@@ -5,7 +5,8 @@ import { LucideIcon } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { COLORS, FONTS } from '@/constants/tokens';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-
+import { scale, verticalScale } from 'react-native-size-matters';
+ 
 interface StatCardProps {
   label: string;
   value: string | number;
@@ -16,7 +17,7 @@ interface StatCardProps {
   className?: string;
   variant?: 'blue' | 'pink' | 'orange' | 'green' | 'purple' | 'yellow';
 }
-
+ 
 const valueColors = {
   blue: 'text-[#0C71FF]',
   pink: 'text-[#D91DAA]',
@@ -25,7 +26,7 @@ const valueColors = {
   purple: 'text-[#6621F0]',
   yellow: 'text-[#FF8C00]',
 };
-
+ 
 export function StatCard({
   label,
   value,
@@ -36,26 +37,29 @@ export function StatCard({
   className,
   variant = 'blue',
 }: StatCardProps) {
-  const scale = useSharedValue(1);
+  const scaleValue = useSharedValue(1);
   const hasBg = !!bg;
-
+ 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: scaleValue.value }],
   }));
-
+ 
   const handlePressIn = () => {
-    if (onPress) scale.value = withSpring(0.97);
+    if (onPress) scaleValue.value = withSpring(0.97);
   };
-
+ 
   const handlePressOut = () => {
-    if (onPress) scale.value = withSpring(1);
+    if (onPress) scaleValue.value = withSpring(1);
   };
-
+ 
   const content = (
-    <View className={cn(
-      "flex-row items-center justify-between px-5 py-4 min-h-[104px] w-full",
-      !hasBg && "bg-fill-weaker"
-    )}>
+    <View 
+      className={cn(
+        "flex-row items-center justify-between px-5 py-4 w-full",
+        !hasBg && "bg-fill-weaker"
+      )}
+      style={{ minHeight: verticalScale(104) }}
+    >
       <View className="gap-1 flex-shrink" style={{ flex: 1 }}>
         <Animated.Text
           className={cn(
@@ -102,7 +106,11 @@ export function StatCard({
           ) : React.isValidElement(Icon) ? (
             Icon
           ) : (
-            <Icon size={hasBg ? 38 : 44} color={hasBg ? COLORS.textBase : COLORS.textStrong} strokeWidth={1.5} />
+            React.createElement(Icon as any, {
+              size: hasBg ? scale(38) : scale(44),
+              color: hasBg ? COLORS.textBase : COLORS.textStrong,
+              strokeWidth: 1.5
+            })
           )}
         </View>
       )}

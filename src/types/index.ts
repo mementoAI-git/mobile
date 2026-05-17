@@ -7,6 +7,7 @@ export interface IFile {
   duration?: number;
   type?: string;
   _id: string;
+  thumbnail?: string;
 }
 
 export interface IAuth {

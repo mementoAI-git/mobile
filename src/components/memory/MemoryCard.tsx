@@ -9,16 +9,20 @@ import { MemTag } from '@/components/ui';
 import { useUiStore } from '@/store';
 import { COLORS, FONTS } from '@/constants/tokens';
 import type { IMemory } from '@/types';
-
+import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+ 
 interface MemoryCardProps {
   memory: IMemory;
   className?: string;
   onPress?: () => void;
   isGrid?: boolean;
 }
-
+ 
 const isProduction = process.env.NODE_ENV === 'production';
-
+ 
+const AnimatedImage = Animated.Image as any;
+const AnimatedText = Animated.Text as any;
+ 
 export function MemoryCard({ memory, className, onPress, isGrid }: MemoryCardProps) {
   const handlePress = onPress ?? (() => router.push(`/(tabs)/stories/${memory._id}`));
   const firstImage = memory.attachments?.find(
@@ -26,12 +30,12 @@ export function MemoryCard({ memory, className, onPress, isGrid }: MemoryCardPro
   );
   const hasMedia = Boolean(firstImage);
   const isBookmarked = memory.status === 'bookmarked';
-
-  const scale = useSharedValue(1);
+ 
+  const cardScale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: cardScale.value }],
   }));
-
+ 
   return (
     <Animated.View
       style={[animStyle]}
@@ -46,14 +50,17 @@ export function MemoryCard({ memory, className, onPress, isGrid }: MemoryCardPro
           Haptics.selectionAsync();
           handlePress();
         }}
-        onPressIn={() => { scale.value = withSpring(0.97); }}
-        onPressOut={() => { scale.value = withSpring(1); }}
+        onPressIn={() => { cardScale.value = withSpring(0.97); }}
+        onPressOut={() => { cardScale.value = withSpring(1); }}
         activeOpacity={0.9}
       >
         {/* ── Media Header ── */}
         {hasMedia ? (
-          <View className={cn("w-full bg-fill-weak relative", isGrid ? "h-36" : "h-52")}>
-            <Animated.Image
+          <View 
+            className="w-full bg-fill-weak relative"
+            style={{ height: isGrid ? verticalScale(144) : verticalScale(208) }}
+          >
+            <AnimatedImage
               sharedTransitionTag={`memory-image-${memory._id}`}
               source={{ uri: firstImage?.url }}
               className="w-full h-full"
@@ -66,7 +73,10 @@ export function MemoryCard({ memory, className, onPress, isGrid }: MemoryCardPro
             )}
           </View>
         ) : (
-          <View className={cn("w-full bg-fill-weaker items-center justify-center border-b border-stroke-weaker", isGrid ? "h-20" : "h-12")}>
+          <View 
+            className="w-full bg-fill-weaker items-center justify-center border-b border-stroke-weaker"
+            style={{ height: isGrid ? verticalScale(80) : verticalScale(48) }}
+          >
             {isBookmarked && (
               <View className="absolute top-3 right-3">
                 <Bookmark size={14} color={COLORS.brand} fill={COLORS.brand} />
@@ -75,26 +85,29 @@ export function MemoryCard({ memory, className, onPress, isGrid }: MemoryCardPro
             {isGrid && <FileText size={24} color={COLORS.textDisabled} strokeWidth={1.5} />}
           </View>
         )}
-
+ 
         {/* ── Content ── */}
         <View className="px-5 py-5 gap-2.5">
-          <Animated.Text
+          <AnimatedText
             sharedTransitionTag={`memory-title-${memory._id}`}
-            className={cn("text-text-strong leading-snug", isGrid ? "text-base" : "text-xl")}
+            className="text-text-strong leading-snug"
             numberOfLines={2}
-            style={{ fontFamily: FONTS.serif }}
+            style={{ 
+              fontFamily: FONTS.serif,
+              fontSize: isGrid ? moderateScale(16) : moderateScale(20)
+            }}
           >
             {memory.title || 'Untitled Memory'}
-          </Animated.Text>
-
+          </AnimatedText>
+ 
           {!isGrid && memory.body ? (
-            <Animated.Text
+            <AnimatedText
               className="text-sm text-text-base leading-relaxed opacity-80"
               numberOfLines={2}
               style={{ fontFamily: FONTS.sans }}
             >
               {memory.body?.replace(/<[^>]+>/g, '')}
-            </Animated.Text>
+            </AnimatedText>
           ) : null}
 
           {/* Tags */}

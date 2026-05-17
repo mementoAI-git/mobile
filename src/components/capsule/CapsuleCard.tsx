@@ -10,6 +10,7 @@ import { useUiStore } from '@/store';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { getThemeById, getThemeByColor } from '@/constants/themes';
 import { cn } from '@/lib/utils';
+import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 
 interface CapsuleCardProps {
   capsule: ICapsule;
@@ -34,9 +35,9 @@ const statusLabels: Record<string, string> = {
 };
 
 export function CapsuleCard({ capsule, onPress, layoutMode = 'grid' }: CapsuleCardProps) {
-  const scale = useSharedValue(1);
+  const cardScale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: cardScale.value }],
   }));
 
   const getExtension = (url?: string) => {
@@ -122,18 +123,21 @@ export function CapsuleCard({ capsule, onPress, layoutMode = 'grid' }: CapsuleCa
               Haptics.selectionAsync();
               onPress?.();
             }}
-            onPressIn={() => { scale.value = withSpring(0.98); }}
-            onPressOut={() => { scale.value = withSpring(1); }}
+            onPressIn={() => { cardScale.value = withSpring(0.98); }}
+            onPressOut={() => { cardScale.value = withSpring(1); }}
             activeOpacity={0.95}
             className="bg-white rounded-[22px] overflow-hidden border border-stroke-weaker shadow-sm"
           >
             <View className="p-3 flex-row gap-3">
               {/* Left side: Single Attachment Thumbnail */}
-              <View className="size-24 rounded-xl bg-fill-weaker border border-stroke-weaker overflow-hidden items-center justify-center relative shrink-0">
+              <View 
+                className="rounded-xl bg-fill-weaker border border-stroke-weaker overflow-hidden items-center justify-center relative shrink-0"
+                style={{ width: scale(96), height: scale(96) }}
+              >
                 {(() => {
-                  const firstImg = attachments.find(attr => isImage(attr.type, attr.url) && (attr.thumbnail || attr.url));
-                  const firstNonImg = attachments.find(attr => !isImage(attr.type, attr.url));
-
+                  const firstImg: any = attachments.find((attr: any) => isImage(attr.type, attr.url) && ((attr as any).thumbnail || attr.url));
+                  const firstNonImg: any = attachments.find((attr: any) => !isImage(attr.type, attr.url));
+ 
                   if (firstImg) {
                     return (
                       <Image
@@ -146,12 +150,17 @@ export function CapsuleCard({ capsule, onPress, layoutMode = 'grid' }: CapsuleCa
                     return renderAttachmentIcon(firstNonImg.type, firstNonImg.url);
                   } else {
                     return (
-                      <Text className="text-[10px] text-text-muted italic" style={{ fontFamily: FONTS.sans }}>No Assets</Text>
+                      <Text 
+                        className="text-text-muted italic" 
+                        style={{ fontFamily: FONTS.sans, fontSize: moderateScale(10) }}
+                      >
+                        No Assets
+                      </Text>
                     );
                   }
                 })()}
               </View>
-
+ 
               {/* Right side: Content */}
               <View className="flex-1 gap-1.5 justify-between">
                 <View className="flex-row items-center justify-between">
@@ -166,50 +175,59 @@ export function CapsuleCard({ capsule, onPress, layoutMode = 'grid' }: CapsuleCa
                       useUiStore.getState().openSheet('capsule-actions', { capsule });
                     }}
                     hitSlop={15}
-                    className="size-6 items-center justify-center"
+                    className="items-center justify-center"
+                    style={{ width: scale(24), height: scale(24) }}
                   >
-                    <MoreVertical size={14} color={COLORS.textWeak} />
+                    <MoreVertical size={scale(14)} color={COLORS.textWeak} />
                   </TouchableOpacity>
                 </View>
-
+ 
                 <View>
                   <Text
-                    className="text-base text-text-strong font-medium"
+                    className="text-text-strong font-medium"
                     numberOfLines={1}
-                    style={{ fontFamily: FONTS.serif }}
+                    style={{ fontFamily: FONTS.serif, fontSize: moderateScale(16) }}
                   >
                     {capsule.title || 'Untitled Capsule'}
                   </Text>
                   <Text
-                    className="text-[10px] text-text-weak leading-tight"
+                    className="text-text-weak leading-tight"
                     numberOfLines={2}
-                    style={{ fontFamily: FONTS.sans }}
+                    style={{ fontFamily: FONTS.sans, fontSize: moderateScale(10) }}
                   >
                     {capsule.body || 'No message content...'}
                   </Text>
                 </View>
-
+ 
                 {/* Compact Info Footer */}
                 <View className="bg-fill-weaker rounded-lg p-2 gap-1">
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-[8px] text-text-weak" style={{ fontFamily: FONTS.sans }}>To:</Text>
+                    <Text className="text-text-weak" style={{ fontFamily: FONTS.sans, fontSize: moderateScale(8) }}>To:</Text>
                     <View className="flex-row items-center gap-1">
                       {(capsule.recipients ?? []).slice(0, 1).map((r: any, i) => (
-                        <Text key={i} className="text-[10px] text-text-strong font-medium" style={{ fontFamily: FONTS.sansMedium }} numberOfLines={1}>
+                        <Text 
+                          key={i} 
+                          className="text-text-strong font-medium" 
+                          style={{ fontFamily: FONTS.sansMedium, fontSize: moderateScale(10) }} 
+                          numberOfLines={1}
+                        >
                           {r.first_name || r.email?.split('@')[0]}
                         </Text>
                       ))}
                       {capsule.recipients?.length > 1 && (
-                        <Text className="text-[9px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
+                        <Text className="text-text-weak" style={{ fontFamily: FONTS.sans, fontSize: moderateScale(9) }}>
                           +{capsule.recipients.length - 1}
                         </Text>
                       )}
                     </View>
                   </View>
-
+ 
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-[8px] text-text-weak" style={{ fontFamily: FONTS.sans }}>Due:</Text>
-                    <Text className="text-[10px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+                    <Text className="text-text-weak" style={{ fontFamily: FONTS.sans, fontSize: moderateScale(8) }}>Due:</Text>
+                    <Text 
+                      className="text-text-strong" 
+                      style={{ fontFamily: FONTS.sansMedium, fontSize: moderateScale(10) }}
+                    >
                       {capsule.schedule_date ? dayjs(capsule.schedule_date).format('MMM D, YYYY') : 'No date'}
                     </Text>
                   </View>
@@ -217,8 +235,11 @@ export function CapsuleCard({ capsule, onPress, layoutMode = 'grid' }: CapsuleCa
               </View>
             </View>
           </TouchableOpacity>
-
-          <Text className="text-center text-sm font-medium text-text-strong mt-1 p-1" style={{ fontFamily: FONTS.sansMedium }}>
+ 
+          <Text 
+            className="text-center font-medium text-text-strong mt-1 p-1" 
+            style={{ fontFamily: FONTS.sansMedium, fontSize: moderateScale(14) }}
+          >
             {getDueInText()}
           </Text>
         </Animated.View>
@@ -237,8 +258,8 @@ export function CapsuleCard({ capsule, onPress, layoutMode = 'grid' }: CapsuleCa
             Haptics.selectionAsync();
             onPress?.();
           }}
-          onPressIn={() => { scale.value = withSpring(0.98); }}
-          onPressOut={() => { scale.value = withSpring(1); }}
+          onPressIn={() => { cardScale.value = withSpring(0.98); }}
+          onPressOut={() => { cardScale.value = withSpring(1); }}
           activeOpacity={0.95}
           className="bg-white rounded-[22px] overflow-hidden border border-stroke-weaker shadow-sm"
         >
@@ -272,29 +293,33 @@ export function CapsuleCard({ capsule, onPress, layoutMode = 'grid' }: CapsuleCa
                 {capsule.title || 'Untitled Capsule'}
               </Text>
               <Text
-                className="text-xs text-text-weak leading-relaxed border-t border-fill-weaker pt-2"
+                className="text-text-weak leading-relaxed border-t border-fill-weaker pt-2"
                 numberOfLines={2}
-                style={{ fontFamily: FONTS.sans }}
+                style={{ fontFamily: FONTS.sans, fontSize: moderateScale(12) }}
               >
                 {capsule.body || 'No message content...'}
               </Text>
             </View>
-
+ 
             {/* Attachment Strip (Parity with Web ImageThumbnail) */}
-            <View className="flex-row items-center gap-1.5 h-10 overflow-hidden">
+            <View 
+              className="flex-row items-center gap-1.5 overflow-hidden"
+              style={{ height: scale(40) }}
+            >
               {attachments.length > 0 ? (
-                attachments.slice(0, 4).map((attr, idx) => {
-                  const showImage = isImage(attr.type, attr.url) && (attr.thumbnail || attr.url);
+                attachments.slice(0, 4).map((attr: any, idx) => {
+                  const showImage = isImage(attr.type, attr.url) && ((attr as any).thumbnail || attr.url);
                   const isLastVisible = idx === 3;
                   const showOverlay = isLastVisible && attachments.length > 4;
                   return (
                     <View
                       key={attr._id || idx}
-                      className="size-10 rounded-lg bg-fill-weaker border border-stroke-weaker overflow-hidden items-center justify-center relative"
+                      className="rounded-lg bg-fill-weaker border border-stroke-weaker overflow-hidden items-center justify-center relative"
+                      style={{ width: scale(40), height: scale(40) }}
                     >
                       {showImage ? (
                         <Image
-                          source={{ uri: attr.thumbnail || attr.url }}
+                          source={{ uri: (attr as any).thumbnail || attr.url }}
                           className="size-full"
                           resizeMode="cover"
                         />
@@ -303,7 +328,12 @@ export function CapsuleCard({ capsule, onPress, layoutMode = 'grid' }: CapsuleCa
                       )}
                       {showOverlay && (
                         <View className="absolute inset-0 bg-black/50 items-center justify-center">
-                          <Text className="text-[10px] text-white font-bold">+{attachments.length - 3}</Text>
+                          <Text 
+                            className="text-white font-bold" 
+                            style={{ fontSize: moderateScale(10) }}
+                          >
+                            +{attachments.length - 3}
+                          </Text>
                         </View>
                       )}
                     </View>
