@@ -1,0 +1,257 @@
+import React, { useState, useMemo } from 'react';
+import { FlatList, RefreshControl, View, ScrollView, ImageBackground, TouchableOpacity, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Plus, Search, Grid, List, X } from 'lucide-react-native';
+import { CapsuleCard } from '@/components/capsule/CapsuleCard';
+import { StatCard, DashboardHeader, CapsuleSkeleton, EmptyState, Spinner } from '@/components/ui';
+import { COLORS, FONTS } from '@/constants/tokens';
+import * as Haptics from 'expo-haptics';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useCapsulesLogic } from '@/hooks/use-capsules-logic';
+import { useUiStore } from '@/store';
+
+const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
+const MEMORIES_BG = require('../../../assets/images/backgrounds/memories_card_bg.png');
+const BENEFI_BG = require('../../../assets/images/backgrounds/benefi_card_bg.png');
+const CAPSULE_BG = require('../../../assets/images/backgrounds/time_cap_card_bg.png');
+const STREAK_BG = require('../../../assets/images/backgrounds/streak_card_bg.png');
+
+const FILTERS = [
+  { id: '', label: 'All' },
+  { id: 'scheduled', label: 'Scheduled' },
+  { id: 'delivered', label: 'Delivered' },
+  { id: 'draft', label: 'Drafts' },
+  { id: 'pause', label: 'Frozen' }
+];
+
+export default function CapsuleScreen() {
+  const {
+    filter,
+    setFilter,
+    stats,
+    capsules,
+    isLoading,
+    isRefetching,
+    refetch,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+    handleCreateNew,
+    handleClearFilter,
+  } = useCapsulesLogic();
+
+  const [layoutMode, setLayoutMode] = useState<'grid' | 'list'>('grid');
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Normalize stats from API to support snake_case, camelCase, and direct mappings
+  const scheduled = stats ? (stats.scheduled ?? stats.scheduled_count ?? 0) : 0;
+  const delivered = stats ? (stats.delivered ?? stats.delivered_count ?? 0) : 0;
+  const draft = stats ? (stats.draft ?? stats.draft_count ?? 0) : 0;
+  const frozen = stats ? (stats.frozen ?? stats.paused_count ?? stats.pause_count ?? 0) : 0;
+
+  // Search filter
+  const filteredCapsules = useMemo(() => {
+    if (!searchQuery) return capsules;
+    const q = searchQuery.toLowerCase();
+    return capsules.filter(c =>
+      c.title?.toLowerCase().includes(q) ||
+      c.body?.toLowerCase().includes(q) ||
+      c.recipients?.some((r: any) =>
+        (r.first_name || r.name || '').toLowerCase().includes(q) ||
+        r.email?.toLowerCase().includes(q)
+      )
+    );
+  }, [capsules, searchQuery]);
+
+  const getFilterCount = (id: string) => {
+    if (!stats) return null;
+    if (id === '') return (stats.total ?? stats.total_count ?? (scheduled + delivered + draft + frozen));
+    if (id === 'scheduled') return scheduled;
+    if (id === 'delivered') return delivered;
+    if (id === 'draft') return draft;
+    if (id === 'pause') return frozen;
+    return null;
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
+      <DashboardHeader title="Time Capsule" />
+
+      <View className="flex-1">
+        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
+
+        {isLoading && !capsules.length ? (
+          <CapsuleSkeleton />
+        ) : (
+          <FlatList
+            data={filteredCapsules}
+            keyExtractor={(item) => item._id ?? ''}
+            ListHeaderComponent={
+              <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-4 gap-6">
+                <Animated.Text className="text-base text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+                  Preserve your thoughts and media in time capsules that deliver to your loved ones exactly when you choose.
+                </Animated.Text>
+
+                {/* Stats Grid */}
+                <View className="gap-4">
+                  <View className="flex-row gap-4">
+                    <StatCard
+                      label="Scheduled"
+                      value={scheduled}
+                      unit="messages"
+                      variant="blue"
+                      bg={CAPSULE_BG}
+                      onPress={() => setFilter('scheduled')}
+                    />
+                    <StatCard
+                      label="Delivered/Unlocked"
+                      value={delivered}
+                      unit="messages"
+                      variant="pink"
+                      bg={STREAK_BG}
+                      onPress={() => setFilter('delivered')}
+                    />
+                  </View>
+                  <View className="flex-row gap-4">
+                    <StatCard
+                      label="Drafts"
+                      value={draft}
+                      unit="messages"
+                      variant="orange"
+                      bg={BENEFI_BG}
+                      onPress={() => setFilter('draft')}
+                    />
+                    <StatCard
+                      label="Frozen"
+                      value={frozen}
+                      unit="messages"
+                      variant="green"
+                      bg={MEMORIES_BG}
+                      onPress={() => setFilter('pause')}
+                    />
+                  </View>
+                </View>
+
+                {/* Filter Pills, Search & Layout Actions */}
+                <View className="mt-2 flex-row items-center gap-2">
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerClassName="gap-2 px-1"
+                    className="flex-1"
+                  >
+                    {FILTERS.map((f) => {
+                      const count = getFilterCount(f.id);
+                      const label = count !== null ? `${f.label} (${count})` : f.label;
+                      const isActive = filter === f.id;
+                      return (
+                        <TouchableOpacity
+                          key={f.id}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setFilter(f.id);
+                          }}
+                          activeOpacity={0.7}
+                          className={`px-5 py-2.5 rounded-full border ${isActive ? 'bg-brand border-brand' : 'bg-white border-stroke-weaker'}`}
+                        >
+                          <Animated.Text className={`text-xs font-bold ${isActive ? 'text-white' : 'text-text-base'}`} style={{ fontFamily: FONTS.sansBold }}>
+                            {label}
+                          </Animated.Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+
+                  {/* Search Button Pill */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setShowSearch(prev => !prev);
+                    }}
+                    activeOpacity={0.7}
+                    className={`size-10 rounded-full border items-center justify-center shrink-0 ${showSearch ? 'bg-brand border-brand' : 'bg-white border-stroke-weaker'}`}
+                  >
+                    <Search size={16} color={showSearch ? 'white' : COLORS.textStrong} />
+                  </TouchableOpacity>
+
+                  {/* Grid/List Toggle Pill */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setLayoutMode(prev => prev === 'grid' ? 'list' : 'grid');
+                    }}
+                    activeOpacity={0.7}
+                    className="size-10 rounded-full bg-white border border-stroke-weaker items-center justify-center shrink-0"
+                  >
+                    {layoutMode === 'grid' ? (
+                      <Grid size={16} color={COLORS.textStrong} />
+                    ) : (
+                      <List size={16} color={COLORS.textStrong} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                {/* Collapsible Search Input Box */}
+                {showSearch && (
+                  <Animated.View entering={FadeInDown.duration(200)} className="flex-row items-center bg-white border border-stroke-weaker rounded-2xl px-4 py-2.5">
+                    <Search size={16} color={COLORS.textWeak} className="mr-2" />
+                    <TextInput
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      placeholder="Search title, body, or recipient..."
+                      placeholderTextColor={COLORS.textMuted}
+                      className="flex-1 text-sm text-text-strong h-8 p-0"
+                      autoFocus
+                    />
+                    {searchQuery.length > 0 && (
+                      <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={10}>
+                        <X size={16} color={COLORS.textWeak} />
+                      </TouchableOpacity>
+                    )}
+                  </Animated.View>
+                )}
+
+                {/* Action Button */}
+                <TouchableOpacity
+                  onPress={handleCreateNew}
+                  activeOpacity={0.8}
+                  className="flex-row items-center justify-center gap-2.5 h-14 rounded-2xl bg-brand shadow-lg shadow-brand/20"
+                >
+                  <Plus size={20} color="white" strokeWidth={2.5} />
+                  <Animated.Text className="text-base font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Create New Capsule</Animated.Text>
+                </TouchableOpacity>
+              </Animated.View>
+            }
+            contentContainerClassName="px-6 pb-24 flex-grow"
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <CapsuleCard
+                capsule={item}
+                layoutMode={layoutMode}
+                onPress={() => useUiStore.getState().openSheet('capsule-detail', { capsule: item })}
+              />
+            )}
+            refreshControl={
+              <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.brand} />
+            }
+            onEndReached={() => hasNextPage && fetchNextPage()}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={isFetchingNextPage ? <View className="py-6"><Spinner size="small" /></View> : null}
+            ListEmptyComponent={
+              <EmptyState
+                title={filter ? "No capsules found" : "Your future self awaits"}
+                description={filter
+                  ? `No capsules match this filter.`
+                  : "Start by creating a time capsule for your loved ones."
+                }
+                actionLabel={filter ? "Clear filter" : "Create first capsule"}
+                onAction={filter ? handleClearFilter : handleCreateNew}
+              />
+            }
+          />
+        )}
+      </View>
+    </SafeAreaView>
+  );
+}
