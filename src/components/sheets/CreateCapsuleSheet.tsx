@@ -1,0 +1,588 @@
+import React, { useState, useCallback, useMemo, useRef } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  Platform,
+  Keyboard,
+  Image
+} from 'react-native';
+import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import { useEffect } from 'react';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import {
+  X,
+  ChevronRight,
+  ChevronDown,
+  Image as ImageIcon,
+  Plus,
+  Check
+} from 'lucide-react-native';
+import { Button, Spinner } from '@/components/ui';
+import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
+import { useCreateCapsule, useUpdateCapsule } from '@/hooks/mutations/use-capsule-mutations';
+import { COLORS, FONTS } from '@/constants/tokens';
+import { StylePicker } from '@/components/capsule/StylePicker';
+import dayjs from 'dayjs';
+import { useQuery } from '@tanstack/react-query';
+import { get } from '@/api/mutations';
+import endpoint from '@/api/endpoint';
+import { useFileUpload } from '@/hooks/use-file-upload';
+import type { IBeneficiary, ICapsule } from '@/types';
+import { getThemeById } from '@/constants/themes';
+import { PreviewCapsuleModal } from './PreviewCapsuleModal';
+import { SelectFromMemoryModal } from './SelectFromMemoryModal';
+import { SelectFromMediaModal } from './SelectFromMediaModal';
+import { useUserStore } from '@/store';
+import { useToast } from '../ui/Toast';
+
+interface Props {
+  onClose: () => void;
+  editData?: ICapsule & { _id?: string };
+}
+
+export function CreateCapsuleSheet({ onClose, editData }: Props) {
+  const isEdit = !!editData?._id;
+
+  // ── Form state ──────────────────────────────────────────────────────────────
+  const [title, setTitle] = useState(editData?.title ?? '');
+  const [body, setBody] = useState(editData?.body ?? '');
+
+  const [recipientIds, setRecipientIds] = useState<string[]>(
+    (editData?.recipients ?? []).map((r) => (r as any)._id ?? r as string),
+  );
+  const [recipientInput, setRecipientInput] = useState('');
+
+  const [attachments, setAttachments] = useState<string[]>(editData?.attachments ?? []);
+  const [memories, setMemories] = useState<string[]>(editData?.memories ?? []);
+
+  const previewModalRef = useRef<BottomSheetModal>(null);
+  const dateModalRef = useRef<BottomSheetModal>(null);
+  const memoryModalRef = useRef<BottomSheetModal>(null);
+  const mediaModalRef = useRef<BottomSheetModal>(null);
+  const { toast } = useToast();
+
+  const [scheduleDate, setScheduleDate] = useState<Date | null>(
+    editData?.schedule_date ? new Date(editData.schedule_date) : null,
+  );
+  const [showNativePicker, setShowNativePicker] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => setKeyboardHeight(e.endCoordinates.height)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardHeight(0)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // Style state
+  const [themeId, setThemeId] = useState(editData?.style?.themeId ?? 'blush');
+  const [bgColor, setBgColor] = useState(editData?.style?.backgroundColor ?? '#FFE5D9');
+  const [fontSize, setFontSize] = useState(editData?.style?.fontSize ?? '2x');
+
+  const { data: beneficiariesData, isLoading: loadingBeneficiaries } = useBeneficiaries();
+
+  const beneficiaries = useMemo(() => {
+    if (Array.isArray(beneficiariesData)) return beneficiariesData;
+    if ((beneficiariesData as any)?.docs) return (beneficiariesData as any).docs;
+    return [];
+  }, [beneficiariesData]);
+
+  const user = useUserStore((s) => s.user);
+  const senderName = user?.name || user?.email || 'You';
+
+  const recipientNames = useMemo(() => {
+    return recipientIds
+      .map(id => {
+        const b = beneficiaries.find(b => b._id === id);
+        return b ? b.name : id;
+      })
+      .filter(Boolean)
+      .join(', ');
+  }, [recipientIds, beneficiaries]);
+
+  const { mutate: createCapsule, isPending: creating } = useCreateCapsule();
+  const { mutate: updateCapsule, isPending: updating } = useUpdateCapsule(editData?._id ?? '');
+  const isPending = creating || updating;
+
+  const { pickAndUpload, isUploading } = useFileUpload();
+
+  const { data: recentMedia, isLoading: loadingMedia } = useQuery({
+    queryKey: ['recent-files'],
+    queryFn: () => get<any>(`${endpoint.files}?limit=10`).then((r) => r.data?.docs || []),
+  });
+
+  const renderBackdrop = useCallback(
+    (backdropProps: any) => (
+      <BottomSheetBackdrop {...backdropProps} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.4} pressBehavior="close" />
+    ),
+    []
+  );
+
+  const toggleRecipient = useCallback((id: string) => {
+    setRecipientIds((prev) =>
+      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id],
+    );
+  }, []);
+
+  const handleRecipientInputSubmit = () => {
+    const email = recipientInput.trim().toLowerCase();
+    if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (!recipientIds.includes(email)) {
+        setRecipientIds(prev => [...prev, email]);
+      }
+      setRecipientInput('');
+    } else if (email) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+    }
+  };
+
+  const toggleAttachment = useCallback((id: string) => {
+    setAttachments((prev) =>
+      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id],
+    );
+  }, []);
+
+  const handleBrowseFiles = async () => {
+    const uploadedFile = await pickAndUpload();
+    if (uploadedFile && uploadedFile.data?._id) {
+      setAttachments(prev => [...prev, uploadedFile.data._id]);
+    } else if (uploadedFile && uploadedFile._id) {
+      setAttachments(prev => [...prev, uploadedFile._id]);
+    }
+  };
+
+  const handleSubmit = (submitStatus: 'draft' | 'scheduled') => {
+    if (!title.trim()) {
+      Alert.alert('Missing title', 'Please add a title before saving.');
+      return;
+    }
+    if (submitStatus === 'scheduled' && !scheduleDate) {
+      Alert.alert('Missing date', 'Pick a delivery date to schedule your capsule.');
+      return;
+    }
+
+    const payload = {
+      title: title.trim(),
+      body: body.trim(),
+      recipients: recipientIds,
+      status: submitStatus,
+      schedule_date: scheduleDate ? scheduleDate.toISOString() : undefined,
+      attachments,
+      memories,
+      style: {
+        themeId,
+        backgroundColor: bgColor,
+        fontSize,
+      },
+    };
+
+    if (isEdit) {
+      updateCapsule(payload, {
+        onSuccess: () => {
+          toast({ title: 'Success', message: 'Time capsule updated successfully!', type: 'success' });
+          onClose();
+        }
+      });
+    } else {
+      createCapsule(payload, {
+        onSuccess: () => {
+          toast({ title: 'Success', message: 'Time capsule scheduled successfully!', type: 'success' });
+          onClose();
+        }
+      });
+    }
+  };
+
+  const selectedTheme = getThemeById(themeId);
+  const Background = selectedTheme.Background;
+
+  return (
+    <>
+      {/* Header */}
+      <View className="px-5 pt-4 pb-4 border-b border-stroke-weaker flex-row items-center justify-between">
+        <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
+          {isEdit ? 'Edit Capsule' : 'Create Capsule'}
+        </Text>
+        <TouchableOpacity onPress={onClose} className="p-1.5 bg-fill-weaker rounded-full">
+          <X size={16} color={COLORS.textWeak} />
+        </TouchableOpacity>
+      </View>
+
+      <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 + keyboardHeight, gap: 32 }}>
+
+        {/* Recipients */}
+        <View className="gap-3">
+          <Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>
+            Select recipient(s)
+          </Text>
+
+          <View className="border border-stroke-weaker rounded-xl p-2 min-h-[44px] flex-row flex-wrap gap-2 items-center bg-white">
+            {recipientIds.map(id => {
+              const b = beneficiaries.find((x: any) => x._id === id);
+              const displayName = b ? b.name : id;
+              return (
+                <View key={id} className="bg-fill-weaker border border-stroke-weaker rounded-full px-3 py-1.5 flex-row items-center gap-1.5">
+                  <Text className="text-xs text-text-strong" style={{ fontFamily: FONTS.sans }}>{displayName}</Text>
+                  <TouchableOpacity onPress={() => toggleRecipient(id)}>
+                    <X size={12} color={COLORS.textWeak} />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+            <BottomSheetTextInput
+              value={recipientInput}
+              onChangeText={setRecipientInput}
+              onSubmitEditing={handleRecipientInputSubmit}
+              placeholder="Enter email address..."
+              placeholderTextColor={COLORS.textDisabled}
+              style={{ flex: 1, minWidth: 120, fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong, padding: 0 }}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              returnKeyType="done"
+            />
+          </View>
+
+          <View className="bg-fill-weaker rounded-2xl p-4 mt-1">
+            <Text className="text-xs text-text-weak mb-3" style={{ fontFamily: FONTS.sans }}>Recent</Text>
+            {loadingBeneficiaries ? (
+              <Spinner />
+            ) : beneficiaries.length === 0 ? (
+              <Text className="text-sm text-text-weak" style={{ fontFamily: FONTS.sans }}>No beneficiaries added yet.</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+                {beneficiaries.map((b: any) => {
+                  const selected = recipientIds.includes(b._id ?? '');
+                  return (
+                    <TouchableOpacity
+                      key={b._id}
+                      onPress={() => toggleRecipient(b._id)}
+                      className="items-center w-16 gap-2"
+                    >
+                      <View className={`size-12 rounded-full items-center justify-center border-2 ${selected ? 'border-brand bg-brand' : 'border-transparent bg-white shadow-sm'}`}>
+                        <Text className={`text-lg font-bold ${selected ? 'text-white' : 'text-text-strong'}`} style={{ fontFamily: FONTS.sansBold }}>
+                          {b.name[0]?.toUpperCase()}
+                        </Text>
+                      </View>
+                      <View className="items-center">
+                        <Text className="text-xs text-text-strong text-center" numberOfLines={1} style={{ fontFamily: FONTS.sansMedium }}>{b.name}</Text>
+                        <Text className="text-[10px] text-text-weak text-center capitalize" numberOfLines={1} style={{ fontFamily: FONTS.sans }}>{b.relationship}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+
+        {/* Upload Media */}
+        <View className="gap-3">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>
+              Upload media
+            </Text>
+            <TouchableOpacity onPress={() => memoryModalRef.current?.present()}>
+              <Text className="text-sm text-brand font-medium">Add from memory</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            onPress={handleBrowseFiles}
+            disabled={isUploading}
+            className="border-2 border-dashed border-stroke-weaker rounded-2xl py-8 px-4 items-center justify-center gap-2"
+          >
+            {isUploading ? (
+              <Spinner />
+            ) : (
+              <>
+                <Text className="text-sm font-semibold text-text-strong text-center" style={{ fontFamily: FONTS.sansSemi }}>
+                  Drag and drop your file{'\n'}here or tap to upload
+                </Text>
+                <Text className="text-xs text-text-weak text-center mb-2" style={{ fontFamily: FONTS.sans }}>
+                  Supports JPG, PNG, MP4, MP3, PDF,{'\n'}DOC, TXT. Max file size: 120mb
+                </Text>
+                <Button variant="outline" onPress={handleBrowseFiles} className="rounded-full bg-white border-stroke-weak pointer-events-none">
+                  <Text className="text-sm text-text-strong">Browse files</Text>
+                </Button>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <View className="bg-fill-weaker rounded-2xl p-4 mt-1">
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-xs text-text-weak" style={{ fontFamily: FONTS.sans }}>Recent</Text>
+              <TouchableOpacity onPress={() => mediaModalRef.current?.present()}>
+                <Text className="text-xs text-brand font-medium">See all</Text>
+              </TouchableOpacity>
+            </View>
+            {loadingMedia ? (
+              <Spinner />
+            ) : !recentMedia?.length ? (
+              <Text className="text-sm text-text-weak" style={{ fontFamily: FONTS.sans }}>No recent media found.</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+                {recentMedia.map((media: any) => {
+                  const mediaId = media._id || media.id;
+                  const isSelected = attachments.includes(mediaId);
+                  return (
+                    <TouchableOpacity
+                      key={mediaId}
+                      onPress={() => toggleAttachment(mediaId)}
+                      className={`size-16 bg-fill-weaker rounded-xl border-2 ${isSelected ? 'border-brand' : 'border-transparent'} shadow-sm overflow-hidden items-center justify-center relative`}
+                    >
+                      {(media.type === 'image' || media.type === 'video') && (media.url || media.thumbnail) ? (
+                        <Image source={{ uri: media.thumbnail || media.url }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                      ) : (
+                        <Text className={`text-[10px] font-bold uppercase ${isSelected ? 'text-brand' : 'text-text-weak'}`}>{media.type}</Text>
+                      )}
+                      {isSelected && (
+                        <View className="absolute top-1 right-1 bg-brand rounded-full p-0.5 shadow-sm">
+                          <Check size={10} color="white" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+                <TouchableOpacity onPress={() => mediaModalRef.current?.present()} className="size-16 border-2 border-dashed border-stroke-weak rounded-xl items-center justify-center bg-white/50">
+                  <Plus size={24} strokeWidth={1.5} color={COLORS.textWeak} />
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+
+        {/* Write a message */}
+        <View className="gap-3">
+          <Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>
+            Write a message
+          </Text>
+          <View className="bg-fill-weaker border border-stroke-weaker rounded-xl px-4 py-3">
+            <BottomSheetTextInput
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Header here"
+              placeholderTextColor={COLORS.textMuted}
+              className="text-base text-text-strong p-0 m-0"
+              style={{ fontFamily: FONTS.serif, fontSize: 16 }}
+            />
+          </View>
+          <View className="bg-fill-weaker border border-stroke-weaker rounded-xl px-4 py-3 min-h-[140px]">
+            <BottomSheetTextInput
+              value={body}
+              onChangeText={setBody}
+              placeholder="Happy birthday, Katrina. I hope you're having a great day. Decided to send this video to remind you of how much I cherish you..."
+              placeholderTextColor={COLORS.textMuted}
+              multiline
+              textAlignVertical="top"
+              className="flex-1 text-base text-text-strong p-0 m-0 leading-relaxed"
+              style={{ fontFamily: FONTS.sans, minHeight: 120 }}
+            />
+          </View>
+        </View>
+
+        {/* Capsule delivery date */}
+        <View className="gap-3">
+          <Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>
+            Capsule delivery date:
+          </Text>
+          <TouchableOpacity
+            onPress={() => dateModalRef.current?.present()}
+            className="flex-row items-center justify-between p-4 bg-white border border-stroke-weaker rounded-xl"
+          >
+            <Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sans }}>
+              {scheduleDate
+                ? `${dayjs(scheduleDate).format('MM/DD/YYYY')} (In ${Math.abs(dayjs(scheduleDate).diff(dayjs(), 'year'))} Years)`
+                : 'Select Delivery Date...'}
+            </Text>
+            <ChevronDown size={16} color={COLORS.textWeak} />
+          </TouchableOpacity>
+          {showNativePicker && (
+            <DateTimePicker
+              value={scheduleDate ?? new Date()}
+              mode="date"
+              minimumDate={new Date()}
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(_e, date) => {
+                setShowNativePicker(Platform.OS === 'ios');
+                if (date) { setScheduleDate(date); }
+              }}
+            />
+          )}
+        </View>
+
+        {/* Preview */}
+        <View className="gap-3">
+          <Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>
+            Preview
+          </Text>
+
+          <View className="w-full mb-2">
+            <StylePicker
+              currentThemeId={themeId}
+              fontSize={fontSize}
+              onThemeSelect={(t) => {
+                setThemeId(t.id);
+                setBgColor(t.color);
+              }}
+              onSizeSelect={setFontSize}
+            />
+          </View>
+
+          <View className="bg-fill-weaker p-4 rounded-3xl border border-stroke-weaker items-center">
+            {/* The Capsule mock card inside preview area */}
+            <View className="w-full aspect-[560/697] rounded-2xl overflow-hidden relative border border-stroke-weak shadow-sm" style={{ backgroundColor: selectedTheme.color }}>
+              <Background width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
+
+              <View className="absolute inset-0 p-6 pt-10">
+                {/* To / From Header */}
+                <View className="flex-row items-center justify-between mb-8 opacity-80">
+                  <Text className="text-[10px]" style={{ fontFamily: selectedTheme.fonts.body, color: selectedTheme.textColor }} numberOfLines={1}>
+                    To: {recipientNames || 'Someone special'}
+                  </Text>
+                  {/* Decorative middle icon */}
+                  <View className="size-3 rounded-full border items-center justify-center mx-2 shrink-0" style={{ borderColor: selectedTheme.headerColor }}>
+                    <View className="size-1 rounded-full" style={{ backgroundColor: selectedTheme.headerColor }} />
+                  </View>
+                  <Text className="text-[10px]" style={{ fontFamily: selectedTheme.fonts.body, color: selectedTheme.textColor }} numberOfLines={1}>
+                    From: {senderName}
+                  </Text>
+                </View>
+
+                <Text
+                  className="text-2xl text-center mb-4 uppercase tracking-widest"
+                  style={{
+                    fontFamily: selectedTheme.fonts.header,
+                    color: selectedTheme.headerColor
+                  }}
+                >
+                  {title || 'Your Title'}
+                </Text>
+                <Text
+                  className="text-sm text-center opacity-80 leading-relaxed"
+                  style={{
+                    fontFamily: selectedTheme.fonts.body,
+                    color: selectedTheme.textColor
+                  }}
+                  numberOfLines={6}
+                >
+                  {body || 'Your message preview...'}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => previewModalRef.current?.present()}
+                className="absolute inset-0 bg-black/40 items-center justify-center"
+              >
+                <View className="bg-black/60 rounded-full px-5 py-2.5 flex-row items-center gap-2">
+                  <Text className="text-white text-sm font-medium">Tap to preview</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Footer moved inside scroll view */}
+        <View className="flex-row gap-3 pt-6 pb-8">
+          <Button
+            variant="outline"
+            onPress={() => handleSubmit('draft')}
+            disabled={isPending}
+            className="flex-1 rounded-full border-stroke-weak"
+          >
+            <Text className="text-sm text-text-strong font-medium">Save as Draft</Text>
+          </Button>
+          <Button
+            onPress={() => handleSubmit('scheduled')}
+            disabled={isPending || !scheduleDate || !title.trim() || !body.trim() || recipientIds.length === 0}
+            className="flex-1 bg-brand rounded-full"
+          >
+            {isPending ? <Spinner color="white" /> : <Text className="text-sm text-white font-medium">{isEdit ? 'Update Capsule' : 'Schedule Capsule'}</Text>}
+          </Button>
+        </View>
+
+      </BottomSheetScrollView>
+
+      <PreviewCapsuleModal
+        ref={previewModalRef}
+        title={title}
+        body={body}
+        themeId={themeId}
+        setThemeId={setThemeId}
+        bgColor={bgColor}
+        setBgColor={setBgColor}
+        fontSize={fontSize}
+        setFontSize={setFontSize}
+        recipientIds={recipientIds}
+        beneficiaries={beneficiaries}
+      />
+
+      {/* Date Options Modal */}
+      <BottomSheetModal
+        ref={dateModalRef}
+        snapPoints={['50%']}
+        backdropComponent={renderBackdrop}
+        handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
+      >
+        <View className="px-5 py-4 border-b border-stroke-weaker flex-row justify-between items-center">
+          <Text className="text-lg font-bold" style={{ fontFamily: FONTS.sansBold }}>Delivery Date</Text>
+          <TouchableOpacity onPress={() => dateModalRef.current?.dismiss()}>
+            <X size={20} color={COLORS.textWeak} />
+          </TouchableOpacity>
+        </View>
+        <BottomSheetScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
+          {[
+            { label: 'In 3 days', days: 3 },
+            { label: 'In 1 week', days: 7 },
+            { label: 'In 1 month', days: 30 },
+            { label: 'In 6 months', days: 180 },
+            { label: 'In 1 year', days: 365 },
+          ].map((preset) => (
+            <TouchableOpacity
+              key={preset.label}
+              onPress={() => {
+                setScheduleDate(dayjs().add(preset.days, 'day').toDate());
+                dateModalRef.current?.dismiss();
+              }}
+              className="p-4 rounded-xl border border-stroke-weaker bg-white"
+            >
+              <Text className="text-base font-medium text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>{preset.label}</Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            onPress={() => {
+              dateModalRef.current?.dismiss();
+              setTimeout(() => setShowNativePicker(true), 300);
+            }}
+            className="p-4 rounded-xl border border-stroke-weaker bg-white mt-4"
+          >
+            <Text className="text-base font-medium text-brand text-center" style={{ fontFamily: FONTS.sansMedium }}>Pick Custom Date...</Text>
+          </TouchableOpacity>
+        </BottomSheetScrollView>
+      </BottomSheetModal>
+
+      <SelectFromMemoryModal
+        ref={memoryModalRef}
+        selectedIds={memories}
+        onConfirm={setMemories}
+      />
+
+      <SelectFromMediaModal
+        ref={mediaModalRef}
+        selectedIds={attachments}
+        onConfirm={setAttachments}
+      />
+    </>
+  );
+}

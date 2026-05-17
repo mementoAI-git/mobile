@@ -1,0 +1,154 @@
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { Sparkles, Crown, CheckCircle2, Zap } from 'lucide-react-native';
+import { COLORS, FONTS } from '@/constants/tokens';
+import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+import { useQueryClient } from '@tanstack/react-query';
+import { post } from '@/api/mutations';
+import endpoint from '@/api/endpoint';
+
+interface UpgradePromptSheetProps {
+  onClose?: () => void;
+}
+
+export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
+  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleUpgrade = async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setLoading(true);
+
+      const redirectUrl = Linking.createURL('/(tabs)/capsule');
+      
+      const res = await post(endpoint.billingCheckout, {
+        success_url: redirectUrl,
+        cancel_url: redirectUrl,
+        tier: 'pro',
+        interval: 'monthly'
+      });
+
+      if (res?.data?.checkout_url) {
+        // Open the secure Paystack checkout flow in-app system browser
+        await WebBrowser.openBrowserAsync(res.data.checkout_url);
+        
+        // Success haptics
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        
+        // Invalidate active subscription queries to update limits instantly!
+        queryClient.invalidateQueries({ queryKey: ['subscription'] });
+      } else {
+        alert('Could not start checkout. Please try again.');
+      }
+    } catch (err: any) {
+      console.error('Checkout error:', err);
+      alert(err?.message || 'A billing error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+      onClose?.();
+    }
+  };
+
+  const premiumFeatures = [
+    { title: 'Unlimited Time Capsules', desc: 'Free accounts are capped at a maximum of 5' },
+    { title: 'Premium AI Memory Insights', desc: 'Deep emotional trends and summary histories' },
+    { title: 'Custom AI Voices & Avatars', desc: 'Preserve your exact speaking tone and style' },
+    { title: 'High-Definition Assets Storage', desc: 'Upload up to 50GB of voice, image & doc files' },
+  ];
+
+  return (
+    <View className="flex-grow px-4 pb-6">
+      {/* Crown Banner */}
+      <View className="items-center justify-center pt-2 pb-6 relative">
+        <View className="size-16 rounded-3xl bg-brand/10 border border-brand/20 items-center justify-center shadow-sm mb-4">
+          <Crown size={32} color={COLORS.brand} strokeWidth={2} />
+        </View>
+        <Text 
+          className="text-2xl text-center text-text-strong font-semibold mb-2" 
+          style={{ fontFamily: FONTS.serif }}
+        >
+          Unlock Premium Memento
+        </Text>
+        <Text 
+          className="text-sm text-center text-text-weak px-4 leading-relaxed" 
+          style={{ fontFamily: FONTS.sans }}
+        >
+          You have reached the free tier limit of **5 Time Capsules**. Upgrade to Pro to preserve infinite future memories.
+        </Text>
+      </View>
+
+      {/* Features List */}
+      <View className="bg-fill-weaker rounded-3xl border border-stroke-weaker p-5 gap-4 mb-8">
+        {premiumFeatures.map((f, i) => (
+          <View key={i} className="flex-row gap-3">
+            <View className="pt-0.5">
+              <CheckCircle2 size={18} color={COLORS.brand} />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>
+                {f.title}
+              </Text>
+              <Text className="text-xs text-text-weak mt-0.5" style={{ fontFamily: FONTS.sans }}>
+                {f.desc}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      {/* Subscription Pricing Option */}
+      <View className="bg-white border border-brand/30 rounded-3xl p-5 shadow-md flex-row items-center justify-between mb-8 relative overflow-hidden">
+        {/* Abstract subtle accent glow */}
+        <View className="absolute right-0 top-0 size-24 bg-brand/5 rounded-full blur-2xl -mr-6 -mt-6 pointer-events-none" />
+        
+        <View>
+          <View className="flex-row items-center gap-1.5 mb-1">
+            <Text className="text-sm font-bold text-brand uppercase tracking-wider" style={{ fontFamily: FONTS.sansBold }}>Memento Pro</Text>
+            <Sparkles size={12} color={COLORS.brand} />
+          </View>
+          <Text className="text-2xl font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>
+            $9.99<Text className="text-xs text-text-weak font-normal" style={{ fontFamily: FONTS.sans }}> / month</Text>
+          </Text>
+        </View>
+        <View className="bg-brand/10 border border-brand/20 px-3 py-1 rounded-full">
+          <Text className="text-[10px] font-bold text-brand" style={{ fontFamily: FONTS.sansBold }}>POPULAR</Text>
+        </View>
+      </View>
+
+      {/* Bottom Actions */}
+      <View className="gap-3">
+        <TouchableOpacity
+          onPress={handleUpgrade}
+          disabled={loading}
+          activeOpacity={0.8}
+          className="flex-row items-center justify-center gap-2 h-14 rounded-2xl bg-brand shadow-lg shadow-brand/20"
+        >
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <>
+              <Zap size={18} color="white" />
+              <Text className="text-base font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>
+                Upgrade Now
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={onClose}
+          disabled={loading}
+          activeOpacity={0.7}
+          className="h-12 items-center justify-center"
+        >
+          <Text className="text-sm text-text-weak font-semibold" style={{ fontFamily: FONTS.sansMedium }}>
+            Maybe Later
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
