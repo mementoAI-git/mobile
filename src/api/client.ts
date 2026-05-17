@@ -1,0 +1,83 @@
+import axios, {
+  AxiosError,
+  type AxiosInstance,
+  type InternalAxiosRequestConfig,
+} from 'axios';
+import { storageKeys } from '@/constants/storage-keys';
+import { secureStorage } from '@/lib/secure-storage';
+import type { ApiError, RequestOptions } from './interface';
+import type { IAuth } from '@/types';
+
+const getAuthToken = async (): Promise<string | null> => {
+  try {
+    const raw = await secureStorage.getItem(storageKeys.auth);
+    return raw ? (JSON.parse(raw) as IAuth).access_token : null;
+  } catch {
+    return null;
+  }
+};
+
+const baseURL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
+
+const client: AxiosInstance = axios.create({
+  baseURL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  },
+});
+
+client.interceptors.request.use(
+  async (config: InternalAxiosRequestConfig) => {
+    const requestConfig = config as InternalAxiosRequestConfig & { skipAuth?: boolean };
+    if (!requestConfig.skipAuth) {
+      const token = await getAuthToken();
+      if (token) {
+        config.headers.authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error: AxiosError) => Promise.reject(error),
+);
+
+client.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError<ApiError>) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      skipErrorHandling?: boolean;
+      _retry?: boolean;
+    };
+
+    if (originalRequest?.skipErrorHandling) {
+      return Promise.reject(error);
+    }
+
+    // Auto-refresh on 401
+    if (error.response?.status === 401 && !originalRequest?._retry) {
+      originalRequest._retry = true;
+      try {
+        const { authService } = await import('./auth-service');
+        const newAuth = await authService.refreshAccessToken();
+        originalRequest.headers.authorization = `Bearer ${newAuth.access_token}`;
+        return client(originalRequest);
+      } catch {
+        const { authService } = await import('./auth-service');
+        authService.clearAuth();
+        authService.redirectToLogin();
+        return Promise.reject(error);
+      }
+    }
+
+    const apiError: ApiError = {
+      message: error.response?.data?.message ?? error.message ?? 'An error occurred',
+      status: error.response?.status,
+      errors: error.response?.data?.errors,
+    };
+
+    return Promise.reject(apiError);
+  },
+);
+
+export default client;

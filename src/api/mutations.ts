@@ -1,0 +1,46 @@
+import type { AxiosRequestConfig } from 'axios';
+import client from './client';
+import type { ApiResponse, RequestOptions } from './interface';
+
+export const get = async <T = any>(
+  url: string,
+  config?: AxiosRequestConfig & RequestOptions,
+): Promise<ApiResponse<T>> => {
+  const response = await client.get<ApiResponse<T>>(url, config);
+  return response.data as ApiResponse<T>;
+};
+
+export const post = async <T = any, D = any>(
+  url: string,
+  data?: D,
+  config?: AxiosRequestConfig & RequestOptions,
+): Promise<ApiResponse<T>> => {
+  const response = await client.post<ApiResponse<T>>(url, data, config);
+  return response.data as ApiResponse<T>;
+};
+
+export const put = async <T = any, D = any>(
+  url: string,
+  data?: D,
+  config?: AxiosRequestConfig & RequestOptions,
+): Promise<ApiResponse<T>> => {
+  const response = await client.put<ApiResponse<T>>(url, data, config);
+  return response.data as ApiResponse<T>;
+};
+
+export const patch = async <T = any, D = any>(
+  url: string,
+  data?: D,
+  config?: AxiosRequestConfig & RequestOptions,
+): Promise<ApiResponse<T>> => {
+  const response = await client.patch<ApiResponse<T>>(url, data, config);
+  return response.data as ApiResponse<T>;
+};
+
+export const del = async <T = any>(
+  url: string,
+  config?: AxiosRequestConfig & RequestOptions,
+): Promise<ApiResponse<T>> => {
+  const response = await client.delete<ApiResponse<T>>(url, config);
+  return response.data as ApiResponse<T>;
+};
