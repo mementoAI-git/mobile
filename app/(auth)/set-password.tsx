@@ -1,0 +1,89 @@
+import React from 'react';
+import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { Controller } from 'react-hook-form';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated from 'react-native-reanimated';
+import { Button, TextInput, Logo } from '@/components/ui';
+import { useSetPasswordLogic } from '@/hooks/use-set-password-logic';
+import { FONTS } from '@/constants/tokens';
+
+export default function SetPasswordScreen() {
+  const {
+    form: { control, formState: { errors } },
+    isPending,
+    error,
+    isSuccess,
+    onSubmit,
+    router,
+  } = useSetPasswordLogic();
+
+  if (isSuccess) {
+    return (
+      <SafeAreaView className="flex-1 bg-background items-center justify-center px-6">
+        <Animated.Text className="text-5xl mb-6">🔐</Animated.Text>
+        <Animated.Text
+          className="text-[32px] text-text-strong text-center mb-3"
+          style={{ fontFamily: FONTS.serif }}
+        >
+          Password updated!
+        </Animated.Text>
+        <Animated.Text 
+          className="text-base text-text-weak text-center mb-8"
+          style={{ fontFamily: FONTS.sans }}
+        >
+          Your new password is set. You can now sign in.
+        </Animated.Text>
+        <Button onPress={() => router.replace('/(auth)/login')} fullWidth size="lg">Go to Sign In</Button>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView className="flex-1 bg-background">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+        <ScrollView contentContainerClassName="flex-grow justify-center px-6 py-12" keyboardShouldPersistTaps="handled">
+          <View className="items-center mb-10">
+            <Logo size="lg" />
+          </View>
+
+          <View className="mb-10">
+            <Animated.Text
+              className="text-[32px] text-text-strong mb-2"
+              style={{ fontFamily: FONTS.serif }}
+            >
+              New password
+            </Animated.Text>
+            <Animated.Text
+              className="text-lg text-text-base leading-relaxed"
+              style={{ fontFamily: FONTS.sans }}
+            >
+              Choose a strong new password.
+            </Animated.Text>
+          </View>
+
+          <View className="gap-4">
+            <Controller control={control} name="password" render={({ field: { onChange, onBlur, value } }) => (
+              <TextInput label="New Password" value={value} onChangeText={onChange} onBlur={onBlur} secureTextEntry error={errors.password?.message} placeholder="••••••••" />
+            )} />
+            <Controller control={control} name="confirm" render={({ field: { onChange, onBlur, value } }) => (
+              <TextInput label="Confirm Password" value={value} onChangeText={onChange} onBlur={onBlur} secureTextEntry error={errors.confirm?.message} placeholder="••••••••" />
+            )} />
+
+            {error && (
+              <View className="bg-error-tint border border-error-weak rounded-xl px-4 py-3">
+                <Animated.Text
+                  className="text-sm text-error-strong text-center"
+                  style={{ fontFamily: FONTS.sansMedium }}
+                >
+                  {(error as any).message ?? 'Failed to update password.'}
+                </Animated.Text>
+              </View>
+            )}
+
+            <Button onPress={onSubmit} loading={isPending} fullWidth size="lg" className="mt-2">Update Password</Button>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
