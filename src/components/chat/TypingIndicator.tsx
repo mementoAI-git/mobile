@@ -73,7 +73,7 @@ export function TypingIndicator() {
       {/* Symmetric White Bubble for AI typing state */}
       <View 
         style={styles.bubble}
-        className="px-5 py-3.5 bg-white border border-stroke-weaker rounded-[20px] rounded-bl-[4px] flex-row items-center gap-3.5"
+        className="px-5 py-3.5 bg-white rounded-[20px] rounded-bl-[4px] flex-row items-center gap-3.5"
       >
         {/* Pulsing Dots */}
         <View className="flex-row items-center gap-1.5">

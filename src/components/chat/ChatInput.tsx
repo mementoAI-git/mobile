@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, TextInput, TouchableOpacity, Platform, StyleSheet, Keyboard } from 'react-native';
 import { ArrowUp, Mic, Square } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { cn } from '@/lib/utils';
 import { COLORS, FONTS } from '@/constants/tokens';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, FadeInDown } from 'react-native-reanimated';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
@@ -81,20 +80,20 @@ export function ChatInput({
   return (
     <Animated.View
       entering={FadeInDown.duration(400)}
-      className="px-4 py-4 bg-transparent"
+      className="px-4 py-2.5 bg-transparent"
       style={{ paddingBottom: bottomPadding }}
     >
       <View
-        className="flex-row items-end gap-3 bg-white/90 border border-stroke-weaker rounded-[32px] px-4 py-2 shadow-xl shadow-black/5"
+        className="flex-row items-center gap-2.5 bg-white/90 border border-stroke-weaker rounded-[24px] px-3.5 py-1 shadow-md shadow-black/5"
         style={styles.floatingContainer}
       >
         {/* Glassmorphism pill container */}
         <View
-          className="flex-1 justify-center py-2"
+          className="flex-1 justify-center py-1"
           style={{
-            minHeight: multiline ? verticalScale(44) : undefined,
-            maxHeight: multiline ? verticalScale(128) : undefined,
-            height: multiline ? undefined : verticalScale(44)
+            minHeight: multiline ? verticalScale(32) : undefined,
+            maxHeight: multiline ? verticalScale(96) : undefined,
+            height: multiline ? undefined : verticalScale(32)
           }}
         >
           <TextInput
@@ -111,7 +110,7 @@ export function ChatInput({
               fontFamily: FONTS.sans,
               paddingVertical: 0,
               textAlignVertical: 'center',
-              fontSize: moderateScale(12)
+              fontSize: moderateScale(13)
             }}
             blurOnSubmit={false}
             editable={!disabled}
@@ -119,16 +118,16 @@ export function ChatInput({
         </View>
 
         {/* Action button */}
-        <Animated.View style={btnAnimStyle} className="mb-0.5">
+        <Animated.View style={btnAnimStyle}>
           {showStop && (
             <TouchableOpacity
               onPress={handleStop}
               onPressIn={() => { btnScale.value = withSpring(0.85); }}
               onPressOut={() => { btnScale.value = withSpring(1); }}
-              className="rounded-full bg-brand items-center justify-center shadow-lg shadow-brand/20"
-              style={{ width: scale(44), height: scale(44), borderRadius: scale(22) }}
+              className="rounded-full bg-brand items-center justify-center shadow-md shadow-brand/10"
+              style={{ width: scale(32), height: scale(32), borderRadius: scale(16) }}
             >
-              <Square size={scale(14)} color={COLORS.textInverse} fill={COLORS.textInverse} />
+              <Square size={scale(11)} color={COLORS.textInverse} fill={COLORS.textInverse} />
             </TouchableOpacity>
           )}
 
@@ -138,10 +137,10 @@ export function ChatInput({
               onPressIn={() => { btnScale.value = withSpring(0.85); }}
               onPressOut={() => { btnScale.value = withSpring(1); }}
               disabled={disabled}
-              className="rounded-full bg-brand items-center justify-center shadow-lg shadow-brand/30"
-              style={{ width: scale(44), height: scale(44), borderRadius: scale(22) }}
+              className="rounded-full bg-brand items-center justify-center shadow-md shadow-brand/15"
+              style={{ width: scale(32), height: scale(32), borderRadius: scale(16) }}
             >
-              <ArrowUp size={scale(20)} color={COLORS.textInverse} strokeWidth={3} />
+              <ArrowUp size={scale(15)} color={COLORS.textInverse} strokeWidth={3} />
             </TouchableOpacity>
           )}
 
@@ -152,9 +151,9 @@ export function ChatInput({
               onPressOut={() => { btnScale.value = withSpring(1); }}
               disabled={disabled}
               className="rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
-              style={{ width: scale(44), height: scale(44), borderRadius: scale(22) }}
+              style={{ width: scale(32), height: scale(32), borderRadius: scale(16) }}
             >
-              <Mic size={scale(20)} color={COLORS.brand} strokeWidth={2} />
+              <Mic size={scale(15)} color={COLORS.brand} strokeWidth={2} />
             </TouchableOpacity>
           )}
 
@@ -162,9 +161,9 @@ export function ChatInput({
           {!showSend && !showStop && !showVoice && (
             <View
               className="rounded-full bg-fill-weak items-center justify-center opacity-40"
-              style={{ width: scale(44), height: scale(44), borderRadius: scale(22) }}
+              style={{ width: scale(32), height: scale(32), borderRadius: scale(16) }}
             >
-              <ArrowUp size={scale(20)} color={COLORS.textMuted} strokeWidth={2.5} />
+              <ArrowUp size={scale(15)} color={COLORS.textMuted} strokeWidth={2.5} />
             </View>
           )}
         </Animated.View>

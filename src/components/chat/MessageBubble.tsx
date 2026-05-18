@@ -24,8 +24,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         className={cn(
           'px-5 py-3.5',
           isUser
-            ? 'bg-[#FAF7F2] border border-stroke-weak rounded-[20px] rounded-tr-[4px]'
-            : 'bg-white border border-stroke-weaker rounded-[20px] rounded-bl-[4px]'
+            ? 'bg-[#FAF7F2] rounded-[20px] rounded-tr-[4px]'
+            : 'bg-white rounded-[20px] rounded-bl-[4px]'
         )}
         style={isUser ? styles.userShadow : styles.aiShadow}
       >
