@@ -7,6 +7,7 @@ import { useMemoryByPrompt } from '@/hooks/queries/use-prompts';
 import { useStartConversation } from '@/hooks/mutations/use-memory-mutations';
 import { useStreamChat } from '@/hooks/use-stream-chat';
 import { useUiStore } from '@/store';
+import type { ChatReplyQuote } from '@/lib/utils';
 
 export function useChatLogic() {
   const { id, type } = useLocalSearchParams<{ id: string; type?: string }>();
@@ -46,8 +47,8 @@ export function useChatLogic() {
     openSheet('chat-actions', { chatId: activeChatId || '' });
   };
 
-  const send = async (text: string) => {
-    await originalSend(text);
+  const send = async (text: string, replyTo?: ChatReplyQuote | null) => {
+    await originalSend(text, replyTo);
   };
 
   const isLoading = isLoadingMessages || (isPromptType && isLoadingPromptMemory);

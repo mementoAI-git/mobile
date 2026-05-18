@@ -48,3 +48,36 @@ export function inferMimeType(uri: string): string {
   };
   return map[ext] ?? 'application/octet-stream';
 }
+
+export type ChatReplyQuote = {
+  role: string;
+  text: string;
+};
+
+export function snippetReplyText(text: string, max = 220): string {
+  const t = text.replace(/\s+/g, ' ').trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
+}
+
+export function buildPromptWithReplyQuote(
+  userText: string,
+  replyTo: ChatReplyQuote | null | undefined,
+  maxQuotedLength = 4000
+): string {
+  const body = userText.trim();
+  if (!replyTo?.text?.trim()) return body;
+
+  const label =
+    replyTo.role === 'user' ? "the user's earlier message" : "Memento's earlier reply";
+  let quoted = replyTo.text.trim();
+  if (quoted.length > maxQuotedLength) {
+    quoted = `${quoted.slice(0, maxQuotedLength).trimEnd()}…`;
+  }
+
+  return (
+    `[The user is replying to ${label}:\n` +
+    `---\n${quoted}\n---]\n\n` +
+    body
+  );
+}

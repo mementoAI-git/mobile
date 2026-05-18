@@ -1,18 +1,28 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import type { IMessage } from '@/types';
 import dayjs from 'dayjs';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { CornerDownRight } from 'lucide-react-native';
 
 interface MessageBubbleProps {
-  message: IMessage | { role: string; text: string; created_at?: string; ai_model?: string; _id?: string };
+  message: IMessage | { 
+    role: string; 
+    text: string; 
+    created_at?: string; 
+    ai_model?: string; 
+    _id?: string;
+    replyTo?: { role: string; text: string };
+  };
+  onReply?: () => void;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, onReply }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const aiModel = (message as any).ai_model;
+  const replyQuote = (message as any).replyTo;
 
   return (
     <Animated.View 
@@ -29,6 +39,25 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         )}
         style={isUser ? styles.userShadow : styles.aiShadow}
       >
+        {/* Reply Quote Block */}
+        {replyQuote && replyQuote.text && (
+          <View className="mb-2.5 border-l-2 border-brand/50 pl-3 py-1 bg-brand/5 rounded-r-lg">
+            <Text 
+              className="text-[10px] text-brand font-bold uppercase tracking-wider mb-0.5"
+              style={{ fontFamily: FONTS.sansBold }}
+            >
+              Replying to {replyQuote.role === 'user' ? 'your message' : 'Memento'}
+            </Text>
+            <Text 
+              className="text-[12px] text-text-weak leading-relaxed"
+              numberOfLines={2}
+              style={{ fontFamily: FONTS.sans }}
+            >
+              {replyQuote.text}
+            </Text>
+          </View>
+        )}
+
         <Text
           className="text-[15px] leading-[23px] text-text-strong"
           style={{ 
@@ -64,6 +93,21 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               {aiModel}
             </Text>
           </View>
+        )}
+        {onReply && (
+          <TouchableOpacity 
+            onPress={onReply}
+            activeOpacity={0.7}
+            className="flex-row items-center ml-3 bg-brand/5 px-2 py-0.5 rounded-full border border-brand/10"
+          >
+            <CornerDownRight size={10} color={COLORS.brand} style={{ marginRight: 3 }} />
+            <Text 
+              className="text-[8px] text-brand font-bold uppercase tracking-widest"
+              style={{ fontFamily: FONTS.sansBold }}
+            >
+              Reply
+            </Text>
+          </TouchableOpacity>
         )}
       </View>
     </Animated.View>

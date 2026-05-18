@@ -3,10 +3,12 @@ import { storageKeys } from '@/constants/storage-keys';
 import { secureStorage } from '@/lib/secure-storage';
 import endpoint from '@/api/endpoint';
 import type { IAuth } from '@/types';
+import { buildPromptWithReplyQuote, type ChatReplyQuote } from '@/lib/utils';
 
 interface StreamMessage {
   role: 'user' | 'ai';
   text: string;
+  replyTo?: ChatReplyQuote;
 }
 
 const baseURL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
@@ -26,10 +28,16 @@ export function useStreamChat(memoryId?: string) {
     }
   };
 
-  const send = useCallback(async (text: string) => {
+  const send = useCallback(async (text: string, replyTo?: ChatReplyQuote | null) => {
     if (!text.trim() || streaming) return;
 
-    const userMessage: StreamMessage = { role: 'user', text };
+    const apiPrompt = buildPromptWithReplyQuote(text, replyTo);
+
+    const userMessage: StreamMessage = { 
+      role: 'user', 
+      text,
+      ...(replyTo ? { replyTo } : {})
+    };
     setMessages((prev) => [...prev, userMessage]);
     setStreaming(true);
     setStreamingText('');
@@ -45,7 +53,7 @@ export function useStreamChat(memoryId?: string) {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          prompt: text,
+          prompt: apiPrompt,
           ...(memoryId ? { memory_id: memoryId } : {}),
         }),
         signal: abortRef.current.signal,

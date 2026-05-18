@@ -92,45 +92,48 @@ export function ConversationBar({ memory, onPress, index = 0 }: ConversationBarP
   };
 
   return (
-    <AnimatedTouchableOpacity
+    <Animated.View
       entering={FadeInDown.delay(index * 80).duration(600).springify()}
-      onPress={() => {
-        Haptics.selectionAsync();
-        onPress?.();
-      }}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      activeOpacity={0.9}
-      className="flex-row items-center gap-4 px-5 py-4 bg-white rounded-[24px] border border-stroke-weaker"
-      style={animatedStyle}
     >
-      {/* Premium Multi-Color Vector Svg Icon */}
-      <View className="size-11 rounded-2xl bg-brand/5 items-center justify-center shrink-0 border border-brand/10">
-        <RecentActivityIcon size={26} />
-      </View>
+      <AnimatedTouchableOpacity
+        onPress={() => {
+          Haptics.selectionAsync();
+          onPress?.();
+        }}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={0.9}
+        className="flex-row items-center gap-4 px-5 py-4 bg-white rounded-[24px] border border-stroke-weaker"
+        style={animatedStyle}
+      >
+        {/* Premium Multi-Color Vector Svg Icon */}
+        <View className="size-11 rounded-2xl bg-brand/5 items-center justify-center shrink-0 border border-brand/10">
+          <RecentActivityIcon size={26} />
+        </View>
 
-      {/* Content details */}
-      <View className="flex-1 gap-1 min-w-0">
-        <Text
-          className="text-base text-text-strong font-normal"
-          numberOfLines={1}
-          style={{ fontFamily: FONTS.serif }}
-        >
-          {memory.title || 'Conversation'}
-        </Text>
-        {renderSubtitle()}
-      </View>
+        {/* Content details */}
+        <View className="flex-1 gap-1 min-w-0">
+          <Text
+            className="text-base text-text-strong font-normal"
+            numberOfLines={1}
+            style={{ fontFamily: FONTS.serif }}
+          >
+            {memory.title || 'Conversation'}
+          </Text>
+          {renderSubtitle()}
+        </View>
 
-      {/* Meta timestamp */}
-      <View className="shrink-0">
-        <Text
-          className="text-[10px] text-text-muted font-medium tracking-wide uppercase"
-          style={{ fontFamily: FONTS.sansSemi }}
-        >
-          {dayjs(memory.updated_at ?? memory.created_at).format('MMM D')}
-        </Text>
-      </View>
-    </AnimatedTouchableOpacity>
+        {/* Meta timestamp */}
+        <View className="shrink-0">
+          <Text
+            className="text-[10px] text-text-muted font-medium tracking-wide uppercase"
+            style={{ fontFamily: FONTS.sansSemi }}
+          >
+            {dayjs(memory.updated_at ?? memory.created_at).format('MMM D')}
+          </Text>
+        </View>
+      </AnimatedTouchableOpacity>
+    </Animated.View>
   );
 }
 

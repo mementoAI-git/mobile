@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, FlatList, KeyboardAvoidingView, Platform, ImageBackground, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, FlatList, KeyboardAvoidingView, Platform, ImageBackground, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MoreVertical, ChevronLeft, Settings } from 'lucide-react-native';
 import { MessageBubble } from '@/components/chat/MessageBubble';
@@ -11,6 +11,8 @@ import Animated, { FadeInDown, FadeInUp, useSharedValue, useAnimatedStyle, withR
 import { useChatLogic } from '@/hooks/use-chat-logic';
 import * as Haptics from 'expo-haptics';
 import { VoiceModeOverlay } from '@/components/chat/VoiceModeOverlay';
+import type { ChatReplyQuote } from '@/lib/utils';
+import { X } from 'lucide-react-native';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
@@ -32,6 +34,7 @@ export default function ChatScreen() {
   } = useChatLogic();
 
   const [voiceModeVisible, setVoiceModeVisible] = useState(false);
+  const [replyQuote, setReplyQuote] = useState<ChatReplyQuote | null>(null);
 
   const pulse = useSharedValue(0.7);
   React.useEffect(() => {
@@ -105,7 +108,15 @@ export default function ChatScreen() {
                 data={allMessages}
                 inverted
                 keyExtractor={(item, i) => item._id ?? String(i)}
-                renderItem={({ item }) => <MessageBubble message={item} />}
+                renderItem={({ item }) => (
+                  <MessageBubble 
+                    message={item} 
+                    onReply={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setReplyQuote({ role: item.role, text: item.text });
+                    }} 
+                  />
+                )}
                 contentContainerClassName="px-5 pb-6 pt-20"
                 showsVerticalScrollIndicator={false}
                 ListHeaderComponent={
@@ -164,9 +175,46 @@ export default function ChatScreen() {
             )}
           </View>
 
+          {/* Reply Quote Preview Panel */}
+          {replyQuote && (
+            <Animated.View 
+              entering={FadeInDown.duration(200)}
+              className="mx-5 mb-2.5 p-3 bg-white border border-stroke-weaker rounded-2xl flex-row items-center justify-between shadow-sm"
+            >
+              <View className="flex-1 pr-3 border-l-2 border-brand/50 pl-3">
+                <Text 
+                  className="text-[10px] text-brand font-bold uppercase tracking-wider mb-0.5"
+                  style={{ fontFamily: FONTS.sansBold }}
+                >
+                  Replying to {replyQuote.role === 'user' ? 'your message' : 'Memento'}
+                </Text>
+                <Text 
+                  className="text-[12px] text-text-weak leading-relaxed"
+                  numberOfLines={1}
+                  style={{ fontFamily: FONTS.sans }}
+                >
+                  {replyQuote.text}
+                </Text>
+              </View>
+              <TouchableOpacity 
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setReplyQuote(null);
+                }}
+                activeOpacity={0.7}
+                className="size-6 rounded-full bg-fill-neutral-weakest items-center justify-center border border-stroke-weaker"
+              >
+                <X size={12} color={COLORS.textWeak} />
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+
           {/* Floating Input */}
           <ChatInput 
-            onSend={send} 
+            onSend={(text) => {
+              send(text, replyQuote);
+              setReplyQuote(null);
+            }} 
             onStop={stop} 
             onVoice={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setVoiceModeVisible(true); }}
             loading={isActuallyStreaming || isLoading} 
