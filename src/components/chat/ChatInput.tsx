@@ -7,7 +7,7 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, FadeInDown } from 'react-native-reanimated';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
- 
+
 interface ChatInputProps {
   onSend: (text: string) => void;
   onVoice?: () => void;
@@ -16,7 +16,7 @@ interface ChatInputProps {
   placeholder?: string;
   loading?: boolean;
 }
- 
+
 export function ChatInput({
   onSend,
   onVoice,
@@ -45,7 +45,7 @@ export function ChatInput({
       hideSub.remove();
     };
   }, []);
- 
+
   const handleSend = () => {
     if (!text.trim() || disabled) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -53,38 +53,38 @@ export function ChatInput({
     setText('');
     setMultiline(false);
   };
- 
+
   const handleVoice = () => {
     if (disabled || !onVoice) return;
     Haptics.selectionAsync();
     onVoice();
   };
- 
+
   const handleStop = () => {
     if (!onStop) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     onStop();
   };
- 
+
   const btnAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: btnScale.value }],
   }));
- 
-  const showStop  = loading;
-  const showSend  = !loading && text.trim().length > 0;
+
+  const showStop = loading;
+  const showSend = !loading && text.trim().length > 0;
   const showVoice = !loading && !text.trim() && onVoice;
 
   const bottomPadding = keyboardVisible
     ? verticalScale(8)
     : (insets.bottom ? insets.bottom + verticalScale(8) : verticalScale(16));
- 
+
   return (
-    <Animated.View 
+    <Animated.View
       entering={FadeInDown.duration(400)}
       className="px-4 py-4 bg-transparent"
       style={{ paddingBottom: bottomPadding }}
     >
-      <View 
+      <View
         className="flex-row items-end gap-3 bg-white/90 border border-stroke-weaker rounded-[32px] px-4 py-2 shadow-xl shadow-black/5"
         style={styles.floatingContainer}
       >
@@ -107,17 +107,17 @@ export function ChatInput({
             placeholderTextColor={COLORS.textMuted}
             multiline
             className="text-text-strong"
-            style={{ 
-              fontFamily: FONTS.sans, 
+            style={{
+              fontFamily: FONTS.sans,
               paddingVertical: 0,
               textAlignVertical: 'center',
-              fontSize: moderateScale(16)
+              fontSize: moderateScale(12)
             }}
             blurOnSubmit={false}
             editable={!disabled}
           />
         </View>
- 
+
         {/* Action button */}
         <Animated.View style={btnAnimStyle} className="mb-0.5">
           {showStop && (
@@ -131,7 +131,7 @@ export function ChatInput({
               <Square size={scale(14)} color={COLORS.textInverse} fill={COLORS.textInverse} />
             </TouchableOpacity>
           )}
- 
+
           {showSend && (
             <TouchableOpacity
               onPress={handleSend}
@@ -144,7 +144,7 @@ export function ChatInput({
               <ArrowUp size={scale(20)} color={COLORS.textInverse} strokeWidth={3} />
             </TouchableOpacity>
           )}
- 
+
           {showVoice && (
             <TouchableOpacity
               onPress={handleVoice}
@@ -157,10 +157,10 @@ export function ChatInput({
               <Mic size={scale(20)} color={COLORS.brand} strokeWidth={2} />
             </TouchableOpacity>
           )}
-          
+
           {/* Default state button (Disabled Send) */}
           {!showSend && !showStop && !showVoice && (
-            <View 
+            <View
               className="rounded-full bg-fill-weak items-center justify-center opacity-40"
               style={{ width: scale(44), height: scale(44), borderRadius: scale(22) }}
             >

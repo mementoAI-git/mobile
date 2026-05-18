@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -9,18 +9,18 @@ import Animated, {
   withSequence,
   FadeInUp
 } from 'react-native-reanimated';
-import { COLORS } from '@/constants/tokens';
+import { COLORS, FONTS } from '@/constants/tokens';
 
 function Dot({ delay }: { delay: number }) {
   const scale = useSharedValue(0.8);
-  const opacity = useSharedValue(0.3);
+  const opacity = useSharedValue(0.4);
 
   useEffect(() => {
     scale.value = withDelay(
       delay,
       withRepeat(
         withSequence(
-          withTiming(1.1, { duration: 400 }),
+          withTiming(1.2, { duration: 400 }),
           withTiming(0.8, { duration: 400 })
         ),
         -1,
@@ -31,8 +31,8 @@ function Dot({ delay }: { delay: number }) {
       delay,
       withRepeat(
         withSequence(
-          withTiming(0.8, { duration: 400 }),
-          withTiming(0.3, { duration: 400 })
+          withTiming(0.9, { duration: 400 }),
+          withTiming(0.4, { duration: 400 })
         ),
         -1,
         true
@@ -49,15 +49,46 @@ function Dot({ delay }: { delay: number }) {
 }
 
 export function TypingIndicator() {
+  const loadingPhrases = [
+    "Reflecting on your words...",
+    "Brewing a thoughtful reply...",
+    "Stirring a pinch of stardust...",
+    "Untangling thought-ribbons...",
+    "Formulating response...",
+    "Polishing wisdom engines..."
+  ];
+
+  const [phrase, setPhrase] = useState(loadingPhrases[0]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const randomIdx = Math.floor(Math.random() * loadingPhrases.length);
+      setPhrase(loadingPhrases[randomIdx]);
+    }, 2500);
+    return () => clearInterval(id);
+  }, []);
+
   return (
-    <Animated.View entering={FadeInUp.duration(400)} className="self-start mb-4">
+    <Animated.View entering={FadeInUp.duration(400)} className="self-start mb-5 max-w-[85%]">
+      {/* Symmetric White Bubble for AI typing state */}
       <View 
         style={styles.bubble}
-        className="px-5 py-3.5 rounded-[24px] rounded-bl-[4px] flex-row items-center gap-1.5 border border-stroke-weaker bg-white"
+        className="px-5 py-3.5 bg-white border border-stroke-weaker rounded-[20px] rounded-bl-[4px] flex-row items-center gap-3.5"
       >
-        <Dot delay={0} />
-        <Dot delay={150} />
-        <Dot delay={300} />
+        {/* Pulsing Dots */}
+        <View className="flex-row items-center gap-1.5">
+          <Dot delay={0} />
+          <Dot delay={150} />
+          <Dot delay={300} />
+        </View>
+
+        {/* Dynamic Whimsical Phrase */}
+        <Text 
+          className="text-xs text-text-weak italic"
+          style={{ fontFamily: FONTS.serif }}
+        >
+          {phrase}
+        </Text>
       </View>
     </Animated.View>
   );
@@ -67,11 +98,13 @@ const styles = StyleSheet.create({
   bubble: {
     ...Platform.select({
       ios: {
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
         shadowColor: COLORS.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.03,
-        shadowRadius: 10,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 1,
       },
     }),
   },

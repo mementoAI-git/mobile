@@ -84,9 +84,10 @@ export default function ChatListScreen() {
           contentContainerClassName="p-5 pb-24"
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={() => <View className="h-3" />}
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
             <ConversationBar
               memory={item}
+              index={index}
               onPress={() => handleOpenChat(item._id)}
             />
           )}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import type { IMessage } from '@/types';
 import dayjs from 'dayjs';
@@ -16,24 +16,25 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
   return (
     <Animated.View 
-      entering={isUser ? undefined : FadeIn.duration(300)}
-      className={cn('mb-4 max-w-[85%]', isUser ? 'self-end' : 'self-start')}
+      entering={FadeInDown.duration(450).springify()}
+      className={cn('mb-5 max-w-[85%]', isUser ? 'self-end' : 'self-start')}
     >
+      {/* Balanced, Cohesive Message Bubble Container */}
       <View
-        style={[
-          isUser ? styles.userBubble : styles.aiBubble,
-          isUser ? styles.userShadow : styles.aiShadow
-        ]}
         className={cn(
           'px-5 py-3.5',
           isUser
-            ? 'bg-brand rounded-[24px] rounded-br-[4px]'
-            : 'bg-white border border-stroke-weaker rounded-[24px] rounded-bl-[4px]',
+            ? 'bg-[#FAF7F2] border border-stroke-weak rounded-[20px] rounded-tr-[4px]'
+            : 'bg-white border border-stroke-weaker rounded-[20px] rounded-bl-[4px]'
         )}
+        style={isUser ? styles.userShadow : styles.aiShadow}
       >
         <Text
-          className={cn('text-[16px] leading-[24px]', isUser ? 'text-white' : 'text-text-strong')}
-          style={{ fontFamily: isUser ? FONTS.sansMedium : FONTS.sans, letterSpacing: -0.1 }}
+          className="text-[15px] leading-[23px] text-text-strong"
+          style={{ 
+            fontFamily: FONTS.serif, 
+            letterSpacing: -0.03
+          }}
         >
           {message.text}
         </Text>
@@ -48,16 +49,16 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         )}
         {'created_at' in message && message.created_at && (
           <Text
-            className="text-[10px] text-text-weak opacity-40 font-bold uppercase tracking-widest"
+            className="text-[9px] text-text-muted font-bold uppercase tracking-widest"
             style={{ fontFamily: FONTS.sansBold }}
           >
             {dayjs(message.created_at).format('h:mm A')}
           </Text>
         )}
         {!isUser && aiModel && (
-          <View className="flex-row items-center ml-2 bg-fill-weak px-2 py-0.5 rounded-full border border-stroke-weaker">
+          <View className="flex-row items-center ml-2 bg-brand/5 px-2 py-0.5 rounded-full border border-brand/10">
             <Text
-              className="text-[8px] text-text-muted font-bold uppercase tracking-widest"
+              className="text-[8px] text-brand font-bold uppercase tracking-widest"
               style={{ fontFamily: FONTS.sansBold }}
             >
               {aiModel}
@@ -70,27 +71,16 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 }
 
 const styles = StyleSheet.create({
-  userBubble: {
-    backgroundColor: COLORS.brand,
-  },
-  aiBubble: {
-    backgroundColor: COLORS.card,
-    ...Platform.select({
-      ios: {
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      },
-    }),
-  },
   userShadow: {
     ...Platform.select({
       ios: {
-        shadowColor: COLORS.brand,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
+        shadowColor: COLORS.shadow,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.02,
+        shadowRadius: 4,
       },
       android: {
-        elevation: 4,
+        elevation: 1,
       },
     }),
   },
@@ -100,7 +90,7 @@ const styles = StyleSheet.create({
         shadowColor: COLORS.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.03,
-        shadowRadius: 10,
+        shadowRadius: 8,
       },
       android: {
         elevation: 1,
