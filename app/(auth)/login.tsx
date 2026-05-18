@@ -62,7 +62,7 @@ export default function LoginScreen() {
       <ImageBackground source={PATTERN} className="absolute inset-0 opacity-40" />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
         className="flex-1"
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -70,6 +70,7 @@ export default function LoginScreen() {
             contentContainerClassName="flex-grow px-6 pt-10 pb-16"
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            automaticallyAdjustKeyboardInsets={true}
           >
             {/* Logo wordmark */}
             <Logo size="md" className="mb-10" />
