@@ -8,6 +8,8 @@ LogBox.ignoreLogs([
   'Expo AV has been deprecated',
 ]);
 
+import * as Sentry from '@sentry/react-native';
+
 if (Platform.OS === 'web') {
   (StyleSheet as any).setFlag?.('darkMode', 'class');
 }
@@ -55,7 +57,18 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function RootLayout() {
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
+
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    debug: __DEV__,
+    tracesSampleRate: 1.0,
+    sendDefaultPii: true,
+  });
+}
+
+function RootLayout() {
   const { token, hydrated, hydrate } = useAuthStore();
   const router = useRouter();
   const segments = useSegments();
@@ -184,3 +197,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(RootLayout);
