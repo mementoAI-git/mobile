@@ -5,7 +5,8 @@ import { X, Search } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { Button } from '@/components/ui';
 import { useMemories } from '@/hooks/queries/use-memories';
-import { MemoryCard } from '@/components/memory/MemoryCard'; // I assume this exists
+import { MemoryCard } from '@/components/memory/MemoryCard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SelectFromMemoryModalProps {
   selectedIds: string[];
@@ -46,6 +47,8 @@ export const SelectFromMemoryModal = forwardRef<BottomSheetModal, SelectFromMemo
   const toggleSelection = (id: string) => {
     setLocalSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
+
+  const insets = useSafeAreaInsets();
 
   return (
     <BottomSheetModal
@@ -118,7 +121,10 @@ export const SelectFromMemoryModal = forwardRef<BottomSheetModal, SelectFromMemo
         </BottomSheetScrollView>
 
         {/* Footer (Sticky) */}
-        <View className="flex-row gap-3 px-5 py-4 border-t border-stroke-weaker bg-white/95">
+        <View 
+          className="flex-row gap-3 px-5 pt-4 border-t border-stroke-weaker bg-white/95"
+          style={{ paddingBottom: insets.bottom ? insets.bottom + 8 : 16 }}
+        >
           <Button variant="outline" onPress={handleClose} className="flex-1 rounded-full border-stroke-weak bg-white">
             <Text className="text-sm font-medium text-text-strong">Cancel</Text>
           </Button>

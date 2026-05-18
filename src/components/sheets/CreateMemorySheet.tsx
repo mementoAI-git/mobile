@@ -7,6 +7,7 @@ import { useFileUpload } from '@/hooks/use-file-upload';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SelectFromMediaModal } from './SelectFromMediaModal';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -20,6 +21,7 @@ interface Props {
 
 export function CreateMemorySheet({ onClose, editData }: Props) {
   const { openSheet } = useUiStore();
+  const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(editData?.title || '');
   const [body, setBody] = useState(editData?.body || '');
   const initialStatus = editData?.status === 'saved' ? 'save' : (editData?.status || 'save');
@@ -106,7 +108,12 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
   return (
     <BottomSheetScrollView 
       showsVerticalScrollIndicator={false} 
-      contentContainerClassName="px-6 pt-2 pb-12 gap-6"
+      contentContainerStyle={{
+        paddingHorizontal: 24,
+        paddingTop: 8,
+        paddingBottom: insets.bottom ? insets.bottom + 24 : 48,
+        gap: 24
+      }}
     >
       <View className="flex-row items-center justify-between">
         <Text

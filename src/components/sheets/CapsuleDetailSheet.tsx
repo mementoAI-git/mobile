@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { X, Calendar, Users, Edit3, Trash2, Clock, CheckCircle2, FileText, Download, Bookmark } from 'lucide-react-native';
 import dayjs from 'dayjs';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { getThemeById, getThemeByColor } from '@/constants/themes';
 import { Badge, Button } from '@/components/ui';
@@ -22,6 +23,7 @@ interface Props {
 
 export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOnly }: Props) {
   const openSheet = useUiStore(s => s.openSheet);
+  const insets = useSafeAreaInsets();
   
   // Local state for live theme preview (parity with web's interactive preview)
   const [themeId, setThemeId] = useState(initialCapsule.style?.themeId || 'blush');
@@ -97,7 +99,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
 
       <BottomSheetScrollView 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom ? insets.bottom + 24 : 40 }}
       >
         {/* Themed Preview Card (Web Style - SVG Background like CapsulePreviewCard) */}
         <View className="p-6">

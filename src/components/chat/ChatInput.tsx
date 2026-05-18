@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Platform, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, TextInput, TouchableOpacity, Platform, StyleSheet, Keyboard } from 'react-native';
 import { ArrowUp, Mic, Square } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { cn } from '@/lib/utils';
 import { COLORS, FONTS } from '@/constants/tokens';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, FadeInDown } from 'react-native-reanimated';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
  
 interface ChatInputProps {
   onSend: (text: string) => void;
@@ -27,6 +28,23 @@ export function ChatInput({
   const [text, setText] = useState('');
   const [multiline, setMultiline] = useState(false);
   const btnScale = useSharedValue(1);
+  const insets = useSafeAreaInsets();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
  
   const handleSend = () => {
     if (!text.trim() || disabled) return;
@@ -55,12 +73,16 @@ export function ChatInput({
   const showStop  = loading;
   const showSend  = !loading && text.trim().length > 0;
   const showVoice = !loading && !text.trim() && onVoice;
+
+  const bottomPadding = keyboardVisible
+    ? verticalScale(8)
+    : (insets.bottom ? insets.bottom + verticalScale(8) : verticalScale(16));
  
   return (
     <Animated.View 
       entering={FadeInDown.duration(400)}
       className="px-4 py-4 bg-transparent"
-      style={{ paddingBottom: Platform.OS === 'ios' ? verticalScale(40) : verticalScale(20) }}
+      style={{ paddingBottom: bottomPadding }}
     >
       <View 
         className="flex-row items-end gap-3 bg-white/90 border border-stroke-weaker rounded-[32px] px-4 py-2 shadow-xl shadow-black/5"

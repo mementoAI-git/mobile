@@ -10,6 +10,7 @@ import {
   Image
 } from 'react-native';
 import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
@@ -45,6 +46,7 @@ interface Props {
 
 export function CreateCapsuleSheet({ onClose, editData }: Props) {
   const isEdit = !!editData?._id;
+  const insets = useSafeAreaInsets();
 
   // ── Form state ──────────────────────────────────────────────────────────────
   const [title, setTitle] = useState(editData?.title ?? '');
@@ -219,7 +221,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
         </TouchableOpacity>
       </View>
 
-      <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 + keyboardHeight, gap: 32 }}>
+      <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: (insets.bottom ? insets.bottom + 24 : 40) + keyboardHeight, gap: 32 }}>
 
         {/* Recipients */}
         <View className="gap-3">

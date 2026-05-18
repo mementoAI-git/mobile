@@ -2,6 +2,7 @@ import React, { useCallback, useRef } from 'react';
 import { View } from 'react-native';
 import BottomSheet, { BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useUiStore } from '@/store';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CreateMemorySheet } from './CreateMemorySheet';
 import { CreateCapsuleSheet } from './CreateCapsuleSheet';
 import { AddBeneficiarySheet } from './AddBeneficiarySheet';
@@ -43,6 +44,7 @@ const SHEET_CONFIGS: Record<string, { component: React.ComponentType<any>; snapP
 export function SheetManager() {
   const { activeSheet, sheetProps, closeSheet } = useUiStore();
   const bottomSheetRef = useRef<BottomSheet>(null);
+  const insets = useSafeAreaInsets();
 
   const handleClose = useCallback(() => {
     closeSheet();
@@ -80,8 +82,8 @@ export function SheetManager() {
       enablePanDownToClose
       onClose={handleClose}
       backdropComponent={renderBackdrop}
-      keyboardBehavior={config.keyboardBehavior || "interactive"}
-      keyboardBlurBehavior={config.keyboardBlurBehavior || "restore"}
+      keyboardBehavior={config.keyboardBehavior as any || "interactive"}
+      keyboardBlurBehavior={config.keyboardBlurBehavior as any || "restore"}
       handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
       backgroundStyle={{ backgroundColor: COLORS.background }}
     >
@@ -89,7 +91,7 @@ export function SheetManager() {
       {['create-capsule', 'capsule-detail', 'memory-insights', 'create-memory', 'create-group'].includes(activeSheet) ? (
         <SheetContent {...sheetProps} onClose={animateClose} />
       ) : (
-        <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: 32 }}>
+        <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: insets.bottom ? insets.bottom + 12 : 32 }}>
           <SheetContent {...sheetProps} onClose={animateClose} />
         </BottomSheetView>
       )}

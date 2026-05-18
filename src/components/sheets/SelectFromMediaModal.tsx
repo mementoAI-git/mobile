@@ -7,6 +7,7 @@ import { Button, Spinner } from '@/components/ui';
 import { useQuery } from '@tanstack/react-query';
 import { get } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: screenWidth } = Dimensions.get('window');
 const itemWidth = (screenWidth - 56) / 2;
@@ -18,6 +19,7 @@ interface SelectFromMediaModalProps {
 
 export const SelectFromMediaModal = forwardRef<BottomSheetModal, SelectFromMediaModalProps>((props, ref) => {
   const { selectedIds, onConfirm } = props;
+  const insets = useSafeAreaInsets();
   
   const [localSelected, setLocalSelected] = useState<string[]>([]);
   const [query, setQuery] = useState('');
@@ -165,7 +167,10 @@ export const SelectFromMediaModal = forwardRef<BottomSheetModal, SelectFromMedia
         </BottomSheetScrollView>
 
         {/* Footer (Sticky) */}
-        <View className="flex-row gap-3 px-5 py-4 border-t border-stroke-weaker bg-white/95">
+        <View 
+          className="flex-row gap-3 px-5 pt-4 border-t border-stroke-weaker bg-white/95"
+          style={{ paddingBottom: insets.bottom ? insets.bottom + 8 : 16 }}
+        >
           <Button variant="outline" onPress={handleClose} className="flex-1 rounded-full border-stroke-weak bg-white">
             <Text className="text-sm font-medium text-text-strong">Cancel</Text>
           </Button>

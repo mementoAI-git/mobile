@@ -6,6 +6,7 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { Button, Spinner } from '@/components/ui';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useCreateGroup, useUpdateGroup, useAddGroupMembers } from '@/hooks/mutations/use-group-mutations';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import type { IGroup } from '@/types';
 
@@ -16,6 +17,7 @@ interface Props {
 
 export function CreateGroupSheet({ onClose, editData }: Props) {
   const isEdit = !!editData?._id;
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState(editData?.name || '');
   const [description, setDescription] = useState(editData?.description || '');
   
@@ -75,7 +77,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
   const isPending = isCreating || isUpdating || isUpdatingMembers;
 
   return (
-    <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
+    <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom ? insets.bottom + 24 : 60 }}>
       {/* Header */}
       <View className="px-6 pt-2 pb-4 flex-row items-center justify-between border-b border-stroke-weaker">
         <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
