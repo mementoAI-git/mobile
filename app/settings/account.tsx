@@ -37,7 +37,7 @@ export default function AccountSettingsScreen() {
 
   async function checkBiometrics() {
     try {
-      const enabled = await SecureStore.getItemAsync('memento:biometrics_enabled');
+      const enabled = await SecureStore.getItemAsync('memento.biometrics_enabled');
       setBiometricsEnabled(enabled === 'true');
     } catch {
       setBiometricsEnabled(false);
@@ -48,9 +48,9 @@ export default function AccountSettingsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (biometricsEnabled) {
       try {
-        await SecureStore.deleteItemAsync('memento:biometrics_password');
-        await SecureStore.deleteItemAsync('memento:biometrics_email');
-        await SecureStore.setItemAsync('memento:biometrics_enabled', 'false');
+        await SecureStore.deleteItemAsync('memento.biometrics_password');
+        await SecureStore.deleteItemAsync('memento.biometrics_email');
+        await SecureStore.setItemAsync('memento.biometrics_enabled', 'false');
         setBiometricsEnabled(false);
         Alert.alert('Disabled', 'Biometric login disabled.');
       } catch {
@@ -77,11 +77,11 @@ export default function AccountSettingsScreen() {
     }
 
     try {
-      await SecureStore.setItemAsync('memento:biometrics_password', pwd, {
+      await SecureStore.setItemAsync('memento.biometrics_password', pwd, {
         requireAuthentication: true,
       });
-      await SecureStore.setItemAsync('memento:biometrics_email', email);
-      await SecureStore.setItemAsync('memento:biometrics_enabled', 'true');
+      await SecureStore.setItemAsync('memento.biometrics_email', email);
+      await SecureStore.setItemAsync('memento.biometrics_enabled', 'true');
       setBiometricsEnabled(true);
       setPasswordModalVisible(false);
       Alert.alert('Success', 'Face ID / Touch ID successfully enrolled!');

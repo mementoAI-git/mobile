@@ -94,16 +94,16 @@ export function useLoginLogic() {
   const handlePasskeyLogin = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
-    const enabled = await SecureStore.getItemAsync('memento:biometrics_enabled');
+    const enabled = await SecureStore.getItemAsync('memento.biometrics_enabled');
     
     if (enabled === 'true') {
       try {
         setPasskeyLoading(true);
-        const password = await SecureStore.getItemAsync('memento:biometrics_password', {
+        const password = await SecureStore.getItemAsync('memento.biometrics_password', {
           requireAuthentication: true,
           authenticationPrompt: 'Authenticate to sign into Memento securely',
         });
-        const email = await SecureStore.getItemAsync('memento:biometrics_email');
+        const email = await SecureStore.getItemAsync('memento.biometrics_email');
         
         if (email && password) {
           mutate({ email, password }, {
