@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+import { post } from '@/api/mutations';
+import endpoint from '@/api/endpoint';
 
 export type BillingInterval = 'monthly' | 'annual';
 export type Currency = 'USD' | 'NGN';
@@ -32,9 +36,35 @@ export function usePricingLogic() {
   const proPrice = interval === 'annual' ? table.pro.annual / 12 : table.pro.monthly;
   const legacyPrice = interval === 'annual' ? table.legacy.annual / 12 : table.legacy.monthly;
 
-  const handleCheckout = (tier: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert('Checkout Unavailable', 'In-App purchases are currently disabled for this environment. Please manage your billing via the Web Application.');
+  const handleCheckout = async (tier: string) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setLoading(true);
+
+      const redirectUrl = Linking.createURL('/settings/billing');
+
+      const res = await post(endpoint.billingCheckout, {
+        success_url: redirectUrl,
+        cancel_url: redirectUrl,
+        tier: tier.toLowerCase(),
+        interval: interval
+      });
+
+      if (res?.data?.checkout_url) {
+        // Open the secure Polar checkout flow in-app system browser
+        await WebBrowser.openBrowserAsync(res.data.checkout_url);
+        
+        // Success haptics
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Alert.alert('Error', 'Could not start checkout. Please try again.');
+      }
+    } catch (err: any) {
+      console.error('Checkout error:', err);
+      Alert.alert('Billing Error', err?.message || 'A billing error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatMoney = (amount: number) => {

@@ -84,7 +84,14 @@
       ],
       "expo-web-browser",
       "expo-audio",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "memento",
+          "project": "memento-mobile"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

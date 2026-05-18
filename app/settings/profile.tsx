@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   { label: 'Privacy', Icon: Eye, href: '/settings/privacy' },
   { label: 'Trustees', Icon: Users, href: '/settings/beneficiaries' },
   { label: '2FA', Icon: Smartphone, href: '/settings/two-factor' },
-  { label: 'Plans', Icon: CreditCard, href: '/pricing' },
+  { label: 'Billing', Icon: CreditCard, href: '/settings/billing' },
 ];
 
 export default function ProfileSettingsScreen() {

@@ -1,6 +1,6 @@
 export const storageKeys = {
   attachments: 'memento.attachments',
-  auth: 'memento.auth',
+  auth: 'memento:auth',
   listmode: 'memento.listmode',
   recentMemories: 'memento.recent-memories',
   welcomeOnce: 'memento.welcome-once',

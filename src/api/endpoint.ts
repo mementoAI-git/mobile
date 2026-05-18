@@ -99,4 +99,10 @@ export default {
   // billing
   billingSubscription: '/billing/subscription',
   billingCheckout: '/billing/checkout',
+  billingUsage: '/billing/usage',
+  billingPortal: '/billing/portal',
+  billingPromoRedeem: '/billing/promo/redeem',
+  billingInvoices: '/billing/invoices',
+  billingCancel: '/billing/cancel',
+  billingResume: '/billing/resume',
 };
