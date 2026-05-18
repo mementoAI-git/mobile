@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, FlatList, KeyboardAvoidingView, Platform, ImageBackground, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MoreVertical, ChevronLeft, Settings } from 'lucide-react-native';
@@ -9,6 +9,8 @@ import { ChatSkeleton } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import Animated, { FadeInDown, FadeInUp, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence } from 'react-native-reanimated';
 import { useChatLogic } from '@/hooks/use-chat-logic';
+import * as Haptics from 'expo-haptics';
+import { VoiceModeOverlay } from '@/components/chat/VoiceModeOverlay';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
@@ -28,6 +30,8 @@ export default function ChatScreen() {
     handleBack,
     handleActions,
   } = useChatLogic();
+
+  const [voiceModeVisible, setVoiceModeVisible] = useState(false);
 
   const pulse = useSharedValue(0.7);
   React.useEffect(() => {
@@ -161,7 +165,18 @@ export default function ChatScreen() {
           </View>
 
           {/* Floating Input */}
-          <ChatInput onSend={send} onStop={stop} loading={isActuallyStreaming || isLoading} />
+          <ChatInput 
+            onSend={send} 
+            onStop={stop} 
+            onVoice={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setVoiceModeVisible(true); }}
+            loading={isActuallyStreaming || isLoading} 
+          />
+
+          <VoiceModeOverlay 
+            visible={voiceModeVisible} 
+            onClose={() => setVoiceModeVisible(false)} 
+            conversationTitle={isPromptType ? (promptMemory?.title ?? 'Prompt Reflection') : (serverMessages?.title ?? 'Conversation')}
+          />
         </SafeAreaView>
       </ImageBackground>
     </KeyboardAvoidingView>
