@@ -18,7 +18,8 @@ export type LoginFormData = z.infer<typeof schema>;
 export function useLoginLogic() {
   const router = useRouter();
   const { mutate, isPending, error } = useLogin();
-  const [oauthLoading, setOauthLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(schema),
@@ -51,7 +52,7 @@ export function useLoginLogic() {
 
   const handleGoogleLogin = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setOauthLoading(true);
+    setGoogleLoading(true);
     try {
       const res = await client.get(`${endpoint.oauth}google`, {
         params: { redirect_uri: 'memento://oauth-callback?provider=google' },
@@ -64,7 +65,26 @@ export function useLoginLogic() {
     } catch {
       // silent
     } finally {
-      setOauthLoading(false);
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setAppleLoading(true);
+    try {
+      const res = await client.get(`${endpoint.oauth}apple`, {
+        params: { redirect_uri: 'memento://oauth-callback?provider=apple' },
+      });
+      const url: string | undefined = res.data?.data?.url;
+      if (!url) return;
+
+      const { openAuthSessionAsync } = await import('expo-web-browser');
+      await openAuthSessionAsync(url, 'memento://');
+    } catch {
+      // silent
+    } finally {
+      setAppleLoading(false);
     }
   };
 
@@ -72,9 +92,11 @@ export function useLoginLogic() {
     form,
     isPending,
     error,
-    oauthLoading,
+    googleLoading,
+    appleLoading,
     onSubmit: form.handleSubmit(onSubmit),
     handleGoogleLogin,
+    handleAppleLogin,
     router,
   };
 }
