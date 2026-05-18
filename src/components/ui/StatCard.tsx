@@ -99,7 +99,7 @@ export function StatCard({
       {Icon && (
         <View className={cn(
           "ml-3",
-          hasBg ? "opacity-30" : "opacity-20"
+          React.isValidElement(Icon) ? "opacity-100" : (hasBg ? "opacity-30" : "opacity-20")
         )}>
           {typeof Icon === 'string' ? (
             <Animated.Text className="text-3xl">{Icon}</Animated.Text>

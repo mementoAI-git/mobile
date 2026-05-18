@@ -3,7 +3,7 @@ import { FlatList, RefreshControl, View, ScrollView, ImageBackground, TouchableO
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Search, Grid, List, X } from 'lucide-react-native';
 import { CapsuleCard } from '@/components/capsule/CapsuleCard';
-import { StatCard, DashboardHeader, CapsuleSkeleton, EmptyState, Spinner } from '@/components/ui';
+import { StatCard, DashboardHeader, CapsuleSkeleton, EmptyState, Spinner, TimerFillIcon, ZapIcon, UnpdfIcon, PauseIcon } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -102,6 +102,7 @@ export default function CapsuleScreen() {
                       unit="messages"
                       variant="blue"
                       bg={CAPSULE_BG}
+                      icon={<TimerFillIcon size={44} />}
                       onPress={() => setFilter('scheduled')}
                     />
                     <StatCard
@@ -110,6 +111,7 @@ export default function CapsuleScreen() {
                       unit="messages"
                       variant="pink"
                       bg={STREAK_BG}
+                      icon={<ZapIcon size={44} />}
                       onPress={() => setFilter('delivered')}
                     />
                   </View>
@@ -120,6 +122,7 @@ export default function CapsuleScreen() {
                       unit="messages"
                       variant="orange"
                       bg={BENEFI_BG}
+                      icon={<UnpdfIcon size={44} />}
                       onPress={() => setFilter('draft')}
                     />
                     <StatCard
@@ -128,6 +131,7 @@ export default function CapsuleScreen() {
                       unit="messages"
                       variant="green"
                       bg={MEMORIES_BG}
+                      icon={<PauseIcon size={44} />}
                       onPress={() => setFilter('pause')}
                     />
                   </View>

@@ -20,4 +20,5 @@ export { ExploreSkeleton } from './ExploreSkeleton';
 export { GradientText } from './GradientText';
 export { SplineChart } from './SplineChart';
 export { JourneyStatIcon } from './JourneyStatIcon';
+export * from './icons/CapsuleStatIcons';
 
