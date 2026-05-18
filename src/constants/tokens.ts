@@ -57,4 +57,6 @@ export const FONTS = {
   serif: 'EBGaramond_400Regular',
   serifMedium: 'EBGaramond_500Medium',
   mono: 'AzeretMono_400Regular',
+  averia: 'AveriaSerifLibre_400Regular',
+  averiaBold: 'AveriaSerifLibre_700Bold',
 };

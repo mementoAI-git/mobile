@@ -31,6 +31,10 @@ import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono';
 import { PatrickHandSC_400Regular } from '@expo-google-fonts/patrick-hand-sc';
 import { Handlee_400Regular } from '@expo-google-fonts/handlee';
 import { CutiveMono_400Regular } from '@expo-google-fonts/cutive-mono';
+import {
+  AveriaSerifLibre_400Regular,
+  AveriaSerifLibre_700Bold,
+} from '@expo-google-fonts/averia-serif-libre';
 import { useAuthStore, useUserStore, useUiStore } from '@/store';
 import { authService } from '@/api/auth-service';
 import { SheetManager } from '@/components/sheets/SheetManager';
@@ -71,6 +75,8 @@ export default function RootLayout() {
     PatrickHandSC_400Regular,
     Handlee_400Regular,
     CutiveMono_400Regular,
+    AveriaSerifLibre_400Regular,
+    AveriaSerifLibre_700Bold,
 
     // Map web font family names directly to React Native loaded fonts
     'Patrick Hand SC': PatrickHandSC_400Regular,
@@ -80,6 +86,8 @@ export default function RootLayout() {
     'Garamond': EBGaramond_400Regular,
     'Sans': Inter_400Regular,
     'Geist Mono': AzeretMono_400Regular,
+    'Averia Serif Libre': AveriaSerifLibre_400Regular,
+    'Averia Serif Libre Bold': AveriaSerifLibre_700Bold,
   });
 
   // Wire up the redirect fn for auth-service token refresh failures

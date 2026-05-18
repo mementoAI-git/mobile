@@ -84,6 +84,8 @@ const config: Config = {
         serif:          ['EBGaramond_400Regular', 'serif'],
         'serif-medium': ['EBGaramond_500Medium',  'serif'],
         mono:           ['AzeretMono_400Regular',  'monospace'],
+        averia:         ['AveriaSerifLibre_400Regular', 'serif'],
+        'averia-bold':  ['AveriaSerifLibre_700Bold',    'serif'],
       },
 
       borderRadius: {
