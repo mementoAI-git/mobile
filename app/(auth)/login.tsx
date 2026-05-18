@@ -59,9 +59,11 @@ export default function LoginScreen() {
     error,
     googleLoading,
     appleLoading,
+    passkeyLoading,
     onSubmit,
     handleGoogleLogin,
     handleAppleLogin,
+    handlePasskeyLogin,
     router,
   } = useLoginLogic();
 
@@ -105,10 +107,16 @@ export default function LoginScreen() {
             <View className="gap-4">
               {/* Passkey Sign In */}
               <TouchableOpacity
+                onPress={handlePasskeyLogin}
+                disabled={googleLoading || appleLoading || passkeyLoading || isPending}
                 activeOpacity={0.8}
                 className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
               >
-                <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />
+                {passkeyLoading ? (
+                  <ActivityIndicator size="small" color={COLORS.brand} />
+                ) : (
+                  <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />
+                )}
                 <Animated.Text
                   className="text-base text-text-strong font-semibold"
                   style={{ fontFamily: FONTS.sansSemi }}
@@ -120,7 +128,7 @@ export default function LoginScreen() {
               {/* Google OAuth with multi-color SVG icon */}
               <TouchableOpacity
                 onPress={handleGoogleLogin}
-                disabled={googleLoading || appleLoading || isPending}
+                disabled={googleLoading || appleLoading || passkeyLoading || isPending}
                 activeOpacity={0.8}
                 className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
               >
@@ -140,7 +148,7 @@ export default function LoginScreen() {
               {/* Apple OAuth button */}
               <TouchableOpacity
                 onPress={handleAppleLogin}
-                disabled={googleLoading || appleLoading || isPending}
+                disabled={googleLoading || appleLoading || passkeyLoading || isPending}
                 activeOpacity={0.8}
                 className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
               >

@@ -10,6 +10,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Text,
+  Alert,
 } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -67,6 +68,34 @@ export default function RegisterScreen() {
 
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+
+  const handlePasskeySignup = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      'Passkey Registration',
+      'To register a secure cross-device hardware passkey, please register your account or manage security credentials via the Memento Web Application.\n\nWould you like to open the signup portal in your browser?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Open Web Portal', 
+          onPress: async () => {
+            try {
+              setPasskeyLoading(true);
+              const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
+              const webBase = apiBase.replace('/api', '');
+              const { openAuthSessionAsync } = await import('expo-web-browser');
+              await openAuthSessionAsync(`${webBase}/signup`, 'memento://');
+            } catch {
+              // silent
+            } finally {
+              setPasskeyLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const handleGoogleSignup = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -142,10 +171,16 @@ export default function RegisterScreen() {
             <View className="gap-4">
               {/* Passkey Sign Up Option */}
               <TouchableOpacity
+                onPress={handlePasskeySignup}
+                disabled={googleLoading || appleLoading || passkeyLoading || isPending}
                 activeOpacity={0.8}
                 className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
               >
-                <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />
+                {passkeyLoading ? (
+                  <ActivityIndicator size="small" color={COLORS.brand} />
+                ) : (
+                  <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />
+                )}
                 <Animated.Text
                   className="text-base text-text-strong font-semibold"
                   style={{ fontFamily: FONTS.sansSemi }}
@@ -157,7 +192,7 @@ export default function RegisterScreen() {
               {/* Google Signup Button */}
               <TouchableOpacity
                 onPress={handleGoogleSignup}
-                disabled={googleLoading || appleLoading || isPending}
+                disabled={googleLoading || appleLoading || passkeyLoading || isPending}
                 activeOpacity={0.8}
                 className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
               >
@@ -177,7 +212,7 @@ export default function RegisterScreen() {
               {/* Apple Signup Button */}
               <TouchableOpacity
                 onPress={handleAppleSignup}
-                disabled={googleLoading || appleLoading || isPending}
+                disabled={googleLoading || appleLoading || passkeyLoading || isPending}
                 activeOpacity={0.8}
                 className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
               >

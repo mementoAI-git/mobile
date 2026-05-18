@@ -7,6 +7,8 @@ import { useLogin } from '@/hooks/mutations/use-auth-mutations';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import * as Haptics from 'expo-haptics';
+import * as SecureStore from 'expo-secure-store';
+import { Alert } from 'react-native';
 
 const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
@@ -20,6 +22,7 @@ export function useLoginLogic() {
   const { mutate, isPending, error } = useLogin();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(schema),
@@ -88,15 +91,83 @@ export function useLoginLogic() {
     }
   };
 
+  const handlePasskeyLogin = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    const enabled = await SecureStore.getItemAsync('memento:biometrics_enabled');
+    
+    if (enabled === 'true') {
+      try {
+        setPasskeyLoading(true);
+        const password = await SecureStore.getItemAsync('memento:biometrics_password', {
+          requireAuthentication: true,
+          authenticationPrompt: 'Authenticate to sign into Memento securely',
+        });
+        const email = await SecureStore.getItemAsync('memento:biometrics_email');
+        
+        if (email && password) {
+          mutate({ email, password }, {
+            onSuccess: (res) => {
+              const resData = res.data as any;
+              const target = resData.onboarding_status === 'never' ? '/(onboard)' : '/(tabs)/overview';
+              router.replace(target as any);
+            },
+            onError: () => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert('Sign In Failed', 'Biometric authentication failed. Please verify your credentials or sign in with your password.');
+            },
+            onSettled: () => {
+              setPasskeyLoading(false);
+            }
+          });
+        } else {
+          setPasskeyLoading(false);
+          Alert.alert('Not Configured', 'Biometric credentials could not be found. Please log in with your email/password and enable Biometrics in settings.');
+        }
+      } catch (err) {
+        setPasskeyLoading(false);
+        // User cancelled biometrics prompt
+      }
+    } else {
+      Alert.alert(
+        'Passkey & Biometrics',
+        'Biometric sign-in is not registered yet. Log in with your email & password first, then enable Biometrics in Settings.\n\nAlternatively, you can authenticate using a Web Passkey.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Use Web Passkey', 
+            onPress: async () => {
+              try {
+                setPasskeyLoading(true);
+                const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
+                const webBase = apiBase.replace('/api', '');
+                const { openAuthSessionAsync } = await import('expo-web-browser');
+                const redirectUrl = 'memento://oauth-callback';
+                const authUrl = `${webBase}/login?passkey=true&redirect=${encodeURIComponent(redirectUrl)}`;
+                await openAuthSessionAsync(authUrl, 'memento://');
+              } catch (err) {
+                // silent
+              } finally {
+                setPasskeyLoading(false);
+              }
+            }
+          }
+        ]
+      );
+    }
+  };
+
   return {
     form,
     isPending,
     error,
     googleLoading,
     appleLoading,
+    passkeyLoading,
     onSubmit: form.handleSubmit(onSubmit),
     handleGoogleLogin,
     handleAppleLogin,
+    handlePasskeyLogin,
     router,
   };
 }

@@ -21,13 +21,58 @@ export default function OAuthCallbackScreen() {
 
   const resolvedProvider = provider ?? 'google';
 
+  const params = useLocalSearchParams<any>();
+
   useEffect(() => {
+    if (params.access_token) {
+      directLogin();
+      return;
+    }
     if (!code) {
       router.replace('/(auth)/login');
       return;
     }
     exchangeCode();
   }, []);
+
+  async function directLogin() {
+    try {
+      const getSingleParam = (val: any): string | undefined => {
+        if (Array.isArray(val)) return val[0];
+        return typeof val === 'string' ? val : undefined;
+      };
+
+      const { access_token, refresh_token, expires_at, refresh_expires_at, onboarding_status, user } = params;
+      
+      let parsedUser = user;
+      const userStr = getSingleParam(user);
+      if (userStr) {
+        try {
+          parsedUser = JSON.parse(userStr);
+        } catch {}
+      }
+
+      const token = getSingleParam(access_token);
+      const refresh = getSingleParam(refresh_token);
+      
+      await setAuth({
+        access_token: token ?? '',
+        refresh_token: refresh ?? '',
+        expires_at: getSingleParam(expires_at) ?? '',
+        refresh_expires_at: getSingleParam(refresh_expires_at) ?? '',
+      });
+      
+      if (parsedUser && typeof parsedUser !== 'string') {
+        setUser(parsedUser);
+      }
+      
+      setDone(true);
+      const target = getSingleParam(onboarding_status) === 'never' ? '/(onboard)' : '/(tabs)/overview';
+      router.replace(target as any);
+    } catch {
+      setError('Authentication failed. Please try again.');
+    }
+  }
 
   async function exchangeCode() {
     try {
