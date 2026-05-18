@@ -29,6 +29,8 @@ export function TextInput({
   inputClassName,
   rightElement,
   leftElement,
+  onFocus,
+  onBlur,
   ...props
 }: InputProps) {
   const [focused, setFocused] = useState(false);
@@ -48,8 +50,7 @@ export function TextInput({
         className={cn(
           'flex-row items-center min-h-[44px] border px-4 bg-fill-weaker',
           props.multiline ? 'rounded-2xl py-3 items-start' : 'rounded-full',
-          focused ? 'border-brand' : 'border-stroke-weak',
-          error && 'border-error-strong',
+          error ? 'border-error-strong' : focused ? 'border-brand' : 'border-stroke-weak',
         )}
       >
         {leftElement && <View className="mr-2">{leftElement}</View>}
@@ -59,8 +60,14 @@ export function TextInput({
             className={cn('flex-1 py-2 text-base text-text-strong', inputClassName)}
             style={{ fontFamily: FONTS.sans }}
             placeholderTextColor={COLORS.textWeak}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
+            onFocus={(e: any) => {
+              setFocused(true);
+              onFocus?.(e);
+            }}
+            onBlur={(e: any) => {
+              setFocused(false);
+              onBlur?.(e);
+            }}
             value={props.value ?? ''}
             {...props}
           />
@@ -69,8 +76,14 @@ export function TextInput({
             className={cn('flex-1 py-2 text-base text-text-strong', inputClassName)}
             style={{ fontFamily: FONTS.sans }}
             placeholderTextColor={COLORS.textWeak}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
+            onFocus={(e: any) => {
+              setFocused(true);
+              onFocus?.(e);
+            }}
+            onBlur={(e: any) => {
+              setFocused(false);
+              onBlur?.(e);
+            }}
             value={props.value ?? ''}
             {...props}
           />

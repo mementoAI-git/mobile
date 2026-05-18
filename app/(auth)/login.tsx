@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   ScrollView,
@@ -7,6 +7,8 @@ import {
   ActivityIndicator,
   ImageBackground,
   TouchableOpacity,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,8 +16,33 @@ import Animated from 'react-native-reanimated';
 import { Button, TextInput, PasswordInput, Logo } from '@/components/ui';
 import { useLoginLogic } from '@/hooks/use-login-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { Fingerprint } from 'lucide-react-native';
+import Svg, { Path } from 'react-native-svg';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
+
+export function GoogleSvgIcon({ size = 18 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        fill="#4285F4"
+        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.69c-.29 1.5-1.14 2.77-2.4 3.61v3h3.86c2.26-2.09 3.59-5.17 3.59-8.46z"
+      />
+      <Path
+        fill="#34A853"
+        d="M12 24c3.24 0 5.97-1.08 7.96-2.91l-3.86-3c-1.08.72-2.45 1.16-4.1 1.16-3.15 0-5.81-2.13-6.76-5.01H1.27v3.1A12 12 0 0 0 12 24z"
+      />
+      <Path
+        fill="#FBBC05"
+        d="M5.24 14.24a7.15 7.15 0 0 1 0-4.48v-3.1H1.27a12 12 0 0 0 0 10.68l3.97-3.1z"
+      />
+      <Path
+        fill="#EA4335"
+        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.27 6.66l3.97 3.1c.95-2.88 3.61-5.01 6.76-5.01z"
+      />
+    </Svg>
+  );
+}
 
 export default function LoginScreen() {
   const {
@@ -28,163 +55,203 @@ export default function LoginScreen() {
     router,
   } = useLoginLogic();
 
+  const [rememberMe, setRememberMe] = useState(false);
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <ImageBackground source={PATTERN} className="absolute inset-0 opacity-40" />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
         className="flex-1"
       >
-        <ScrollView
-          contentContainerClassName="flex-grow justify-center px-6 py-12"
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Logo wordmark */}
-          <Logo size="md" className="mb-10" />
-
-          {/* Header */}
-          <View className="mb-10">
-            <Animated.Text
-              className="text-[40px] text-text-strong mb-2"
-              style={{ fontFamily: FONTS.serif }}
-            >
-              Welcome back
-            </Animated.Text>
-            <Animated.Text
-              className="text-lg text-text-base leading-relaxed"
-              style={{ fontFamily: FONTS.sans }}
-            >
-              Sign in to continue your story
-            </Animated.Text>
-          </View>
-
-          {/* Form */}
-          <View className="gap-4">
-            <Controller
-              control={control}
-              name="email"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  label="Email"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  error={errors.email?.message}
-                  placeholder="you@example.com"
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="password"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <PasswordInput
-                  label="Password"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  autoComplete="current-password"
-                  error={errors.password?.message}
-                  placeholder="••••••••"
-                />
-              )}
-            />
-
-            <TouchableOpacity
-              onPress={() => router.push('/(auth)/forgot-password')}
-              className="self-end py-1"
-            >
-              <Animated.Text
-                className="text-sm text-brand font-bold underline"
-                style={{ fontFamily: FONTS.sansBold }}
-              >
-                Forgot password?
-              </Animated.Text>
-            </TouchableOpacity>
-
-            {error && (
-              <View className="bg-error-weak border border-error-weak rounded-2xl px-4 py-3">
-                <Animated.Text
-                  className="text-sm text-error-strong text-center"
-                  style={{ fontFamily: FONTS.sansMedium }}
-                >
-                  {(error as any).message ?? 'Login failed. Please try again.'}
-                </Animated.Text>
-              </View>
-            )}
-
-            <Button
-              onPress={onSubmit}
-              loading={isPending}
-              fullWidth
-              size="lg"
-              className="mt-2"
-            >
-              Sign In
-            </Button>
-          </View>
-
-          {/* Divider */}
-          <View className="flex-row items-center gap-4 my-8">
-            <View className="flex-1 h-px bg-stroke-weaker" />
-            <Animated.Text
-              className="text-xs text-text-disabled uppercase tracking-widest"
-              style={{ fontFamily: FONTS.sansBold }}
-            >
-              or
-            </Animated.Text>
-            <View className="flex-1 h-px bg-stroke-weaker" />
-          </View>
-
-          {/* Google OAuth */}
-          <TouchableOpacity
-            onPress={handleGoogleLogin}
-            disabled={oauthLoading || isPending}
-            className="flex-row items-center justify-center gap-3 border border-stroke-weaker rounded-full min-h-[52px] px-4 bg-card shadow-sm"
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView
+            contentContainerClassName="flex-grow px-6 pt-10 pb-16"
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            {oauthLoading ? (
-              <ActivityIndicator size="small" color={COLORS.brand} />
-            ) : (
-              <Animated.Text style={{ fontSize: 18, lineHeight: 22 }}>
-                <Animated.Text style={{ color: '#4285F4' }}>G</Animated.Text>
-                <Animated.Text style={{ color: '#EA4335' }}>o</Animated.Text>
-                <Animated.Text style={{ color: '#FBBC05' }}>o</Animated.Text>
-                <Animated.Text style={{ color: '#4285F4' }}>g</Animated.Text>
-                <Animated.Text style={{ color: '#34A853' }}>l</Animated.Text>
-                <Animated.Text style={{ color: '#EA4335' }}>e</Animated.Text>
-              </Animated.Text>
-            )}
-            <Animated.Text
-              className="text-base text-text-strong font-semibold"
-              style={{ fontFamily: FONTS.sansSemi }}
-            >
-              Continue with Google
-            </Animated.Text>
-          </TouchableOpacity>
+            {/* Logo wordmark */}
+            <Logo size="md" className="mb-10" />
 
-          {/* Footer */}
-          <View className="flex-row items-center justify-center gap-2 mt-10">
-            <Animated.Text
-              className="text-base text-text-weak"
-              style={{ fontFamily: FONTS.sans }}
-            >
-              Don't have an account?
-            </Animated.Text>
-            <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+            {/* Header */}
+            <View className="mb-10">
               <Animated.Text
-                className="text-base text-brand font-bold"
-                style={{ fontFamily: FONTS.sansBold }}
+                className="text-[40px] text-text-strong mb-2"
+                style={{ fontFamily: FONTS.serif }}
               >
-                Sign up
+                Welcome back
               </Animated.Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+              <Animated.Text
+                className="text-lg text-text-base leading-relaxed"
+                style={{ fontFamily: FONTS.sans }}
+              >
+                Please login to continue
+              </Animated.Text>
+            </View>
+
+            {/* Form */}
+            <View className="gap-4">
+              {/* Passkey Sign In */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
+              >
+                <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />
+                <Animated.Text
+                  className="text-base text-text-strong font-semibold"
+                  style={{ fontFamily: FONTS.sansSemi }}
+                >
+                  Sign in with a passkey
+                </Animated.Text>
+              </TouchableOpacity>
+
+              {/* Google OAuth with multi-color SVG icon */}
+              <TouchableOpacity
+                onPress={handleGoogleLogin}
+                disabled={oauthLoading || isPending}
+                activeOpacity={0.8}
+                className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
+              >
+                {oauthLoading ? (
+                  <ActivityIndicator size="small" color={COLORS.brand} />
+                ) : (
+                  <GoogleSvgIcon size={18} />
+                )}
+                <Animated.Text
+                  className="text-base text-text-strong font-semibold"
+                  style={{ fontFamily: FONTS.sansSemi }}
+                >
+                  Continue with Google
+                </Animated.Text>
+              </TouchableOpacity>
+
+              {/* Divider */}
+              <View className="flex-row items-center gap-4 my-3">
+                <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
+                <Animated.Text
+                  className="text-xs text-text-disabled lowercase"
+                  style={{ fontFamily: FONTS.sans }}
+                >
+                  or
+                </Animated.Text>
+                <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
+              </View>
+
+              {/* Email Field */}
+              <Controller
+                control={control}
+                name="email"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    label="Email"
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    error={errors.email?.message}
+                    placeholder="you@example.com"
+                  />
+                )}
+              />
+
+              {/* Password Field */}
+              <Controller
+                control={control}
+                name="password"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <PasswordInput
+                    label="Password"
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    autoComplete="current-password"
+                    error={errors.password?.message}
+                    placeholder="••••••••"
+                  />
+                )}
+              />
+
+              {/* Remember for 30 days & Forgot Password Row */}
+              <View className="flex-row items-center justify-between mt-1 mb-2">
+                <TouchableOpacity
+                  onPress={() => setRememberMe(!rememberMe)}
+                  activeOpacity={0.8}
+                  className="flex-row items-center gap-2"
+                >
+                  <View
+                    className={`size-4 rounded-full border items-center justify-center ${
+                      rememberMe ? 'border-brand bg-brand' : 'border-stroke-weak bg-white'
+                    }`}
+                  >
+                    {rememberMe && <View className="size-1.5 rounded-full bg-white" />}
+                  </View>
+                  <Animated.Text
+                    className="text-xs text-text-base"
+                    style={{ fontFamily: FONTS.sans }}
+                  >
+                    Remember for 30 days
+                  </Animated.Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => router.push('/(auth)/forgot-password')}
+                  className="py-1"
+                >
+                  <Animated.Text
+                    className="text-xs text-brand font-bold underline"
+                    style={{ fontFamily: FONTS.sansBold }}
+                  >
+                    Forgot password?
+                  </Animated.Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Error Message */}
+              {error && (
+                <View className="bg-error-weak border border-error-weak rounded-2xl px-4 py-3">
+                  <Animated.Text
+                    className="text-sm text-error-strong text-center"
+                    style={{ fontFamily: FONTS.sansMedium }}
+                  >
+                    {(error as any).message ?? 'Login failed. Please try again.'}
+                  </Animated.Text>
+                </View>
+              )}
+
+              {/* Submit Button */}
+              <Button
+                onPress={onSubmit}
+                loading={isPending}
+                fullWidth
+                size="lg"
+                className="mt-2"
+              >
+                Login
+              </Button>
+            </View>
+
+            {/* Footer */}
+            <View className="flex-row items-center justify-center gap-2 mt-10">
+              <Animated.Text
+                className="text-base text-text-weak"
+                style={{ fontFamily: FONTS.sans }}
+              >
+                Don't have an account?
+              </Animated.Text>
+              <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+                <Animated.Text
+                  className="text-base text-brand font-bold"
+                  style={{ fontFamily: FONTS.sansBold }}
+                >
+                  Sign up
+                </Animated.Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
