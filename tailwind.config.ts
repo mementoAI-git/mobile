@@ -41,7 +41,7 @@ const config: Config = {
           inverse:  '#FFFFFF',
           brand:    '#FF5E00',              // --text-brand-strong
           success:  '#067A57',              // --green-1000
-          error:    '#4A3728',              // earthy brown (mobile) — web uses #C73A3A
+          error:    '#C73A3A',              // brick red — aligned with web
           warning:  '#8F6C1A',             // --amber-1000
           info:     '#1A80F7',             // --blue-1000
         },
@@ -57,7 +57,7 @@ const config: Config = {
 
         // ── Status ─────────────────────────────────────────────────
         success: { weak: 'rgba(10,204,146,0.05)',  strong: '#067A57' },
-        error:   { weak: 'rgba(74,55,40,0.05)',    strong: '#4A3728' },
+        error:   { weak: 'rgba(199,58,58,0.05)',   strong: '#C73A3A' },
         warning: { weak: 'rgba(255,192,46,0.05)',  strong: '#8F6C1A' },
         info:    { weak: 'rgba(26,128,247,0.06)',  strong: '#1A80F7' },
 

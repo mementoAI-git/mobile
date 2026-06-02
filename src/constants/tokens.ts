@@ -30,8 +30,8 @@ export const COLORS = {
 
   // Status
   success: '#067A57',
-  /** Intentionally earthy brown per AGENTS.md — team alignment pending with web (#C73A3A). */
-  error: '#4A3728',
+  /** Aligned with web #C73A3A (brick red) — team confirmed. */
+  error: '#C73A3A',
   warning: '#8F6C1A',
   info: '#1A80F7',
 
