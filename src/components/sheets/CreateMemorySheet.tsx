@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet, Platform } from 'react-native';
 import { Button, TextInput, Spinner } from '@/components/ui';
-import { Camera, FolderOpen, Users, Check, X, Shield, Lock, Mic } from 'lucide-react-native';
+import { Image as ImageIcon, FolderOpen, Users, Check, X, Shield, Lock, Paperclip } from 'lucide-react-native';
 import { useCreateMemory, useUpdateMemory } from '@/hooks/mutations/use-memory-mutations';
 import { useFileUpload } from '@/hooks/use-file-upload';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
@@ -195,7 +195,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
               <Spinner size="small" />
             ) : (
               <>
-                <Camera size={16} color={attachments.length > 0 ? COLORS.brand : COLORS.textBase} strokeWidth={1.5} />
+                <ImageIcon size={16} color={attachments.length > 0 ? COLORS.brand : COLORS.textBase} strokeWidth={1.5} />
                 <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: attachments.length > 0 ? COLORS.brand : COLORS.textStrong }}>
                   {attachments.length > 0 ? `${attachments.length} file${attachments.length > 1 ? 's' : ''}` : 'Add media'}
                 </Text>
@@ -222,13 +222,13 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
         >
           <Users size={16} color={beneficiaries.length > 0 ? COLORS.brand : COLORS.textBase} strokeWidth={1.5} />
           <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: beneficiaries.length > 0 ? COLORS.brand : COLORS.textStrong }}>
-            {beneficiaries.length > 0 ? `${beneficiaries.length} trustee${beneficiaries.length > 1 ? 's' : ''} selected` : 'Share with trustees'}
+            {beneficiaries.length > 0 ? `${beneficiaries.length} beneficiar${beneficiaries.length > 1 ? 'ies' : 'y'} added` : 'Add beneficiaries'}
           </Text>
         </TouchableOpacity>
 
         {showBeneficiaries && (
           <Animated.View entering={FadeInDown} className="bg-fill-weaker rounded-[24px] border border-stroke-weaker p-5">
-            <Text className="text-[10px] text-text-muted font-bold uppercase tracking-[2px] mb-4" style={{ fontFamily: FONTS.sansBold }}>Select Trustees</Text>
+            <Text className="text-[10px] text-text-muted font-bold uppercase tracking-[2px] mb-4" style={{ fontFamily: FONTS.sansBold }}>Select Beneficiaries</Text>
             {beneficiariesList.length > 0 ? (
               beneficiariesList.map((b: any) => (
                 <TouchableOpacity

@@ -167,7 +167,7 @@ export default function ChatScreen() {
 
           {/* ── Host Chat toolbar: jump pills + deep dive + milestone ──── */}
           {!isPromptType && (
-            <View className="pb-1 border-b border-stroke-weaker/30">
+            <View className="pb-1">
               {/* Jump pills row */}
               <View className="px-4 py-1">
                 <HostChatJumpPills

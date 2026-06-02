@@ -14,7 +14,7 @@ const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 const NAV_ITEMS = [
   { label: 'Security', Icon: Shield, href: '/settings/account' },
   { label: 'Privacy', Icon: Eye, href: '/settings/privacy' },
-  { label: 'Trustees', Icon: Users, href: '/settings/beneficiaries' },
+  { label: 'Beneficiaries', Icon: Users, href: '/settings/beneficiaries' },
   { label: '2FA', Icon: Smartphone, href: '/settings/two-factor' },
   { label: 'Billing', Icon: CreditCard, href: '/settings/billing' },
 ];

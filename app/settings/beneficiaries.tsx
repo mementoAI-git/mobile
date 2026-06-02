@@ -61,7 +61,7 @@ export default function BeneficiariesSettingsScreen() {
               className="text-[28px] text-text-strong"
               style={{ fontFamily: FONTS.serif }}
             >
-              Trustees
+              Beneficiaries
             </Animated.Text>
           </View>
           <View className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center">
@@ -87,7 +87,7 @@ export default function BeneficiariesSettingsScreen() {
             className="text-[28px] text-text-strong"
             style={{ fontFamily: FONTS.serif }}
           >
-            Trustees
+            Beneficiaries
           </Animated.Text>
         </View>
         <TouchableOpacity
