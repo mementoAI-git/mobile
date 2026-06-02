@@ -22,3 +22,12 @@ export { SplineChart } from './SplineChart';
 export { JourneyStatIcon } from './JourneyStatIcon';
 export * from './icons/CapsuleStatIcons';
 
+// ── New parity components (matching web shadcn primitives) ────────────────
+export { Separator } from './Separator';
+export { Progress } from './Progress';
+export { Switch } from './Switch';
+export { Checkbox } from './Checkbox';
+export { Tabs } from './Tabs';
+export type { TabItem } from './Tabs';
+export { Select } from './Select';
+export type { SelectOption, SelectProps } from './Select';
