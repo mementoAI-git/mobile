@@ -34,11 +34,11 @@ function SettingsRow({
         {icon}
       </View>
       <View className="flex-1">
-        <Animated.Text style={{ fontFamily: FONTS.sansMedium, fontSize: 15, color: COLORS.textStrong }}>
+        <Animated.Text className="text-base text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
           {label}
         </Animated.Text>
         {description && (
-          <Animated.Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>
+          <Animated.Text className="text-xs text-text-weak mt-0.5" style={{ fontFamily: FONTS.sans }}>
             {description}
           </Animated.Text>
         )}
@@ -200,7 +200,7 @@ export default function AccountSettingsScreen() {
                 <AlertTriangle size={20} color={COLORS.error} strokeWidth={1.5} />
               </View>
               <View className="flex-1">
-                <Animated.Text style={{ fontFamily: FONTS.sansMedium, fontSize: 15, color: COLORS.error }}>
+                <Animated.Text className="text-base text-error-strong" style={{ fontFamily: FONTS.sansMedium }}>
                   Delete Account
                 </Animated.Text>
               </View>

@@ -54,10 +54,10 @@ export default function TwoFactorScreen() {
             }
           </View>
           <View className="flex-1">
-            <Animated.Text style={{ fontFamily: FONTS.sansMedium, fontSize: 15, color: COLORS.textStrong }}>
+            <Animated.Text className="text-base text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
               {is2FAEnabled ? 'Enabled' : 'Not enabled'}
             </Animated.Text>
-            <Animated.Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>
+            <Animated.Text className="text-xs text-text-weak mt-0.5" style={{ fontFamily: FONTS.sans }}>
               {is2FAEnabled ? 'Your account has a second factor' : 'Protect your account with an authenticator app'}
             </Animated.Text>
           </View>

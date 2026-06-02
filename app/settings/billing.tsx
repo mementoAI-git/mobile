@@ -309,7 +309,7 @@ export default function BillingSettingsScreen() {
                   ) : (
                     <>
                       <Play size={14} color={COLORS.brand} />
-                      <Animated.Text className="text-xs font-semibold" style={{ fontFamily: FONTS.sansSemi, color: COLORS.brand }}>
+                      <Animated.Text className="text-xs font-semibold" className="text-sm text-brand" style={{ fontFamily: FONTS.sansSemi }}>
                         Resume Subscription
                       </Animated.Text>
                     </>
