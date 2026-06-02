@@ -73,7 +73,7 @@ export default function PrivacySettingsScreen() {
                   <item.Icon size={20} color={COLORS.textBase} strokeWidth={1.5} />
                 </View>
                 <View className="flex-1">
-                  <Animated.Text className="text-base text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+                  <Animated.Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
                     {item.title}
                   </Animated.Text>
                   <Animated.Text className="text-xs text-text-weak mt-0.5" style={{ fontFamily: FONTS.sans }}>

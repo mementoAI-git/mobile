@@ -115,7 +115,7 @@ export default function ProfileSettingsScreen() {
                   <item.Icon size={20} color={COLORS.textBase} strokeWidth={1.5} />
                 </View>
                 <Animated.Text
-                  className="flex-1 text-base text-text-strong"
+                  className="flex-1 text-[15px] text-text-strong"
                   style={{ fontFamily: FONTS.sansMedium }}
                 >
                   {item.label}
