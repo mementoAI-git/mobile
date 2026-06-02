@@ -9,6 +9,7 @@
         "@expo-google-fonts/azeret-mono": "^0.4.1",
         "@expo-google-fonts/cutive-mono": "^0.4.1",
         "@expo-google-fonts/eb-garamond": "^0.4.2",
+        "@expo-google-fonts/geist": "^0.4.2",
         "@expo-google-fonts/handlee": "^0.4.1",
         "@expo-google-fonts/inter": "^0.4.2",
         "@expo-google-fonts/patrick-hand-sc": "^0.4.1",
@@ -280,6 +281,8 @@
     "@expo-google-fonts/cutive-mono": ["@expo-google-fonts/cutive-mono@0.4.1", "", {}, "sha512-MO12yJjnhN1SZuYHhPcMHfZPFyB+svydhbGyD8TASuTKVf1/v/77ztkyyN3CgWZu+u2X/GNmgbaV6WzBvaI60g=="],
 
     "@expo-google-fonts/eb-garamond": ["@expo-google-fonts/eb-garamond@0.4.2", "", {}, "sha512-tkw/RNj3sLpOfasAYF1wrh8XnKspHXmoNf6StJ4LDvFlRpDCXXtG8sxkyjab1ncnlgK8iRUC8FugmYMr55YCHw=="],
+
+    "@expo-google-fonts/geist": ["@expo-google-fonts/geist@0.4.2", "", {}, "sha512-cTsqJRQrvK5EniTVwH7UDK18RFf9Bc6yxciAuM936aViQ+eR6j3mLEI2rQkJXz5JP9kwtn8tHJviDyZ0ulH6oA=="],
 
     "@expo-google-fonts/handlee": ["@expo-google-fonts/handlee@0.4.1", "", {}, "sha512-y56SU1fACbtlkOCOzjQ7oMe9jvUyaKv/bUqZA7o/oxDs94OXhGmWiEePhmHRHI/ZEs18H8PiXlU7iDVpL2KTrg=="],
 
