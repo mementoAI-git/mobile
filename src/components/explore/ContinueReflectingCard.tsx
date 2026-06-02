@@ -34,12 +34,12 @@ export function ContinueReflectingCard({ title, onPress, className }: ContinueRe
         onPressOut={handlePressOut}
         activeOpacity={0.9}
         className={cn(
-          'flex-row items-center rounded-2xl bg-white border border-stroke-weaker p-4 mr-4 w-[280px]',
+          'flex-row items-center rounded-2xl bg-white border border-stroke-weaker p-4 mr-4 w-[280px] h-[100px]',
           className
         )}
       >
         {/* Left icon container */}
-        <View className="size-14 items-center justify-center mr-3 bg-fill-weaker rounded-xl">
+        <View className="size-14 items-center justify-center mr-3 bg-fill-weaker rounded-xl shrink-0">
           <Image
             source={QUESTION_ICON}
             className="size-10"
@@ -48,7 +48,7 @@ export function ContinueReflectingCard({ title, onPress, className }: ContinueRe
         </View>
 
         {/* Text content */}
-        <View className="flex-1 justify-between h-full gap-2">
+        <View className="flex-1 justify-between gap-2">
           <Animated.Text
             numberOfLines={2}
             className="text-[15px] text-text-strong leading-tight"
