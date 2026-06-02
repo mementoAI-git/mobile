@@ -152,7 +152,7 @@ export default function BeneficiariesSettingsScreen() {
                     {b.name || 'Pending Invitation'}
                   </Animated.Text>
                   <Animated.Text
-                    className="text-xs text-text-weak"
+                    className="text-xs text-text-weak leading-relaxed"
                     numberOfLines={1}
                     style={{ fontFamily: FONTS.sansMedium }}
                   >

@@ -38,7 +38,7 @@ function SettingsRow({
           {label}
         </Animated.Text>
         {description && (
-          <Animated.Text className="text-xs text-text-weak mt-0.5" style={{ fontFamily: FONTS.sans }}>
+          <Animated.Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
             {description}
           </Animated.Text>
         )}
@@ -151,7 +151,7 @@ export default function AccountSettingsScreen() {
 
           {error && (
             <View className="bg-fill-weaker rounded-2xl px-4 py-3 border border-stroke-weaker">
-              <Animated.Text className="text-sm text-text-weak" style={{ fontFamily: FONTS.sans }}>
+              <Animated.Text className="text-sm text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
                 {(error as any).message}
               </Animated.Text>
             </View>

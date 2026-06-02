@@ -231,7 +231,7 @@ export default function BillingSettingsScreen() {
                       </View>
                     )}
                   </View>
-                  <Animated.Text className="text-xs text-text-weak mt-0.5" style={{ fontFamily: FONTS.sans }}>
+                  <Animated.Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
                     {summary?.status ? `Status: ${summary.status.replace(/_/g, ' ')}` : 'Save infinite memories with Pro'}
                   </Animated.Text>
                 </View>
@@ -242,7 +242,7 @@ export default function BillingSettingsScreen() {
               ) : (
                 <View className="bg-fill-weaker border border-stroke-weaker/45 rounded-2xl p-4 gap-3">
                   <View className="flex-row justify-between items-center">
-                    <Animated.Text className="text-xs text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>Billing Cycle</Animated.Text>
+                    <Animated.Text className="text-xs text-text-muted font-bold uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Billing Cycle</Animated.Text>
                     <Animated.Text className="text-sm text-text-strong font-medium" style={{ fontFamily: FONTS.sansMedium }}>
                       {renewLabel()}
                     </Animated.Text>
@@ -331,7 +331,7 @@ export default function BillingSettingsScreen() {
                 <View className="gap-2">
                   <View className="flex-row justify-between items-end">
                     <Animated.Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>Vault Storage</Animated.Text>
-                    <Animated.Text className="text-xs text-text-weak" style={{ fontFamily: FONTS.sans }}>
+                    <Animated.Text className="text-xs text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
                       {formatBytes(usage.storage_used_bytes)} of {formatBytes(usage.storage_limit_bytes || 5368709120)}
                     </Animated.Text>
                   </View>
@@ -348,13 +348,13 @@ export default function BillingSettingsScreen() {
                 {/* Grid stats */}
                 <View className="flex-row gap-4">
                   <View className="flex-1 bg-fill-weaker rounded-2xl p-4 border border-stroke-weaker/45">
-                    <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>Trustees</Animated.Text>
+                    <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Trustees</Animated.Text>
                     <Animated.Text className="text-lg text-text-strong font-bold mt-1" style={{ fontFamily: FONTS.sansBold }}>
                       {usage.beneficiary_count ?? 0}
                     </Animated.Text>
                   </View>
                   <View className="flex-1 bg-fill-weaker rounded-2xl p-4 border border-stroke-weaker/45">
-                    <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>Capsules</Animated.Text>
+                    <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Capsules</Animated.Text>
                     <Animated.Text className="text-lg text-text-strong font-bold mt-1" style={{ fontFamily: FONTS.sansBold }}>
                       {usage.timed_message_count ?? 0}
                     </Animated.Text>

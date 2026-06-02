@@ -76,7 +76,7 @@ export default function PrivacySettingsScreen() {
                   <Animated.Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
                     {item.title}
                   </Animated.Text>
-                  <Animated.Text className="text-xs text-text-weak mt-0.5" style={{ fontFamily: FONTS.sans }}>
+                  <Animated.Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
                     {item.desc}
                   </Animated.Text>
                 </View>

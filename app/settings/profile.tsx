@@ -81,17 +81,17 @@ export default function ProfileSettingsScreen() {
 
             <View className="flex-row items-center gap-4 mt-8 pt-8 border-t border-stroke-weaker/40">
               <View className="flex-1 gap-1.5 items-center">
-                <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>Enrichment</Animated.Text>
+                <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Enrichment</Animated.Text>
                 <Animated.Text className="text-xl text-brand font-bold" style={{ fontFamily: FONTS.sansBold }}>{enrichmentScore}%</Animated.Text>
               </View>
               <View className="w-px h-10 bg-stroke-weaker" />
               <View className="flex-1 gap-1.5 items-center">
-                <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>Stories</Animated.Text>
+                <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Stories</Animated.Text>
                 <Animated.Text className="text-xl text-text-strong font-bold" style={{ fontFamily: FONTS.sansBold }}>{memoriesCount}</Animated.Text>
               </View>
               <View className="w-px h-10 bg-stroke-weaker" />
               <View className="flex-1 gap-1.5 items-center">
-                <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>Streak</Animated.Text>
+                <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Streak</Animated.Text>
                 <View className="flex-row items-center gap-1">
                   <Flame size={16} color={COLORS.brand} />
                   <Animated.Text className="text-xl text-text-strong font-bold" style={{ fontFamily: FONTS.sansBold }}>{streakCount}</Animated.Text>

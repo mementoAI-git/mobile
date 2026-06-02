@@ -57,7 +57,7 @@ export default function TwoFactorScreen() {
             <Animated.Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
               {is2FAEnabled ? 'Enabled' : 'Not enabled'}
             </Animated.Text>
-            <Animated.Text className="text-xs text-text-weak mt-0.5" style={{ fontFamily: FONTS.sans }}>
+            <Animated.Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
               {is2FAEnabled ? 'Your account has a second factor' : 'Protect your account with an authenticator app'}
             </Animated.Text>
           </View>
@@ -99,7 +99,7 @@ export default function TwoFactorScreen() {
                 className="bg-fill-weaker rounded-2xl p-4 border border-stroke-weaker flex-row items-center justify-between"
               >
                 <View className="flex-1">
-                  <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-widest mb-1" style={{ fontFamily: FONTS.sansBold }}>
+                  <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-[2px] mb-1" style={{ fontFamily: FONTS.sansBold }}>
                     Secret key — tap to copy
                   </Animated.Text>
                   <Animated.Text className="text-base text-text-strong tracking-[2px]" style={{ fontFamily: FONTS.mono }}>
