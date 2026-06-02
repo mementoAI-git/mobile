@@ -1,52 +1,94 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Animated, StyleSheet, Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { WifiOff } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+const OFFLINE_DEBOUNCE_MS = 1500; // wait 1.5s before showing banner (avoids false positives)
+
 export function OfflineNotice() {
-  const [isConnected, setIsConnected] = useState(true);
-  const translateY = React.useRef(new Animated.Value(-100)).current;
+  const [isVisible, setIsVisible] = useState(false);
+  const translateY = useRef(new Animated.Value(-100)).current;
   const insets = useSafeAreaInsets();
+  const offlineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isReadyRef = useRef(false); // ref so the listener closure always sees current value
+
+  const showBanner = () => {
+    setIsVisible(true);
+    Animated.spring(translateY, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 40,
+      friction: 8,
+    }).start();
+  };
+
+  const hideBanner = () => {
+    // Clear any pending offline timer — we're back online
+    if (offlineTimerRef.current) {
+      clearTimeout(offlineTimerRef.current);
+      offlineTimerRef.current = null;
+    }
+    Animated.timing(translateY, {
+      toValue: -100,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => setIsVisible(false));
+  };
+
+  const handleConnectionChange = (connected: boolean) => {
+    if (!connected) {
+      // Debounce: only show after 1.5s of confirmed offline state
+      // This prevents false positives from brief network glitches
+      if (offlineTimerRef.current) return; // already waiting
+      offlineTimerRef.current = setTimeout(() => {
+        offlineTimerRef.current = null;
+        showBanner();
+      }, OFFLINE_DEBOUNCE_MS);
+    } else {
+      // Back online — hide immediately
+      hideBanner();
+    }
+  };
 
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
-      setIsConnected(state.isConnected ?? true);
+    // Use fetch() for the real initial state instead of relying on
+    // the first listener event (which can fire with false/null before OS settles)
+    NetInfo.fetch().then((state) => {
+      const connected = state.isConnected ?? true;
+      isReadyRef.current = true;
+      if (!connected) {
+        showBanner();
+      }
     });
 
-    return () => unsubscribe();
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      if (!isReadyRef.current) return; // ignore events until initial fetch is done
+      handleConnectionChange(state.isConnected ?? true);
+    });
+
+    return () => {
+      unsubscribe();
+      if (offlineTimerRef.current) {
+        clearTimeout(offlineTimerRef.current);
+      }
+    };
   }, []);
 
-  useEffect(() => {
-    if (!isConnected) {
-      Animated.spring(translateY, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 40,
-        friction: 8,
-      }).start();
-    } else {
-      Animated.timing(translateY, {
-        toValue: -100,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [isConnected]);
 
   return (
-    <Animated.View 
+    <Animated.View
       style={[
-        styles.container, 
-        { 
+        styles.container,
+        {
           transform: [{ translateY }],
-          paddingTop: Platform.OS === 'ios' ? insets.top : 10 
-        }
+          paddingTop: Platform.OS === 'ios' ? insets.top : 10,
+        },
       ]}
     >
-      <View className="flex-row items-center gap-2 px-4 py-2 bg-text-strong rounded-full shadow-lg">
-        <WifiOff size={16} color={COLORS.brand} />
+      <View className="flex-row items-center gap-2 px-4 py-2 bg-text-strong rounded-full">
+        <WifiOff size={16} color={COLORS.brand} strokeWidth={2} />
         <Text className="text-white text-xs font-medium" style={{ fontFamily: FONTS.sansMedium }}>
           You're offline. Some features may be limited.
         </Text>
