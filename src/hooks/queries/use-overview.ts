@@ -7,22 +7,27 @@ import { useUserStore, useAuthStore } from '@/store';
 // User stats — streak, enrichment_score, quick_capture_pending_count, beneficiaries_count
 export function useUserStats() {
   const token = useAuthStore((s) => s.token);
-  const user = useUserStore((s) => s.user);
-  const setUser = useUserStore((s) => s.setUser);
 
   return useQuery({
     queryKey: queryKeys.userStats,
     queryFn: async () => {
       const res = await get<any>(endpoint.userStats);
       const stats = res.data;
-      // If we have a user in store, sync any updated stats like streak
+
+      // Sync updated stats to user store — but only when values actually change.
+      // IMPORTANT: read user via getState() (not a reactive selector) so this
+      // queryFn does NOT subscribe to useUserStore and cannot trigger a re-render
+      // loop on the Overview screen.
+      // Only sync `streak` — it's the one stat field that lives on IUser.
+      // enrichment_score is read directly from statsData in the Overview screen.
+      const { user, setUser } = useUserStore.getState();
       if (stats && user) {
-        setUser({
-          ...user,
-          streak: stats.streak_count ?? user.streak,
-          enrichment_score: stats.enrichment_score ?? user.enrichment_score,
-        });
+        const newStreak = stats.streak_count ?? user.streak;
+        if (newStreak !== user.streak) {
+          setUser({ ...user, streak: newStreak });
+        }
       }
+
       return stats;
     },
     enabled: !!token,
