@@ -84,7 +84,7 @@ export function RecentActivitiesSection({ activities, isLoading }: Props) {
         </TouchableOpacity>
       </View>
 
-      <View className="bg-white border border-stroke-weaker rounded-[32px] overflow-hidden shadow-sm">
+      <View className="bg-white border border-stroke-weaker rounded-[32px] overflow-hidden">
         {activities.map((activity, index) => (
           <React.Fragment key={activity._id || index}>
             {index > 0 && (

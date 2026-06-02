@@ -1,13 +1,35 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, KeyboardAvoidingView, Platform, ImageBackground, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  ImageBackground,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MoreVertical, ChevronLeft, Settings } from 'lucide-react-native';
+import { MoreVertical, ChevronLeft } from 'lucide-react-native';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { ChatInput } from '@/components/chat/ChatInput';
+import { MilestoneCard } from '@/components/chat/MilestoneCard';
+import { DeepDiveNudge } from '@/components/chat/DeepDiveNudge';
+import { DeepDiveBanner } from '@/components/chat/DeepDiveBanner';
+import { HostChatJumpPills, monthKeysFromMessages } from '@/components/chat/HostChatJumpPills';
 import { ChatSkeleton } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
-import Animated, { FadeInDown, FadeInUp, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence } from 'react-native-reanimated';
+import { dimensionLabel } from '@/constants/enrichment';
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSequence,
+} from 'react-native-reanimated';
 import { useChatLogic } from '@/hooks/use-chat-logic';
 import * as Haptics from 'expo-haptics';
 import { VoiceModeOverlay } from '@/components/chat/VoiceModeOverlay';
@@ -31,23 +53,26 @@ export default function ChatScreen() {
     stop,
     handleBack,
     handleActions,
+    chatMode,
+    deepDiveDimension,
+    handleEnterDeepDive,
+    handleExitDeepDive,
+    enrichmentStats,
   } = useChatLogic();
 
   const [voiceModeVisible, setVoiceModeVisible] = useState(false);
   const [replyQuote, setReplyQuote] = useState<ChatReplyQuote | null>(null);
+  const [nudgeHidden, setNudgeHidden] = useState(false);
 
+  // Pulsing live indicator
   const pulse = useSharedValue(0.7);
   React.useEffect(() => {
     pulse.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 800 }),
-        withTiming(0.4, { duration: 800 })
-      ),
+      withSequence(withTiming(1, { duration: 800 }), withTiming(0.4, { duration: 800 })),
       -1,
-      true
+      true,
     );
   }, []);
-
   const pulseStyle = useAnimatedStyle(() => ({
     opacity: pulse.value,
     transform: [{ scale: pulse.value }],
@@ -55,18 +80,59 @@ export default function ChatScreen() {
 
   const isActuallyStreaming = streaming || isStartingConversation;
 
+  // Month keys for jump pills (from persisted server messages)
+  const allServerMessages = serverMessages?.messages ?? [];
+  const monthKeys = monthKeysFromMessages(allServerMessages);
+  const categoryPills = enrichmentStats.stats?.jump_pills ?? [];
+
+  // Deep dive nudge visibility
+  const nudgeDimension = enrichmentStats.nudgeDimension;
+  const nudgeQuestion = enrichmentStats.nudgeQuestion;
+  const dismissedNudges = enrichmentStats.getDismissedNudges();
+  const showDeepDiveNudge =
+    chatMode === 'open' &&
+    !nudgeHidden &&
+    nudgeDimension !== null &&
+    !dismissedNudges.includes(nudgeDimension);
+
+  const handleDismissNudge = useCallback(async () => {
+    setNudgeHidden(true);
+    if (nudgeDimension) {
+      await enrichmentStats.dismissNudge(nudgeDimension);
+    }
+  }, [nudgeDimension, enrichmentStats]);
+
+  const handleStartDeepDiveFromNudge = useCallback(() => {
+    setNudgeHidden(true);
+    if (nudgeDimension) handleEnterDeepDive(nudgeDimension);
+  }, [nudgeDimension, handleEnterDeepDive]);
+
+  // Jump to message by month — scrolls to first message in that month
+  const handleJumpToMonth = useCallback(
+    (yyyyMm: string) => {
+      const idx = [...allMessages].reverse().findIndex(
+        (m) => (m as any).created_at?.slice(0, 7) === yyyyMm,
+      );
+      if (idx >= 0 && flatListRef.current) {
+        // allMessages is reversed (inverted FlatList), so re-calculate index
+        const invertedIdx = allMessages.length - 1 - idx;
+        flatListRef.current.scrollToIndex({ index: invertedIdx, animated: true, viewPosition: 0 });
+      }
+    },
+    [allMessages, flatListRef],
+  );
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: COLORS.background }}
       behavior="padding"
       keyboardVerticalOffset={0}
     >
-      <ImageBackground source={PATTERN} className="flex-1" imageStyle={{ opacity: 0.3 }}>
+      <ImageBackground source={PATTERN} className="flex-1" imageStyle={{ opacity: 0.03 }}>
         <SafeAreaView className="flex-1 bg-transparent" edges={['top']}>
-          {/* Modern Header */}
-          <View
-            className="flex-row items-center gap-3 px-6 py-4 border-stroke-weaker/50 bg-transparent"
-          >
+
+          {/* ── Header ───────────────────────────────────────────────────── */}
+          <View className="flex-row items-center gap-3 px-6 py-4">
             <TouchableOpacity
               onPress={handleBack}
               activeOpacity={0.7}
@@ -74,21 +140,22 @@ export default function ChatScreen() {
             >
               <ChevronLeft size={20} color={COLORS.textBase} />
             </TouchableOpacity>
+
             <View className="flex-1">
               <Animated.Text
                 className="text-lg text-text-strong"
                 numberOfLines={1}
                 style={{ fontFamily: FONTS.serif }}
               >
-                {isPromptType ? (promptMemory?.title ?? 'Prompt Reflection') : (serverMessages?.title ?? 'Conversation')}
+                {isPromptType
+                  ? (promptMemory?.title ?? 'Prompt Reflection')
+                  : (serverMessages?.title ?? 'Your Memento')}
               </Animated.Text>
               <View className="flex-row items-center gap-1.5 mt-0.5">
                 <Animated.View className="size-1.5 rounded-full bg-success" style={pulseStyle} />
-                {/* <Animated.Text className="text-[9px] text-success uppercase tracking-widest font-bold" style={{ fontFamily: FONTS.sansBold }}>
-                  AI Companion
-                </Animated.Text> */}
               </View>
             </View>
+
             <TouchableOpacity
               onPress={handleActions}
               activeOpacity={0.7}
@@ -98,7 +165,56 @@ export default function ChatScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Content */}
+          {/* ── Host Chat toolbar: jump pills + deep dive + milestone ──── */}
+          {!isPromptType && (
+            <View className="pb-1">
+              {/* Jump pills row */}
+              <View className="px-4 py-1">
+                <HostChatJumpPills
+                  monthKeys={monthKeys}
+                  categoryPills={categoryPills}
+                  onJump={handleJumpToMonth}
+                  onCategoryPill={(starter) => send(starter)}
+                />
+              </View>
+
+              {/* Deep dive banner (while in deep_dive mode) */}
+              {chatMode === 'deep_dive' && deepDiveDimension && (
+                <View className="px-4 pb-1">
+                  <DeepDiveBanner
+                    dimensionLabel={dimensionLabel(deepDiveDimension)}
+                    onExit={handleExitDeepDive}
+                  />
+                </View>
+              )}
+
+              {/* Milestone card */}
+              {(enrichmentStats.deltaToday > 0 || enrichmentStats.milestoneJustReached) && (
+                <View className="px-4 pb-1">
+                  <MilestoneCard
+                    enrichmentDelta={enrichmentStats.deltaToday}
+                    milestoneLabel={
+                      enrichmentStats.milestoneJustReached
+                        ? enrichmentStats.stats?.milestone?.reached_label
+                        : null
+                    }
+                  />
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* ── Deep Dive Nudge (floating above messages) ─────────────── */}
+          {!isPromptType && showDeepDiveNudge && nudgeDimension && (
+            <DeepDiveNudge
+              dimension={nudgeDimension}
+              question={nudgeQuestion}
+              onDeepDive={handleStartDeepDiveFromNudge}
+              onDismiss={handleDismissNudge}
+            />
+          )}
+
+          {/* ── Messages ─────────────────────────────────────────────── */}
           <View className="flex-1 relative bg-transparent">
             {isLoading && !allMessages.length ? (
               <ChatSkeleton />
@@ -107,22 +223,23 @@ export default function ChatScreen() {
                 ref={flatListRef}
                 data={allMessages}
                 inverted
-                keyExtractor={(item, i) => item._id ?? String(i)}
+                keyExtractor={(item, i) => (item as any)._id ?? String(i)}
                 renderItem={({ item }) => (
-                  <MessageBubble 
-                    message={item} 
+                  <MessageBubble
+                    message={item as any}
                     onReply={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setReplyQuote({ role: item.role, text: item.text });
-                    }} 
+                      setReplyQuote({ role: (item as any).role, text: (item as any).text });
+                    }}
                   />
                 )}
-                contentContainerClassName="px-5 pb-6 pt-20"
+                contentContainerClassName="px-5 pb-6 pt-4"
                 showsVerticalScrollIndicator={false}
+                onScrollToIndexFailed={() => {}}
                 ListHeaderComponent={
                   isActuallyStreaming ? (
                     streamingText ? (
-                      <MessageBubble message={{ role: 'assistant', text: streamingText }} />
+                      <MessageBubble message={{ role: 'assistant', text: streamingText } as any} />
                     ) : (
                       <TypingIndicator />
                     )
@@ -130,24 +247,22 @@ export default function ChatScreen() {
                 }
                 ListFooterComponent={
                   isPromptType && promptMemory ? (
-                    <View className="mx-5 my-4 p-5 rounded-2xl border border-stroke-weaker bg-fill-weaker shadow-sm flex-row items-center justify-between">
-                      <View className="flex-1 pr-4">
-                        <Animated.Text
-                          className="text-base text-text-strong leading-relaxed"
-                          style={{ fontFamily: FONTS.serif }}
-                        >
-                          {promptMemory.title}
-                        </Animated.Text>
-                      </View>
-                      <View className="size-8 rounded-full bg-fill-neutral-weakest items-center justify-center border border-stroke-weaker">
-                        <Settings size={16} color={COLORS.textWeak} />
-                      </View>
+                    <View className="mx-5 my-4 p-5 rounded-2xl border border-stroke-weaker bg-fill-weaker shadow-sm">
+                      <Animated.Text
+                        className="text-base text-text-strong leading-relaxed"
+                        style={{ fontFamily: FONTS.serif }}
+                      >
+                        {promptMemory.title}
+                      </Animated.Text>
                     </View>
                   ) : null
                 }
                 ListEmptyComponent={
                   <View className="items-center justify-center py-24 gap-8">
-                    <Animated.View entering={FadeInUp.duration(600)} className="size-24 rounded-full bg-white border border-stroke-weaker items-center justify-center shadow-sm">
+                    <Animated.View
+                      entering={FadeInUp.duration(600)}
+                      className="size-24 rounded-full bg-white border border-stroke-weaker items-center justify-center shadow-sm"
+                    >
                       <Animated.Text className="text-4xl">🌱</Animated.Text>
                     </Animated.View>
                     <View className="items-center gap-3 px-10">
@@ -156,7 +271,7 @@ export default function ChatScreen() {
                         className="text-[28px] text-text-strong text-center"
                         style={{ fontFamily: FONTS.serif }}
                       >
-                        {isPromptType ? "Reflect & Grow" : "Your story grows here"}
+                        {isPromptType ? 'Reflect & Grow' : 'Your story grows here'}
                       </Animated.Text>
                       <Animated.Text
                         entering={FadeInDown.delay(300)}
@@ -164,9 +279,8 @@ export default function ChatScreen() {
                         style={{ fontFamily: FONTS.sans }}
                       >
                         {isPromptType
-                          ? "Write your answer below or tap the microphone to reply with a voice note. Your AI companion will respond to help you deep dive!"
-                          : "Share a memory, an emotion, or just say hello. Your AI companion is here to listen and help you preserve your legacy."
-                        }
+                          ? 'Write your answer below or tap the microphone to reply with a voice note. Your AI companion will respond to help you deep dive!'
+                          : 'Share a memory, an emotion, or just say hello. Your AI companion is here to listen and help you preserve your legacy.'}
                       </Animated.Text>
                     </View>
                   </View>
@@ -175,20 +289,20 @@ export default function ChatScreen() {
             )}
           </View>
 
-          {/* Reply Quote Preview Panel */}
+          {/* ── Reply Quote Preview Panel ────────────────────────────── */}
           {replyQuote && (
-            <Animated.View 
+            <Animated.View
               entering={FadeInDown.duration(200)}
               className="mx-5 mb-2.5 p-3 bg-white border border-stroke-weaker rounded-2xl flex-row items-center justify-between shadow-sm"
             >
               <View className="flex-1 pr-3 border-l-2 border-brand/50 pl-3">
-                <Text 
+                <Text
                   className="text-[10px] text-brand font-bold uppercase tracking-wider mb-0.5"
                   style={{ fontFamily: FONTS.sansBold }}
                 >
                   Replying to {replyQuote.role === 'user' ? 'your message' : 'Memento'}
                 </Text>
-                <Text 
+                <Text
                   className="text-[12px] text-text-weak leading-relaxed"
                   numberOfLines={1}
                   style={{ fontFamily: FONTS.sans }}
@@ -196,34 +310,41 @@ export default function ChatScreen() {
                   {replyQuote.text}
                 </Text>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setReplyQuote(null);
                 }}
                 activeOpacity={0.7}
-                className="size-6 rounded-full bg-fill-neutral-weakest items-center justify-center border border-stroke-weaker"
+                className="size-6 rounded-full bg-fill-weaker items-center justify-center border border-stroke-weaker"
               >
                 <X size={12} color={COLORS.textWeak} />
               </TouchableOpacity>
             </Animated.View>
           )}
 
-          {/* Floating Input */}
-          <ChatInput 
+          {/* ── Chat Input ────────────────────────────────────────────── */}
+          <ChatInput
             onSend={(text) => {
               send(text, replyQuote);
               setReplyQuote(null);
-            }} 
-            onStop={stop} 
-            onVoice={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setVoiceModeVisible(true); }}
-            loading={isActuallyStreaming || isLoading} 
+            }}
+            onStop={stop}
+            onVoice={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setVoiceModeVisible(true);
+            }}
+            loading={isActuallyStreaming || isLoading}
           />
 
-          <VoiceModeOverlay 
-            visible={voiceModeVisible} 
-            onClose={() => setVoiceModeVisible(false)} 
-            conversationTitle={isPromptType ? (promptMemory?.title ?? 'Prompt Reflection') : (serverMessages?.title ?? 'Conversation')}
+          <VoiceModeOverlay
+            visible={voiceModeVisible}
+            onClose={() => setVoiceModeVisible(false)}
+            conversationTitle={
+              isPromptType
+                ? (promptMemory?.title ?? 'Prompt Reflection')
+                : (serverMessages?.title ?? 'Conversation')
+            }
           />
         </SafeAreaView>
       </ImageBackground>
@@ -231,12 +352,4 @@ export default function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  headerGlass: {
-    ...Platform.select({
-      ios: {
-        backgroundColor: COLORS.glass,
-      },
-    }),
-  },
-});
+const styles = StyleSheet.create({});

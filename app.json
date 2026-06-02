@@ -17,7 +17,6 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.mementoai.app",
       "associatedDomains": [
-        "applinks:app.memento.ai",
         "applinks:app.memento.ai"
       ],
       "infoPlist": {
@@ -91,7 +90,9 @@
           "organization": "memento",
           "project": "memento-mobile"
         }
-      ]
+      ],
+      "@sentry/react-native",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true

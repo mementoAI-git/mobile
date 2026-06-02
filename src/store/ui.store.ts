@@ -13,10 +13,13 @@ export type SheetName =
   | 'memory-detail'
   | 'memory-actions'
   | 'capsule-actions'
+  | 'capsule-detail'
   | 'quick-capture'
   | 'memory-insights'
   | 'chat-actions'
   | 'feedback'
+  | 'upgrade-prompt'
+  | 'select'
   | null;
 
 interface UiState {

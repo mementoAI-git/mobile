@@ -99,7 +99,7 @@ export default function VerifyEmailScreen() {
           </Button>
         </View>
 
-        <TouchableOpacity onPress={() => router.back()} className="mt-8 items-center">
+        <TouchableOpacity onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/(auth)/login'); } }} className="mt-8 items-center">
           <Animated.Text
             className="text-base text-text-base underline"
             style={{ fontFamily: FONTS.sansBold }}

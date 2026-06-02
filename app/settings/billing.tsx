@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground, StyleSheet, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity, ImageBackground, ActivityIndicator, Alert, Text} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, CreditCard, Sparkles, Receipt, RefreshCw, Send, CheckCircle2, AlertTriangle, Play, Pause } from 'lucide-react-native';
+import { ChevronLeft, CreditCard, Sparkles, Receipt, RefreshCw, ExternalLink, AlertTriangle, Play, Pause } from 'lucide-react-native';
 import { Button, TextInput, Card, Badge } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { useSubscription } from '@/hooks/queries/use-subscription';
+import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { get, post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
@@ -64,9 +65,9 @@ export default function BillingSettingsScreen() {
   });
 
   // 2. Usage Query
-  const { data: usage, isLoading: usageLoading } = useQuery<UsageLimit>({
+  const { data: usage, isLoading: usageLoading } = useQuery<UsageLimit | null>({
     queryKey: ['billing-usage'],
-    queryFn: () => get<{ data: UsageLimit }>(endpoint.billingUsage).then((r) => r.data?.data),
+    queryFn: () => get<{ data: UsageLimit }>(endpoint.billingUsage).then((r) => r.data?.data ?? null),
     staleTime: 30_000,
   });
 
@@ -178,6 +179,7 @@ export default function BillingSettingsScreen() {
     }
   };
 
+  const router = useRouter();
   const isCancelled = summary?.status === 'cancelled' || summary?.status === 'canceled';
 
   return (
@@ -186,22 +188,22 @@ export default function BillingSettingsScreen() {
       <View className="flex-row items-center justify-between px-6 py-4">
         <View className="flex-row items-center gap-3">
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); Linking.openURL('memento://settings/profile'); }}
-            className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center shadow-sm"
+            onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings' as any); } }}
+            className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
           >
             <ChevronLeft size={22} color={COLORS.textBase} />
           </TouchableOpacity>
-          <Animated.Text
+          <Text
             className="text-[28px] text-text-strong"
             style={{ fontFamily: FONTS.serif }}
           >
             Billing
-          </Animated.Text>
+          </Text>
         </View>
 
         <TouchableOpacity
           onPress={handleRefresh}
-          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center shadow-sm"
+          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
         >
           <RefreshCw size={16} color={COLORS.textBase} />
         </TouchableOpacity>
@@ -212,7 +214,7 @@ export default function BillingSettingsScreen() {
 
         <View className="px-6 gap-6">
           {/* 1. Subscription Overview Card */}
-          <Animated.View entering={FadeInDown.duration(600)} style={styles.cardShadow}>
+          <Animated.View entering={FadeInDown.duration(600)}>
             <View className="bg-white rounded-[32px] border border-stroke-weaker p-6">
               <View className="flex-row items-center gap-4 mb-6">
                 <View className="size-12 rounded-2xl bg-brand-tint items-center justify-center">
@@ -220,18 +222,18 @@ export default function BillingSettingsScreen() {
                 </View>
                 <View className="flex-1">
                   <View className="flex-row items-center gap-2">
-                    <Animated.Text className="text-lg text-text-strong capitalize" style={{ fontFamily: FONTS.sansSemi }}>
+                    <Text className="text-lg text-text-strong capitalize" style={{ fontFamily: FONTS.sansSemi }}>
                       {summary?.tier ?? 'Free Tier'}
-                    </Animated.Text>
+                    </Text>
                     {isProOrAbove && (
                       <View className="bg-brand/10 px-2 py-0.5 rounded-full">
                         <Sparkles size={10} color={COLORS.brand} />
                       </View>
                     )}
                   </View>
-                  <Animated.Text className="text-xs text-text-weak mt-0.5" style={{ fontFamily: FONTS.sans }}>
+                  <Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
                     {summary?.status ? `Status: ${summary.status.replace(/_/g, ' ')}` : 'Save infinite memories with Pro'}
-                  </Animated.Text>
+                  </Text>
                 </View>
               </View>
 
@@ -240,10 +242,10 @@ export default function BillingSettingsScreen() {
               ) : (
                 <View className="bg-fill-weaker border border-stroke-weaker/45 rounded-2xl p-4 gap-3">
                   <View className="flex-row justify-between items-center">
-                    <Animated.Text className="text-xs text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>Billing Cycle</Animated.Text>
-                    <Animated.Text className="text-sm text-text-strong font-medium" style={{ fontFamily: FONTS.sansMedium }}>
+                    <Text className="text-xs text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Billing Cycle</Text>
+                    <Text className="text-sm text-text-strong font-medium" style={{ fontFamily: FONTS.sansMedium }}>
                       {renewLabel()}
-                    </Animated.Text>
+                    </Text>
                   </View>
                 </View>
               )}
@@ -259,20 +261,20 @@ export default function BillingSettingsScreen() {
                     {portalBusy ? (
                       <ActivityIndicator size="small" color={COLORS.brand} />
                     ) : (
-                      <Animated.Text className="text-sm text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>
+                      <Text className="text-sm text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>
                         Manage Portal
-                      </Animated.Text>
+                      </Text>
                     )}
                   </TouchableOpacity>
                 )}
 
                 <TouchableOpacity
                   onPress={() => { Haptics.selectionAsync(); Linking.openURL('memento://pricing'); }}
-                  className="flex-1 h-12 rounded-2xl bg-brand items-center justify-center shadow-sm"
+                  className="flex-1 h-12 rounded-2xl bg-brand items-center justify-center"
                 >
-                  <Animated.Text className="text-sm text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>
+                  <Text className="text-sm text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>
                     {isProOrAbove ? 'Change Plan' : 'Upgrade to Pro'}
-                  </Animated.Text>
+                  </Text>
                 </TouchableOpacity>
               </View>
 
@@ -288,9 +290,9 @@ export default function BillingSettingsScreen() {
                   ) : (
                     <>
                       <Pause size={14} color={COLORS.error} />
-                      <Animated.Text className="text-xs font-semibold" style={{ fontFamily: FONTS.sansSemi, color: COLORS.error }}>
+                      <Text className="text-xs font-semibold" style={{ fontFamily: FONTS.sansSemi, color: COLORS.error }}>
                         Cancel Subscription
-                      </Animated.Text>
+                      </Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -307,9 +309,9 @@ export default function BillingSettingsScreen() {
                   ) : (
                     <>
                       <Play size={14} color={COLORS.brand} />
-                      <Animated.Text className="text-xs font-semibold" style={{ fontFamily: FONTS.sansSemi, color: COLORS.brand }}>
+                      <Text className="text-sm text-brand" style={{ fontFamily: FONTS.sansSemi }}>
                         Resume Subscription
-                      </Animated.Text>
+                      </Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -319,19 +321,19 @@ export default function BillingSettingsScreen() {
 
           {/* 2. Usage & Limits Card */}
           {usage && (
-            <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.cardShadow}>
+            <Animated.View entering={FadeInDown.delay(100).duration(600)}>
               <View className="bg-white rounded-[32px] border border-stroke-weaker p-6 gap-6">
-                <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
+                <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
                   Storage & Usage
-                </Animated.Text>
+                </Text>
 
                 {/* Storage Progress */}
                 <View className="gap-2">
                   <View className="flex-row justify-between items-end">
-                    <Animated.Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>Vault Storage</Animated.Text>
-                    <Animated.Text className="text-xs text-text-weak" style={{ fontFamily: FONTS.sans }}>
+                    <Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>Vault Storage</Text>
+                    <Text className="text-xs text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
                       {formatBytes(usage.storage_used_bytes)} of {formatBytes(usage.storage_limit_bytes || 5368709120)}
-                    </Animated.Text>
+                    </Text>
                   </View>
                   <View className="h-2.5 w-full bg-fill-weaker border border-stroke-weaker/30 rounded-full overflow-hidden">
                     <View 
@@ -346,16 +348,16 @@ export default function BillingSettingsScreen() {
                 {/* Grid stats */}
                 <View className="flex-row gap-4">
                   <View className="flex-1 bg-fill-weaker rounded-2xl p-4 border border-stroke-weaker/45">
-                    <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>Trustees</Animated.Text>
-                    <Animated.Text className="text-lg text-text-strong font-bold mt-1" style={{ fontFamily: FONTS.sansBold }}>
+                    <Text className="text-[10px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Trustees</Text>
+                    <Text className="text-lg text-text-strong mt-1" style={{ fontFamily: FONTS.sansBold }}>
                       {usage.beneficiary_count ?? 0}
-                    </Animated.Text>
+                    </Text>
                   </View>
                   <View className="flex-1 bg-fill-weaker rounded-2xl p-4 border border-stroke-weaker/45">
-                    <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>Capsules</Animated.Text>
-                    <Animated.Text className="text-lg text-text-strong font-bold mt-1" style={{ fontFamily: FONTS.sansBold }}>
+                    <Text className="text-[10px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Capsules</Text>
+                    <Text className="text-lg text-text-strong mt-1" style={{ fontFamily: FONTS.sansBold }}>
                       {usage.timed_message_count ?? 0}
-                    </Animated.Text>
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -363,11 +365,11 @@ export default function BillingSettingsScreen() {
           )}
 
           {/* 3. Promo Code Card */}
-          <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.cardShadow}>
+          <Animated.View entering={FadeInDown.delay(200).duration(600)}>
             <View className="bg-white rounded-[32px] border border-stroke-weaker p-6 gap-5">
-              <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
+              <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
                 Promo Code
-              </Animated.Text>
+              </Text>
 
               <View className="flex-row gap-3 items-end">
                 <View className="flex-1">
@@ -388,9 +390,9 @@ export default function BillingSettingsScreen() {
                   {promoBusy ? (
                     <ActivityIndicator size="small" color={COLORS.brand} />
                   ) : (
-                    <Animated.Text className="text-sm text-brand font-semibold" style={{ fontFamily: FONTS.sansSemi }}>
+                    <Text className="text-sm text-brand font-semibold" style={{ fontFamily: FONTS.sansSemi }}>
                       Redeem
-                    </Animated.Text>
+                    </Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -399,13 +401,13 @@ export default function BillingSettingsScreen() {
 
           {/* 4. Invoices List Card */}
           {isProOrAbove && (
-            <Animated.View entering={FadeInDown.delay(300).duration(600)} style={styles.cardShadow}>
+            <Animated.View entering={FadeInDown.delay(300).duration(600)}>
               <View className="bg-white rounded-[32px] border border-stroke-weaker p-6 gap-4">
                 <View className="flex-row items-center gap-2">
                   <Receipt size={16} color={COLORS.textBase} />
-                  <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
+                  <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
                     Invoices
-                  </Animated.Text>
+                  </Text>
                 </View>
 
                 {invoicesLoading ? (
@@ -420,19 +422,19 @@ export default function BillingSettingsScreen() {
                         activeOpacity={0.7}
                         className="flex-row items-center justify-between bg-fill-weaker px-4 py-3.5 rounded-2xl border border-stroke-weaker/45"
                       >
-                        <Animated.Text className="text-sm text-text-strong font-medium" style={{ fontFamily: FONTS.sansMedium }}>
+                        <Text className="text-sm text-text-strong font-medium" style={{ fontFamily: FONTS.sansMedium }}>
                           {inv.label || `Invoice #${idx + 1}`}
-                        </Animated.Text>
+                        </Text>
                         {inv.url && (
-                          <Send size={14} color={COLORS.brand} />
+                          <ExternalLink size={14} color={COLORS.brand} strokeWidth={1.5} />
                         )}
                       </TouchableOpacity>
                     ))}
                   </View>
                 ) : (
-                  <Animated.Text className="text-xs text-text-disabled py-2 leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+                  <Text className="text-xs text-text-disabled py-2 leading-relaxed" style={{ fontFamily: FONTS.sans }}>
                     No invoices returned yet. They will appear here when your billing provider processes them.
-                  </Animated.Text>
+                  </Text>
                 )}
               </View>
             </Animated.View>
@@ -442,19 +444,3 @@ export default function BillingSettingsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  cardShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: '#170B00',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-});

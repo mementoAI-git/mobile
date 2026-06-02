@@ -94,7 +94,7 @@ export default function OnboardWelcomeScreen() {
           <Button
             onPress={() => router.push('/(onboard)/nickname')}
             size="lg"
-            className="h-14 bg-brand rounded-full shadow-lg shadow-brand/20"
+            className="h-14 bg-brand rounded-full"
           >
             <Text className="text-base font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Continue</Text>
           </Button>

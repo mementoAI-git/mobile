@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLogin } from '@/hooks/mutations/use-auth-mutations';
+import { useToast } from '@/components/ui/Toast';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import * as Haptics from 'expo-haptics';
@@ -19,7 +20,8 @@ export type LoginFormData = z.infer<typeof schema>;
 
 export function useLoginLogic() {
   const router = useRouter();
-  const { mutate, isPending, error } = useLogin();
+  const { toast } = useToast();
+  const { mutate, isPending } = useLogin();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
@@ -48,7 +50,10 @@ export function useLoginLogic() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         if (err?.data?.requires_verification || err?.requires_verification) {
           router.push(`/(auth)/verify-email?email=${data.email}`);
+          return;
         }
+        const message = err?.message || 'Login failed. Please try again.';
+        toast(message, 'error');
       },
     });
   };
@@ -160,7 +165,6 @@ export function useLoginLogic() {
   return {
     form,
     isPending,
-    error,
     googleLoading,
     appleLoading,
     passkeyLoading,

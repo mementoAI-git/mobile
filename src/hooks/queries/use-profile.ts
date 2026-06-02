@@ -7,17 +7,20 @@ import type { IUser } from '@/types';
 
 export function useProfile() {
   const token = useAuthStore((s) => s.token);
-  const setUser = useUserStore((s) => s.setUser);
 
   return useQuery({
     queryKey: queryKeys.profile,
     queryFn: async () => {
       const res = await get<IUser>(endpoint.profile);
-      if (res.data) setUser(res.data);
+      if (res.data) {
+        // Use getState() (imperative read) so this queryFn does NOT subscribe
+        // to useUserStore reactively — avoids triggering a re-render loop on
+        // every background refetch.
+        useUserStore.getState().setUser(res.data);
+      }
       return res.data;
     },
     enabled: !!token,
     staleTime: 60_000,
   });
 }
-

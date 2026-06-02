@@ -90,6 +90,8 @@ export interface IUser {
   newsletter_subscriber: boolean;
   created_at: string;
   onboarding_step_reached?: number;
+  /** The single unified Host Chat thread for this user (mirrors web primary_conversation_id). */
+  primary_conversation_id?: string | null;
 }
 
 export interface IMemoryAccessItem {

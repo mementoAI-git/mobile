@@ -30,6 +30,7 @@ import {
   EBGaramond_500Medium,
 } from '@expo-google-fonts/eb-garamond';
 import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono';
+import { Geist_400Regular, Geist_700Bold } from '@expo-google-fonts/geist';
 import { PatrickHandSC_400Regular } from '@expo-google-fonts/patrick-hand-sc';
 import { Handlee_400Regular } from '@expo-google-fonts/handlee';
 import { CutiveMono_400Regular } from '@expo-google-fonts/cutive-mono';
@@ -90,6 +91,8 @@ function RootLayout() {
     CutiveMono_400Regular,
     AveriaSerifLibre_400Regular,
     AveriaSerifLibre_700Bold,
+    Geist_400Regular,
+    Geist_700Bold,
 
     // Map web font family names directly to React Native loaded fonts
     'Patrick Hand SC': PatrickHandSC_400Regular,
@@ -98,7 +101,10 @@ function RootLayout() {
     'Portrait Script': require('../assets/fonts/Portrait-script-regular.ttf'),
     'Garamond': EBGaramond_400Regular,
     'Sans': Inter_400Regular,
-    'Geist Mono': AzeretMono_400Regular,
+    // Fixed: was incorrectly mapped to AzeretMono — Geist is a distinct geometric sans
+    'Geist': Geist_400Regular,
+    'Geist Bold': Geist_700Bold,
+    'Geist Mono': AzeretMono_400Regular, // kept for capsule theme backward-compat
     'Averia Serif Libre': AveriaSerifLibre_400Regular,
     'Averia Serif Libre Bold': AveriaSerifLibre_700Bold,
   });

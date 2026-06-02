@@ -56,7 +56,6 @@ export default function LoginScreen() {
   const {
     form: { control, formState: { errors } },
     isPending,
-    error,
     googleLoading,
     appleLoading,
     passkeyLoading,
@@ -247,18 +246,6 @@ export default function LoginScreen() {
                   </Animated.Text>
                 </TouchableOpacity>
               </View>
-
-              {/* Error Message */}
-              {error && (
-                <View className="bg-error-weak border border-error-weak rounded-2xl px-4 py-3">
-                  <Animated.Text
-                    className="text-sm text-error-strong text-center"
-                    style={{ fontFamily: FONTS.sansMedium }}
-                  >
-                    {(error as any).message ?? 'Login failed. Please try again.'}
-                  </Animated.Text>
-                </View>
-              )}
 
               {/* Submit Button */}
               <Button

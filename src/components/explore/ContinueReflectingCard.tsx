@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { View, Image, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,7 @@ export function ContinueReflectingCard({ title, onPress, className }: ContinueRe
   const handlePressOut = () => { if (onPress) scale.value = withSpring(1); };
 
   return (
-    <Animated.View style={[animStyle, styles.shadow]}>
+    <Animated.View style={[animStyle]}>
       <TouchableOpacity
         onPress={() => {
           Haptics.selectionAsync();
@@ -34,12 +34,12 @@ export function ContinueReflectingCard({ title, onPress, className }: ContinueRe
         onPressOut={handlePressOut}
         activeOpacity={0.9}
         className={cn(
-          'flex-row items-center rounded-2xl bg-white border border-stroke-weaker p-4 mr-4 w-[280px]',
+          'flex-row items-center rounded-2xl bg-white border border-stroke-weaker p-4 mr-4 w-[280px] h-[100px]',
           className
         )}
       >
         {/* Left icon container */}
-        <View className="size-14 items-center justify-center mr-3 bg-fill-weaker rounded-xl">
+        <View className="size-14 items-center justify-center mr-3 bg-fill-weaker rounded-xl shrink-0">
           <Image
             source={QUESTION_ICON}
             className="size-10"
@@ -48,7 +48,7 @@ export function ContinueReflectingCard({ title, onPress, className }: ContinueRe
         </View>
 
         {/* Text content */}
-        <View className="flex-1 justify-between h-full gap-2">
+        <View className="flex-1 justify-between gap-2">
           <Animated.Text
             numberOfLines={2}
             className="text-[15px] text-text-strong leading-tight"
@@ -71,18 +71,3 @@ export function ContinueReflectingCard({ title, onPress, className }: ContinueRe
   );
 }
 
-const styles = StyleSheet.create({
-  shadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 5,
-      },
-      android: {
-        elevation: 1,
-      },
-    }),
-  },
-});
