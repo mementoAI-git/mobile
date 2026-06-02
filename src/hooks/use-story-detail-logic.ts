@@ -25,7 +25,16 @@ export function useStoryDetailLogic() {
           style: 'destructive',
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            deleteMemory(memory!._id, { onSuccess: () => router.back() });
+            deleteMemory(memory!._id, {
+              onSuccess: () => {
+                // After delete, back stack may be empty if opened via deep link
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)/stories');
+                }
+              },
+            });
           },
         },
       ],

@@ -29,7 +29,7 @@ export default function TwoFactorScreen() {
       {/* Header */}
       <View className="flex-row items-center gap-3 px-6 py-4">
         <TouchableOpacity
-          onPress={() => { Haptics.selectionAsync(); router.back(); }}
+          onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
           className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center shadow-sm"
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
@@ -87,8 +87,7 @@ export default function TwoFactorScreen() {
                   variant="outline" 
                   fullWidth 
                   size="lg" 
-                  className="mt-8"
-                  style={{ borderColor: `${COLORS.error}20` }}
+                  className="mt-8 border-error/20"
                 >
                   <Animated.Text className="font-bold" style={{ fontFamily: FONTS.sansBold, color: COLORS.error }}>Disable 2FA</Animated.Text>
                 </Button>

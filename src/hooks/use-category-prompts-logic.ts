@@ -91,7 +91,12 @@ export function useCategoryPromptsLogic() {
 
   const handleBack = () => {
     Haptics.selectionAsync();
-    router.back();
+    // Explore category can be opened via deep link as root screen
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/explore');
+    }
   };
 
   return {

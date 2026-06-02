@@ -51,7 +51,13 @@ export function useChatLogic() {
 
   const handleBack = () => {
     Haptics.selectionAsync();
-    router.back();
+    // The HostChatEntryScreen uses router.replace() → clears back stack.
+    // Must guard before calling back() or it throws GO_BACK not handled.
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/overview');
+    }
   };
 
   const handleActions = () => {

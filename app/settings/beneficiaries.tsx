@@ -52,7 +52,7 @@ export default function BeneficiariesSettingsScreen() {
         <View className="flex-row items-center justify-between px-6 py-4">
           <View className="flex-row items-center gap-3">
             <TouchableOpacity
-              onPress={() => { Haptics.selectionAsync(); router.back(); }}
+              onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
               className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center shadow-sm"
             >
               <ChevronLeft size={22} color={COLORS.textBase} />
@@ -78,7 +78,7 @@ export default function BeneficiariesSettingsScreen() {
       <View className="flex-row items-center justify-between px-6 py-4">
         <View className="flex-row items-center gap-3">
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); router.back(); }}
+            onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
             className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center shadow-sm"
           >
             <ChevronLeft size={22} color={COLORS.textBase} />
