@@ -179,7 +179,6 @@ export default function AccountSettingsScreen() {
             icon={<Fingerprint size={20} color={COLORS.brand} strokeWidth={1.5} />}
             iconBg={COLORS.brandSubtle}
             label="Face ID / Touch ID"
-            description="Sign in with biometrics instead of your password"
             right={
               <Switch
                 value={biometricsEnabled}
@@ -204,14 +203,8 @@ export default function AccountSettingsScreen() {
                 <Animated.Text style={{ fontFamily: FONTS.sansMedium, fontSize: 15, color: COLORS.error }}>
                   Delete Account
                 </Animated.Text>
-                <Animated.Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>
-                  Permanently removes all your data
-                </Animated.Text>
               </View>
             </View>
-            <Animated.Text className="text-sm text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
-              This action is irreversible. All your memories, capsules, and trusted connections will be permanently deleted.
-            </Animated.Text>
             <Button onPress={handleDelete} loading={deleting} variant="destructive" fullWidth size="lg">
               Delete My Account
             </Button>
