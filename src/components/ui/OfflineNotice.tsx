@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function OfflineNotice() {
   const [isConnected, setIsConnected] = useState(true);
-  const translateY = new Animated.Value(-100);
+  const translateY = React.useRef(new Animated.Value(-100)).current;
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
