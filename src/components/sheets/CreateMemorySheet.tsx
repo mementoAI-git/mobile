@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet, Platform } from 'react-native';
 import { Button, TextInput, Spinner } from '@/components/ui';
-import { Image as ImageIcon, Users, Check, X, Shield, Lock } from 'lucide-react-native';
+import { Camera, FolderOpen, Users, Check, X, Shield, Lock, Mic } from 'lucide-react-native';
 import { useCreateMemory, useUpdateMemory } from '@/hooks/mutations/use-memory-mutations';
 import { useFileUpload } from '@/hooks/use-file-upload';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
@@ -188,15 +188,16 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
           <TouchableOpacity
             onPress={handlePickFile}
             disabled={isUploading}
-            className={`flex-1 flex-row items-center justify-center gap-2.5 h-14 rounded-2xl border ${attachments.length > 0 ? 'bg-brand/5 border-brand' : 'bg-white border-stroke-weaker'} shadow-sm`}
+            activeOpacity={0.8}
+            className={`flex-1 flex-row items-center justify-center gap-2 h-12 rounded-full border ${attachments.length > 0 ? 'bg-brand/5 border-brand' : 'bg-fill-weaker border-stroke-weaker'}`}
           >
             {isUploading ? (
               <Spinner size="small" />
             ) : (
               <>
-                <ImageIcon size={20} color={attachments.length > 0 ? COLORS.brand : COLORS.textBase} />
-                <Text className={`text-sm font-bold ${attachments.length > 0 ? 'text-brand' : 'text-text-strong'}`} style={{ fontFamily: FONTS.sansBold }}>
-                  {attachments.length > 0 ? `${attachments.length} Added` : 'Add Media'}
+                <Camera size={16} color={attachments.length > 0 ? COLORS.brand : COLORS.textBase} strokeWidth={1.5} />
+                <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: attachments.length > 0 ? COLORS.brand : COLORS.textStrong }}>
+                  {attachments.length > 0 ? `${attachments.length} file${attachments.length > 1 ? 's' : ''}` : 'Add media'}
                 </Text>
               </>
             )}
@@ -204,26 +205,26 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
 
           <TouchableOpacity
             onPress={() => mediaModalRef.current?.present()}
-            className="flex-1 flex-row items-center justify-center gap-2.5 h-14 rounded-2xl border bg-white border-stroke-weaker shadow-sm"
+            activeOpacity={0.8}
+            className="flex-1 flex-row items-center justify-center gap-2 h-12 rounded-full border bg-fill-weaker border-stroke-weaker"
           >
-            <ImageIcon size={20} color={COLORS.textBase} />
-            <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>
+            <FolderOpen size={16} color={COLORS.textBase} strokeWidth={1.5} />
+            <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textStrong }}>
               Library
             </Text>
           </TouchableOpacity>
         </View>
 
-        <View className="flex-row items-center gap-3">
-          <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); setShowBeneficiaries(!showBeneficiaries); }}
-            className={`flex-1 flex-row items-center justify-center gap-2.5 h-14 rounded-2xl border ${beneficiaries.length > 0 ? 'bg-brand/5 border-brand' : 'bg-white border-stroke-weaker'} shadow-sm`}
-          >
-            <Users size={20} color={beneficiaries.length > 0 ? COLORS.brand : COLORS.textBase} />
-            <Text className={`text-sm font-bold ${beneficiaries.length > 0 ? 'text-brand' : 'text-text-strong'}`} style={{ fontFamily: FONTS.sansBold }}>
-              {beneficiaries.length > 0 ? `${beneficiaries.length} Selected` : 'Trustees'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          onPress={() => { Haptics.selectionAsync(); setShowBeneficiaries(!showBeneficiaries); }}
+          activeOpacity={0.8}
+          className={`flex-row items-center justify-center gap-2 h-12 rounded-full border ${beneficiaries.length > 0 ? 'bg-brand/5 border-brand' : 'bg-fill-weaker border-stroke-weaker'}`}
+        >
+          <Users size={16} color={beneficiaries.length > 0 ? COLORS.brand : COLORS.textBase} strokeWidth={1.5} />
+          <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: beneficiaries.length > 0 ? COLORS.brand : COLORS.textStrong }}>
+            {beneficiaries.length > 0 ? `${beneficiaries.length} trustee${beneficiaries.length > 1 ? 's' : ''} selected` : 'Share with trustees'}
+          </Text>
+        </TouchableOpacity>
 
         {showBeneficiaries && (
           <Animated.View entering={FadeInDown} className="bg-fill-weaker rounded-[24px] border border-stroke-weaker p-5">
