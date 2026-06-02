@@ -20,6 +20,7 @@ import { ChatActionsSheet } from './ChatActionsSheet';
 import { FeedbackSheet } from './FeedbackSheet';
 import { CapsuleDetailSheet } from './CapsuleDetailSheet';
 import { UpgradePromptSheet } from './UpgradePromptSheet';
+import { SelectSheet } from './SelectSheet';
 import { COLORS } from '@/constants/tokens';
 
 const SHEET_CONFIGS: Record<string, { component: React.ComponentType<any>; snapPoints?: string[]; dynamic?: boolean; keyboardBehavior?: 'interactive' | 'fillParent' | 'extend'; keyboardBlurBehavior?: 'restore' | 'dismiss' | 'none' }> = {
@@ -39,6 +40,7 @@ const SHEET_CONFIGS: Record<string, { component: React.ComponentType<any>; snapP
   'feedback': { component: FeedbackSheet, snapPoints: ['90%'], dynamic: true, keyboardBehavior: 'fillParent' },
   'capsule-detail': { component: CapsuleDetailSheet, snapPoints: ['92%'] },
   'upgrade-prompt': { component: UpgradePromptSheet, dynamic: true },
+  'select': { component: SelectSheet, dynamic: true },
 };
 
 export function SheetManager() {
