@@ -65,9 +65,9 @@ export default function BillingSettingsScreen() {
   });
 
   // 2. Usage Query
-  const { data: usage, isLoading: usageLoading } = useQuery<UsageLimit>({
+  const { data: usage, isLoading: usageLoading } = useQuery<UsageLimit | null>({
     queryKey: ['billing-usage'],
-    queryFn: () => get<{ data: UsageLimit }>(endpoint.billingUsage).then((r) => r.data?.data),
+    queryFn: () => get<{ data: UsageLimit }>(endpoint.billingUsage).then((r) => r.data?.data ?? null),
     staleTime: 30_000,
   });
 
