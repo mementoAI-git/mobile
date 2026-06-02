@@ -101,31 +101,6 @@ export default function ProfileSettingsScreen() {
           </ImageBackground>
         </Animated.View>
 
-        {/* Insights Section */}
-        <View className="px-6 mb-10 gap-4">
-          <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px] px-1" style={{ fontFamily: FONTS.sansBold }}>Personal Insights</Animated.Text>
-          <View className="flex-row gap-4">
-            <View className="flex-1 bg-white rounded-[24px] border border-stroke-weaker p-5">
-              <View className="flex-row items-center gap-2 mb-3">
-                <Trophy size={16} color={COLORS.brand} />
-                <Animated.Text className="text-xs text-text-weak font-bold" style={{ fontFamily: FONTS.sansBold }}>Enrichment Level</Animated.Text>
-              </View>
-              <Animated.Text className="text-3xl text-text-strong mb-2" style={{ fontFamily: FONTS.serif }}>{enrichmentScore}%</Animated.Text>
-              <View className="h-2 w-full bg-fill-weak rounded-full overflow-hidden">
-                <View className="h-full bg-brand" style={{ width: `${enrichmentScore}%` }} />
-              </View>
-            </View>
-            <View className="flex-1 bg-white rounded-[24px] border border-stroke-weaker p-5">
-              <View className="flex-row items-center gap-2 mb-3">
-                <Zap size={16} color={COLORS.brand} />
-                <Animated.Text className="text-xs text-text-weak font-bold" style={{ fontFamily: FONTS.sansBold }}>Top Focus</Animated.Text>
-              </View>
-              <Animated.Text className="text-[17px] text-text-strong leading-tight mb-2" style={{ fontFamily: FONTS.serif }} numberOfLines={2}>{topDimension}</Animated.Text>
-              <Animated.Text className="text-[10px] text-text-muted mt-auto" style={{ fontFamily: FONTS.sansMedium }}>Based on your patterns</Animated.Text>
-            </View>
-          </View>
-        </View>
-
         {/* Navigation Section */}
         <View className="px-6 gap-3">
           <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px] px-1 mb-1" style={{ fontFamily: FONTS.sansBold }}>Settings & Privacy</Animated.Text>

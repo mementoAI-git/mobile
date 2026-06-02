@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { View, ScrollView, TouchableOpacity, ImageBackground, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, CreditCard, Sparkles, Receipt, RefreshCw, Send, CheckCircle2, AlertTriangle, Play, Pause } from 'lucide-react-native';
+import { ChevronLeft, CreditCard, Sparkles, Receipt, RefreshCw, ExternalLink, AlertTriangle, Play, Pause } from 'lucide-react-native';
 import { Button, TextInput, Card, Badge } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { useSubscription } from '@/hooks/queries/use-subscription';
+import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { get, post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
@@ -178,6 +179,7 @@ export default function BillingSettingsScreen() {
     }
   };
 
+  const router = useRouter();
   const isCancelled = summary?.status === 'cancelled' || summary?.status === 'canceled';
 
   return (
@@ -186,7 +188,7 @@ export default function BillingSettingsScreen() {
       <View className="flex-row items-center justify-between px-6 py-4">
         <View className="flex-row items-center gap-3">
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); Linking.openURL('memento://settings/profile'); }}
+            onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings' as any); } }}
             className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
           >
             <ChevronLeft size={22} color={COLORS.textBase} />
@@ -424,7 +426,7 @@ export default function BillingSettingsScreen() {
                           {inv.label || `Invoice #${idx + 1}`}
                         </Animated.Text>
                         {inv.url && (
-                          <Send size={14} color={COLORS.brand} />
+                          <ExternalLink size={14} color={COLORS.brand} strokeWidth={1.5} />
                         )}
                       </TouchableOpacity>
                     ))}

@@ -10,25 +10,29 @@ import { useRouter } from 'expo-router';
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 const PRIVACY_ITEMS = [
-  { 
-    title: 'Data & Storage', 
-    desc: 'Manage your data and storage usage across your devices.',
-    Icon: Database 
+  {
+    title: 'Data & Storage',
+    desc: 'Manage your data and storage usage.',
+    Icon: Database,
+    iconBg: COLORS.fillWeak,
   },
-  { 
-    title: 'Memory Visibility', 
+  {
+    title: 'Memory Visibility',
     desc: 'Control who can see your memories by default.',
-    Icon: Eye 
+    Icon: Eye,
+    iconBg: COLORS.fillWeak,
   },
-  { 
-    title: 'AI Personalization', 
+  {
+    title: 'AI Personalization',
     desc: 'Allow your companion to learn from your reflections.',
-    Icon: Brain 
+    Icon: Brain,
+    iconBg: COLORS.fillWeak,
   },
-  { 
-    title: 'Export Data', 
+  {
+    title: 'Export Data',
     desc: 'Download a complete archive of all your content.',
-    Icon: Download 
+    Icon: Download,
+    iconBg: COLORS.fillWeak,
   },
 ];
 
@@ -45,51 +49,44 @@ export default function PrivacySettingsScreen() {
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
-        <Animated.Text
-          className="text-[28px] text-text-strong"
-          style={{ fontFamily: FONTS.serif }}
-        >
+        <Animated.Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
           Privacy
         </Animated.Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-12">
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pb-16 gap-6">
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
 
-        <View className="px-6 gap-4">
-          <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px] px-1 mb-1" style={{ fontFamily: FONTS.sansBold }}>Security & Control</Animated.Text>
-          
+        <View className="gap-3">
+          <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px] px-1" style={{ fontFamily: FONTS.sansBold }}>
+            Controls
+          </Animated.Text>
+
           {PRIVACY_ITEMS.map((item, idx) => (
-            <Animated.View key={item.title} entering={FadeInDown.delay(100 * idx).duration(500)}>
+            <Animated.View key={item.title} entering={FadeInDown.delay(60 * idx).duration(400)}>
               <TouchableOpacity
                 onPress={() => Haptics.selectionAsync()}
                 activeOpacity={0.7}
-                className="flex-row items-center gap-4 bg-white rounded-[24px] p-5 border border-stroke-weaker"
+                className="flex-row items-center gap-4 px-5 py-4 bg-white rounded-[20px] border border-stroke-weaker"
               >
-                <View className="size-12 rounded-2xl bg-fill-weaker items-center justify-center">
-                  <item.Icon size={22} color={COLORS.textBase} strokeWidth={1.5} />
+                <View className="size-11 rounded-2xl items-center justify-center" style={{ backgroundColor: item.iconBg }}>
+                  <item.Icon size={20} color={COLORS.textBase} strokeWidth={1.5} />
                 </View>
-                <View className="flex-1 gap-0.5">
-                  <Animated.Text
-                    className="text-base text-text-strong"
-                    style={{ fontFamily: FONTS.sansMedium }}
-                  >
+                <View className="flex-1">
+                  <Animated.Text style={{ fontFamily: FONTS.sansMedium, fontSize: 15, color: COLORS.textStrong }}>
                     {item.title}
                   </Animated.Text>
-                  <Animated.Text
-                    className="text-xs text-text-weak leading-relaxed"
-                    style={{ fontFamily: FONTS.sans }}
-                  >
+                  <Animated.Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>
                     {item.desc}
                   </Animated.Text>
                 </View>
-                <ChevronRight size={18} color={COLORS.textDisabled} />
+                <ChevronRight size={18} color={COLORS.textDisabled} strokeWidth={1.5} />
               </TouchableOpacity>
             </Animated.View>
           ))}
         </View>
 
-        <View className="px-10 mt-12">
+        <View className="px-2">
           <Animated.Text className="text-center text-[10px] text-text-disabled leading-relaxed uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
             Your data is encrypted end-to-end. Memento cannot read your reflections without your explicit permission.
           </Animated.Text>

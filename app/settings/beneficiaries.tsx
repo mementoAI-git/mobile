@@ -92,7 +92,7 @@ export default function BeneficiariesSettingsScreen() {
         </View>
         <TouchableOpacity
           onPress={handleAdd}
-          className="size-11 rounded-full bg-brand items-center justify-center shadow-lg shadow-brand/20"
+          className="size-11 rounded-full bg-brand items-center justify-center"
         >
           <Plus size={22} color="white" strokeWidth={2.5} />
         </TouchableOpacity>
@@ -130,9 +130,9 @@ export default function BeneficiariesSettingsScreen() {
               <Button
                 onPress={() => openSheet('add-beneficiary')}
                 size="lg"
-                className="px-10 rounded-full shadow-lg shadow-brand/20"
+                className="px-10 rounded-full"
               >
-                <Animated.Text className="text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>Add First Trustee</Animated.Text>
+                <Animated.Text className="text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>Add First Beneficiary</Animated.Text>
               </Button>
             </Animated.View>
           ) : (
