@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
+import { View, ScrollView, TouchableOpacity, ImageBackground, Text} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { ChevronLeft, ShieldCheck, ShieldOff, Smartphone, Copy } from 'lucide-react-native';
@@ -34,9 +34,9 @@ export default function TwoFactorScreen() {
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
-        <Animated.Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
+        <Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
           Two-Factor Auth
-        </Animated.Text>
+        </Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pb-16 gap-5">
@@ -54,12 +54,12 @@ export default function TwoFactorScreen() {
             }
           </View>
           <View className="flex-1">
-            <Animated.Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+            <Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
               {is2FAEnabled ? 'Enabled' : 'Not enabled'}
-            </Animated.Text>
-            <Animated.Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
+            </Text>
+            <Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
               {is2FAEnabled ? 'Your account has a second factor' : 'Protect your account with an authenticator app'}
-            </Animated.Text>
+            </Text>
           </View>
         </View>
 
@@ -84,9 +84,9 @@ export default function TwoFactorScreen() {
               <View className="size-11 rounded-2xl bg-brand/10 items-center justify-center shrink-0">
                 <Smartphone size={20} color={COLORS.brand} strokeWidth={1.5} />
               </View>
-              <Animated.Text className="text-sm text-text-weak leading-relaxed flex-1" style={{ fontFamily: FONTS.sans }}>
+              <Text className="text-sm text-text-weak leading-relaxed flex-1" style={{ fontFamily: FONTS.sans }}>
                 Open your authenticator app and scan the QR code, or enter the secret key manually.
-              </Animated.Text>
+              </Text>
             </View>
 
             {setupData.secret && (
@@ -99,12 +99,12 @@ export default function TwoFactorScreen() {
                 className="bg-fill-weaker rounded-2xl p-4 border border-stroke-weaker flex-row items-center justify-between"
               >
                 <View className="flex-1">
-                  <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-[2px] mb-1" style={{ fontFamily: FONTS.sansBold }}>
+                  <Text className="text-[10px] text-text-muted uppercase tracking-[2px] mb-1" style={{ fontFamily: FONTS.sansBold }}>
                     Secret key — tap to copy
-                  </Animated.Text>
-                  <Animated.Text className="text-base text-text-strong tracking-[2px]" style={{ fontFamily: FONTS.mono }}>
+                  </Text>
+                  <Text className="text-base text-text-strong tracking-[2px]" style={{ fontFamily: FONTS.mono }}>
                     {setupData.secret}
-                  </Animated.Text>
+                  </Text>
                 </View>
                 <Copy size={18} color={COLORS.textMuted} strokeWidth={1.5} />
               </TouchableOpacity>
@@ -121,7 +121,7 @@ export default function TwoFactorScreen() {
 
             {error && (
               <View className="rounded-2xl px-4 py-3 border" style={{ backgroundColor: `${COLORS.error}08`, borderColor: `${COLORS.error}20` }}>
-                <Animated.Text className="text-sm" style={{ fontFamily: FONTS.sans, color: COLORS.error }}>{error}</Animated.Text>
+                <Text className="text-sm" style={{ fontFamily: FONTS.sans, color: COLORS.error }}>{error}</Text>
               </View>
             )}
 

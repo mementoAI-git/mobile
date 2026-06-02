@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
+import { View, ScrollView, TouchableOpacity, ImageBackground, Text} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft, Database, Eye, Brain, Download, ChevronRight } from 'lucide-react-native';
@@ -49,18 +49,18 @@ export default function PrivacySettingsScreen() {
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
-        <Animated.Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
+        <Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
           Privacy
-        </Animated.Text>
+        </Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pb-16 gap-6">
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
 
         <View className="gap-3">
-          <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px] px-1" style={{ fontFamily: FONTS.sansBold }}>
+          <Text className="text-[11px] text-text-muted uppercase tracking-[2px] px-1" style={{ fontFamily: FONTS.sansBold }}>
             Controls
-          </Animated.Text>
+          </Text>
 
           {PRIVACY_ITEMS.map((item, idx) => (
             <Animated.View key={item.title} entering={FadeInDown.delay(60 * idx).duration(400)}>
@@ -73,12 +73,12 @@ export default function PrivacySettingsScreen() {
                   <item.Icon size={20} color={COLORS.textBase} strokeWidth={1.5} />
                 </View>
                 <View className="flex-1">
-                  <Animated.Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+                  <Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
                     {item.title}
-                  </Animated.Text>
-                  <Animated.Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
+                  </Text>
+                  <Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
                     {item.desc}
-                  </Animated.Text>
+                  </Text>
                 </View>
                 <ChevronRight size={18} color={COLORS.textDisabled} strokeWidth={1.5} />
               </TouchableOpacity>
@@ -87,9 +87,9 @@ export default function PrivacySettingsScreen() {
         </View>
 
         <View className="px-2">
-          <Animated.Text className="text-center text-[10px] text-text-disabled leading-relaxed uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
+          <Text className="text-center text-[10px] text-text-disabled leading-relaxed uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
             Your data is encrypted end-to-end. Memento cannot read your reflections without your explicit permission.
-          </Animated.Text>
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>

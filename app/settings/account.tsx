@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground, Alert, Modal } from 'react-native';
+import { View, ScrollView, TouchableOpacity, ImageBackground, Alert, Modal, Text} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft, ShieldCheck, AlertTriangle, Fingerprint, KeyRound } from 'lucide-react-native';
@@ -34,13 +34,13 @@ function SettingsRow({
         {icon}
       </View>
       <View className="flex-1">
-        <Animated.Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+        <Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
           {label}
-        </Animated.Text>
+        </Text>
         {description && (
-          <Animated.Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
+          <Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
             {description}
-          </Animated.Text>
+          </Text>
         )}
       </View>
       {right}
@@ -123,9 +123,9 @@ export default function AccountSettingsScreen() {
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
-        <Animated.Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
+        <Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
           Security
-        </Animated.Text>
+        </Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pb-16 gap-6">
@@ -133,9 +133,9 @@ export default function AccountSettingsScreen() {
 
         {/* ── Change Password ─────────────────────────────────────────── */}
         <View className="gap-3">
-          <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px] px-1" style={{ fontFamily: FONTS.sansBold }}>
+          <Text className="text-[11px] text-text-muted uppercase tracking-[2px] px-1" style={{ fontFamily: FONTS.sansBold }}>
             Update Password
-          </Animated.Text>
+          </Text>
 
           <View className="gap-2">
             <Controller control={control} name="current_password" render={({ field: { onChange, onBlur, value } }) => (
@@ -151,16 +151,16 @@ export default function AccountSettingsScreen() {
 
           {error && (
             <View className="bg-fill-weaker rounded-2xl px-4 py-3 border border-stroke-weaker">
-              <Animated.Text className="text-sm text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+              <Text className="text-sm text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
                 {(error as any).message}
-              </Animated.Text>
+              </Text>
             </View>
           )}
           {isSuccess && (
             <View className="rounded-2xl px-4 py-3 border" style={{ backgroundColor: `${COLORS.success}08`, borderColor: `${COLORS.success}20` }}>
-              <Animated.Text className="text-sm" style={{ fontFamily: FONTS.sans, color: COLORS.success }}>
+              <Text className="text-sm" style={{ fontFamily: FONTS.sans, color: COLORS.success }}>
                 Password updated successfully.
-              </Animated.Text>
+              </Text>
             </View>
           )}
 
@@ -171,9 +171,9 @@ export default function AccountSettingsScreen() {
 
         {/* ── Device Access ────────────────────────────────────────────── */}
         <View className="gap-3">
-          <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px] px-1" style={{ fontFamily: FONTS.sansBold }}>
+          <Text className="text-[11px] text-text-muted uppercase tracking-[2px] px-1" style={{ fontFamily: FONTS.sansBold }}>
             Device Access
-          </Animated.Text>
+          </Text>
 
           <SettingsRow
             icon={<Fingerprint size={20} color={COLORS.brand} strokeWidth={1.5} />}
@@ -190,9 +190,9 @@ export default function AccountSettingsScreen() {
 
         {/* ── Danger Zone ──────────────────────────────────────────────── */}
         <View className="gap-3">
-          <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px] px-1" style={{ fontFamily: FONTS.sansBold }}>
+          <Text className="text-[11px] text-text-muted uppercase tracking-[2px] px-1" style={{ fontFamily: FONTS.sansBold }}>
             Danger Zone
-          </Animated.Text>
+          </Text>
 
           <View className="bg-white rounded-[20px] border p-5 gap-3" style={{ borderColor: `${COLORS.error}20` }}>
             <View className="flex-row items-center gap-3">
@@ -200,9 +200,9 @@ export default function AccountSettingsScreen() {
                 <AlertTriangle size={20} color={COLORS.error} strokeWidth={1.5} />
               </View>
               <View className="flex-1">
-                <Animated.Text className="text-[15px] text-error-strong" style={{ fontFamily: FONTS.sansMedium }}>
+                <Text className="text-[15px] text-error-strong" style={{ fontFamily: FONTS.sansMedium }}>
                   Delete Account
-                </Animated.Text>
+                </Text>
               </View>
             </View>
             <Button onPress={handleDelete} loading={deleting} variant="destructive" fullWidth size="lg">
@@ -218,12 +218,12 @@ export default function AccountSettingsScreen() {
           <View className="bg-white rounded-[32px] p-6 gap-5 border border-stroke-weaker">
             <View className="items-center gap-2">
               <Fingerprint size={36} color={COLORS.brand} />
-              <Animated.Text className="text-xl text-text-strong text-center" style={{ fontFamily: FONTS.serif }}>
+              <Text className="text-xl text-text-strong text-center" style={{ fontFamily: FONTS.serif }}>
                 Enable Biometric Login
-              </Animated.Text>
-              <Animated.Text className="text-sm text-text-weak text-center leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+              </Text>
+              <Text className="text-sm text-text-weak text-center leading-relaxed" style={{ fontFamily: FONTS.sans }}>
                 Confirm your password to register biometric access on this device.
-              </Animated.Text>
+              </Text>
             </View>
             <TextInput label="Password" secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} placeholder="••••••••" error={confirmError} />
             <View className="flex-row gap-3">
@@ -231,13 +231,13 @@ export default function AccountSettingsScreen() {
                 onPress={() => setPasswordModalVisible(false)}
                 className="flex-1 h-12 rounded-2xl border border-stroke-weak items-center justify-center"
               >
-                <Animated.Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>Cancel</Animated.Text>
+                <Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={enrollBiometrics}
                 className="flex-1 h-12 rounded-2xl bg-brand items-center justify-center"
               >
-                <Animated.Text className="text-sm text-white" style={{ fontFamily: FONTS.sansBold }}>Confirm</Animated.Text>
+                <Text className="text-sm text-white" style={{ fontFamily: FONTS.sansBold }}>Confirm</Text>
               </TouchableOpacity>
             </View>
           </View>

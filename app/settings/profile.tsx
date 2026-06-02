@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, ImageBackground, TouchableOpacity } from 'react-native';
+import { View, ScrollView, ImageBackground, TouchableOpacity, Text} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, ChevronRight, Shield, Eye, Users, Smartphone, Zap, MessageSquare, CreditCard, LogOut, Trophy, Flame } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -42,12 +42,12 @@ export default function ProfileSettingsScreen() {
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
-        <Animated.Text
+        <Text
           className="text-[28px] text-text-strong"
           style={{ fontFamily: FONTS.serif }}
         >
           Account
-        </Animated.Text>
+        </Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-24">
@@ -63,38 +63,38 @@ export default function ProfileSettingsScreen() {
             <View className="flex-row items-center gap-5">
               <Avatar uri={profile?.picture_url} name={profile?.fullname ?? profile?.first_name} size="xl" className="border border-stroke-weak" />
               <View className="flex-1 gap-1">
-                <Animated.Text
+                <Text
                   className="text-[24px] text-text-strong leading-tight"
                   style={{ fontFamily: FONTS.serif }}
                 >
                   {(profile?.fullname ?? `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim()) || 'Your Name'}
-                </Animated.Text>
-                <Animated.Text
+                </Text>
+                <Text
                   className="text-sm text-text-weak opacity-60"
                   style={{ fontFamily: FONTS.sansMedium }}
                   numberOfLines={1}
                 >
                   {profile?.email}
-                </Animated.Text>
+                </Text>
               </View>
             </View>
 
             <View className="flex-row items-center gap-4 mt-8 pt-8 border-t border-stroke-weaker/40">
               <View className="flex-1 gap-1.5 items-center">
-                <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Enrichment</Animated.Text>
-                <Animated.Text className="text-xl text-brand font-bold" style={{ fontFamily: FONTS.sansBold }}>{enrichmentScore}%</Animated.Text>
+                <Text className="text-[10px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Enrichment</Text>
+                <Text className="text-xl text-brand font-bold" style={{ fontFamily: FONTS.sansBold }}>{enrichmentScore}%</Text>
               </View>
               <View className="w-px h-10 bg-stroke-weaker" />
               <View className="flex-1 gap-1.5 items-center">
-                <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Stories</Animated.Text>
-                <Animated.Text className="text-xl text-text-strong font-bold" style={{ fontFamily: FONTS.sansBold }}>{memoriesCount}</Animated.Text>
+                <Text className="text-[10px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Stories</Text>
+                <Text className="text-xl text-text-strong font-bold" style={{ fontFamily: FONTS.sansBold }}>{memoriesCount}</Text>
               </View>
               <View className="w-px h-10 bg-stroke-weaker" />
               <View className="flex-1 gap-1.5 items-center">
-                <Animated.Text className="text-[10px] text-text-muted font-bold uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Streak</Animated.Text>
+                <Text className="text-[10px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Streak</Text>
                 <View className="flex-row items-center gap-1">
                   <Flame size={16} color={COLORS.brand} />
-                  <Animated.Text className="text-xl text-text-strong font-bold" style={{ fontFamily: FONTS.sansBold }}>{streakCount}</Animated.Text>
+                  <Text className="text-xl text-text-strong font-bold" style={{ fontFamily: FONTS.sansBold }}>{streakCount}</Text>
                 </View>
               </View>
             </View>
@@ -103,7 +103,7 @@ export default function ProfileSettingsScreen() {
 
         {/* Navigation Section */}
         <View className="px-6 gap-3">
-          <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px] px-1 mb-1" style={{ fontFamily: FONTS.sansBold }}>Settings & Privacy</Animated.Text>
+          <Text className="text-[11px] text-text-muted uppercase tracking-[2px] px-1 mb-1" style={{ fontFamily: FONTS.sansBold }}>Settings & Privacy</Text>
           {NAV_ITEMS.map((item, idx) => (
             <Animated.View key={item.href} entering={FadeInDown.delay(100 * idx).duration(400)}>
               <TouchableOpacity
@@ -114,12 +114,12 @@ export default function ProfileSettingsScreen() {
                 <View className="size-11 rounded-2xl bg-fill-weaker items-center justify-center">
                   <item.Icon size={20} color={COLORS.textBase} strokeWidth={1.5} />
                 </View>
-                <Animated.Text
+                <Text
                   className="flex-1 text-[15px] text-text-strong"
                   style={{ fontFamily: FONTS.sansMedium }}
                 >
                   {item.label}
-                </Animated.Text>
+                </Text>
                 <ChevronRight size={18} color={COLORS.textDisabled} />
               </TouchableOpacity>
             </Animated.View>
@@ -135,12 +135,12 @@ export default function ProfileSettingsScreen() {
               <View className="size-11 rounded-2xl bg-fill-weaker items-center justify-center">
                 <MessageSquare size={20} color={COLORS.textBase} strokeWidth={1.5} />
               </View>
-              <Animated.Text
+              <Text
                 className="flex-1 text-base text-text-strong"
                 style={{ fontFamily: FONTS.sansMedium }}
               >
                 Send Feedback
-              </Animated.Text>
+              </Text>
               <ChevronRight size={18} color={COLORS.textDisabled} />
             </TouchableOpacity>
           </Animated.View>
@@ -155,13 +155,13 @@ export default function ProfileSettingsScreen() {
             style={{ backgroundColor: `${COLORS.error}05`, borderColor: `${COLORS.error}15` }}
           >
             <LogOut size={20} color={COLORS.error} />
-            <Animated.Text className="text-base font-bold" style={{ fontFamily: FONTS.sansBold, color: COLORS.error }}>
+            <Text className="text-base font-bold" style={{ fontFamily: FONTS.sansBold, color: COLORS.error }}>
               Sign Out
-            </Animated.Text>
+            </Text>
           </TouchableOpacity>
-          <Animated.Text className="text-center text-[10px] text-text-disabled mt-6 uppercase tracking-[3px]" style={{ fontFamily: FONTS.sansBold }}>
+          <Text className="text-center text-[10px] text-text-disabled mt-6 uppercase tracking-[3px]" style={{ fontFamily: FONTS.sansBold }}>
             Memento v1.0.0
-          </Animated.Text>
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
