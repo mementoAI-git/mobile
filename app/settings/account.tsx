@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground, StyleSheet, Platform, Alert, Modal } from 'react-native';
+import { View, ScrollView, TouchableOpacity, ImageBackground, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Controller } from 'react-hook-form';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -99,7 +99,7 @@ export default function AccountSettingsScreen() {
       <View className="flex-row items-center gap-3 px-6 py-4">
         <TouchableOpacity
           onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
-          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center shadow-sm"
+          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
@@ -116,7 +116,7 @@ export default function AccountSettingsScreen() {
 
         <View className="px-6 gap-8">
           {/* Change Password Card */}
-          <Animated.View entering={FadeInDown.duration(600)} style={styles.cardShadow}>
+          <Animated.View entering={FadeInDown.duration(600)}>
             <View className="bg-white rounded-[32px] border border-stroke-weaker p-6 gap-6">
               <View className="flex-row items-center gap-3 mb-2">
                 <View className="size-10 rounded-2xl bg-brand-tint items-center justify-center">
@@ -167,7 +167,7 @@ export default function AccountSettingsScreen() {
           </Animated.View>
 
           {/* Biometrics Toggle Card */}
-          <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.cardShadow}>
+          <Animated.View entering={FadeInDown.delay(100).duration(600)}>
             <View className="bg-white rounded-[32px] border border-stroke-weaker p-6">
               <View className="flex-row items-center justify-between">
                 <View className="flex-row items-center gap-3">
@@ -190,14 +190,14 @@ export default function AccountSettingsScreen() {
                     biometricsEnabled ? 'bg-brand items-end' : 'bg-fill-weaker border border-stroke-weaker items-start'
                   }`}
                 >
-                  <View className="size-6 rounded-full shadow-sm bg-white" />
+                  <View className="size-6 rounded-full bg-white" />
                 </TouchableOpacity>
               </View>
             </View>
           </Animated.View>
 
           {/* Danger Zone Card */}
-          <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.cardShadow}>
+          <Animated.View entering={FadeInDown.delay(200).duration(600)}>
             <View 
               className="rounded-[32px] border p-6 gap-4"
               style={{ backgroundColor: `${COLORS.error}05`, borderColor: `${COLORS.error}15` }}
@@ -267,7 +267,7 @@ export default function AccountSettingsScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={enrollBiometrics}
-                className="flex-1 h-12 rounded-2xl bg-brand items-center justify-center shadow-sm"
+                className="flex-1 h-12 rounded-2xl bg-brand items-center justify-center"
               >
                 <Animated.Text className="text-sm text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>
                   Confirm
@@ -280,19 +280,3 @@ export default function AccountSettingsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  cardShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: '#170B00',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-});

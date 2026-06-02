@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground, StyleSheet, Platform } from 'react-native';
+import { View, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft, Database, Eye, Brain, Download, ChevronRight } from 'lucide-react-native';
@@ -41,7 +41,7 @@ export default function PrivacySettingsScreen() {
       <View className="flex-row items-center gap-3 px-6 py-4">
         <TouchableOpacity
           onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
-          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center shadow-sm"
+          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
@@ -60,7 +60,7 @@ export default function PrivacySettingsScreen() {
           <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px] px-1 mb-1" style={{ fontFamily: FONTS.sansBold }}>Security & Control</Animated.Text>
           
           {PRIVACY_ITEMS.map((item, idx) => (
-            <Animated.View key={item.title} entering={FadeInDown.delay(100 * idx).duration(500)} style={styles.cardShadow}>
+            <Animated.View key={item.title} entering={FadeInDown.delay(100 * idx).duration(500)}>
               <TouchableOpacity
                 onPress={() => Haptics.selectionAsync()}
                 activeOpacity={0.7}
@@ -98,19 +98,3 @@ export default function PrivacySettingsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  cardShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: '#170B00',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.04,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-});

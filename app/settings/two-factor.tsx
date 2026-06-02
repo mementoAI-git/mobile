@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground, StyleSheet, Platform } from 'react-native';
+import { View, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft, ShieldCheck, Smartphone, Copy } from 'lucide-react-native';
@@ -30,7 +30,7 @@ export default function TwoFactorScreen() {
       <View className="flex-row items-center gap-3 px-6 py-4">
         <TouchableOpacity
           onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
-          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center shadow-sm"
+          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
@@ -47,7 +47,7 @@ export default function TwoFactorScreen() {
 
         <View className="px-6 gap-8">
           {/* Status Card */}
-          <Animated.View entering={FadeInDown.duration(600)} style={styles.cardShadow}>
+          <Animated.View entering={FadeInDown.duration(600)}>
             <View className="bg-white rounded-[32px] border border-stroke-weaker p-6">
               <View className="flex-row items-center gap-4">
                 <View 
@@ -169,19 +169,3 @@ export default function TwoFactorScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  cardShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: '#170B00',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-});

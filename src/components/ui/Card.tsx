@@ -23,14 +23,7 @@ export function Card({ children, className, size = 'default', ...props }: CardPr
         size === 'default' ? 'py-4 gap-4' : 'py-3 gap-3',
         className,
       )}
-      style={{
-        // shadow-card approximates web ring-1 ring-foreground/10 + subtle depth
-        shadowColor: COLORS.textDisabled,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 1,
-        shadowRadius: 2,
-        elevation: 1,
-      }}
+      // Web uses ring-1 ring-foreground/10 (no box-shadow) — flat surface, border only
       {...props}
     >
       {children}

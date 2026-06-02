@@ -369,7 +369,7 @@ export default function PreferencesScreen() {
           <Button
             onPress={handleNext}
             loading={saving}
-            className="flex-1 h-14 bg-brand rounded-full shadow-lg shadow-brand/20"
+            className="flex-1 h-14 bg-brand rounded-full"
           >
             <Animated.Text className="text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>
               {step === TOTAL_STEPS ? "Begin Journey" : 'Continue'}

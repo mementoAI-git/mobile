@@ -157,7 +157,7 @@ export function ChatActionsSheet({ onClose }: ChatActionsSheetProps) {
             setShowEnrichment(false);
           }}
           activeOpacity={0.8}
-          className="flex-row items-center gap-4 p-4 rounded-[20px] bg-white border border-stroke-weaker shadow-sm"
+          className="flex-row items-center gap-4 p-4 rounded-[20px] bg-white border border-stroke-weaker"
         >
           <View className="size-10 rounded-xl items-center justify-center bg-brand/10">
             <Layers size={18} color={COLORS.brand} strokeWidth={1.5} />
@@ -227,7 +227,7 @@ export function ChatActionsSheet({ onClose }: ChatActionsSheetProps) {
                 setShowDeepDiveSelector(false);
               }}
               activeOpacity={0.8}
-              className="flex-row items-center gap-4 p-4 rounded-[20px] bg-white border border-stroke-weaker shadow-sm"
+              className="flex-row items-center gap-4 p-4 rounded-[20px] bg-white border border-stroke-weaker"
             >
               <View className="size-10 rounded-xl items-center justify-center bg-success/10">
                 <BarChart2 size={18} color={COLORS.success} strokeWidth={1.5} />
@@ -284,7 +284,7 @@ export function ChatActionsSheet({ onClose }: ChatActionsSheetProps) {
         <TouchableOpacity
           onPress={handleExport}
           activeOpacity={0.8}
-          className="flex-row items-center gap-4 p-4 rounded-[20px] bg-white border border-stroke-weaker shadow-sm"
+          className="flex-row items-center gap-4 p-4 rounded-[20px] bg-white border border-stroke-weaker"
         >
           <View className="size-10 rounded-xl items-center justify-center bg-fill-weak">
             <Download size={18} color={COLORS.textBase} strokeWidth={1.5} />
@@ -305,7 +305,7 @@ export function ChatActionsSheet({ onClose }: ChatActionsSheetProps) {
           onPress={handleDelete}
           disabled={isPending}
           activeOpacity={0.8}
-          className="flex-row items-center gap-4 p-4 rounded-[20px] bg-white border border-stroke-weaker shadow-sm"
+          className="flex-row items-center gap-4 p-4 rounded-[20px] bg-white border border-stroke-weaker"
           style={{ borderColor: `${COLORS.error}20` }}
         >
           <View

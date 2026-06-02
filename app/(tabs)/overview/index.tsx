@@ -266,7 +266,7 @@ export default function OverviewScreen() {
                     <Text className="text-[24px] text-text-strong flex-1 leading-snug" style={{ fontFamily: FONTS.serif }}>
                       What's on your{"\n"}mind today?
                     </Text>
-                    <View className="flex-row items-center gap-3 bg-white/90 px-3.5 py-2 rounded-full border border-white shadow-sm">
+                    <View className="flex-row items-center gap-3 bg-white/90 px-3.5 py-2 rounded-full border border-white/30">
                       <View className="flex-row items-center gap-1.5">
                         <Zap size={14} color={COLORS.brand} fill={COLORS.brand} />
                         <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>{streakCount}</Text>
@@ -286,7 +286,7 @@ export default function OverviewScreen() {
                         openSheet('create-memory');
                       }}
                       activeOpacity={0.8}
-                      className="flex-1 flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full shadow-lg shadow-brand/20"
+                      className="flex-1 flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full"
                     >
                       <Plus size={20} color="white" strokeWidth={3} />
                       <Animated.Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Add story</Animated.Text>
@@ -338,7 +338,7 @@ export default function OverviewScreen() {
                     >
                       {enrichmentScore}%
                     </GradientText>
-                    <View className="bg-white/80 px-3 py-1.5 rounded-full border border-white shadow-sm">
+                    <View className="bg-white/80 px-3 py-1.5 rounded-full border border-white/30">
                       <Text className="text-[10px] font-bold text-text-strong uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>
                         Enrichment score
                       </Text>

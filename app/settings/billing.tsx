@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground, StyleSheet, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity, ImageBackground, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft, CreditCard, Sparkles, Receipt, RefreshCw, Send, CheckCircle2, AlertTriangle, Play, Pause } from 'lucide-react-native';
@@ -187,7 +187,7 @@ export default function BillingSettingsScreen() {
         <View className="flex-row items-center gap-3">
           <TouchableOpacity
             onPress={() => { Haptics.selectionAsync(); Linking.openURL('memento://settings/profile'); }}
-            className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center shadow-sm"
+            className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
           >
             <ChevronLeft size={22} color={COLORS.textBase} />
           </TouchableOpacity>
@@ -201,7 +201,7 @@ export default function BillingSettingsScreen() {
 
         <TouchableOpacity
           onPress={handleRefresh}
-          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center shadow-sm"
+          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
         >
           <RefreshCw size={16} color={COLORS.textBase} />
         </TouchableOpacity>
@@ -212,7 +212,7 @@ export default function BillingSettingsScreen() {
 
         <View className="px-6 gap-6">
           {/* 1. Subscription Overview Card */}
-          <Animated.View entering={FadeInDown.duration(600)} style={styles.cardShadow}>
+          <Animated.View entering={FadeInDown.duration(600)}>
             <View className="bg-white rounded-[32px] border border-stroke-weaker p-6">
               <View className="flex-row items-center gap-4 mb-6">
                 <View className="size-12 rounded-2xl bg-brand-tint items-center justify-center">
@@ -268,7 +268,7 @@ export default function BillingSettingsScreen() {
 
                 <TouchableOpacity
                   onPress={() => { Haptics.selectionAsync(); Linking.openURL('memento://pricing'); }}
-                  className="flex-1 h-12 rounded-2xl bg-brand items-center justify-center shadow-sm"
+                  className="flex-1 h-12 rounded-2xl bg-brand items-center justify-center"
                 >
                   <Animated.Text className="text-sm text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>
                     {isProOrAbove ? 'Change Plan' : 'Upgrade to Pro'}
@@ -319,7 +319,7 @@ export default function BillingSettingsScreen() {
 
           {/* 2. Usage & Limits Card */}
           {usage && (
-            <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.cardShadow}>
+            <Animated.View entering={FadeInDown.delay(100).duration(600)}>
               <View className="bg-white rounded-[32px] border border-stroke-weaker p-6 gap-6">
                 <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
                   Storage & Usage
@@ -363,7 +363,7 @@ export default function BillingSettingsScreen() {
           )}
 
           {/* 3. Promo Code Card */}
-          <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.cardShadow}>
+          <Animated.View entering={FadeInDown.delay(200).duration(600)}>
             <View className="bg-white rounded-[32px] border border-stroke-weaker p-6 gap-5">
               <Animated.Text className="text-[11px] font-bold text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
                 Promo Code
@@ -399,7 +399,7 @@ export default function BillingSettingsScreen() {
 
           {/* 4. Invoices List Card */}
           {isProOrAbove && (
-            <Animated.View entering={FadeInDown.delay(300).duration(600)} style={styles.cardShadow}>
+            <Animated.View entering={FadeInDown.delay(300).duration(600)}>
               <View className="bg-white rounded-[32px] border border-stroke-weaker p-6 gap-4">
                 <View className="flex-row items-center gap-2">
                   <Receipt size={16} color={COLORS.textBase} />
@@ -442,19 +442,3 @@ export default function BillingSettingsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  cardShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: '#170B00',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-});

@@ -118,7 +118,7 @@ export function SplineChart({
   const activePoint = activeIdx !== null ? coords[activeIdx] : null;
 
   return (
-    <View className="bg-white border border-stroke-weaker rounded-3xl p-5 shadow-sm overflow-hidden">
+    <View className="bg-white border border-stroke-weaker rounded-3xl p-5 overflow-hidden">
       <View className="flex-row items-center justify-between mb-4">
         <View>
           <Text className="text-xs text-text-weak font-medium uppercase tracking-wider" style={{ fontFamily: FONTS.sansMedium }}>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { View, Image, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,7 @@ export function ContinueReflectingCard({ title, onPress, className }: ContinueRe
   const handlePressOut = () => { if (onPress) scale.value = withSpring(1); };
 
   return (
-    <Animated.View style={[animStyle, styles.shadow]}>
+    <Animated.View style={[animStyle]}>
       <TouchableOpacity
         onPress={() => {
           Haptics.selectionAsync();
@@ -71,18 +71,3 @@ export function ContinueReflectingCard({ title, onPress, className }: ContinueRe
   );
 }
 
-const styles = StyleSheet.create({
-  shadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 5,
-      },
-      android: {
-        elevation: 1,
-      },
-    }),
-  },
-});

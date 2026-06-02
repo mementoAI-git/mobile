@@ -118,7 +118,7 @@ export function StatCard({
   );
 
   const containerStyle = cn(
-    'flex-1 rounded-[24px] overflow-hidden border border-stroke-weaker bg-white shadow-sm',
+    'flex-1 rounded-[24px] overflow-hidden border border-stroke-weaker bg-white',
     className
   );
 

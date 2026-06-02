@@ -268,7 +268,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
           loading={isCreating || isUpdatingMemory}
           disabled={!title.trim() || isUploading || isCreating || isUpdatingMemory}
           size="lg"
-          className="h-14 bg-brand rounded-full shadow-lg shadow-brand/20"
+          className="h-14 bg-brand rounded-full"
         >
           <Text className="text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>
             {editData ? 'Save Changes' : 'Save Memory'}

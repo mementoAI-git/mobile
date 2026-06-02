@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
@@ -148,18 +148,3 @@ export function MemoryCard({ memory, className, onPress, isGrid }: MemoryCardPro
   );
 }
 
-const styles = StyleSheet.create({
-  shadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-});
