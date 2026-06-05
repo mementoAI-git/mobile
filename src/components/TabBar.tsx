@@ -26,7 +26,7 @@ interface TabConfig {
 // Tab bar bg:   #fefbf8 cream (web --background), not white
 const TAB_CONFIG: Record<string, TabConfig> = {
   overview: { Icon: LayoutDashboard, label: 'Overview' },
-  chat:     { Icon: MessageCircle,   label: 'Chats' },
+  chat:     { Icon: MessageCircle,   label: 'Chat' },
   stories:  { Icon: BookOpen,        label: 'Memories' },
   explore:  { Icon: Compass,         label: 'Explore' },
   capsule:  { Icon: Timer,           label: 'Capsule' },

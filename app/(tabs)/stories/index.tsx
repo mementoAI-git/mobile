@@ -128,7 +128,7 @@ export default function StoriesScreen() {
                   <TouchableOpacity
                     onPress={handleCreateNew}
                     activeOpacity={0.8}
-                    className="flex-1 flex-row items-center justify-center gap-2.5 h-14 rounded-2xl bg-brand shadow-lg shadow-brand/20"
+                    className="flex-1 flex-row items-center justify-center gap-2.5 h-14 rounded-2xl bg-brand"
                   >
                     <Plus size={20} color="white" strokeWidth={2.5} />
                     <Animated.Text className="text-base font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>New Memory</Animated.Text>

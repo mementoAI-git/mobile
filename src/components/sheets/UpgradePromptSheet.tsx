@@ -124,7 +124,7 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
           onPress={handleUpgrade}
           disabled={loading}
           activeOpacity={0.8}
-          className="flex-row items-center justify-center gap-2 h-14 rounded-2xl bg-brand shadow-lg shadow-brand/20"
+          className="flex-row items-center justify-center gap-2 h-14 rounded-2xl bg-brand"
         >
           {loading ? (
             <ActivityIndicator color="white" />

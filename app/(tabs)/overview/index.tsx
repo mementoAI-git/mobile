@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -149,15 +149,38 @@ export default function OverviewScreen() {
   const greeting = useMemo(() => getGreeting(), []);
   const useBright = new Date().getHours() >= 6 && new Date().getHours() < 17;
 
+  // Track manual pull-to-refresh separately from background refetches.
+  // isRefetching from TanStack Query is true for ALL background refetches
+  // (focus refetch, interval, stale, etc.) — using it directly for RefreshControl
+  // causes the spinner to appear and layout to shift every 30s or on tab focus.
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+
   // Data fetching
   const { data: profile } = useProfile();
-  const { data: statsData, refetch: refetchStats, isRefetching, isLoading: statsLoading } = useUserStats();
-  const { data: memoriesStats, isLoading: memoriesLoading } = useMemoriesStats();
-  const { data: capsuleStats, isLoading: capsuleLoading } = useCapsuleStats();
-  const { data: dailyPrompts, isLoading: promptsLoading } = useDailyPrompts();
-  const { data: overviewTopics, isLoading: topicsLoading } = useOverviewPrompts();
-  const { data: activitiesData, isLoading: activitiesLoading } = useActivities({ page: 1, limit: 4 });
+  const { data: statsData, refetch: refetchStats, isLoading: statsLoading } = useUserStats();
+  const { data: memoriesStats, refetch: refetchMemories, isLoading: memoriesLoading } = useMemoriesStats();
+  const { data: capsuleStats, refetch: refetchCapsule, isLoading: capsuleLoading } = useCapsuleStats();
+  const { data: dailyPrompts, refetch: refetchPrompts, isLoading: promptsLoading } = useDailyPrompts();
+  const { data: overviewTopics, refetch: refetchTopics, isLoading: topicsLoading } = useOverviewPrompts();
+  const { data: activitiesData, refetch: refetchActivities, isLoading: activitiesLoading } = useActivities({ page: 1, limit: 4 });
   const { mutate: startConversation, isPending: startingConversation } = useStartConversation();
+
+  // Manual pull-to-refresh: refetch everything and clear the spinner when done
+  const handleManualRefresh = useCallback(async () => {
+    setManualRefreshing(true);
+    try {
+      await Promise.all([
+        refetchStats(),
+        refetchMemories(),
+        refetchCapsule(),
+        refetchPrompts(),
+        refetchTopics(),
+        refetchActivities(),
+      ]);
+    } finally {
+      setManualRefreshing(false);
+    }
+  }, [refetchStats, refetchMemories, refetchCapsule, refetchPrompts, refetchTopics, refetchActivities]);
 
   const handleStartConversation = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -189,14 +212,14 @@ export default function OverviewScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
       <DashboardHeader title="Overview" />
 
-      {isLoading && !isRefetching ? (
+      {isLoading && !manualRefreshing ? (
         <OverviewSkeleton />
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerClassName="px-6 pt-6 pb-32 gap-8"
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetchStats} tintColor={COLORS.brand} />
+            <RefreshControl refreshing={manualRefreshing} onRefresh={handleManualRefresh} tintColor={COLORS.brand} />
           }
         >
           {/* ── Editorial Greeting ────────────────────────────────── */}
@@ -243,7 +266,7 @@ export default function OverviewScreen() {
                     <Text className="text-[24px] text-text-strong flex-1 leading-snug" style={{ fontFamily: FONTS.serif }}>
                       What's on your{"\n"}mind today?
                     </Text>
-                    <View className="flex-row items-center gap-3 bg-white/90 px-3.5 py-2 rounded-full border border-white shadow-sm">
+                    <View className="flex-row items-center gap-3 bg-white/90 px-3.5 py-2 rounded-full border border-white/30">
                       <View className="flex-row items-center gap-1.5">
                         <Zap size={14} color={COLORS.brand} fill={COLORS.brand} />
                         <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>{streakCount}</Text>
@@ -263,7 +286,7 @@ export default function OverviewScreen() {
                         openSheet('create-memory');
                       }}
                       activeOpacity={0.8}
-                      className="flex-1 flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full shadow-lg shadow-brand/20"
+                      className="flex-1 flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full"
                     >
                       <Plus size={20} color="white" strokeWidth={3} />
                       <Animated.Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Add story</Animated.Text>
@@ -315,7 +338,7 @@ export default function OverviewScreen() {
                     >
                       {enrichmentScore}%
                     </GradientText>
-                    <View className="bg-white/80 px-3 py-1.5 rounded-full border border-white shadow-sm">
+                    <View className="bg-white/80 px-3 py-1.5 rounded-full border border-white/30">
                       <Text className="text-[10px] font-bold text-text-strong uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>
                         Enrichment score
                       </Text>

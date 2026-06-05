@@ -1,8 +1,25 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import type { Router } from 'expo-router';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+/**
+ * Safe back navigation — guards against GO_BACK errors when the screen
+ * is the root of the navigation stack (e.g. opened via deep link, push
+ * notification, or router.replace() which clears back history).
+ *
+ * Usage:
+ *   safeBack(router, '/(tabs)/overview');
+ */
+export function safeBack(router: Router, fallback: string = '/(tabs)/overview') {
+  if (router.canGoBack()) {
+    router.back();
+  } else {
+    router.replace(fallback as any);
+  }
 }
 
 export function formatBytes(bytes: number | string): string {

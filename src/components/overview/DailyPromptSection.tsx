@@ -51,7 +51,7 @@ export function DailyPromptSection({ prompts, isLoading }: Props) {
         </Animated.Text>
       </View>
 
-      <View className="bg-white border border-stroke-weaker rounded-[32px] p-6 shadow-sm">
+      <View className="bg-white border border-stroke-weaker rounded-[32px] p-6">
         {prompts.length > 1 && (
           <View className="flex-row flex-wrap gap-2 mb-6">
             {prompts.map((p, i) => (
@@ -94,7 +94,7 @@ export function DailyPromptSection({ prompts, isLoading }: Props) {
           <TouchableOpacity
             onPress={handleCapture}
             activeOpacity={0.8}
-            className="flex-row items-center justify-center gap-2 bg-brand rounded-full h-12 px-6 shadow-lg shadow-brand/20 self-start"
+            className="flex-row items-center justify-center gap-2 bg-brand rounded-full h-12 px-6 self-start"
           >
             <Mic size={18} color="white" strokeWidth={2.5} />
             <Animated.Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>

@@ -24,7 +24,7 @@ export default function PricingScreen() {
     <SafeAreaView className="flex-1 bg-background">
       {/* Header */}
       <View className="flex-row items-center gap-2 px-4 pt-5 pb-3 bg-background">
-        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); router.back(); }} className="p-1.5 -ml-1.5">
+        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)/overview'); } }} className="p-1.5 -ml-1.5">
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
       </View>

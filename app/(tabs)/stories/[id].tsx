@@ -80,7 +80,7 @@ export default function StoryDetailScreen() {
         {/* Header */}
         <View className="flex-row items-center gap-3 px-6 py-4 bg-background">
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)/stories'); } }}
             className="size-10 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center -ml-2"
           >
             <ChevronLeft size={20} color={COLORS.textBase} />
@@ -109,7 +109,7 @@ export default function StoryDetailScreen() {
       {/* Header */}
       <View className="flex-row items-center gap-3 px-6 py-4 bg-background">
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)/stories'); } }}
           className="size-10 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center -ml-2"
         >
           <ChevronLeft size={20} color={COLORS.textBase} />

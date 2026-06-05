@@ -1,5 +1,6 @@
 import React from 'react';
 import { Stack } from 'expo-router';
+import { COLORS } from '@/constants/tokens';
 
 export default function OnboardLayout() {
   return (
@@ -12,5 +13,3 @@ export default function OnboardLayout() {
     />
   );
 }
-
-import { COLORS } from '@/constants/tokens';

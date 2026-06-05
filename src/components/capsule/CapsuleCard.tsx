@@ -126,7 +126,7 @@ export function CapsuleCard({ capsule, onPress, layoutMode = 'grid' }: CapsuleCa
             onPressIn={() => { cardScale.value = withSpring(0.98); }}
             onPressOut={() => { cardScale.value = withSpring(1); }}
             activeOpacity={0.95}
-            className="bg-white rounded-[22px] overflow-hidden border border-stroke-weaker shadow-sm"
+            className="bg-white rounded-[22px] overflow-hidden border border-stroke-weaker"
           >
             <View className="p-3 flex-row gap-3">
               {/* Left side: Single Attachment Thumbnail */}

@@ -125,11 +125,16 @@ export function usePreferencesLogic() {
   const handleBack = () => {
     setValidationAttempted(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (step > 1) { 
-      setStep((s) => s - 1); 
-      scrollToTop(); 
+    if (step > 1) {
+      setStep((s) => s - 1);
+      scrollToTop();
     } else {
-      router.back();
+      // Step 1 of onboarding preferences — go back to nickname or previous onboard step
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(onboard)/nickname');
+      }
     }
   };
 

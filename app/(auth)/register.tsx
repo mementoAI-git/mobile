@@ -344,7 +344,7 @@ export default function RegisterScreen() {
               <Animated.Text className="text-base text-text-weak" style={{ fontFamily: FONTS.sans }}>
                 Already have an account?
               </Animated.Text>
-              <TouchableOpacity onPress={() => router.back()}>
+              <TouchableOpacity onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/(auth)/login'); } }}>
                 <Animated.Text className="text-base text-brand font-bold" style={{ fontFamily: FONTS.sansBold }}>
                   Sign in
                 </Animated.Text>

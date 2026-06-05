@@ -1,131 +1,112 @@
-import React from 'react';
-import { View, FlatList, RefreshControl, ImageBackground, TouchableOpacity } from 'react-native';
+/**
+ * HostChatEntryScreen — mirrors web/src/pages/dashboard/chat/main/host-chat-entry.tsx
+ *
+ * Resolves the single unified Host Chat thread from the user profile.
+ * - If primary_conversation_id exists → navigate to /chat/:id
+ * - If not → navigate to /chat/new (creates thread on first message)
+ *
+ * The user never sees a "list of chats" from this tab.
+ * Past conversations are accessible via Memories tab.
+ */
+import React, { useEffect } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, MessageSquare } from 'lucide-react-native';
-import { ConversationBar } from '@/components/memory/ConversationBar';
-import { Spinner, DashboardHeader, Skeleton } from '@/components/ui';
+import { useRouter } from 'expo-router';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { MessageCircle, RefreshCw } from 'lucide-react-native';
+import { useProfile } from '@/hooks/queries/use-profile';
+import { useUserStore } from '@/store';
 import { COLORS, FONTS } from '@/constants/tokens';
-import Animated from 'react-native-reanimated';
-import { useChatListLogic } from '@/hooks/use-chat-list-logic';
+import { Spinner } from '@/components/ui';
 
-const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
+export default function HostChatEntryScreen() {
+  const router = useRouter();
+  const { data: profile, isLoading, isError, refetch } = useProfile();
+  const user = useUserStore((s) => s.user);
 
-function ChatListSkeleton() {
-  return (
-    <View className="flex-1 p-5 gap-4">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <View key={i} className="flex-row items-center bg-white border border-stroke-weaker p-4 rounded-[20px] shadow-sm gap-4">
-          <Skeleton className="size-12 rounded-full" />
-          <View className="flex-1 gap-2">
-            <Skeleton className="h-4 w-[40%] rounded-md" />
-            <Skeleton className="h-3 w-[85%] rounded-md" />
-          </View>
-          <Skeleton className="h-3 w-12 rounded-md" />
-        </View>
-      ))}
-    </View>
-  );
-}
+  useEffect(() => {
+    // Wait for profile to load — then resolve the primary conversation
+    if (isLoading) return;
 
-export default function ChatListScreen() {
-  const {
-    conversations,
-    isLoading,
-    isFetchingNextPage,
-    fetchNextPage,
-    hasNextPage,
-    refetch,
-    isRefetching,
-    handleNew,
-    handleOpenChat,
-    starting,
-  } = useChatListLogic();
+    // Primary conversation ID from profile (fresh fetch) or cached user store
+    const primaryId =
+      (profile as any)?.primary_conversation_id ??
+      user?.primary_conversation_id;
 
-  if (isLoading) {
+    if (primaryId) {
+      router.replace({ pathname: '/chat/[id]', params: { id: primaryId } });
+    } else {
+      // No primary thread yet — go to /chat/new; first message creates one
+      router.replace({ pathname: '/chat/[id]', params: { id: 'new' } });
+    }
+  }, [isLoading, profile, user?.primary_conversation_id]);
+
+  // Error state — same pattern as web HostChatEntryPage
+  if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-        <DashboardHeader title="Chats" />
-        <ChatListSkeleton />
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: COLORS.background }}
+        edges={['top']}
+      >
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 32 }}
+        >
+          <View
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              backgroundColor: COLORS.fillWeak,
+              borderWidth: 1,
+              borderColor: COLORS.strokeWeaker,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <MessageCircle size={28} color={COLORS.textDisabled} strokeWidth={1.5} />
+          </View>
+          <View style={{ alignItems: 'center', gap: 6 }}>
+            <Text style={{ fontFamily: FONTS.serif, fontSize: 20, color: COLORS.textStrong, textAlign: 'center' }}>
+              Couldn't load your conversation
+            </Text>
+            <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, textAlign: 'center' }}>
+              Check your connection and try again.
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => refetch()}
+            activeOpacity={0.8}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              borderWidth: 1,
+              borderColor: COLORS.strokeWeak,
+              borderRadius: 999,
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              marginTop: 4,
+            }}
+          >
+            <RefreshCw size={14} color={COLORS.textBase} strokeWidth={2} />
+            <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>
+              Retry
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
       </SafeAreaView>
     );
   }
 
+  // Loading state — minimal centered spinner
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <DashboardHeader
-        title="Chats"
-        rightElement={
-          <TouchableOpacity
-            onPress={handleNew}
-            disabled={starting}
-            activeOpacity={0.8}
-            className="flex-row items-center gap-2 bg-brand rounded-full px-5 h-10 shadow-lg shadow-brand/20"
-          >
-            {starting ? (
-              <Spinner size="small" color="white" />
-            ) : (
-              <>
-                <Plus size={16} color="white" />
-                <Animated.Text className="text-sm font-semibold text-white" style={{ fontFamily: FONTS.sansSemi }}>
-                  New
-                </Animated.Text>
-              </>
-            )}
-          </TouchableOpacity>
-        }
-      />
-
-      <View className="flex-1 relative">
-        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-30" />
-
-        <FlatList
-          data={conversations}
-          keyExtractor={(item) => item._id}
-          contentContainerClassName="p-5 pb-24"
-          showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={() => <View className="h-3" />}
-          renderItem={({ item, index }) => (
-            <ConversationBar
-              memory={item}
-              index={index}
-              onPress={() => handleOpenChat(item._id)}
-            />
-          )}
-          onEndReached={() => hasNextPage && fetchNextPage()}
-          onEndReachedThreshold={0.5}
-          refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.brand} />
-          }
-          ListFooterComponent={isFetchingNextPage ? <Spinner /> : null}
-          ListEmptyComponent={
-            <View className="items-center justify-center py-20 gap-6">
-              <View className="size-20 bg-fill-weaker rounded-full items-center justify-center border border-stroke-weaker">
-                <MessageSquare size={32} color={COLORS.textDisabled} strokeWidth={1.5} />
-              </View>
-              <View className="gap-2 items-center">
-                <Animated.Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
-                  No chats yet
-                </Animated.Text>
-                <Animated.Text
-                  className="text-base text-text-weak text-center px-12 leading-relaxed"
-                  style={{ fontFamily: FONTS.sans }}
-                >
-                  Start a new chat to begin preserving your memories with AI.
-                </Animated.Text>
-              </View>
-              <TouchableOpacity
-                onPress={handleNew}
-                activeOpacity={0.8}
-                className="flex-row items-center gap-2 bg-brand rounded-full px-8 py-4 mt-2 shadow-lg shadow-brand/20"
-              >
-                <Plus size={16} color="white" />
-                <Animated.Text className="text-base font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>
-                  Start your first chat
-                </Animated.Text>
-              </TouchableOpacity>
-            </View>
-          }
-        />
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: COLORS.background }}
+      edges={['top']}
+    >
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Spinner size="large" color={COLORS.brand} />
       </View>
     </SafeAreaView>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, Platform, ImageBackground, TouchableOpacity } from 'react-native';
+import { View, ScrollView, ImageBackground, TouchableOpacity, Text} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft, Plus, Trash2, Mail, ShieldCheck } from 'lucide-react-native';
@@ -18,7 +18,7 @@ function BeneficiariesSkeleton() {
 
       {/* Row items skeleton */}
       {[1, 2, 3, 4].map((i) => (
-        <View key={i} className="bg-white rounded-[24px] border border-stroke-weaker p-5 flex-row items-center gap-4 shadow-sm">
+        <View key={i} className="bg-white rounded-[24px] border border-stroke-weaker p-5 flex-row items-center gap-4">
           <Skeleton className="size-12 rounded-full" />
           <View className="flex-1 gap-2">
             <Skeleton className="h-5 w-[45%] rounded-md" />
@@ -52,17 +52,17 @@ export default function BeneficiariesSettingsScreen() {
         <View className="flex-row items-center justify-between px-6 py-4">
           <View className="flex-row items-center gap-3">
             <TouchableOpacity
-              onPress={() => { Haptics.selectionAsync(); router.back(); }}
-              className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center shadow-sm"
+              onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
+              className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
             >
               <ChevronLeft size={22} color={COLORS.textBase} />
             </TouchableOpacity>
-            <Animated.Text
+            <Text
               className="text-[28px] text-text-strong"
               style={{ fontFamily: FONTS.serif }}
             >
-              Trustees
-            </Animated.Text>
+              Beneficiaries
+            </Text>
           </View>
           <View className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center">
             <Plus size={22} color={COLORS.textWeak} />
@@ -78,21 +78,21 @@ export default function BeneficiariesSettingsScreen() {
       <View className="flex-row items-center justify-between px-6 py-4">
         <View className="flex-row items-center gap-3">
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); router.back(); }}
-            className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center shadow-sm"
+            onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
+            className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
           >
             <ChevronLeft size={22} color={COLORS.textBase} />
           </TouchableOpacity>
-          <Animated.Text
+          <Text
             className="text-[28px] text-text-strong"
             style={{ fontFamily: FONTS.serif }}
           >
-            Trustees
-          </Animated.Text>
+            Beneficiaries
+          </Text>
         </View>
         <TouchableOpacity
           onPress={handleAdd}
-          className="size-11 rounded-full bg-brand items-center justify-center shadow-lg shadow-brand/20"
+          className="size-11 rounded-full bg-brand items-center justify-center"
         >
           <Plus size={22} color="white" strokeWidth={2.5} />
         </TouchableOpacity>
@@ -103,9 +103,9 @@ export default function BeneficiariesSettingsScreen() {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pb-24 gap-4">
           <Animated.View entering={FadeInDown.duration(600)} className="pt-2 pb-4">
-            <Animated.Text className="text-base text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+            <Text className="text-base text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
               These are the trusted people who will receive your memories and capsules according to your wishes.
-            </Animated.Text>
+            </Text>
           </Animated.View>
 
           {beneficiaries?.length === 0 ? (
@@ -114,25 +114,25 @@ export default function BeneficiariesSettingsScreen() {
                 <ShieldCheck size={52} color={COLORS.brand} strokeWidth={1.2} />
               </View>
               <View className="items-center gap-3">
-                <Animated.Text
+                <Text
                   className="text-2xl text-text-strong text-center"
                   style={{ fontFamily: FONTS.serif }}
                 >
                   Protect your legacy
-                </Animated.Text>
-                <Animated.Text
+                </Text>
+                <Text
                   className="text-base text-text-weak text-center px-8 leading-relaxed"
                   style={{ fontFamily: FONTS.sans }}
                 >
                   Add trusted people who can receive your memories and time capsules in the future.
-                </Animated.Text>
+                </Text>
               </View>
               <Button
                 onPress={() => openSheet('add-beneficiary')}
                 size="lg"
-                className="px-10 rounded-full shadow-lg shadow-brand/20"
+                className="px-10 rounded-full"
               >
-                <Animated.Text className="text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>Add First Trustee</Animated.Text>
+                <Text className="text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>Add First Beneficiary</Text>
               </Button>
             </Animated.View>
           ) : (
@@ -140,24 +140,24 @@ export default function BeneficiariesSettingsScreen() {
               <Animated.View
                 key={b._id}
                 entering={FadeInDown.delay(100 * idx)}
-                style={styles.cardShadow}
+               
                 className="bg-white rounded-[24px] border border-stroke-weaker p-5 flex-row items-center gap-4"
               >
                 <Avatar name={b.name} size="lg" className="border-2 border-brand/5" />
                 <View className="flex-1 gap-1">
-                  <Animated.Text
+                  <Text
                     className="text-lg text-text-strong leading-tight"
                     style={{ fontFamily: FONTS.serif }}
                   >
                     {b.name || 'Pending Invitation'}
-                  </Animated.Text>
-                  <Animated.Text
-                    className="text-xs text-text-weak"
+                  </Text>
+                  <Text
+                    className="text-xs text-text-weak leading-relaxed"
                     numberOfLines={1}
                     style={{ fontFamily: FONTS.sansMedium }}
                   >
                     {b.email}
-                  </Animated.Text>
+                  </Text>
                   <View className="flex-row mt-1">
                     <Badge
                       label={b.status === 'pending' ? 'Invited' : 'Verified'}
@@ -190,19 +190,3 @@ export default function BeneficiariesSettingsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  cardShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: '#170B00',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-});

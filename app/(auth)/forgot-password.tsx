@@ -39,7 +39,7 @@ export default function ForgotPasswordScreen() {
         >
           We've sent a reset link to {email}. Check your email and follow the instructions.
         </Animated.Text>
-        <Button onPress={() => router.back()} variant="outline" fullWidth>
+        <Button onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/(auth)/login'); } }} variant="outline" fullWidth>
           Back to Sign In
         </Button>
       </SafeAreaView>
@@ -60,7 +60,7 @@ export default function ForgotPasswordScreen() {
             <Logo size="lg" />
           </View>
 
-          <TouchableOpacity onPress={() => router.back()} className="mb-6">
+          <TouchableOpacity onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/(auth)/login'); } }} className="mb-6">
             <Animated.Text
               className="text-sm text-brand"
               style={{ fontFamily: FONTS.sansMedium }}

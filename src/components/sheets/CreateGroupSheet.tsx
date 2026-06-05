@@ -184,7 +184,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
           loading={isPending}
           disabled={!name.trim() || isPending}
           size="lg"
-          className="h-14 bg-brand rounded-full shadow-lg shadow-brand/20 mt-2"
+          className="h-14 bg-brand rounded-full mt-2"
         >
           <Text className="text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>
             {isEdit ? 'Save Changes' : 'Create Circle'}
