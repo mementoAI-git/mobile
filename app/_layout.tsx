@@ -6,8 +6,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 LogBox.ignoreLogs([
   // Comes from moti's internal SafeAreaView usage — not our code, nothing to fix.
   'SafeAreaView has been deprecated',
-  // expo-av deprecated; migration to expo-video/expo-audio is tracked separately.
-  'Expo AV has been deprecated',
 ]);
 
 import * as Sentry from '@sentry/react-native';

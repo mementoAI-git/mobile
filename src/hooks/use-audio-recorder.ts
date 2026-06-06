@@ -1,113 +1,72 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { Audio } from 'expo-av';
-
-interface AudioRecorderState {
-  isRecording: boolean;
-  isPaused: boolean;
-  duration: number;
-  uri: string | null;
-}
+import { useRef, useCallback, useEffect } from 'react';
+import {
+  useAudioRecorder as useExpoAudioRecorder,
+  AudioModule,
+  RecordingPresets,
+} from 'expo-audio';
 
 export function useAudioRecorder() {
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  // expo-audio's built-in recorder hook — replaces expo-av Audio.Recording
+  const recorder = useExpoAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const isMountedRef = useRef(true);
-  const [state, setState] = useState<AudioRecorderState>({
-    isRecording: false,
-    isPaused: false,
-    duration: 0,
-    uri: null,
-  });
-
-  const unloadRecording = useCallback(async () => {
-    const recording = recordingRef.current;
-    if (!recording) return;
-
-    recording.setOnRecordingStatusUpdate(null);
-    recordingRef.current = null;
-
-    try {
-      await recording.stopAndUnloadAsync();
-    } catch {
-      // Recording may already be stopped/unloaded.
-    }
-  }, []);
 
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
-      void unloadRecording();
+      // Stop recording on unmount if still active
+      if (recorder.isRecording) {
+        recorder.stop().catch(() => undefined);
+      }
     };
-  }, [unloadRecording]);
+  // recorder is stable — the hook reference doesn't change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const start = useCallback(async () => {
     try {
-      await unloadRecording();
-
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') throw new Error('Microphone permission denied');
+      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
+      if (!granted) throw new Error('Microphone permission denied');
       if (!isMountedRef.current) return;
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await AudioModule.setAudioModeAsync({
+        // expo-audio uses allowsRecording (not the expo-av allowsRecordingIOS)
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
       if (!isMountedRef.current) return;
 
-      const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      );
-      if (!isMountedRef.current) {
-        await recording.stopAndUnloadAsync().catch(() => undefined);
-        return;
-      }
-
-      recording.setOnRecordingStatusUpdate((s) => {
-        if (!isMountedRef.current) return;
-        setState((prev) => ({ ...prev, duration: Math.floor((s.durationMillis ?? 0) / 1000) }));
-      });
-
-      await recording.startAsync();
-      if (!isMountedRef.current) {
-        recording.setOnRecordingStatusUpdate(null);
-        await recording.stopAndUnloadAsync().catch(() => undefined);
-        return;
-      }
-
-      recordingRef.current = recording;
-      setState((prev) => ({ ...prev, isRecording: true, uri: null }));
+      await recorder.record();
     } catch (err) {
       console.error('Failed to start recording', err);
     }
-  }, [unloadRecording]);
+  }, [recorder]);
 
   const stop = useCallback(async (): Promise<string | null> => {
-    const recording = recordingRef.current;
-    if (!recording) return null;
+    if (!recorder.isRecording) return null;
     try {
-      recording.setOnRecordingStatusUpdate(null);
-      recordingRef.current = null;
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      if (isMountedRef.current) {
-        setState((prev) => ({ ...prev, isRecording: false, isPaused: false, uri: uri ?? null }));
-      }
-      return uri ?? null;
+      await recorder.stop();
+      // recorder.uri is populated after stop()
+      return recorder.uri ?? null;
     } catch (err) {
       console.error('Failed to stop recording', err);
-      if (isMountedRef.current) {
-        setState((prev) => ({ ...prev, isRecording: false, isPaused: false }));
-      }
       return null;
     }
-  }, []);
+  }, [recorder]);
 
   const cancel = useCallback(async () => {
-    await unloadRecording();
-    if (isMountedRef.current) {
-      setState({ isRecording: false, isPaused: false, duration: 0, uri: null });
+    if (recorder.isRecording) {
+      await recorder.stop().catch(() => undefined);
     }
-  }, [unloadRecording]);
+  }, [recorder]);
 
-  return { ...state, start, stop, cancel };
+  return {
+    isRecording: recorder.isRecording,
+    isPaused: false, // expo-audio doesn't expose pause on the recorder hook
+    // currentTime is in seconds (number)
+    duration: Math.floor(recorder.currentTime),
+    uri: recorder.uri ?? null,
+    start,
+    stop,
+    cancel,
+  };
 }

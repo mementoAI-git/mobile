@@ -5,8 +5,8 @@
   "scripts": {
     "start": "expo start",
     "android": "npx expo start --android --port 3000",
-   "ios": "expo start --ios",
-   "ios:run": "expo run:ios",
+    "ios": "expo start --ios",
+    "ios:run": "expo run:ios",
     "web": "expo start --web"
   },
   "dependencies": {
@@ -35,7 +35,6 @@
     "expo-apple-authentication": "~8.0.8",
     "expo-asset": "~12.0.13",
     "expo-audio": "~1.1.1",
-    "expo-av": "~16.0.8",
     "expo-camera": "~17.0.10",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
@@ -52,6 +51,7 @@
     "expo-secure-store": "~15.0.8",
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
+    "expo-video": "~3.0.16",
     "expo-web-browser": "~15.0.11",
     "lucide-react-native": "^1.14.0",
     "moti": "^0.30.0",
