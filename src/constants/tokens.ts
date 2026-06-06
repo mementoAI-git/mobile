@@ -91,6 +91,25 @@ export const COLORS = {
   glassDark: 'rgba(23, 11, 0, 0.05)',
 };
 
+/**
+ * CARD_PASTEL_SURFACES — seeded pastel backgrounds for text-only memory cards.
+ * Each entry is picked deterministically from stableHash(memory._id) so a card's
+ * surface is stable across renders and sessions.
+ *
+ * These are the only hardcoded hex values approved outside the main COLORS token
+ * system. They are intentional warm/cool pastel tints derived from the sand and
+ * fill palettes, used exclusively for card backgrounds.
+ *
+ * Approved exception per AGENTS.md § "Approved hardcoded exceptions".
+ */
+export const CARD_PASTEL_SURFACES = [
+  { bg: '#F5F5F3', border: '#E8E8E4' }, // warm white — mirrors sand-1/sand-2
+  { bg: '#F0F4FF', border: '#DDE6FF' }, // soft blue — mirrors blue-1/blue-2
+  { bg: '#FFF8ED', border: '#FFE9C4' }, // warm amber — mirrors sand-3/sand-4
+  { bg: '#F0F9FF', border: '#D6EEFF' }, // sky — mirrors blue-2/blue-3
+  { bg: '#F0FFF6', border: '#C8F0DC' }, // soft green — mirrors success/50
+] as const;
+
 export const FONTS = {
   sans: 'Inter_400Regular',
   sansMedium: 'Inter_500Medium',

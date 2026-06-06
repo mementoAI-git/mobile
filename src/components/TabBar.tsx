@@ -91,12 +91,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
 
-  // Hide tab bar on specific nested screens (like Chat screen)
-  if (pathname.match(/^\/chat\/[^\/]+$/) || pathname.match(/^\/stories\/[^\/]+$/)) {
-    return null;
-  }
-
-  // Stable handler — doesn't change unless navigation changes (which it won't)
+  // Stable handler — MUST be declared before any conditional return (Rules of Hooks)
   const handleTabPress = useCallback((routeName: string, routeKey: string, isFocused: boolean) => {
     const event = navigation.emit({
       type: 'tabPress',
@@ -107,6 +102,11 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
       navigation.navigate(routeName);
     }
   }, [navigation]);
+
+  // Hide tab bar on specific nested screens (chat detail, story detail)
+  if (pathname.match(/^\/chat\/[^\/]+$/) || pathname.match(/^\/stories\/[^\/]+$/)) {
+    return null;
+  }
 
   return (
     <View
