@@ -121,6 +121,12 @@ export interface IMemory {
   topics?: string[];
   groups?: IMemoryAccessItem[];
   beneficiaries?: IMemoryAccessItem[];
+  /** Quick capture / daily-prompt enrichment state — mirrors web enrichment_status */
+  enrichment_status?: 'pending' | 'completed' | 'failed';
+  /** Source of capture — 'quick' for voice/quick-capture memories */
+  capture_source?: 'quick' | 'manual' | 'prompt';
+  /** Prompt type for daily-prompt reflections */
+  prompt_type?: 'static' | 'ai-generated';
 }
 
 export interface IPagination<T> {

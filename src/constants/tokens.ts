@@ -102,12 +102,33 @@ export const COLORS = {
  *
  * Approved exception per AGENTS.md § "Approved hardcoded exceptions".
  */
+/**
+ * Text card surfaces — rgba strings so React Native composites them correctly on white.
+ *
+ * The web uses color-mix() of very-transparent fills (0.04–0.06 opacity) with white.
+ * At those opacities the hue is imperceptible on screen — what you see is essentially
+ * white with a warm-neutral border. We replicate that using low-opacity rgba values
+ * instead of baked hex so the compositing remains faithful across device brightness.
+ *
+ * bg:     the fill token composited at ~4% → nearly white with a faint hue
+ * border: 80% stroke-neutral-weak + 20% of the semantic fill → warm gray with faint hue
+ */
 export const CARD_PASTEL_SURFACES = [
-  { bg: '#F5F5F3', border: '#E8E8E4' }, // warm white — mirrors sand-1/sand-2
-  { bg: '#F0F4FF', border: '#DDE6FF' }, // soft blue — mirrors blue-1/blue-2
-  { bg: '#FFF8ED', border: '#FFE9C4' }, // warm amber — mirrors sand-3/sand-4
-  { bg: '#F0F9FF', border: '#D6EEFF' }, // sky — mirrors blue-2/blue-3
-  { bg: '#F0FFF6', border: '#C8F0DC' }, // soft green — mirrors success/50
+  // All surfaces use opaque white as base — mirrors the web where color-mix()
+  // produces colours indistinguishable from white on a white card background.
+  // The identity comes from the border colour, NOT the background fill.
+  // Borders are the neutral stroke with a faint semantic hue wash.
+  //
+  // 0 — neutral: white bg  |  pure neutral border (rgba brown-100)
+  { bg: '#ffffff', border: 'rgba(23,11,0,0.10)' },
+  // 1 — brand: white bg  |  neutral border with faint orange cast
+  { bg: '#ffffff', border: 'rgba(200,80,0,0.12)' },
+  // 2 — warning: white bg  |  neutral border with faint amber cast
+  { bg: '#ffffff', border: 'rgba(180,130,0,0.12)' },
+  // 3 — info: white bg  |  neutral border with faint blue cast
+  { bg: '#ffffff', border: 'rgba(20,100,220,0.11)' },
+  // 4 — success: white bg  |  neutral border with faint green cast
+  { bg: '#ffffff', border: 'rgba(6,100,70,0.12)' },
 ] as const;
 
 export const FONTS = {

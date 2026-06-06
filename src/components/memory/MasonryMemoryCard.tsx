@@ -1,17 +1,46 @@
 import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ImageBackground } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { MoreHorizontal, Mic } from 'lucide-react-native';
+import { MoreHorizontal, Play } from 'lucide-react-native';
 import { useUiStore } from '@/store';
 import { COLORS, FONTS, CARD_PASTEL_SURFACES } from '@/constants/tokens';
 import type { IMemory } from '@/types';
 import dayjs from 'dayjs';
 
+const RECORD_BANNER = require('../../../assets/images/backgrounds/record-banner.png');
+
+/** Mirrors web QuickCaptureProcessingBadge — shown while enrichment is pending */
+function InProgressBadge({ memory, overlay }: { memory: IMemory; overlay?: boolean }) {
+  const isPending =
+    memory.enrichment_status === 'pending' &&
+    (memory.capture_source === 'quick' ||
+      memory.prompt_type === 'static' ||
+      memory.prompt_type === 'ai-generated');
+  if (!isPending) return null;
+  return (
+    <View
+      className={`rounded-full px-2 py-0.5 ${overlay ? 'absolute left-2 top-2 z-10' : ''}`}
+      style={{ backgroundColor: COLORS.brandSubtle, borderWidth: 1, borderColor: COLORS.brandTint }}
+    >
+      <Text
+        className="text-[10px] font-bold uppercase tracking-wide"
+        style={{ fontFamily: FONTS.sansBold, color: COLORS.brand }}
+      >
+        In progress
+      </Text>
+    </View>
+  );
+}
+
 // ─── Seeding helpers (mirrors web grid.tsx) ──────────────────────────────────
 
 const MEDIA_ASPECT_RATIOS = [4 / 5, 5 / 6, 3 / 4, 1] as const;
+/** Seeded min-heights for text cards — mirrors web TEXT_CARD_MIN_HEIGHTS */
+const TEXT_CARD_MIN_HEIGHTS = [206, 232, 264] as const;
+/** Seeded body line clamps — mirrors web TEXT_BODY_CLAMPS */
+const TEXT_BODY_CLAMPS = [5, 7, 9] as const;
 
 function stableHash(s: string): number {
   let h = 0;
@@ -61,6 +90,8 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
 
   const storyTitle = memory.title || 'Untitled Memory';
   const hasTopics = Array.isArray(memory.topics) && memory.topics.length > 0;
+  const textCardMinHeight = TEXT_CARD_MIN_HEIGHTS[seed % TEXT_CARD_MIN_HEIGHTS.length];
+  const textBodyLines = TEXT_BODY_CLAMPS[seed % TEXT_BODY_CLAMPS.length];
 
   // ── Render the visual block ───────────────────────────────────────────────
 
@@ -73,6 +104,8 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
             className="w-full h-full"
             resizeMode="cover"
           />
+          {/* In progress badge — overlay top-left */}
+          <InProgressBadge memory={memory} overlay />
           {/* Actions button */}
           <TouchableOpacity
             onPress={handleActions}
@@ -92,32 +125,40 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
       return (
         <View
           style={{ aspectRatio }}
-          className="w-full rounded-[20px] overflow-hidden bg-text-strong items-center justify-center relative"
+          className="w-full rounded-[20px] overflow-hidden relative"
         >
-          {/* Wave pattern background */}
-          <View className="absolute inset-0 items-center justify-center opacity-20">
-            {[...Array(6)].map((_, i) => (
-              <View
-                key={i}
-                className="absolute w-full"
-                style={{
-                  height: 2,
-                  backgroundColor: COLORS.textInverse,
-                  top: `${15 + i * 14}%`,
-                  opacity: 0.4 + i * 0.1,
-                  transform: [{ scaleX: 0.7 + (i % 3) * 0.15 }],
-                }}
-              />
-            ))}
+          {/* record-banner.png as full-bleed bg — mirrors web audio card */}
+          <ImageBackground
+            source={RECORD_BANNER}
+            className="absolute inset-0"
+            resizeMode="cover"
+            style={{ opacity: 0.9 }}
+          />
+          {/* In progress badge — overlay top-left */}
+          <InProgressBadge memory={memory} overlay />
+          {/* Duration pill — centered, glass effect */}
+          <View className="absolute inset-0 items-center justify-center">
+            <View
+              className="items-center gap-2 rounded-[20px] px-5 py-4"
+              style={{ backgroundColor: `${COLORS.textInverse}1a`, borderWidth: 1, borderColor: `${COLORS.textInverse}33` }}
+            >
+              {/* Wave lines — visual parity with WaveIcon on web */}
+              <View className="flex-row items-end gap-0.5" style={{ height: 20 }}>
+                {[6, 12, 18, 14, 8, 16, 10, 18, 12, 6].map((h, i) => (
+                  <View
+                    key={i}
+                    style={{ width: 3, height: h, backgroundColor: COLORS.textInverse, borderRadius: 2, opacity: 0.8 }}
+                  />
+                ))}
+              </View>
+              <Text
+                className="text-sm font-semibold tracking-widest"
+                style={{ fontFamily: FONTS.sansBold, color: COLORS.textInverse }}
+              >
+                {duration}
+              </Text>
+            </View>
           </View>
-
-          <View className="items-center gap-2 z-10 bg-white/10 border border-white/20 rounded-[20px] px-5 py-4 backdrop-blur-md">
-            <Mic size={28} color={COLORS.textInverse} strokeWidth={1.5} />
-            <Text className="text-white text-sm font-bold tracking-widest" style={{ fontFamily: FONTS.sansBold }}>
-              {duration}
-            </Text>
-          </View>
-
           {/* Actions button */}
           <TouchableOpacity
             onPress={handleActions}
@@ -133,9 +174,16 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
     // Text-only card
     return (
       <View
-        style={{ backgroundColor: surface.bg, borderColor: surface.border, borderWidth: 1 }}
-        className="w-full rounded-[20px] p-4 gap-3 relative"
+        style={{
+          backgroundColor: surface.bg,
+          borderColor: surface.border,
+          borderWidth: 1,
+          minHeight: textCardMinHeight,
+        }}
+        className="w-full rounded-[20px] p-4 gap-3 relative overflow-hidden"
       >
+        {/* In progress badge — inline for text cards */}
+        <InProgressBadge memory={memory} />
         <Text
           className="text-[15px] text-text-strong leading-snug font-semibold"
           style={{ fontFamily: FONTS.sansSemi }}
@@ -144,16 +192,33 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
           {storyTitle}
         </Text>
 
-        {/* User's own body text only — no AI-generated metadata */}
+        {/* User's own body text only — seeded line clamp */}
         {memory.body ? (
           <Text
             className="text-xs text-text-weak leading-relaxed"
             style={{ fontFamily: FONTS.sans }}
-            numberOfLines={4}
+            numberOfLines={textBodyLines}
           >
             {memory.body.replace(/<[^>]+>/g, '').trim()}
           </Text>
         ) : null}
+
+        {/* User-defined tags — shown on text cards (matches web) */}
+        {(memory.tags?.length ?? 0) > 0 && (
+          <View className="flex-row flex-wrap gap-1 mt-0.5">
+            {memory.tags!.slice(0, 4).map((tag) => (
+              <View
+                key={tag}
+                className="rounded-full px-2 py-0.5"
+                style={{ backgroundColor: `${surface.border}99`, borderWidth: 1, borderColor: surface.border }}
+              >
+                <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: COLORS.textWeak }}>
+                  #{tag}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Actions button */}
         <TouchableOpacity

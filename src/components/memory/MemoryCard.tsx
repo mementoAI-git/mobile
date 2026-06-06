@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Image, Platform, StyleSheet } from 'react
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { MoreVertical, Bookmark, Mic, FileText } from 'lucide-react-native';
+import { MoreHorizontal, Bookmark, Mic, FileText } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { MemTag } from '@/components/ui';
 import { useUiStore } from '@/store';
@@ -137,7 +137,7 @@ export const MemoryCard = React.memo(function MemoryCard({
             hitSlop={8}
             className="absolute top-3 right-4 bg-black/50 rounded-full px-2.5 py-1.5 items-center justify-center"
           >
-            <MoreVertical size={14} color={COLORS.textInverse} strokeWidth={2.5} />
+            <MoreHorizontal size={14} color={COLORS.textInverse} strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
       );
@@ -186,7 +186,7 @@ export const MemoryCard = React.memo(function MemoryCard({
             hitSlop={8}
             className="absolute top-3 right-4 bg-black/50 rounded-full px-2.5 py-1.5 items-center justify-center"
           >
-            <MoreVertical size={14} color={COLORS.textInverse} strokeWidth={2.5} />
+            <MoreHorizontal size={14} color={COLORS.textInverse} strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
       );
@@ -226,7 +226,7 @@ export const MemoryCard = React.memo(function MemoryCard({
           style={{ backgroundColor: `${surface.border}cc` }}
           className="absolute top-4 right-4 rounded-full px-2.5 py-1.5 items-center justify-center"
         >
-          <MoreVertical size={14} color={COLORS.textWeak} strokeWidth={2.5} />
+          <MoreHorizontal size={14} color={COLORS.textWeak} strokeWidth={2.5} />
         </TouchableOpacity>
       </View>
     );
@@ -273,11 +273,19 @@ export const MemoryCard = React.memo(function MemoryCard({
             </Text>
           ) : null}
 
-          {/* Tags — user-defined only */}
+          {/* Tags — user-defined pills matching masonry style */}
           {(memory.tags?.length ?? 0) > 0 && (
-            <View className="flex-row flex-wrap gap-2">
+            <View className="flex-row flex-wrap gap-1.5">
               {memory.tags!.slice(0, 4).map((tag) => (
-                <MemTag key={tag} label={tag} />
+                <View
+                  key={tag}
+                  className="rounded-full px-2.5 py-0.5"
+                  style={{ backgroundColor: `${surface.border}99`, borderWidth: 1, borderColor: surface.border }}
+                >
+                  <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textWeak }}>
+                    #{tag}
+                  </Text>
+                </View>
               ))}
             </View>
           )}
