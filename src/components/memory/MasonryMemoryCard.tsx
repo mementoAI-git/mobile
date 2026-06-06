@@ -60,16 +60,20 @@ function pickBySeed<T>(items: readonly T[], seed: number): T {
 interface MasonryMemoryCardProps {
   memory: IMemory;
   onPress?: () => void;
+  /** 'grid' = masonry column card (default), 'list' = full-width editorial card */
+  variant?: 'grid' | 'list';
 }
 
 export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
   memory,
   onPress,
+  variant = 'grid',
 }: MasonryMemoryCardProps) {
   const handlePress = onPress ?? (() => router.push(`/(tabs)/stories/${memory._id}`));
 
   const seed = stableHash(memory._id || memory.title || '');
-  const aspectRatio = MEDIA_ASPECT_RATIOS[seed % MEDIA_ASPECT_RATIOS.length];
+  // List mode uses 3:2; grid mode uses seeded ratio
+  const aspectRatio = variant === 'list' ? 3 / 2 : MEDIA_ASPECT_RATIOS[seed % MEDIA_ASPECT_RATIOS.length];
   const surface = CARD_PASTEL_SURFACES[seed % CARD_PASTEL_SURFACES.length];
 
   const bannerMedia = memory.attachments?.find(
@@ -233,6 +237,73 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
     );
   };
 
+  if (variant === 'list') {
+    return (
+      <Animated.View
+        style={[animStyle, {
+          shadowColor: COLORS.shadow,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.07,
+          shadowRadius: 16,
+        }]}
+        className="w-full mb-2 bg-white rounded-[24px] overflow-hidden border border-stroke-weaker"
+      >
+        <TouchableOpacity
+          onPress={() => { Haptics.selectionAsync(); handlePress(); }}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          activeOpacity={0.95}
+        >
+          {/* Hero — same renderVisual but rounded-t only */}
+          <View className="overflow-hidden rounded-t-[24px]">
+            {renderVisual()}
+          </View>
+
+          {/* Body */}
+          <View className="px-5 pt-4 pb-5 gap-3">
+            {/* Title */}
+            <Text
+              className="text-[22px] text-text-strong leading-tight"
+              style={{ fontFamily: FONTS.serif }}
+              numberOfLines={3}
+            >
+              {storyTitle}
+            </Text>
+
+            {/* Body preview */}
+            {memory.body ? (
+              <Text
+                className="text-sm leading-relaxed"
+                style={{ fontFamily: FONTS.sans, color: '#555555' }}
+                numberOfLines={2}
+              >
+                {memory.body.replace(/<[^>]+>/g, '').trim()}
+              </Text>
+            ) : null}
+
+            {/* Tags */}
+            {(memory.tags?.length ?? 0) > 0 && (
+              <View className="flex-row flex-wrap gap-1.5">
+                {memory.tags!.slice(0, 4).map((tag) => (
+                  <View
+                    key={tag}
+                    className="rounded-full px-2.5 py-0.5"
+                    style={{ backgroundColor: `${surface.border}99`, borderWidth: 1, borderColor: surface.border }}
+                  >
+                    <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textWeak }}>
+                      #{tag}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  }
+
+  // ── Grid variant (default) ────────────────────────────────────────────────
   return (
     <Animated.View style={animStyle} className="w-full">
       <TouchableOpacity

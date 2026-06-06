@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { View, FlatList, RefreshControl, ScrollView, ImageBackground, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Search, LayoutGrid, List } from 'lucide-react-native';
-import { MemoryCard } from '@/components/memory/MemoryCard';
+import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
 import { MasonryMemoryGrid } from '@/components/memory/MasonryMemoryGrid';
 import { StatCard, DashboardHeader, TextInput, StoriesSkeleton, EmptyState, Spinner } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -45,12 +45,12 @@ export default function StoriesScreen() {
     [router],
   );
 
-  // Stable renderItem for FlatList — prevents VirtualizedList "slow to update" warning
+  // Stable renderItem for FlatList — uses same MasonryMemoryCard as grid for visual consistency
   const renderListItem = useCallback(
     ({ item }: { item: any }) => (
-      <MemoryCard
+      <MasonryMemoryCard
         memory={item}
-        isGrid={false}
+        variant="list"
         onPress={() => handleMemoryPress(item._id)}
       />
     ),
