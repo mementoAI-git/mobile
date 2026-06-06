@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useUiStore } from '@/store';
 import { useCapsules, useCapsuleStats } from '@/hooks/queries/use-capsules';
@@ -20,25 +20,25 @@ export function useCapsulesLogic() {
     isRefetching,
   } = useCapsules(filter || undefined);
 
-  const capsules = data?.pages.flatMap((p) => p.docs) ?? [];
+  const capsules = useMemo(() => data?.pages.flatMap((p) => p.docs) ?? [], [data?.pages]);
   const stats = statsData;
 
   const timedCount = usage?.timed_message_count ?? 0;
   const atTimedMessageLimit = !isProOrAbove && timedCount >= 5;
 
-  const handleCreateNew = () => {
+  const handleCreateNew = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (atTimedMessageLimit) {
       openSheet('upgrade-prompt');
       return;
     }
     openSheet('create-capsule');
-  };
+  }, [atTimedMessageLimit, openSheet]);
 
-  const handleClearFilter = () => {
+  const handleClearFilter = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setFilter('');
-  };
+  }, []);
 
   return {
     openSheet,

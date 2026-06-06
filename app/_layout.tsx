@@ -154,10 +154,12 @@ function RootLayout() {
 
     if (token && pendingDeepLink && inTabs) {
       // Wait a tiny bit for the initial tab navigation to settle
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         router.push(pendingDeepLink as any);
         setPendingDeepLink(null);
       }, 500);
+
+      return () => clearTimeout(timer);
     }
   }, [token, segments, router]);
 

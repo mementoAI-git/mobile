@@ -81,9 +81,15 @@ export default function ChatScreen() {
   const isActuallyStreaming = streaming || isStartingConversation;
 
   // Month keys for jump pills (from persisted server messages)
-  const allServerMessages = serverMessages?.messages ?? [];
-  const monthKeys = monthKeysFromMessages(allServerMessages);
-  const categoryPills = enrichmentStats.stats?.jump_pills ?? [];
+  const allServerMessages = serverMessages?.messages;
+  const monthKeys = React.useMemo(
+    () => monthKeysFromMessages(allServerMessages ?? []),
+    [allServerMessages],
+  );
+  const categoryPills = React.useMemo(
+    () => enrichmentStats.stats?.jump_pills ?? [],
+    [enrichmentStats.stats?.jump_pills],
+  );
 
   // Deep dive nudge visibility
   const nudgeDimension = enrichmentStats.nudgeDimension;
@@ -106,6 +112,48 @@ export default function ChatScreen() {
     setNudgeHidden(true);
     if (nudgeDimension) handleEnterDeepDive(nudgeDimension);
   }, [nudgeDimension, handleEnterDeepDive]);
+
+  const handleCategoryPill = useCallback((starter: string) => {
+    send(starter);
+  }, [send]);
+
+  const renderMessage = useCallback(
+    ({ item }: { item: any }) => (
+      <MessageBubble
+        message={item}
+        onReply={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setReplyQuote({ role: item.role, text: item.text });
+        }}
+      />
+    ),
+    [],
+  );
+
+  const listHeaderComponent = React.useMemo(() => {
+    if (!isActuallyStreaming) return null;
+
+    return streamingText ? (
+      <MessageBubble message={{ role: 'assistant', text: streamingText } as any} />
+    ) : (
+      <TypingIndicator />
+    );
+  }, [isActuallyStreaming, streamingText]);
+
+  const listFooterComponent = React.useMemo(() => {
+    if (!isPromptType || !promptMemory) return null;
+
+    return (
+      <View className="mx-5 my-4 p-5 rounded-2xl border border-stroke-weaker bg-fill-weaker shadow-sm">
+        <Animated.Text
+          className="text-base text-text-strong leading-relaxed"
+          style={{ fontFamily: FONTS.serif }}
+        >
+          {promptMemory.title}
+        </Animated.Text>
+      </View>
+    );
+  }, [isPromptType, promptMemory]);
 
   // Jump to message by month — scrolls to first message in that month
   const handleJumpToMonth = useCallback(
@@ -174,7 +222,7 @@ export default function ChatScreen() {
                   monthKeys={monthKeys}
                   categoryPills={categoryPills}
                   onJump={handleJumpToMonth}
-                  onCategoryPill={(starter) => send(starter)}
+                  onCategoryPill={handleCategoryPill}
                 />
               </View>
 
@@ -224,39 +272,12 @@ export default function ChatScreen() {
                 data={allMessages}
                 inverted
                 keyExtractor={(item, i) => (item as any)._id ?? String(i)}
-                renderItem={({ item }) => (
-                  <MessageBubble
-                    message={item as any}
-                    onReply={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setReplyQuote({ role: (item as any).role, text: (item as any).text });
-                    }}
-                  />
-                )}
+                renderItem={renderMessage}
                 contentContainerClassName="px-5 pb-6 pt-4"
                 showsVerticalScrollIndicator={false}
                 onScrollToIndexFailed={() => {}}
-                ListHeaderComponent={
-                  isActuallyStreaming ? (
-                    streamingText ? (
-                      <MessageBubble message={{ role: 'assistant', text: streamingText } as any} />
-                    ) : (
-                      <TypingIndicator />
-                    )
-                  ) : null
-                }
-                ListFooterComponent={
-                  isPromptType && promptMemory ? (
-                    <View className="mx-5 my-4 p-5 rounded-2xl border border-stroke-weaker bg-fill-weaker shadow-sm">
-                      <Animated.Text
-                        className="text-base text-text-strong leading-relaxed"
-                        style={{ fontFamily: FONTS.serif }}
-                      >
-                        {promptMemory.title}
-                      </Animated.Text>
-                    </View>
-                  ) : null
-                }
+                ListHeaderComponent={listHeaderComponent}
+                ListFooterComponent={listFooterComponent}
                 ListEmptyComponent={
                   <View className="items-center justify-center py-24 gap-8">
                     <Animated.View

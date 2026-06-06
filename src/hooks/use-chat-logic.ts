@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -44,12 +44,15 @@ export function useChatLogic() {
   const enrichmentStats = useEnrichmentStats();
 
   // Merge and reverse for inverted FlatList (index 0 = bottom)
-  const allMessages = [
-    ...(serverMessages?.messages ?? []),
-    ...messages,
-  ].reverse();
+  const allMessages = useMemo(
+    () => [
+      ...(serverMessages?.messages ?? []),
+      ...messages,
+    ].reverse(),
+    [serverMessages?.messages, messages],
+  );
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     Haptics.selectionAsync();
     // The HostChatEntryScreen uses router.replace() → clears back stack.
     // Must guard before calling back() or it throws GO_BACK not handled.
@@ -58,9 +61,9 @@ export function useChatLogic() {
     } else {
       router.replace('/(tabs)/overview');
     }
-  };
+  }, [router]);
 
-  const handleActions = () => {
+  const handleActions = useCallback(() => {
     Haptics.selectionAsync();
     openSheet('chat-actions', {
       chatId: activeChatId || '',
@@ -72,7 +75,7 @@ export function useChatLogic() {
         setDeepDiveDimension(dimension ?? null);
       },
     });
-  };
+  }, [activeChatId, chatMode, deepDiveDimension, enrichmentStats.stats, openSheet]);
 
   const send = useCallback(
     async (text: string, replyTo?: ChatReplyQuote | null) => {
@@ -92,7 +95,7 @@ export function useChatLogic() {
       queryClient.invalidateQueries({ queryKey: queryKeys.userStats });
     }
     prevMessagesLengthRef.current = messages.length;
-  }, [messages.length]);
+  }, [messages, messages.length, queryClient]);
 
   const handleEnterDeepDive = useCallback((dimension: LifeDimension) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

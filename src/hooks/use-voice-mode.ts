@@ -42,6 +42,22 @@ export function useVoiceMode() {
 
   const timerRef = useRef<any>(null);
   const conversationLoopRef = useRef<any>(null);
+  const connectTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const isMountedRef = useRef(true);
+
+  const clearConnectTimeouts = () => {
+    connectTimeoutsRef.current.forEach(clearTimeout);
+    connectTimeoutsRef.current = [];
+  };
+
+  const sleep = (ms: number) =>
+    new Promise<void>((resolve) => {
+      const timeout = setTimeout(() => {
+        connectTimeoutsRef.current = connectTimeoutsRef.current.filter((id) => id !== timeout);
+        resolve();
+      }, ms);
+      connectTimeoutsRef.current.push(timeout);
+    });
 
   const connect = async () => {
     if (isConnecting || isConnected) return;
@@ -52,11 +68,14 @@ export function useVoiceMode() {
     setUserSpeechText('');
 
     // Step through realistic secure handshakes
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await sleep(800);
+    if (!isMountedRef.current) return;
     setAiSpeechText('Establishing biometric voice pathway...');
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await sleep(800);
+    if (!isMountedRef.current) return;
     setAiSpeechText('Linking to Memento AI Brain...');
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    await sleep(600);
+    if (!isMountedRef.current) return;
 
     setIsConnecting(false);
     setIsConnected(true);
@@ -73,6 +92,7 @@ export function useVoiceMode() {
     setIsAiSpeaking(false);
     setAiSpeechText('Call ended.');
     setUserSpeechText('');
+    clearConnectTimeouts();
 
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -88,6 +108,15 @@ export function useVoiceMode() {
     Haptics.selectionAsync();
     setIsMuted((m) => !m);
   };
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      clearConnectTimeouts();
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (conversationLoopRef.current) clearTimeout(conversationLoopRef.current);
+    };
+  }, []);
 
   // Stopwatch timer when connected
   useEffect(() => {
@@ -116,6 +145,7 @@ export function useVoiceMode() {
     const runConversationLoop = () => {
       // User speaks after a short pause
       conversationLoopRef.current = setTimeout(() => {
+        if (!isMountedRef.current) return;
         setIsAiSpeaking(false);
         const randomUserText = MOCK_USER_TRANSCRIPTS[Math.floor(Math.random() * MOCK_USER_TRANSCRIPTS.length)];
         setUserSpeechText(randomUserText);
@@ -123,6 +153,7 @@ export function useVoiceMode() {
 
         // AI responds to user
         conversationLoopRef.current = setTimeout(() => {
+          if (!isMountedRef.current) return;
           setIsAiSpeaking(true);
           const randomAiText = MOCK_AI_RESPONSES[Math.floor(Math.random() * MOCK_AI_RESPONSES.length)];
           setAiSpeechText(randomAiText);

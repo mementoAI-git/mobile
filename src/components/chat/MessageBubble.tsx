@@ -19,7 +19,7 @@ interface MessageBubbleProps {
   onReply?: () => void;
 }
 
-export function MessageBubble({ message, onReply }: MessageBubbleProps) {
+export const MessageBubble = React.memo(function MessageBubble({ message, onReply }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const aiModel = (message as any).ai_model;
   const replyQuote = (message as any).replyTo;
@@ -112,7 +112,7 @@ export function MessageBubble({ message, onReply }: MessageBubbleProps) {
       </View>
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   userShadow: {

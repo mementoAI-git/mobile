@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import Animated, { 
+  cancelAnimation,
   useSharedValue, 
   useAnimatedStyle, 
   withRepeat, 
@@ -10,6 +11,15 @@ import Animated, {
   FadeInUp
 } from 'react-native-reanimated';
 import { COLORS, FONTS } from '@/constants/tokens';
+
+const LOADING_PHRASES = [
+  "Reflecting on your words...",
+  "Brewing a thoughtful reply...",
+  "Stirring a pinch of stardust...",
+  "Untangling thought-ribbons...",
+  "Formulating response...",
+  "Polishing wisdom engines..."
+];
 
 function Dot({ delay }: { delay: number }) {
   const scale = useSharedValue(0.8);
@@ -38,6 +48,11 @@ function Dot({ delay }: { delay: number }) {
         true
       )
     );
+
+    return () => {
+      cancelAnimation(scale);
+      cancelAnimation(opacity);
+    };
   }, []);
 
   const animStyle = useAnimatedStyle(() => ({
@@ -49,21 +64,12 @@ function Dot({ delay }: { delay: number }) {
 }
 
 export function TypingIndicator() {
-  const loadingPhrases = [
-    "Reflecting on your words...",
-    "Brewing a thoughtful reply...",
-    "Stirring a pinch of stardust...",
-    "Untangling thought-ribbons...",
-    "Formulating response...",
-    "Polishing wisdom engines..."
-  ];
-
-  const [phrase, setPhrase] = useState(loadingPhrases[0]);
+  const [phrase, setPhrase] = useState(LOADING_PHRASES[0]);
 
   useEffect(() => {
     const id = setInterval(() => {
-      const randomIdx = Math.floor(Math.random() * loadingPhrases.length);
-      setPhrase(loadingPhrases[randomIdx]);
+      const randomIdx = Math.floor(Math.random() * LOADING_PHRASES.length);
+      setPhrase(LOADING_PHRASES[randomIdx]);
     }, 2500);
     return () => clearInterval(id);
   }, []);

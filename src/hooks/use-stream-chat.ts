@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { storageKeys } from '@/constants/storage-keys';
 import { secureStorage } from '@/lib/secure-storage';
 import endpoint from '@/api/endpoint';
@@ -25,6 +25,17 @@ export function useStreamChat(memoryId?: string) {
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const abortRef = useRef<AbortController | null>(null);
+  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      abortRef.current?.abort();
+      readerRef.current?.cancel().catch(() => undefined);
+      readerRef.current = null;
+    };
+  }, []);
 
   const getToken = async (): Promise<string | null> => {
     try {
@@ -51,10 +62,14 @@ export function useStreamChat(memoryId?: string) {
       setStreaming(true);
       setStreamingText('');
 
-      abortRef.current = new AbortController();
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
 
       try {
         const token = await getToken();
+        if (!isMountedRef.current) return;
+
         const response = await fetch(`${baseURL}${endpoint.aiPrompt}`, {
           method: 'POST',
           headers: {
@@ -70,18 +85,19 @@ export function useStreamChat(memoryId?: string) {
               ? { deep_dive_dimension: deepDiveDimension }
               : {}),
           }),
-          signal: abortRef.current.signal,
+          signal: controller.signal,
         });
 
         if (!response.body) throw new Error('No response body');
 
         const reader = response.body.getReader();
+        readerRef.current = reader;
         const decoder = new TextDecoder();
         let accumulated = '';
 
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done || !isMountedRef.current || controller.signal.aborted) break;
           const chunk = decoder.decode(value, { stream: true });
           // Handle full-text replacement pattern (web uses this)
           if (accumulated && chunk.length > accumulated.length && chunk.startsWith(accumulated)) {
@@ -89,21 +105,31 @@ export function useStreamChat(memoryId?: string) {
           } else {
             accumulated += chunk;
           }
-          setStreamingText(accumulated);
+          if (isMountedRef.current) setStreamingText(accumulated);
         }
 
-        setMessages((prev) => [...prev, { role: 'ai', text: accumulated }]);
-        setStreamingText('');
+        if (isMountedRef.current && !controller.signal.aborted) {
+          setMessages((prev) => [...prev, { role: 'ai', text: accumulated }]);
+          setStreamingText('');
+        }
       } catch (err: any) {
-        if (err?.name !== 'AbortError') {
+        if (isMountedRef.current && err?.name !== 'AbortError') {
           setMessages((prev) => [
             ...prev,
             { role: 'ai', text: 'Sorry, something went wrong. Please try again.' },
           ]);
+          setStreamingText('');
         }
-        setStreamingText('');
       } finally {
-        setStreaming(false);
+        if (readerRef.current) {
+          readerRef.current = null;
+        }
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+        }
+        if (isMountedRef.current) {
+          setStreaming(false);
+        }
       }
     },
     [streaming, memoryId],
@@ -111,6 +137,7 @@ export function useStreamChat(memoryId?: string) {
 
   const abort = useCallback(() => {
     abortRef.current?.abort();
+    readerRef.current?.cancel().catch(() => undefined);
   }, []);
 
   const clear = useCallback(() => {

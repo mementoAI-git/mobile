@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { usePromptCategories, useDailyPrompts } from '@/hooks/queries/use-prompts';
 import { useStartConversation } from '@/hooks/mutations/use-memory-mutations';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { IMemory, IPrompt } from '@/types';
 
 const STATIC_CATEGORIES = [
@@ -29,28 +29,31 @@ export function useExploreLogic() {
       .filter((p) => Boolean(p?._id));
   }, [slots]);
 
-  const handleOpenCategory = (id: string) => {
+  const handleOpenCategory = useCallback((id: string) => {
     Haptics.selectionAsync();
     router.push({
       pathname: '/(tabs)/explore/[id]',
       params: { id },
     });
-  };
+  }, [router]);
 
-  const handlePromptPress = (prompt: IPrompt) => {
+  const handlePromptPress = useCallback((prompt: IPrompt) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({
       pathname: '/chat/[id]',
       params: { id: prompt._id || '', type: 'prompt' },
     });
-  };
+  }, [router]);
 
-  const handleBackToOverview = () => {
+  const handleBackToOverview = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.replace('/(tabs)/overview');
-  };
+  }, [router]);
 
-  const displayCategories = categories && (categories as any[]).length > 0 ? categories : STATIC_CATEGORIES;
+  const displayCategories = useMemo(
+    () => categories && (categories as any[]).length > 0 ? categories : STATIC_CATEGORIES,
+    [categories],
+  );
 
   return {
     router,
