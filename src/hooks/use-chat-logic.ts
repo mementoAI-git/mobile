@@ -30,14 +30,19 @@ export function useChatLogic() {
   );
 
   const promptMemory = promptMemoryRes?.data;
-  const activeChatId = isPromptType ? (promptMemory?._id || null) : id;
+
+  // Treat the literal string 'new' as no ID — the conversation hasn't been created yet.
+  // Passing 'new' as a memory_id to the AI endpoint or the messages query causes backend errors.
+  const activeChatId = isPromptType
+    ? (promptMemory?._id ?? null)
+    : (id && id !== 'new' ? id : null);
 
   const { data: serverMessages, isLoading: isLoadingMessages } = useConversationMessages(
-    activeChatId || '',
+    activeChatId ?? '',
   );
 
   const { messages, streaming, streamingText, send: streamSend, abort: stop } = useStreamChat(
-    activeChatId || undefined,
+    activeChatId ?? undefined,
   );
 
   // ── Enrichment stats (refetched after each AI response) ─────────────────

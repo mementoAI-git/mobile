@@ -27,6 +27,11 @@ export function useStreamChat(memoryId?: string) {
   const abortRef = useRef<AbortController | null>(null);
   const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
   const isMountedRef = useRef(true);
+  // Keep a ref of streaming so `send` doesn't need it as a dep (which would
+  // invalidate the callback on every stream start/stop and re-render everything downstream).
+  const streamingRef = useRef(false);
+  const memoryIdRef = useRef(memoryId);
+  memoryIdRef.current = memoryId;
 
   useEffect(() => {
     return () => {
@@ -48,7 +53,7 @@ export function useStreamChat(memoryId?: string) {
 
   const send = useCallback(
     async (text: string, options?: SendOptions) => {
-      if (!text.trim() || streaming) return;
+      if (!text.trim() || streamingRef.current) return;
 
       const { replyTo, chatMode, deepDiveDimension } = options ?? {};
       const apiPrompt = buildPromptWithReplyQuote(text, replyTo ?? null);
@@ -59,6 +64,7 @@ export function useStreamChat(memoryId?: string) {
         ...(replyTo ? { replyTo } : {}),
       };
       setMessages((prev) => [...prev, userMessage]);
+      streamingRef.current = true;
       setStreaming(true);
       setStreamingText('');
 
@@ -78,7 +84,8 @@ export function useStreamChat(memoryId?: string) {
           },
           body: JSON.stringify({
             prompt: apiPrompt,
-            ...(memoryId ? { memory_id: memoryId } : {}),
+            // Use ref so this always reads the latest memoryId without being a dep
+            ...(memoryIdRef.current ? { memory_id: memoryIdRef.current } : {}),
             // Host Chat: send mode + dimension to the API (mirrors web)
             ...(chatMode ? { chat_mode: chatMode } : {}),
             ...(chatMode === 'deep_dive' && deepDiveDimension
@@ -128,11 +135,16 @@ export function useStreamChat(memoryId?: string) {
           abortRef.current = null;
         }
         if (isMountedRef.current) {
+          streamingRef.current = false;
           setStreaming(false);
         }
       }
     },
-    [streaming, memoryId],
+    // No deps needed — all mutable values are read via refs (streamingRef, memoryIdRef,
+    // isMountedRef, abortRef, readerRef). This keeps `send` a stable reference forever,
+    // preventing re-renders of ChatInput / useChatLogic.send on every stream tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
   );
 
   const abort = useCallback(() => {
