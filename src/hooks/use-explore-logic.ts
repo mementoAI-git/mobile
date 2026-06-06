@@ -41,7 +41,7 @@ export function useExploreLogic() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({
       pathname: '/chat/[id]',
-      params: { id: prompt._id || '', type: 'prompt' },
+      params: { id: prompt._id || '', type: 'prompt', promptTitle: prompt.title || '' },
     });
   }, [router]);
 

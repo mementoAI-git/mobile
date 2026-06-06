@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   KeyboardAvoidingView,
-  Platform,
   ImageBackground,
   TouchableOpacity,
   StyleSheet,
@@ -42,6 +41,7 @@ export default function ChatScreen() {
   const {
     isPromptType,
     promptMemory,
+    promptTitle,
     isStartingConversation,
     flatListRef,
     serverMessages,
@@ -267,6 +267,36 @@ export default function ChatScreen() {
             />
           )}
 
+          {/* ── Prompt question card — pinned as permanent anchor for the reflection session ── */}
+          {isPromptType && promptTitle && (
+            <Animated.View
+              entering={FadeInDown.duration(400)}
+              className="mx-5 mb-3"
+            >
+              <View
+                className="bg-white rounded-[20px] border border-stroke-weaker px-5 py-4 gap-3 shadow-sm"
+              >
+                <View
+                  className="self-start rounded-full px-2.5 py-0.5"
+                  style={{ backgroundColor: COLORS.brandSubtle, borderWidth: 1, borderColor: COLORS.brandTint }}
+                >
+                  <Animated.Text
+                    className="text-[10px] font-bold uppercase tracking-widest"
+                    style={{ fontFamily: FONTS.sansBold, color: COLORS.brand }}
+                  >
+                    Today's reflection
+                  </Animated.Text>
+                </View>
+                <Animated.Text
+                  className="text-[18px] text-text-strong leading-snug"
+                  style={{ fontFamily: FONTS.serif }}
+                >
+                  {promptTitle}
+                </Animated.Text>
+              </View>
+            </Animated.View>
+          )}
+
           {/* ── Messages ─────────────────────────────────────────────── */}
           <View className="flex-1 relative bg-transparent">
             {isLoading && !allMessages.length ? (
@@ -284,32 +314,33 @@ export default function ChatScreen() {
                 ListHeaderComponent={listHeaderComponent}
                 ListFooterComponent={listFooterComponent}
                 ListEmptyComponent={
-                  <View className="items-center justify-center py-24 gap-8">
-                    <Animated.View
-                      entering={FadeInUp.duration(600)}
-                      className="size-24 rounded-full bg-white border border-stroke-weaker items-center justify-center shadow-sm"
-                    >
-                      <Animated.Text className="text-4xl">🌱</Animated.Text>
-                    </Animated.View>
-                    <View className="items-center gap-3 px-10">
-                      <Animated.Text
-                        entering={FadeInDown.delay(200)}
-                        className="text-[28px] text-text-strong text-center"
-                        style={{ fontFamily: FONTS.serif }}
+                  /* Prompt type: pinned card above handles the question display — nothing extra needed here */
+                  isPromptType ? null : (
+                    <View className="items-center justify-center py-24 gap-8">
+                      <Animated.View
+                        entering={FadeInUp.duration(600)}
+                        className="size-24 rounded-full bg-white border border-stroke-weaker items-center justify-center shadow-sm"
                       >
-                        {isPromptType ? 'Reflect & Grow' : 'Your story grows here'}
-                      </Animated.Text>
-                      <Animated.Text
-                        entering={FadeInDown.delay(300)}
-                        className="text-[15px] text-text-weak text-center leading-relaxed"
-                        style={{ fontFamily: FONTS.sans }}
-                      >
-                        {isPromptType
-                          ? 'Write your answer below or tap the microphone to reply with a voice note. Your AI companion will respond to help you deep dive!'
-                          : 'Share a memory, an emotion, or just say hello. Your AI companion is here to listen and help you preserve your legacy.'}
-                      </Animated.Text>
+                        <Animated.Text className="text-4xl">🌱</Animated.Text>
+                      </Animated.View>
+                      <View className="items-center gap-3 px-10">
+                        <Animated.Text
+                          entering={FadeInDown.delay(200)}
+                          className="text-[28px] text-text-strong text-center"
+                          style={{ fontFamily: FONTS.serif }}
+                        >
+                          Your story grows here
+                        </Animated.Text>
+                        <Animated.Text
+                          entering={FadeInDown.delay(300)}
+                          className="text-[15px] text-text-weak text-center leading-relaxed"
+                          style={{ fontFamily: FONTS.sans }}
+                        >
+                          Share a memory, an emotion, or just say hello. Your AI companion is here to listen and help you preserve your legacy.
+                        </Animated.Text>
+                      </View>
                     </View>
-                  </View>
+                  )
                 }
               />
             )}

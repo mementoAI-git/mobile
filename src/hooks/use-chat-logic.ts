@@ -14,7 +14,7 @@ import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import type { ChatReplyQuote } from '@/lib/utils';
 
 export function useChatLogic() {
-  const { id, type } = useLocalSearchParams<{ id: string; type?: string }>();
+  const { id, type, promptTitle } = useLocalSearchParams<{ id: string; type?: string; promptTitle?: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
   const flatListRef = useRef<FlatList>(null);
@@ -123,6 +123,8 @@ export function useChatLogic() {
     activeChatId,
     isPromptType,
     promptMemory,
+    /** Prompt question text passed via URL param — available immediately before API resolves */
+    promptTitle: promptTitle ?? promptMemory?.title ?? null,
     isStartingConversation: false,
     router,
     flatListRef,
