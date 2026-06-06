@@ -29,7 +29,8 @@ const INSIGHT_ICONS: Record<string, any> = {
 
 export function MemoryInsightsSheet() {
   const [activeCategory, setActiveCategory] = useState(SUMMARY_TAB_KEY);
-  const { closeSheet, openSheet } = useUiStore();
+  const closeSheet = useUiStore((s) => s.closeSheet);
+  const openSheet = useUiStore((s) => s.openSheet);
 
   const { data: persona, isLoading: personaLoading } = usePersona();
   const { data: summaryRes, isLoading: summaryLoading } = useMemoryInsightsSummary();

@@ -254,4 +254,12 @@ export interface ICapsuleStats {
   scheduled: number;
   delivered: number;
   draft: number;
+  // API may return snake_case variants
+  total_count?: number;
+  scheduled_count?: number;
+  delivered_count?: number;
+  draft_count?: number;
+  pause_count?: number;
+  paused_count?: number;
+  frozen?: number;
 }

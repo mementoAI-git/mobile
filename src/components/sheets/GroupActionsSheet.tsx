@@ -8,7 +8,9 @@ import { useDeleteGroup } from '@/hooks/mutations/use-group-mutations';
 import * as Haptics from 'expo-haptics';
 
 export function GroupActionsSheet() {
-  const { sheetProps, closeSheet, openSheet } = useUiStore();
+  const sheetProps = useUiStore((s) => s.sheetProps);
+  const closeSheet = useUiStore((s) => s.closeSheet);
+  const openSheet = useUiStore((s) => s.openSheet);
   const group = sheetProps?.group;
   const { mutate: deleteGroup, isPending } = useDeleteGroup();
 

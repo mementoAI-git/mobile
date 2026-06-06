@@ -16,7 +16,7 @@ const FEEDBACK_OPTIONS = ['Bug', 'Feature Request', 'UI/UX Issue', 'General Feed
 export function FeedbackSheet() {
   const user = useUserStore(s => s.user);
   const closeSheet = useUiStore((s) => s.closeSheet);
-  const { showToast } = useToast();
+  const { toast } = useToast();
   
   const [type, setType] = useState(FEEDBACK_OPTIONS[0]);
   const [message, setMessage] = useState('');
@@ -24,6 +24,12 @@ export function FeedbackSheet() {
   const [attachments, setAttachments] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTypeSelect, setShowTypeSelect] = useState(false);
+
+  // Guard: don't setState after the sheet closes
+  const isMountedRef = React.useRef(true);
+  React.useEffect(() => {
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const { mutateAsync: uploadFile, isPending: isUploading } = useFileUpload();
 
@@ -47,12 +53,14 @@ export function FeedbackSheet() {
           type: fileType,
         });
         
-        if (uploaded && uploaded._id) {
+        if (isMountedRef.current && uploaded && uploaded._id) {
           setAttachments(prev => [...prev, uploaded._id]);
         }
       } catch (err) {
-        console.error('Upload failed', err);
-        Alert.alert('Upload Failed', 'There was an error uploading your screenshot.');
+        if (isMountedRef.current) {
+          console.error('Upload failed', err);
+          Alert.alert('Upload Failed', 'There was an error uploading your screenshot.');
+        }
       }
     }
   };
@@ -69,13 +77,17 @@ export function FeedbackSheet() {
         screenshots: attachments
       });
       
-      showToast({ message: 'Feedback sent successfully!', type: 'success' });
-      closeSheet();
+      if (isMountedRef.current) {
+        toast('Feedback sent successfully!', 'success');
+        closeSheet();
+      }
     } catch (error) {
-      console.error("Failed to send feedback:", error);
-      Alert.alert('Error', 'Failed to send feedback. Please try again.');
+      if (isMountedRef.current) {
+        console.error("Failed to send feedback:", error);
+        Alert.alert('Error', 'Failed to send feedback. Please try again.');
+      }
     } finally {
-      setIsSubmitting(false);
+      if (isMountedRef.current) setIsSubmitting(false);
     }
   };
 

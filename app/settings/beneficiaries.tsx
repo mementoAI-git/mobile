@@ -136,7 +136,7 @@ export default function BeneficiariesSettingsScreen() {
               </Button>
             </Animated.View>
           ) : (
-            beneficiaries?.map((b, idx) => (
+            beneficiaries?.map((b: any, idx: number) => (
               <Animated.View
                 key={b._id}
                 entering={FadeInDown.delay(100 * idx)}

@@ -12,7 +12,7 @@ interface MemoryActionsSheetProps {
 }
 
 export function MemoryActionsSheet({ memory, onClose }: MemoryActionsSheetProps) {
-  const { openSheet } = useUiStore();
+  const openSheet = useUiStore((s) => s.openSheet);
   const { mutate: deleteMemory, isPending: isDeleting } = useDeleteMemory();
   const { mutate: toggleBookmark, isPending: isBookmarking } = useBookmarkMemory();
   const { mutate: restoreMemory, isPending: isRestoring } = useRestoreMemory();

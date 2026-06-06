@@ -23,7 +23,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const AnimatedImage = Animated.Image as any;
 const AnimatedText = Animated.Text as any;
  
-export function MemoryCard({ memory, className, onPress, isGrid }: MemoryCardProps) {
+export const MemoryCard = React.memo(function MemoryCard({ memory, className, onPress, isGrid }: MemoryCardProps) {
   const handlePress = onPress ?? (() => router.push(`/(tabs)/stories/${memory._id}`));
   const firstImage = memory.attachments?.find(
     (a) => a.type?.startsWith('image/') || a.type?.startsWith('video/'),
@@ -146,5 +146,5 @@ export function MemoryCard({ memory, className, onPress, isGrid }: MemoryCardPro
       </TouchableOpacity>
     </Animated.View>
   );
-}
+});
 

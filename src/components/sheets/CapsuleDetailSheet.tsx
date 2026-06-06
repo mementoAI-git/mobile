@@ -37,7 +37,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
   const headerColor = currentTheme.headerColor;
 
   const user = useUserStore((s) => s.user);
-  const senderName = user?.name || user?.email || 'You';
+  const senderName = user ? `${user.first_name} ${user.last_name}`.trim() || user.email : 'You';
 
   const recipientNames = initialCapsule.recipients
     .map((r: any) => r.name || r.first_name || r.email || r)
@@ -199,9 +199,9 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
             </View>
 
             {/* Attached Files & Memories */}
-            {(initialCapsule.attachments?.length > 0 || initialCapsule.memories?.length > 0) && (
+            {((initialCapsule.attachments?.length ?? 0) > 0 || (initialCapsule.memories?.length ?? 0) > 0) && (
               <View className="bg-fill-weaker rounded-2xl p-5 gap-4 border border-stroke-weaker">
-                {initialCapsule.memories && initialCapsule.memories.length > 0 && (
+                {(initialCapsule.memories?.length ?? 0) > 0 && (
                   <View className="flex-row items-center gap-4 border-b border-stroke-weaker pb-4">
                     <View className="size-10 rounded-full bg-white items-center justify-center border border-stroke-weaker">
                       <Bookmark size={18} color={COLORS.brand} />
@@ -211,7 +211,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
                         Attached Memories
                       </Text>
                       <Text className="text-base text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
-                        {initialCapsule.memories.length} {initialCapsule.memories.length === 1 ? 'memory' : 'memories'}
+                        {initialCapsule.memories?.length ?? 0} {(initialCapsule.memories?.length ?? 0) === 1 ? 'memory' : 'memories'}
                       </Text>
                     </View>
                   </View>

@@ -52,6 +52,10 @@ export default function StoriesScreen() {
           <FlatList
             data={stories}
             keyExtractor={(item) => item._id}
+            initialNumToRender={8}
+            maxToRenderPerBatch={5}
+            windowSize={5}
+            removeClippedSubviews
             ListHeaderComponent={
               <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-4 gap-6">
                 <Animated.Text className="text-base text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>

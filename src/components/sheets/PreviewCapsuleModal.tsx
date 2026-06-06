@@ -55,7 +55,7 @@ export const PreviewCapsuleModal = forwardRef<BottomSheetModal, PreviewCapsuleMo
     .filter(Boolean)
     .join(', ');
 
-  const senderName = user?.name || user?.email || 'You';
+  const senderName = user ? `${user.first_name} ${user.last_name}`.trim() || user.email : 'You';
 
   const handleClose = () => {
     if (ref && 'current' in ref && ref.current) {

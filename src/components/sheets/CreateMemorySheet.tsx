@@ -20,7 +20,7 @@ interface Props {
 }
 
 export function CreateMemorySheet({ onClose, editData }: Props) {
-  const { openSheet } = useUiStore();
+  const openSheet = useUiStore((s) => s.openSheet);
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(editData?.title || '');
   const [body, setBody] = useState(editData?.body || '');

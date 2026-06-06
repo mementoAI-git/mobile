@@ -53,12 +53,16 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
   const [body, setBody] = useState(editData?.body ?? '');
 
   const [recipientIds, setRecipientIds] = useState<string[]>(
-    (editData?.recipients ?? []).map((r) => (r as any)._id ?? r as string),
+    (editData?.recipients ?? []).map((r) => (r as any)._id ?? (r as any)),
   );
   const [recipientInput, setRecipientInput] = useState('');
 
-  const [attachments, setAttachments] = useState<string[]>(editData?.attachments ?? []);
-  const [memories, setMemories] = useState<string[]>(editData?.memories ?? []);
+  const [attachments, setAttachments] = useState<string[]>(
+    editData?.attachments?.map((f) => (typeof f === 'string' ? f : f._id)) ?? [],
+  );
+  const [memories, setMemories] = useState<string[]>(
+    editData?.memories?.map((m) => (typeof m === 'string' ? m : m._id)) ?? [],
+  );
 
   const previewModalRef = useRef<BottomSheetModal>(null);
   const dateModalRef = useRef<BottomSheetModal>(null);
@@ -101,12 +105,12 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
   }, [beneficiariesData]);
 
   const user = useUserStore((s) => s.user);
-  const senderName = user?.name || user?.email || 'You';
+  const senderName = user ? `${user.first_name} ${user.last_name}`.trim() || user.email : 'You';
 
   const recipientNames = useMemo(() => {
     return recipientIds
       .map(id => {
-        const b = beneficiaries.find(b => b._id === id);
+        const b = beneficiaries.find((b: any) => b._id === id);
         return b ? b.name : id;
       })
       .filter(Boolean)
@@ -192,14 +196,14 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
     if (isEdit) {
       updateCapsule(payload, {
         onSuccess: () => {
-          toast({ title: 'Success', message: 'Time capsule updated successfully!', type: 'success' });
+          toast('Time capsule updated successfully!', 'success');
           onClose();
         }
       });
     } else {
       createCapsule(payload, {
         onSuccess: () => {
-          toast({ title: 'Success', message: 'Time capsule scheduled successfully!', type: 'success' });
+          toast('Time capsule scheduled successfully!', 'success');
           onClose();
         }
       });

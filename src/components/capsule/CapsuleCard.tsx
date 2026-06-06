@@ -34,7 +34,7 @@ const statusLabels: Record<string, string> = {
   pause: 'Paused',
 };
 
-export function CapsuleCard({ capsule, onPress, layoutMode = 'grid' }: CapsuleCardProps) {
+export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, layoutMode = 'grid' }: CapsuleCardProps) {
   const cardScale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: cardScale.value }],
@@ -390,4 +390,4 @@ export function CapsuleCard({ capsule, onPress, layoutMode = 'grid' }: CapsuleCa
       </Animated.View>
     </View>
   );
-}
+});

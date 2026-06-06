@@ -13,7 +13,7 @@ interface CapsuleActionsSheetProps {
 }
 
 export function CapsuleActionsSheet({ capsule, onClose }: CapsuleActionsSheetProps) {
-  const { openSheet } = useUiStore();
+  const openSheet = useUiStore((s) => s.openSheet);
   const { mutate: deleteCapsule, isPending: isDeleting } = useDeleteCapsule();
   const { mutate: updateCapsule, isPending: isUpdating } = useUpdateCapsule(capsule._id ?? '');
 

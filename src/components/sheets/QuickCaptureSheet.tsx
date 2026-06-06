@@ -16,10 +16,17 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
   const [attachments, setAttachments] = useState<string[]>([]);
   const [isPickingImage, setIsPickingImage] = useState<boolean>(false);
 
-  const inputRef = useRef<RNTextInput>(null);
+  // Cast to any: BottomSheetTextInput ref type doesn't perfectly overlap RNTextInput
+  const inputRef = useRef<any>(null);
+  // Guard state updates after the sheet has been closed/unmounted
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    return () => { isMountedRef.current = false; };
+  }, []);
   const { isRecording, duration, start, stop } = useAudioRecorder();
 
-  const { closeSheet, sheetProps } = useUiStore();
+  const closeSheet = useUiStore((s) => s.closeSheet);
+  const sheetProps = useUiStore((s) => s.sheetProps);
 
   useEffect(() => {
     const eventName = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
@@ -37,6 +44,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
   const handleRecord = async () => {
     if (isRecording) {
       const uri = await stop();
+      if (!isMountedRef.current) return;
       if (uri) {
         try {
           const uploaded = await uploadFile({
@@ -44,11 +52,11 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
             name: 'voice_note.m4a',
             type: 'audio/m4a',
           });
-          if (uploaded && uploaded._id) {
+          if (isMountedRef.current && uploaded && uploaded._id) {
             setAttachments(prev => [...prev, uploaded._id]);
           }
         } catch (err) {
-          console.error('Upload failed', err);
+          if (isMountedRef.current) console.error('Upload failed', err);
         }
       }
     } else {
@@ -57,6 +65,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
   };
 
   const handlePickImage = async () => {
+    if (!isMountedRef.current) return;
     setIsPickingImage(true);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -77,15 +86,17 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
           type: fileType,
         });
 
-        if (uploaded && uploaded._id) {
+        if (isMountedRef.current && uploaded && uploaded._id) {
           setAttachments(prev => [...prev, uploaded._id]);
         }
       } catch (err) {
-        console.error('Upload failed', err);
+        if (isMountedRef.current) console.error('Upload failed', err);
       }
     }
-    setIsPickingImage(false);
-    setTimeout(() => inputRef.current?.focus(), 100);
+    if (isMountedRef.current) {
+      setIsPickingImage(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
   };
 
   const handleSave = () => {

@@ -153,8 +153,9 @@ export default function StoryDetailScreen() {
                     isLooping
                   />
                 ) : (
+                  // sharedTransitionTag is a Reanimated runtime prop not in static types — cast to any
                   <Animated.Image
-                    sharedTransitionTag={`memory-image-${memory._id}`}
+                    {...{ sharedTransitionTag: `memory-image-${memory._id}` } as any}
                     source={{ uri: imageAttachments[0].url }}
                     className="w-full aspect-video"
                     resizeMode="cover"
@@ -178,7 +179,7 @@ export default function StoryDetailScreen() {
                         />
                       ) : (
                         <Animated.Image
-                          sharedTransitionTag={index === 0 ? `memory-image-${memory._id}` : undefined}
+                          {...(index === 0 ? { sharedTransitionTag: `memory-image-${memory._id}` } : {}) as any}
                           source={{ uri: item.url }}
                           style={{ width: '100%', height: '100%' }}
                           className="rounded-none"
@@ -194,8 +195,9 @@ export default function StoryDetailScreen() {
 
           <View className="px-5 pt-6 pb-16 gap-4">
             {/* Title */}
+            {/* sharedTransitionTag is a Reanimated runtime prop not in static TS types — spread cast */}
             <Animated.Text
-              sharedTransitionTag={`memory-title-${memory._id}`}
+              {...{ sharedTransitionTag: `memory-title-${memory._id}` } as any}
               className="text-3xl text-text-strong leading-tight"
               style={{ fontFamily: FONTS.serif }}
             >

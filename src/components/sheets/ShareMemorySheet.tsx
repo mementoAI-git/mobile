@@ -9,7 +9,9 @@ import { Button } from '@/components/ui';
 import { useUiStore } from '@/store';
 
 export function ShareMemorySheet() {
-  const { sheetProps, closeSheet, openSheet } = useUiStore();
+  const sheetProps = useUiStore((s) => s.sheetProps);
+  const closeSheet = useUiStore((s) => s.closeSheet);
+  const openSheet = useUiStore((s) => s.openSheet);
   const memoryId = sheetProps?.id;
   const [copied, setCopied] = useState(false);
 
