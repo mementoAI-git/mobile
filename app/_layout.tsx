@@ -4,7 +4,9 @@ import { StyleSheet, Platform, LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 LogBox.ignoreLogs([
-  // 'SafeAreaView has been deprecated',
+  // Comes from moti's internal SafeAreaView usage — not our code, nothing to fix.
+  'SafeAreaView has been deprecated',
+  // expo-av deprecated; migration to expo-video/expo-audio is tracked separately.
   'Expo AV has been deprecated',
 ]);
 
@@ -206,4 +208,7 @@ function RootLayout() {
   );
 }
 
-export default Sentry.wrap(RootLayout);
+// Only wrap with Sentry when it has been initialised (DSN present).
+// Calling Sentry.wrap() before Sentry.init() produces a "App Start Span
+// could not be finished" warning and silently breaks tracing.
+export default SENTRY_DSN ? Sentry.wrap(RootLayout) : RootLayout;
