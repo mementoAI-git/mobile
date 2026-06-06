@@ -104,7 +104,10 @@ export function useNotifications() {
         }
       }
     };
-  }, [router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // router is intentionally excluded — it changes on every navigation and would
+           // tear down & re-register notification listeners on each route change.
+           // We read it imperatively inside the stable handler via closure.
 
   return {
     expoPushToken,

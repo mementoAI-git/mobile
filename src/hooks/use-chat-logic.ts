@@ -95,7 +95,9 @@ export function useChatLogic() {
       queryClient.invalidateQueries({ queryKey: queryKeys.userStats });
     }
     prevMessagesLengthRef.current = messages.length;
-  }, [messages, messages.length, queryClient]);
+    // messages.length is derived from messages — listing both causes a double-trigger.
+    // Only depend on `messages` (the array reference changes when length changes).
+  }, [messages, queryClient]);
 
   const handleEnterDeepDive = useCallback((dimension: LifeDimension) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

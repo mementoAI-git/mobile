@@ -44,7 +44,9 @@ const SHEET_CONFIGS: Record<string, { component: React.ComponentType<any>; snapP
 };
 
 export function SheetManager() {
-  const { activeSheet, sheetProps, closeSheet } = useUiStore();
+  const activeSheet = useUiStore((s) => s.activeSheet);
+  const sheetProps = useUiStore((s) => s.sheetProps);
+  const closeSheet = useUiStore((s) => s.closeSheet);
   const bottomSheetRef = useRef<BottomSheet>(null);
   const insets = useSafeAreaInsets();
 

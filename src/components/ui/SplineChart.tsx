@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, PanResponder, GestureResponderEvent } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -82,38 +82,49 @@ export function SplineChart({
     ? `${pathD} L ${coords[coords.length - 1].x} ${paddingTop + chartHeight} L ${coords[0].x} ${paddingTop + chartHeight} Z`
     : '';
 
-  const handleTouch = (event: GestureResponderEvent) => {
-    const touchX = event.nativeEvent.locationX;
-    // Find closest index
-    let closestIdx = 0;
-    let minDiff = Infinity;
-    coords.forEach((coord, i) => {
-      const diff = Math.abs(coord.x - touchX);
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestIdx = i;
-      }
-    });
+  // Keep latest coords in a ref so the stable PanResponder can always read them
+  // without needing to be recreated on every render.
+  const coordsRef = useRef(coords);
+  coordsRef.current = coords;
 
-    if (closestIdx !== activeIdx) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setActiveIdx(closestIdx);
-    }
-  };
+  const activeIdxRef = useRef(activeIdx);
+  activeIdxRef.current = activeIdx;
 
-  const handleTouchRelease = () => {
-    setActiveIdx(null);
-  };
-
-  // Touch responder setup
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: handleTouch,
-    onPanResponderMove: handleTouch,
-    onPanResponderRelease: handleTouchRelease,
-    onPanResponderTerminate: handleTouchRelease,
-  });
+  // PanResponder is created once and never recreated — it reads live values via refs.
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (event: GestureResponderEvent) => {
+        const touchX = event.nativeEvent.locationX;
+        let closestIdx = 0;
+        let minDiff = Infinity;
+        coordsRef.current.forEach((coord, i) => {
+          const diff = Math.abs(coord.x - touchX);
+          if (diff < minDiff) { minDiff = diff; closestIdx = i; }
+        });
+        if (closestIdx !== activeIdxRef.current) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setActiveIdx(closestIdx);
+        }
+      },
+      onPanResponderMove: (event: GestureResponderEvent) => {
+        const touchX = event.nativeEvent.locationX;
+        let closestIdx = 0;
+        let minDiff = Infinity;
+        coordsRef.current.forEach((coord, i) => {
+          const diff = Math.abs(coord.x - touchX);
+          if (diff < minDiff) { minDiff = diff; closestIdx = i; }
+        });
+        if (closestIdx !== activeIdxRef.current) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setActiveIdx(closestIdx);
+        }
+      },
+      onPanResponderRelease: () => setActiveIdx(null),
+      onPanResponderTerminate: () => setActiveIdx(null),
+    })
+  ).current;
 
   const activePoint = activeIdx !== null ? coords[activeIdx] : null;
 

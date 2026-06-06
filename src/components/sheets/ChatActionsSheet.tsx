@@ -37,7 +37,7 @@ interface ChatActionsSheetProps {
 
 export function ChatActionsSheet({ onClose }: ChatActionsSheetProps) {
   const closeSheet = useUiStore((s) => s.closeSheet);
-  const { sheetProps } = useUiStore();
+  const sheetProps = useUiStore((s) => s.sheetProps);
   const { mutate: deleteMemory, isPending } = useDeleteMemory();
   const [showEnrichment, setShowEnrichment] = useState(false);
   const [showDeepDiveSelector, setShowDeepDiveSelector] = useState(false);

@@ -64,13 +64,14 @@ function OverviewJourneyCard({
     transform: [{ scale: scale.value }],
   }));
 
-  const handlePressIn = () => {
+  // useCallback so these stable handlers don't re-create on every parent render
+  const handlePressIn = useCallback(() => {
     if (onPress) scale.value = withSpring(0.98);
-  };
+  }, [onPress, scale]);
 
-  const handlePressOut = () => {
+  const handlePressOut = useCallback(() => {
     if (onPress) scale.value = withSpring(1);
-  };
+  }, [onPress, scale]);
 
   const content = (
     <View className="flex-row items-center justify-between p-5 flex-1">
@@ -147,7 +148,11 @@ export default function OverviewScreen() {
   const openSheet = useUiStore((s) => s.openSheet);
   const user = useUserStore((s) => s.user);
   const greeting = useMemo(() => getGreeting(), []);
-  const useBright = new Date().getHours() >= 6 && new Date().getHours() < 17;
+  // useBright computed once at mount — hour doesn't change meaningfully during a session
+  const useBright = useMemo(() => {
+    const h = new Date().getHours();
+    return h >= 6 && h < 17;
+  }, []);
 
   // Track manual pull-to-refresh separately from background refetches.
   // isRefetching from TanStack Query is true for ALL background refetches
@@ -182,7 +187,7 @@ export default function OverviewScreen() {
     }
   }, [refetchStats, refetchMemories, refetchCapsule, refetchPrompts, refetchTopics, refetchActivities]);
 
-  const handleStartConversation = () => {
+  const handleStartConversation = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     startConversation(undefined, {
       onSuccess: (res) => {
@@ -190,7 +195,7 @@ export default function OverviewScreen() {
         router.push({ pathname: '/chat/[id]', params: { id: memory._id } });
       },
     });
-  };
+  }, [router, startConversation]);
 
   const stats = statsData ?? {};
   const streakCount = Number(user?.streak) || Number(stats.streak_count) || 0;

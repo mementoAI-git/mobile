@@ -91,10 +91,15 @@ export default function ChatScreen() {
     [enrichmentStats.stats?.jump_pills],
   );
 
-  // Deep dive nudge visibility
+  // Deep dive nudge visibility — destructure stable references to avoid
+  // capturing the whole enrichmentStats object in callbacks/deps.
   const nudgeDimension = enrichmentStats.nudgeDimension;
   const nudgeQuestion = enrichmentStats.nudgeQuestion;
-  const dismissedNudges = enrichmentStats.getDismissedNudges();
+  const getDismissedNudges = enrichmentStats.getDismissedNudges;
+  const dismissNudge = enrichmentStats.dismissNudge;
+
+  // getDismissedNudges is a stable useCallback — safe to call during render.
+  const dismissedNudges = getDismissedNudges();
   const showDeepDiveNudge =
     chatMode === 'open' &&
     !nudgeHidden &&
@@ -104,9 +109,9 @@ export default function ChatScreen() {
   const handleDismissNudge = useCallback(async () => {
     setNudgeHidden(true);
     if (nudgeDimension) {
-      await enrichmentStats.dismissNudge(nudgeDimension);
+      await dismissNudge(nudgeDimension);
     }
-  }, [nudgeDimension, enrichmentStats]);
+  }, [nudgeDimension, dismissNudge]);
 
   const handleStartDeepDiveFromNudge = useCallback(() => {
     setNudgeHidden(true);

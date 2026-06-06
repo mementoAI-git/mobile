@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, FlatList, ImageBackground, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, FlatList, ImageBackground, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Bookmark, BookmarkCheck, MoreHorizontal, Pencil, Trash2, Play, FileText, Download } from 'lucide-react-native';
 import dayjs from 'dayjs';
@@ -274,7 +274,7 @@ export default function StoryDetailScreen() {
                             {a.name || 'Document'}
                           </Text>
                           <Text className="text-xs text-text-weak uppercase" style={{ fontFamily: FONTS.sans }}>
-                            {a.type || 'FILE'} • {(a.size && a.size > 0) ? (a.size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown size'}
+                            {a.type || 'FILE'} • {(a.size && Number(a.size) > 0) ? (Number(a.size) / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown size'}
                           </Text>
                         </View>
                       </View>

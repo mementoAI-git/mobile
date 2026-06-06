@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, FlatList, RefreshControl, ImageBackground, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoryCard } from '@/components/explore/CategoryCard';
@@ -130,7 +130,7 @@ export default function ExploreScreen() {
             }
             contentContainerClassName="px-6 pb-24 flex-grow"
             showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => {
+            renderItem={useCallback(({ item }: { item: any }) => {
               const meta = CATEGORY_META[item.slug || item.name?.toLowerCase()] || {
                 title: item.name || 'Category',
                 subtitle: 'Explore prompts in this category',
@@ -144,7 +144,8 @@ export default function ExploreScreen() {
                   onPress={() => handleOpenCategory(item._id ?? item.name)}
                 />
               );
-            }}
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+            }, [handleOpenCategory])}
             refreshControl={
               <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.brand} />
             }
