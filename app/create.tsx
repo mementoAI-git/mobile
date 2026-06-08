@@ -474,8 +474,11 @@ export default function CreateScreen() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
+    // SafeAreaProvider here is intentional — fullScreenModal creates a new
+    // UIViewController that doesn't inherit the root provider's inset measurements.
+    // initialWindowMetrics gives this modal its own synchronous safe-area context.
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-    <SafeAreaView style={styles.root}>
+      <SafeAreaView style={styles.root}>
       {showEmoji && <EmojiPicker onSelect={insertEmoji} onClose={() => setShowEmoji(false)} />}
       <KeyboardAvoidingView style={styles.kav} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
 
@@ -588,7 +591,7 @@ export default function CreateScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
     </SafeAreaProvider>
   );
 }

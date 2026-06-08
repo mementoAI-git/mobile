@@ -21,6 +21,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import {
   useFonts,
   Inter_400Regular,
@@ -189,6 +190,7 @@ function RootLayout() {
   if (!hydrated || !fontsLoaded) return null;
 
   return (
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
     <GestureHandlerRootView className="flex-1">
       <QueryClientProvider client={queryClient}>
         <BottomSheetModalProvider>
@@ -209,6 +211,7 @@ function RootLayout() {
         </BottomSheetModalProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
 
