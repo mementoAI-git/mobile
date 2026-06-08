@@ -288,7 +288,7 @@ export default function OverviewScreen() {
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        openSheet('create-memory');
+                        router.push('/article');
                       }}
                       activeOpacity={0.8}
                       className="flex-1 flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full"

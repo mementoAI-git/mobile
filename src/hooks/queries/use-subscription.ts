@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { get } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
+import { queryKeys } from '@/constants/query-keys';
 
 export interface SubscriptionUsage {
   storage_used_bytes?: number;
@@ -17,7 +18,7 @@ export interface SubscriptionSummary {
 
 export function useSubscription() {
   const query = useQuery({
-    queryKey: ['subscription'],
+    queryKey: queryKeys.subscription,
     queryFn: () => get<SubscriptionSummary>(endpoint.billingSubscription).then((r) => r.data),
     staleTime: 30_000,
     retry: false,

@@ -27,16 +27,17 @@ import {
 import { SafeAreaView, SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  Image as ImageIcon,
-  Video,
-  Music,
-  Mic,
-  Smile,
   Globe,
   ChevronDown,
   X,
   FileText,
   Play,
+  BookOpen,
+  Image as ImageIcon,
+  Camera,
+  Mic,
+  Video,
+  Music,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -572,23 +573,40 @@ export default function CreateScreen() {
           </View>
         )}
 
-        {/* ── Bottom toolbar (Image | Video | Music | Mic | Smile) ─────────── */}
-        <View style={styles.toolbar}>
-          <TouchableOpacity onPress={handleImagePicker} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <ImageIcon size={22} color={COLORS.textBase} strokeWidth={1.8} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleVideoPicker} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Video size={22} color={COLORS.textBase} strokeWidth={1.8} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleAudioFile} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Music size={22} color={COLORS.textBase} strokeWidth={1.8} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleVoice} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Mic size={22} color={isRecording ? COLORS.error : COLORS.textBase} strokeWidth={1.8} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setShowEmoji(true); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Smile size={22} color={COLORS.textBase} strokeWidth={1.8} />
-          </TouchableOpacity>
+        {/* ── Switch modes / add media ──────────────────────────────────── */}
+        <View style={styles.modeBar}>
+          <Text style={styles.modeLabel}>SWITCH MODES OR ADD MEDIA FILES</Text>
+          <View style={styles.modeRow}>
+            {/* Story mode — filled dark pill */}
+            <TouchableOpacity
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/article'); }}
+              activeOpacity={0.8}
+              style={styles.storyModePill}
+            >
+              <BookOpen size={16} color={COLORS.textInverse} strokeWidth={2} />
+              <Text style={styles.storyModeText}>Story mode</Text>
+            </TouchableOpacity>
+
+            {/* Gallery */}
+            <TouchableOpacity onPress={handleImagePicker} activeOpacity={0.8} style={styles.mediaBtn}>
+              <ImageIcon size={20} color={COLORS.textBase} strokeWidth={1.8} />
+            </TouchableOpacity>
+
+            {/* Camera */}
+            <TouchableOpacity onPress={handleVideoPicker} activeOpacity={0.8} style={styles.mediaBtn}>
+              <Camera size={20} color={COLORS.textBase} strokeWidth={1.8} />
+            </TouchableOpacity>
+
+            {/* Voice recorder */}
+            <TouchableOpacity onPress={handleVoice} activeOpacity={0.8} style={[styles.mediaBtn, isRecording && styles.mediaBtnActive]}>
+              <Mic size={20} color={isRecording ? COLORS.error : COLORS.textBase} strokeWidth={1.8} />
+            </TouchableOpacity>
+
+            {/* Document / file */}
+            <TouchableOpacity onPress={handleAudioFile} activeOpacity={0.8} style={styles.mediaBtn}>
+              <FileText size={20} color={COLORS.textBase} strokeWidth={1.8} />
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
       </SafeAreaView>
@@ -724,6 +742,38 @@ const styles = StyleSheet.create({
   videoRemoveBtn: {
     position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: 11,
     backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center',
+  },
+
+  // Mode bar — "Switch modes or add media files"
+  modeBar: {
+    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14,
+    borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker,
+    backgroundColor: COLORS.background,
+    gap: 10,
+  },
+  modeLabel: {
+    fontFamily: FONTS.sansBold, fontSize: 10,
+    color: COLORS.textMuted, letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  modeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  storyModePill: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: 14, height: 42,
+    borderRadius: 12, backgroundColor: COLORS.brand,
+  },
+  storyModeText: {
+    fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textInverse,
+  },
+  mediaBtn: {
+    width: 42, height: 42, borderRadius: 12,
+    backgroundColor: COLORS.fillWeak,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: COLORS.strokeWeaker,
+  },
+  mediaBtnActive: {
+    backgroundColor: `${COLORS.error}12`,
+    borderColor: `${COLORS.error}30`,
   },
 
   errorText: { fontFamily: FONTS.sans, fontSize: 13, color: COLORS.error, marginTop: 8, paddingHorizontal: 4 },

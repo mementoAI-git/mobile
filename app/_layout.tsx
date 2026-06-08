@@ -202,7 +202,8 @@ function RootLayout() {
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="chat/[id]" />
               <Stack.Screen name="create" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
-              <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="article" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+              <Stack.Screen name="settings" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
               <Stack.Screen name="accept-invite/[id]" />
               <Stack.Screen name="+not-found" />
             </Stack>

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { post } from '@/api/mutations';
+import { post, del } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { useAuthStore, useUserStore } from '@/store';
 import { queryKeys } from '@/constants/query-keys';
@@ -114,10 +114,7 @@ export function useDeleteAccount() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => {
-      const { del } = require('@/api/mutations');
-      return del(endpoint.deleteAccount);
-    },
+    mutationFn: () => del(endpoint.deleteAccount),
     onSuccess: async () => {
       await clearAuth();
       clearUser();
