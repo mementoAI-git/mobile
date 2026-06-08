@@ -92,7 +92,12 @@
       ],
       "@sentry/react-native",
       "expo-asset",
-      "expo-video"
+      "expo-video",
+      ["expo-speech-recognition", {
+  "microphonePermission": "Allow Memento to use the microphone for voice input.",
+  "speechRecognitionPermission": "Allow Memento to use speech recognition."
+}],
+      "expo-dev-client"
     ],
     "experiments": {
       "typedRoutes": true

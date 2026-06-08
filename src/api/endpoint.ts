@@ -70,6 +70,8 @@ export default {
   addMessageToMemory: '/memories/add-message',
   conversationEnrichment: '/memories/:id/enrichment',
 
+  memoriesQuickCapture: '/memories/quick-capture',
+
   // ai
   aiPrompt: '/ai/prompt',
   aiGreet: '/ai/prompt/greet',

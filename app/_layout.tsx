@@ -6,6 +6,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 LogBox.ignoreLogs([
   // Comes from moti's internal SafeAreaView usage — not our code, nothing to fix.
   'SafeAreaView has been deprecated',
+  // Expo Router fires this in Expo Go because chat/[id] is a root-level stack screen
+  // that lives outside the (tabs) group. It works correctly — just noisy in Go.
+  '[Layout children]',
 ]);
 
 import * as Sentry from '@sentry/react-native';
@@ -174,10 +177,12 @@ function RootLayout() {
     }
   }, [token, expoPushToken]);
 
-  // Hide splash once both auth is hydrated AND fonts are loaded
+  // Hide splash once both auth is hydrated AND fonts are loaded.
+  // .catch() silences the "No native splash screen registered" rejection that fires
+  // when hideAsync() is called from a fullScreenModal view controller (e.g. /create).
   useEffect(() => {
     if (hydrated && fontsLoaded) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, [hydrated, fontsLoaded]);
 
@@ -194,6 +199,7 @@ function RootLayout() {
               <Stack.Screen name="(onboard)" />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="chat/[id]" />
+              <Stack.Screen name="create" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
               <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
               <Stack.Screen name="accept-invite/[id]" />
               <Stack.Screen name="+not-found" />

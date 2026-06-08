@@ -13,9 +13,16 @@ export function useAudioRecorder() {
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
-      // Stop recording on unmount if still active
-      if (recorder.isRecording) {
-        recorder.stop().catch(() => undefined);
+      // Stop recording on unmount if still active.
+      // Wrapped in try/catch because expo-audio's recorder is a native shared object
+      // (AVAudioRecorder) that may already be deallocated by the time React runs
+      // the cleanup, causing NativeSharedObjectNotFoundException on .isRecording access.
+      try {
+        if (recorder.isRecording) {
+          recorder.stop().catch(() => undefined);
+        }
+      } catch {
+        // Native object already gone — nothing to clean up
       }
     };
   // recorder is stable — the hook reference doesn't change
@@ -42,8 +49,8 @@ export function useAudioRecorder() {
   }, [recorder]);
 
   const stop = useCallback(async (): Promise<string | null> => {
-    if (!recorder.isRecording) return null;
     try {
+      if (!recorder.isRecording) return null;
       await recorder.stop();
       // recorder.uri is populated after stop()
       return recorder.uri ?? null;
@@ -54,8 +61,12 @@ export function useAudioRecorder() {
   }, [recorder]);
 
   const cancel = useCallback(async () => {
-    if (recorder.isRecording) {
-      await recorder.stop().catch(() => undefined);
+    try {
+      if (recorder.isRecording) {
+        await recorder.stop().catch(() => undefined);
+      }
+    } catch {
+      // Native object already gone
     }
   }, [recorder]);
 

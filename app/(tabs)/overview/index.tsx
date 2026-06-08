@@ -300,7 +300,8 @@ export default function OverviewScreen() {
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        openSheet('quick-capture');
+                        // openSheet('quick-capture'); // ← old bottom-sheet (keep for rollback)
+                        router.push('/create'); // ← new full-screen compose
                       }}
                       activeOpacity={0.7}
                       className="size-14 bg-white border border-stroke-weaker rounded-full items-center justify-center shadow-sm"
