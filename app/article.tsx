@@ -28,11 +28,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
 import {
   MoreHorizontal,
-  Link,
-  List,
-  Quote,
-  Undo2,
-  KeyboardOff,
   Plus,
   X,
   Users,
@@ -41,6 +36,7 @@ import {
   Copy,
   Check,
 } from 'lucide-react-native';
+import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -564,20 +560,10 @@ export default function ArticleScreen() {
           </ScrollView>
 
           {/* Toolbar */}
-          <View style={styles.toolbar}>
-            <TouchableOpacity onPress={() => Haptics.selectionAsync()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.addBtn}>
-              <Plus size={14} color={COLORS.background} strokeWidth={2.5} />
-            </TouchableOpacity>
-            <View style={styles.toolbarSpacer} />
-            {([{ Icon: Link, label: 'Link' }, { Icon: List, label: 'List' }, { Icon: Quote, label: 'Quote' }, { Icon: Undo2, label: 'Undo' }] as const).map(({ Icon, label }) => (
-              <TouchableOpacity key={label} onPress={() => Haptics.selectionAsync()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.toolbarIcon}>
-                <Icon size={20} color={COLORS.textBase} strokeWidth={1.8} />
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); Keyboard.dismiss(); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.toolbarIcon}>
-              <KeyboardOff size={20} color={COLORS.textBase} strokeWidth={1.8} />
-            </TouchableOpacity>
-          </View>
+          <EditorActionBar
+            mode="story"
+            onSwitchMode={() => { router.replace('/create'); }}
+          />
         </KeyboardAvoidingView>
       </SafeAreaView>
 
@@ -619,7 +605,13 @@ const styles = StyleSheet.create({
   titleInput: { fontFamily: FONTS.serif, fontSize: 34, fontWeight: '700', color: COLORS.textStrong, padding: 0, margin: 0, marginBottom: 8, lineHeight: 42, textAlignVertical: 'top' },
   subtitleInput: { fontFamily: FONTS.sans, fontSize: 18, color: COLORS.textWeak, padding: 0, margin: 0, marginBottom: 24, lineHeight: 26, textAlignVertical: 'top' },
   bodyInput: { fontFamily: FONTS.sans, fontSize: 16, color: COLORS.textBase, padding: 0, margin: 0, lineHeight: 26, minHeight: 300, textAlignVertical: 'top' },
-  toolbar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker, backgroundColor: COLORS.background },
+  toolbar: { flexDirection: 'column', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker, backgroundColor: COLORS.background, gap: 10 },
+  toolbarLabel: { fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.textMuted, letterSpacing: 1, textTransform: 'uppercase' },
+  toolbarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  storyModePill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, paddingHorizontal: 16, borderRadius: 999, backgroundColor: COLORS.textStrong },
+  storyModeText: { fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textInverse },
+  mediaBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' },
+  // legacy — kept so old refs don't crash
   addBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
   toolbarSpacer: { flex: 1 },
   toolbarIcon: { padding: 6, marginLeft: 4 },

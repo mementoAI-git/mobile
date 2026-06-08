@@ -32,13 +32,12 @@ import {
   X,
   FileText,
   Play,
-  BookOpen,
-  Image as ImageIcon,
   Camera,
   Mic,
   Video,
   Music,
 } from 'lucide-react-native';
+import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -574,40 +573,15 @@ export default function CreateScreen() {
         )}
 
         {/* ── Switch modes / add media ──────────────────────────────────── */}
-        <View style={styles.modeBar}>
-          <Text style={styles.modeLabel}>SWITCH MODES OR ADD MEDIA FILES</Text>
-          <View style={styles.modeRow}>
-            {/* Story mode — filled dark pill */}
-            <TouchableOpacity
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/article'); }}
-              activeOpacity={0.8}
-              style={styles.storyModePill}
-            >
-              <BookOpen size={16} color={COLORS.textInverse} strokeWidth={2} />
-              <Text style={styles.storyModeText}>Story mode</Text>
-            </TouchableOpacity>
-
-            {/* Gallery */}
-            <TouchableOpacity onPress={handleImagePicker} activeOpacity={0.8} style={styles.mediaBtn}>
-              <ImageIcon size={20} color={COLORS.textBase} strokeWidth={1.8} />
-            </TouchableOpacity>
-
-            {/* Camera */}
-            <TouchableOpacity onPress={handleVideoPicker} activeOpacity={0.8} style={styles.mediaBtn}>
-              <Camera size={20} color={COLORS.textBase} strokeWidth={1.8} />
-            </TouchableOpacity>
-
-            {/* Voice recorder */}
-            <TouchableOpacity onPress={handleVoice} activeOpacity={0.8} style={[styles.mediaBtn, isRecording && styles.mediaBtnActive]}>
-              <Mic size={20} color={isRecording ? COLORS.error : COLORS.textBase} strokeWidth={1.8} />
-            </TouchableOpacity>
-
-            {/* Document / file */}
-            <TouchableOpacity onPress={handleAudioFile} activeOpacity={0.8} style={styles.mediaBtn}>
-              <FileText size={20} color={COLORS.textBase} strokeWidth={1.8} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <EditorActionBar
+          mode="quick-capture"
+          onSwitchMode={() => { router.replace('/article'); }}
+          onPhoto={handleImagePicker}
+          onCamera={handleVideoPicker}
+          onAudio={handleVoice}
+          onFile={handleAudioFile}
+          isRecording={isRecording}
+        />
       </KeyboardAvoidingView>
       </SafeAreaView>
     </SafeAreaProvider>
