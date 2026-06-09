@@ -288,7 +288,7 @@ export default function OverviewScreen() {
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        router.push('/article');
+                        router.push({ pathname: '/editor', params: { mode: 'story' } });
                       }}
                       activeOpacity={0.8}
                       className="flex-1 flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full"
@@ -300,8 +300,7 @@ export default function OverviewScreen() {
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        // openSheet('quick-capture'); // ← old bottom-sheet (keep for rollback)
-                        router.push('/create'); // ← new full-screen compose
+                        router.push({ pathname: '/editor', params: { mode: 'quick-capture' } });
                       }}
                       activeOpacity={0.7}
                       className="size-14 bg-white border border-stroke-weaker rounded-full items-center justify-center shadow-sm"

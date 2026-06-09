@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    fontFamily: FONTS.sansBold,
+    fontFamily: FONTS.geist,
     fontSize: 10,
     color: COLORS.textMuted,
     letterSpacing: 1,
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#77C7AF",
   },
   modePillText: {
-    fontFamily: FONTS.sansSemi,
+    fontFamily: FONTS.geist,
     fontSize: 13,
     color: COLORS.textInverse,
   },

@@ -42,7 +42,10 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, SlideInUp } from 'react-native-reanimated';
+
+// Module-level flag — SlideInUp only on the very first mount per session.
+let createHasSlid = false;
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useUserStore } from '@/store';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
@@ -480,6 +483,7 @@ export default function CreateScreen() {
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <SafeAreaView style={styles.root}>
       {showEmoji && <EmojiPicker onSelect={insertEmoji} onClose={() => setShowEmoji(false)} />}
+      <Animated.View style={{ flex: 1 }} entering={(() => { const anim = createHasSlid ? undefined : SlideInUp.duration(350); createHasSlid = true; return anim; })()}>
       <KeyboardAvoidingView style={styles.kav} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
@@ -583,6 +587,7 @@ export default function CreateScreen() {
           isRecording={isRecording}
         />
       </KeyboardAvoidingView>
+      </Animated.View>
       </SafeAreaView>
     </SafeAreaProvider>
   );

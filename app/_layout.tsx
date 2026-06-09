@@ -201,8 +201,9 @@ function RootLayout() {
               <Stack.Screen name="(onboard)" />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="chat/[id]" />
-              <Stack.Screen name="create" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
-              <Stack.Screen name="article" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+              <Stack.Screen name="editor" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+              <Stack.Screen name="create" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
+              <Stack.Screen name="article" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
               <Stack.Screen name="settings" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
               <Stack.Screen name="accept-invite/[id]" />
               <Stack.Screen name="+not-found" />

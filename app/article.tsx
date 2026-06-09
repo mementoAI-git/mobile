@@ -38,8 +38,13 @@ import {
 } from 'lucide-react-native';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, SlideInUp } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+
+// Tracks whether this screen has already performed its first slide-up entrance.
+// Module-level: persists across router.replace calls in the same session,
+// resets on app restart — exactly the right scope.
+let articleHasSlid = false;
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useUserStore } from '@/store';
 import { useCreateMemory } from '@/hooks/mutations/use-memory-mutations';
@@ -514,6 +519,7 @@ export default function ArticleScreen() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <SafeAreaView style={styles.root}>
+        <Animated.View style={{ flex: 1 }} entering={(() => { const anim = articleHasSlid ? undefined : SlideInUp.duration(350); articleHasSlid = true; return anim; })()}>
         <KeyboardAvoidingView style={styles.kav} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
 
           {/* Header */}
@@ -565,6 +571,7 @@ export default function ArticleScreen() {
             onSwitchMode={() => { router.replace('/create'); }}
           />
         </KeyboardAvoidingView>
+        </Animated.View>
       </SafeAreaView>
 
       {/* Publish modal — local so it renders above this fullScreenModal */}
