@@ -70,8 +70,8 @@ const GLASS_BG = Platform.select({
 const SPRING = { damping: 22, stiffness: 280, mass: 0.8 };
 
 // Widths
-const INACTIVE_W = 52;   // tight icon-only touch target
-const ACTIVE_W   = 108;  // expanded pill with label
+const INACTIVE_W = 60;   // tight icon-only touch target
+const ACTIVE_W   = 96;  // expanded pill with label
 const PILL_H     = 58;
 const ICON_SIZE  = 26;
 
@@ -249,20 +249,19 @@ const PILL_SHADOW = Platform.select({
 });
 
 const styles = StyleSheet.create({
-  // Absolute row container
+  // Absolute row container — inset from edges so the dock truly floats
   root: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: 20,
+    right: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
     gap: 12,
     zIndex: 100,
   },
 
-  // Glass pill
+  // Glass pill — flexShrink so it doesn't crowd out the search circle
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -271,6 +270,7 @@ const styles = StyleSheet.create({
     backgroundColor: GLASS_BG,
     paddingHorizontal: 6,
     gap: 4,
+    flexShrink: 1,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(23,11,0,0.08)',
     ...PILL_SHADOW,
