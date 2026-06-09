@@ -87,6 +87,10 @@ export default function CapsuleScreen() {
           <FlatList
             data={filteredCapsules}
             keyExtractor={(item) => item._id ?? ''}
+            initialNumToRender={6}
+            maxToRenderPerBatch={4}
+            windowSize={5}
+            removeClippedSubviews
             ListHeaderComponent={
               <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-4 gap-6">
                 <Animated.Text className="text-base text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>

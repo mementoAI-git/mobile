@@ -12,10 +12,12 @@ export function useNotifications() {
   const router = useRouter();
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [notification, setNotification] = useState<Notifications.Notification | null>(null);
-  const notificationListener = useRef<Notifications.Subscription>();
-  const responseListener = useRef<Notifications.Subscription>();
+  const notificationListener = useRef<Notifications.Subscription | null>(null);
+  const responseListener = useRef<Notifications.Subscription | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     if (Constants.appOwnership === 'expo') {
       console.log('Push notifications are not supported in Expo Go (SDK 53+). Please use a development build.');
       return;
@@ -23,14 +25,15 @@ export function useNotifications() {
 
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
-        shouldShowAlert: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
         shouldPlaySound: true,
         shouldSetBadge: true,
       }),
     });
 
     registerForPushNotificationsAsync().then((token) => {
-      if (token) setExpoPushToken(token);
+      if (isMounted && token) setExpoPushToken(token);
     });
 
     const handleNotificationResponse = (response: Notifications.NotificationResponse) => {
@@ -68,42 +71,43 @@ export function useNotifications() {
 
     // Check if app was opened by a notification while killed
     Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (response) {
+      if (isMounted && response) {
         handleNotificationResponse(response);
       }
     });
 
     notificationListener.current = Notifications.addNotificationReceivedListener((notif) => {
+      if (!isMounted) return;
       setNotification(notif);
     });
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
 
     return () => {
+      isMounted = false;
       if (notificationListener.current) {
         try {
-          if (typeof Notifications.removeNotificationSubscription === 'function') {
-            Notifications.removeNotificationSubscription(notificationListener.current);
-          } else {
-            notificationListener.current.remove();
-          }
+          notificationListener.current.remove();
         } catch (e) {
           console.log('Error removing notification subscription', e);
+        } finally {
+          notificationListener.current = null;
         }
       }
       if (responseListener.current) {
         try {
-          if (typeof Notifications.removeNotificationSubscription === 'function') {
-            Notifications.removeNotificationSubscription(responseListener.current);
-          } else {
-            responseListener.current.remove();
-          }
+          responseListener.current.remove();
         } catch (e) {
           console.log('Error removing response subscription', e);
+        } finally {
+          responseListener.current = null;
         }
       }
     };
-  }, [router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // router is intentionally excluded — it changes on every navigation and would
+           // tear down & re-register notification listeners on each route change.
+           // We read it imperatively inside the stable handler via closure.
 
   return {
     expoPushToken,

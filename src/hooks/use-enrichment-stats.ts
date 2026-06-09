@@ -2,7 +2,7 @@
  * Enrichment stats hook — ported from web/src/features/enrichment/use-enrichment-stats.ts
  * Uses AsyncStorage instead of localStorage for persistence on mobile.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { get } from '@/api/mutations';
@@ -46,6 +46,7 @@ export function useEnrichmentStats(): UseEnrichmentStatsResult {
   const [dismissedNudges, setDismissedNudges] = useState<string[]>([]);
 
   const lastMilestoneRef = useRef<number>(0);
+  const isMountedRef = useRef(true);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: queryKeys.userStats,
@@ -58,13 +59,19 @@ export function useEnrichmentStats(): UseEnrichmentStatsResult {
   // Load dismissed nudges from AsyncStorage on mount
   useEffect(() => {
     AsyncStorage.getItem(DISMISSED_NUDGES_KEY).then((raw) => {
+      if (!isMountedRef.current) return;
       if (raw) {
         try { setDismissedNudges(JSON.parse(raw)); } catch { /* ignore */ }
       }
     });
     AsyncStorage.getItem(MILESTONE_KEY).then((raw) => {
+      if (!isMountedRef.current) return;
       if (raw) lastMilestoneRef.current = Number(raw);
     });
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   // Compute delta and milestone whenever stats change
@@ -74,6 +81,7 @@ export function useEnrichmentStats(): UseEnrichmentStatsResult {
     const today = todayStr();
 
     AsyncStorage.getItem(BASELINE_KEY).then((raw) => {
+      if (!isMountedRef.current) return;
       let baseline: EnrichmentBaseline | null = null;
       try { baseline = raw ? JSON.parse(raw) : null; } catch { /* ignore */ }
 
@@ -96,13 +104,13 @@ export function useEnrichmentStats(): UseEnrichmentStatsResult {
     }
   }, [stats?.enrichment_score, stats?.milestone?.reached_threshold]);
 
-  const dismissNudge = async (dimension: LifeDimension) => {
+  const dismissNudge = useCallback(async (dimension: LifeDimension) => {
     const updated = [...dismissedNudges.filter((d) => d !== dimension), dimension];
     setDismissedNudges(updated);
     await AsyncStorage.setItem(DISMISSED_NUDGES_KEY, JSON.stringify(updated));
-  };
+  }, [dismissedNudges]);
 
-  const getDismissedNudges = () => dismissedNudges;
+  const getDismissedNudges = useCallback(() => dismissedNudges, [dismissedNudges]);
 
   const nudgeDimension = (stats?.nudge?.category_key as LifeDimension | undefined) ?? null;
   const nudgeQuestion = stats?.nudge?.question ?? null;

@@ -4,8 +4,11 @@ import { StyleSheet, Platform, LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 LogBox.ignoreLogs([
-  // 'SafeAreaView has been deprecated',
-  'Expo AV has been deprecated',
+  // Comes from moti's internal SafeAreaView usage — not our code, nothing to fix.
+  'SafeAreaView has been deprecated',
+  // Expo Router fires this in Expo Go because chat/[id] is a root-level stack screen
+  // that lives outside the (tabs) group. It works correctly — just noisy in Go.
+  '[Layout children]',
 ]);
 
 import * as Sentry from '@sentry/react-native';
@@ -18,6 +21,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import {
   useFonts,
   Inter_400Regular,
@@ -44,6 +48,7 @@ import { SheetManager } from '@/components/sheets/SheetManager';
 import { ToastProvider } from '@/components/ui/Toast';
 import { OfflineNotice } from '@/components/ui/OfflineNotice';
 import { useNotifications } from '@/hooks/use-notifications';
+import { COLORS } from '@/constants/tokens';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -154,10 +159,12 @@ function RootLayout() {
 
     if (token && pendingDeepLink && inTabs) {
       // Wait a tiny bit for the initial tab navigation to settle
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         router.push(pendingDeepLink as any);
         setPendingDeepLink(null);
       }, 500);
+
+      return () => clearTimeout(timer);
     }
   }, [token, segments, router]);
 
@@ -172,36 +179,46 @@ function RootLayout() {
     }
   }, [token, expoPushToken]);
 
-  // Hide splash once both auth is hydrated AND fonts are loaded
+  // Hide splash once both auth is hydrated AND fonts are loaded.
+  // .catch() silences the "No native splash screen registered" rejection that fires
+  // when hideAsync() is called from a fullScreenModal view controller (e.g. /create).
   useEffect(() => {
     if (hydrated && fontsLoaded) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(() => { });
     }
   }, [hydrated, fontsLoaded]);
 
   if (!hydrated || !fontsLoaded) return null;
 
   return (
-    <GestureHandlerRootView className="flex-1">
-      <QueryClientProvider client={queryClient}>
-        <BottomSheetModalProvider>
-          <ToastProvider>
-            <OfflineNotice />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(onboard)" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="chat/[id]" />
-              <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="accept-invite/[id]" />
-              <Stack.Screen name="+not-found" />
-            </Stack>
-            <SheetManager />
-          </ToastProvider>
-        </BottomSheetModalProvider>
-      </QueryClientProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <GestureHandlerRootView className="flex-1">
+        <QueryClientProvider client={queryClient}>
+          <BottomSheetModalProvider>
+            <ToastProvider>
+              <OfflineNotice />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(onboard)" />
+                <Stack.Screen name="(tabs)" options={{ contentStyle: { backgroundColor: COLORS.background } }} />
+                <Stack.Screen name="chat/[id]" />
+                <Stack.Screen name="editor" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+                <Stack.Screen name="create" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
+                <Stack.Screen name="article" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
+                <Stack.Screen name="settings" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+                <Stack.Screen name="accept-invite/[id]" />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+              <SheetManager />
+            </ToastProvider>
+          </BottomSheetModalProvider>
+        </QueryClientProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
 
-export default Sentry.wrap(RootLayout);
+// Only wrap with Sentry when it has been initialised (DSN present).
+// Calling Sentry.wrap() before Sentry.init() produces a "App Start Span
+// could not be finished" warning and silently breaks tracing.
+export default SENTRY_DSN ? Sentry.wrap(RootLayout) : RootLayout;

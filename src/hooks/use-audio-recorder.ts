@@ -1,75 +1,83 @@
-import { useState, useRef, useCallback } from 'react';
-import { Audio } from 'expo-av';
-
-interface AudioRecorderState {
-  isRecording: boolean;
-  isPaused: boolean;
-  duration: number;
-  uri: string | null;
-}
+import { useRef, useCallback, useEffect } from 'react';
+import {
+  useAudioRecorder as useExpoAudioRecorder,
+  AudioModule,
+  RecordingPresets,
+} from 'expo-audio';
 
 export function useAudioRecorder() {
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const [state, setState] = useState<AudioRecorderState>({
-    isRecording: false,
-    isPaused: false,
-    duration: 0,
-    uri: null,
-  });
+  // expo-audio's built-in recorder hook — replaces expo-av Audio.Recording
+  const recorder = useExpoAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      // Stop recording on unmount if still active.
+      // Wrapped in try/catch because expo-audio's recorder is a native shared object
+      // (AVAudioRecorder) that may already be deallocated by the time React runs
+      // the cleanup, causing NativeSharedObjectNotFoundException on .isRecording access.
+      try {
+        if (recorder.isRecording) {
+          recorder.stop().catch(() => undefined);
+        }
+      } catch {
+        // Native object already gone — nothing to clean up
+      }
+    };
+  // recorder is stable — the hook reference doesn't change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const start = useCallback(async () => {
     try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') throw new Error('Microphone permission denied');
+      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
+      if (!granted) throw new Error('Microphone permission denied');
+      if (!isMountedRef.current) return;
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await AudioModule.setAudioModeAsync({
+        // expo-audio uses allowsRecording (not the expo-av allowsRecordingIOS)
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
+      if (!isMountedRef.current) return;
 
-      const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      );
-
-      recording.setOnRecordingStatusUpdate((s) => {
-        setState((prev) => ({ ...prev, duration: Math.floor((s.durationMillis ?? 0) / 1000) }));
-      });
-
-      await recording.startAsync();
-      recordingRef.current = recording;
-      setState((prev) => ({ ...prev, isRecording: true, uri: null }));
+      await recorder.record();
     } catch (err) {
       console.error('Failed to start recording', err);
     }
-  }, []);
+  }, [recorder]);
 
   const stop = useCallback(async (): Promise<string | null> => {
-    const recording = recordingRef.current;
-    if (!recording) return null;
     try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      recordingRef.current = null;
-      setState((prev) => ({ ...prev, isRecording: false, isPaused: false, uri: uri ?? null }));
-      return uri ?? null;
+      if (!recorder.isRecording) return null;
+      await recorder.stop();
+      // recorder.uri is populated after stop()
+      return recorder.uri ?? null;
     } catch (err) {
       console.error('Failed to stop recording', err);
       return null;
     }
-  }, []);
+  }, [recorder]);
 
   const cancel = useCallback(async () => {
-    const recording = recordingRef.current;
-    if (!recording) return;
     try {
-      await recording.stopAndUnloadAsync();
+      if (recorder.isRecording) {
+        await recorder.stop().catch(() => undefined);
+      }
     } catch {
-      // ignore
+      // Native object already gone
     }
-    recordingRef.current = null;
-    setState({ isRecording: false, isPaused: false, duration: 0, uri: null });
-  }, []);
+  }, [recorder]);
 
-  return { ...state, start, stop, cancel };
+  return {
+    isRecording: recorder.isRecording,
+    isPaused: false, // expo-audio doesn't expose pause on the recorder hook
+    // currentTime is in seconds (number)
+    duration: Math.floor(recorder.currentTime),
+    uri: recorder.uri ?? null,
+    start,
+    stop,
+    cancel,
+  };
 }

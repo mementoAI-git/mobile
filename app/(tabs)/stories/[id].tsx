@@ -1,16 +1,30 @@
 import React from 'react';
-import { View, ScrollView, FlatList, ImageBackground, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, FlatList, ImageBackground, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Bookmark, BookmarkCheck, MoreHorizontal, Pencil, Trash2, Play, FileText, Download } from 'lucide-react-native';
 import dayjs from 'dayjs';
 import Animated from 'react-native-reanimated';
-import { Video, ResizeMode } from 'expo-av';
+import { VideoView } from 'expo-video';
+import { useVideoPlayer } from '@/hooks/use-video-player';
 import * as WebBrowser from 'expo-web-browser';
 import { Badge, Spinner, MemTag, Skeleton } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useStoryDetailLogic } from '@/hooks/use-story-detail-logic';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
+
+function VideoItem({ uri, style }: { uri: string; style?: any }) {
+  const { player } = useVideoPlayer(uri, { loop: true, autoPlay: true });
+  return (
+    <VideoView
+      player={player}
+      style={style ?? { width: '100%', aspectRatio: 16 / 9 }}
+      allowsFullscreen
+      allowsPictureInPicture
+      nativeControls
+    />
+  );
+}
 
 function StoryDetailSkeleton() {
   return (
@@ -145,16 +159,14 @@ export default function StoryDetailScreen() {
             <View>
               {imageAttachments.length === 1 ? (
                 imageAttachments[0].type?.startsWith('video/') ? (
-                  <Video
-                    source={{ uri: imageAttachments[0].url || '' }}
+                  <VideoItem
+                    uri={imageAttachments[0].url || ''}
                     style={{ width: '100%', aspectRatio: 16 / 9 }}
-                    useNativeControls
-                    resizeMode={ResizeMode.COVER}
-                    isLooping
                   />
                 ) : (
+                  // sharedTransitionTag is a Reanimated runtime prop not in static types — cast to any
                   <Animated.Image
-                    sharedTransitionTag={`memory-image-${memory._id}`}
+                    {...{ sharedTransitionTag: `memory-image-${memory._id}` } as any}
                     source={{ uri: imageAttachments[0].url }}
                     className="w-full aspect-video"
                     resizeMode="cover"
@@ -170,15 +182,13 @@ export default function StoryDetailScreen() {
                   renderItem={({ item, index }) => (
                     <View style={{ width: 320, aspectRatio: 16 / 9 }}>
                       {item.type?.startsWith('video/') ? (
-                        <Video
-                          source={{ uri: item.url || '' }}
+                        <VideoItem
+                          uri={item.url || ''}
                           style={{ width: '100%', height: '100%' }}
-                          useNativeControls
-                          resizeMode={ResizeMode.COVER}
                         />
                       ) : (
                         <Animated.Image
-                          sharedTransitionTag={index === 0 ? `memory-image-${memory._id}` : undefined}
+                          {...(index === 0 ? { sharedTransitionTag: `memory-image-${memory._id}` } : {}) as any}
                           source={{ uri: item.url }}
                           style={{ width: '100%', height: '100%' }}
                           className="rounded-none"
@@ -194,8 +204,9 @@ export default function StoryDetailScreen() {
 
           <View className="px-5 pt-6 pb-16 gap-4">
             {/* Title */}
+            {/* sharedTransitionTag is a Reanimated runtime prop not in static TS types — spread cast */}
             <Animated.Text
-              sharedTransitionTag={`memory-title-${memory._id}`}
+              {...{ sharedTransitionTag: `memory-title-${memory._id}` } as any}
               className="text-3xl text-text-strong leading-tight"
               style={{ fontFamily: FONTS.serif }}
             >
@@ -274,7 +285,7 @@ export default function StoryDetailScreen() {
                             {a.name || 'Document'}
                           </Text>
                           <Text className="text-xs text-text-weak uppercase" style={{ fontFamily: FONTS.sans }}>
-                            {a.type || 'FILE'} • {(a.size && a.size > 0) ? (a.size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown size'}
+                            {a.type || 'FILE'} • {(a.size && Number(a.size) > 0) ? (Number(a.size) / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown size'}
                           </Text>
                         </View>
                       </View>

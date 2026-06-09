@@ -5,7 +5,7 @@ import { X, Search } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { Button } from '@/components/ui';
 import { useMemories } from '@/hooks/queries/use-memories';
-import { MemoryCard } from '@/components/memory/MemoryCard';
+import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SelectFromMemoryModalProps {
@@ -102,7 +102,7 @@ export const SelectFromMemoryModal = forwardRef<BottomSheetModal, SelectFromMemo
                   className={`w-[48%] mb-4 rounded-xl border-2 ${isSelected ? 'border-brand' : 'border-transparent'}`}
                 >
                   <View className="pointer-events-none flex-1">
-                    <MemoryCard memory={m} isGrid={true} />
+                    <MasonryMemoryCard memory={m} />
                   </View>
                   {isSelected && (
                     <View className="absolute top-2 right-2 bg-brand rounded-full p-1 z-10 shadow-sm">

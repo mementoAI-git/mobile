@@ -4,7 +4,7 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface GradientTextProps extends TextProps {
-  colors: string[];
+  colors: [string, string, ...string[]];
 }
 
 export function GradientText({ colors, style, children, ...props }: GradientTextProps) {
@@ -17,7 +17,7 @@ export function GradientText({ colors, style, children, ...props }: GradientText
       }
     >
       <LinearGradient
-        colors={colors}
+        colors={colors as [string, string, ...string[]]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
       >

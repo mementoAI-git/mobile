@@ -25,7 +25,9 @@ export function useFileUpload() {
         },
       });
 
-      return response.data.data;
+      // Server returns { data: IFile[] } (array) — match web's handling
+      const data = response.data.data;
+      return Array.isArray(data) ? data[0] : data;
     },
   });
 }

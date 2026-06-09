@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Animated, StyleSheet, Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { WifiOff } from 'lucide-react-native';
@@ -14,7 +14,8 @@ export function OfflineNotice() {
   const offlineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isReadyRef = useRef(false); // ref so the listener closure always sees current value
 
-  const showBanner = () => {
+  // Stable callbacks stored in refs so the NetInfo listener never captures a stale closure.
+  const showBanner = useCallback(() => {
     setIsVisible(true);
     Animated.spring(translateY, {
       toValue: 0,
@@ -22,9 +23,9 @@ export function OfflineNotice() {
       tension: 40,
       friction: 8,
     }).start();
-  };
+  }, [translateY]);
 
-  const hideBanner = () => {
+  const hideBanner = useCallback(() => {
     // Clear any pending offline timer — we're back online
     if (offlineTimerRef.current) {
       clearTimeout(offlineTimerRef.current);
@@ -35,9 +36,9 @@ export function OfflineNotice() {
       duration: 300,
       useNativeDriver: true,
     }).start(() => setIsVisible(false));
-  };
+  }, [translateY]);
 
-  const handleConnectionChange = (connected: boolean) => {
+  const handleConnectionChange = useCallback((connected: boolean) => {
     if (!connected) {
       // Debounce: only show after 1.5s of confirmed offline state
       // This prevents false positives from brief network glitches
@@ -50,7 +51,7 @@ export function OfflineNotice() {
       // Back online — hide immediately
       hideBanner();
     }
-  };
+  }, [showBanner, hideBanner]);
 
   useEffect(() => {
     // Use fetch() for the real initial state instead of relying on
@@ -74,7 +75,7 @@ export function OfflineNotice() {
         clearTimeout(offlineTimerRef.current);
       }
     };
-  }, []);
+  }, [showBanner, handleConnectionChange]);
 
 
   return (

@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useCallback, useMemo } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useConversations } from '@/hooks/queries/use-memories';
 import { useStartConversation } from '@/hooks/mutations/use-memory-mutations';
@@ -22,9 +23,9 @@ export function useChatListLogic() {
 
   const { mutate: startConversation, isPending: starting } = useStartConversation();
 
-  const conversations = data?.pages.flatMap((p) => p.docs) ?? [];
+  const conversations = useMemo(() => data?.pages.flatMap((p) => p.docs) ?? [], [data?.pages]);
 
-  const handleNew = () => {
+  const handleNew = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     // Check for existing primary_conversation_id — web routes to it instead of creating new
@@ -48,12 +49,12 @@ export function useChatListLogic() {
         router.push({ pathname: '/chat/[id]', params: { id: memoryId } });
       },
     });
-  };
+  }, [queryClient, router, startConversation]);
 
-  const handleOpenChat = (id: string) => {
+  const handleOpenChat = useCallback((id: string) => {
     Haptics.selectionAsync();
     router.push({ pathname: '/chat/[id]', params: { id } });
-  };
+  }, [router]);
 
   return {
     router,

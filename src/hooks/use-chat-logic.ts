@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -14,7 +14,7 @@ import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import type { ChatReplyQuote } from '@/lib/utils';
 
 export function useChatLogic() {
-  const { id, type } = useLocalSearchParams<{ id: string; type?: string }>();
+  const { id, type, promptTitle } = useLocalSearchParams<{ id: string; type?: string; promptTitle?: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
   const flatListRef = useRef<FlatList>(null);
@@ -30,26 +30,34 @@ export function useChatLogic() {
   );
 
   const promptMemory = promptMemoryRes?.data;
-  const activeChatId = isPromptType ? (promptMemory?._id || null) : id;
+
+  // Treat the literal string 'new' as no ID — the conversation hasn't been created yet.
+  // Passing 'new' as a memory_id to the AI endpoint or the messages query causes backend errors.
+  const activeChatId = isPromptType
+    ? (promptMemory?._id ?? null)
+    : (id && id !== 'new' ? id : null);
 
   const { data: serverMessages, isLoading: isLoadingMessages } = useConversationMessages(
-    activeChatId || '',
+    activeChatId ?? '',
   );
 
   const { messages, streaming, streamingText, send: streamSend, abort: stop } = useStreamChat(
-    activeChatId || undefined,
+    activeChatId ?? undefined,
   );
 
   // ── Enrichment stats (refetched after each AI response) ─────────────────
   const enrichmentStats = useEnrichmentStats();
 
   // Merge and reverse for inverted FlatList (index 0 = bottom)
-  const allMessages = [
-    ...(serverMessages?.messages ?? []),
-    ...messages,
-  ].reverse();
+  const allMessages = useMemo(
+    () => [
+      ...(serverMessages?.messages ?? []),
+      ...messages,
+    ].reverse(),
+    [serverMessages?.messages, messages],
+  );
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     Haptics.selectionAsync();
     // The HostChatEntryScreen uses router.replace() → clears back stack.
     // Must guard before calling back() or it throws GO_BACK not handled.
@@ -58,9 +66,9 @@ export function useChatLogic() {
     } else {
       router.replace('/(tabs)/overview');
     }
-  };
+  }, [router]);
 
-  const handleActions = () => {
+  const handleActions = useCallback(() => {
     Haptics.selectionAsync();
     openSheet('chat-actions', {
       chatId: activeChatId || '',
@@ -72,7 +80,7 @@ export function useChatLogic() {
         setDeepDiveDimension(dimension ?? null);
       },
     });
-  };
+  }, [activeChatId, chatMode, deepDiveDimension, enrichmentStats.stats, openSheet]);
 
   const send = useCallback(
     async (text: string, replyTo?: ChatReplyQuote | null) => {
@@ -92,7 +100,9 @@ export function useChatLogic() {
       queryClient.invalidateQueries({ queryKey: queryKeys.userStats });
     }
     prevMessagesLengthRef.current = messages.length;
-  }, [messages.length]);
+    // messages.length is derived from messages — listing both causes a double-trigger.
+    // Only depend on `messages` (the array reference changes when length changes).
+  }, [messages, queryClient]);
 
   const handleEnterDeepDive = useCallback((dimension: LifeDimension) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -113,6 +123,8 @@ export function useChatLogic() {
     activeChatId,
     isPromptType,
     promptMemory,
+    /** Prompt question text passed via URL param — available immediately before API resolves */
+    promptTitle: promptTitle ?? promptMemory?.title ?? null,
     isStartingConversation: false,
     router,
     flatListRef,

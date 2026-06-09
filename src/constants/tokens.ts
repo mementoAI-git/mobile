@@ -91,6 +91,46 @@ export const COLORS = {
   glassDark: 'rgba(23, 11, 0, 0.05)',
 };
 
+/**
+ * CARD_PASTEL_SURFACES — seeded pastel backgrounds for text-only memory cards.
+ * Each entry is picked deterministically from stableHash(memory._id) so a card's
+ * surface is stable across renders and sessions.
+ *
+ * These are the only hardcoded hex values approved outside the main COLORS token
+ * system. They are intentional warm/cool pastel tints derived from the sand and
+ * fill palettes, used exclusively for card backgrounds.
+ *
+ * Approved exception per AGENTS.md § "Approved hardcoded exceptions".
+ */
+/**
+ * Text card surfaces — rgba strings so React Native composites them correctly on white.
+ *
+ * The web uses color-mix() of very-transparent fills (0.04–0.06 opacity) with white.
+ * At those opacities the hue is imperceptible on screen — what you see is essentially
+ * white with a warm-neutral border. We replicate that using low-opacity rgba values
+ * instead of baked hex so the compositing remains faithful across device brightness.
+ *
+ * bg:     the fill token composited at ~4% → nearly white with a faint hue
+ * border: 80% stroke-neutral-weak + 20% of the semantic fill → warm gray with faint hue
+ */
+export const CARD_PASTEL_SURFACES = [
+  // All surfaces use opaque white as base — mirrors the web where color-mix()
+  // produces colours indistinguishable from white on a white card background.
+  // The identity comes from the border colour, NOT the background fill.
+  // Borders are the neutral stroke with a faint semantic hue wash.
+  //
+  // 0 — neutral: white bg  |  pure neutral border (rgba brown-100)
+  { bg: '#ffffff', border: 'rgba(23,11,0,0.10)' },
+  // 1 — brand: white bg  |  neutral border with faint orange cast
+  { bg: '#ffffff', border: 'rgba(200,80,0,0.12)' },
+  // 2 — warning: white bg  |  neutral border with faint amber cast
+  { bg: '#ffffff', border: 'rgba(180,130,0,0.12)' },
+  // 3 — info: white bg  |  neutral border with faint blue cast
+  { bg: '#ffffff', border: 'rgba(20,100,220,0.11)' },
+  // 4 — success: white bg  |  neutral border with faint green cast
+  { bg: '#ffffff', border: 'rgba(6,100,70,0.12)' },
+] as const;
+
 export const FONTS = {
   sans: 'Inter_400Regular',
   sansMedium: 'Inter_500Medium',

@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Animated, StyleSheet, ViewProps } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, ViewProps } from 'react-native';
 import { cn } from '@/lib/utils';
 import { COLORS } from '@/constants/tokens';
 
@@ -8,10 +8,10 @@ interface SkeletonProps extends ViewProps {
 }
 
 export function Skeleton({ className, style, ...props }: SkeletonProps) {
-  const opacity = new Animated.Value(0.3);
+  const opacity = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
-    Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, {
           toValue: 0.7,
@@ -24,8 +24,14 @@ export function Skeleton({ className, style, ...props }: SkeletonProps) {
           useNativeDriver: true,
         }),
       ])
-    ).start();
-  }, []);
+    );
+
+    loop.start();
+
+    return () => {
+      loop.stop();
+    };
+  }, [opacity]);
 
   return (
     <Animated.View

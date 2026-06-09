@@ -7,7 +7,7 @@ import { FONTS } from '@/constants/tokens';
 
 export function MemoryDetailSheet() {
   const closeSheet = useUiStore((s) => s.closeSheet);
-  const { sheetProps } = useUiStore();
+  const sheetProps = useUiStore((s) => s.sheetProps);
   const memory = sheetProps?.memory;
 
   if (!memory) return null;

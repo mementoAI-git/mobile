@@ -14,7 +14,7 @@ interface CategoryCardProps {
   className?: string;
 }
 
-export function CategoryCard({ title, subtitle, image, onPress, className }: CategoryCardProps) {
+export const CategoryCard = React.memo(function CategoryCard({ title, subtitle, image, onPress, className }: CategoryCardProps) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -69,5 +69,5 @@ export function CategoryCard({ title, subtitle, image, onPress, className }: Cat
       </TouchableOpacity>
     </Animated.View>
   );
-}
+});
 

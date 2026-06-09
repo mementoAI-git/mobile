@@ -26,4 +26,6 @@ export const queryKeys = {
 
   activities: ['activities'] as const,
   files: ['files'] as const,
+
+  subscription: ['subscription'] as const,
 };

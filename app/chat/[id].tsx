@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   KeyboardAvoidingView,
-  Platform,
   ImageBackground,
   TouchableOpacity,
   StyleSheet,
@@ -42,6 +41,7 @@ export default function ChatScreen() {
   const {
     isPromptType,
     promptMemory,
+    promptTitle,
     isStartingConversation,
     flatListRef,
     serverMessages,
@@ -81,14 +81,25 @@ export default function ChatScreen() {
   const isActuallyStreaming = streaming || isStartingConversation;
 
   // Month keys for jump pills (from persisted server messages)
-  const allServerMessages = serverMessages?.messages ?? [];
-  const monthKeys = monthKeysFromMessages(allServerMessages);
-  const categoryPills = enrichmentStats.stats?.jump_pills ?? [];
+  const allServerMessages = serverMessages?.messages;
+  const monthKeys = React.useMemo(
+    () => monthKeysFromMessages(allServerMessages ?? []),
+    [allServerMessages],
+  );
+  const categoryPills = React.useMemo(
+    () => enrichmentStats.stats?.jump_pills ?? [],
+    [enrichmentStats.stats?.jump_pills],
+  );
 
-  // Deep dive nudge visibility
+  // Deep dive nudge visibility — destructure stable references to avoid
+  // capturing the whole enrichmentStats object in callbacks/deps.
   const nudgeDimension = enrichmentStats.nudgeDimension;
   const nudgeQuestion = enrichmentStats.nudgeQuestion;
-  const dismissedNudges = enrichmentStats.getDismissedNudges();
+  const getDismissedNudges = enrichmentStats.getDismissedNudges;
+  const dismissNudge = enrichmentStats.dismissNudge;
+
+  // getDismissedNudges is a stable useCallback — safe to call during render.
+  const dismissedNudges = getDismissedNudges();
   const showDeepDiveNudge =
     chatMode === 'open' &&
     !nudgeHidden &&
@@ -98,14 +109,56 @@ export default function ChatScreen() {
   const handleDismissNudge = useCallback(async () => {
     setNudgeHidden(true);
     if (nudgeDimension) {
-      await enrichmentStats.dismissNudge(nudgeDimension);
+      await dismissNudge(nudgeDimension);
     }
-  }, [nudgeDimension, enrichmentStats]);
+  }, [nudgeDimension, dismissNudge]);
 
   const handleStartDeepDiveFromNudge = useCallback(() => {
     setNudgeHidden(true);
     if (nudgeDimension) handleEnterDeepDive(nudgeDimension);
   }, [nudgeDimension, handleEnterDeepDive]);
+
+  const handleCategoryPill = useCallback((starter: string) => {
+    send(starter);
+  }, [send]);
+
+  const renderMessage = useCallback(
+    ({ item }: { item: any }) => (
+      <MessageBubble
+        message={item}
+        onReply={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setReplyQuote({ role: item.role, text: item.text });
+        }}
+      />
+    ),
+    [],
+  );
+
+  const listHeaderComponent = React.useMemo(() => {
+    if (!isActuallyStreaming) return null;
+
+    return streamingText ? (
+      <MessageBubble message={{ role: 'assistant', text: streamingText } as any} />
+    ) : (
+      <TypingIndicator />
+    );
+  }, [isActuallyStreaming, streamingText]);
+
+  const listFooterComponent = React.useMemo(() => {
+    if (!isPromptType || !promptMemory) return null;
+
+    return (
+      <View className="mx-5 my-4 p-5 rounded-2xl border border-stroke-weaker bg-fill-weaker shadow-sm">
+        <Animated.Text
+          className="text-base text-text-strong leading-relaxed"
+          style={{ fontFamily: FONTS.serif }}
+        >
+          {promptMemory.title}
+        </Animated.Text>
+      </View>
+    );
+  }, [isPromptType, promptMemory]);
 
   // Jump to message by month — scrolls to first message in that month
   const handleJumpToMonth = useCallback(
@@ -174,7 +227,7 @@ export default function ChatScreen() {
                   monthKeys={monthKeys}
                   categoryPills={categoryPills}
                   onJump={handleJumpToMonth}
-                  onCategoryPill={(starter) => send(starter)}
+                  onCategoryPill={handleCategoryPill}
                 />
               </View>
 
@@ -214,6 +267,36 @@ export default function ChatScreen() {
             />
           )}
 
+          {/* ── Prompt question card — pinned as permanent anchor for the reflection session ── */}
+          {isPromptType && promptTitle && (
+            <Animated.View
+              entering={FadeInDown.duration(400)}
+              className="mx-5 mb-3"
+            >
+              <View
+                className="bg-white rounded-[20px] border border-stroke-weaker px-5 py-4 gap-3 shadow-sm"
+              >
+                <View
+                  className="self-start rounded-full px-2.5 py-0.5"
+                  style={{ backgroundColor: COLORS.brandSubtle, borderWidth: 1, borderColor: COLORS.brandTint }}
+                >
+                  <Animated.Text
+                    className="text-[10px] font-bold uppercase tracking-widest"
+                    style={{ fontFamily: FONTS.sansBold, color: COLORS.brand }}
+                  >
+                    Today's reflection
+                  </Animated.Text>
+                </View>
+                <Animated.Text
+                  className="text-[18px] text-text-strong leading-snug"
+                  style={{ fontFamily: FONTS.serif }}
+                >
+                  {promptTitle}
+                </Animated.Text>
+              </View>
+            </Animated.View>
+          )}
+
           {/* ── Messages ─────────────────────────────────────────────── */}
           <View className="flex-1 relative bg-transparent">
             {isLoading && !allMessages.length ? (
@@ -224,66 +307,40 @@ export default function ChatScreen() {
                 data={allMessages}
                 inverted
                 keyExtractor={(item, i) => (item as any)._id ?? String(i)}
-                renderItem={({ item }) => (
-                  <MessageBubble
-                    message={item as any}
-                    onReply={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setReplyQuote({ role: (item as any).role, text: (item as any).text });
-                    }}
-                  />
-                )}
+                renderItem={renderMessage}
                 contentContainerClassName="px-5 pb-6 pt-4"
                 showsVerticalScrollIndicator={false}
                 onScrollToIndexFailed={() => {}}
-                ListHeaderComponent={
-                  isActuallyStreaming ? (
-                    streamingText ? (
-                      <MessageBubble message={{ role: 'assistant', text: streamingText } as any} />
-                    ) : (
-                      <TypingIndicator />
-                    )
-                  ) : null
-                }
-                ListFooterComponent={
-                  isPromptType && promptMemory ? (
-                    <View className="mx-5 my-4 p-5 rounded-2xl border border-stroke-weaker bg-fill-weaker shadow-sm">
-                      <Animated.Text
-                        className="text-base text-text-strong leading-relaxed"
-                        style={{ fontFamily: FONTS.serif }}
-                      >
-                        {promptMemory.title}
-                      </Animated.Text>
-                    </View>
-                  ) : null
-                }
+                ListHeaderComponent={listHeaderComponent}
+                ListFooterComponent={listFooterComponent}
                 ListEmptyComponent={
-                  <View className="items-center justify-center py-24 gap-8">
-                    <Animated.View
-                      entering={FadeInUp.duration(600)}
-                      className="size-24 rounded-full bg-white border border-stroke-weaker items-center justify-center shadow-sm"
-                    >
-                      <Animated.Text className="text-4xl">🌱</Animated.Text>
-                    </Animated.View>
-                    <View className="items-center gap-3 px-10">
-                      <Animated.Text
-                        entering={FadeInDown.delay(200)}
-                        className="text-[28px] text-text-strong text-center"
-                        style={{ fontFamily: FONTS.serif }}
+                  /* Prompt type: pinned card above handles the question display — nothing extra needed here */
+                  isPromptType ? null : (
+                    <View className="items-center justify-center py-24 gap-8">
+                      <Animated.View
+                        entering={FadeInUp.duration(600)}
+                        className="size-24 rounded-full bg-white border border-stroke-weaker items-center justify-center shadow-sm"
                       >
-                        {isPromptType ? 'Reflect & Grow' : 'Your story grows here'}
-                      </Animated.Text>
-                      <Animated.Text
-                        entering={FadeInDown.delay(300)}
-                        className="text-[15px] text-text-weak text-center leading-relaxed"
-                        style={{ fontFamily: FONTS.sans }}
-                      >
-                        {isPromptType
-                          ? 'Write your answer below or tap the microphone to reply with a voice note. Your AI companion will respond to help you deep dive!'
-                          : 'Share a memory, an emotion, or just say hello. Your AI companion is here to listen and help you preserve your legacy.'}
-                      </Animated.Text>
+                        <Animated.Text className="text-4xl">🌱</Animated.Text>
+                      </Animated.View>
+                      <View className="items-center gap-3 px-10">
+                        <Animated.Text
+                          entering={FadeInDown.delay(200)}
+                          className="text-[28px] text-text-strong text-center"
+                          style={{ fontFamily: FONTS.serif }}
+                        >
+                          Your story grows here
+                        </Animated.Text>
+                        <Animated.Text
+                          entering={FadeInDown.delay(300)}
+                          className="text-[15px] text-text-weak text-center leading-relaxed"
+                          style={{ fontFamily: FONTS.sans }}
+                        >
+                          Share a memory, an emotion, or just say hello. Your AI companion is here to listen and help you preserve your legacy.
+                        </Animated.Text>
+                      </View>
                     </View>
-                  </View>
+                  )
                 }
               />
             )}

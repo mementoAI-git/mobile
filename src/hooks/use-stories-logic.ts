@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useUiStore } from '@/store';
 import { useStories, useMemoriesStats } from '@/hooks/queries/use-memories';
@@ -10,17 +10,17 @@ export function useStoriesLogic() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
-  const handleSearchChange = (value: string) => {
+  const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
     if (value === '') {
       setDebouncedSearch('');
     }
-  };
+  }, []);
 
-  const handleSearchSubmit = () => {
+  const handleSearchSubmit = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setDebouncedSearch(search);
-  };
+  }, [search]);
 
   const { data: statsData } = useMemoriesStats();
   const {
@@ -36,24 +36,24 @@ export function useStoriesLogic() {
     search: debouncedSearch || undefined,
   });
 
-  const stories = data?.pages.flatMap((p) => p.docs) ?? [];
+  const stories = useMemo(() => data?.pages.flatMap((p) => p.docs) ?? [], [data?.pages]);
   const stats = statsData?.data;
 
-  const handleCreateNew = () => {
+  const handleCreateNew = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     openSheet('create-memory');
-  };
+  }, [openSheet]);
 
-  const handleClearSearch = () => {
+  const handleClearSearch = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSearch('');
     setDebouncedSearch('');
-  };
+  }, []);
 
-  const handleToggleView = (mode: 'grid' | 'list') => {
+  const handleToggleView = useCallback((mode: 'grid' | 'list') => {
     Haptics.selectionAsync();
     setViewMode(mode);
-  };
+  }, []);
 
   return {
     openSheet,

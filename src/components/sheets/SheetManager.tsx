@@ -21,6 +21,7 @@ import { FeedbackSheet } from './FeedbackSheet';
 import { CapsuleDetailSheet } from './CapsuleDetailSheet';
 import { UpgradePromptSheet } from './UpgradePromptSheet';
 import { SelectSheet } from './SelectSheet';
+import { PublishArticleSheet } from './PublishArticleSheet';
 import { COLORS } from '@/constants/tokens';
 
 const SHEET_CONFIGS: Record<string, { component: React.ComponentType<any>; snapPoints?: string[]; dynamic?: boolean; keyboardBehavior?: 'interactive' | 'fillParent' | 'extend'; keyboardBlurBehavior?: 'restore' | 'dismiss' | 'none' }> = {
@@ -41,10 +42,13 @@ const SHEET_CONFIGS: Record<string, { component: React.ComponentType<any>; snapP
   'capsule-detail': { component: CapsuleDetailSheet, snapPoints: ['92%'] },
   'upgrade-prompt': { component: UpgradePromptSheet, dynamic: true },
   'select': { component: SelectSheet, dynamic: true },
+  'publish-article': { component: PublishArticleSheet, snapPoints: ['80%'], keyboardBehavior: 'extend' },
 };
 
 export function SheetManager() {
-  const { activeSheet, sheetProps, closeSheet } = useUiStore();
+  const activeSheet = useUiStore((s) => s.activeSheet);
+  const sheetProps = useUiStore((s) => s.sheetProps);
+  const closeSheet = useUiStore((s) => s.closeSheet);
   const bottomSheetRef = useRef<BottomSheet>(null);
   const insets = useSafeAreaInsets();
 

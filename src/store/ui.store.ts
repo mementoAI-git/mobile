@@ -7,8 +7,6 @@ export type SheetName =
   | 'create-group'
   | 'group-actions'
   | 'share-memory'
-  | 'audio-recorder'
-  | 'file-preview'
   | 'search-memory'
   | 'memory-detail'
   | 'memory-actions'
@@ -20,6 +18,7 @@ export type SheetName =
   | 'feedback'
   | 'upgrade-prompt'
   | 'select'
+  | 'publish-article'
   | null;
 
 interface UiState {

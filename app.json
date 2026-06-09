@@ -75,14 +75,13 @@
           "cameraPermission": "Allow Memento to use your camera to capture memories."
         }
       ],
+      "expo-web-browser",
       [
-        "expo-av",
+        "expo-audio",
         {
           "microphonePermission": "Allow Memento to access your microphone for voice recordings."
         }
       ],
-      "expo-web-browser",
-      "expo-audio",
       "@react-native-community/datetimepicker",
       [
         "@sentry/react-native/expo",
@@ -92,7 +91,13 @@
         }
       ],
       "@sentry/react-native",
-      "expo-asset"
+      "expo-asset",
+      "expo-video",
+      ["expo-speech-recognition", {
+  "microphonePermission": "Allow Memento to use the microphone for voice input.",
+  "speechRecognitionPermission": "Allow Memento to use speech recognition."
+}],
+      "expo-dev-client"
     ],
     "experiments": {
       "typedRoutes": true
