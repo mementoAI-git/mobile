@@ -7,7 +7,15 @@ import { MasonryMemoryGrid } from '@/components/memory/MasonryMemoryGrid';
 import { StatCard, DashboardHeader, TextInput, StoriesSkeleton, EmptyState, Spinner } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedScrollHandler,
+  interpolate,
+  Extrapolation,
+  withTiming,
+} from 'react-native-reanimated';
 import { useStoriesLogic } from '@/hooks/use-stories-logic';
 import { useRouter } from 'expo-router';
 
@@ -44,6 +52,63 @@ export default function StoriesScreen() {
     (id: string) => router.push({ pathname: '/(tabs)/stories/[id]', params: { id } }),
     [router],
   );
+
+  // Reanimated scroll tracking
+  const scrollY = useSharedValue(0);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  // Floating button animations: transition from a wide pill to a compact circle
+  const floatBtnStyle = useAnimatedStyle(() => {
+    // Morph width from 136px (wide pill) to 40px (compact circle)
+    const width = interpolate(
+      scrollY.value,
+      [0, 100],
+      [136, 40],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      width,
+    };
+  });
+
+  // Shift the Plus icon horizontally from left-side layout to absolute center
+  const animIconStyle = useAnimatedStyle(() => {
+    const translateX = interpolate(
+      scrollY.value,
+      [0, 100],
+      [-33, 0], // slide icon from left offset (when text is present) back to absolute center (0)
+      Extrapolation.CLAMP
+    );
+    return {
+      transform: [{ translateX }],
+    };
+  });
+
+  // Fade out label and slide it right on scroll
+  const labelStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      scrollY.value,
+      [0, 40],
+      [1, 0],
+      Extrapolation.CLAMP
+    );
+    const translateX = interpolate(
+      scrollY.value,
+      [0, 100],
+      [13, 33], // starts next to offset icon, slides away on scroll
+      Extrapolation.CLAMP
+    );
+    return {
+      opacity,
+      transform: [{ translateX }],
+    };
+  });
 
   // Stable renderItem for FlatList — uses same MasonryMemoryCard as grid for visual consistency
   const renderListItem = useCallback(
@@ -119,8 +184,8 @@ export default function StoriesScreen() {
               <TouchableOpacity
                 key={f}
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setActiveFilter(f);
+                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                   setActiveFilter(f);
                 }}
                 activeOpacity={0.7}
                 className={`px-6 py-2.5 rounded-full border ${activeFilter === f ? 'bg-brand border-brand' : 'bg-white border-stroke-weaker'}`}
@@ -135,18 +200,6 @@ export default function StoriesScreen() {
             ))}
           </ScrollView>
         </View>
-
-        {/* Quick Actions Bar */}
-        <TouchableOpacity
-          onPress={handleCreateNew}
-          activeOpacity={0.8}
-          className="flex-row items-center justify-center gap-2.5 h-14 rounded-2xl bg-brand"
-        >
-          <Plus size={20} color="white" strokeWidth={2.5} />
-          <Animated.Text className="text-base font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>
-            New Memory
-          </Animated.Text>
-        </TouchableOpacity>
       </Animated.View>
     ),
     // Re-render header only when these change
@@ -185,10 +238,11 @@ export default function StoriesScreen() {
             onEndReached={() => hasNextPage && fetchNextPage()}
             refreshing={isRefetching}
             onRefresh={refetch}
+            onScroll={scrollHandler}
           />
         ) : (
           /* ── List view ─────────────────────────────────────────────── */
-          <FlatList
+          <Animated.FlatList
             data={stories}
             keyExtractor={(item) => item._id}
             initialNumToRender={8}
@@ -202,6 +256,8 @@ export default function StoriesScreen() {
             refreshControl={
               <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.brand} />
             }
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
             onEndReached={() => hasNextPage && fetchNextPage()}
             onEndReachedThreshold={0.3}
             ListFooterComponent={
@@ -214,6 +270,64 @@ export default function StoriesScreen() {
             ListEmptyComponent={emptyState}
           />
         )}
+
+        {/* Floating Action Button - morphs width and contents on scroll */}
+        <Animated.View 
+          style={[
+            floatBtnStyle,
+            {
+              position: 'absolute',
+              bottom: 96,
+              right: 24,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: COLORS.brand,
+              shadowColor: '#170B00',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 8,
+              elevation: 5,
+              zIndex: 50,
+              overflow: 'hidden',
+            }
+          ]}
+        >
+          <TouchableOpacity
+            onPress={handleCreateNew}
+            activeOpacity={0.85}
+            style={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              height: '100%',
+            }}
+          >
+            <Animated.View style={[
+              animIconStyle,
+              {
+                position: 'absolute',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }
+            ]}>
+              <Plus size={20} color="white" strokeWidth={2.5} />
+            </Animated.View>
+            <Animated.Text
+              style={[
+                labelStyle,
+                {
+                  fontFamily: FONTS.sansBold,
+                  fontSize: 13,
+                  color: 'white',
+                  position: 'absolute',
+                }
+              ]}
+              numberOfLines={1}
+            >
+              New Memory
+            </Animated.Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );

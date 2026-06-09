@@ -53,7 +53,7 @@ export function DashboardHeader({ title, showStreak = true, rightElement }: Dash
             activeOpacity={0.8}
             className="border-2 border-transparent focus:border-brand/20 rounded-full ml-1"
           >
-            <Avatar uri={user?.picture_url} name={user?.first_name || user?.email} size="sm" />
+            <Avatar uri={user?.picture_url} name={user?.first_name || user?.email} size="md" />
           </TouchableOpacity>
         </View>
       </View>

@@ -3,6 +3,7 @@ import { View, ScrollView, RefreshControl } from 'react-native';
 import { MasonryMemoryCard } from './MasonryMemoryCard';
 import type { IMemory } from '@/types';
 import { COLORS } from '@/constants/tokens';
+import Animated from 'react-native-reanimated';
 
 const COLUMN_COUNT = 2;
 const COLUMN_GAP = 10; // px between the two columns
@@ -15,6 +16,7 @@ interface MasonryMemoryGridProps {
   onRefresh?: () => void;
   ListHeaderComponent?: React.ReactElement | null;
   onMemoryPress?: (memory: IMemory) => void;
+  onScroll?: (event: any) => void;
 }
 
 /**
@@ -34,6 +36,7 @@ export function MasonryMemoryGrid({
   onRefresh,
   ListHeaderComponent,
   onMemoryPress,
+  onScroll,
 }: MasonryMemoryGridProps) {
   // Map from memory._id → measured height in pixels
   const [measuredHeights, setMeasuredHeights] = useState<Record<string, number>>({});
@@ -65,23 +68,27 @@ export function MasonryMemoryGrid({
   }, [memories, measuredHeights]);
 
   const handleScroll = useCallback(
-    ({ nativeEvent }: { nativeEvent: any }) => {
-      const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-      const paddingToBottom = 200;
-      const isClose =
-        layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
-      if (isClose) {
-        onEndReached?.();
+    (event: any) => {
+      onScroll?.(event);
+      const { nativeEvent } = event;
+      if (nativeEvent) {
+        const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+        const paddingToBottom = 200;
+        const isClose =
+          layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+        if (isClose) {
+          onEndReached?.();
+        }
       }
     },
-    [onEndReached],
+    [onEndReached, onScroll],
   );
 
   return (
-    <ScrollView
+    <Animated.ScrollView
       showsVerticalScrollIndicator={false}
-      onScroll={handleScroll}
-      scrollEventThrottle={300}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
       refreshControl={
         onRefresh ? (
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.brand} />
@@ -110,6 +117,6 @@ export function MasonryMemoryGrid({
           </View>
         ))}
       </View>
-    </ScrollView>
+    </Animated.ScrollView>
   );
 }

@@ -21,7 +21,7 @@ function InProgressBadge({ memory, overlay }: { memory: IMemory; overlay?: boole
   if (!isPending) return null;
   return (
     <View
-      className={`rounded-full px-2 py-0.5 ${overlay ? 'absolute left-2 top-2 z-10' : ''}`}
+      className={`rounded-full px-2 py-0.5 ${overlay ? 'absolute left-2 top-2 z-10 w-fit' : ''}`}
       style={{ backgroundColor: COLORS.brandSubtle, borderWidth: 1, borderColor: COLORS.brandTint }}
     >
       <Text
@@ -187,14 +187,16 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
         className="w-full rounded-[20px] p-4 gap-3 relative overflow-hidden"
       >
         {/* In progress badge — inline for text cards */}
-        <InProgressBadge memory={memory} />
-        <Text
-          className="text-[15px] text-text-strong leading-snug font-semibold"
-          style={{ fontFamily: FONTS.sansSemi }}
-          numberOfLines={3}
-        >
-          {storyTitle}
-        </Text>
+        <View className='flex-row'>
+          {/* <Text
+            className="text-[15px] text-text-strong leading-snug font-semibold"
+            style={{ fontFamily: FONTS.sansSemi }}
+            numberOfLines={3}
+          >
+            {storyTitle}
+          </Text> */}
+          <InProgressBadge memory={memory} />
+        </View>
 
         {/* User's own body text only — seeded line clamp */}
         {memory.body ? (
