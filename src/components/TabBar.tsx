@@ -188,7 +188,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     return null;
   }
 
-  const bottomPad = insets.bottom ? insets.bottom + 8 : 20;
+  const bottomPad = insets.bottom ? insets.bottom + 24 : 36;
 
   return (
     <View
@@ -249,8 +249,13 @@ const PILL_SHADOW = Platform.select({
 });
 
 const styles = StyleSheet.create({
-  // Absolute row container — inset from edges so the dock truly floats
+  // height: 0 collapses the React Navigation wrapper to nothing so its
+  // background disappears. The pill + circle float via position: absolute
+  // and don't need the parent to have any height.
   root: {
+    height: 0,
+    backgroundColor: 'transparent',
+    overflow: 'visible',
     position: 'absolute',
     left: 20,
     right: 20,
