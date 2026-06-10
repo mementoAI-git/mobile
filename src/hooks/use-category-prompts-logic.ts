@@ -85,7 +85,9 @@ export function useCategoryPromptsLogic() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({
       pathname: '/chat/[id]',
-      params: { id: prompt._id || '', type: 'prompt' },
+      // promptTitle is passed so the chat screen can display the question card
+      // immediately — before the async useMemoryByPrompt query resolves.
+      params: { id: prompt._id || '', type: 'prompt', promptTitle: prompt.title || '' },
     });
   };
 
