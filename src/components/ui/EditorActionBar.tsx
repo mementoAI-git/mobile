@@ -24,7 +24,7 @@ import {
   Image as ImageIcon,
   ImagePlus,
   AudioLines,
-  FileText,
+  Music,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -188,7 +188,9 @@ export function EditorActionBar({
           activeOpacity={0.75}
           style={styles.mediaBtn}
         >
-          <FileText size={20} color={COLORS.textBase} strokeWidth={1.8} />
+          {/* Music note icon — clearly communicates "attach an audio file"
+              (previously FileText which was ambiguous / read as "document") */}
+          <Music size={20} color={COLORS.textBase} strokeWidth={1.8} />
         </TouchableOpacity>
       </View>
     </View>

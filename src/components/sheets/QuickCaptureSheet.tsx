@@ -120,9 +120,10 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
 
   return (
     <View className="px-5 pb-8 pt-2">
+      {/* Header */}
       <View className="flex-row items-center justify-between mb-4">
         <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
-          Quick Capture
+          {dailyPrompt ? "Today's Reflection" : 'Quick Capture'}
         </Text>
         <TouchableOpacity
           onPress={() => { Haptics.selectionAsync(); onClose ? onClose() : closeSheet(); }}
@@ -132,12 +133,38 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
         </TouchableOpacity>
       </View>
 
+      {/* Prompt question card — only shown when opened from a daily prompt */}
+      {dailyPrompt?.pinned_text ? (
+        <View
+          className="bg-white rounded-[20px] border border-stroke-weaker px-4 py-4 mb-4 gap-2"
+          style={{ shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 }}
+        >
+          <View
+            className="self-start rounded-full px-2.5 py-0.5"
+            style={{ backgroundColor: `${COLORS.brand}0D`, borderWidth: 1, borderColor: `${COLORS.brand}33` }}
+          >
+            <Text
+              className="text-[10px] font-bold uppercase tracking-widest"
+              style={{ fontFamily: FONTS.sansBold, color: COLORS.brand }}
+            >
+              Prompt
+            </Text>
+          </View>
+          <Text
+            className="text-[17px] text-text-strong leading-snug"
+            style={{ fontFamily: FONTS.serif }}
+          >
+            {dailyPrompt.pinned_text}
+          </Text>
+        </View>
+      ) : null}
+
       <View className="bg-fill-weaker border border-stroke-weaker rounded-2xl p-4 min-h-[160px]">
         <BottomSheetTextInput
           ref={inputRef}
           value={text}
           onChangeText={setText}
-          placeholder="What's on your mind? Type or speak..."
+          placeholder={dailyPrompt ? 'Your reflection...' : "What's on your mind? Type or speak..."}
           placeholderTextColor={COLORS.textWeak}
           multiline
           autoFocus

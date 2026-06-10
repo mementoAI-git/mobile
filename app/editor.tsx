@@ -49,7 +49,18 @@ const PUBLISHED_BASE_URL = 'https://app.mymemento.io/post';
 const NOTE_CHAR_MAX = 8000;
 const MAX_FILE_MB = 15;
 const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
-const AUDIO_INPUT_MIME = ['audio/mpeg','audio/wav','audio/webm','audio/mp4','audio/aac','audio/flac','audio/ogg','audio/*'];
+const FILE_INPUT_MIME = [
+  // Audio
+  'audio/mpeg','audio/wav','audio/webm','audio/mp4','audio/aac','audio/flac','audio/ogg','audio/*',
+  // Documents
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+  'application/rtf',
+];
 
 const SURFER_WEBP = require('../assets/images/illustrations/surfer.webp');
 const SUCCESS_BG = require('../assets/images/backgrounds/published_success_bg.png');
@@ -397,8 +408,8 @@ export default function EditorScreen() {
   const handleAudioFile = useCallback(async () => {
     Haptics.selectionAsync();
     try {
-      const result = await DocumentPicker.getDocumentAsync({ type: AUDIO_INPUT_MIME, copyToCacheDirectory: true });
-      if (!result.canceled && result.assets[0]) { const a = result.assets[0]; if (a.size && a.size > MAX_FILE_BYTES) { toast(`File exceeds ${MAX_FILE_MB}MB limit`, 'error'); return; } await uploadAndAdd(a.uri, a.mimeType || 'audio/mpeg', a.name); }
+      const result = await DocumentPicker.getDocumentAsync({ type: FILE_INPUT_MIME, copyToCacheDirectory: true });
+      if (!result.canceled && result.assets[0]) { const a = result.assets[0]; if (a.size && a.size > MAX_FILE_BYTES) { toast(`File exceeds ${MAX_FILE_MB}MB limit`, 'error'); return; } await uploadAndAdd(a.uri, a.mimeType || 'application/octet-stream', a.name); }
     } catch {}
   }, [uploadAndAdd, toast]);
 

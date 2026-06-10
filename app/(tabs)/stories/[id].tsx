@@ -234,20 +234,9 @@ export default function StoryDetailScreen() {
               {memory.body?.replace(/<[^>]+>/g, '') ?? ''}
             </Animated.Text>
 
-            {/* AI Summary */}
-            {memory.summary && (
-              <View className="bg-fill-weak rounded-2xl p-4 border border-stroke-weaker gap-2">
-                <Animated.Text
-                  className="text-xs font-semibold text-text-muted uppercase tracking-wider"
-                  style={{ fontFamily: FONTS.sansSemi }}
-                >
-                  AI Summary
-                </Animated.Text>
-                <Animated.Text className="text-sm text-text-base leading-relaxed" style={{ fontFamily: FONTS.sans }}>
-                  {memory.summary}
-                </Animated.Text>
-              </View>
-            )}
+            {/* AI Summary — hidden until quality improves (generic copy, no personalisation).
+                Re-enable once the backend prompt uses the user's name and context.
+                Ticket: https://github.com/mementoAI-git/mobile/issues/XX */}
 
             {/* Tags */}
             {(memory.tags?.length ?? 0) > 0 && (

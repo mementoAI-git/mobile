@@ -25,16 +25,17 @@ export function MemoryActionsSheet({ memory, onClose }: MemoryActionsSheetProps)
   };
 
   const onEdit = () => {
-    // Navigate to edit or open edit sheet
-    // Web does: open("edit-memory", { memory })
+    // Open create-memory sheet in edit mode. Do NOT call onClose here — the
+    // SheetManager renders a single BottomSheet instance and swaps content
+    // by changing activeSheet. Calling onClose triggers the close animation
+    // which fires handleClose → closeSheet() and kills the newly-opened sheet.
     openSheet('create-memory', { editData: memory });
-    onClose?.();
   };
 
   const onShare = async () => {
     try {
       await Share.share({
-        message: `Check out my memory: ${memory.title || 'Untitled'}\n\nhttps://memento.app/stories/${memory._id}`,
+        message: `Check out my memory: ${memory.title || 'Untitled'}\n\nhttps://app.mymemento.io/post/${memory._id}`,
       });
     } catch (error) {
       console.error(error);
