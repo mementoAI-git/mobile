@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import {
   View,
   ScrollView,
@@ -9,11 +9,13 @@ import {
   ImageBackground,
   Image,
   Modal,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import { Pressable, Text } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Plus, Zap, MessageCircle, Trophy, ChevronRight, Folder, UserCheck, Hourglass, Activity, HelpCircle, Check, X } from 'lucide-react-native';
+import { Plus, Zap, MessageCircle, Trophy, ChevronRight, Folder, UserCheck, Hourglass, Activity, HelpCircle, Check, X, BarChart2 } from 'lucide-react-native';
 import { useUiStore } from '@/store';
 import { useUserStats, useMemoriesStats, useCapsuleStats } from '@/hooks/queries/use-overview';
 import { useUserStore } from '@/store';
@@ -31,7 +33,13 @@ import Animated, {
   FadeInDown, FadeInUp,
   useSharedValue, useAnimatedStyle, withSpring,
   useAnimatedScrollHandler, interpolate, Extrapolation,
+  runOnJS,
 } from 'react-native-reanimated';
+
+// Enable LayoutAnimation on Android
+if (UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const WELCOME_BG = require('../../../assets/images/backgrounds/welcome_bg.png');
 const ENRICHMENT_BG = require('../../../assets/images/backgrounds/enrichment_bg.png');
@@ -304,13 +312,30 @@ export default function OverviewScreen() {
 
   const [showStreakModal, setShowStreakModal] = useState(false);
 
-  // Scroll-driven FAB: track scroll position to show/hide the floating + button
+  // ── "Add story" collapse ──────────────────────────────────────────────────
+  // heroGone drives the flex collapse via LayoutAnimation (native, bidirectional).
+  // opacity fade is handled separately by Reanimated (UI-thread only — no layout).
+  const [heroGone, setHeroGone] = useState(false);
+  const heroGoneRef = useRef(false); // prevents repeated LayoutAnimation calls
+
+  const updateHeroGone = useCallback((gone: boolean) => {
+    if (heroGoneRef.current === gone) return;
+    heroGoneRef.current = gone;
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setHeroGone(gone);
+  }, []);
+
+  // ── Scroll tracking ───────────────────────────────────────────────────────
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => { scrollY.value = event.contentOffset.y; },
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+      // Cross the threshold → trigger LayoutAnimation on JS thread
+      runOnJS(updateHeroGone)(event.contentOffset.y > 150);
+    },
   });
 
-  // "Add story" pill fades out as the hero scrolls off screen
+  // Opacity fade for "Add story" — pure UI-thread, no layout = no reverse issues
   const addStoryPillStyle = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.value, [80, 180], [1, 0], Extrapolation.CLAMP),
   }));
@@ -459,22 +484,23 @@ export default function OverviewScreen() {
                   </View>
 
                   <View className="flex-row items-center gap-3">
-                    {/* Add story — primary CTA, wider (flex-[1.5]), fades out on scroll */}
-                    <Animated.View style={[{ flex: 1.5 }, addStoryPillStyle]}>
+                    {/* LayoutAnimation handles the transition between these two states.
+                        We never animate layout props — we just swap DOM structure. */}
+                    {!heroGone && (
                       <TouchableOpacity
                         onPress={() => {
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                           router.push({ pathname: '/editor', params: { mode: 'story' } });
                         }}
                         activeOpacity={0.8}
-                        className="flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full w-full"
+                        style={{ flex: 1.5 }}
+                        className="flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full"
                       >
                         <Plus size={20} color="white" strokeWidth={3} />
-                        <Animated.Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Add story</Animated.Text>
+                        <Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Add story</Text>
                       </TouchableOpacity>
-                    </Animated.View>
+                    )}
 
-                    {/* Quick capture — secondary CTA, narrower (flex-1) */}
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -484,7 +510,7 @@ export default function OverviewScreen() {
                       className="flex-1 flex-row items-center justify-center gap-2 h-14 bg-white border border-stroke-weaker rounded-full shadow-sm"
                     >
                       <Zap size={16} color={COLORS.textBase} strokeWidth={2} />
-                      <Animated.Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>Quick capture</Animated.Text>
+                      <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>Quick capture</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -520,10 +546,20 @@ export default function OverviewScreen() {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       openSheet('memory-insights');
                     }}
-                    className="h-11 border border-stroke-weaker rounded-full items-center justify-center px-6 self-start bg-white/50 shadow-sm"
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      height: 40,
+                      borderRadius: 999,
+                      backgroundColor: COLORS.fillWeaker,
+                      paddingHorizontal: 16,
+                      alignSelf: 'flex-start',
+                    }}
                     android_ripple={{ color: COLORS.brandSubtle }}
                   >
-                    <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>View insights</Text>
+                    <BarChart2 size={15} color={COLORS.textWeak} strokeWidth={1.5} />
+                    <Text style={{ fontFamily: FONTS.sansBold, fontSize: 12, color: COLORS.textStrong }}>View insights</Text>
                   </Pressable>
                 </View>
               </ImageBackground>
