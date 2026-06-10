@@ -59,7 +59,20 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
     const t = tagInput.trim().toLowerCase();
     if (t && !tags.includes(t)) {
       setTags(prev => [...prev, t]);
+    }
+    setTagInput('');
+  };
+
+  const handleTagInputChange = (text: string) => {
+    // Spacebar (trailing space) auto-commits the current text as a tag
+    if (text.endsWith(' ')) {
+      const t = text.trim().toLowerCase();
+      if (t && !tags.includes(t)) {
+        setTags(prev => [...prev, t]);
+      }
       setTagInput('');
+    } else {
+      setTagInput(text);
     }
   };
 
@@ -173,10 +186,10 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
             ))}
             <BottomSheetTextInput
               value={tagInput}
-              onChangeText={setTagInput}
+              onChangeText={handleTagInputChange}
               onSubmitEditing={handleTagSubmit}
               blurOnSubmit={false}
-              placeholder={tags.length === 0 ? "Add tags (press enter)" : "Add more..."}
+              placeholder={tags.length === 0 ? "Add tags (press enter or space)" : "Add more..."}
               placeholderTextColor={COLORS.textMuted}
               className="flex-1 min-w-[100px] text-sm text-text-strong h-8 px-2"
               style={{ fontFamily: FONTS.sans }}
