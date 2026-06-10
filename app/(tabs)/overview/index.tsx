@@ -434,44 +434,32 @@ export default function OverviewScreen() {
                     </TouchableOpacity>
                   </View>
 
-                  <View className="flex-row items-center justify-between gap-3">
+                  <View className="flex-row items-center gap-3">
+                    {/* Add story — primary CTA, wider (flex-[1.5]) */}
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                         router.push({ pathname: '/editor', params: { mode: 'story' } });
                       }}
                       activeOpacity={0.8}
-                      className="flex-1 flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full"
+                      style={{ flex: 1.5 }}
+                      className="flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full"
                     >
                       <Plus size={20} color="white" strokeWidth={3} />
                       <Animated.Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Add story</Animated.Text>
                     </TouchableOpacity>
 
+                    {/* Quick capture — secondary CTA, narrower (flex-1) */}
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         router.push({ pathname: '/editor', params: { mode: 'quick-capture' } });
                       }}
                       activeOpacity={0.7}
-                      className="size-14 bg-white border border-stroke-weaker rounded-full items-center justify-center shadow-sm"
+                      className="flex-1 flex-row items-center justify-center gap-2 h-14 bg-white border border-stroke-weaker rounded-full shadow-sm"
                     >
-                      <Zap size={22} color={COLORS.textBase} strokeWidth={2} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        handleStartConversation();
-                      }}
-                      disabled={startingConversation}
-                      activeOpacity={0.7}
-                      className="size-14 bg-white border border-stroke-weaker rounded-full items-center justify-center shadow-sm"
-                    >
-                      {startingConversation ? (
-                        <Spinner size="small" />
-                      ) : (
-                        <MessageCircle size={22} color={COLORS.textBase} strokeWidth={2} />
-                      )}
+                      <Zap size={16} color={COLORS.textBase} strokeWidth={2} />
+                      <Animated.Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>Quick capture</Animated.Text>
                     </TouchableOpacity>
                   </View>
                 </View>
