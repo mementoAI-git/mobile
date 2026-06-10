@@ -8,11 +8,12 @@ import {
   TouchableOpacity,
   ImageBackground,
   Image,
+  Modal,
 } from 'react-native';
 import { Pressable, Text } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Plus, Zap, MessageCircle, Trophy, ChevronRight, Folder, UserCheck, Hourglass, Activity, HelpCircle } from 'lucide-react-native';
+import { Plus, Zap, MessageCircle, Trophy, ChevronRight, Folder, UserCheck, Hourglass, Activity, HelpCircle, Check, X } from 'lucide-react-native';
 import { useUiStore } from '@/store';
 import { useUserStats, useMemoriesStats, useCapsuleStats } from '@/hooks/queries/use-overview';
 import { useUserStore } from '@/store';
@@ -114,7 +115,7 @@ function OverviewJourneyCard({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={0.9}
-        className={`w-full rounded-[24px] border ${borderColor} ${bgColor} flex-row items-center justify-between shadow-sm overflow-hidden`}
+        className={`w-full rounded-2xl border ${borderColor} ${bgColor} flex-row items-center justify-between overflow-hidden`}
       >
         {bgImage ? (
           <ImageBackground
@@ -132,6 +133,149 @@ function OverviewJourneyCard({
     </Animated.View>
   );
 }
+
+// ─── Streak Modal ─────────────────────────────────────────────────────────────
+
+function getStreakMessage(days: number): string {
+  if (days >= 21) return `${days} days strong — This is dedication!`;
+  if (days >= 8) return "You're on a roll! Your consistency is inspiring.";
+  if (days === 7) return "A full week of reflection — your story is taking shape!";
+  if (days >= 3) return "Great rhythm! You're showing up and finding your pace.";
+  return "Every story starts with the first step. You've got this.";
+}
+
+interface StreakModalProps {
+  visible: boolean;
+  onClose: () => void;
+  streakCount: number;
+  stats: any;
+  user: any;
+}
+
+function StreakModal({ visible, onClose, streakCount, stats, user }: StreakModalProps) {
+  const weekStreak = streakCount > 0 ? Math.floor(streakCount / 7) : 0;
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0=Sun, 6=Sat
+
+  const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      {/* Backdrop */}
+      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} activeOpacity={1} onPress={onClose} />
+
+      {/* Panel */}
+      <View style={{
+        backgroundColor: COLORS.background,
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        paddingTop: 12,
+        paddingHorizontal: 20,
+        paddingBottom: 32,
+        ...Platform.select({
+          ios: { shadowColor: '#170B00', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 20 },
+          android: { elevation: 16 },
+        }),
+      }}>
+        {/* Handle */}
+        <View style={{ alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: COLORS.strokeStrong, opacity: 0.3, marginBottom: 20 }} />
+
+        {/* Header */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <Text style={{ fontFamily: FONTS.serif, fontSize: 22, color: COLORS.textStrong }}>Your Streak</Text>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); onClose(); }}
+            style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <X size={16} color={COLORS.textBase} strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Week streak circle */}
+        <View style={{ alignItems: 'center', marginBottom: 24, gap: 12 }}>
+          <View style={{
+            width: 110, height: 110, borderRadius: 55,
+            backgroundColor: `${COLORS.brand}12`,
+            borderWidth: 1, borderColor: `${COLORS.brand}25`,
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Text style={{ fontFamily: FONTS.serif, fontSize: 48, fontWeight: '700', color: COLORS.brand, lineHeight: 54 }}>
+              {weekStreak}
+            </Text>
+          </View>
+          <View style={{ alignItems: 'center', gap: 4 }}>
+            <Text style={{ fontFamily: FONTS.serif, fontSize: 18, color: COLORS.textStrong }}>Week streak</Text>
+            <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, textAlign: 'center', maxWidth: 240 }}>
+              {getStreakMessage(streakCount)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Week calendar */}
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
+          {DAY_LABELS.map((label, index) => {
+            const isToday = index === dayOfWeek;
+            const isInStreak = streakCount > 0 && index <= dayOfWeek && index >= Math.max(0, dayOfWeek - (streakCount - 1));
+            // Calculate date for this weekday
+            const diff = index - dayOfWeek;
+            const d = new Date(today);
+            d.setDate(today.getDate() + diff);
+            const dateNum = d.getDate();
+
+            return (
+              <View key={index} style={{ alignItems: 'center', gap: 6, minWidth: 32 }}>
+                <Text style={{
+                  fontFamily: FONTS.sansBold, fontSize: 10, textTransform: 'uppercase',
+                  color: isToday ? COLORS.textStrong : COLORS.textMuted,
+                  letterSpacing: 0.5,
+                }}>
+                  {isToday ? 'Now' : label}
+                </Text>
+                {isInStreak ? (
+                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }}>
+                    <Check size={13} color="white" strokeWidth={3} />
+                  </View>
+                ) : (
+                  <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: COLORS.textMuted }}>{dateNum}</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Stats row */}
+        <View style={{
+          backgroundColor: COLORS.fillWeak, borderRadius: 16,
+          padding: 4, paddingTop: 8,
+        }}>
+          <Text style={{ fontFamily: FONTS.geist, fontSize: 10, color: COLORS.textMuted, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+            Streak restore coming soon
+          </Text>
+          <View style={{ flexDirection: 'row', backgroundColor: COLORS.card, borderRadius: 12, overflow: 'hidden' }}>
+            {[
+              { label: 'Days', value: stats.streak_count || user?.streak || 0 },
+              { label: 'Reflections', value: stats.reflections_count || 0 },
+              { label: 'Stories', value: stats.stories_count || 0 },
+            ].map((item, i) => (
+              <View key={item.label} style={{
+                flex: 1, paddingVertical: 16, alignItems: 'center', gap: 6,
+                borderRightWidth: i < 2 ? StyleSheet.hairlineWidth : 0,
+                borderRightColor: COLORS.strokeWeaker,
+              }}>
+                <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak }}>{item.label}</Text>
+                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>{item.value}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -153,6 +297,8 @@ export default function OverviewScreen() {
     const h = new Date().getHours();
     return h >= 6 && h < 17;
   }, []);
+
+  const [showStreakModal, setShowStreakModal] = useState(false);
 
   // Track manual pull-to-refresh separately from background refetches.
   // isRefetching from TanStack Query is true for ALL background refetches
@@ -260,18 +406,22 @@ export default function OverviewScreen() {
           {/* ── Two-Card Hero Section ─────────────────────────────── */}
           <View className="gap-6">
             {/* Card 1: Primary Action Hero */}
-            <Animated.View entering={FadeInDown.delay(100)} style={styles.cardShadow}>
+            <Animated.View entering={FadeInDown.delay(100)}>
               <ImageBackground
                 source={WELCOME_BG}
-                className="rounded-[32px] overflow-hidden border border-stroke-weaker bg-white"
-                imageStyle={{ borderRadius: 32 }}
+                className="rounded-2xl overflow-hidden border border-stroke-weaker bg-white"
+                imageStyle={{ borderRadius: 16 }}
               >
                 <View className="p-7 gap-8">
                   <View className="flex-row items-start justify-between">
                     <Text className="text-[24px] text-text-strong flex-1 leading-snug" style={{ fontFamily: FONTS.serif }}>
                       What's on your{"\n"}mind today?
                     </Text>
-                    <View className="flex-row items-center gap-3 bg-white/90 px-3.5 py-2 rounded-full border border-white/30">
+                    <TouchableOpacity
+                      onPress={() => { Haptics.selectionAsync(); setShowStreakModal(true); }}
+                      activeOpacity={0.8}
+                      className="flex-row items-center gap-3 bg-white/90 px-3.5 py-2 rounded-full border border-white/30"
+                    >
                       <View className="flex-row items-center gap-1.5">
                         <Zap size={14} color={COLORS.brand} fill={COLORS.brand} />
                         <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>{streakCount}</Text>
@@ -281,7 +431,7 @@ export default function OverviewScreen() {
                         <Trophy size={14} color={COLORS.warning} />
                         <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>{enrichmentScore}%</Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   </View>
 
                   <View className="flex-row items-center justify-between gap-3">
@@ -329,11 +479,11 @@ export default function OverviewScreen() {
             </Animated.View>
 
             {/* Card 2: Enrichment Hero */}
-            <Animated.View entering={FadeInDown.delay(200)} style={styles.cardShadow}>
+            <Animated.View entering={FadeInDown.delay(200)}>
               <ImageBackground
                 source={ENRICHMENT_BG}
-                className="rounded-[32px] overflow-hidden border border-stroke-weaker bg-white"
-                imageStyle={{ borderRadius: 32 }}
+                className="rounded-2xl overflow-hidden border border-stroke-weaker bg-white"
+                imageStyle={{ borderRadius: 16 }}
               >
                 <View className="p-7 gap-5">
                   <View className="flex-row items-center gap-4">
@@ -449,22 +599,17 @@ export default function OverviewScreen() {
 
         </ScrollView>
       )}
+
+      {/* Streak tracker modal */}
+      <StreakModal
+        visible={showStreakModal}
+        onClose={() => setShowStreakModal(false)}
+        streakCount={streakCount}
+        stats={stats}
+        user={user}
+      />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  cardShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.shadow,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.1,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
-  },
-});
+const styles = StyleSheet.create({});
