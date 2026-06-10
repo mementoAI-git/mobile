@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Keyboard, TextInput as RNTextInput, Platform } from 'react-native';
 import { Mic, Send, Image as ImageIcon, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useCreateMemory } from '@/hooks/mutations/use-memory-mutations';
+import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useUiStore } from '@/store';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
@@ -38,7 +38,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
     return () => sub.remove();
   }, [isRecording, isPickingImage, text, attachments, onClose]);
   const dailyPrompt = sheetProps?.daily_prompt as IDailyPromptCapture | undefined;
-  const { mutate: createMemory, isPending: isCreating } = useCreateMemory();
+  const { mutate: quickCapture, isPending: isCreating } = useQuickCapture();
   const { mutateAsync: uploadFile, isPending: isUploading } = useFileUpload();
 
   const handleRecord = async () => {
@@ -101,21 +101,27 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
 
   const handleSave = () => {
     if (!text.trim() && attachments.length === 0) return;
-    createMemory(
-      {
-        title: dailyPrompt ? dailyPrompt.pinned_text : 'Quick Note',
-        body: text.trim(),
-        attachments,
-        status: 'save',
-        daily_prompt: dailyPrompt,
+
+    const payload: import('@/hooks/mutations/use-quick-capture').QuickCapturePayload = {
+      body: text.trim(),
+      attachments: attachments.length > 0 ? attachments : undefined,
+      // Wire up daily prompt context so the server can link enrichment to the prompt
+      ...(dailyPrompt?.prompt_type === 'static' && dailyPrompt.prompt_id
+        ? { prompt_type: 'static', prompt_id: dailyPrompt.prompt_id }
+        : dailyPrompt?.pinned_text
+        ? { prompt_type: 'ai-generated', prompt_text: dailyPrompt.pinned_text }
+        : {}),
+      ...(dailyPrompt?.reflection_day_key
+        ? { reflection_day_key: dailyPrompt.reflection_day_key }
+        : {}),
+    };
+
+    quickCapture(payload, {
+      onSuccess: () => {
+        if (onClose) onClose();
+        else closeSheet();
       },
-      {
-        onSuccess: () => {
-          if (onClose) onClose();
-          else closeSheet();
-        },
-      }
-    );
+    });
   };
 
   return (
