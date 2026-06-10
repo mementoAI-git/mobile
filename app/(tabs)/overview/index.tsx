@@ -27,7 +27,11 @@ import { DailyPromptSection } from '@/components/overview/DailyPromptSection';
 import { RecentActivitiesSection } from '@/components/overview/RecentActivitiesSection';
 import { BrowseTopicsSection } from '@/components/overview/BrowseTopicsSection';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown, FadeInUp, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown, FadeInUp,
+  useSharedValue, useAnimatedStyle, withSpring,
+  useAnimatedScrollHandler, interpolate, Extrapolation,
+} from 'react-native-reanimated';
 
 const WELCOME_BG = require('../../../assets/images/backgrounds/welcome_bg.png');
 const ENRICHMENT_BG = require('../../../assets/images/backgrounds/enrichment_bg.png');
@@ -300,6 +304,23 @@ export default function OverviewScreen() {
 
   const [showStreakModal, setShowStreakModal] = useState(false);
 
+  // Scroll-driven FAB: track scroll position to show/hide the floating + button
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => { scrollY.value = event.contentOffset.y; },
+  });
+
+  // "Add story" pill fades out as the hero scrolls off screen
+  const addStoryPillStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [80, 180], [1, 0], Extrapolation.CLAMP),
+  }));
+
+  // Floating + FAB fades in once the hero has scrolled off
+  const fabStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [120, 220], [0, 1], Extrapolation.CLAMP),
+    transform: [{ scale: interpolate(scrollY.value, [120, 220], [0.7, 1], Extrapolation.CLAMP) }],
+  }));
+
   // Track manual pull-to-refresh separately from background refetches.
   // isRefetching from TanStack Query is true for ALL background refetches
   // (focus refetch, interval, stale, etc.) — using it directly for RefreshControl
@@ -366,9 +387,12 @@ export default function OverviewScreen() {
       {isLoading && !manualRefreshing ? (
         <OverviewSkeleton />
       ) : (
-        <ScrollView
+        <>
+        <Animated.ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerClassName="px-6 pt-6 pb-32 gap-8"
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl refreshing={manualRefreshing} onRefresh={handleManualRefresh} tintColor={COLORS.brand} />
           }
@@ -435,19 +459,20 @@ export default function OverviewScreen() {
                   </View>
 
                   <View className="flex-row items-center gap-3">
-                    {/* Add story — primary CTA, wider (flex-[1.5]) */}
-                    <TouchableOpacity
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        router.push({ pathname: '/editor', params: { mode: 'story' } });
-                      }}
-                      activeOpacity={0.8}
-                      style={{ flex: 1.5 }}
-                      className="flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full"
-                    >
-                      <Plus size={20} color="white" strokeWidth={3} />
-                      <Animated.Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Add story</Animated.Text>
-                    </TouchableOpacity>
+                    {/* Add story — primary CTA, wider (flex-[1.5]), fades out on scroll */}
+                    <Animated.View style={[{ flex: 1.5 }, addStoryPillStyle]}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                          router.push({ pathname: '/editor', params: { mode: 'story' } });
+                        }}
+                        activeOpacity={0.8}
+                        className="flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full w-full"
+                      >
+                        <Plus size={20} color="white" strokeWidth={3} />
+                        <Animated.Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Add story</Animated.Text>
+                      </TouchableOpacity>
+                    </Animated.View>
 
                     {/* Quick capture — secondary CTA, narrower (flex-1) */}
                     <TouchableOpacity
@@ -585,7 +610,41 @@ export default function OverviewScreen() {
           {/* ── Browse Topics (Horizontal Scroll) ─────────────────── */}
           <BrowseTopicsSection prompts={topics} isLoading={topicsLoading} />
 
-        </ScrollView>
+        </Animated.ScrollView>
+
+        {/* Floating + FAB — appears when "Add story" scrolls off screen */}
+        <Animated.View
+          style={[fabStyle, {
+            position: 'absolute',
+            bottom: 96,
+            right: 24,
+            zIndex: 50,
+          }]}
+        >
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push({ pathname: '/editor', params: { mode: 'story' } });
+            }}
+            activeOpacity={0.85}
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: COLORS.brand,
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#170B00',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 12,
+              elevation: 6,
+            }}
+          >
+            <Plus size={26} color="white" strokeWidth={2.5} />
+          </TouchableOpacity>
+        </Animated.View>
+        </>
       )}
 
       {/* Streak tracker modal */}
