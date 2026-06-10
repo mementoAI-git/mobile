@@ -52,7 +52,11 @@ export function useAudioRecorder() {
     try {
       if (!recorder.isRecording) return null;
       await recorder.stop();
-      // recorder.uri is populated after stop()
+      // expo-audio's AudioRecorder is a native SharedObject — the `uri` property
+      // is populated asynchronously via a native→JS event that fires after the
+      // `stop()` promise resolves. Yielding one macrotask tick gives the native
+      // layer time to write the URI before we read it back.
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
       return recorder.uri ?? null;
     } catch (err) {
       console.error('Failed to stop recording', err);
