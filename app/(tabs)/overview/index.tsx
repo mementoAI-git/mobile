@@ -148,12 +148,13 @@ function OverviewJourneyCard({
 
 // ─── Streak Modal ─────────────────────────────────────────────────────────────
 
-function getStreakMessage(days: number): string {
-  if (days >= 21) return `${days} days strong — This is dedication!`;
-  if (days >= 8) return "You're on a roll! Your consistency is inspiring.";
-  if (days === 7) return "A full week of reflection — your story is taking shape!";
-  if (days >= 3) return "Great rhythm! You're showing up and finding your pace.";
-  return "Every story starts with the first step. You've got this.";
+function getStreakSubtitle(days: number, nickname?: string): string {
+  const name = nickname ? `, ${nickname}` : '';
+  if (days >= 21) return `You are a legend${name}. Keep it up!`;
+  if (days >= 8) return `You are on a roll${name}. Keep it up!`;
+  if (days === 7) return `A full week${name}. Your story is taking shape!`;
+  if (days >= 3) return `Great rhythm${name}. Keep it up!`;
+  return `Every story starts somewhere${name}. You've got this!`;
 }
 
 interface StreakModalProps {
@@ -164,92 +165,141 @@ interface StreakModalProps {
   user: any;
 }
 
+// Day labels starting Sunday (matches JS Date.getDay())
+const WEEK_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
 function StreakModal({ visible, onClose, streakCount, stats, user }: StreakModalProps) {
   const weekStreak = streakCount > 0 ? Math.floor(streakCount / 7) : 0;
   const today = new Date();
-  const dayOfWeek = today.getDay(); // 0=Sun, 6=Sat
+  const todayDow = today.getDay(); // 0=Sun, 6=Sat
+  const nickname = user?.nickname || user?.first_name || '';
 
-  const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  // Which day indices are "in streak" (today and before, up to streakCount days back)
+  const streakStart = Math.max(0, todayDow - (streakCount - 1));
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      {/* Backdrop */}
-      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} activeOpacity={1} onPress={onClose} />
+      {/* Scrim */}
+      <TouchableOpacity
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }}
+        activeOpacity={1}
+        onPress={onClose}
+      />
 
-      {/* Panel */}
+      {/* Sheet */}
       <View style={{
-        backgroundColor: COLORS.background,
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        paddingTop: 12,
-        paddingHorizontal: 20,
-        paddingBottom: 32,
+        backgroundColor: '#ffffff',
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        paddingBottom: 36,
         ...Platform.select({
-          ios: { shadowColor: '#170B00', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 20 },
-          android: { elevation: 16 },
+          ios: { shadowColor: '#170B00', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 24 },
+          android: { elevation: 20 },
         }),
       }}>
-        {/* Handle */}
-        <View style={{ alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: COLORS.strokeStrong, opacity: 0.3, marginBottom: 20 }} />
+        {/* Drag handle */}
+        <View style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB', marginTop: 12, marginBottom: 32 }} />
 
-        {/* Header */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <Text style={{ fontFamily: FONTS.serif, fontSize: 22, color: COLORS.textStrong }}>Your Streak</Text>
-          <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); onClose(); }}
-            style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <X size={16} color={COLORS.textBase} strokeWidth={2} />
-          </TouchableOpacity>
+        {/* Fire circle + number */}
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          {/* Circle with light blue border */}
+          <View style={{
+            width: 120,
+            height: 120,
+            borderRadius: 60,
+            borderWidth: 2,
+            borderColor: '#93C5FD', // light blue
+            backgroundColor: 'transparent',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Text style={{ fontSize: 64, lineHeight: 72 }}>🔥</Text>
+          </View>
+          {/* Week streak number — overlaps circle bottom */}
+          <Text style={{
+            fontFamily: FONTS.serif,
+            fontSize: 52,
+            fontWeight: '700',
+            color: COLORS.textStrong,
+            marginTop: -18,
+            lineHeight: 56,
+          }}>
+            {weekStreak}
+          </Text>
         </View>
 
-        {/* Week streak circle */}
-        <View style={{ alignItems: 'center', marginBottom: 24, gap: 12 }}>
-          <View style={{
-            width: 110, height: 110, borderRadius: 55,
-            backgroundColor: `${COLORS.brand}12`,
-            borderWidth: 1, borderColor: `${COLORS.brand}25`,
-            alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Text style={{ fontFamily: FONTS.serif, fontSize: 48, fontWeight: '700', color: COLORS.brand, lineHeight: 54 }}>
-              {weekStreak}
-            </Text>
-          </View>
-          <View style={{ alignItems: 'center', gap: 4 }}>
-            <Text style={{ fontFamily: FONTS.serif, fontSize: 18, color: COLORS.textStrong }}>Week streak</Text>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, textAlign: 'center', maxWidth: 240 }}>
-              {getStreakMessage(streakCount)}
-            </Text>
-          </View>
+        {/* Title + subtitle */}
+        <View style={{ alignItems: 'center', gap: 6, marginBottom: 32, paddingHorizontal: 24 }}>
+          <Text style={{ fontFamily: FONTS.serif, fontSize: 26, fontWeight: '700', color: COLORS.textStrong }}>
+            Week streak
+          </Text>
+          <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, textAlign: 'center' }}>
+            {getStreakSubtitle(streakCount, nickname)}
+          </Text>
         </View>
 
         {/* Week calendar */}
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
-          {DAY_LABELS.map((label, index) => {
-            const isToday = index === dayOfWeek;
-            const isInStreak = streakCount > 0 && index <= dayOfWeek && index >= Math.max(0, dayOfWeek - (streakCount - 1));
-            // Calculate date for this weekday
-            const diff = index - dayOfWeek;
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4, marginBottom: 28, paddingHorizontal: 16 }}>
+          {WEEK_LABELS.map((label, index) => {
+            const isToday = index === todayDow;
+            const isPastStreak = streakCount > 0 && index < todayDow && index >= streakStart;
+            const isFuture = index > todayDow;
+
+            // Calculate the actual date for this column
+            const diff = index - todayDow;
             const d = new Date(today);
             d.setDate(today.getDate() + diff);
             const dateNum = d.getDate();
 
             return (
-              <View key={index} style={{ alignItems: 'center', gap: 6, minWidth: 32 }}>
+              <View key={index} style={{ flex: 1, alignItems: 'center', gap: 8 }}>
+                {/* Day label */}
                 <Text style={{
-                  fontFamily: FONTS.sansBold, fontSize: 10, textTransform: 'uppercase',
-                  color: isToday ? COLORS.textStrong : COLORS.textMuted,
+                  fontFamily: FONTS.sansBold,
+                  fontSize: 11,
+                  textTransform: 'uppercase',
                   letterSpacing: 0.5,
+                  color: isToday ? '#F97316' : COLORS.textMuted, // orange for today
                 }}>
-                  {isToday ? 'Now' : label}
+                  {isToday ? 'TODAY' : label}
                 </Text>
-                {isInStreak ? (
-                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }}>
-                    <Check size={13} color="white" strokeWidth={3} />
+
+                {/* Day indicator */}
+                {isPastStreak ? (
+                  // Green filled circle with checkmark
+                  <View style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: '#22C55E',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <Check size={16} color="white" strokeWidth={3} />
+                  </View>
+                ) : isToday ? (
+                  // Today: zap emoji + date in orange (no circle bg)
+                  <View style={{ alignItems: 'center', gap: 0, height: 36, justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 16, lineHeight: 20 }}>⚡</Text>
+                    <Text style={{
+                      fontFamily: FONTS.sansBold,
+                      fontSize: 13,
+                      color: '#F97316',
+                      lineHeight: 16,
+                    }}>
+                      {dateNum}
+                    </Text>
                   </View>
                 ) : (
-                  <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: COLORS.textMuted }}>{dateNum}</Text>
+                  // Future or non-streak past: just the date number in gray
+                  <View style={{ height: 36, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{
+                      fontFamily: FONTS.sansMedium,
+                      fontSize: 15,
+                      color: COLORS.textWeak,
+                    }}>
+                      {dateNum}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -257,29 +307,53 @@ function StreakModal({ visible, onClose, streakCount, stats, user }: StreakModal
           })}
         </View>
 
-        {/* Stats row */}
-        <View style={{
-          backgroundColor: COLORS.fillWeak, borderRadius: 16,
-          padding: 4, paddingTop: 8,
-        }}>
-          <Text style={{ fontFamily: FONTS.geist, fontSize: 10, color: COLORS.textMuted, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
-            Streak restore coming soon
-          </Text>
-          <View style={{ flexDirection: 'row', backgroundColor: COLORS.card, borderRadius: 12, overflow: 'hidden' }}>
-            {[
-              { label: 'Days', value: stats.streak_count || user?.streak || 0 },
-              { label: 'Reflections', value: stats.reflections_count || 0 },
-              { label: 'Stories', value: stats.stories_count || 0 },
-            ].map((item, i) => (
-              <View key={item.label} style={{
-                flex: 1, paddingVertical: 16, alignItems: 'center', gap: 6,
-                borderRightWidth: i < 2 ? StyleSheet.hairlineWidth : 0,
-                borderRightColor: COLORS.strokeWeaker,
-              }}>
-                <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak }}>{item.label}</Text>
-                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>{item.value}</Text>
-              </View>
-            ))}
+        {/* Bottom stats card */}
+        <View style={{ marginHorizontal: 16 }}>
+          <View style={{
+            backgroundColor: '#F3F4F6',
+            borderRadius: 20,
+            paddingTop: 14,
+            paddingBottom: 4,
+            paddingHorizontal: 4,
+          }}>
+            <Text style={{
+              fontFamily: FONTS.sansMedium,
+              fontSize: 13,
+              color: COLORS.textWeak,
+              textAlign: 'center',
+              marginBottom: 8,
+            }}>
+              Streak restore coming soon
+            </Text>
+
+            {/* White inner card */}
+            <View style={{
+              backgroundColor: '#ffffff',
+              borderRadius: 16,
+              flexDirection: 'row',
+              overflow: 'hidden',
+            }}>
+              {[
+                { label: 'Days', value: stats.streak_count || user?.streak || 0 },
+                { label: 'Reflections', value: stats.reflections_count || 0 },
+                { label: 'Stories', value: stats.stories_count || 0 },
+              ].map((item, i) => (
+                <View
+                  key={item.label}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 20,
+                    alignItems: 'center',
+                    gap: 4,
+                    borderRightWidth: i < 2 ? StyleSheet.hairlineWidth : 0,
+                    borderRightColor: '#E5E7EB',
+                  }}
+                >
+                  <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textWeak }}>{item.label}</Text>
+                  <Text style={{ fontFamily: FONTS.sansBold, fontSize: 22, color: COLORS.textStrong }}>{item.value}</Text>
+                </View>
+              ))}
+            </View>
           </View>
         </View>
       </View>
@@ -407,7 +481,10 @@ export default function OverviewScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-      <DashboardHeader title="Overview" />
+      <DashboardHeader
+        title="Overview"
+        onStreakPress={() => setShowStreakModal(true)}
+      />
 
       {isLoading && !manualRefreshing ? (
         <OverviewSkeleton />

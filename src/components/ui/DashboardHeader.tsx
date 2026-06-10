@@ -14,9 +14,11 @@ interface DashboardHeaderProps {
   title: string;
   showStreak?: boolean;
   rightElement?: React.ReactNode;
+  /** Called when the streak pill is tapped — use to open a streak modal. */
+  onStreakPress?: () => void;
 }
 
-export function DashboardHeader({ title, showStreak = true, rightElement }: DashboardHeaderProps) {
+export function DashboardHeader({ title, showStreak = true, rightElement, onStreakPress }: DashboardHeaderProps) {
   const router = useRouter();
   const user = useUserStore((s) => s.user);
   const streakCount = Number(user?.streak) || 0;
@@ -35,7 +37,7 @@ export function DashboardHeader({ title, showStreak = true, rightElement }: Dash
           {rightElement}
           {showStreak && (
             <TouchableOpacity
-              onPress={() => Haptics.selectionAsync()}
+              onPress={() => { Haptics.selectionAsync(); onStreakPress?.(); }}
               activeOpacity={0.8}
               style={{
                 flexDirection: 'row',
