@@ -240,15 +240,12 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
   };
 
   if (variant === 'list') {
+    const hasMedia = !!(bannerMedia || audioMedia);
     return (
       <Animated.View
-        style={[animStyle, {
-          shadowColor: COLORS.shadow,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.07,
-          shadowRadius: 16,
-        }]}
-        className="w-full mb-2 bg-white rounded-[24px] overflow-hidden border border-stroke-weaker"
+        style={[animStyle]}
+        // border-stroke-weak (not weaker) gives a crisper card edge against the cream background
+        className="w-full mb-2 bg-white rounded-[24px] overflow-hidden border border-stroke-weak"
       >
         <TouchableOpacity
           onPress={() => { Haptics.selectionAsync(); handlePress(); }}
@@ -256,23 +253,29 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
           onPressOut={handlePressOut}
           activeOpacity={0.95}
         >
-          {/* Hero — same renderVisual but rounded-t only */}
-          <View className="overflow-hidden rounded-t-[24px]">
-            {renderVisual()}
-          </View>
+          {/* Hero media block — only rendered when the memory actually has media.
+              Text-only memories skip this entirely so there's no empty space. */}
+          {hasMedia && (
+            <View className="overflow-hidden rounded-t-[24px]">
+              {renderVisual()}
+            </View>
+          )}
 
           {/* Body */}
           <View className="px-5 pt-4 pb-5 gap-3">
+            {/* InProgress badge for text-only cards (media cards show it as overlay) */}
+            {!hasMedia && <InProgressBadge memory={memory} />}
+
             {/* Title */}
             <Text
               className="text-[22px] text-text-strong leading-tight"
               style={{ fontFamily: FONTS.serif }}
-              numberOfLines={3}
+              numberOfLines={2}
             >
               {storyTitle}
             </Text>
 
-            {/* Body preview */}
+            {/* Body preview — max 2 lines */}
             {memory.body ? (
               <Text
                 className="text-sm leading-relaxed"
@@ -300,6 +303,15 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
               </View>
             )}
           </View>
+        </TouchableOpacity>
+
+        {/* Actions button — absolute, so it floats above content for text-only cards too */}
+        <TouchableOpacity
+          onPress={handleActions}
+          hitSlop={8}
+          className="absolute top-3 right-3 size-8 rounded-full bg-fill-weak border border-stroke-weaker items-center justify-center"
+        >
+          <MoreHorizontal size={14} color={COLORS.textBase} />
         </TouchableOpacity>
       </Animated.View>
     );

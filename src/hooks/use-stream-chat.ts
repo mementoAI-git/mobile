@@ -16,6 +16,8 @@ interface SendOptions {
   replyTo?: ChatReplyQuote | null;
   chatMode?: ChatMode;
   deepDiveDimension?: LifeDimension | null;
+  /** IDs of already-uploaded files to pass as context to the AI */
+  attachments?: string[];
 }
 
 const baseURL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
@@ -55,7 +57,7 @@ export function useStreamChat(memoryId?: string) {
     async (text: string, options?: SendOptions) => {
       if (!text.trim() || streamingRef.current) return;
 
-      const { replyTo, chatMode, deepDiveDimension } = options ?? {};
+      const { replyTo, chatMode, deepDiveDimension, attachments } = options ?? {};
       const apiPrompt = buildPromptWithReplyQuote(text, replyTo ?? null);
 
       const userMessage: StreamMessage = {
@@ -91,6 +93,8 @@ export function useStreamChat(memoryId?: string) {
             ...(chatMode === 'deep_dive' && deepDiveDimension
               ? { deep_dive_dimension: deepDiveDimension }
               : {}),
+            // File attachments uploaded before sending (parity with web ChatInput)
+            ...(attachments && attachments.length > 0 ? { attachments } : {}),
           }),
           signal: controller.signal,
         });

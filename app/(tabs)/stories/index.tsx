@@ -1,7 +1,8 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, FlatList, RefreshControl, ScrollView, ImageBackground, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Search, LayoutGrid, List } from 'lucide-react-native';
+import { Plus, Search } from 'lucide-react-native';
+// import { LayoutGrid, List } from 'lucide-react-native'; // list mode toggled off for now
 import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
 import { MasonryMemoryGrid } from '@/components/memory/MasonryMemoryGrid';
 import { StatCard, DashboardHeader, TextInput, StoriesSkeleton, EmptyState, Spinner } from '@/components/ui';
@@ -140,43 +141,45 @@ export default function StoriesScreen() {
           </View>
         )}
 
-        {/* Search & Layout Control */}
-        <View className="gap-4">
-          <View className="flex-row items-center gap-3">
-            <TextInput
-              placeholder="Search memories..."
-              value={search}
-              onChangeText={handleSearchChange}
-              onSubmitEditing={handleSearchSubmit}
-              returnKeyType="search"
-              containerClassName="flex-1"
-              leftElement={<Search size={18} color={COLORS.textWeak} />}
-              rightElement={
-                search ? (
-                  <TouchableOpacity onPress={handleClearSearch}>
-                    <View className="size-5 bg-text-muted/10 rounded-full items-center justify-center">
-                      <Plus size={12} color={COLORS.textWeak} style={{ transform: [{ rotate: '45deg' }] }} />
-                    </View>
-                  </TouchableOpacity>
-                ) : null
-              }
-              placeholderTextColor={COLORS.textMuted}
-            />
-            <View className="flex-row items-center gap-1 border border-stroke-weaker rounded-2xl p-1 bg-white">
-              <TouchableOpacity
-                onPress={() => handleToggleView('grid')}
-                className={`size-10 rounded-xl items-center justify-center ${viewMode === 'grid' ? 'bg-brand' : ''}`}
-              >
-                <LayoutGrid size={18} color={viewMode === 'grid' ? '#fff' : COLORS.textWeak} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleToggleView('list')}
-                className={`size-10 rounded-xl items-center justify-center ${viewMode === 'list' ? 'bg-brand' : ''}`}
-              >
-                <List size={18} color={viewMode === 'list' ? '#fff' : COLORS.textWeak} />
-              </TouchableOpacity>
+          {/* Search & Layout Control */}
+          <View className="gap-4">
+            <View className="flex-row items-center gap-3">
+              <TextInput
+                placeholder="Search memories..."
+                value={search}
+                onChangeText={handleSearchChange}
+                onSubmitEditing={handleSearchSubmit}
+                returnKeyType="search"
+                containerClassName="flex-1"
+                leftElement={<Search size={18} color={COLORS.textWeak} />}
+                rightElement={
+                  search ? (
+                    <TouchableOpacity onPress={handleClearSearch}>
+                      <View className="size-5 bg-text-muted/10 rounded-full items-center justify-center">
+                        <Plus size={12} color={COLORS.textWeak} style={{ transform: [{ rotate: '45deg' }] }} />
+                      </View>
+                    </TouchableOpacity>
+                  ) : null
+                }
+                placeholderTextColor={COLORS.textMuted}
+              />
+              {/* Grid/List toggle — commented out; grid-only for now
+              <View className="flex-row items-center gap-1 border border-stroke-weaker rounded-2xl p-1 bg-white">
+                <TouchableOpacity
+                  onPress={() => handleToggleView('grid')}
+                  className={`size-10 rounded-xl items-center justify-center ${viewMode === 'grid' ? 'bg-brand' : ''}`}
+                >
+                  <LayoutGrid size={18} color={viewMode === 'grid' ? '#fff' : COLORS.textWeak} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleToggleView('list')}
+                  className={`size-10 rounded-xl items-center justify-center ${viewMode === 'list' ? 'bg-brand' : ''}`}
+                >
+                  <List size={18} color={viewMode === 'list' ? '#fff' : COLORS.textWeak} />
+                </TouchableOpacity>
+              </View>
+              */}
             </View>
-          </View>
 
           {/* Filter Pills */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2.5">
@@ -229,8 +232,8 @@ export default function StoriesScreen() {
 
         {isLoading && !stories.length ? (
           <StoriesSkeleton />
-        ) : viewMode === 'grid' ? (
-          /* ── Masonry grid view ─────────────────────────────────────── */
+        ) : (
+          /* ── Masonry grid view (list mode commented out) ──────────── */
           <MasonryMemoryGrid
             memories={stories}
             ListHeaderComponent={listHeader}
@@ -240,8 +243,8 @@ export default function StoriesScreen() {
             onRefresh={refetch}
             onScroll={scrollHandler}
           />
+          /* List view — commented out for now
         ) : (
-          /* ── List view ─────────────────────────────────────────────── */
           <Animated.FlatList
             data={stories}
             keyExtractor={(item) => item._id}
@@ -269,6 +272,7 @@ export default function StoriesScreen() {
             }
             ListEmptyComponent={emptyState}
           />
+          */
         )}
 
         {/* Floating Action Button - morphs width and contents on scroll */}

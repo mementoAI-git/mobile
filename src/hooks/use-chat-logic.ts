@@ -83,8 +83,8 @@ export function useChatLogic() {
   }, [activeChatId, chatMode, deepDiveDimension, enrichmentStats.stats, openSheet]);
 
   const send = useCallback(
-    async (text: string, replyTo?: ChatReplyQuote | null) => {
-      await streamSend(text, { replyTo, chatMode, deepDiveDimension });
+    async (text: string, replyTo?: ChatReplyQuote | null, attachments?: string[]) => {
+      await streamSend(text, { replyTo, chatMode, deepDiveDimension, attachments });
     },
     [streamSend, chatMode, deepDiveDimension],
   );

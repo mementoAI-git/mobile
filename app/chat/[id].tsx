@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MoreVertical, ChevronLeft } from 'lucide-react-native';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
-import { ChatInput } from '@/components/chat/ChatInput';
+import { ChatInput, type ChatSendPayload } from '@/components/chat/ChatInput';
 import { MilestoneCard } from '@/components/chat/MilestoneCard';
 import { DeepDiveNudge } from '@/components/chat/DeepDiveNudge';
 import { DeepDiveBanner } from '@/components/chat/DeepDiveBanner';
@@ -382,8 +382,8 @@ export default function ChatScreen() {
 
           {/* ── Chat Input ────────────────────────────────────────────── */}
           <ChatInput
-            onSend={(text) => {
-              send(text, replyQuote);
+            onSend={(payload: ChatSendPayload) => {
+              send(payload.text, replyQuote, payload.attachmentIds.length ? payload.attachmentIds : undefined);
               setReplyQuote(null);
             }}
             onStop={stop}
