@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ImageBackground,
   Image,
-  Modal,
   LayoutAnimation,
   UIManager,
 } from 'react-native';
@@ -146,221 +145,6 @@ function OverviewJourneyCard({
   );
 }
 
-// ─── Streak Modal ─────────────────────────────────────────────────────────────
-
-function getStreakSubtitle(days: number, nickname?: string): string {
-  const name = nickname ? `, ${nickname}` : '';
-  if (days >= 21) return `You are a legend${name}. Keep it up!`;
-  if (days >= 8) return `You are on a roll${name}. Keep it up!`;
-  if (days === 7) return `A full week${name}. Your story is taking shape!`;
-  if (days >= 3) return `Great rhythm${name}. Keep it up!`;
-  return `Every story starts somewhere${name}. You've got this!`;
-}
-
-interface StreakModalProps {
-  visible: boolean;
-  onClose: () => void;
-  streakCount: number;
-  stats: any;
-  user: any;
-}
-
-// Day labels starting Sunday (matches JS Date.getDay())
-const WEEK_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-function StreakModal({ visible, onClose, streakCount, stats, user }: StreakModalProps) {
-  const weekStreak = streakCount > 0 ? Math.floor(streakCount / 7) : 0;
-  const today = new Date();
-  const todayDow = today.getDay(); // 0=Sun, 6=Sat
-  const nickname = user?.nickname || user?.first_name || '';
-
-  // Which day indices are "in streak" (today and before, up to streakCount days back)
-  const streakStart = Math.max(0, todayDow - (streakCount - 1));
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      {/* Scrim */}
-      <TouchableOpacity
-        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }}
-        activeOpacity={1}
-        onPress={onClose}
-      />
-
-      {/* Sheet */}
-      <View style={{
-        backgroundColor: '#ffffff',
-        borderTopLeftRadius: 28,
-        borderTopRightRadius: 28,
-        paddingBottom: 36,
-        ...Platform.select({
-          ios: { shadowColor: '#170B00', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 24 },
-          android: { elevation: 20 },
-        }),
-      }}>
-        {/* Drag handle */}
-        <View style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB', marginTop: 12, marginBottom: 32 }} />
-
-        {/* Fire circle + number */}
-        <View style={{ alignItems: 'center', marginBottom: 20 }}>
-          {/* Circle with light blue border */}
-          <View style={{
-            width: 120,
-            height: 120,
-            borderRadius: 60,
-            borderWidth: 2,
-            borderColor: '#93C5FD', // light blue
-            backgroundColor: 'transparent',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <Text style={{ fontSize: 64, lineHeight: 72 }}>🔥</Text>
-          </View>
-          {/* Week streak number — overlaps circle bottom */}
-          <Text style={{
-            fontFamily: FONTS.serif,
-            fontSize: 52,
-            fontWeight: '700',
-            color: COLORS.textStrong,
-            marginTop: -18,
-            lineHeight: 56,
-          }}>
-            {weekStreak}
-          </Text>
-        </View>
-
-        {/* Title + subtitle */}
-        <View style={{ alignItems: 'center', gap: 6, marginBottom: 32, paddingHorizontal: 24 }}>
-          <Text style={{ fontFamily: FONTS.serif, fontSize: 26, fontWeight: '700', color: COLORS.textStrong }}>
-            Week streak
-          </Text>
-          <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, textAlign: 'center' }}>
-            {getStreakSubtitle(streakCount, nickname)}
-          </Text>
-        </View>
-
-        {/* Week calendar */}
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4, marginBottom: 28, paddingHorizontal: 16 }}>
-          {WEEK_LABELS.map((label, index) => {
-            const isToday = index === todayDow;
-            const isPastStreak = streakCount > 0 && index < todayDow && index >= streakStart;
-            const isFuture = index > todayDow;
-
-            // Calculate the actual date for this column
-            const diff = index - todayDow;
-            const d = new Date(today);
-            d.setDate(today.getDate() + diff);
-            const dateNum = d.getDate();
-
-            return (
-              <View key={index} style={{ flex: 1, alignItems: 'center', gap: 8 }}>
-                {/* Day label */}
-                <Text style={{
-                  fontFamily: FONTS.sansBold,
-                  fontSize: 11,
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.5,
-                  color: isToday ? '#F97316' : COLORS.textMuted, // orange for today
-                }}>
-                  {isToday ? 'TODAY' : label}
-                </Text>
-
-                {/* Day indicator */}
-                {isPastStreak ? (
-                  // Green filled circle with checkmark
-                  <View style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 18,
-                    backgroundColor: '#22C55E',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                    <Check size={16} color="white" strokeWidth={3} />
-                  </View>
-                ) : isToday ? (
-                  // Today: zap emoji + date in orange (no circle bg)
-                  <View style={{ alignItems: 'center', gap: 0, height: 36, justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 16, lineHeight: 20 }}>⚡</Text>
-                    <Text style={{
-                      fontFamily: FONTS.sansBold,
-                      fontSize: 13,
-                      color: '#F97316',
-                      lineHeight: 16,
-                    }}>
-                      {dateNum}
-                    </Text>
-                  </View>
-                ) : (
-                  // Future or non-streak past: just the date number in gray
-                  <View style={{ height: 36, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{
-                      fontFamily: FONTS.sansMedium,
-                      fontSize: 15,
-                      color: COLORS.textWeak,
-                    }}>
-                      {dateNum}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Bottom stats card */}
-        <View style={{ marginHorizontal: 16 }}>
-          <View style={{
-            backgroundColor: '#F3F4F6',
-            borderRadius: 20,
-            paddingTop: 14,
-            paddingBottom: 4,
-            paddingHorizontal: 4,
-          }}>
-            <Text style={{
-              fontFamily: FONTS.sansMedium,
-              fontSize: 13,
-              color: COLORS.textWeak,
-              textAlign: 'center',
-              marginBottom: 8,
-            }}>
-              Streak restore coming soon
-            </Text>
-
-            {/* White inner card */}
-            <View style={{
-              backgroundColor: '#ffffff',
-              borderRadius: 16,
-              flexDirection: 'row',
-              overflow: 'hidden',
-            }}>
-              {[
-                { label: 'Days', value: stats.streak_count || user?.streak || 0 },
-                { label: 'Reflections', value: stats.reflections_count || 0 },
-                { label: 'Stories', value: stats.stories_count || 0 },
-              ].map((item, i) => (
-                <View
-                  key={item.label}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 20,
-                    alignItems: 'center',
-                    gap: 4,
-                    borderRightWidth: i < 2 ? StyleSheet.hairlineWidth : 0,
-                    borderRightColor: '#E5E7EB',
-                  }}
-                >
-                  <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textWeak }}>{item.label}</Text>
-                  <Text style={{ fontFamily: FONTS.sansBold, fontSize: 22, color: COLORS.textStrong }}>{item.value}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 
 function getGreeting(): string {
@@ -384,7 +168,10 @@ export default function OverviewScreen() {
     return h >= 6 && h < 17;
   }, []);
 
-  const [showStreakModal, setShowStreakModal] = useState(false);
+  const openStreakSheet = useCallback(() => {
+    Haptics.selectionAsync();
+    openSheet('streak');
+  }, [openSheet]);
 
   // ── "Add story" collapse ──────────────────────────────────────────────────
   // heroGone drives the flex collapse via LayoutAnimation (native, bidirectional).
@@ -483,7 +270,7 @@ export default function OverviewScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
       <DashboardHeader
         title="Overview"
-        onStreakPress={() => setShowStreakModal(true)}
+        onStreakPress={openStreakSheet}
       />
 
       {isLoading && !manualRefreshing ? (
@@ -544,7 +331,7 @@ export default function OverviewScreen() {
                       What's on your{"\n"}mind today?
                     </Text>
                     <TouchableOpacity
-                      onPress={() => { Haptics.selectionAsync(); setShowStreakModal(true); }}
+                      onPress={openStreakSheet}
                       activeOpacity={0.8}
                       className="flex-row items-center gap-3 bg-white/90 px-3.5 py-2 rounded-full border border-white/30"
                     >
@@ -618,11 +405,12 @@ export default function OverviewScreen() {
                   <Text className="text-[15px] text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
                     Share stories & files to build context. Link apps to enrich your Memento.
                   </Text>
-                  <Pressable
+                  <TouchableOpacity
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       openSheet('memory-insights');
                     }}
+                    activeOpacity={0.7}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -633,11 +421,10 @@ export default function OverviewScreen() {
                       paddingHorizontal: 16,
                       alignSelf: 'flex-start',
                     }}
-                    android_ripple={{ color: COLORS.brandSubtle }}
                   >
                     <BarChart2 size={15} color={COLORS.textWeak} strokeWidth={1.5} />
                     <Text style={{ fontFamily: FONTS.sansBold, fontSize: 12, color: COLORS.textStrong }}>View insights</Text>
-                  </Pressable>
+                  </TouchableOpacity>
                 </View>
               </ImageBackground>
             </Animated.View>
@@ -760,14 +547,6 @@ export default function OverviewScreen() {
         </>
       )}
 
-      {/* Streak tracker modal */}
-      <StreakModal
-        visible={showStreakModal}
-        onClose={() => setShowStreakModal(false)}
-        streakCount={streakCount}
-        stats={stats}
-        user={user}
-      />
     </SafeAreaView>
   );
 }

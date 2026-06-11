@@ -19,6 +19,7 @@ export type SheetName =
   | 'upgrade-prompt'
   | 'select'
   | 'publish-article'
+  | 'streak'
   | null;
 
 interface UiState {
