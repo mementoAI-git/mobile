@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -8,6 +8,7 @@ import {
   ImageBackground,
   TouchableOpacity,
   Keyboard,
+  LayoutAnimation,
   TouchableWithoutFeedback,
   Text,
   Alert,
@@ -29,22 +30,10 @@ const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 export function GoogleSvgIcon({ size = 18 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path
-        fill="#4285F4"
-        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.69c-.29 1.5-1.14 2.77-2.4 3.61v3h3.86c2.26-2.09 3.59-5.17 3.59-8.46z"
-      />
-      <Path
-        fill="#34A853"
-        d="M12 24c3.24 0 5.97-1.08 7.96-2.91l-3.86-3c-1.08.72-2.45 1.16-4.1 1.16-3.15 0-5.81-2.13-6.76-5.01H1.27v3.1A12 12 0 0 0 12 24z"
-      />
-      <Path
-        fill="#FBBC05"
-        d="M5.24 14.24a7.15 7.15 0 0 1 0-4.48v-3.1H1.27a12 12 0 0 0 0 10.68l3.97-3.1z"
-      />
-      <Path
-        fill="#EA4335"
-        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.27 6.66l3.97 3.1c.95-2.88 3.61-5.01 6.76-5.01z"
-      />
+      <Path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.69c-.29 1.5-1.14 2.77-2.4 3.61v3h3.86c2.26-2.09 3.59-5.17 3.59-8.46z" />
+      <Path fill="#34A853" d="M12 24c3.24 0 5.97-1.08 7.96-2.91l-3.86-3c-1.08.72-2.45 1.16-4.1 1.16-3.15 0-5.81-2.13-6.76-5.01H1.27v3.1A12 12 0 0 0 12 24z" />
+      <Path fill="#FBBC05" d="M5.24 14.24a7.15 7.15 0 0 1 0-4.48v-3.1H1.27a12 12 0 0 0 0 10.68l3.97-3.1z" />
+      <Path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.27 6.66l3.97 3.1c.95-2.88 3.61-5.01 6.76-5.01z" />
     </Svg>
   );
 }
@@ -69,6 +58,21 @@ export default function RegisterScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, () => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setIsKeyboardVisible(true);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setIsKeyboardVisible(false);
+    });
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
 
   const handlePasskeySignup = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -77,8 +81,8 @@ export default function RegisterScreen() {
       'To register a secure cross-device hardware passkey, please register your account or manage security credentials via the Memento Web Application.\n\nWould you like to open the signup portal in your browser?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Open Web Portal', 
+        {
+          text: 'Open Web Portal',
           onPress: async () => {
             try {
               setPasskeyLoading(true);
@@ -86,9 +90,7 @@ export default function RegisterScreen() {
               const webBase = apiBase.replace('/api', '');
               const { openAuthSessionAsync } = await import('expo-web-browser');
               await openAuthSessionAsync(`${webBase}/signup`, 'memento://');
-            } catch {
-              // silent
-            } finally {
+            } catch { /* silent */ } finally {
               setPasskeyLoading(false);
             }
           }
@@ -106,12 +108,9 @@ export default function RegisterScreen() {
       });
       const url: string | undefined = res.data?.data?.url;
       if (!url) return;
-
       const { openAuthSessionAsync } = await import('expo-web-browser');
       await openAuthSessionAsync(url, 'memento://');
-    } catch {
-      // silent
-    } finally {
+    } catch { /* silent */ } finally {
       setGoogleLoading(false);
     }
   };
@@ -125,12 +124,9 @@ export default function RegisterScreen() {
       });
       const url: string | undefined = res.data?.data?.url;
       if (!url) return;
-
       const { openAuthSessionAsync } = await import('expo-web-browser');
       await openAuthSessionAsync(url, 'memento://');
-    } catch {
-      // silent
-    } finally {
+    } catch { /* silent */ } finally {
       setAppleLoading(false);
     }
   };
@@ -138,110 +134,104 @@ export default function RegisterScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <ImageBackground source={PATTERN} className="absolute inset-0 opacity-40" />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
-        className="flex-1"
-      >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
             contentContainerClassName="flex-grow px-6 pt-10 pb-16"
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             automaticallyAdjustKeyboardInsets={true}
+            keyboardDismissMode="on-drag"
           >
-            {/* Logo wordmark */}
-            <Logo size="md" className="mb-10" />
+            {/* Logo — hidden when keyboard is up so "Create account" slides to the top */}
+            {!isKeyboardVisible && <Logo size="md" className="mb-10" />}
 
-            <View className="mb-10">
-              <Animated.Text
-                className="text-[40px] text-text-strong mb-2"
-                style={{ fontFamily: FONTS.serif }}
-              >
+            <View className={isKeyboardVisible ? 'mb-4' : 'mb-10'}>
+              <Animated.Text className="text-[40px] text-text-strong mb-2" style={{ fontFamily: FONTS.serif }}>
                 Create account
               </Animated.Text>
-              <Animated.Text
-                className="text-lg text-text-base leading-relaxed"
-                style={{ fontFamily: FONTS.sans }}
-              >
+              <Animated.Text className="text-lg text-text-base leading-relaxed" style={{ fontFamily: FONTS.sans }}>
                 Start preserving your memories
               </Animated.Text>
             </View>
 
             <View className="gap-4">
-              {/* Passkey Sign Up Option */}
-              <TouchableOpacity
-                onPress={handlePasskeySignup}
-                disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                activeOpacity={0.8}
-                className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
-              >
-                {passkeyLoading ? (
-                  <ActivityIndicator size="small" color={COLORS.brand} />
-                ) : (
-                  <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />
-                )}
-                <Animated.Text
-                  className="text-base text-text-strong font-semibold"
-                  style={{ fontFamily: FONTS.sansSemi }}
-                >
-                  Sign up with a passkey
-                </Animated.Text>
-              </TouchableOpacity>
-
-              {/* Google Signup Button */}
-              <TouchableOpacity
-                onPress={handleGoogleSignup}
-                disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                activeOpacity={0.8}
-                className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
-              >
-                {googleLoading ? (
-                  <ActivityIndicator size="small" color={COLORS.brand} />
-                ) : (
-                  <GoogleSvgIcon size={18} />
-                )}
-                <Animated.Text
-                  className="text-base text-text-strong font-semibold"
-                  style={{ fontFamily: FONTS.sansSemi }}
-                >
-                  Continue with Google
-                </Animated.Text>
-              </TouchableOpacity>
-
-              {/* Apple Signup Button */}
-              <TouchableOpacity
-                onPress={handleAppleSignup}
-                disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                activeOpacity={0.8}
-                className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
-              >
-                {appleLoading ? (
-                  <ActivityIndicator size="small" color={COLORS.brand} />
-                ) : (
-                  <AppleSvgIcon size={18} />
-                )}
-                <Animated.Text
-                  className="text-base text-text-strong font-semibold"
-                  style={{ fontFamily: FONTS.sansSemi }}
-                >
-                  Continue with Apple
-                </Animated.Text>
-              </TouchableOpacity>
+              {/* OAuth buttons — full pills when keyboard hidden, compact icon row when visible */}
+              {isKeyboardVisible ? (
+                <View className="flex-row items-center justify-center gap-4 py-1">
+                  <TouchableOpacity
+                    onPress={handlePasskeySignup}
+                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                    activeOpacity={0.8}
+                    className="items-center gap-1"
+                  >
+                    <View className="size-11 rounded-full border border-stroke-weak bg-white items-center justify-center">
+                      {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={20} color={COLORS.textStrong} strokeWidth={2} />}
+                    </View>
+                    <Animated.Text className="text-[10px] text-text-weak" style={{ fontFamily: FONTS.sans }}>Passkey</Animated.Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleGoogleSignup}
+                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                    activeOpacity={0.8}
+                    className="items-center gap-1"
+                  >
+                    <View className="size-11 rounded-full border border-stroke-weak bg-white items-center justify-center">
+                      {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={20} />}
+                    </View>
+                    <Animated.Text className="text-[10px] text-text-weak" style={{ fontFamily: FONTS.sans }}>Google</Animated.Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleAppleSignup}
+                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                    activeOpacity={0.8}
+                    className="items-center gap-1"
+                  >
+                    <View className="size-11 rounded-full border border-stroke-weak bg-white items-center justify-center">
+                      {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={20} />}
+                    </View>
+                    <Animated.Text className="text-[10px] text-text-weak" style={{ fontFamily: FONTS.sans }}>Apple</Animated.Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    onPress={handlePasskeySignup}
+                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                    activeOpacity={0.8}
+                    className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
+                  >
+                    {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />}
+                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Sign up with a passkey</Animated.Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleGoogleSignup}
+                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                    activeOpacity={0.8}
+                    className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
+                  >
+                    {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={18} />}
+                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Continue with Google</Animated.Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleAppleSignup}
+                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                    activeOpacity={0.8}
+                    className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
+                  >
+                    {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={18} />}
+                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Continue with Apple</Animated.Text>
+                  </TouchableOpacity>
+                </>
+              )}
 
               {/* Divider */}
               <View className="flex-row items-center gap-4 my-3">
                 <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
-                <Animated.Text
-                  className="text-xs text-text-disabled lowercase"
-                  style={{ fontFamily: FONTS.sans }}
-                >
-                  or
-                </Animated.Text>
+                <Animated.Text className="text-xs text-text-disabled lowercase" style={{ fontFamily: FONTS.sans }}>or</Animated.Text>
                 <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
               </View>
 
-              {/* Credentials Fields */}
+              {/* Name row */}
               <View className="flex-row gap-3">
                 <View className="flex-1">
                   <Controller
@@ -317,23 +307,13 @@ export default function RegisterScreen() {
                 </View>
               )}
 
-              <Button
-                onPress={onSubmit}
-                loading={isPending}
-                fullWidth
-                size="lg"
-                className="mt-2"
-              >
+              <Button onPress={onSubmit} loading={isPending} fullWidth size="lg" className="mt-2">
                 Create Account
               </Button>
             </View>
 
-            {/* Legal Terms Link */}
             <View className="items-center justify-center px-4 mt-6">
-              <Text
-                className="text-xs text-text-weak text-center leading-normal"
-                style={{ fontFamily: FONTS.sans }}
-              >
+              <Text className="text-xs text-text-weak text-center leading-normal" style={{ fontFamily: FONTS.sans }}>
                 By creating an account, you agree to our{' '}
                 <Text className="text-brand underline font-semibold">Terms of Service</Text> and{' '}
                 <Text className="text-brand underline font-semibold">Privacy Policy</Text>.
@@ -352,7 +332,6 @@ export default function RegisterScreen() {
             </View>
           </ScrollView>
         </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
