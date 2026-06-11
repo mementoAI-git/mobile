@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   ScrollView,
@@ -56,6 +56,7 @@ export default function RegisterScreen() {
   } = useRegisterLogic();
 
   const insets = useSafeAreaInsets();
+  const scrollViewRef = useRef<ScrollView>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
@@ -67,6 +68,8 @@ export default function RegisterScreen() {
     const showSub = Keyboard.addListener(showEvent, () => {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setIsKeyboardVisible(true);
+      // Scroll to bottom so all fields + button are visible regardless of which field was tapped
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: false }), 150);
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -139,9 +142,10 @@ export default function RegisterScreen() {
     >
       <View style={{ flex: 1, backgroundColor: '#fefbf8', paddingTop: insets.top }}>
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-40" />
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
-            contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 40, paddingBottom: 80 }}
+            ref={scrollViewRef}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 40, paddingBottom: 32 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="on-drag"
@@ -335,7 +339,6 @@ export default function RegisterScreen() {
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </TouchableWithoutFeedback>
       </View>
     </KeyboardAvoidingView>
   );

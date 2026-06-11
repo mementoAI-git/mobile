@@ -65,7 +65,7 @@ export function useRegister() {
 export function useForgotPassword() {
   return useMutation({
     mutationFn: (email: string) =>
-      post(endpoint.sendLink, { email }, { skipAuth: true }),
+      post(endpoint.sendLink, { email, type: 'reset' }, { skipAuth: true }),
   });
 }
 
