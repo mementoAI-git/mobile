@@ -187,16 +187,17 @@ export function StreakSheet() {
       {/* ── Bottom stats card ───────────────────────────────────── */}
       <View style={{ marginHorizontal: 16 }}>
         <View style={{
-          backgroundColor: '#F3F4F6',
+          // backgroundColor: '#F3F4F6',
+          backgroundColor: COLORS.fillWeaker,
           borderRadius: 20,
           paddingTop: 14,
           paddingBottom: 4,
           paddingHorizontal: 4,
         }}>
           <Text style={{
-            fontFamily: FONTS.sansMedium,
-            fontSize: 13,
-            color: COLORS.textWeak,
+            fontFamily: FONTS.sansBold,
+            fontSize: 12,
+            color: COLORS.gray950,
             textAlign: 'center',
             marginBottom: 8,
           }}>
@@ -221,7 +222,7 @@ export function StreakSheet() {
                   alignItems: 'center',
                   gap: 4,
                   borderRightWidth: i < 2 ? StyleSheet.hairlineWidth : 0,
-                  borderRightColor: '#E5E7EB',
+                  borderRightColor: COLORS.fillWeaker,
                 }}
               >
                 <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textWeak }}>
