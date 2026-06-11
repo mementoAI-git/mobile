@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   ScrollView,
@@ -8,10 +8,11 @@ import {
   ImageBackground,
   TouchableOpacity,
   Keyboard,
+  LayoutAnimation,
   TouchableWithoutFeedback,
 } from 'react-native';
 import { Controller } from 'react-hook-form';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { Button, TextInput, PasswordInput, Logo } from '@/components/ui';
 import { useLoginLogic } from '@/hooks/use-login-logic';
@@ -66,28 +67,47 @@ export default function LoginScreen() {
     router,
   } = useLoginLogic();
 
+  const insets = useSafeAreaInsets();
+  const scrollViewRef = useRef<ScrollView>(null);
   const [rememberMe, setRememberMe] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, () => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setIsKeyboardVisible(true);
+      // Scroll to bottom so all fields + button are visible regardless of which field was tapped
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: false }), 150);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setIsKeyboardVisible(false);
+    });
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <ImageBackground source={PATTERN} className="absolute inset-0 opacity-40" />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
-        className="flex-1"
-      >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View style={{ flex: 1, backgroundColor: '#fefbf8', paddingTop: insets.top }}>
+        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-40" />
           <ScrollView
-            contentContainerClassName="flex-grow px-6 pt-10 pb-16"
+            ref={scrollViewRef}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 40, paddingBottom: 32 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            automaticallyAdjustKeyboardInsets={true}
+            keyboardDismissMode="on-drag"
           >
-            {/* Logo wordmark */}
-            <Logo size="md" className="mb-10" />
+            {/* Logo — hidden when keyboard is up so "Welcome back" slides to the top */}
+            {!isKeyboardVisible && <Logo size="md" className="mb-10" />}
 
             {/* Header */}
-            <View className="mb-10">
+            <View className={isKeyboardVisible ? 'mb-4' : 'mb-10'}>
               <Animated.Text
                 className="text-[40px] text-text-strong mb-2"
                 style={{ fontFamily: FONTS.serif }}
@@ -104,65 +124,76 @@ export default function LoginScreen() {
 
             {/* Form */}
             <View className="gap-4">
-              {/* Passkey Sign In */}
-              <TouchableOpacity
-                onPress={handlePasskeyLogin}
-                disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                activeOpacity={0.8}
-                className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
-              >
-                {passkeyLoading ? (
-                  <ActivityIndicator size="small" color={COLORS.brand} />
-                ) : (
-                  <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />
-                )}
-                <Animated.Text
-                  className="text-base text-text-strong font-semibold"
-                  style={{ fontFamily: FONTS.sansSemi }}
-                >
-                  Sign in with a passkey
-                </Animated.Text>
-              </TouchableOpacity>
-
-              {/* Google OAuth with multi-color SVG icon */}
-              <TouchableOpacity
-                onPress={handleGoogleLogin}
-                disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                activeOpacity={0.8}
-                className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
-              >
-                {googleLoading ? (
-                  <ActivityIndicator size="small" color={COLORS.brand} />
-                ) : (
-                  <GoogleSvgIcon size={18} />
-                )}
-                <Animated.Text
-                  className="text-base text-text-strong font-semibold"
-                  style={{ fontFamily: FONTS.sansSemi }}
-                >
-                  Continue with Google
-                </Animated.Text>
-              </TouchableOpacity>
-
-              {/* Apple OAuth button */}
-              <TouchableOpacity
-                onPress={handleAppleLogin}
-                disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                activeOpacity={0.8}
-                className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
-              >
-                {appleLoading ? (
-                  <ActivityIndicator size="small" color={COLORS.brand} />
-                ) : (
-                  <AppleSvgIcon size={18} />
-                )}
-                <Animated.Text
-                  className="text-base text-text-strong font-semibold"
-                  style={{ fontFamily: FONTS.sansSemi }}
-                >
-                  Continue with Apple
-                </Animated.Text>
-              </TouchableOpacity>
+              {/* OAuth buttons — full pills when keyboard hidden, compact icon row when visible */}
+              {isKeyboardVisible ? (
+                /* Compact icon row */
+                <View className="flex-row items-center justify-center gap-4 py-1">
+                  <TouchableOpacity
+                    onPress={handlePasskeyLogin}
+                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                    activeOpacity={0.8}
+                    className="items-center gap-1"
+                  >
+                    <View className="size-11 rounded-full border border-stroke-weak bg-white items-center justify-center">
+                      {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={20} color={COLORS.textStrong} strokeWidth={2} />}
+                    </View>
+                    <Animated.Text className="text-[10px] text-text-weak" style={{ fontFamily: FONTS.sans }}>Passkey</Animated.Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleGoogleLogin}
+                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                    activeOpacity={0.8}
+                    className="items-center gap-1"
+                  >
+                    <View className="size-11 rounded-full border border-stroke-weak bg-white items-center justify-center">
+                      {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={20} />}
+                    </View>
+                    <Animated.Text className="text-[10px] text-text-weak" style={{ fontFamily: FONTS.sans }}>Google</Animated.Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleAppleLogin}
+                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                    activeOpacity={0.8}
+                    className="items-center gap-1"
+                  >
+                    <View className="size-11 rounded-full border border-stroke-weak bg-white items-center justify-center">
+                      {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={20} />}
+                    </View>
+                    <Animated.Text className="text-[10px] text-text-weak" style={{ fontFamily: FONTS.sans }}>Apple</Animated.Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                /* Full-width pills */
+                <>
+                  <TouchableOpacity
+                    onPress={handlePasskeyLogin}
+                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                    activeOpacity={0.8}
+                    className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
+                  >
+                    {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />}
+                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Sign in with a passkey</Animated.Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleGoogleLogin}
+                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                    activeOpacity={0.8}
+                    className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
+                  >
+                    {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={18} />}
+                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Continue with Google</Animated.Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleAppleLogin}
+                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                    activeOpacity={0.8}
+                    className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
+                  >
+                    {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={18} />}
+                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Continue with Apple</Animated.Text>
+                  </TouchableOpacity>
+                </>
+              )}
 
               {/* Divider */}
               <View className="flex-row items-center gap-4 my-3">
@@ -277,8 +308,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }

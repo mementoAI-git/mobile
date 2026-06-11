@@ -14,9 +14,11 @@ interface DashboardHeaderProps {
   title: string;
   showStreak?: boolean;
   rightElement?: React.ReactNode;
+  /** Called when the streak pill is tapped — use to open a streak modal. */
+  onStreakPress?: () => void;
 }
 
-export function DashboardHeader({ title, showStreak = true, rightElement }: DashboardHeaderProps) {
+export function DashboardHeader({ title, showStreak = true, rightElement, onStreakPress }: DashboardHeaderProps) {
   const router = useRouter();
   const user = useUserStore((s) => s.user);
   const streakCount = Number(user?.streak) || 0;
@@ -35,12 +37,22 @@ export function DashboardHeader({ title, showStreak = true, rightElement }: Dash
           {rightElement}
           {showStreak && (
             <TouchableOpacity
-              onPress={() => Haptics.selectionAsync()}
+              onPress={() => { Haptics.selectionAsync(); onStreakPress?.(); }}
               activeOpacity={0.8}
-              className="flex-row items-center gap-1.5 px-3 py-1.5 bg-brand-tint rounded-full"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                // backgroundColor: COLORS.fillWeaker,
+                // backgroundColor: `${COLORS.brand}50`,
+                backgroundColor: `#FFC02E1A`,
+                borderRadius: 8,
+              }}
             >
-              <Zap size={18} color={COLORS.brand} fill={COLORS.brand} />
-              <Animated.Text className="text-sm font-bold text-brand" style={{ fontFamily: FONTS.sansBold }}>
+              <Zap size={16} color={COLORS.brand} fill={COLORS.brand} />
+              <Animated.Text style={{ fontFamily: FONTS.geist, fontSize: 14, color: COLORS.textStrong }}>
                 {streakCount}
               </Animated.Text>
             </TouchableOpacity>

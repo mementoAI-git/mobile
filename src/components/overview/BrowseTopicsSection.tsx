@@ -67,6 +67,7 @@ export function BrowseTopicsSection({ prompts, isLoading }: Props) {
               key={i}
               title={t.title}
               image={meta.image}
+              category={t.category}
               onPress={() => router.push({
                 pathname: '/chat/[id]',
                 params: { id: t._id, title: t.title }

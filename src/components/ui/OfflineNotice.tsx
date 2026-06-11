@@ -84,7 +84,7 @@ export function OfflineNotice() {
         styles.container,
         {
           transform: [{ translateY }],
-          paddingTop: Platform.OS === 'ios' ? insets.top : 10,
+          paddingTop: Math.max(insets.top, 10),
         },
       ]}
     >

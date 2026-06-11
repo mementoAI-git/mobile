@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Platform, StyleSheet, Keyboard } from 'react-native';
-import { ArrowUp, Mic, Square, Phone } from 'lucide-react-native';
+import {
+  View, Text, TextInput, TouchableOpacity, Platform, StyleSheet,
+  Keyboard, ScrollView, Image, Alert, ActivityIndicator,
+} from 'react-native';
+import { ArrowUp, Mic, Square, Phone, Paperclip, X, FileText } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { COLORS, FONTS } from '@/constants/tokens';
 import Animated, {
   useAnimatedStyle,
@@ -15,9 +20,29 @@ import Animated, {
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVoiceToText } from '@/hooks/use-voice-to-text';
+import { useFileUpload } from '@/hooks/mutations/use-file-upload';
+import type { IFile } from '@/types';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface AttachmentItem {
+  clientId: string;
+  fileId: string | null;   // null while uploading
+  uri: string;
+  name: string;
+  mimeType: string;
+  isUploading: boolean;
+  file?: IFile;
+}
+
+export interface ChatSendPayload {
+  text: string;
+  /** IDs of already-uploaded files to pass to the AI as context */
+  attachmentIds: string[];
+}
 
 interface ChatInputProps {
-  onSend: (text: string) => void;
+  onSend: (payload: ChatSendPayload) => void;
   /** Opens the voice call overlay (separate from voice-to-text dictation) */
   onVoice?: () => void;
   onStop?: () => void;
@@ -25,6 +50,19 @@ interface ChatInputProps {
   placeholder?: string;
   loading?: boolean;
 }
+
+const MAX_FILE_MB = 15;
+const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
+
+const SUPPORTED_MIME = [
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic',
+  'video/mp4', 'video/quicktime',
+  'audio/mpeg', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/*',
+  'application/pdf',
+  'text/plain',
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function ChatInput({
   onSend,
@@ -37,20 +75,19 @@ export function ChatInput({
   const [text, setText] = useState('');
   const [multiline, setMultiline] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
 
   const btnScale = useSharedValue(1);
   const micPulse = useSharedValue(1);
   const insets = useSafeAreaInsets();
 
-  // Snapshot of text the user had typed BEFORE they tapped the mic.
-  // Live dictation partial is appended after this prefix so it never
-  // overwrites what the user typed manually.
   const textBeforeDictationRef = useRef('');
 
-  // ─── Voice-to-text (live on-device, no upload) ───────────────────────────
+  const { mutateAsync: uploadFile } = useFileUpload();
+
+  // ─── Voice-to-text ──────────────────────────────────────────────────────
 
   const handlePartial = useCallback((liveText: string) => {
-    // Replace only the dictation portion — keep any text the user typed before
     const prefix = textBeforeDictationRef.current;
     const combined = prefix ? `${prefix} ${liveText}` : liveText;
     setText(combined);
@@ -58,7 +95,6 @@ export function ChatInput({
   }, []);
 
   const handleTranscript = useCallback((finalText: string) => {
-    // Recognition ended — commit the final text cleanly
     const prefix = textBeforeDictationRef.current;
     const combined = prefix ? `${prefix} ${finalText}` : finalText;
     setText(combined);
@@ -78,7 +114,7 @@ export function ChatInput({
     onTranscript: handleTranscript,
   });
 
-  // ─── Mic pulse animation while recording ─────────────────────────────────
+  // ─── Mic pulse animation ─────────────────────────────────────────────────
 
   useEffect(() => {
     if (isRecording) {
@@ -107,22 +143,76 @@ export function ChatInput({
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => setKeyboardVisible(false),
     );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
+    return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
-  // ─── Handlers ────────────────────────────────────────────────────────────
+  // ─── File upload helper ───────────────────────────────────────────────────
+
+  const uploadAndAdd = useCallback(async (uri: string, mimeType: string, name: string) => {
+    if (uri.length > MAX_FILE_BYTES) {
+      Alert.alert('File too large', `Files must be under ${MAX_FILE_MB}MB`);
+      return;
+    }
+    const clientId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    setAttachments(prev => [...prev, { clientId, fileId: null, uri, name, mimeType, isUploading: true }]);
+    try {
+      const result = await uploadFile({ uri, type: mimeType, name });
+      if (result?._id) {
+        setAttachments(prev => prev.map(a =>
+          a.clientId === clientId ? { ...a, fileId: result._id, isUploading: false, file: result } : a
+        ));
+      } else {
+        setAttachments(prev => prev.filter(a => a.clientId !== clientId));
+      }
+    } catch {
+      setAttachments(prev => prev.filter(a => a.clientId !== clientId));
+    }
+  }, [uploadFile]);
+
+  // ─── Attachment picker ────────────────────────────────────────────────────
+
+  const handleAttach = useCallback(async () => {
+    Haptics.selectionAsync();
+    // Show action sheet style choice — images/docs via document picker (supports both on iOS/Android)
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: SUPPORTED_MIME,
+        copyToCacheDirectory: true,
+        multiple: true,
+      });
+      if (!result.canceled && result.assets.length > 0) {
+        for (const asset of result.assets) {
+          if (asset.size && asset.size > MAX_FILE_BYTES) {
+            Alert.alert('File too large', `"${asset.name}" exceeds the ${MAX_FILE_MB}MB limit.`);
+            continue;
+          }
+          await uploadAndAdd(asset.uri, asset.mimeType || 'application/octet-stream', asset.name);
+        }
+      }
+    } catch { /* user cancelled */ }
+  }, [uploadAndAdd]);
+
+  const removeAttachment = useCallback((clientId: string) => {
+    Haptics.selectionAsync();
+    setAttachments(prev => prev.filter(a => a.clientId !== clientId));
+  }, []);
+
+  // ─── Send ─────────────────────────────────────────────────────────────────
 
   const handleSend = useCallback(() => {
-    if (!text.trim() || disabled) return;
+    const trimmed = text.trim();
+    const readyIds = attachments.filter(a => a.fileId && !a.isUploading).map(a => a.fileId as string);
+    if ((!trimmed && readyIds.length === 0) || disabled) return;
+    // Block if any upload is still in progress
+    if (attachments.some(a => a.isUploading)) return;
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onSend(text.trim());
+    onSend({ text: trimmed, attachmentIds: readyIds });
     setText('');
     setMultiline(false);
+    setAttachments([]);
     textBeforeDictationRef.current = '';
-  }, [text, disabled, onSend]);
+  }, [text, attachments, disabled, onSend]);
 
   const handleMicPress = useCallback(async () => {
     if (disabled) return;
@@ -130,7 +220,6 @@ export function ChatInput({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       stopRecording();
     } else {
-      // Snapshot the current text so dictation appends after it
       textBeforeDictationRef.current = text.trim();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await startRecording();
@@ -147,10 +236,12 @@ export function ChatInput({
     transform: [{ scale: btnScale.value }],
   }));
 
-  // ─── Derived visibility flags ─────────────────────────────────────────────
+  // ─── Derived ──────────────────────────────────────────────────────────────
 
+  const anyUploading = attachments.some(a => a.isUploading);
+  const hasContent = text.trim().length > 0 || attachments.filter(a => a.fileId).length > 0;
   const showStop = loading;
-  const showSend = !loading && text.trim().length > 0 && !isRecording;
+  const showSend = !loading && hasContent && !isRecording && !anyUploading;
   const showMic = !loading && !showSend;
 
   const bottomPadding = keyboardVisible
@@ -171,11 +262,42 @@ export function ChatInput({
       className="px-4 py-2.5 bg-transparent"
       style={{ paddingBottom: bottomPadding }}
     >
+      {/* Attachment preview strip */}
+      {attachments.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginBottom: 8 }}
+          contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
+        >
+          {attachments.map(a => (
+            <View key={a.clientId} style={styles.attachChip}>
+              {a.mimeType.startsWith('image/') ? (
+                <Image source={{ uri: a.uri }} style={styles.attachThumb} resizeMode="cover" />
+              ) : (
+                <View style={styles.attachIcon}>
+                  <FileText size={14} color={COLORS.brand} strokeWidth={1.8} />
+                </View>
+              )}
+              <Text style={styles.attachName} numberOfLines={1}>{a.name}</Text>
+              {a.isUploading
+                ? <ActivityIndicator size="small" color={COLORS.brand} style={{ marginLeft: 4 }} />
+                : (
+                  <TouchableOpacity onPress={() => removeAttachment(a.clientId)} hitSlop={6}>
+                    <X size={12} color={COLORS.textWeak} strokeWidth={2.5} />
+                  </TouchableOpacity>
+                )
+              }
+            </View>
+          ))}
+        </ScrollView>
+      )}
+
       <View
         className="flex-row items-center gap-2 bg-white/90 border border-stroke-weaker rounded-[24px] px-3.5 py-1 shadow-md shadow-black/5"
         style={styles.floatingContainer}
       >
-        {/* Text input — always visible; dictation streams text directly into it */}
+        {/* Text input */}
         <View
           className="flex-1 justify-center py-1"
           style={{
@@ -187,45 +309,22 @@ export function ChatInput({
           <TextInput
             value={text}
             onChangeText={(v) => {
-              // If user types manually while recording, update the snapshot so
-              // subsequent partials don't overwrite their edits
-              if (isRecording) {
-                textBeforeDictationRef.current = v;
-              }
+              if (isRecording) textBeforeDictationRef.current = v;
               setText(v);
               setMultiline(v.includes('\n') || v.length > 80);
             }}
-            placeholder={
-              isRecording
-                ? 'Listening…'
-                : placeholder
-            }
-            placeholderTextColor={
-              isRecording ? COLORS.brand : COLORS.textMuted
-            }
+            placeholder={isRecording ? 'Listening…' : placeholder}
+            placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
             multiline
             className="text-text-strong"
-            style={{
-              fontFamily: FONTS.sans,
-              paddingVertical: 0,
-              textAlignVertical: 'center',
-              fontSize: moderateScale(13),
-            }}
+            style={{ fontFamily: FONTS.sans, paddingVertical: 0, textAlignVertical: 'center', fontSize: moderateScale(13) }}
             blurOnSubmit={false}
             editable={!disabled}
           />
-
-          {/* Subtle live recording indicator below placeholder when no text yet */}
           {isRecording && !text.trim() && (
             <View className="flex-row items-center gap-1.5 mt-0.5">
               <View className="size-1.5 rounded-full bg-error" />
-              <Text
-                style={{
-                  fontFamily: FONTS.sansMedium,
-                  fontSize: moderateScale(11),
-                  color: COLORS.error,
-                }}
-              >
+              <Text style={{ fontFamily: FONTS.sansMedium, fontSize: moderateScale(11), color: COLORS.error }}>
                 {formatDuration(duration)} · tap mic to finish
               </Text>
             </View>
@@ -234,13 +333,22 @@ export function ChatInput({
 
         {/* Right-side controls */}
         <View className="flex-row items-center gap-1.5">
-          {/* Voice call button — only when not dictating */}
+          {/* Paperclip — attach file */}
+          {!isRecording && !showStop && (
+            <TouchableOpacity
+              onPress={handleAttach}
+              disabled={disabled || anyUploading}
+              className="rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
+              style={{ width: scale(28), height: scale(28), borderRadius: scale(14), opacity: disabled || anyUploading ? 0.4 : 1 }}
+            >
+              <Paperclip size={scale(12)} color={COLORS.textWeak} strokeWidth={2} />
+            </TouchableOpacity>
+          )}
+
+          {/* Voice call button */}
           {onVoice && !isRecording && !showStop && (
             <TouchableOpacity
-              onPress={() => {
-                Haptics.selectionAsync();
-                onVoice();
-              }}
+              onPress={() => { Haptics.selectionAsync(); onVoice(); }}
               disabled={disabled}
               className="rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
               style={{ width: scale(28), height: scale(28), borderRadius: scale(14) }}
@@ -310,9 +418,40 @@ export function ChatInput({
 const styles = StyleSheet.create({
   floatingContainer: {
     ...Platform.select({
-      ios: {
-        backgroundColor: 'rgba(255, 255, 255, 0.85)',
-      },
+      ios: { backgroundColor: 'rgba(255, 255, 255, 0.85)' },
     }),
+  },
+
+  // Attachment chip
+  attachChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.fillWeak,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    maxWidth: 180,
+  },
+  attachThumb: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+  },
+  attachIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: `${COLORS.brand}12`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachName: {
+    flex: 1,
+    fontFamily: FONTS.sans,
+    fontSize: 11,
+    color: COLORS.textStrong,
   },
 });

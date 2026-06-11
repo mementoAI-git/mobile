@@ -6,7 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { Button, TextInput, Logo } from '@/components/ui';
 import { useForgotPasswordLogic } from '@/hooks/use-forgot-password-logic';
@@ -22,6 +22,8 @@ export default function ForgotPasswordScreen() {
     handleSubmit,
     router,
   } = useForgotPasswordLogic();
+
+  const insets = useSafeAreaInsets();
 
   if (sent) {
     return (
@@ -47,14 +49,17 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View style={{ flex: 1, backgroundColor: '#fefbf8', paddingTop: insets.top }}>
         <ScrollView
-          contentContainerClassName="flex-grow justify-center px-6 py-12"
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 48, justifyContent: 'center', flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
         >
           <View className="items-center mb-10">
             <Logo size="lg" />
@@ -110,7 +115,7 @@ export default function ForgotPasswordScreen() {
             </Button>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }

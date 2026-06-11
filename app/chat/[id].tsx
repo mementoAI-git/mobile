@@ -4,6 +4,7 @@ import {
   Text,
   FlatList,
   KeyboardAvoidingView,
+  Platform,
   ImageBackground,
   TouchableOpacity,
   StyleSheet,
@@ -12,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MoreVertical, ChevronLeft } from 'lucide-react-native';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
-import { ChatInput } from '@/components/chat/ChatInput';
+import { ChatInput, type ChatSendPayload } from '@/components/chat/ChatInput';
 import { MilestoneCard } from '@/components/chat/MilestoneCard';
 import { DeepDiveNudge } from '@/components/chat/DeepDiveNudge';
 import { DeepDiveBanner } from '@/components/chat/DeepDiveBanner';
@@ -30,6 +31,7 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { useChatLogic } from '@/hooks/use-chat-logic';
+import { useBackHandler } from '@/hooks/use-back-handler';
 import * as Haptics from 'expo-haptics';
 import { VoiceModeOverlay } from '@/components/chat/VoiceModeOverlay';
 import type { ChatReplyQuote } from '@/lib/utils';
@@ -59,6 +61,9 @@ export default function ChatScreen() {
     handleExitDeepDive,
     enrichmentStats,
   } = useChatLogic();
+
+  // Intercept Android hardware back to prevent app exit when history is empty
+  useBackHandler(handleBack);
 
   const [voiceModeVisible, setVoiceModeVisible] = useState(false);
   const [replyQuote, setReplyQuote] = useState<ChatReplyQuote | null>(null);
@@ -178,8 +183,7 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: COLORS.background }}
-      behavior="padding"
-      keyboardVerticalOffset={0}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ImageBackground source={PATTERN} className="flex-1" imageStyle={{ opacity: 0.03 }}>
         <SafeAreaView className="flex-1 bg-transparent" edges={['top']}>
@@ -382,8 +386,8 @@ export default function ChatScreen() {
 
           {/* ── Chat Input ────────────────────────────────────────────── */}
           <ChatInput
-            onSend={(text) => {
-              send(text, replyQuote);
+            onSend={(payload: ChatSendPayload) => {
+              send(payload.text, replyQuote, payload.attachmentIds.length ? payload.attachmentIds : undefined);
               setReplyQuote(null);
             }}
             onStop={stop}

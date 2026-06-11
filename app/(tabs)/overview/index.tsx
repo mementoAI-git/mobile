@@ -1,6 +1,7 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import {
   View,
+  Text,
   ScrollView,
   RefreshControl,
   StyleSheet,
@@ -8,11 +9,12 @@ import {
   TouchableOpacity,
   ImageBackground,
   Image,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
-import { Pressable, Text } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Plus, Zap, MessageCircle, Trophy, ChevronRight, Folder, UserCheck, Hourglass, Activity, HelpCircle } from 'lucide-react-native';
+import { Plus, Zap, MessageCircle, Trophy, ChevronRight, Folder, UserCheck, Hourglass, Activity, HelpCircle, Check, X, BarChart2 } from 'lucide-react-native';
 import { useUiStore } from '@/store';
 import { useUserStats, useMemoriesStats, useCapsuleStats } from '@/hooks/queries/use-overview';
 import { useUserStore } from '@/store';
@@ -26,7 +28,17 @@ import { DailyPromptSection } from '@/components/overview/DailyPromptSection';
 import { RecentActivitiesSection } from '@/components/overview/RecentActivitiesSection';
 import { BrowseTopicsSection } from '@/components/overview/BrowseTopicsSection';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown, FadeInUp, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown, FadeInUp,
+  useSharedValue, useAnimatedStyle, withSpring,
+  useAnimatedScrollHandler, interpolate, Extrapolation,
+  runOnJS,
+} from 'react-native-reanimated';
+
+// Enable LayoutAnimation on Android
+if (UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const WELCOME_BG = require('../../../assets/images/backgrounds/welcome_bg.png');
 const ENRICHMENT_BG = require('../../../assets/images/backgrounds/enrichment_bg.png');
@@ -114,7 +126,7 @@ function OverviewJourneyCard({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={0.9}
-        className={`w-full rounded-[24px] border ${borderColor} ${bgColor} flex-row items-center justify-between shadow-sm overflow-hidden`}
+        className={`w-full rounded-2xl border ${borderColor} ${bgColor} flex-row items-center justify-between overflow-hidden`}
       >
         {bgImage ? (
           <ImageBackground
@@ -132,6 +144,8 @@ function OverviewJourneyCard({
     </Animated.View>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -153,6 +167,45 @@ export default function OverviewScreen() {
     const h = new Date().getHours();
     return h >= 6 && h < 17;
   }, []);
+
+  const openStreakSheet = useCallback(() => {
+    Haptics.selectionAsync();
+    openSheet('streak');
+  }, [openSheet]);
+
+  // ── "Add story" collapse ──────────────────────────────────────────────────
+  // heroGone drives the flex collapse via LayoutAnimation (native, bidirectional).
+  // opacity fade is handled separately by Reanimated (UI-thread only — no layout).
+  const [heroGone, setHeroGone] = useState(false);
+  const heroGoneRef = useRef(false); // prevents repeated LayoutAnimation calls
+
+  const updateHeroGone = useCallback((gone: boolean) => {
+    if (heroGoneRef.current === gone) return;
+    heroGoneRef.current = gone;
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setHeroGone(gone);
+  }, []);
+
+  // ── Scroll tracking ───────────────────────────────────────────────────────
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+      // Cross the threshold → trigger LayoutAnimation on JS thread
+      runOnJS(updateHeroGone)(event.contentOffset.y > 150);
+    },
+  });
+
+  // Opacity fade for "Add story" — pure UI-thread, no layout = no reverse issues
+  const addStoryPillStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [80, 180], [1, 0], Extrapolation.CLAMP),
+  }));
+
+  // Floating + FAB fades in once the hero has scrolled off
+  const fabStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [120, 220], [0, 1], Extrapolation.CLAMP),
+    transform: [{ scale: interpolate(scrollY.value, [120, 220], [0.7, 1], Extrapolation.CLAMP) }],
+  }));
 
   // Track manual pull-to-refresh separately from background refetches.
   // isRefetching from TanStack Query is true for ALL background refetches
@@ -215,14 +268,20 @@ export default function OverviewScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-      <DashboardHeader title="Overview" />
+      <DashboardHeader
+        title="Overview"
+        onStreakPress={openStreakSheet}
+      />
 
       {isLoading && !manualRefreshing ? (
         <OverviewSkeleton />
       ) : (
-        <ScrollView
+        <>
+        <Animated.ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerClassName="px-6 pt-6 pb-32 gap-8"
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl refreshing={manualRefreshing} onRefresh={handleManualRefresh} tintColor={COLORS.brand} />
           }
@@ -260,18 +319,22 @@ export default function OverviewScreen() {
           {/* ── Two-Card Hero Section ─────────────────────────────── */}
           <View className="gap-6">
             {/* Card 1: Primary Action Hero */}
-            <Animated.View entering={FadeInDown.delay(100)} style={styles.cardShadow}>
+            <Animated.View entering={FadeInDown.delay(100)}>
               <ImageBackground
                 source={WELCOME_BG}
-                className="rounded-[32px] overflow-hidden border border-stroke-weaker bg-white"
-                imageStyle={{ borderRadius: 32 }}
+                className="rounded-2xl overflow-hidden border border-stroke-weaker bg-white"
+                imageStyle={{ borderRadius: 16 }}
               >
                 <View className="p-7 gap-8">
                   <View className="flex-row items-start justify-between">
                     <Text className="text-[24px] text-text-strong flex-1 leading-snug" style={{ fontFamily: FONTS.serif }}>
                       What's on your{"\n"}mind today?
                     </Text>
-                    <View className="flex-row items-center gap-3 bg-white/90 px-3.5 py-2 rounded-full border border-white/30">
+                    <TouchableOpacity
+                      onPress={openStreakSheet}
+                      activeOpacity={0.8}
+                      className="flex-row items-center gap-3 bg-white/90 px-3.5 py-2 rounded-full border border-white/30"
+                    >
                       <View className="flex-row items-center gap-1.5">
                         <Zap size={14} color={COLORS.brand} fill={COLORS.brand} />
                         <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>{streakCount}</Text>
@@ -281,21 +344,26 @@ export default function OverviewScreen() {
                         <Trophy size={14} color={COLORS.warning} />
                         <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>{enrichmentScore}%</Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   </View>
 
-                  <View className="flex-row items-center justify-between gap-3">
-                    <TouchableOpacity
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        router.push({ pathname: '/editor', params: { mode: 'story' } });
-                      }}
-                      activeOpacity={0.8}
-                      className="flex-1 flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full"
-                    >
-                      <Plus size={20} color="white" strokeWidth={3} />
-                      <Animated.Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Add story</Animated.Text>
-                    </TouchableOpacity>
+                  <View className="flex-row items-center gap-3">
+                    {/* LayoutAnimation handles the transition between these two states.
+                        We never animate layout props — we just swap DOM structure. */}
+                    {!heroGone && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                          router.push({ pathname: '/editor', params: { mode: 'story' } });
+                        }}
+                        activeOpacity={0.8}
+                        style={{ flex: 1.5 }}
+                        className="flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full"
+                      >
+                        <Plus size={20} color="white" strokeWidth={3} />
+                        <Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Add story</Text>
+                      </TouchableOpacity>
+                    )}
 
                     <TouchableOpacity
                       onPress={() => {
@@ -303,25 +371,10 @@ export default function OverviewScreen() {
                         router.push({ pathname: '/editor', params: { mode: 'quick-capture' } });
                       }}
                       activeOpacity={0.7}
-                      className="size-14 bg-white border border-stroke-weaker rounded-full items-center justify-center shadow-sm"
+                      className="flex-1 flex-row items-center justify-center gap-2 h-14 bg-white border border-stroke-weaker rounded-full shadow-sm"
                     >
-                      <Zap size={22} color={COLORS.textBase} strokeWidth={2} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        handleStartConversation();
-                      }}
-                      disabled={startingConversation}
-                      activeOpacity={0.7}
-                      className="size-14 bg-white border border-stroke-weaker rounded-full items-center justify-center shadow-sm"
-                    >
-                      {startingConversation ? (
-                        <Spinner size="small" />
-                      ) : (
-                        <MessageCircle size={22} color={COLORS.textBase} strokeWidth={2} />
-                      )}
+                      <Zap size={16} color={COLORS.textBase} strokeWidth={2} />
+                      <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>Quick capture</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -329,11 +382,11 @@ export default function OverviewScreen() {
             </Animated.View>
 
             {/* Card 2: Enrichment Hero */}
-            <Animated.View entering={FadeInDown.delay(200)} style={styles.cardShadow}>
+            <Animated.View entering={FadeInDown.delay(200)}>
               <ImageBackground
                 source={ENRICHMENT_BG}
-                className="rounded-[32px] overflow-hidden border border-stroke-weaker bg-white"
-                imageStyle={{ borderRadius: 32 }}
+                className="rounded-2xl overflow-hidden border border-stroke-weaker bg-white"
+                imageStyle={{ borderRadius: 16 }}
               >
                 <View className="p-7 gap-5">
                   <View className="flex-row items-center gap-4">
@@ -352,16 +405,26 @@ export default function OverviewScreen() {
                   <Text className="text-[15px] text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
                     Share stories & files to build context. Link apps to enrich your Memento.
                   </Text>
-                  <Pressable
+                  <TouchableOpacity
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       openSheet('memory-insights');
                     }}
-                    className="h-11 border border-stroke-weaker rounded-full items-center justify-center px-6 self-start bg-white/50 shadow-sm"
-                    android_ripple={{ color: COLORS.brandSubtle }}
+                    activeOpacity={0.7}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      height: 40,
+                      borderRadius: 999,
+                      backgroundColor: COLORS.fillWeaker,
+                      paddingHorizontal: 16,
+                      alignSelf: 'flex-start',
+                    }}
                   >
-                    <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>View insights</Text>
-                  </Pressable>
+                    <BarChart2 size={15} color={COLORS.textWeak} strokeWidth={1.5} />
+                    <Text style={{ fontFamily: FONTS.sansBold, fontSize: 12, color: COLORS.textStrong }}>View insights</Text>
+                  </TouchableOpacity>
                 </View>
               </ImageBackground>
             </Animated.View>
@@ -447,24 +510,45 @@ export default function OverviewScreen() {
           {/* ── Browse Topics (Horizontal Scroll) ─────────────────── */}
           <BrowseTopicsSection prompts={topics} isLoading={topicsLoading} />
 
-        </ScrollView>
+        </Animated.ScrollView>
+
+        {/* Floating + FAB — appears when "Add story" scrolls off screen */}
+        <Animated.View
+          style={[fabStyle, {
+            position: 'absolute',
+            bottom: 96,
+            right: 24,
+            zIndex: 50,
+          }]}
+        >
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push({ pathname: '/editor', params: { mode: 'story' } });
+            }}
+            activeOpacity={0.85}
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: COLORS.brand,
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#170B00',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 12,
+              elevation: 6,
+            }}
+          >
+            <Plus size={26} color="white" strokeWidth={2.5} />
+          </TouchableOpacity>
+        </Animated.View>
+        </>
       )}
+
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  cardShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.shadow,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.1,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
-  },
-});
+const styles = StyleSheet.create({});

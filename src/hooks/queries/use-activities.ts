@@ -1,13 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { get } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
-import { queryKeys } from '@/constants/query-keys';
 
-interface Activity {
+export interface Activity {
   _id: string;
+  title?: string;
   description: string;
-  created_at: string;
   type?: string;
+  action?: string;
+  reference?: string;
+  created_at: string;
+  updated_at?: string;
 }
 
 interface ActivitiesResponse {
