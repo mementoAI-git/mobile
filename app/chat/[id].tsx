@@ -183,8 +183,7 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: COLORS.background }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ImageBackground source={PATTERN} className="flex-1" imageStyle={{ opacity: 0.03 }}>
         <SafeAreaView className="flex-1 bg-transparent" edges={['top']}>
