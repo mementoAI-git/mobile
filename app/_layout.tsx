@@ -2,6 +2,12 @@ import '../global.css';
 import React, { useEffect } from 'react';
 import { StyleSheet, Platform, LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
+
+// Suppress Reanimated strict-mode "reading from value during render" warnings.
+// These come from useSharedValue + direct .value reads in card press handlers
+// and are harmless — they don't affect correctness or performance.
+configureReanimatedLogger({ level: ReanimatedLogLevel.warn, strict: false });
 
 LogBox.ignoreLogs([
   // Comes from moti's internal SafeAreaView usage — not our code, nothing to fix.
@@ -44,7 +50,6 @@ import {
 } from '@expo-google-fonts/averia-serif-libre';
 import { useAuthStore, useUserStore, useUiStore } from '@/store';
 import { authService } from '@/api/auth-service';
-import { SheetManager } from '@/components/sheets/SheetManager';
 import { ToastProvider } from '@/components/ui/Toast';
 import { OfflineNotice } from '@/components/ui/OfflineNotice';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -209,7 +214,8 @@ function RootLayout() {
                 <Stack.Screen name="accept-invite/[id]" />
                 <Stack.Screen name="+not-found" />
               </Stack>
-              <SheetManager />
+              {/* SheetManager has moved to app/(tabs)/_layout.tsx so it renders inside
+                  a fully-initialised navigation context (required for useRouter() in sheets) */}
             </ToastProvider>
           </BottomSheetModalProvider>
         </QueryClientProvider>

@@ -30,6 +30,7 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { useChatLogic } from '@/hooks/use-chat-logic';
+import { useBackHandler } from '@/hooks/use-back-handler';
 import * as Haptics from 'expo-haptics';
 import { VoiceModeOverlay } from '@/components/chat/VoiceModeOverlay';
 import type { ChatReplyQuote } from '@/lib/utils';
@@ -59,6 +60,9 @@ export default function ChatScreen() {
     handleExitDeepDive,
     enrichmentStats,
   } = useChatLogic();
+
+  // Intercept Android hardware back to prevent app exit when history is empty
+  useBackHandler(handleBack);
 
   const [voiceModeVisible, setVoiceModeVisible] = useState(false);
   const [replyQuote, setReplyQuote] = useState<ChatReplyQuote | null>(null);
