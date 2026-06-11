@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text } from 'react-native-gesture-handler';
+import { Text } from 'react-native';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Check } from 'lucide-react-native';
 import { useUiStore, useUserStore } from '@/store';

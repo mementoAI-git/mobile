@@ -4,6 +4,7 @@ import {
   Text,
   FlatList,
   KeyboardAvoidingView,
+  Platform,
   ImageBackground,
   TouchableOpacity,
   StyleSheet,
@@ -182,7 +183,7 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: COLORS.background }}
-      behavior="padding"
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
       <ImageBackground source={PATTERN} className="flex-1" imageStyle={{ opacity: 0.03 }}>

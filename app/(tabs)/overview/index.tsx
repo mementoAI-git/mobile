@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react';
 import {
   View,
+  Text,
   ScrollView,
   RefreshControl,
   StyleSheet,
@@ -11,7 +12,6 @@ import {
   LayoutAnimation,
   UIManager,
 } from 'react-native';
-import { Pressable, Text } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Plus, Zap, MessageCircle, Trophy, ChevronRight, Folder, UserCheck, Hourglass, Activity, HelpCircle, Check, X, BarChart2 } from 'lucide-react-native';

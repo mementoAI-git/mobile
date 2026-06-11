@@ -72,7 +72,7 @@ export default function LoginScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <ImageBackground source={PATTERN} className="absolute inset-0 opacity-40" />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
         className="flex-1"
       >
