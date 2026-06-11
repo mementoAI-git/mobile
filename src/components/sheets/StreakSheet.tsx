@@ -195,8 +195,8 @@ export function StreakSheet() {
           paddingHorizontal: 4,
         }}>
           <Text style={{
-            fontFamily: FONTS.sansBold,
-            fontSize: 12,
+            fontFamily: FONTS.sans,
+            fontSize: 14,
             color: COLORS.gray950,
             textAlign: 'center',
             marginBottom: 8,
@@ -228,7 +228,7 @@ export function StreakSheet() {
                 <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textWeak }}>
                   {item.label}
                 </Text>
-                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 22, color: COLORS.textStrong }}>
+                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>
                   {item.value}
                 </Text>
               </View>
