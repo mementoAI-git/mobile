@@ -71,9 +71,12 @@ export function SheetManager() {
 
   // Open/close the modal in response to activeSheet state changes
   useEffect(() => {
+    console.log('[SheetManager] activeSheet changed:', activeSheet, '| modalRef:', !!modalRef.current);
     if (activeSheet) {
-      // Small timeout ensures the config is applied before presenting
-      const t = setTimeout(() => modalRef.current?.present(), 0);
+      const t = setTimeout(() => {
+        console.log('[SheetManager] calling present() on:', activeSheet, '| ref available:', !!modalRef.current);
+        modalRef.current?.present();
+      }, 50);
       return () => clearTimeout(t);
     } else {
       modalRef.current?.dismiss();
