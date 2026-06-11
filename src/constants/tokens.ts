@@ -138,6 +138,7 @@ export const FONTS = {
   sansBold: 'Inter_700Bold',
   serif: 'EBGaramond_400Regular',
   serifMedium: 'EBGaramond_500Medium',
+  serifBold: 'EBGaramond_700Bold',
   mono: 'AzeretMono_400Regular',
   averia: 'AveriaSerifLibre_400Regular',
   averiaBold: 'AveriaSerifLibre_700Bold',

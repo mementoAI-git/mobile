@@ -1,13 +1,27 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Check } from 'lucide-react-native';
+import Svg, { Path } from 'react-native-svg';
+import Animated, {
+  useSharedValue,
+  useAnimatedProps,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { useUserStore } from '@/store';
 import { useUserStats } from '@/hooks/queries/use-overview';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { ZapIconWarm } from '@/components/ui';
 
 const STREAK_FLAME = require('../../../assets/images/illustrations/streak_flame.webp');
+
+// The open-arc SVG path (horseshoe open at bottom) from design assets.
+// Total dash ceiling = 350 (slightly above the ~310 real arc length).
+const ARC_PATH = 'M31.091 106.753C12.8665 97.4489 0.387861 78.497 0.387862 56.6305C0.387864 25.5686 25.5685 0.387936 56.6305 0.387937C87.6924 0.387938 112.873 25.5686 112.873 56.6305C112.873 78.497 100.394 97.4489 82.1699 106.753';
+const ARC_DASH = 350;
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 function getStreakSubtitle(days: number, nickname?: string): string {
   const name = nickname ? `, ${nickname}` : '';
@@ -28,6 +42,44 @@ function toMonFirstIndex(jsDow: number): number {
   return (jsDow + 6) % 7;
 }
 
+// ── Animated arc ring ───────────────────────────────────────────────────────
+// Draws the horseshoe ring that surrounds the flame on mount.
+// size: rendered pixel size of the SVG (should match the circle container size).
+function StreakArc({ size = 120 }: { size?: number }) {
+  const dashOffset = useSharedValue(ARC_DASH);
+
+  useEffect(() => {
+    dashOffset.value = withTiming(0, {
+      duration: 900,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, []);
+
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: dashOffset.value,
+  }));
+
+  return (
+    <Svg
+      width={size}
+      height={size}
+      viewBox="0 0 114 108"
+      fill="none"
+      style={{ position: 'absolute', top: 0, left: 0 }}
+    >
+      <AnimatedPath
+        d={ARC_PATH}
+        stroke="#78C6FC"
+        strokeWidth={0.77576}
+        strokeLinecap="round"
+        fill="none"
+        strokeDasharray={ARC_DASH}
+        animatedProps={animatedProps}
+      />
+    </Svg>
+  );
+}
+
 export function StreakSheet() {
   const user = useUserStore((s) => s.user);
   const { data: statsData } = useUserStats();
@@ -41,30 +93,27 @@ export function StreakSheet() {
   // Streak days go backwards from today in Mon-first space.
   const streakStart = Math.max(0, todayMonFirst - (streakCount - 1));
 
+  const CIRCLE_SIZE = 120;
+
   return (
     <BottomSheetView style={{ paddingTop: 20, paddingBottom: 40 }}>
-      {/* ── Flame circle with overlapping day count ───────────────── */}
+      {/* ── Animated arc + flame + overlapping day count ─────────── */}
       <View style={{ alignItems: 'center', marginBottom: 20 }}>
-        <View style={{ alignItems: 'center' }}>
-          <View style={{
-            width: 120,
-            height: 120,
-            borderRadius: 60,
-            borderWidth: 2,
-            borderColor: '#93C5FD',
-            backgroundColor: 'transparent',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
+        <View style={{ alignItems: 'center' }} className="relative">
+          {/* Outer container — arc SVG is absolutely positioned inside */}
+          <View style={{ width: CIRCLE_SIZE, height: CIRCLE_SIZE, alignItems: 'center', justifyContent: 'center' }}>
+            <StreakArc size={CIRCLE_SIZE} />
             <Image source={STREAK_FLAME} style={{ width: 72, height: 72 }} resizeMode="contain" />
           </View>
-          {/* Number overlaps the bottom of the circle */}
+          {/* Number overlaps the bottom of the arc ring */}
           <Text style={{
-            fontFamily: FONTS.serif,
+            fontFamily: FONTS.serifBold,
             fontSize: 52,
             color: COLORS.textStrong,
             lineHeight: 56,
-            marginTop: -18,
+            marginTop: -24,
+            position: 'absolute',
+            bottom: -24,
           }}>
             {streakCount}
           </Text>
@@ -74,7 +123,7 @@ export function StreakSheet() {
       {/* ── Title + subtitle ────────────────────────────────────── */}
       <View style={{ alignItems: 'center', gap: 6, marginBottom: 32, paddingHorizontal: 24 }}>
         <Text style={{ fontFamily: FONTS.serif, fontSize: 26, color: COLORS.textStrong, textAlign: 'center' }}>
-          Day streak
+          {streakCount === 1 ? 'Day' : 'Days'} streak
         </Text>
         <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, textAlign: 'center', lineHeight: 20 }}>
           {getStreakSubtitle(streakCount, nickname)}
@@ -117,7 +166,7 @@ export function StreakSheet() {
                 </View>
               ) : isToday ? (
                 // TODAY: ZapIconWarm on top, bold orange date below — no border ring
-                <View style={{ alignItems: 'center', height: 36, justifyContent: 'center' }}>
+                <View style={{ alignItems: 'center', height: 36, justifyContent: 'center', flexDirection: 'row', gap: 4  }}>
                   <ZapIconWarm size={16} />
                   <Text style={{ fontFamily: FONTS.sansBold, fontSize: 13, color: COLORS.brand, lineHeight: 16 }}>
                     {dateNum}

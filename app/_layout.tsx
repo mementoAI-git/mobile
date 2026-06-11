@@ -38,6 +38,7 @@ import {
 import {
   EBGaramond_400Regular,
   EBGaramond_500Medium,
+  EBGaramond_700Bold,
 } from '@expo-google-fonts/eb-garamond';
 import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono';
 import { Geist_400Regular, Geist_700Bold } from '@expo-google-fonts/geist';
@@ -95,6 +96,7 @@ function RootLayout() {
     Inter_700Bold,
     EBGaramond_400Regular,
     EBGaramond_500Medium,
+    EBGaramond_700Bold,
     AzeretMono_400Regular,
     PatrickHandSC_400Regular,
     Handlee_400Regular,
