@@ -12,7 +12,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { Controller } from 'react-hook-form';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { Button, TextInput, PasswordInput, Logo } from '@/components/ui';
 import { useLoginLogic } from '@/hooks/use-login-logic';
@@ -67,6 +67,7 @@ export default function LoginScreen() {
     router,
   } = useLoginLogic();
 
+  const insets = useSafeAreaInsets();
   const [rememberMe, setRememberMe] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
@@ -85,14 +86,17 @@ export default function LoginScreen() {
   }, []);
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <ImageBackground source={PATTERN} className="absolute inset-0 opacity-40" />
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View style={{ flex: 1, backgroundColor: '#fefbf8', paddingTop: insets.top }}>
+        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-40" />
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
-            contentContainerClassName="flex-grow px-6 pt-10 pb-16"
+            contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 40, paddingBottom: 80 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            automaticallyAdjustKeyboardInsets={true}
             keyboardDismissMode="on-drag"
           >
             {/* Logo — hidden when keyboard is up so "Welcome back" slides to the top */}
@@ -301,6 +305,7 @@ export default function LoginScreen() {
             </View>
           </ScrollView>
         </TouchableWithoutFeedback>
-    </SafeAreaView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }

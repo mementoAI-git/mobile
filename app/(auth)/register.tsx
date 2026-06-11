@@ -14,7 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { Controller } from 'react-hook-form';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { Button, TextInput, PasswordInput, Logo } from '@/components/ui';
 import { useRegisterLogic } from '@/hooks/use-register-logic';
@@ -55,6 +55,7 @@ export default function RegisterScreen() {
     router,
   } = useRegisterLogic();
 
+  const insets = useSafeAreaInsets();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
@@ -132,14 +133,17 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <ImageBackground source={PATTERN} className="absolute inset-0 opacity-40" />
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View style={{ flex: 1, backgroundColor: '#fefbf8', paddingTop: insets.top }}>
+        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-40" />
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
-            contentContainerClassName="flex-grow px-6 pt-10 pb-16"
+            contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 40, paddingBottom: 80 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            automaticallyAdjustKeyboardInsets={true}
             keyboardDismissMode="on-drag"
           >
             {/* Logo — hidden when keyboard is up so "Create account" slides to the top */}
@@ -332,6 +336,7 @@ export default function RegisterScreen() {
             </View>
           </ScrollView>
         </TouchableWithoutFeedback>
-    </SafeAreaView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
