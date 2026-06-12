@@ -12,7 +12,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { Controller } from 'react-hook-form';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { Button, TextInput, PasswordInput, Logo } from '@/components/ui';
 import { useLoginLogic } from '@/hooks/use-login-logic';
@@ -67,7 +67,6 @@ export default function LoginScreen() {
     router,
   } = useLoginLogic();
 
-  const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
   const [rememberMe, setRememberMe] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -89,20 +88,20 @@ export default function LoginScreen() {
   }, []);
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={{ flex: 1, backgroundColor: '#fefbf8', paddingTop: insets.top }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-40" />
-          <ScrollView
-            ref={scrollViewRef}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 40, paddingBottom: Math.max(32, insets.bottom + 16) }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            keyboardDismissMode="on-drag"
-          >
+        <ScrollView
+          ref={scrollViewRef}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 40, paddingBottom: 32 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
+        >
             {/* Logo — hidden when keyboard is up so "Welcome back" slides to the top */}
             {!isKeyboardVisible && <Logo size="md" className="mb-10" />}
 
@@ -307,8 +306,8 @@ export default function LoginScreen() {
                 </Animated.Text>
               </TouchableOpacity>
             </View>
-          </ScrollView>
-      </View>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

@@ -6,11 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { Button, TextInput, Logo } from '@/components/ui';
 import { useForgotPasswordLogic } from '@/hooks/use-forgot-password-logic';
-import { FONTS } from '@/constants/tokens';
+import { COLORS, FONTS } from '@/constants/tokens';
 
 export default function ForgotPasswordScreen() {
   const {
@@ -22,8 +22,6 @@ export default function ForgotPasswordScreen() {
     handleSubmit,
     router,
   } = useForgotPasswordLogic();
-
-  const insets = useSafeAreaInsets();
 
   if (sent) {
     return (
@@ -49,14 +47,14 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={{ flex: 1, backgroundColor: '#fefbf8', paddingTop: insets.top }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 48, paddingBottom: Math.max(48, insets.bottom + 16), justifyContent: 'center', flexGrow: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 48, paddingBottom: 48, justifyContent: 'center', flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="on-drag"
@@ -115,7 +113,7 @@ export default function ForgotPasswordScreen() {
             </Button>
           </View>
         </ScrollView>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
