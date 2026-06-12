@@ -37,6 +37,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/constants/query-keys';
 import { useToast } from '@/components/ui/Toast';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
+import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import type { IBeneficiary, IFile } from '@/types';
@@ -331,6 +332,8 @@ export default function EditorScreen() {
   // Shared
   const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>([]);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [previewVisible, setPreviewVisible] = useState(false);
 
   const { mutate: createMemory } = useCreateMemory();
   const { mutateAsync: quickCapture, isPending: qcPending } = useQuickCapture();
@@ -512,24 +515,39 @@ export default function EditorScreen() {
                   style={{ fontFamily: FONTS.sans, fontSize: 16, color: COLORS.textBase, padding: 0, margin: 0, lineHeight: 26, minHeight: 300, textAlignVertical: 'top' }}
                   multiline blurOnSubmit={false} scrollEnabled={false} textAlignVertical="top" />
                 {/* Attachment previews — story mode */}
-                {attachments.filter(a => a.mimeType.startsWith('image/')).length > 0 && (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 16 }}>
-                    {attachments.filter(a => a.mimeType.startsWith('image/')).slice(0, 6).map(a => (
-                      <View key={a.clientId} style={{ width: '31.5%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
-                        <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                        {a.isUploading && (
-                          <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
-                            <ActivityIndicator color={COLORS.textInverse} />
-                          </View>
-                        )}
-                        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }}
-                          style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
-                          <X size={10} color={COLORS.textInverse} strokeWidth={2.5} />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
+                {(() => {
+                  const imgAttachments = attachments.filter(a => a.mimeType.startsWith('image/'));
+                  if (!imgAttachments.length) return null;
+                  return (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 16 }}>
+                      {imgAttachments.slice(0, 6).map((a, idx) => {
+                        const isLast = idx === 5 && imgAttachments.length > 6;
+                        const globalIdx = attachments.findIndex(x => x.clientId === a.clientId);
+                        return (
+                          <TouchableOpacity key={a.clientId} activeOpacity={0.85}
+                            onPress={() => { setPreviewIndex(globalIdx >= 0 ? globalIdx : idx); setPreviewVisible(true); Haptics.selectionAsync(); }}
+                            style={{ width: '31.5%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
+                            <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                            {isLast && (
+                              <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
+                                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' }}>+{imgAttachments.length - 6}</Text>
+                              </View>
+                            )}
+                            {a.isUploading && (
+                              <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
+                                <ActivityIndicator color={COLORS.textInverse} />
+                              </View>
+                            )}
+                            <TouchableOpacity onPress={(e) => { e.stopPropagation(); Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }}
+                              style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+                              <X size={10} color={COLORS.textInverse} strokeWidth={2.5} />
+                            </TouchableOpacity>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  );
+                })()}
                 {attachments.filter(a => a.isVoice).map(a => {
                   const dur = a.duration ?? 0;
                   return (
@@ -574,24 +592,39 @@ export default function EditorScreen() {
                   </View>
                 )}
                 {/* Attachment previews */}
-                {attachments.filter(a => a.mimeType.startsWith('image/')).length > 0 && (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
-                    {attachments.filter(a => a.mimeType.startsWith('image/')).slice(0, 6).map((a, idx) => (
-                      <View key={a.clientId} style={{ width: '31.5%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
-                        <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                        {a.isUploading && (
-                          <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', borderRadius: 12 }}>
-                            <ActivityIndicator color={COLORS.textInverse} />
-                          </View>
-                        )}
-                        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }}
-                          style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
-                          <X size={10} color={COLORS.textInverse} strokeWidth={2.5} />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
+                {(() => {
+                  const imgAttachments = attachments.filter(a => a.mimeType.startsWith('image/'));
+                  if (!imgAttachments.length) return null;
+                  return (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+                      {imgAttachments.slice(0, 6).map((a, idx) => {
+                        const isLast = idx === 5 && imgAttachments.length > 6;
+                        const globalIdx = attachments.findIndex(x => x.clientId === a.clientId);
+                        return (
+                          <TouchableOpacity key={a.clientId} activeOpacity={0.85}
+                            onPress={() => { setPreviewIndex(globalIdx >= 0 ? globalIdx : idx); setPreviewVisible(true); Haptics.selectionAsync(); }}
+                            style={{ width: '31.5%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
+                            <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                            {isLast && (
+                              <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
+                                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' }}>+{imgAttachments.length - 6}</Text>
+                              </View>
+                            )}
+                            {a.isUploading && (
+                              <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', borderRadius: 12 }}>
+                                <ActivityIndicator color={COLORS.textInverse} />
+                              </View>
+                            )}
+                            <TouchableOpacity onPress={(e) => { e.stopPropagation(); Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }}
+                              style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+                              <X size={10} color={COLORS.textInverse} strokeWidth={2.5} />
+                            </TouchableOpacity>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  );
+                })()}
                 {attachments.filter(a => a.isVoice).map(a => {
                   const dur = a.duration ?? 0;
                   return (
@@ -674,6 +707,19 @@ export default function EditorScreen() {
       {isStory && (
         <PublishModal visible={showPublish} title={title} body={storyBody} attachmentIds={uploadedIds} onClose={() => setShowPublish(false)} />
       )}
+
+      {/* Media previewer */}
+      <MediaPreviewModal
+        visible={previewVisible}
+        attachments={attachments}
+        initialIndex={previewIndex}
+        onClose={() => setPreviewVisible(false)}
+        onRemove={(clientId) => {
+          Haptics.selectionAsync();
+          setAttachments(prev => prev.filter(a => a.clientId !== clientId));
+          if (attachments.length <= 1) setPreviewVisible(false);
+        }}
+      />
     </SafeAreaProvider>
   );
 }
