@@ -474,7 +474,35 @@ export default function EditorScreen() {
                     <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: savedDotColor }} />
                     <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted }}>{savedLabel}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => Haptics.selectionAsync()} activeOpacity={0.7}
+                  <TouchableOpacity onPress={() => {
+                    Haptics.selectionAsync();
+                    Alert.alert('Story options', undefined, [
+                      {
+                        text: 'Load saved draft',
+                        onPress: () => {
+                          AsyncStorage.getItem(STORY_DRAFT_KEY(user?.email)).then(raw => {
+                            if (!raw) { Alert.alert('No draft', 'No saved draft found.'); return; }
+                            try {
+                              const d = JSON.parse(raw);
+                              if (d.title) setTitle(d.title);
+                              if (d.body) setStoryBody(d.body);
+                            } catch {}
+                          });
+                        },
+                      },
+                      {
+                        text: 'Delete draft',
+                        style: 'destructive',
+                        onPress: () => {
+                          AsyncStorage.removeItem(STORY_DRAFT_KEY(user?.email)).catch(() => {});
+                          setTitle('');
+                          setStoryBody('');
+                          setSavedStatus('saved');
+                        },
+                      },
+                      { text: 'Cancel', style: 'cancel' },
+                    ]);
+                  }} activeOpacity={0.7}
                     style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
                     <MoreHorizontal size={16} color={COLORS.textBase} strokeWidth={2} />
                   </TouchableOpacity>
@@ -499,17 +527,10 @@ export default function EditorScreen() {
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {isStory ? (
               <>
-                <Animated.View entering={FadeInDown.duration(300)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 24 }}>
-                  {(user?.picture_url || user?.picture)
-                    ? <Image source={{ uri: user.picture_url || user.picture }} style={{ width: 24, height: 24, borderRadius: 12 }} />
-                    : <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.textInverse }}>{(user?.nickname || user?.first_name || 'Y').charAt(0).toUpperCase()}</Text></View>
-                  }
-                  <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textMuted }}>{user?.nickname || user?.first_name || 'You'}'s Memo.</Text>
-                </Animated.View>
                 <TextInput ref={titleRef} value={title} onChangeText={v => { setTitle(v); scheduleSave(v, storyBody); }}
                   placeholder="Title" placeholderTextColor={COLORS.textDisabled}
-                  style={{ fontFamily: FONTS.serif, fontSize: 34, fontWeight: '700', color: COLORS.textStrong, padding: 0, margin: 0, marginBottom: 8, lineHeight: 42, textAlignVertical: 'top' }}
-                  returnKeyType="next" onSubmitEditing={() => bodyRef.current?.focus()} blurOnSubmit={false} scrollEnabled={false} multiline />
+                  style={{ fontFamily: FONTS.serif, fontSize: 34, fontWeight: '700', color: COLORS.textStrong, padding: 0, margin: 0, marginBottom: 8, lineHeight: 42 }}
+                  returnKeyType="next" onSubmitEditing={() => bodyRef.current?.focus()} blurOnSubmit={false} />
                 <TextInput ref={bodyRef} value={storyBody} onChangeText={v => { setStoryBody(v); scheduleSave(title, v); }}
                   placeholder="Start writing your article…" placeholderTextColor={COLORS.textDisabled}
                   style={{ fontFamily: FONTS.sans, fontSize: 16, color: COLORS.textBase, padding: 0, margin: 0, lineHeight: 26, minHeight: 300, textAlignVertical: 'top' }}
@@ -574,13 +595,6 @@ export default function EditorScreen() {
               </>
             ) : (
               <>
-                <Animated.View entering={FadeInDown.duration(300)} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 24, marginBottom: 16, gap: 12 }}>
-                  {(user?.picture_url || user?.picture)
-                    ? <Image source={{ uri: user.picture_url || user.picture }} style={{ width: 44, height: 44, borderRadius: 22 }} />
-                    : <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontFamily: FONTS.sansBold, fontSize: 18, color: COLORS.textInverse }}>{(user?.nickname || user?.first_name || 'Y').charAt(0).toUpperCase()}</Text></View>
-                  }
-                  <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 16, color: COLORS.textStrong }}>{user?.nickname || user?.first_name || 'You'}</Text>
-                </Animated.View>
                 <TextInput ref={bodyRef} value={qcBody} onChangeText={v => setQcBody(v.slice(0, NOTE_CHAR_MAX))}
                   placeholder="What's on your mind?" placeholderTextColor={isRecording ? COLORS.error : COLORS.textMuted}
                   style={{ fontFamily: FONTS.sans, fontSize: 16, lineHeight: 24, color: COLORS.textStrong, padding: 0, margin: 0, minHeight: 80, textAlignVertical: 'top' }}
