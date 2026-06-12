@@ -53,6 +53,7 @@ import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useToast } from '@/components/ui/Toast';
+import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
 import type { IBeneficiary, IFile } from '@/types';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -160,7 +161,7 @@ function UserAvatar({ user }: { user: { first_name?: string; picture_url?: strin
 
 // ─── Attachment cards ─────────────────────────────────────────────────────────
 
-function ImageGrid({ items, onRemove }: { items: AttachmentItem[]; onRemove: (id: string) => void }) {
+function ImageGrid({ items, onRemove, onPreview }: { items: AttachmentItem[]; onRemove: (id: string) => void; onPreview: (idx: number) => void }) {
   if (!items.length) return null;
   const single = items.length === 1;
   return (
@@ -169,7 +170,7 @@ function ImageGrid({ items, onRemove }: { items: AttachmentItem[]; onRemove: (id
         const isLast = idx === 3 && items.length > 4;
         const flex = single ? 1 : items.length === 3 && idx === 2 ? 1 : 0.48;
         return (
-          <View key={item.clientId} style={{ flex, aspectRatio: single ? undefined : 1, maxHeight: single ? 200 : undefined, position: 'relative' }}>
+          <TouchableOpacity key={item.clientId} activeOpacity={0.85} onPress={() => onPreview(idx)} style={{ flex, aspectRatio: single ? undefined : 1, maxHeight: single ? 200 : undefined, position: 'relative' }}>
             <Image source={{ uri: item.uri }} style={{ width: '100%', height: single ? 200 : '100%', borderRadius: 12 }} resizeMode="cover" />
             {isLast && (
               <View style={styles.imgOverlay}>
@@ -179,10 +180,10 @@ function ImageGrid({ items, onRemove }: { items: AttachmentItem[]; onRemove: (id
             {item.isUploading && (
               <View style={styles.imgOverlay}><ActivityIndicator color={COLORS.textInverse} /></View>
             )}
-            <TouchableOpacity onPress={() => onRemove(item.clientId)} style={styles.removeBtn} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+            <TouchableOpacity onPress={(e) => { e.stopPropagation(); onRemove(item.clientId); }} style={styles.removeBtn} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
               <X size={8} color={COLORS.textStrong} strokeWidth={2.5} />
             </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
         );
       })}
     </View>
@@ -306,6 +307,8 @@ export default function CreateScreen() {
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [previewVisible, setPreviewVisible] = useState(false);
 
   const { mutateAsync: quickCapture, isPending } = useQuickCapture();
   const { mutateAsync: uploadFileMutation } = useFileUpload();
@@ -548,7 +551,20 @@ export default function CreateScreen() {
           )}
 
           {/* Attachments */}
-          {imageAttachments.length > 0 && <ImageGrid items={imageAttachments} onRemove={handleRemove} />}
+          {imageAttachments.length > 0 && (
+            <ImageGrid
+              items={imageAttachments}
+              onRemove={handleRemove}
+              onPreview={(imgIdx) => {
+                // Find the index of this image in the full attachments array
+                const item = imageAttachments[imgIdx];
+                const globalIdx = attachments.findIndex((a) => a.clientId === item?.clientId);
+                setPreviewIndex(globalIdx >= 0 ? globalIdx : imgIdx);
+                setPreviewVisible(true);
+                Haptics.selectionAsync();
+              }}
+            />
+          )}
           {videoAttachments.map((a) => <VideoCard key={a.clientId} item={a} onRemove={handleRemove} />)}
           {voiceAttachments.map((a) => <VoiceCard key={a.clientId} item={a} onRemove={handleRemove} />)}
           {audioAttachments.map((a) => <AudioFileCard key={a.clientId} item={a} onRemove={handleRemove} />)}
@@ -598,6 +614,18 @@ export default function CreateScreen() {
       </KeyboardAvoidingView>
       </Animated.View>
       </SafeAreaView>
+
+      {/* Media previewer — spans full screen over the compose modal */}
+      <MediaPreviewModal
+        visible={previewVisible}
+        attachments={attachments}
+        initialIndex={previewIndex}
+        onClose={() => setPreviewVisible(false)}
+        onRemove={(clientId) => {
+          handleRemove(clientId);
+          if (attachments.length <= 1) setPreviewVisible(false);
+        }}
+      />
     </SafeAreaProvider>
   );
 }

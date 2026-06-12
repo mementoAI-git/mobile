@@ -34,14 +34,7 @@ export function useAudioRecorder() {
       const { granted } = await AudioModule.requestRecordingPermissionsAsync();
       if (!granted) throw new Error('Microphone permission denied');
       if (!isMountedRef.current) return;
-
-      await AudioModule.setAudioModeAsync({
-        // expo-audio uses allowsRecording (not the expo-av allowsRecordingIOS)
-        allowsRecording: true,
-        playsInSilentMode: true,
-      });
-      if (!isMountedRef.current) return;
-
+      // expo-audio manages audio mode internally — no setAudioModeAsync needed
       await recorder.record();
     } catch (err) {
       console.error('Failed to start recording', err);

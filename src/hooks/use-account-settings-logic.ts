@@ -59,7 +59,7 @@ export function useAccountSettingsLogic() {
           style: 'destructive',
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            deleteAccount(undefined, { onSuccess: () => router.replace('/(auth)/login') });
+            deleteAccount();
           },
         },
       ],

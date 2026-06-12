@@ -22,7 +22,7 @@ import {
   Platform,
 } from 'react-native';
 import { type BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Timer, Search } from 'lucide-react-native';
+import { Timer, Search, Home, MessageCircle, BookOpen, Compass } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname } from 'expo-router';

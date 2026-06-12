@@ -55,6 +55,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { OfflineNotice } from '@/components/ui/OfflineNotice';
 import { useNotifications } from '@/hooks/use-notifications';
 import { COLORS } from '@/constants/tokens';
+import { StatusBar } from 'expo-status-bar';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -199,6 +200,7 @@ function RootLayout() {
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <StatusBar style="dark" />
       <GestureHandlerRootView className="flex-1">
         <QueryClientProvider client={queryClient}>
           <BottomSheetModalProvider>
