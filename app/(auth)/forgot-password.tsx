@@ -1,16 +1,29 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
+  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   TouchableOpacity,
+  Keyboard,
+  LayoutAnimation,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  Easing,
+} from 'react-native-reanimated';
 import { Button, TextInput, Logo } from '@/components/ui';
 import { useForgotPasswordLogic } from '@/hooks/use-forgot-password-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
+
+// ─── Easing presets ───────────────────────────────────────────────────────────
+const EASE_OUT = Easing.out(Easing.cubic);
+const EASE_IN  = Easing.in(Easing.cubic);
 
 export default function ForgotPasswordScreen() {
   const {
@@ -22,6 +35,53 @@ export default function ForgotPasswordScreen() {
     handleSubmit,
     router,
   } = useForgotPasswordLogic();
+
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // ─── Cascade animation values ────────────────────────────────────────────
+  const logoOpacity    = useSharedValue(1);
+  const logoY          = useSharedValue(0);
+  const backOpacity    = useSharedValue(1);
+  const backY          = useSharedValue(0);
+  const headingOpacity = useSharedValue(1);
+  const headingY       = useSharedValue(0);
+
+  const logoStyle    = useAnimatedStyle(() => ({ opacity: logoOpacity.value,    transform: [{ translateY: logoY.value }] }));
+  const backStyle    = useAnimatedStyle(() => ({ opacity: backOpacity.value,    transform: [{ translateY: backY.value }] }));
+  const headingStyle = useAnimatedStyle(() => ({ opacity: headingOpacity.value, transform: [{ translateY: headingY.value }] }));
+
+  const animateIn = () => {
+    logoOpacity.value    = withDelay(0,  withTiming(0, { duration: 140, easing: EASE_IN }));
+    logoY.value          = withDelay(0,  withTiming(-6, { duration: 140, easing: EASE_IN }));
+    backOpacity.value    = withDelay(50, withTiming(0, { duration: 150, easing: EASE_IN }));
+    backY.value          = withDelay(50, withTiming(-4, { duration: 150, easing: EASE_IN }));
+    headingOpacity.value = withDelay(110, withTiming(0, { duration: 170, easing: EASE_IN }));
+    headingY.value       = withDelay(110, withTiming(-4, { duration: 170, easing: EASE_IN }));
+  };
+
+  const animateOut = () => {
+    headingOpacity.value = withDelay(0,   withTiming(1, { duration: 200, easing: EASE_OUT }));
+    headingY.value       = withDelay(0,   withTiming(0, { duration: 200, easing: EASE_OUT }));
+    backOpacity.value    = withDelay(70,  withTiming(1, { duration: 220, easing: EASE_OUT }));
+    backY.value          = withDelay(70,  withTiming(0, { duration: 220, easing: EASE_OUT }));
+    logoOpacity.value    = withDelay(140, withTiming(1, { duration: 260, easing: EASE_OUT }));
+    logoY.value          = withDelay(140, withTiming(0, { duration: 260, easing: EASE_OUT }));
+  };
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, () => {
+      animateIn();
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: false }), 150);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      animateOut();
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    });
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
 
   if (sent) {
     return (
@@ -47,32 +107,39 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top', 'bottom']}>
+    <ImageBackground source={require('../../assets/images/backgrounds/welcome_bg.png')} style={{ flex: 1, backgroundColor: COLORS.background }} imageStyle={{ opacity: 0.4 }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
+          ref={scrollViewRef}
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 48, paddingBottom: 48, justifyContent: 'center', flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="on-drag"
         >
-          <View className="items-center mb-10">
+          {/* Logo — collapses first */}
+          <Animated.View style={[logoStyle, { alignItems: 'center', marginBottom: 40 }]}>
             <Logo size="lg" />
-          </View>
+          </Animated.View>
 
-          <TouchableOpacity onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/(auth)/login'); } }} className="mb-6">
-            <Animated.Text
-              className="text-sm text-brand"
-              style={{ fontFamily: FONTS.sansMedium }}
-            >
-              ← Back to Sign In
-            </Animated.Text>
-          </TouchableOpacity>
+          {/* Back link — collapses second */}
+          <Animated.View style={[backStyle, { marginBottom: 24 }]}>
+            <TouchableOpacity onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/(auth)/login'); } }}>
+              <Animated.Text
+                className="text-sm text-brand"
+                style={{ fontFamily: FONTS.sansMedium }}
+              >
+                ← Back to Sign In
+              </Animated.Text>
+            </TouchableOpacity>
+          </Animated.View>
 
-          <View className="mb-10">
+          {/* Heading — collapses third */}
+          <Animated.View style={[headingStyle, { marginBottom: 32 }]}>
             <Animated.Text
               className="text-3xl text-text-strong mb-2"
               style={{ fontFamily: FONTS.serif }}
@@ -85,8 +152,9 @@ export default function ForgotPasswordScreen() {
             >
               Enter your email and we'll send you a reset link.
             </Animated.Text>
-          </View>
+          </Animated.View>
 
+          {/* Fields — always visible */}
           <View className="gap-4">
             <TextInput
               label="Email"
@@ -114,6 +182,7 @@ export default function ForgotPasswordScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }

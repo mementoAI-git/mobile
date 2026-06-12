@@ -9,11 +9,16 @@ import {
   TouchableOpacity,
   Keyboard,
   LayoutAnimation,
-  TouchableWithoutFeedback,
 } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  Easing,
+} from 'react-native-reanimated';
 import { Button, TextInput, PasswordInput, Logo } from '@/components/ui';
 import { useLoginLogic } from '@/hooks/use-login-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -21,6 +26,10 @@ import { Fingerprint } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
+
+// ─── Easing presets ───────────────────────────────────────────────────────────
+const EASE_OUT = Easing.out(Easing.cubic);
+const EASE_IN  = Easing.in(Easing.cubic);
 
 export function GoogleSvgIcon({ size = 18 }: { size?: number }) {
   return (
@@ -71,16 +80,48 @@ export default function LoginScreen() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
+  // ─── Cascade animation values ────────────────────────────────────────────
+  const logoOpacity    = useSharedValue(1);
+  const logoY          = useSharedValue(0);
+  const headingOpacity = useSharedValue(1);
+  const headingY       = useSharedValue(0);
+  const oauthOpacity   = useSharedValue(1);
+  const dividerOpacity = useSharedValue(1);
+
+  const logoStyle    = useAnimatedStyle(() => ({ opacity: logoOpacity.value,    transform: [{ translateY: logoY.value }] }));
+  const headingStyle = useAnimatedStyle(() => ({ opacity: headingOpacity.value, transform: [{ translateY: headingY.value }] }));
+  const oauthStyle   = useAnimatedStyle(() => ({ opacity: oauthOpacity.value }));
+  const dividerStyle = useAnimatedStyle(() => ({ opacity: dividerOpacity.value }));
+
+  const animateIn = () => {
+    logoOpacity.value    = withDelay(0,   withTiming(0, { duration: 140, easing: EASE_IN }));
+    logoY.value          = withDelay(0,   withTiming(-6, { duration: 140, easing: EASE_IN }));
+    headingOpacity.value = withDelay(40,  withTiming(0, { duration: 170, easing: EASE_IN }));
+    headingY.value       = withDelay(40,  withTiming(-4, { duration: 170, easing: EASE_IN }));
+    oauthOpacity.value   = withDelay(90,  withTiming(0, { duration: 150, easing: EASE_IN }));
+    dividerOpacity.value = withDelay(130, withTiming(0, { duration: 110, easing: EASE_IN }));
+  };
+
+  const animateOut = () => {
+    dividerOpacity.value = withDelay(0,   withTiming(1, { duration: 180, easing: EASE_OUT }));
+    oauthOpacity.value   = withDelay(30,  withTiming(1, { duration: 200, easing: EASE_OUT }));
+    headingOpacity.value = withDelay(80,  withTiming(1, { duration: 230, easing: EASE_OUT }));
+    headingY.value       = withDelay(80,  withTiming(0, { duration: 230, easing: EASE_OUT }));
+    logoOpacity.value    = withDelay(140, withTiming(1, { duration: 260, easing: EASE_OUT }));
+    logoY.value          = withDelay(140, withTiming(0, { duration: 260, easing: EASE_OUT }));
+  };
+
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const showSub = Keyboard.addListener(showEvent, () => {
+      animateIn();
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setIsKeyboardVisible(true);
-      // Scroll to bottom so all fields + button are visible regardless of which field was tapped
       setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: false }), 150);
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
+      animateOut();
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setIsKeyboardVisible(false);
     });
@@ -88,12 +129,12 @@ export default function LoginScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top', 'bottom']}>
+    <ImageBackground source={PATTERN} style={{ flex: 1, backgroundColor: COLORS.background }} imageStyle={{ opacity: 0.4 }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-40" />
         <ScrollView
           ref={scrollViewRef}
           style={{ flex: 1 }}
@@ -102,212 +143,178 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="on-drag"
         >
-            {/* Logo — hidden when keyboard is up so "Welcome back" slides to the top */}
-            {!isKeyboardVisible && <Logo size="md" className="mb-10" />}
+          {/* Logo — collapses away first */}
+          {!isKeyboardVisible && (
+            <Animated.View style={logoStyle} className="mb-10">
+              <Logo size="md" />
+            </Animated.View>
+          )}
 
-            {/* Header */}
-            <View className={isKeyboardVisible ? 'mb-4' : 'mb-10'}>
+          {/* Heading — collapses second */}
+          <Animated.View style={[headingStyle, { marginBottom: isKeyboardVisible ? 16 : 40 }]}>
+            <Animated.Text
+              className="text-[40px] text-text-strong mb-2"
+              style={{ fontFamily: FONTS.serif }}
+            >
+              Welcome back
+            </Animated.Text>
+            <Animated.Text
+              className="text-lg text-text-base leading-relaxed"
+              style={{ fontFamily: FONTS.sans }}
+            >
+              Please login to continue
+            </Animated.Text>
+          </Animated.View>
+
+          <View className="gap-4">
+            {/* Full OAuth pills — only shown when keyboard is hidden */}
+            {!isKeyboardVisible && (
+              <Animated.View style={oauthStyle} className="gap-4">
+                <TouchableOpacity
+                  onPress={handlePasskeyLogin}
+                  disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                  activeOpacity={0.8}
+                  className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
+                >
+                  {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />}
+                  <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Sign in with a passkey</Animated.Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleGoogleLogin}
+                  disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                  activeOpacity={0.8}
+                  className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
+                >
+                  {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={18} />}
+                  <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Continue with Google</Animated.Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleAppleLogin}
+                  disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                  activeOpacity={0.8}
+                  className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
+                >
+                  {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={18} />}
+                  <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Continue with Apple</Animated.Text>
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+
+            {/* Divider */}
+            <Animated.View style={dividerStyle} className="flex-row items-center gap-4 my-3">
+              <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
               <Animated.Text
-                className="text-[40px] text-text-strong mb-2"
-                style={{ fontFamily: FONTS.serif }}
-              >
-                Welcome back
-              </Animated.Text>
-              <Animated.Text
-                className="text-lg text-text-base leading-relaxed"
+                className="text-xs text-text-disabled lowercase"
                 style={{ fontFamily: FONTS.sans }}
               >
-                Please login to continue
+                or
               </Animated.Text>
-            </View>
+              <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
+            </Animated.View>
 
-            {/* Form */}
-            <View className="gap-4">
-              {/* OAuth buttons — full pills when keyboard hidden, compact icon row when visible */}
-              {isKeyboardVisible ? (
-                /* Compact icon row */
-                <View className="flex-row items-center justify-center gap-4 py-1">
-                  <TouchableOpacity
-                    onPress={handlePasskeyLogin}
-                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                    activeOpacity={0.8}
-                    className="items-center gap-1"
-                  >
-                    <View className="size-11 rounded-full border border-stroke-weak bg-white items-center justify-center">
-                      {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={20} color={COLORS.textStrong} strokeWidth={2} />}
-                    </View>
-                    <Animated.Text className="text-[10px] text-text-weak" style={{ fontFamily: FONTS.sans }}>Passkey</Animated.Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleGoogleLogin}
-                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                    activeOpacity={0.8}
-                    className="items-center gap-1"
-                  >
-                    <View className="size-11 rounded-full border border-stroke-weak bg-white items-center justify-center">
-                      {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={20} />}
-                    </View>
-                    <Animated.Text className="text-[10px] text-text-weak" style={{ fontFamily: FONTS.sans }}>Google</Animated.Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleAppleLogin}
-                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                    activeOpacity={0.8}
-                    className="items-center gap-1"
-                  >
-                    <View className="size-11 rounded-full border border-stroke-weak bg-white items-center justify-center">
-                      {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={20} />}
-                    </View>
-                    <Animated.Text className="text-[10px] text-text-weak" style={{ fontFamily: FONTS.sans }}>Apple</Animated.Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                /* Full-width pills */
-                <>
-                  <TouchableOpacity
-                    onPress={handlePasskeyLogin}
-                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                    activeOpacity={0.8}
-                    className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
-                  >
-                    {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />}
-                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Sign in with a passkey</Animated.Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleGoogleLogin}
-                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                    activeOpacity={0.8}
-                    className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
-                  >
-                    {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={18} />}
-                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Continue with Google</Animated.Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleAppleLogin}
-                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                    activeOpacity={0.8}
-                    className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
-                  >
-                    {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={18} />}
-                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Continue with Apple</Animated.Text>
-                  </TouchableOpacity>
-                </>
+            {/* Email Field */}
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  label="Email"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  error={errors.email?.message}
+                  placeholder="you@example.com"
+                />
               )}
+            />
 
-              {/* Divider */}
-              <View className="flex-row items-center gap-4 my-3">
-                <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
+            {/* Password Field */}
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <PasswordInput
+                  label="Password"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  autoComplete="current-password"
+                  error={errors.password?.message}
+                  placeholder="••••••••"
+                />
+              )}
+            />
+
+            {/* Remember for 30 days & Forgot Password Row */}
+            <View className="flex-row items-center justify-between mt-1 mb-2">
+              <TouchableOpacity
+                onPress={() => setRememberMe(!rememberMe)}
+                activeOpacity={0.8}
+                className="flex-row items-center gap-2"
+              >
+                <View
+                  className={`size-4 rounded-full border items-center justify-center ${
+                    rememberMe ? 'border-brand bg-brand' : 'border-stroke-weak bg-white'
+                  }`}
+                >
+                  {rememberMe && <View className="size-1.5 rounded-full bg-white" />}
+                </View>
                 <Animated.Text
-                  className="text-xs text-text-disabled lowercase"
+                  className="text-xs text-text-base"
                   style={{ fontFamily: FONTS.sans }}
                 >
-                  or
+                  Remember for 30 days
                 </Animated.Text>
-                <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
-              </View>
+              </TouchableOpacity>
 
-              {/* Email Field */}
-              <Controller
-                control={control}
-                name="email"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    label="Email"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    error={errors.email?.message}
-                    placeholder="you@example.com"
-                  />
-                )}
-              />
-
-              {/* Password Field */}
-              <Controller
-                control={control}
-                name="password"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <PasswordInput
-                    label="Password"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    autoComplete="current-password"
-                    error={errors.password?.message}
-                    placeholder="••••••••"
-                  />
-                )}
-              />
-
-              {/* Remember for 30 days & Forgot Password Row */}
-              <View className="flex-row items-center justify-between mt-1 mb-2">
-                <TouchableOpacity
-                  onPress={() => setRememberMe(!rememberMe)}
-                  activeOpacity={0.8}
-                  className="flex-row items-center gap-2"
-                >
-                  <View
-                    className={`size-4 rounded-full border items-center justify-center ${
-                      rememberMe ? 'border-brand bg-brand' : 'border-stroke-weak bg-white'
-                    }`}
-                  >
-                    {rememberMe && <View className="size-1.5 rounded-full bg-white" />}
-                  </View>
-                  <Animated.Text
-                    className="text-xs text-text-base"
-                    style={{ fontFamily: FONTS.sans }}
-                  >
-                    Remember for 30 days
-                  </Animated.Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => router.push('/(auth)/forgot-password')}
-                  className="py-1"
-                >
-                  <Animated.Text
-                    className="text-xs text-brand font-bold underline"
-                    style={{ fontFamily: FONTS.sansBold }}
-                  >
-                    Forgot password?
-                  </Animated.Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Submit Button */}
-              <Button
-                onPress={onSubmit}
-                loading={isPending}
-                fullWidth
-                size="lg"
-                className="mt-2"
+              <TouchableOpacity
+                onPress={() => router.push('/(auth)/forgot-password')}
+                className="py-1"
               >
-                Login
-              </Button>
-            </View>
-
-            {/* Footer */}
-            <View className="flex-row items-center justify-center gap-2 mt-10">
-              <Animated.Text
-                className="text-base text-text-weak"
-                style={{ fontFamily: FONTS.sans }}
-              >
-                Don't have an account?
-              </Animated.Text>
-              <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
                 <Animated.Text
-                  className="text-base text-brand font-bold"
+                  className="text-xs text-brand font-bold underline"
                   style={{ fontFamily: FONTS.sansBold }}
                 >
-                  Sign up
+                  Forgot password?
                 </Animated.Text>
               </TouchableOpacity>
             </View>
+
+            {/* Submit Button */}
+            <Button
+              onPress={onSubmit}
+              loading={isPending}
+              fullWidth
+              size="lg"
+              className="mt-2"
+            >
+              Login
+            </Button>
+          </View>
+
+          {/* Footer */}
+          <View className="flex-row items-center justify-center gap-2 mt-10">
+            <Animated.Text
+              className="text-base text-text-weak"
+              style={{ fontFamily: FONTS.sans }}
+            >
+              Don't have an account?
+            </Animated.Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+              <Animated.Text
+                className="text-base text-brand font-bold"
+                style={{ fontFamily: FONTS.sansBold }}
+              >
+                Sign up
+              </Animated.Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
