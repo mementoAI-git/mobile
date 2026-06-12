@@ -22,7 +22,7 @@ export function useProfileSettingsLogic() {
         style: 'destructive',
         onPress: () => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          logout(undefined, { onSuccess: () => router.replace('/(auth)/login') });
+          logout();
         },
       },
     ]);

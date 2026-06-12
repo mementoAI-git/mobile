@@ -96,7 +96,7 @@ export function useLogout() {
     onSettled: async () => {
       await clearAuth();
       clearUser();
-      queryClient.clear();
+      queryClient.removeQueries();
     },
   });
 }
@@ -118,7 +118,7 @@ export function useDeleteAccount() {
     onSuccess: async () => {
       await clearAuth();
       clearUser();
-      queryClient.clear();
+      queryClient.removeQueries();
     },
   });
 }
