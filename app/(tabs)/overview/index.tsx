@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useRef } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,6 @@ import {
   TouchableOpacity,
   ImageBackground,
   Image,
-  LayoutAnimation,
-  UIManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -32,13 +30,7 @@ import Animated, {
   FadeInDown, FadeInUp,
   useSharedValue, useAnimatedStyle, withSpring,
   useAnimatedScrollHandler, interpolate, Extrapolation,
-  runOnJS,
 } from 'react-native-reanimated';
-
-// Enable LayoutAnimation on Android
-if (UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 const WELCOME_BG = require('../../../assets/images/backgrounds/welcome_bg.png');
 const ENRICHMENT_BG = require('../../../assets/images/backgrounds/enrichment_bg.png');
@@ -173,38 +165,18 @@ export default function OverviewScreen() {
     openSheet('streak');
   }, [openSheet]);
 
-  // ── "Add story" collapse ──────────────────────────────────────────────────
-  // heroGone drives the flex collapse via LayoutAnimation (native, bidirectional).
-  // opacity fade is handled separately by Reanimated (UI-thread only — no layout).
-  const [heroGone, setHeroGone] = useState(false);
-  const heroGoneRef = useRef(false); // prevents repeated LayoutAnimation calls
-
-  const updateHeroGone = useCallback((gone: boolean) => {
-    if (heroGoneRef.current === gone) return;
-    heroGoneRef.current = gone;
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setHeroGone(gone);
-  }, []);
-
   // ── Scroll tracking ───────────────────────────────────────────────────────
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollY.value = event.contentOffset.y;
-      // Cross the threshold → trigger LayoutAnimation on JS thread
-      runOnJS(updateHeroGone)(event.contentOffset.y > 150);
     },
   });
 
-  // Opacity fade for "Add story" — pure UI-thread, no layout = no reverse issues
-  const addStoryPillStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.value, [80, 180], [1, 0], Extrapolation.CLAMP),
-  }));
-
-  // Floating + FAB fades in once the hero has scrolled off
+  // FAB fades in only after the hero card (~320px tall) has fully scrolled off screen
   const fabStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.value, [120, 220], [0, 1], Extrapolation.CLAMP),
-    transform: [{ scale: interpolate(scrollY.value, [120, 220], [0.7, 1], Extrapolation.CLAMP) }],
+    opacity: interpolate(scrollY.value, [300, 400], [0, 1], Extrapolation.CLAMP),
+    transform: [{ scale: interpolate(scrollY.value, [300, 400], [0.7, 1], Extrapolation.CLAMP) }],
   }));
 
   // Track manual pull-to-refresh separately from background refetches.
@@ -325,7 +297,7 @@ export default function OverviewScreen() {
                 className="rounded-2xl overflow-hidden border border-stroke-weaker bg-white"
                 imageStyle={{ borderRadius: 16 }}
               >
-                <View className="p-7 gap-8">
+                <View className="p-7 gap-8" style={{ borderRadius: 16 }}>
                   <View className="flex-row items-start justify-between">
                     <Text className="text-[24px] text-text-strong flex-1 leading-snug" style={{ fontFamily: FONTS.serif }}>
                       What's on your{"\n"}mind today?
@@ -348,22 +320,18 @@ export default function OverviewScreen() {
                   </View>
 
                   <View className="flex-row items-center gap-3">
-                    {/* LayoutAnimation handles the transition between these two states.
-                        We never animate layout props — we just swap DOM structure. */}
-                    {!heroGone && (
-                      <TouchableOpacity
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                          router.push({ pathname: '/editor', params: { mode: 'story' } });
-                        }}
-                        activeOpacity={0.8}
-                        style={{ flex: 1.5 }}
-                        className="flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full"
-                      >
-                        <Plus size={20} color="white" strokeWidth={3} />
-                        <Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Add story</Text>
-                      </TouchableOpacity>
-                    )}
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        router.push({ pathname: '/editor', params: { mode: 'story' } });
+                      }}
+                      activeOpacity={0.8}
+                      style={{ flex: 1.5 }}
+                      className="flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full"
+                    >
+                      <Plus size={20} color="white" strokeWidth={3} />
+                      <Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Add story</Text>
+                    </TouchableOpacity>
 
                     <TouchableOpacity
                       onPress={() => {
@@ -388,7 +356,7 @@ export default function OverviewScreen() {
                 className="rounded-2xl overflow-hidden border border-stroke-weaker bg-white"
                 imageStyle={{ borderRadius: 16 }}
               >
-                <View className="p-7 gap-5">
+                <View className="p-7 gap-5" style={{ borderRadius: 16 }}>
                   <View className="flex-row items-center gap-4">
                     <GradientText
                       colors={['#5B9BD5', '#A8D4F5']}
