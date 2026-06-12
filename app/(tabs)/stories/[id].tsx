@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, ScrollView, FlatList, ImageBackground, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, FlatList, ImageBackground, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Bookmark, BookmarkCheck, MoreHorizontal, Pencil, Trash2, Play, FileText, Download } from 'lucide-react-native';
+import { ChevronLeft, Bookmark, BookmarkCheck, MoreHorizontal, Pencil, Trash2, FileText, Download, Music } from 'lucide-react-native';
 import dayjs from 'dayjs';
 import Animated from 'react-native-reanimated';
 import { VideoView } from 'expo-video';
@@ -14,8 +14,10 @@ import { useBackHandler } from '@/hooks/use-back-handler';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 
+const SCREEN_W = Dimensions.get('window').width;
+
 function VideoItem({ uri, style }: { uri: string; style?: any }) {
-  const { player } = useVideoPlayer(uri, { loop: true, autoPlay: true });
+  const { player } = useVideoPlayer(uri, { loop: true, autoPlay: false });
   return (
     <VideoView
       player={player}
@@ -189,8 +191,9 @@ export default function StoryDetailScreen() {
                   horizontal
                   pagingEnabled
                   showsHorizontalScrollIndicator={false}
+                  getItemLayout={(_, index) => ({ length: SCREEN_W, offset: SCREEN_W * index, index })}
                   renderItem={({ item, index }) => (
-                    <View style={{ width: 320, aspectRatio: 16 / 9 }}>
+                    <View style={{ width: SCREEN_W, aspectRatio: 16 / 9 }}>
                       {item.type?.startsWith('video/') ? (
                         <VideoItem
                           uri={item.url || ''}
@@ -262,35 +265,90 @@ export default function StoryDetailScreen() {
               </View>
             )}
 
-            {/* Other attachments */}
+            {/* Other attachments — type-specific cards */}
             {otherAttachments.length > 0 && (
               <View className="gap-2 mt-2">
                 <Animated.Text className="text-sm font-semibold text-text-muted uppercase tracking-wider" style={{ fontFamily: FONTS.sansSemi }}>
                   Attachments
                 </Animated.Text>
                 <View className="gap-2">
-                  {otherAttachments.map((a) => (
-                    <TouchableOpacity
-                      key={a._id}
-                      onPress={() => handleOpenFile(a.url)}
-                      className="flex-row items-center justify-between bg-fill-weaker border border-stroke-weaker p-3 rounded-xl"
-                    >
-                      <View className="flex-row items-center gap-3 flex-1">
-                        <View className="size-10 bg-white rounded-lg border border-stroke-weaker items-center justify-center">
-                          <FileText size={20} color={COLORS.textBase} />
-                        </View>
-                        <View className="flex-1">
-                          <Text className="text-sm text-text-strong" numberOfLines={1} style={{ fontFamily: FONTS.sansMedium }}>
-                            {a.name || 'Document'}
+                  {otherAttachments.map((a) => {
+                    const isVoice = a.name?.startsWith('voice_') || false;
+                    const isAudio = a.type?.startsWith('audio/');
+
+                    // ── Voice note card ──────────────────────────────────────
+                    if (isVoice) {
+                      // Seeded waveform bars from clientId/name
+                      let h = 0;
+                      const seed = a._id || a.name || '';
+                      for (let i = 0; i < seed.length; i++) {
+                        h = (h * 31 + seed.charCodeAt(i)) | 0;
+                      }
+                      const bars = Array.from({ length: 24 }, (_, i) =>
+                        4 + Math.round((Math.sin((Math.abs(h) + i * 997) * 0.013) * 0.5 + 0.5) * 16)
+                      );
+                      const dur = Number(a.duration ?? 0);
+                      const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+                      return (
+                        <View key={a._id} style={{ backgroundColor: COLORS.textStrong, borderRadius: 16, padding: 14, paddingRight: 36, position: 'relative' }}>
+                          <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 12, color: 'rgba(255,255,255,0.85)', marginBottom: 10 }} numberOfLines={1}>
+                            Voice note{dur > 0 ? ` · ${fmt(dur)}` : ''}
                           </Text>
-                          <Text className="text-xs text-text-weak uppercase" style={{ fontFamily: FONTS.sans }}>
-                            {a.type || 'FILE'} • {(a.size && Number(a.size) > 0) ? (Number(a.size) / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown size'}
-                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
+                            {bars.map((barH, i) => (
+                              <View
+                                key={i}
+                                style={{ flex: 1, height: barH, borderRadius: 2, backgroundColor: `${COLORS.brand}99`, maxHeight: 24 }}
+                              />
+                            ))}
+                          </View>
                         </View>
-                      </View>
-                      <Download size={18} color={COLORS.brand} />
-                    </TouchableOpacity>
-                  ))}
+                      );
+                    }
+
+                    // ── Audio file card ──────────────────────────────────────
+                    if (isAudio) {
+                      return (
+                        <TouchableOpacity
+                          key={a._id}
+                          onPress={() => handleOpenFile(a.url)}
+                          activeOpacity={0.7}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.fillWeak, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, paddingVertical: 10 }}
+                        >
+                          <Music size={18} color={COLORS.brand} strokeWidth={1.8} />
+                          <Text style={{ flex: 1, fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textStrong }} numberOfLines={1}>
+                            {a.name || 'Audio file'}
+                          </Text>
+                          <Download size={16} color={COLORS.brand} />
+                        </TouchableOpacity>
+                      );
+                    }
+
+                    // ── Document / generic file card ─────────────────────────
+                    return (
+                      <TouchableOpacity
+                        key={a._id}
+                        onPress={() => handleOpenFile(a.url)}
+                        activeOpacity={0.7}
+                        className="flex-row items-center justify-between bg-fill-weaker border border-stroke-weaker p-3 rounded-xl"
+                      >
+                        <View className="flex-row items-center gap-3 flex-1">
+                          <View className="size-10 bg-white rounded-lg border border-stroke-weaker items-center justify-center">
+                            <FileText size={20} color={COLORS.textBase} />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-sm text-text-strong" numberOfLines={1} style={{ fontFamily: FONTS.sansMedium }}>
+                              {a.name || 'Document'}
+                            </Text>
+                            <Text className="text-xs text-text-weak uppercase" style={{ fontFamily: FONTS.sans }}>
+                              {a.type?.split('/')[1]?.toUpperCase() ?? 'FILE'}{(a.size && Number(a.size) > 0) ? ` · ${(Number(a.size) / 1024 / 1024).toFixed(2)} MB` : ''}
+                            </Text>
+                          </View>
+                        </View>
+                        <Download size={18} color={COLORS.brand} />
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
             )}
