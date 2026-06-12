@@ -98,7 +98,7 @@ export default function LoginScreen() {
           <ScrollView
             ref={scrollViewRef}
             style={{ flex: 1 }}
-            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 40, paddingBottom: 32 }}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 40, paddingBottom: Math.max(32, insets.bottom + 16) }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="on-drag"

@@ -181,12 +181,13 @@ export default function ChatScreen() {
   );
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: COLORS.background }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <ImageBackground source={PATTERN} className="flex-1" imageStyle={{ opacity: 0.03 }}>
-        <SafeAreaView className="flex-1 bg-transparent" edges={['top']}>
+        <View className="flex-1">
 
           {/* ── Header ───────────────────────────────────────────────────── */}
           <View className="flex-row items-center gap-3 px-6 py-4">
@@ -407,9 +408,10 @@ export default function ChatScreen() {
                 : (serverMessages?.title ?? 'Conversation')
             }
           />
-        </SafeAreaView>
+        </View>
       </ImageBackground>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

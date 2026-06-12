@@ -17,6 +17,7 @@ import {
   StyleSheet,
   Animated,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   BookOpen,
@@ -110,10 +111,11 @@ export function EditorActionBar({
     onSwitchMode();
   }, [onSwitchMode, showTooltip, dismissTooltip]);
 
+  const insets = useSafeAreaInsets();
   const isStory = mode === 'story';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: Math.max(12, insets.bottom) }]}>
       {/* Label */}
       <Text style={styles.label}>SWITCH MODES OR ADD MEDIA FILES</Text>
 

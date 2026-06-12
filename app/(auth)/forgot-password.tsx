@@ -56,7 +56,7 @@ export default function ForgotPasswordScreen() {
       <View style={{ flex: 1, backgroundColor: '#fefbf8', paddingTop: insets.top }}>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 48, justifyContent: 'center', flexGrow: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 48, paddingBottom: Math.max(48, insets.bottom + 16), justifyContent: 'center', flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="on-drag"

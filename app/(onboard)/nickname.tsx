@@ -22,7 +22,7 @@ export default function NicknameScreen() {
   } = useNicknameLogic();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.onboardingCream }} edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.onboardingCream }} edges={['top']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
         <View className="flex-row items-center justify-between px-6 pt-2">
           <Logo size="md" />
