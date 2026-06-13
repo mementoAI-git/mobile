@@ -76,9 +76,11 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
   const aspectRatio = variant === 'list' ? 3 / 2 : MEDIA_ASPECT_RATIOS[seed % MEDIA_ASPECT_RATIOS.length];
   const surface = CARD_PASTEL_SURFACES[seed % CARD_PASTEL_SURFACES.length];
 
-  const bannerMedia = memory.attachments?.find(
-    (a) => a.type?.startsWith('image/') || a.type?.startsWith('video/'),
-  );
+  // Prefer an image attachment for the thumbnail — videos render as blank when
+  // used as <Image> source. Fall back to the first video if no images exist.
+  const bannerMedia =
+    memory.attachments?.find((a) => a.type?.startsWith('image/')) ??
+    memory.attachments?.find((a) => a.type?.startsWith('video/'));
   const audioMedia = memory.attachments?.find((a) => a.type?.startsWith('audio/'));
 
   const cardScale = useSharedValue(1);
@@ -104,6 +106,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
       return (
         <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden bg-fill-weaker relative">
           <Image
+            key={bannerMedia.url}
             source={{ uri: bannerMedia.url }}
             className="w-full h-full"
             resizeMode="cover"
