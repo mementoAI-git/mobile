@@ -38,7 +38,8 @@ import { queryKeys } from '@/constants/query-keys';
 import { useToast } from '@/components/ui/Toast';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
-import { StoryRichEditor, type StoryRichEditorRef } from '@/components/ui/StoryRichEditor';
+import { StoryRichEditor, FormattingToolbar, type StoryRichEditorRef } from '@/components/ui/StoryRichEditor';
+import type { EditorBridge } from '@10play/tentap-editor';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import type { IBeneficiary, IFile } from '@/types';
@@ -347,6 +348,8 @@ export default function EditorScreen() {
   const [savedStatus, setSavedStatus] = useState<'saved'|'saving'|'unsaved'>('saved');
   const [showPublish, setShowPublish] = useState(false);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  const [editorBridge, setEditorBridge] = useState<EditorBridge | null>(null);
+  const handleBridgeReady = useCallback((bridge: EditorBridge) => setEditorBridge(bridge), []);
 
   // Quick-capture state
   const [qcBody, setQcBody] = useState('');
@@ -604,6 +607,7 @@ export default function EditorScreen() {
                   ref={richEditorRef}
                   initialContent={storyBody}
                   onChange={handleStoryBodyChange}
+                  onBridgeReady={handleBridgeReady}
                 />
               ) : (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -784,6 +788,11 @@ export default function EditorScreen() {
                 </View>
               )}
             </>
+          )}
+
+          {/* ── Formatting toolbar (story mode only, above media selector) ── */}
+          {isStory && editorBridge && (
+            <FormattingToolbar editor={editorBridge} />
           )}
 
           {/* ── Action bar ── */}
