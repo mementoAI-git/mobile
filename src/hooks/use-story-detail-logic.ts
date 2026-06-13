@@ -48,7 +48,30 @@ export function useStoryDetailLogic() {
 
   const handleEdit = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    openSheet('create-memory', { editData: memory });
+    // Serialise the full memory into a single param so the editor can populate
+    // title, body, tags, beneficiaries, and all existing attachments.
+    const initialData = JSON.stringify({
+      title: memory!.title ?? '',
+      body: memory!.body ?? '',
+      tags: memory!.tags ?? [],
+      beneficiaries: (memory!.beneficiaries ?? []).map((b: any) =>
+        typeof b === 'string' ? b : b._id
+      ).filter(Boolean),
+      attachments: (memory!.attachments ?? []).map((a: any) => ({
+        id: a._id ?? '',
+        url: a.url ?? '',
+        type: a.type ?? 'image/jpeg',
+        name: a.name ?? '',
+      })),
+    });
+    router.push({
+      pathname: '/editor',
+      params: {
+        mode: 'story',
+        memoryId: memory!._id,
+        initialData,
+      },
+    });
   };
 
   const handleOpenActions = () => {

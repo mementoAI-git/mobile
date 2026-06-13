@@ -1,9 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import { useUiStore } from '@/store';
 import { useStories, useMemoriesStats } from '@/hooks/queries/use-memories';
 
 export function useStoriesLogic() {
+  const router = useRouter();
   const openSheet = useUiStore((s) => s.openSheet);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -41,8 +43,9 @@ export function useStoriesLogic() {
 
   const handleCreateNew = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    openSheet('create-memory');
-  }, [openSheet]);
+    // lockMode: 'true' prevents the user from switching to quick-capture mode
+    router.push({ pathname: '/editor', params: { mode: 'story', lockMode: 'true' } });
+  }, [router]);
 
   const handleClearSearch = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

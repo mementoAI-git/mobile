@@ -103,17 +103,23 @@ export function MasonryMemoryGrid({
       <View style={{ flexDirection: 'row', gap: COLUMN_GAP, paddingHorizontal: 20 }}>
         {columns.map((col, colIndex) => (
           <View key={`col-${colIndex}`} style={{ flex: 1, gap: CARD_GAP }}>
-            {col.map((memory) => (
-              <View
-                key={memory._id}
-                onLayout={(e) => handleLayout(memory._id, e.nativeEvent.layout.height)}
-              >
-                <MasonryMemoryCard
-                  memory={memory}
-                  onPress={onMemoryPress ? () => onMemoryPress(memory) : undefined}
-                />
-              </View>
-            ))}
+            {col.map((memory) => {
+              // Include first attachment ID in the key so that when attachments
+              // change (e.g. after editing), React unmounts and remounts the card
+              // rather than reusing the stale component tree via React.memo.
+              const firstAttachmentId = memory.attachments?.[0]?._id ?? 'none';
+              return (
+                <View
+                  key={`${memory._id}-${firstAttachmentId}`}
+                  onLayout={(e) => handleLayout(memory._id, e.nativeEvent.layout.height)}
+                >
+                  <MasonryMemoryCard
+                    memory={memory}
+                    onPress={onMemoryPress ? () => onMemoryPress(memory) : undefined}
+                  />
+                </View>
+              );
+            })}
           </View>
         ))}
       </View>

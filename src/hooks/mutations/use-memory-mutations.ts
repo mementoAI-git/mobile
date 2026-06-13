@@ -34,10 +34,33 @@ export function useUpdateMemory(id: string) {
   return useMutation({
     mutationFn: (payload: Partial<CreateMemoryPayload>) =>
       put<IMemory>(endpoint.memory.replace(':id', id), payload),
-    onSuccess: () => {
+    onSuccess: (_response, variables) => {
+      // Server PUT returns the PRE-update document (MongoDB { new: false } default).
+      // Patch text fields instantly from variables — no network call needed.
+      const safeFields: Partial<IMemory> = {};
+      if (variables.title  !== undefined) safeFields.title  = variables.title;
+      if (variables.body   !== undefined) safeFields.body   = variables.body;
+      if (variables.tags   !== undefined) safeFields.tags   = variables.tags;
+      if (variables.status !== undefined) safeFields.status = variables.status;
+
+      const textPatcher = (old: any) => {
+        if (!old?.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            docs: (page.docs ?? []).map((s: any) =>
+              s._id === id ? { ...s, ...safeFields } : s
+            ),
+          })),
+        };
+      };
+      queryClient.setQueriesData({ queryKey: ['stories'] }, textPatcher);
+      queryClient.setQueriesData({ queryKey: ['memories'] }, textPatcher);
+
+      // Silently invalidate the individual memory for the detail screen.
+      // The MasonryMemoryGrid key change handles thumbnail updates on the card.
       queryClient.invalidateQueries({ queryKey: queryKeys.memory(id) });
-      queryClient.invalidateQueries({ queryKey: ['memories'] });
-      queryClient.invalidateQueries({ queryKey: ['stories'] });
     },
   });
 }
@@ -47,9 +70,21 @@ export function useDeleteMemory() {
   return useMutation({
     mutationFn: (id: string) =>
       del(endpoint.memory.replace(':id', id)),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['memories'] });
-      queryClient.invalidateQueries({ queryKey: ['stories'] });
+    onSuccess: (_res, id) => {
+      // Instantly remove the deleted item from all list caches — no refetch needed.
+      const remover = (old: any) => {
+        if (!old?.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            docs: (page.docs ?? []).filter((s: any) => s._id !== id),
+          })),
+        };
+      };
+      queryClient.setQueriesData({ queryKey: ['stories'] }, remover);
+      queryClient.setQueriesData({ queryKey: ['memories'] }, remover);
+      // Stats counter needs a server refetch since we can't decrement it locally
       queryClient.invalidateQueries({ queryKey: queryKeys.memoriesStats });
     },
   });
@@ -76,7 +111,27 @@ export function useBookmarkMemory() {
         ? del(endpoint.bookmarkMemory.replace(':id', id))
         : post(endpoint.bookmarkMemory.replace(':id', id)),
     onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.memory(vars.id) });
+      // Instantly flip bookmarked state in both list caches and detail cache.
+      // `vars.bookmarked` is the OLD state — the new state is the opposite.
+      const newBookmarked = !vars.bookmarked;
+      const flipper = (old: any) => {
+        if (!old?.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            docs: (page.docs ?? []).map((s: any) =>
+              s._id === vars.id ? { ...s, bookmarked: newBookmarked } : s
+            ),
+          })),
+        };
+      };
+      queryClient.setQueriesData({ queryKey: ['stories'] }, flipper);
+      queryClient.setQueriesData({ queryKey: ['memories'] }, flipper);
+      // Also patch the individual memory detail cache
+      queryClient.setQueryData(queryKeys.memory(vars.id), (old: any) =>
+        old ? { ...old, bookmarked: newBookmarked } : old
+      );
     },
   });
 }

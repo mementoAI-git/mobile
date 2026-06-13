@@ -21,6 +21,7 @@ import { useStartConversation } from '@/hooks/mutations/use-memory-mutations';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useOverviewPrompts, useDailyPrompts } from '@/hooks/queries/use-prompts';
 import { useProfile } from '@/hooks/queries/use-profile';
+import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useActivities } from '@/hooks/queries/use-activities';
 import { DailyPromptSection } from '@/components/overview/DailyPromptSection';
 import { RecentActivitiesSection } from '@/components/overview/RecentActivitiesSection';
@@ -193,6 +194,7 @@ export default function OverviewScreen() {
   const { data: dailyPrompts, refetch: refetchPrompts, isLoading: promptsLoading } = useDailyPrompts();
   const { data: overviewTopics, refetch: refetchTopics, isLoading: topicsLoading } = useOverviewPrompts();
   const { data: activitiesData, refetch: refetchActivities, isLoading: activitiesLoading } = useActivities({ page: 1, limit: 4 });
+  const { data: beneficiariesRaw } = useBeneficiaries();
   const { mutate: startConversation, isPending: startingConversation } = useStartConversation();
 
   // Manual pull-to-refresh: refetch everything and clear the spinner when done
@@ -227,7 +229,14 @@ export default function OverviewScreen() {
   const enrichmentScore = Number(stats.enrichment_score) || 0;
   const memoriesCount = memoriesStats?.stories_count ?? 0;
   const weeklyMemories = memoriesStats?.week_count ?? 0;
-  const beneficiariesCount = Number(stats.beneficiaries_count) || 0;
+  // Use actual beneficiaries list count — matches web which calls endpoint.beneficiaries directly
+  const beneficiariesCount = (() => {
+    if (!beneficiariesRaw) return 0;
+    if ((beneficiariesRaw as any)?.totalDocs != null) return Number((beneficiariesRaw as any).totalDocs);
+    if (Array.isArray(beneficiariesRaw)) return beneficiariesRaw.length;
+    if ((beneficiariesRaw as any)?.docs) return ((beneficiariesRaw as any).docs as any[]).length;
+    return 0;
+  })();
   const capsuleCount = capsuleStats?.scheduled_count || 0;
   const quickPending = Number(stats.quick_capture_pending_count) || 0;
 
@@ -445,14 +454,10 @@ export default function OverviewScreen() {
             <OverviewJourneyCard
               label="TIME CAPSULES"
               valueElement={
-                <>
-                  <Text className="text-xl font-bold text-[#FF7D0C]" style={{ fontFamily: FONTS.sansBold }}>{capsuleCount}</Text>
-                  <Text className="text-base font-bold text-text-strong ml-1" style={{ fontFamily: FONTS.sansBold }}>posts scheduled</Text>
-                </>
+                <Text className="text-base font-bold text-text-muted" style={{ fontFamily: FONTS.sansMedium }}>Coming soon</Text>
               }
               icon={<JourneyStatIcon type="capsules" />}
               bgImage={CAPSULE_BG}
-              onPress={() => router.push('/(tabs)/capsule')}
             />
 
             <OverviewJourneyCard

@@ -9,8 +9,19 @@ export function useAddBeneficiary() {
   return useMutation({
     mutationFn: (payload: { name: string; email: string; relationship: string }) =>
       post<IBeneficiary>(endpoint.beneficiaries, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.beneficiaries });
+    onSuccess: (res) => {
+      const newBeneficiary = (res as any)?.data ?? res;
+      if (newBeneficiary?._id) {
+        // Append new beneficiary to the cached list instantly
+        queryClient.setQueryData(queryKeys.beneficiaries, (old: any) => {
+          if (Array.isArray(old)) return [...old, newBeneficiary];
+          if (old?.docs) return { ...old, docs: [...old.docs, newBeneficiary] };
+          return old;
+        });
+      } else {
+        // Fallback if server doesn't return the new item
+        queryClient.invalidateQueries({ queryKey: queryKeys.beneficiaries });
+      }
     },
   });
 }
@@ -20,8 +31,13 @@ export function useRemoveBeneficiary() {
   return useMutation({
     mutationFn: (id: string) =>
       del(endpoint.beneficiary.replace(':id', id)),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.beneficiaries });
+    onSuccess: (_res, id) => {
+      // Instantly remove from cached list — no refetch
+      queryClient.setQueryData(queryKeys.beneficiaries, (old: any) => {
+        if (Array.isArray(old)) return old.filter((b: any) => b._id !== id);
+        if (old?.docs) return { ...old, docs: old.docs.filter((b: any) => b._id !== id) };
+        return old;
+      });
     },
   });
 }

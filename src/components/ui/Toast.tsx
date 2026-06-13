@@ -1,12 +1,31 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+/**
+ * Toast — imperative singleton + React context
+ *
+ * Design:
+ *  - Full solid background (brand / success / error)
+ *  - Icon left (Check / AlertTriangle / Info)
+ *  - White text
+ *  - Slides up from bottom, above tab bar
+ *  - Auto-dismisses after 3.5s, no manual X button
+ *
+ * Singleton: call `toast()` from anywhere — portals, sheets, callbacks etc.
+ * Hook: `useToast()` — backward compat, falls back to singleton if outside provider.
+ */
+
+import React, {
+  createContext, useContext, useState, useCallback, useEffect,
+} from 'react';
+import { View, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MotiView, AnimatePresence } from 'moti';
-import { X } from 'lucide-react-native';
+import { Check, AlertTriangle, Info } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type ToastType = 'success' | 'error' | 'info';
 
-interface Toast {
+interface ToastItem {
   id: string;
   message: string;
   type: ToastType;
@@ -16,60 +35,113 @@ interface ToastContextType {
   toast: (message: string, type?: ToastType) => void;
 }
 
+// ─── Module-level singleton ───────────────────────────────────────────────────
+
+let _toastHandler: ((message: string, type: ToastType) => void) | null = null;
+
+/** Imperative toast — safe to call from anywhere, including sheets & portals */
+export function toast(message: string, type: ToastType = 'info') {
+  if (_toastHandler) {
+    _toastHandler(message, type);
+  } else {
+    Promise.resolve().then(() => _toastHandler?.(message, type));
+  }
+}
+
+// ─── React context ────────────────────────────────────────────────────────────
+
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
-export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
+// ─── Config ───────────────────────────────────────────────────────────────────
 
-  const toast = useCallback((message: string, type: ToastType = 'info') => {
+const BG: Record<ToastType, string> = {
+  success: COLORS.success,
+  error:   COLORS.error,
+  info:    COLORS.brand,
+};
+
+function ToastIcon({ type }: { type: ToastType }) {
+  const color = '#ffffff';
+  const size = 18;
+  const sw = 2.5;
+  if (type === 'success') return <Check size={size} color={color} strokeWidth={sw} />;
+  if (type === 'error')   return <AlertTriangle size={size} color={color} strokeWidth={sw} />;
+  return <Info size={size} color={color} strokeWidth={sw} />;
+}
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const insets = useSafeAreaInsets();
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const addToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, message, type }]);
+    setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 3500);
   }, []);
 
-  const remove = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  useEffect(() => {
+    _toastHandler = addToast;
+    return () => { _toastHandler = null; };
+  }, [addToast]);
 
   return (
-    <ToastContext.Provider value={{ toast }}>
+    <ToastContext.Provider value={{ toast: addToast }}>
       {children}
-      <View className="absolute top-12 left-4 right-4 gap-2 z-50 pointer-events-none">
+
+      {/* ── Toast stack — top of screen, inside safe area ── */}
+      <View
+        style={{
+          position: 'absolute',
+          top: insets.top + 8,
+          left: 16,
+          right: 16,
+          gap: 8,
+          pointerEvents: 'none',
+          zIndex: 9999,
+        }}
+      >
         <AnimatePresence>
-          {toasts.map((t) => (
+          {toasts.map(t => (
             <MotiView
               key={t.id}
-              from={{ opacity: 0, translateY: -20, scale: 0.95 }}
+              from={{ opacity: 0, translateY: -40, scale: 0.96 }}
               animate={{ opacity: 1, translateY: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="pointer-events-auto"
+              exit={{ opacity: 0, translateY: -20, scale: 0.96 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 300, mass: 0.8 }}
             >
               <View
-                className="flex-row items-center gap-3 px-4 py-3 rounded-2xl border"
                 style={{
-                  backgroundColor: t.type === 'success' ? `${COLORS.success}10` : t.type === 'error' ? `${COLORS.error}10` : COLORS.card,
-                  borderColor: t.type === 'success' ? `${COLORS.success}20` : t.type === 'error' ? `${COLORS.error}20` : COLORS.strokeWeak,
-                  shadowColor: 'rgba(23,11,0,0.1)',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                  borderRadius: 14,
+                  backgroundColor: BG[t.type],
+                  // subtle shadow so it lifts off the content beneath
+                  shadowColor: '#000',
                   shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 1,
+                  shadowOpacity: 0.18,
                   shadowRadius: 12,
-                  elevation: 5,
+                  elevation: 8,
                 }}
               >
+                <ToastIcon type={t.type} />
                 <Text
-                  className="flex-1 text-sm"
-                  style={{ 
+                  style={{
+                    flex: 1,
                     fontFamily: FONTS.sansMedium,
-                    color: t.type === 'success' ? COLORS.success : t.type === 'error' ? COLORS.error : COLORS.textStrong
+                    fontSize: 14,
+                    color: '#ffffff',
+                    lineHeight: 20,
                   }}
                 >
                   {t.message}
                 </Text>
-                <TouchableOpacity onPress={() => remove(t.id)} className="p-1">
-                  <X size={14} color="rgba(23,11,0,0.4)" />
-                </TouchableOpacity>
               </View>
             </MotiView>
           ))}
@@ -79,8 +151,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useToast() {
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
+export function useToast(): ToastContextType {
   const context = useContext(ToastContext);
-  if (!context) throw new Error('useToast must be used within ToastProvider');
-  return context;
+  if (context) return context;
+  // Fallback: singleton — never throws even in portals/sheets
+  return { toast };
 }

@@ -114,21 +114,17 @@ export const COLORS = {
  * border: 80% stroke-neutral-weak + 20% of the semantic fill → warm gray with faint hue
  */
 export const CARD_PASTEL_SURFACES = [
-  // All surfaces use opaque white as base — mirrors the web where color-mix()
-  // produces colours indistinguishable from white on a white card background.
-  // The identity comes from the border colour, NOT the background fill.
-  // Borders are the neutral stroke with a faint semantic hue wash.
-  //
-  // 0 — neutral: white bg  |  pure neutral border (rgba brown-100)
-  { bg: '#ffffff', border: 'rgba(23,11,0,0.10)' },
-  // 1 — brand: white bg  |  neutral border with faint orange cast
-  { bg: '#ffffff', border: 'rgba(200,80,0,0.12)' },
-  // 2 — warning: white bg  |  neutral border with faint amber cast
-  { bg: '#ffffff', border: 'rgba(180,130,0,0.12)' },
-  // 3 — info: white bg  |  neutral border with faint blue cast
-  { bg: '#ffffff', border: 'rgba(20,100,220,0.11)' },
-  // 4 — success: white bg  |  neutral border with faint green cast
-  { bg: '#ffffff', border: 'rgba(6,100,70,0.12)' },
+  // Visible pastel fills — warm & cool tints for text-only memory cards.
+  // 0 — warm cream (neutral sand)
+  { bg: '#FBF5EE', border: 'rgba(23,11,0,0.08)' },
+  // 1 — peach (brand orange tint)
+  { bg: '#FFF0E8', border: 'rgba(200,80,0,0.12)' },
+  // 2 — butter (amber/warning tint)
+  { bg: '#FDF7E0', border: 'rgba(180,130,0,0.12)' },
+  // 3 — sky (info blue tint)
+  { bg: '#EEF4FF', border: 'rgba(20,100,220,0.11)' },
+  // 4 — mint (success green tint)
+  { bg: '#EBF7F2', border: 'rgba(6,100,70,0.12)' },
 ] as const;
 
 export const FONTS = {

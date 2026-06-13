@@ -13,6 +13,8 @@ export function useCapsules(filter?: string) {
       ).then((r) => r.data),
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,
+    // 30s stale time — avoids refetch on every tab switch
+    staleTime: 30_000,
   });
 }
 
