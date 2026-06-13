@@ -38,6 +38,7 @@ import { queryKeys } from '@/constants/query-keys';
 import { useToast } from '@/components/ui/Toast';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
+import { StoryRichEditor, type StoryRichEditorRef } from '@/components/ui/StoryRichEditor';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import type { IBeneficiary, IFile } from '@/types';
@@ -336,6 +337,7 @@ export default function EditorScreen() {
   const user = useUserStore(s => s.user);
   const titleRef = useRef<TextInput>(null);
   const bodyRef = useRef<TextInput>(null);
+  const richEditorRef = useRef<StoryRichEditorRef>(null);
   const isMountedRef = useRef(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -344,6 +346,7 @@ export default function EditorScreen() {
   const [storyBody, setStoryBody] = useState('');
   const [savedStatus, setSavedStatus] = useState<'saved'|'saving'|'unsaved'>('saved');
   const [showPublish, setShowPublish] = useState(false);
+  const [isDraftLoaded, setIsDraftLoaded] = useState(false);
 
   // Quick-capture state
   const [qcBody, setQcBody] = useState('');
@@ -392,14 +395,19 @@ export default function EditorScreen() {
           })));
         }
       } catch { /* ignore malformed JSON */ }
+      setIsDraftLoaded(true);
     } else if (!isEditing) {
-      AsyncStorage.getItem(STORY_DRAFT_KEY(user?.email)).then(raw => {
-        if (!raw || !isMountedRef.current) return;
-        try { const d = JSON.parse(raw); if (d.title) setTitle(d.title); if (d.body) setStoryBody(d.body); } catch {}
-      });
-      AsyncStorage.getItem(QC_DRAFT_KEY(user?.email)).then(raw => {
-        if (!raw || !isMountedRef.current) return;
-        try { const d = JSON.parse(raw); if (d.body) setQcBody(d.body); } catch {}
+      Promise.all([
+        AsyncStorage.getItem(STORY_DRAFT_KEY(user?.email)).then(raw => {
+          if (!raw || !isMountedRef.current) return;
+          try { const d = JSON.parse(raw); if (d.title) setTitle(d.title); if (d.body) setStoryBody(d.body); } catch {}
+        }),
+        AsyncStorage.getItem(QC_DRAFT_KEY(user?.email)).then(raw => {
+          if (!raw || !isMountedRef.current) return;
+          try { const d = JSON.parse(raw); if (d.body) setQcBody(d.body); } catch {}
+        })
+      ]).finally(() => {
+        if (isMountedRef.current) setIsDraftLoaded(true);
       });
     }
     const t = setTimeout(() => { (isStory ? titleRef : bodyRef).current?.focus(); }, 200);
@@ -480,6 +488,12 @@ export default function EditorScreen() {
     return names.length === 1 ? `Shared with ${names[0]}` : `Shared with ${names.length} people`;
   }, [selectedBeneficiaryIds, beneficiaries]);
 
+  // Stable onChange for StoryRichEditor — avoids recreating the bridge on every render
+  const handleStoryBodyChange = useCallback((v: string) => {
+    setStoryBody(v);
+    scheduleSave(title, v);
+  }, [title, scheduleSave]);
+
   const storyHasContent = title.trim().length > 0 || storyBody.trim().length > 0;
   const uploadedIds = attachments.filter(a => a.fileId && !a.isUploading).map(a => a.fileId);
   const anyUploading = attachments.some(a => a.isUploading);
@@ -526,7 +540,10 @@ export default function EditorScreen() {
                             try {
                               const d = JSON.parse(raw);
                               if (d.title) setTitle(d.title);
-                              if (d.body) setStoryBody(d.body);
+                              if (d.body) {
+                                setStoryBody(d.body);
+                                richEditorRef.current?.setContent(d.body);
+                              }
                             } catch {}
                           });
                         },
@@ -538,6 +555,7 @@ export default function EditorScreen() {
                           AsyncStorage.removeItem(STORY_DRAFT_KEY(user?.email)).catch(() => {});
                           setTitle('');
                           setStoryBody('');
+                          richEditorRef.current?.setContent('');
                           setSavedStatus('saved');
                         },
                       },
@@ -564,77 +582,104 @@ export default function EditorScreen() {
             </View>
           </View>
 
-          {/* ── Content ── */}
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            {isStory ? (
-              <>
-                <TextInput ref={titleRef} value={title} onChangeText={v => { setTitle(v); scheduleSave(v, storyBody); }}
-                  placeholder="Title" placeholderTextColor={COLORS.textDisabled}
-                  style={{ fontFamily: FONTS.serif, fontSize: 34, fontWeight: '700', color: COLORS.textStrong, padding: 0, margin: 0, marginBottom: 8, lineHeight: 42 }}
-                  returnKeyType="next" onSubmitEditing={() => bodyRef.current?.focus()} blurOnSubmit={false} />
-                <TextInput ref={bodyRef} value={storyBody} onChangeText={v => { setStoryBody(v); scheduleSave(title, v); }}
-                  placeholder="Start writing your article…" placeholderTextColor={COLORS.textDisabled}
-                  style={{ fontFamily: FONTS.sans, fontSize: 16, color: COLORS.textBase, padding: 0, margin: 0, lineHeight: 26, textAlignVertical: 'top' }}
-                  multiline numberOfLines={2} blurOnSubmit={false} scrollEnabled={false} textAlignVertical="top" />
-                {/* Attachment previews — story mode */}
-                {(() => {
-                  const imgAttachments = attachments.filter(a => a.mimeType.startsWith('image/'));
-                  if (!imgAttachments.length) return null;
-                  return (
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 16 }}>
-                      {imgAttachments.slice(0, 6).map((a, idx) => {
-                        const isLast = idx === 5 && imgAttachments.length > 6;
-                        const globalIdx = attachments.findIndex(x => x.clientId === a.clientId);
-                        return (
-                          <TouchableOpacity key={a.clientId} activeOpacity={0.85}
-                            onPress={() => { setPreviewIndex(globalIdx >= 0 ? globalIdx : idx); setPreviewVisible(true); Haptics.selectionAsync(); }}
-                            style={{ width: '31.5%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
-                            <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                            {isLast && (
-                              <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
-                                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' }}>+{imgAttachments.length - 6}</Text>
-                              </View>
-                            )}
-                            {a.isUploading && (
-                              <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
-                                <ActivityIndicator color={COLORS.textInverse} />
-                              </View>
-                            )}
-                            <TouchableOpacity onPress={(e) => { e.stopPropagation(); Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }}
-                              style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
-                              <X size={10} color={COLORS.textInverse} strokeWidth={2.5} />
+          {/* ── Story mode: title + rich editor (flex layout, no ScrollView) ── */}
+          {isStory && (
+            <View style={{ flex: 1 }}>
+              {/* Title */}
+              <TextInput
+                ref={titleRef}
+                value={title}
+                onChangeText={v => { setTitle(v); scheduleSave(v, storyBody); }}
+                placeholder="Title"
+                placeholderTextColor={COLORS.textDisabled}
+                style={{ fontFamily: FONTS.serif, fontSize: 34, fontWeight: '700', color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42 }}
+                returnKeyType="next"
+                onSubmitEditing={() => richEditorRef.current?.focus()}
+                blurOnSubmit={false}
+              />
+
+              {/* WYSIWYG body — takes all remaining vertical space */}
+              {isDraftLoaded ? (
+                <StoryRichEditor
+                  ref={richEditorRef}
+                  initialContent={storyBody}
+                  onChange={handleStoryBodyChange}
+                />
+              ) : (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                  <ActivityIndicator color={COLORS.brand} />
+                </View>
+              )}
+
+              {/* Attachment strip below the editor */}
+              {attachments.length > 0 && (
+                <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+                  {/* Images */}
+                  {(() => {
+                    const imgs = attachments.filter(a => a.mimeType.startsWith('image/'));
+                    if (!imgs.length) return null;
+                    return (
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                        {imgs.slice(0, 6).map((a, idx) => {
+                          const isLast = idx === 5 && imgs.length > 6;
+                          const globalIdx = attachments.findIndex(x => x.clientId === a.clientId);
+                          return (
+                            <TouchableOpacity key={a.clientId} activeOpacity={0.85}
+                              onPress={() => { setPreviewIndex(globalIdx >= 0 ? globalIdx : idx); setPreviewVisible(true); Haptics.selectionAsync(); }}
+                              style={{ width: '31.5%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
+                              <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                              {isLast && (
+                                <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
+                                  <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' }}>+{imgs.length - 6}</Text>
+                                </View>
+                              )}
+                              {a.isUploading && (
+                                <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
+                                  <ActivityIndicator color={COLORS.textInverse} />
+                                </View>
+                              )}
+                              <TouchableOpacity onPress={(e) => { e.stopPropagation(); Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }}
+                                style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+                                <X size={10} color={COLORS.textInverse} strokeWidth={2.5} />
+                              </TouchableOpacity>
                             </TouchableOpacity>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  );
-                })()}
-                {attachments.filter(a => a.isVoice).map(a => {
-                  const dur = a.duration ?? 0;
-                  return (
-                    <View key={a.clientId} style={{ marginTop: 8, backgroundColor: COLORS.textStrong, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                      <Music size={14} color={COLORS.textInverse} strokeWidth={1.8} />
-                      <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>Voice · {Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}</Text>
-                      {a.isUploading && <ActivityIndicator size="small" color={COLORS.textInverse} />}
+                          );
+                        })}
+                      </View>
+                    );
+                  })()}
+                  {/* Voice + docs */}
+                  {attachments.filter(a => a.isVoice).map(a => {
+                    const dur = a.duration ?? 0;
+                    return (
+                      <View key={a.clientId} style={{ marginTop: 6, backgroundColor: COLORS.textStrong, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <Music size={14} color={COLORS.textInverse} strokeWidth={1.8} />
+                        <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>Voice · {Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}</Text>
+                        {a.isUploading && <ActivityIndicator size="small" color={COLORS.textInverse} />}
+                        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }} hitSlop={8}>
+                          <X size={12} color="rgba(255,255,255,0.7)" strokeWidth={2} />
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                  {attachments.filter(a => !a.mimeType.startsWith('image/') && !a.isVoice).map(a => (
+                    <View key={a.clientId} style={{ marginTop: 6, backgroundColor: COLORS.fillWeak, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <FileText size={14} color={COLORS.brand} strokeWidth={1.8} />
+                      <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textStrong }} numberOfLines={1}>{a.name}</Text>
+                      {a.isUploading && <ActivityIndicator size="small" color={COLORS.brand} />}
                       <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }} hitSlop={8}>
-                        <X size={12} color="rgba(255,255,255,0.7)" strokeWidth={2} />
+                        <X size={12} color={COLORS.textWeak} strokeWidth={2} />
                       </TouchableOpacity>
                     </View>
-                  );
-                })}
-                {attachments.filter(a => !a.mimeType.startsWith('image/') && !a.isVoice).map(a => (
-                  <View key={a.clientId} style={{ marginTop: 6, backgroundColor: COLORS.fillWeak, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <FileText size={14} color={COLORS.brand} strokeWidth={1.8} />
-                    <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textStrong }} numberOfLines={1}>{a.name}</Text>
-                    {a.isUploading && <ActivityIndicator size="small" color={COLORS.brand} />}
-                    <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }} hitSlop={8}>
-                      <X size={12} color={COLORS.textWeak} strokeWidth={2} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </>
-            ) : (
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* ── Quick-capture content: ScrollView ── */}
+          {!isStory && (
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <>
                 <TextInput ref={bodyRef} value={qcBody} onChangeText={v => setQcBody(v.slice(0, NOTE_CHAR_MAX))}
                   placeholder="What's on your mind?" placeholderTextColor={isRecording ? COLORS.error : COLORS.textMuted}
@@ -707,8 +752,8 @@ export default function EditorScreen() {
                 ))}
                 {saveError && <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.error, marginTop: 8 }}>{saveError}</Text>}
               </>
-            )}
-          </ScrollView>
+            </ScrollView>
+          )}
 
           {/* ── Privacy (quick-capture only) ── */}
           {!isStory && (
