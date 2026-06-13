@@ -169,9 +169,9 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
 
 // ─── Publish modal (story mode) ───────────────────────────────────────────────
 
-function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId }: {
+function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId, onAddAnother }: {
   visible: boolean; title: string; body: string; attachmentIds: string[];
-  onClose: () => void; memoryId?: string;
+  onClose: () => void; memoryId?: string; onAddAnother?: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const [tags, setTags] = useState('');
@@ -261,7 +261,11 @@ function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId }
       <SafeAreaProvider>
         <SafeAreaView style={[{ flex: 1, backgroundColor: COLORS.background }, publishedUrl ? { backgroundColor: 'transparent' } : null]} edges={publishedUrl ? [] : ['top']}>
           {publishedUrl ? (
-            <PublishSuccessView publishedUrl={publishedUrl} onAddAnother={handleClose} onDismiss={handleClose} />
+            <PublishSuccessView
+              publishedUrl={publishedUrl}
+              onAddAnother={onAddAnother ?? handleClose}
+              onDismiss={handleClose}
+            />
           ) : (
             <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: insets.bottom + 24 }} keyboardShouldPersistTaps="handled">
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -824,9 +828,24 @@ export default function EditorScreen() {
           memoryId={memoryId}
           onClose={() => {
             setShowPublish(false);
-            // After editing, go back to the story detail screen
-            if (isEditing) router.back();
+            if (isEditing) {
+              // Editing mode — go back to story detail
+              router.back();
+            } else if (lockMode === 'true') {
+              // Came from stories screen — navigate there
+              router.replace('/(tabs)/stories');
+            }
           }}
+          onAddAnother={lockMode === 'true' ? () => {
+            // Reset the editor to a blank slate and stay on screen
+            setShowPublish(false);
+            setTitle('');
+            setStoryBody('');
+            setAttachments([]);
+            richEditorRef.current?.setContent('');
+            setSavedStatus('saved');
+            setTimeout(() => titleRef.current?.focus(), 200);
+          } : undefined}
         />
       )}
 
