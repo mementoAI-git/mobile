@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Text, ScrollView, FlatList, ImageBackground, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, Image, ImageBackground, TouchableOpacity, Dimensions } from 'react-native';
+import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Bookmark, BookmarkCheck, MoreHorizontal, Pencil, Trash2, FileText, Download, Music } from 'lucide-react-native';
 import dayjs from 'dayjs';
@@ -94,6 +95,9 @@ export default function StoryDetailScreen() {
     }
   });
 
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [previewVisible, setPreviewVisible] = useState(false);
+
   const handleOpenFile = async (url?: string) => {
     if (url) {
       await WebBrowser.openBrowserAsync(url);
@@ -166,54 +170,53 @@ export default function StoryDetailScreen() {
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-30" />
 
         <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Attachment image/video carousel */}
-          {imageAttachments.length > 0 && (
-            <View>
-              {imageAttachments.length === 1 ? (
-                imageAttachments[0].type?.startsWith('video/') ? (
-                  <VideoItem
-                    uri={imageAttachments[0].url || ''}
-                    style={{ width: '100%', aspectRatio: 16 / 9 }}
-                  />
-                ) : (
-                  // sharedTransitionTag is a Reanimated runtime prop not in static types — cast to any
-                  <Animated.Image
-                    {...{ sharedTransitionTag: `memory-image-${memory._id}` } as any}
-                    source={{ uri: imageAttachments[0].url }}
-                    className="w-full aspect-video"
-                    resizeMode="cover"
-                  />
-                )
-              ) : (
-                <FlatList
-                  data={imageAttachments}
-                  keyExtractor={(a, i) => a.url ?? String(i)}
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  getItemLayout={(_, index) => ({ length: SCREEN_W, offset: SCREEN_W * index, index })}
-                  renderItem={({ item, index }) => (
-                    <View style={{ width: SCREEN_W, aspectRatio: 16 / 9 }}>
-                      {item.type?.startsWith('video/') ? (
-                        <VideoItem
-                          uri={item.url || ''}
-                          style={{ width: '100%', height: '100%' }}
-                        />
-                      ) : (
-                        <Animated.Image
-                          {...(index === 0 ? { sharedTransitionTag: `memory-image-${memory._id}` } : {}) as any}
-                          source={{ uri: item.url }}
-                          style={{ width: '100%', height: '100%' }}
-                          className="rounded-none"
-                          resizeMode="cover"
-                        />
-                      )}
-                    </View>
-                  )}
-                />
-              )}
-            </View>
-          )}
+          {/* ── Image / video grid — vertical wrap, tap to full-screen preview ── */}
+          {imageAttachments.length > 0 && (() => {
+            const imgOnly = imageAttachments.filter(a => !a.type?.startsWith('video/'));
+            const videos  = imageAttachments.filter(a =>  a.type?.startsWith('video/'));
+            return (
+              <View style={{ gap: 4, padding: 4 }}>
+                {/* Image grid — 3-column wrap */}
+                {imgOnly.length > 0 && (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                    {imgOnly.map((item, idx) => {
+                      const globalIdx = imageAttachments.findIndex(a => a.url === item.url);
+                      const isSingle = imgOnly.length === 1;
+                      return (
+                        <TouchableOpacity
+                          key={item.url ?? idx}
+                          activeOpacity={0.85}
+                          onPress={() => {
+                            setPreviewIndex(globalIdx >= 0 ? globalIdx : idx);
+                            setPreviewVisible(true);
+                          }}
+                          style={{
+                            width: isSingle ? '100%' : '31.5%',
+                            aspectRatio: isSingle ? 16 / 9 : 1,
+                            borderRadius: 12,
+                            overflow: 'hidden',
+                            backgroundColor: COLORS.fillWeak,
+                          }}
+                        >
+                          <Image
+                            source={{ uri: item.url }}
+                            style={{ width: '100%', height: '100%' }}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+                {/* Videos — full-width, stacked */}
+                {videos.map((item, idx) => (
+                  <View key={item.url ?? idx} style={{ borderRadius: 12, overflow: 'hidden', marginTop: imgOnly.length ? 4 : 0 }}>
+                    <VideoItem uri={item.url || ''} style={{ width: '100%', aspectRatio: 16 / 9 }} />
+                  </View>
+                ))}
+              </View>
+            );
+          })()}
 
           <View className="px-5 pt-6 pb-16 gap-4">
             {/* Title */}
@@ -380,6 +383,19 @@ export default function StoryDetailScreen() {
           </View>
         </ScrollView>
       </View>
+
+      {/* Full-screen image previewer */}
+      <MediaPreviewModal
+        visible={previewVisible}
+        attachments={imageAttachments.map(a => ({
+          clientId: a._id ?? (a.url ?? ''),
+          uri: a.url ?? '',
+          name: a.name ?? '',
+          mimeType: a.type ?? 'image/jpeg',
+        }))}
+        initialIndex={previewIndex}
+        onClose={() => setPreviewVisible(false)}
+      />
     </SafeAreaView>
   );
 }
