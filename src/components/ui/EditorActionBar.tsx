@@ -44,6 +44,8 @@ interface EditorActionBarProps {
   mode: EditorMode;
   /** Called when the user taps the inactive mode pill to switch */
   onSwitchMode: () => void;
+  /** When true, the mode-switch pills are hidden (e.g. when editing an existing story) */
+  disableModeSwitch?: boolean;
   /** Media attachment callbacks — work in both story and quick-capture modes */
   onPhoto?: () => void;
   onCamera?: () => void;
@@ -58,6 +60,7 @@ interface EditorActionBarProps {
 export function EditorActionBar({
   mode,
   onSwitchMode,
+  disableModeSwitch = false,
   onPhoto,
   onCamera,
   onAudio,
@@ -139,22 +142,19 @@ export function EditorActionBar({
 
       {/* Pill row */}
       <View style={styles.row}>
-        {/* Single mode pill — shows current mode, tapping switches to the other */}
-        <TouchableOpacity
-          onPress={handleSwitchMode}
-          activeOpacity={0.8}
-          style={[styles.modePill, isStory ? styles.modePillStory : styles.modePillQuick]}
-        >
-          {/* {isStory
-            ? <BookOpen size={15} color={COLORS.textInverse} strokeWidth={2} />
-            // : <Zap size={15} color={COLORS.textInverse} strokeWidth={2} fill={COLORS.textInverse} />
-            : <BookOpen size={15} color={COLORS.textInverse} strokeWidth={2} fill={COLORS.textInverse} />
-          } */}
-          <BookOpen size={15} color={COLORS.textInverse} strokeWidth={2} />
-          <Text style={styles.modePillText}>
-            {isStory ? 'Story mode' : 'Quick capture'}
-          </Text>
-        </TouchableOpacity>
+        {/* Single mode pill — hidden when editing an existing story */}
+        {!disableModeSwitch && (
+          <TouchableOpacity
+            onPress={handleSwitchMode}
+            activeOpacity={0.8}
+            style={[styles.modePill, isStory ? styles.modePillStory : styles.modePillQuick]}
+          >
+            <BookOpen size={15} color={COLORS.textInverse} strokeWidth={2} />
+            <Text style={styles.modePillText}>
+              {isStory ? 'Story mode' : 'Quick capture'}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* Media buttons */}
         <TouchableOpacity

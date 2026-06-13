@@ -28,7 +28,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useUserStore } from '@/store';
-import { useCreateMemory } from '@/hooks/mutations/use-memory-mutations';
+import { useCreateMemory, useUpdateMemory } from '@/hooks/mutations/use-memory-mutations';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
@@ -167,8 +167,8 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
 
 // ─── Publish modal (story mode) ───────────────────────────────────────────────
 
-function PublishModal({ visible, title, body, attachmentIds, onClose }: {
-  visible: boolean; title: string; body: string; attachmentIds: string[]; onClose: () => void;
+function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId }: {
+  visible: boolean; title: string; body: string; attachmentIds: string[]; onClose: () => void; memoryId?: string;
 }) {
   const insets = useSafeAreaInsets();
   const [tags, setTags] = useState('');
@@ -177,7 +177,10 @@ function PublishModal({ visible, title, body, attachmentIds, onClose }: {
   const [isAutotagging, setIsAutotagging] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
 
-  const { mutate: createMemory, isPending } = useCreateMemory();
+  const isEditMode = !!memoryId;
+  const { mutate: createMemory, isPending: createPending } = useCreateMemory();
+  const { mutate: updateMemory, isPending: updatePending } = useUpdateMemory(memoryId ?? '');
+  const isPending = isEditMode ? updatePending : createPending;
   const { data: beneficiariesRaw } = useBeneficiaries();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -217,22 +220,34 @@ function PublishModal({ visible, title, body, attachmentIds, onClose }: {
     if (!title.trim() && !body.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const tagList = tags.split(',').map(t => t.trim()).filter(Boolean);
-    createMemory(
-      { title: title || 'Untitled', body, tags: tagList, status: 'save', attachments: attachmentIds.length ? attachmentIds : undefined, beneficiaries: selectedBeneficiaryIds.length ? selectedBeneficiaryIds : undefined },
-      {
-        onSuccess: (res: any) => {
-          queryClient.invalidateQueries({ queryKey: ['stories'] });
-          queryClient.invalidateQueries({ queryKey: queryKeys.memoriesStats });
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          const id = res?.data?._id ?? res?.data?.data?._id ?? '';
-          setPublishedUrl(id ? `${PUBLISHED_BASE_URL}/${id}` : PUBLISHED_BASE_URL);
-        },
-        onError: (err: any) => toast(err?.message ?? 'Could not publish. Try again.', 'error'),
+    const payload = {
+      title: title || 'Untitled', body, tags: tagList, status: 'save' as const,
+      attachments: attachmentIds.length ? attachmentIds : undefined,
+      beneficiaries: selectedBeneficiaryIds.length ? selectedBeneficiaryIds : undefined,
+    };
+    const onSuccess = (res: any) => {
+      queryClient.invalidateQueries({ queryKey: ['stories'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.memoriesStats });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (isEditMode) {
+        // Edit: show a success toast and close — no share screen
+        toast('Story updated successfully', 'success');
+        onClose();
+      } else {
+        const id = res?.data?._id ?? res?.data?.data?._id ?? '';
+        setPublishedUrl(id ? `${PUBLISHED_BASE_URL}/${id}` : PUBLISHED_BASE_URL);
       }
-    );
+    };
+    const onError = (err: any) => toast(err?.message ?? 'Could not publish. Try again.', 'error');
+
+    if (isEditMode) {
+      updateMemory(payload, { onSuccess, onError });
+    } else {
+      createMemory(payload, { onSuccess, onError });
+    }
   // attachmentIds must be in deps — without it the closure captures the initial
   // empty array and voice notes / images added before publishing are silently dropped.
-  }, [title, body, tags, attachmentIds, selectedBeneficiaryIds, createMemory, queryClient, toast]);
+  }, [title, body, tags, attachmentIds, selectedBeneficiaryIds, isEditMode, createMemory, updateMemory, queryClient, toast, onClose]);
 
   const handleClose = useCallback(() => {
     setPublishedUrl(null); setTags(''); setSelectedBeneficiaryIds([]); setBeneficiaryMenuOpen(false); onClose();
@@ -308,9 +323,12 @@ function PublishModal({ visible, title, body, attachmentIds, onClose }: {
 
 export default function EditorScreen() {
   const router = useRouter();
-  const { mode: rawMode } = useLocalSearchParams<{ mode?: string }>();
+  const { mode: rawMode, memoryId, initialData } = useLocalSearchParams<{
+    mode?: string; memoryId?: string; initialData?: string;
+  }>();
   const mode = (rawMode === 'quick-capture' ? 'quick-capture' : 'story') as 'story' | 'quick-capture';
   const isStory = mode === 'story';
+  const isEditing = !!memoryId;
 
   const user = useUserStore(s => s.user);
   const titleRef = useRef<TextInput>(null);
@@ -351,16 +369,36 @@ export default function EditorScreen() {
 
   useEffect(() => { return () => { isMountedRef.current = false; if (saveTimerRef.current) clearTimeout(saveTimerRef.current); }; }, []);
 
-  // Load drafts
+  // Load drafts / pre-populate from edit params
   useEffect(() => {
-    AsyncStorage.getItem(STORY_DRAFT_KEY(user?.email)).then(raw => {
-      if (!raw || !isMountedRef.current) return;
-      try { const d = JSON.parse(raw); if (d.title) setTitle(d.title); if (d.body) setStoryBody(d.body); } catch {}
-    });
-    AsyncStorage.getItem(QC_DRAFT_KEY(user?.email)).then(raw => {
-      if (!raw || !isMountedRef.current) return;
-      try { const d = JSON.parse(raw); if (d.body) setQcBody(d.body); } catch {}
-    });
+    if (isEditing && initialData) {
+      // Edit mode — decode full memory JSON seeded by handleEdit
+      try {
+        const d = JSON.parse(decodeURIComponent(initialData));
+        if (d.title) setTitle(d.title);
+        if (d.body)  setStoryBody(d.body);
+        // Seed existing attachments — already on server, no re-upload needed
+        if (Array.isArray(d.attachments) && d.attachments.length) {
+          setAttachments(d.attachments.map((a: any) => ({
+            clientId: a.id || `existing_${Math.random().toString(36).slice(2)}`,
+            fileId: a.id || '',
+            uri: a.url || '',
+            name: a.name || '',
+            mimeType: a.type || 'image/jpeg',
+            isUploading: false,
+          })));
+        }
+      } catch { /* ignore malformed JSON */ }
+    } else if (!isEditing) {
+      AsyncStorage.getItem(STORY_DRAFT_KEY(user?.email)).then(raw => {
+        if (!raw || !isMountedRef.current) return;
+        try { const d = JSON.parse(raw); if (d.title) setTitle(d.title); if (d.body) setStoryBody(d.body); } catch {}
+      });
+      AsyncStorage.getItem(QC_DRAFT_KEY(user?.email)).then(raw => {
+        if (!raw || !isMountedRef.current) return;
+        try { const d = JSON.parse(raw); if (d.body) setQcBody(d.body); } catch {}
+      });
+    }
     const t = setTimeout(() => { (isStory ? titleRef : bodyRef).current?.focus(); }, 200);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -703,7 +741,9 @@ export default function EditorScreen() {
           {/* ── Action bar ── */}
           <EditorActionBar
             mode={mode}
+            disableModeSwitch={isEditing}
             onSwitchMode={() => {
+              if (isEditing) return;
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.setParams({ mode: isStory ? 'quick-capture' : 'story' });
               // Re-focus input after mode switch
@@ -719,7 +759,18 @@ export default function EditorScreen() {
       </SafeAreaView>
 
       {isStory && (
-        <PublishModal visible={showPublish} title={title} body={storyBody} attachmentIds={uploadedIds} onClose={() => setShowPublish(false)} />
+        <PublishModal
+          visible={showPublish}
+          title={title}
+          body={storyBody}
+          attachmentIds={uploadedIds}
+          memoryId={memoryId}
+          onClose={() => {
+            setShowPublish(false);
+            // After editing, go back to the story detail screen
+            if (isEditing) router.back();
+          }}
+        />
       )}
 
       {/* Media previewer */}

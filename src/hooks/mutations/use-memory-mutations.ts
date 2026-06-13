@@ -35,9 +35,12 @@ export function useUpdateMemory(id: string) {
     mutationFn: (payload: Partial<CreateMemoryPayload>) =>
       put<IMemory>(endpoint.memory.replace(':id', id), payload),
     onSuccess: () => {
+      // Invalidate the individual memory so detail screen re-fetches
       queryClient.invalidateQueries({ queryKey: queryKeys.memory(id) });
-      queryClient.invalidateQueries({ queryKey: ['memories'] });
-      queryClient.invalidateQueries({ queryKey: ['stories'] });
+      // Force-refetch the stories/memories list immediately so card thumbnails
+      // update without requiring an app restart or tab re-focus.
+      queryClient.refetchQueries({ queryKey: ['memories'] });
+      queryClient.refetchQueries({ queryKey: ['stories'] });
     },
   });
 }

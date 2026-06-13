@@ -208,7 +208,7 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
             style={styles.closeBtn}
             activeOpacity={0.8}
           >
-            <X size={18} color={COLORS.textStrong} strokeWidth={2.5} />
+            <X size={18} color="#ffffff" strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
 
@@ -250,14 +250,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
 
-  // Trash — design system destructive: bg-error/10, border-error/20
+  // Trash — visible on dark background
   trashBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: `${COLORS.error}12`,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderWidth: 1,
-    borderColor: `${COLORS.error}25`,
+    borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -267,29 +267,29 @@ const styles = StyleSheet.create({
     height: 36,
   },
 
-  // Counter pill — bg-fill-weaker, text-text-muted
+  // Counter pill
   counter: {
-    backgroundColor: COLORS.fillWeak,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
   counterText: {
     fontFamily: FONTS.sansMedium,
     fontSize: 13,
-    color: COLORS.textInverse,
+    color: '#ffffff',
   },
 
-  // Close — size-9 rounded-full bg-fill-weaker border-stroke-weaker
+  // Close — visible on dark background
   closeBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLORS.fillWeak,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
+    borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
