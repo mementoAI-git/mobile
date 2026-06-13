@@ -167,9 +167,8 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
 
 // ─── Publish modal (story mode) ───────────────────────────────────────────────
 
-function PublishModal({ visible, title, body, attachmentIds, attachmentItems, onClose, memoryId }: {
+function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId }: {
   visible: boolean; title: string; body: string; attachmentIds: string[];
-  attachmentItems?: Array<{ clientId: string; fileId: string; uri: string; name: string; mimeType: string }>;
   onClose: () => void; memoryId?: string;
 }) {
   const insets = useSafeAreaInsets();
@@ -243,26 +242,13 @@ function PublishModal({ visible, title, body, attachmentIds, attachmentItems, on
     const onError = (err: any) => toast(err?.message ?? 'Could not publish. Try again.', 'error');
 
     if (isEditMode) {
-      // Include populated attachment objects so the cache patcher can
-      // build correct thumbnails without an extra network fetch
-      const editPayload = {
-        ...payload,
-        _clientAttachments: (attachmentItems ?? [])
-          .filter(a => a.fileId && !a.mimeType.startsWith('audio/'))
-          .map(a => ({
-            _id: a.fileId,
-            url: a.uri,
-            type: a.mimeType,
-            name: a.name,
-          })),
-      };
-      updateMemory(editPayload, { onSuccess, onError });
+      updateMemory(payload, { onSuccess, onError });
     } else {
       createMemory(payload, { onSuccess, onError });
     }
   // attachmentIds must be in deps — without it the closure captures the initial
   // empty array and voice notes / images added before publishing are silently dropped.
-  }, [title, body, tags, attachmentIds, attachmentItems, selectedBeneficiaryIds, isEditMode, createMemory, updateMemory, queryClient, toast, onClose]);
+  }, [title, body, tags, attachmentIds, selectedBeneficiaryIds, isEditMode, createMemory, updateMemory, queryClient, toast, onClose]);
 
   const handleClose = useCallback(() => {
     setPublishedUrl(null); setTags(''); setSelectedBeneficiaryIds([]); setBeneficiaryMenuOpen(false); onClose();
@@ -779,7 +765,6 @@ export default function EditorScreen() {
           title={title}
           body={storyBody}
           attachmentIds={uploadedIds}
-          attachmentItems={attachments}
           memoryId={memoryId}
           onClose={() => {
             setShowPublish(false);

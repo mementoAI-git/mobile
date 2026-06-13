@@ -19,7 +19,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useStoriesLogic } from '@/hooks/use-stories-logic';
 import { useRouter } from 'expo-router';
-import { useFocusEffect } from 'expo-router';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const MEMORIES_BG = require('../../../assets/images/backgrounds/memories_card_bg.png');
@@ -49,14 +48,6 @@ export default function StoriesScreen() {
     handleCreateNew,
     handleClearSearch,
   } = useStoriesLogic();
-
-  // Refetch whenever this screen comes into focus — ensures thumbnails and
-  // titles are always fresh after returning from editor, detail, etc.
-  useFocusEffect(
-    useCallback(() => {
-      refetch();
-    }, [refetch]),
-  );
 
   const handleMemoryPress = useCallback(
     (id: string) => router.push({ pathname: '/(tabs)/stories/[id]', params: { id } }),
