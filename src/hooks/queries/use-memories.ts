@@ -13,6 +13,8 @@ export function useMemories(params?: { limit?: number }) {
       ).then((r) => r.data),
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,
+    // 30s stale time — avoids refetch on every tab switch
+    staleTime: 30_000,
   });
 }
 
@@ -31,6 +33,8 @@ export function useStories(params?: { limit?: number; filter?: string; search?: 
     },
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,
+    // 30s stale time — avoids refetch on every tab switch
+    staleTime: 30_000,
   });
 }
 
@@ -43,6 +47,7 @@ export function useConversations(params?: { limit?: number }) {
       ).then((r) => r.data),
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,
+    staleTime: 30_000,
   });
 }
 
@@ -52,6 +57,8 @@ export function useMemory(id: string) {
     queryFn: () =>
       get<IMemory>(endpoint.memory.replace(':id', id)).then((r) => r.data),
     enabled: !!id,
+    // Individual memory detail — 30s so navigating back doesn't re-fetch
+    staleTime: 30_000,
   });
 }
 
