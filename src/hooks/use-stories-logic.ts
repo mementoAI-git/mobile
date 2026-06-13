@@ -43,7 +43,8 @@ export function useStoriesLogic() {
 
   const handleCreateNew = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push({ pathname: '/editor', params: { mode: 'story' } });
+    // lockMode: 'true' prevents the user from switching to quick-capture mode
+    router.push({ pathname: '/editor', params: { mode: 'story', lockMode: 'true' } });
   }, [router]);
 
   const handleClearSearch = useCallback(() => {

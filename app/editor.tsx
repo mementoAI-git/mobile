@@ -324,12 +324,14 @@ function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId }
 
 export default function EditorScreen() {
   const router = useRouter();
-  const { mode: rawMode, memoryId, initialData } = useLocalSearchParams<{
-    mode?: string; memoryId?: string; initialData?: string;
+  const { mode: rawMode, memoryId, initialData, lockMode } = useLocalSearchParams<{
+    mode?: string; memoryId?: string; initialData?: string; lockMode?: string;
   }>();
   const mode = (rawMode === 'quick-capture' ? 'quick-capture' : 'story') as 'story' | 'quick-capture';
   const isStory = mode === 'story';
   const isEditing = !!memoryId;
+  // When lockMode is set, the mode toggle is hidden — user cannot switch to quick-capture
+  const isModeSwithDisabled = lockMode === 'true' || isEditing;
 
   const user = useUserStore(s => s.user);
   const titleRef = useRef<TextInput>(null);
@@ -742,9 +744,9 @@ export default function EditorScreen() {
           {/* ── Action bar ── */}
           <EditorActionBar
             mode={mode}
-            disableModeSwitch={isEditing}
+            disableModeSwitch={isModeSwithDisabled}
             onSwitchMode={() => {
-              if (isEditing) return;
+              if (isModeSwithDisabled) return;
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.setParams({ mode: isStory ? 'quick-capture' : 'story' });
               // Re-focus input after mode switch
