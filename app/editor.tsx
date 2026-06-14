@@ -454,9 +454,12 @@ export default function EditorScreen() {
   const handleImagePicker = useCallback(async () => {
     Haptics.selectionAsync();
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow Memento to access your photos.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, quality: 0.85 });
-    if (!result.canceled) await Promise.all(result.assets.map(a => uploadAndAdd(a.uri, a.mimeType || 'image/jpeg', a.fileName || `photo_${Date.now()}.jpg`)));
+    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow Memento to access your photos and videos.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], allowsMultipleSelection: true, quality: 0.85 });
+    if (!result.canceled) await Promise.all(result.assets.map(a => {
+      const isVideo = a.mimeType?.startsWith('video/');
+      return uploadAndAdd(a.uri, a.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg'), a.fileName || `${isVideo ? 'video' : 'photo'}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`);
+    }));
   }, [uploadAndAdd]);
 
   // Camera button — opens the CameraCaptureModal which supports both photo
@@ -759,7 +762,22 @@ export default function EditorScreen() {
                     </View>
                   );
                 })}
-                {attachments.filter(a => !a.mimeType.startsWith('image/') && !a.isVoice).map(a => (
+                {/* Video chips — dark pill with play icon + filename */}
+                {attachments.filter(a => a.mimeType.startsWith('video/')).map(a => (
+                  <View key={a.clientId} style={{ marginTop: 6, backgroundColor: COLORS.textStrong, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Video size={14} color={COLORS.textInverse} strokeWidth={1.8} />
+                    <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 12, color: 'rgba(255,255,255,0.85)' }} numberOfLines={1}>{a.name}</Text>
+                    {a.isUploading
+                      ? <ActivityIndicator size="small" color={COLORS.textInverse} />
+                      : (
+                        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }} hitSlop={8}>
+                          <X size={12} color="rgba(255,255,255,0.7)" strokeWidth={2} />
+                        </TouchableOpacity>
+                      )}
+                  </View>
+                ))}
+                {/* Document chips */}
+                {attachments.filter(a => !a.mimeType.startsWith('image/') && !a.mimeType.startsWith('video/') && !a.isVoice).map(a => (
                   <View key={a.clientId} style={{ marginTop: 6, backgroundColor: COLORS.fillWeak, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <FileText size={14} color={COLORS.brand} strokeWidth={1.8} />
                     <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textStrong }} numberOfLines={1}>{a.name}</Text>

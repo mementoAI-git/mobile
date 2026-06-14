@@ -23,14 +23,15 @@ import React, {
   useRef, useState, useCallback, useEffect,
 } from 'react';
 import {
-  View, Text, Modal, TouchableOpacity, StyleSheet,
+  View, Text, Modal, TouchableOpacity, StyleSheet, Image,
   ActivityIndicator, Alert, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, Camera as ExpoCamera } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import {
-  X, RotateCcw, Camera, Video, Zap, ZapOff,
+  X, RotateCcw, Camera, Video, Zap, ZapOff, ImageIcon,
 } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 
@@ -202,6 +203,36 @@ export function CameraCaptureModal({
       else handleStartRecording();
     }
   }, [captureMode, isRecording, handleTakePhoto, handleStartRecording, handleStopRecording]);
+
+  // ── Gallery picker — open device library for images or videos ────────────
+
+  const handleGallery = useCallback(async () => {
+    if (isRecording) return;
+    Haptics.selectionAsync();
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Allow Memento to access your photos and videos.', [
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],
+      allowsMultipleSelection: false,
+      quality: 0.85,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const a = result.assets[0];
+      const isVideo = a.mimeType?.startsWith('video/');
+      onCapture(
+        a.uri,
+        a.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg'),
+        a.fileName || `${isVideo ? 'video' : 'photo'}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`,
+      );
+      onClose();
+    }
+  }, [isRecording, onCapture, onClose]);
 
   // ── Mode switch (only allowed while not recording) ────────────────────────
 
@@ -399,8 +430,19 @@ export function CameraCaptureModal({
                   )}
                 </TouchableOpacity>
 
-                {/* Spacer to visually balance the flip button */}
-                <View style={{ width: 44 }} />
+                {/* Gallery picker — opens device library for images + videos */}
+                <TouchableOpacity
+                  onPress={handleGallery}
+                  activeOpacity={0.8}
+                  disabled={isRecording}
+                  style={[styles.iconBtn, isRecording && styles.iconBtnDisabled]}
+                >
+                  <ImageIcon
+                    size={22}
+                    color={isRecording ? 'rgba(255,255,255,0.3)' : COLORS.textInverse}
+                    strokeWidth={2}
+                  />
+                </TouchableOpacity>
               </View>
             </View>
           </>
