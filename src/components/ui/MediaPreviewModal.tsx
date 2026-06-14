@@ -13,12 +13,14 @@
 import React, { useRef, useCallback, useState } from 'react';
 import {
   View, Text, Modal, FlatList, Image,
-  TouchableOpacity, Linking, Dimensions,
+  TouchableOpacity, TouchableWithoutFeedback, Dimensions,
   StyleSheet, Share,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
+import { VideoView } from 'expo-video';
+import { useVideoPlayer } from '@/hooks/use-video-player';
 import * as Haptics from 'expo-haptics';
-import { ChevronLeft, Share2, X, Play, Mic, FileText, Music } from 'lucide-react-native';
+import { ChevronLeft, Share2, X, Mic, FileText, Music } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -62,32 +64,37 @@ function formatDuration(secs: number) {
 function ImageSlide({ uri }: { uri: string }) {
   return (
     <View style={styles.slide}>
-      <View style={{ flex: 1, justifyContent: 'center' }}>
-        <Image
-          source={{ uri }}
-          style={styles.roundedImage}
-          resizeMode="cover"
-        />
-      </View>
+      {/* flex: 1 + contain — image fills the card height without cropping,
+          letterboxed on the cream background for any aspect ratio */}
+      <Image
+        source={{ uri }}
+        style={styles.slideImage}
+        resizeMode="contain"
+      />
     </View>
   );
 }
 
-function VideoSlide({ uri, name }: { uri: string; name: string }) {
+/**
+ * VideoSlide — uses expo-video for in-app playback.
+ *
+ * useVideoPlayer must be called at the component top level (Rules of Hooks),
+ * so VideoSlide is its own component rather than an inline renderer.
+ *
+ * uri preference: CDN URL (post-upload) → local file:// (during upload)
+ */
+function VideoSlide({ uri }: { uri: string }) {
+  const { player } = useVideoPlayer(uri, { autoPlay: false, loop: false });
   return (
     <View style={styles.slide}>
       <View style={{ flex: 1, justifyContent: 'center' }}>
-        <TouchableOpacity
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); Linking.openURL(uri).catch(() => {}); }}
-          activeOpacity={0.85}
-          style={[styles.roundedImage, styles.mediaCard]}
-        >
-          <View style={styles.iconCircle}>
-            <Play size={36} color={COLORS.textInverse} fill={COLORS.textInverse} />
-          </View>
-          <Text style={styles.mediaName} numberOfLines={2}>{name}</Text>
-          <Text style={styles.mediaHint}>Tap to play</Text>
-        </TouchableOpacity>
+        <VideoView
+          player={player}
+          nativeControls
+          style={styles.roundedImage}
+          allowsFullscreen
+          allowsPictureInPicture
+        />
       </View>
     </View>
   );
@@ -132,7 +139,7 @@ function DocSlide({ item }: { item: PreviewAttachment }) {
 
 function renderSlide(item: PreviewAttachment) {
   if (item.mimeType.startsWith('image/')) return <ImageSlide uri={item.uri} />;
-  if (item.mimeType.startsWith('video/')) return <VideoSlide uri={item.uri} name={item.name} />;
+  if (item.mimeType.startsWith('video/')) return <VideoSlide uri={item.uri} />;
   if (item.mimeType.startsWith('audio/') || item.isVoice) return <AudioSlide item={item} />;
   return <DocSlide item={item} />;
 }
@@ -192,6 +199,10 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      {/* SafeAreaProvider scoped to the Modal window — fixes inset delivery
+          on Android edge-to-edge (edgeToEdgeEnabled: true in app.json)
+          which causes the header to be hidden behind the status bar on first open */}
+      <SafeAreaProvider>
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         {/* ── Header ── */}
         <View style={styles.header}>
@@ -209,31 +220,37 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
           </TouchableOpacity>
         </View>
 
-        {/* ── Paging list ── */}
-        <FlatList
-          ref={listRef}
-          data={attachments}
-          keyExtractor={(item) => item.clientId}
-          horizontal
-          pagingEnabled={false}
-          snapToInterval={CARD_W + CARD_GAP}
-          snapToAlignment="start"
-          decelerationRate="fast"
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: SIDE_PAD }}
-          ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
-          onViewableItemsChanged={handleViewableChange}
-          viewabilityConfig={viewabilityConfig.current}
-          getItemLayout={(_, index) => ({ length: CARD_W + CARD_GAP, offset: (CARD_W + CARD_GAP) * index, index })}
-          renderItem={({ item }) => renderSlide(item)}
-          initialScrollIndex={initialIndex}
-          onScrollToIndexFailed={() => {}}
-          style={{ flex: 1 }}
-        />
+        {/* ── Paging list — TouchableWithoutFeedback wraps the flex:1 area so
+            tapping the cream space above/below the image card closes the modal ── */}
+        <TouchableWithoutFeedback onPress={() => { Haptics.selectionAsync(); onClose(); }}>
+          <View style={{ flex: 1 }}>
+            <FlatList
+              ref={listRef}
+              data={attachments}
+              keyExtractor={(item) => item.clientId}
+              horizontal
+              pagingEnabled={false}
+              snapToInterval={CARD_W + CARD_GAP}
+              snapToAlignment="start"
+              decelerationRate="fast"
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: SIDE_PAD }}
+              ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
+              onViewableItemsChanged={handleViewableChange}
+              viewabilityConfig={viewabilityConfig.current}
+              getItemLayout={(_, index) => ({ length: CARD_W + CARD_GAP, offset: (CARD_W + CARD_GAP) * index, index })}
+              renderItem={({ item }) => renderSlide(item)}
+              initialScrollIndex={initialIndex}
+              onScrollToIndexFailed={() => {}}
+              style={{ flex: 1 }}
+            />
+          </View>
+        </TouchableWithoutFeedback>
 
         {/* ── Dot pagination ── */}
         <Dots count={attachments.length} active={currentIndex} />
       </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }
@@ -274,6 +291,13 @@ const styles = StyleSheet.create({
   slide: {
     width: CARD_W,
     flex: 1,
+  },
+  // Image slide — flex:1 + contain shows the full image at its natural ratio
+  // without any cropping, letterboxed on the cream background
+  slideImage: {
+    flex: 1,
+    width: '100%',
+    borderRadius: 24,
   },
   roundedImage: {
     width: '100%',

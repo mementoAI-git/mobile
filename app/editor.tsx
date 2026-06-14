@@ -22,6 +22,7 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import * as ExpoCamera from 'expo-camera';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Clipboard from 'expo-clipboard';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -36,8 +37,11 @@ import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/constants/query-keys';
 import { useToast } from '@/components/ui/Toast';
+import { upsertDraft, loadDrafts, deleteDraft, type StoryDraft, type StoryDraftAttachment } from '@/components/sheets/DraftsSheet';
+import { useUiStore } from '@/store';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
+import { CameraCaptureModal } from '@/components/ui/CameraCaptureModal';
 import { StoryRichEditor, FormattingToolbar, type StoryRichEditorRef } from '@/components/ui/StoryRichEditor';
 import type { EditorBridge } from '@10play/tentap-editor';
 import client from '@/api/client';
@@ -169,9 +173,10 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
 
 // ─── Publish modal (story mode) ───────────────────────────────────────────────
 
-function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId, onAddAnother }: {
+function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId, onAddAnother, draftId, userEmail }: {
   visible: boolean; title: string; body: string; attachmentIds: string[];
   onClose: () => void; memoryId?: string; onAddAnother?: () => void;
+  draftId?: string; userEmail?: string | null;
 }) {
   const insets = useSafeAreaInsets();
   const [tags, setTags] = useState('');
@@ -238,6 +243,8 @@ function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId, 
         onClose();
       } else {
         const id = res?.data?._id ?? res?.data?.data?._id ?? '';
+        // Delete the draft slot now that the story has been published
+        if (draftId) deleteDraft(userEmail, draftId).catch(() => {});
         setPublishedUrl(id ? `${PUBLISHED_BASE_URL}/${id}` : PUBLISHED_BASE_URL);
       }
     };
@@ -346,6 +353,12 @@ export default function EditorScreen() {
   const isMountedRef = useRef(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Multi-draft: each new story session gets its own id so up to 10 drafts can coexist
+  const draftIdRef = useRef<string>(isEditing ? '' : `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+  const [draftCount, setDraftCount] = useState(0);
+  // Incrementing this key forces StoryRichEditor to fully remount (blank WebView)
+  const [editorInstanceKey, setEditorInstanceKey] = useState(0);
+
   // Story state
   const [title, setTitle] = useState('');
   const [storyBody, setStoryBody] = useState('');
@@ -365,6 +378,7 @@ export default function EditorScreen() {
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [cameraVisible, setCameraVisible] = useState(false);
 
   const { mutate: createMemory } = useCreateMemory();
   const { mutateAsync: quickCapture, isPending: qcPending } = useQuickCapture();
@@ -382,7 +396,7 @@ export default function EditorScreen() {
 
   useEffect(() => { return () => { isMountedRef.current = false; if (saveTimerRef.current) clearTimeout(saveTimerRef.current); }; }, []);
 
-  // Load drafts / pre-populate from edit params
+  // Load drafts / pre-populate from edit params; also refresh draft count badge
   useEffect(() => {
     if (isEditing && initialData) {
       // Edit mode — decode full memory JSON seeded by handleEdit
@@ -404,10 +418,10 @@ export default function EditorScreen() {
       } catch { /* ignore malformed JSON */ }
       setIsDraftLoaded(true);
     } else if (!isEditing) {
+      // Load QC draft and refresh the draft count badge in parallel
       Promise.all([
-        AsyncStorage.getItem(STORY_DRAFT_KEY(user?.email)).then(raw => {
-          if (!raw || !isMountedRef.current) return;
-          try { const d = JSON.parse(raw); if (d.title) setTitle(d.title); if (d.body) setStoryBody(d.body); } catch {}
+        loadDrafts(user?.email).then(d => {
+          if (isMountedRef.current) setDraftCount(d.length);
         }),
         AsyncStorage.getItem(QC_DRAFT_KEY(user?.email)).then(raw => {
           if (!raw || !isMountedRef.current) return;
@@ -422,19 +436,52 @@ export default function EditorScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Autosave story draft
+  // Autosave story draft — upserts into the multi-draft array (max 10)
   const scheduleSave = useCallback((t: string, b: string) => {
+    if (isEditing) return; // Never autosave when editing an existing published story
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     setSavedStatus('saving');
-    saveTimerRef.current = setTimeout(() => {
-      const key = STORY_DRAFT_KEY(user?.email);
-      if (t.trim() || b.trim()) {
-        AsyncStorage.setItem(key, JSON.stringify({ title: t, body: b }))
-          .then(() => { if (isMountedRef.current) setSavedStatus('saved'); })
-          .catch(() => { if (isMountedRef.current) setSavedStatus('unsaved'); });
-      } else { AsyncStorage.removeItem(key).catch(() => {}); if (isMountedRef.current) setSavedStatus('saved'); }
+    saveTimerRef.current = setTimeout(async () => {
+      if (!t.trim() && !b.trim()) {
+        // Empty — remove this draft slot silently
+        if (draftIdRef.current) {
+          await deleteDraft(user?.email, draftIdRef.current).catch(() => {});
+        }
+        if (isMountedRef.current) setSavedStatus('saved');
+        return;
+      }
+      try {
+        // Snapshot already-uploaded attachments so they can be restored on load
+        const savedAttachments: StoryDraftAttachment[] = attachments
+          .filter(a => a.fileId && !a.isUploading)
+          .map(a => ({
+            fileId: a.fileId,
+            uri: a.file?.url || a.uri,
+            name: a.name,
+            mimeType: a.mimeType,
+            isVoice: a.isVoice,
+            duration: a.duration,
+          }));
+
+        await upsertDraft(user?.email, {
+          id: draftIdRef.current,
+          title: t,
+          body: b,
+          updatedAt: Date.now(),
+          attachments: savedAttachments.length ? savedAttachments : undefined,
+        });
+        if (isMountedRef.current) {
+          setSavedStatus('saved');
+          // Refresh the badge count
+          loadDrafts(user?.email).then(d => {
+            if (isMountedRef.current) setDraftCount(d.length);
+          });
+        }
+      } catch {
+        if (isMountedRef.current) setSavedStatus('unsaved');
+      }
     }, 1200);
-  }, [user?.email]);
+  }, [user?.email, isEditing]);
 
   // Upload helper
   const uploadAndAdd = useCallback(async (uri: string, mimeType: string, name: string, opts?: { isVoice?: boolean; duration?: number }) => {
@@ -451,17 +498,25 @@ export default function EditorScreen() {
   const handleImagePicker = useCallback(async () => {
     Haptics.selectionAsync();
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow Memento to access your photos.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, quality: 0.85 });
-    if (!result.canceled) await Promise.all(result.assets.map(a => uploadAndAdd(a.uri, a.mimeType || 'image/jpeg', a.fileName || `photo_${Date.now()}.jpg`)));
+    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow Memento to access your photos and videos.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], allowsMultipleSelection: true, quality: 0.85 });
+    if (!result.canceled) await Promise.all(result.assets.map(a => {
+      const isVideo = a.mimeType?.startsWith('video/');
+      return uploadAndAdd(a.uri, a.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg'), a.fileName || `${isVideo ? 'video' : 'photo'}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`);
+    }));
   }, [uploadAndAdd]);
 
-  const handleVideoPicker = useCallback(async () => {
+  // Camera button — opens the CameraCaptureModal which supports both photo
+  // and video recording via expo-camera's CameraView. The modal handles its
+  // own permissions and calls onCapture once the user snaps or records.
+  const handleOpenCamera = useCallback(() => {
     Haptics.selectionAsync();
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow Memento to access your photos.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], allowsMultipleSelection: false, quality: 0.85 });
-    if (!result.canceled && result.assets[0]) { const a = result.assets[0]; await uploadAndAdd(a.uri, a.mimeType || 'video/mp4', a.fileName || `video_${Date.now()}.mp4`); }
+    setCameraVisible(true);
+  }, []);
+
+  const handleCameraCapture = useCallback(async (uri: string, mimeType: string, fileName: string) => {
+    setCameraVisible(false);
+    await uploadAndAdd(uri, mimeType, fileName);
   }, [uploadAndAdd]);
 
   const handleAudioFile = useCallback(async () => {
@@ -536,41 +591,44 @@ export default function EditorScreen() {
                     <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: savedDotColor }} />
                     <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted }}>{savedLabel}</Text>
                   </View>
+                  {/* My Drafts button — badge shows count, opens DraftsSheet */}
                   <TouchableOpacity onPress={() => {
                     Haptics.selectionAsync();
-                    Alert.alert('Story options', undefined, [
-                      {
-                        text: 'Load saved draft',
-                        onPress: () => {
-                          AsyncStorage.getItem(STORY_DRAFT_KEY(user?.email)).then(raw => {
-                            if (!raw) { Alert.alert('No draft', 'No saved draft found.'); return; }
-                            try {
-                              const d = JSON.parse(raw);
-                              if (d.title) setTitle(d.title);
-                              if (d.body) {
-                                setStoryBody(d.body);
-                                richEditorRef.current?.setContent(d.body);
-                              }
-                            } catch {}
-                          });
-                        },
+                    useUiStore.getState().openSheet('story-drafts', {
+                      email: user?.email,
+                      onLoadDraft: (draft: StoryDraft) => {
+                        // Assign this draft's id so autosave continues updating the same slot
+                        draftIdRef.current = draft.id;
+                        setTitle(draft.title ?? '');
+                        const body = draft.body ?? '';
+                        setStoryBody(body);
+                        richEditorRef.current?.setContent(body);
+                        // Restore already-uploaded attachments from the draft
+                        if (Array.isArray(draft.attachments) && draft.attachments.length) {
+                          setAttachments(draft.attachments.map(a => ({
+                            clientId: `restored_${a.fileId}_${Math.random().toString(36).slice(2)}`,
+                            fileId: a.fileId,
+                            uri: a.uri,
+                            name: a.name,
+                            mimeType: a.mimeType,
+                            isVoice: a.isVoice,
+                            duration: a.duration,
+                            isUploading: false,
+                          })));
+                        } else {
+                          setAttachments([]);
+                        }
+                        setSavedStatus('saved');
                       },
-                      {
-                        text: 'Delete draft',
-                        style: 'destructive',
-                        onPress: () => {
-                          AsyncStorage.removeItem(STORY_DRAFT_KEY(user?.email)).catch(() => {});
-                          setTitle('');
-                          setStoryBody('');
-                          richEditorRef.current?.setContent('');
-                          setSavedStatus('saved');
-                        },
-                      },
-                      { text: 'Cancel', style: 'cancel' },
-                    ]);
+                    });
                   }} activeOpacity={0.7}
-                    style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
+                    style={{ height: 34, paddingHorizontal: 12, borderRadius: 17, backgroundColor: COLORS.fillWeak, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                     <MoreHorizontal size={16} color={COLORS.textBase} strokeWidth={2} />
+                    {draftCount > 0 && (
+                      <View style={{ minWidth: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
+                        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.textInverse }}>{draftCount}</Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => { if (!storyHasContent || anyUploading) return; Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowPublish(true); }}
                     disabled={!storyHasContent || anyUploading} activeOpacity={0.8}
@@ -601,13 +659,90 @@ export default function EditorScreen() {
                 placeholderTextColor={COLORS.textDisabled}
                 style={{ fontFamily: FONTS.serif, fontSize: 34, fontWeight: '700', color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42 }}
                 returnKeyType="next"
+                autoCapitalize="sentences"
+                autoCorrect
                 onSubmitEditing={() => richEditorRef.current?.focus()}
                 blurOnSubmit={false}
               />
 
-              {/* WYSIWYG body — takes all remaining vertical space */}
+              {/* ── Attachment strip — horizontal scroll row above the editor so the
+                  editor always has flex:1 space and the strip never gets clipped.
+                  Images: 72×72 square chips. Voice/docs: compact pill chips. ── */}
+              {attachments.length > 0 && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  style={{ flexGrow: 0, flexShrink: 0 }}
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 10, gap: 8, flexDirection: 'row', alignItems: 'center' }}
+                >
+                  {/* Image / video chips */}
+                  {attachments.filter(a => a.mimeType.startsWith('image/') || a.mimeType.startsWith('video/')).map((a, idx) => {
+                    const globalIdx = attachments.findIndex(x => x.clientId === a.clientId);
+                    const isVideo = a.mimeType.startsWith('video/');
+                    return (
+                      <TouchableOpacity key={a.clientId} activeOpacity={0.85}
+                        onPress={() => { setPreviewIndex(globalIdx >= 0 ? globalIdx : idx); setPreviewVisible(true); Haptics.selectionAsync(); }}
+                        style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: COLORS.textStrong }}>
+                        <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                        {/* Play overlay for videos */}
+                        {isVideo && !a.isUploading && (
+                          <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' }}>
+                            <Play size={18} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+                          </View>
+                        )}
+                        {a.isUploading && (
+                          <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
+                            <ActivityIndicator color={COLORS.textInverse} />
+                          </View>
+                        )}
+                        <TouchableOpacity onPress={(e) => { e.stopPropagation(); Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }}
+                          style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+                          <X size={10} color={COLORS.textInverse} strokeWidth={2.5} />
+                        </TouchableOpacity>
+                      </TouchableOpacity>
+                    );
+                  })}
+                  {/* Voice chips */}
+                  {attachments.filter(a => a.isVoice).map(a => {
+                    const dur = a.duration ?? 0;
+                    return (
+                      <View key={a.clientId} style={{ height: 44, backgroundColor: COLORS.textStrong, borderRadius: 22, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Music size={13} color={COLORS.textInverse} strokeWidth={1.8} />
+                        <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>{Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}</Text>
+                        {a.isUploading
+                          ? <ActivityIndicator size="small" color={COLORS.textInverse} />
+                          : (
+                            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }} hitSlop={8}>
+                              <X size={11} color="rgba(255,255,255,0.7)" strokeWidth={2} />
+                            </TouchableOpacity>
+                          )}
+                      </View>
+                    );
+                  })}
+                  {/* Document chips */}
+                  {attachments.filter(a => !a.mimeType.startsWith('image/') && !a.mimeType.startsWith('video/') && !a.isVoice).map(a => (
+                    <View key={a.clientId} style={{ height: 44, backgroundColor: COLORS.fillWeak, borderRadius: 22, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 180 }}>
+                      <FileText size={13} color={COLORS.brand} strokeWidth={1.8} />
+                      <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textStrong, flexShrink: 1 }} numberOfLines={1}>{a.name}</Text>
+                      {a.isUploading
+                        ? <ActivityIndicator size="small" color={COLORS.brand} />
+                        : (
+                          <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }} hitSlop={8}>
+                            <X size={11} color={COLORS.textWeak} strokeWidth={2} />
+                          </TouchableOpacity>
+                        )}
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+
+              {/* WYSIWYG body — takes all remaining vertical space.
+                  editorInstanceKey forces a full remount (blank WebView) when
+                  "Add another story" is tapped after publishing. */}
               {isDraftLoaded ? (
                 <StoryRichEditor
+                  key={editorInstanceKey}
                   ref={richEditorRef}
                   initialContent={storyBody}
                   onChange={handleStoryBodyChange}
@@ -616,70 +751,6 @@ export default function EditorScreen() {
               ) : (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                   <ActivityIndicator color={COLORS.brand} />
-                </View>
-              )}
-
-              {/* Attachment strip below the editor */}
-              {attachments.length > 0 && (
-                <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
-                  {/* Images */}
-                  {(() => {
-                    const imgs = attachments.filter(a => a.mimeType.startsWith('image/'));
-                    if (!imgs.length) return null;
-                    return (
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                        {imgs.slice(0, 6).map((a, idx) => {
-                          const isLast = idx === 5 && imgs.length > 6;
-                          const globalIdx = attachments.findIndex(x => x.clientId === a.clientId);
-                          return (
-                            <TouchableOpacity key={a.clientId} activeOpacity={0.85}
-                              onPress={() => { setPreviewIndex(globalIdx >= 0 ? globalIdx : idx); setPreviewVisible(true); Haptics.selectionAsync(); }}
-                              style={{ width: '31.5%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
-                              <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                              {isLast && (
-                                <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
-                                  <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' }}>+{imgs.length - 6}</Text>
-                                </View>
-                              )}
-                              {a.isUploading && (
-                                <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
-                                  <ActivityIndicator color={COLORS.textInverse} />
-                                </View>
-                              )}
-                              <TouchableOpacity onPress={(e) => { e.stopPropagation(); Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }}
-                                style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
-                                <X size={10} color={COLORS.textInverse} strokeWidth={2.5} />
-                              </TouchableOpacity>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-                    );
-                  })()}
-                  {/* Voice + docs */}
-                  {attachments.filter(a => a.isVoice).map(a => {
-                    const dur = a.duration ?? 0;
-                    return (
-                      <View key={a.clientId} style={{ marginTop: 6, backgroundColor: COLORS.textStrong, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                        <Music size={14} color={COLORS.textInverse} strokeWidth={1.8} />
-                        <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>Voice · {Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}</Text>
-                        {a.isUploading && <ActivityIndicator size="small" color={COLORS.textInverse} />}
-                        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }} hitSlop={8}>
-                          <X size={12} color="rgba(255,255,255,0.7)" strokeWidth={2} />
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
-                  {attachments.filter(a => !a.mimeType.startsWith('image/') && !a.isVoice).map(a => (
-                    <View key={a.clientId} style={{ marginTop: 6, backgroundColor: COLORS.fillWeak, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <FileText size={14} color={COLORS.brand} strokeWidth={1.8} />
-                      <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textStrong }} numberOfLines={1}>{a.name}</Text>
-                      {a.isUploading && <ActivityIndicator size="small" color={COLORS.brand} />}
-                      <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }} hitSlop={8}>
-                        <X size={12} color={COLORS.textWeak} strokeWidth={2} />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
                 </View>
               )}
             </View>
@@ -691,31 +762,38 @@ export default function EditorScreen() {
               <>
                 <TextInput ref={bodyRef} value={qcBody} onChangeText={v => setQcBody(v.slice(0, NOTE_CHAR_MAX))}
                   placeholder="What's on your mind?" placeholderTextColor={isRecording ? COLORS.error : COLORS.textMuted}
-                  style={{ fontFamily: FONTS.sans, fontSize: 16, lineHeight: 24, color: COLORS.textStrong, padding: 0, margin: 0, textAlignVertical: 'top' }}
-                  multiline numberOfLines={2} autoFocus blurOnSubmit={false} scrollEnabled={false} maxLength={NOTE_CHAR_MAX} />
+                  style={{ fontFamily: FONTS.sans, fontSize: 16, lineHeight: 24, color: COLORS.textStrong, padding: 0, margin: 0, textAlignVertical: 'top', minHeight: 56 }}
+                  multiline autoFocus autoCorrect autoCapitalize="sentences" blurOnSubmit={false} scrollEnabled={false} maxLength={NOTE_CHAR_MAX} />
                 {isRecording && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
                     <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.error }} />
                     <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 11, color: COLORS.error }}>{Math.floor(recDuration/60)}:{String(recDuration%60).padStart(2,'0')} · Tap mic to finish</Text>
                   </View>
                 )}
-                {/* Attachment previews */}
+                {/* Attachment previews — images AND videos shown as tappable thumbnails */}
                 {(() => {
-                  const imgAttachments = attachments.filter(a => a.mimeType.startsWith('image/'));
-                  if (!imgAttachments.length) return null;
+                  const mediaAttachments = attachments.filter(a => a.mimeType.startsWith('image/') || a.mimeType.startsWith('video/'));
+                  if (!mediaAttachments.length) return null;
                   return (
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
-                      {imgAttachments.slice(0, 6).map((a, idx) => {
-                        const isLast = idx === 5 && imgAttachments.length > 6;
+                      {mediaAttachments.slice(0, 6).map((a, idx) => {
+                        const isLast = idx === 5 && mediaAttachments.length > 6;
+                        const isVideo = a.mimeType.startsWith('video/');
                         const globalIdx = attachments.findIndex(x => x.clientId === a.clientId);
                         return (
                           <TouchableOpacity key={a.clientId} activeOpacity={0.85}
                             onPress={() => { setPreviewIndex(globalIdx >= 0 ? globalIdx : idx); setPreviewVisible(true); Haptics.selectionAsync(); }}
-                            style={{ width: '31.5%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
+                            style={{ width: '31.5%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: COLORS.textStrong }}>
                             <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                            {/* Play overlay for videos */}
+                            {isVideo && !a.isUploading && (
+                              <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' }}>
+                                <Play size={22} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+                              </View>
+                            )}
                             {isLast && (
                               <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
-                                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' }}>+{imgAttachments.length - 6}</Text>
+                                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' }}>+{mediaAttachments.length - 6}</Text>
                               </View>
                             )}
                             {a.isUploading && (
@@ -748,7 +826,8 @@ export default function EditorScreen() {
                     </View>
                   );
                 })}
-                {attachments.filter(a => !a.mimeType.startsWith('image/') && !a.isVoice).map(a => (
+                {/* Document chips */}
+                {attachments.filter(a => !a.mimeType.startsWith('image/') && !a.mimeType.startsWith('video/') && !a.isVoice).map(a => (
                   <View key={a.clientId} style={{ marginTop: 6, backgroundColor: COLORS.fillWeak, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <FileText size={14} color={COLORS.brand} strokeWidth={1.8} />
                     <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textStrong }} numberOfLines={1}>{a.name}</Text>
@@ -794,12 +873,8 @@ export default function EditorScreen() {
             </>
           )}
 
-          {/* ── Formatting toolbar (story mode only, above media selector) ── */}
-          {isStory && editorBridge && (
-            <FormattingToolbar editor={editorBridge} />
-          )}
-
-          {/* ── Action bar ── */}
+          {/* ── Action bar — story mode: ⊕ upload + inline formatting tools
+                          quick-capture: mode pill + media buttons ── */}
           <EditorActionBar
             mode={mode}
             disableModeSwitch={isModeSwithDisabled}
@@ -811,10 +886,11 @@ export default function EditorScreen() {
               setTimeout(() => { (isStory ? bodyRef : titleRef).current?.focus(); }, 100);
             }}
             onPhoto={handleImagePicker}
-            onCamera={handleVideoPicker}
+            onCamera={handleOpenCamera}
             onAudio={handleVoice}
             onFile={handleAudioFile}
             isRecording={isRecording}
+            editor={isStory ? editorBridge : null}
           />
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -826,6 +902,8 @@ export default function EditorScreen() {
           body={storyBody}
           attachmentIds={uploadedIds}
           memoryId={memoryId}
+          draftId={draftIdRef.current}
+          userEmail={user?.email}
           onClose={() => {
             setShowPublish(false);
             if (isEditing) {
@@ -837,13 +915,18 @@ export default function EditorScreen() {
             }
           }}
           onAddAnother={lockMode === 'true' ? () => {
-            // Reset the editor to a blank slate and stay on screen
+            // Reset the editor to a guaranteed blank slate:
+            // 1. Clear React state
             setShowPublish(false);
             setTitle('');
             setStoryBody('');
             setAttachments([]);
-            richEditorRef.current?.setContent('');
             setSavedStatus('saved');
+            // 2. Assign a fresh draft id for the next session
+            draftIdRef.current = `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+            // 3. Increment key → forces StoryRichEditor WebView to fully remount
+            //    (guarantees the Tiptap bridge starts empty, no stale HTML)
+            setEditorInstanceKey(k => k + 1);
             setTimeout(() => titleRef.current?.focus(), 200);
           } : undefined}
         />
@@ -860,6 +943,13 @@ export default function EditorScreen() {
           setAttachments(prev => prev.filter(a => a.clientId !== clientId));
           if (attachments.length <= 1) setPreviewVisible(false);
         }}
+      />
+
+      {/* Camera capture — photo + video via expo-camera CameraView */}
+      <CameraCaptureModal
+        visible={cameraVisible}
+        onClose={() => setCameraVisible(false)}
+        onCapture={handleCameraCapture}
       />
     </SafeAreaProvider>
   );

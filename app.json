@@ -73,7 +73,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow Memento to access your photos to attach them to your memories.",
-          "cameraPermission": "Allow Memento to use your camera to capture memories."
+          "cameraPermission": "Allow Memento to use your camera to capture memories.",
+          "microphonePermission": "Allow Memento to record audio for videos and voice memos."
         }
       ],
       "expo-web-browser",

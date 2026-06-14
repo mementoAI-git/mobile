@@ -8,19 +8,17 @@ import { AddBeneficiarySheet } from './AddBeneficiarySheet';
 import { MemoryActionsSheet } from './MemoryActionsSheet';
 import { CapsuleActionsSheet } from './CapsuleActionsSheet';
 import { CreateGroupSheet } from './CreateGroupSheet';
-import { GroupActionsSheet } from './GroupActionsSheet';
 import { ShareMemorySheet } from './ShareMemorySheet';
 import { QuickCaptureSheet } from './QuickCaptureSheet';
 import { MemoryInsightsSheet } from './MemoryInsightsSheet';
 import { SearchMemorySheet } from './SearchMemorySheet';
-import { MemoryDetailSheet } from './MemoryDetailSheet';
 import { ChatActionsSheet } from './ChatActionsSheet';
 import { FeedbackSheet } from './FeedbackSheet';
 import { CapsuleDetailSheet } from './CapsuleDetailSheet';
 import { UpgradePromptSheet } from './UpgradePromptSheet';
 import { SelectSheet } from './SelectSheet';
-import { PublishArticleSheet } from './PublishArticleSheet';
 import { StreakSheet } from './StreakSheet';
+import { DraftsSheet } from './DraftsSheet';
 import { COLORS } from '@/constants/tokens';
 
 const SHEET_CONFIGS: Record<string, {
@@ -37,18 +35,16 @@ const SHEET_CONFIGS: Record<string, {
   'capsule-actions': { component: CapsuleActionsSheet, dynamic: true },
   'share-memory': { component: ShareMemorySheet, dynamic: true },
   'create-group': { component: CreateGroupSheet, snapPoints: ['90%'], keyboardBehavior: 'extend' },
-  'group-actions': { component: GroupActionsSheet, dynamic: true },
   'quick-capture': { component: QuickCaptureSheet, dynamic: true, keyboardBlurBehavior: 'none' },
   'memory-insights': { component: MemoryInsightsSheet, snapPoints: ['88%'] },
   'search-memory': { component: SearchMemorySheet, snapPoints: ['90%'], keyboardBehavior: 'fillParent' },
-  'memory-detail': { component: MemoryDetailSheet, snapPoints: ['90%'], keyboardBehavior: 'fillParent' },
   'chat-actions': { component: ChatActionsSheet, dynamic: true },
   'feedback': { component: FeedbackSheet, snapPoints: ['90%'], dynamic: true, keyboardBehavior: 'fillParent' },
   'capsule-detail': { component: CapsuleDetailSheet, snapPoints: ['92%'] },
   'upgrade-prompt': { component: UpgradePromptSheet, dynamic: true },
   'select': { component: SelectSheet, dynamic: true },
-  'publish-article': { component: PublishArticleSheet, snapPoints: ['80%'], keyboardBehavior: 'extend' },
   'streak': { component: StreakSheet, dynamic: true },
+  'story-drafts': { component: DraftsSheet, snapPoints: ['70%'] },
 };
 
 // Sheets that manage their own BottomSheetView / layout

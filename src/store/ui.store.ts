@@ -20,6 +20,7 @@ export type SheetName =
   | 'select'
   | 'publish-article'
   | 'streak'
+  | 'story-drafts'
   | null;
 
 interface UiState {
