@@ -26,7 +26,7 @@ import {
   View, Text, Modal, TouchableOpacity, StyleSheet, Image,
   ActivityIndicator, Alert, Linking,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-context';
 import { CameraView, Camera as ExpoCamera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -256,6 +256,9 @@ export function CameraCaptureModal({
       onRequestClose={handleClose}
       statusBarTranslucent
     >
+      {/* SafeAreaProvider scoped to this Modal window — fixes useSafeAreaInsets()
+          returning zero insets on first open on iOS (separate UIWindow) */}
+      <SafeAreaProvider>
       <View style={styles.root}>
 
         {/* ── Loading / denied ── */}
@@ -448,6 +451,7 @@ export function CameraCaptureModal({
           </>
         )}
       </View>
+      </SafeAreaProvider>
     </Modal>
   );
 }

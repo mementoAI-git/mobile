@@ -13,10 +13,10 @@
 import React, { useRef, useCallback, useState } from 'react';
 import {
   View, Text, Modal, FlatList, Image,
-  TouchableOpacity, Dimensions,
+  TouchableOpacity, TouchableWithoutFeedback, Dimensions,
   StyleSheet, Share,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { VideoView } from 'expo-video';
 import { useVideoPlayer } from '@/hooks/use-video-player';
 import * as Haptics from 'expo-haptics';
@@ -199,6 +199,10 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      {/* SafeAreaProvider scoped to the Modal window — fixes inset delivery
+          on Android edge-to-edge (edgeToEdgeEnabled: true in app.json)
+          which causes the header to be hidden behind the status bar on first open */}
+      <SafeAreaProvider>
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         {/* ── Header ── */}
         <View style={styles.header}>
@@ -216,31 +220,37 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
           </TouchableOpacity>
         </View>
 
-        {/* ── Paging list ── */}
-        <FlatList
-          ref={listRef}
-          data={attachments}
-          keyExtractor={(item) => item.clientId}
-          horizontal
-          pagingEnabled={false}
-          snapToInterval={CARD_W + CARD_GAP}
-          snapToAlignment="start"
-          decelerationRate="fast"
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: SIDE_PAD }}
-          ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
-          onViewableItemsChanged={handleViewableChange}
-          viewabilityConfig={viewabilityConfig.current}
-          getItemLayout={(_, index) => ({ length: CARD_W + CARD_GAP, offset: (CARD_W + CARD_GAP) * index, index })}
-          renderItem={({ item }) => renderSlide(item)}
-          initialScrollIndex={initialIndex}
-          onScrollToIndexFailed={() => {}}
-          style={{ flex: 1 }}
-        />
+        {/* ── Paging list — TouchableWithoutFeedback wraps the flex:1 area so
+            tapping the cream space above/below the image card closes the modal ── */}
+        <TouchableWithoutFeedback onPress={() => { Haptics.selectionAsync(); onClose(); }}>
+          <View style={{ flex: 1 }}>
+            <FlatList
+              ref={listRef}
+              data={attachments}
+              keyExtractor={(item) => item.clientId}
+              horizontal
+              pagingEnabled={false}
+              snapToInterval={CARD_W + CARD_GAP}
+              snapToAlignment="start"
+              decelerationRate="fast"
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: SIDE_PAD }}
+              ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
+              onViewableItemsChanged={handleViewableChange}
+              viewabilityConfig={viewabilityConfig.current}
+              getItemLayout={(_, index) => ({ length: CARD_W + CARD_GAP, offset: (CARD_W + CARD_GAP) * index, index })}
+              renderItem={({ item }) => renderSlide(item)}
+              initialScrollIndex={initialIndex}
+              onScrollToIndexFailed={() => {}}
+              style={{ flex: 1 }}
+            />
+          </View>
+        </TouchableWithoutFeedback>
 
         {/* ── Dot pagination ── */}
         <Dots count={attachments.length} active={currentIndex} />
       </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }
