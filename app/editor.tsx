@@ -22,6 +22,7 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import * as ExpoCamera from 'expo-camera';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Clipboard from 'expo-clipboard';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -38,6 +39,7 @@ import { queryKeys } from '@/constants/query-keys';
 import { useToast } from '@/components/ui/Toast';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
+import { CameraCaptureModal } from '@/components/ui/CameraCaptureModal';
 import { StoryRichEditor, FormattingToolbar, type StoryRichEditorRef } from '@/components/ui/StoryRichEditor';
 import type { EditorBridge } from '@10play/tentap-editor';
 import client from '@/api/client';
@@ -365,6 +367,7 @@ export default function EditorScreen() {
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [cameraVisible, setCameraVisible] = useState(false);
 
   const { mutate: createMemory } = useCreateMemory();
   const { mutateAsync: quickCapture, isPending: qcPending } = useQuickCapture();
@@ -456,12 +459,17 @@ export default function EditorScreen() {
     if (!result.canceled) await Promise.all(result.assets.map(a => uploadAndAdd(a.uri, a.mimeType || 'image/jpeg', a.fileName || `photo_${Date.now()}.jpg`)));
   }, [uploadAndAdd]);
 
-  const handleVideoPicker = useCallback(async () => {
+  // Camera button — opens the CameraCaptureModal which supports both photo
+  // and video recording via expo-camera's CameraView. The modal handles its
+  // own permissions and calls onCapture once the user snaps or records.
+  const handleOpenCamera = useCallback(() => {
     Haptics.selectionAsync();
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow Memento to access your photos.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], allowsMultipleSelection: false, quality: 0.85 });
-    if (!result.canceled && result.assets[0]) { const a = result.assets[0]; await uploadAndAdd(a.uri, a.mimeType || 'video/mp4', a.fileName || `video_${Date.now()}.mp4`); }
+    setCameraVisible(true);
+  }, []);
+
+  const handleCameraCapture = useCallback(async (uri: string, mimeType: string, fileName: string) => {
+    setCameraVisible(false);
+    await uploadAndAdd(uri, mimeType, fileName);
   }, [uploadAndAdd]);
 
   const handleAudioFile = useCallback(async () => {
@@ -811,7 +819,7 @@ export default function EditorScreen() {
               setTimeout(() => { (isStory ? bodyRef : titleRef).current?.focus(); }, 100);
             }}
             onPhoto={handleImagePicker}
-            onCamera={handleVideoPicker}
+            onCamera={handleOpenCamera}
             onAudio={handleVoice}
             onFile={handleAudioFile}
             isRecording={isRecording}
@@ -860,6 +868,13 @@ export default function EditorScreen() {
           setAttachments(prev => prev.filter(a => a.clientId !== clientId));
           if (attachments.length <= 1) setPreviewVisible(false);
         }}
+      />
+
+      {/* Camera capture — photo + video via expo-camera CameraView */}
+      <CameraCaptureModal
+        visible={cameraVisible}
+        onClose={() => setCameraVisible(false)}
+        onCapture={handleCameraCapture}
       />
     </SafeAreaProvider>
   );
