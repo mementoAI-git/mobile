@@ -13,12 +13,14 @@
 import React, { useRef, useCallback, useState } from 'react';
 import {
   View, Text, Modal, FlatList, Image,
-  TouchableOpacity, Linking, Dimensions,
+  TouchableOpacity, Dimensions,
   StyleSheet, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { VideoView } from 'expo-video';
+import { useVideoPlayer } from '@/hooks/use-video-player';
 import * as Haptics from 'expo-haptics';
-import { ChevronLeft, Share2, X, Play, Mic, FileText, Music } from 'lucide-react-native';
+import { ChevronLeft, Share2, X, Mic, FileText, Music } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -73,21 +75,26 @@ function ImageSlide({ uri }: { uri: string }) {
   );
 }
 
-function VideoSlide({ uri, name }: { uri: string; name: string }) {
+/**
+ * VideoSlide — uses expo-video for in-app playback.
+ *
+ * useVideoPlayer must be called at the component top level (Rules of Hooks),
+ * so VideoSlide is its own component rather than an inline renderer.
+ *
+ * uri preference: CDN URL (post-upload) → local file:// (during upload)
+ */
+function VideoSlide({ uri }: { uri: string }) {
+  const { player } = useVideoPlayer(uri, { autoPlay: false, loop: false });
   return (
     <View style={styles.slide}>
       <View style={{ flex: 1, justifyContent: 'center' }}>
-        <TouchableOpacity
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); Linking.openURL(uri).catch(() => {}); }}
-          activeOpacity={0.85}
-          style={[styles.roundedImage, styles.mediaCard]}
-        >
-          <View style={styles.iconCircle}>
-            <Play size={36} color={COLORS.textInverse} fill={COLORS.textInverse} />
-          </View>
-          <Text style={styles.mediaName} numberOfLines={2}>{name}</Text>
-          <Text style={styles.mediaHint}>Tap to play</Text>
-        </TouchableOpacity>
+        <VideoView
+          player={player}
+          nativeControls
+          style={styles.roundedImage}
+          allowsFullscreen
+          allowsPictureInPicture
+        />
       </View>
     </View>
   );
@@ -132,7 +139,7 @@ function DocSlide({ item }: { item: PreviewAttachment }) {
 
 function renderSlide(item: PreviewAttachment) {
   if (item.mimeType.startsWith('image/')) return <ImageSlide uri={item.uri} />;
-  if (item.mimeType.startsWith('video/')) return <VideoSlide uri={item.uri} name={item.name} />;
+  if (item.mimeType.startsWith('video/')) return <VideoSlide uri={item.uri} />;
   if (item.mimeType.startsWith('audio/') || item.isVoice) return <AudioSlide item={item} />;
   return <DocSlide item={item} />;
 }

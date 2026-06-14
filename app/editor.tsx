@@ -632,11 +632,18 @@ export default function EditorScreen() {
                   {/* Image / video chips */}
                   {attachments.filter(a => a.mimeType.startsWith('image/') || a.mimeType.startsWith('video/')).map((a, idx) => {
                     const globalIdx = attachments.findIndex(x => x.clientId === a.clientId);
+                    const isVideo = a.mimeType.startsWith('video/');
                     return (
                       <TouchableOpacity key={a.clientId} activeOpacity={0.85}
                         onPress={() => { setPreviewIndex(globalIdx >= 0 ? globalIdx : idx); setPreviewVisible(true); Haptics.selectionAsync(); }}
-                        style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
+                        style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: COLORS.textStrong }}>
                         <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                        {/* Play overlay for videos */}
+                        {isVideo && !a.isUploading && (
+                          <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' }}>
+                            <Play size={18} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+                          </View>
+                        )}
                         {a.isUploading && (
                           <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
                             <ActivityIndicator color={COLORS.textInverse} />
@@ -713,23 +720,30 @@ export default function EditorScreen() {
                     <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 11, color: COLORS.error }}>{Math.floor(recDuration/60)}:{String(recDuration%60).padStart(2,'0')} · Tap mic to finish</Text>
                   </View>
                 )}
-                {/* Attachment previews */}
+                {/* Attachment previews — images AND videos shown as tappable thumbnails */}
                 {(() => {
-                  const imgAttachments = attachments.filter(a => a.mimeType.startsWith('image/'));
-                  if (!imgAttachments.length) return null;
+                  const mediaAttachments = attachments.filter(a => a.mimeType.startsWith('image/') || a.mimeType.startsWith('video/'));
+                  if (!mediaAttachments.length) return null;
                   return (
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
-                      {imgAttachments.slice(0, 6).map((a, idx) => {
-                        const isLast = idx === 5 && imgAttachments.length > 6;
+                      {mediaAttachments.slice(0, 6).map((a, idx) => {
+                        const isLast = idx === 5 && mediaAttachments.length > 6;
+                        const isVideo = a.mimeType.startsWith('video/');
                         const globalIdx = attachments.findIndex(x => x.clientId === a.clientId);
                         return (
                           <TouchableOpacity key={a.clientId} activeOpacity={0.85}
                             onPress={() => { setPreviewIndex(globalIdx >= 0 ? globalIdx : idx); setPreviewVisible(true); Haptics.selectionAsync(); }}
-                            style={{ width: '31.5%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
+                            style={{ width: '31.5%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: COLORS.textStrong }}>
                             <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                            {/* Play overlay for videos */}
+                            {isVideo && !a.isUploading && (
+                              <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' }}>
+                                <Play size={22} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+                              </View>
+                            )}
                             {isLast && (
                               <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
-                                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' }}>+{imgAttachments.length - 6}</Text>
+                                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' }}>+{mediaAttachments.length - 6}</Text>
                               </View>
                             )}
                             {a.isUploading && (
@@ -762,20 +776,6 @@ export default function EditorScreen() {
                     </View>
                   );
                 })}
-                {/* Video chips — dark pill with play icon + filename */}
-                {attachments.filter(a => a.mimeType.startsWith('video/')).map(a => (
-                  <View key={a.clientId} style={{ marginTop: 6, backgroundColor: COLORS.textStrong, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <Video size={14} color={COLORS.textInverse} strokeWidth={1.8} />
-                    <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 12, color: 'rgba(255,255,255,0.85)' }} numberOfLines={1}>{a.name}</Text>
-                    {a.isUploading
-                      ? <ActivityIndicator size="small" color={COLORS.textInverse} />
-                      : (
-                        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }} hitSlop={8}>
-                          <X size={12} color="rgba(255,255,255,0.7)" strokeWidth={2} />
-                        </TouchableOpacity>
-                      )}
-                  </View>
-                ))}
                 {/* Document chips */}
                 {attachments.filter(a => !a.mimeType.startsWith('image/') && !a.mimeType.startsWith('video/') && !a.isVoice).map(a => (
                   <View key={a.clientId} style={{ marginTop: 6, backgroundColor: COLORS.fillWeak, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
