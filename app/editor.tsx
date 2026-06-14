@@ -873,12 +873,8 @@ export default function EditorScreen() {
             </>
           )}
 
-          {/* ── Formatting toolbar (story mode only, above media selector) ── */}
-          {isStory && editorBridge && (
-            <FormattingToolbar editor={editorBridge} />
-          )}
-
-          {/* ── Action bar ── */}
+          {/* ── Action bar — story mode: ⊕ upload + inline formatting tools
+                          quick-capture: mode pill + media buttons ── */}
           <EditorActionBar
             mode={mode}
             disableModeSwitch={isModeSwithDisabled}
@@ -894,6 +890,7 @@ export default function EditorScreen() {
             onAudio={handleVoice}
             onFile={handleAudioFile}
             isRecording={isRecording}
+            editor={isStory ? editorBridge : null}
           />
         </KeyboardAvoidingView>
       </SafeAreaView>
