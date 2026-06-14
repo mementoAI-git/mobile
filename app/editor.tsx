@@ -37,6 +37,8 @@ import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/constants/query-keys';
 import { useToast } from '@/components/ui/Toast';
+import { upsertDraft, loadDrafts, deleteDraft, type StoryDraft, type StoryDraftAttachment } from '@/components/sheets/DraftsSheet';
+import { useUiStore } from '@/store';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
 import { CameraCaptureModal } from '@/components/ui/CameraCaptureModal';
@@ -171,9 +173,10 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
 
 // ─── Publish modal (story mode) ───────────────────────────────────────────────
 
-function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId, onAddAnother }: {
+function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId, onAddAnother, draftId, userEmail }: {
   visible: boolean; title: string; body: string; attachmentIds: string[];
   onClose: () => void; memoryId?: string; onAddAnother?: () => void;
+  draftId?: string; userEmail?: string | null;
 }) {
   const insets = useSafeAreaInsets();
   const [tags, setTags] = useState('');
@@ -240,6 +243,8 @@ function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId, 
         onClose();
       } else {
         const id = res?.data?._id ?? res?.data?.data?._id ?? '';
+        // Delete the draft slot now that the story has been published
+        if (draftId) deleteDraft(userEmail, draftId).catch(() => {});
         setPublishedUrl(id ? `${PUBLISHED_BASE_URL}/${id}` : PUBLISHED_BASE_URL);
       }
     };
@@ -348,6 +353,10 @@ export default function EditorScreen() {
   const isMountedRef = useRef(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Multi-draft: each new story session gets its own id so up to 10 drafts can coexist
+  const draftIdRef = useRef<string>(isEditing ? '' : `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+  const [draftCount, setDraftCount] = useState(0);
+
   // Story state
   const [title, setTitle] = useState('');
   const [storyBody, setStoryBody] = useState('');
@@ -385,7 +394,7 @@ export default function EditorScreen() {
 
   useEffect(() => { return () => { isMountedRef.current = false; if (saveTimerRef.current) clearTimeout(saveTimerRef.current); }; }, []);
 
-  // Load drafts / pre-populate from edit params
+  // Load drafts / pre-populate from edit params; also refresh draft count badge
   useEffect(() => {
     if (isEditing && initialData) {
       // Edit mode — decode full memory JSON seeded by handleEdit
@@ -407,10 +416,10 @@ export default function EditorScreen() {
       } catch { /* ignore malformed JSON */ }
       setIsDraftLoaded(true);
     } else if (!isEditing) {
+      // Load QC draft and refresh the draft count badge in parallel
       Promise.all([
-        AsyncStorage.getItem(STORY_DRAFT_KEY(user?.email)).then(raw => {
-          if (!raw || !isMountedRef.current) return;
-          try { const d = JSON.parse(raw); if (d.title) setTitle(d.title); if (d.body) setStoryBody(d.body); } catch {}
+        loadDrafts(user?.email).then(d => {
+          if (isMountedRef.current) setDraftCount(d.length);
         }),
         AsyncStorage.getItem(QC_DRAFT_KEY(user?.email)).then(raw => {
           if (!raw || !isMountedRef.current) return;
@@ -425,19 +434,52 @@ export default function EditorScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Autosave story draft
+  // Autosave story draft — upserts into the multi-draft array (max 10)
   const scheduleSave = useCallback((t: string, b: string) => {
+    if (isEditing) return; // Never autosave when editing an existing published story
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     setSavedStatus('saving');
-    saveTimerRef.current = setTimeout(() => {
-      const key = STORY_DRAFT_KEY(user?.email);
-      if (t.trim() || b.trim()) {
-        AsyncStorage.setItem(key, JSON.stringify({ title: t, body: b }))
-          .then(() => { if (isMountedRef.current) setSavedStatus('saved'); })
-          .catch(() => { if (isMountedRef.current) setSavedStatus('unsaved'); });
-      } else { AsyncStorage.removeItem(key).catch(() => {}); if (isMountedRef.current) setSavedStatus('saved'); }
+    saveTimerRef.current = setTimeout(async () => {
+      if (!t.trim() && !b.trim()) {
+        // Empty — remove this draft slot silently
+        if (draftIdRef.current) {
+          await deleteDraft(user?.email, draftIdRef.current).catch(() => {});
+        }
+        if (isMountedRef.current) setSavedStatus('saved');
+        return;
+      }
+      try {
+        // Snapshot already-uploaded attachments so they can be restored on load
+        const savedAttachments: StoryDraftAttachment[] = attachments
+          .filter(a => a.fileId && !a.isUploading)
+          .map(a => ({
+            fileId: a.fileId,
+            uri: a.file?.url || a.uri,
+            name: a.name,
+            mimeType: a.mimeType,
+            isVoice: a.isVoice,
+            duration: a.duration,
+          }));
+
+        await upsertDraft(user?.email, {
+          id: draftIdRef.current,
+          title: t,
+          body: b,
+          updatedAt: Date.now(),
+          attachments: savedAttachments.length ? savedAttachments : undefined,
+        });
+        if (isMountedRef.current) {
+          setSavedStatus('saved');
+          // Refresh the badge count
+          loadDrafts(user?.email).then(d => {
+            if (isMountedRef.current) setDraftCount(d.length);
+          });
+        }
+      } catch {
+        if (isMountedRef.current) setSavedStatus('unsaved');
+      }
     }, 1200);
-  }, [user?.email]);
+  }, [user?.email, isEditing]);
 
   // Upload helper
   const uploadAndAdd = useCallback(async (uri: string, mimeType: string, name: string, opts?: { isVoice?: boolean; duration?: number }) => {
@@ -547,41 +589,44 @@ export default function EditorScreen() {
                     <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: savedDotColor }} />
                     <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted }}>{savedLabel}</Text>
                   </View>
+                  {/* My Drafts button — badge shows count, opens DraftsSheet */}
                   <TouchableOpacity onPress={() => {
                     Haptics.selectionAsync();
-                    Alert.alert('Story options', undefined, [
-                      {
-                        text: 'Load saved draft',
-                        onPress: () => {
-                          AsyncStorage.getItem(STORY_DRAFT_KEY(user?.email)).then(raw => {
-                            if (!raw) { Alert.alert('No draft', 'No saved draft found.'); return; }
-                            try {
-                              const d = JSON.parse(raw);
-                              if (d.title) setTitle(d.title);
-                              if (d.body) {
-                                setStoryBody(d.body);
-                                richEditorRef.current?.setContent(d.body);
-                              }
-                            } catch {}
-                          });
-                        },
+                    useUiStore.getState().openSheet('story-drafts', {
+                      email: user?.email,
+                      onLoadDraft: (draft: StoryDraft) => {
+                        // Assign this draft's id so autosave continues updating the same slot
+                        draftIdRef.current = draft.id;
+                        setTitle(draft.title ?? '');
+                        const body = draft.body ?? '';
+                        setStoryBody(body);
+                        richEditorRef.current?.setContent(body);
+                        // Restore already-uploaded attachments from the draft
+                        if (Array.isArray(draft.attachments) && draft.attachments.length) {
+                          setAttachments(draft.attachments.map(a => ({
+                            clientId: `restored_${a.fileId}_${Math.random().toString(36).slice(2)}`,
+                            fileId: a.fileId,
+                            uri: a.uri,
+                            name: a.name,
+                            mimeType: a.mimeType,
+                            isVoice: a.isVoice,
+                            duration: a.duration,
+                            isUploading: false,
+                          })));
+                        } else {
+                          setAttachments([]);
+                        }
+                        setSavedStatus('saved');
                       },
-                      {
-                        text: 'Delete draft',
-                        style: 'destructive',
-                        onPress: () => {
-                          AsyncStorage.removeItem(STORY_DRAFT_KEY(user?.email)).catch(() => {});
-                          setTitle('');
-                          setStoryBody('');
-                          richEditorRef.current?.setContent('');
-                          setSavedStatus('saved');
-                        },
-                      },
-                      { text: 'Cancel', style: 'cancel' },
-                    ]);
+                    });
                   }} activeOpacity={0.7}
-                    style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
+                    style={{ height: 34, paddingHorizontal: 12, borderRadius: 17, backgroundColor: COLORS.fillWeak, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                     <MoreHorizontal size={16} color={COLORS.textBase} strokeWidth={2} />
+                    {draftCount > 0 && (
+                      <View style={{ minWidth: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
+                        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.textInverse }}>{draftCount}</Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => { if (!storyHasContent || anyUploading) return; Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowPublish(true); }}
                     disabled={!storyHasContent || anyUploading} activeOpacity={0.8}
@@ -855,6 +900,8 @@ export default function EditorScreen() {
           body={storyBody}
           attachmentIds={uploadedIds}
           memoryId={memoryId}
+          draftId={draftIdRef.current}
+          userEmail={user?.email}
           onClose={() => {
             setShowPublish(false);
             if (isEditing) {

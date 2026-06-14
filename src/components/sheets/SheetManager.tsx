@@ -18,6 +18,7 @@ import { CapsuleDetailSheet } from './CapsuleDetailSheet';
 import { UpgradePromptSheet } from './UpgradePromptSheet';
 import { SelectSheet } from './SelectSheet';
 import { StreakSheet } from './StreakSheet';
+import { DraftsSheet } from './DraftsSheet';
 import { COLORS } from '@/constants/tokens';
 
 const SHEET_CONFIGS: Record<string, {
@@ -43,6 +44,7 @@ const SHEET_CONFIGS: Record<string, {
   'upgrade-prompt': { component: UpgradePromptSheet, dynamic: true },
   'select': { component: SelectSheet, dynamic: true },
   'streak': { component: StreakSheet, dynamic: true },
+  'story-drafts': { component: DraftsSheet, snapPoints: ['70%'] },
 };
 
 // Sheets that manage their own BottomSheetView / layout
