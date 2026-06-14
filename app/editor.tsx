@@ -356,6 +356,8 @@ export default function EditorScreen() {
   // Multi-draft: each new story session gets its own id so up to 10 drafts can coexist
   const draftIdRef = useRef<string>(isEditing ? '' : `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`);
   const [draftCount, setDraftCount] = useState(0);
+  // Incrementing this key forces StoryRichEditor to fully remount (blank WebView)
+  const [editorInstanceKey, setEditorInstanceKey] = useState(0);
 
   // Story state
   const [title, setTitle] = useState('');
@@ -735,9 +737,12 @@ export default function EditorScreen() {
                 </ScrollView>
               )}
 
-              {/* WYSIWYG body — takes all remaining vertical space */}
+              {/* WYSIWYG body — takes all remaining vertical space.
+                  editorInstanceKey forces a full remount (blank WebView) when
+                  "Add another story" is tapped after publishing. */}
               {isDraftLoaded ? (
                 <StoryRichEditor
+                  key={editorInstanceKey}
                   ref={richEditorRef}
                   initialContent={storyBody}
                   onChange={handleStoryBodyChange}
@@ -913,13 +918,18 @@ export default function EditorScreen() {
             }
           }}
           onAddAnother={lockMode === 'true' ? () => {
-            // Reset the editor to a blank slate and stay on screen
+            // Reset the editor to a guaranteed blank slate:
+            // 1. Clear React state
             setShowPublish(false);
             setTitle('');
             setStoryBody('');
             setAttachments([]);
-            richEditorRef.current?.setContent('');
             setSavedStatus('saved');
+            // 2. Assign a fresh draft id for the next session
+            draftIdRef.current = `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+            // 3. Increment key → forces StoryRichEditor WebView to fully remount
+            //    (guarantees the Tiptap bridge starts empty, no stale HTML)
+            setEditorInstanceKey(k => k + 1);
             setTimeout(() => titleRef.current?.focus(), 200);
           } : undefined}
         />
