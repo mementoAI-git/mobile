@@ -64,13 +64,13 @@ function formatDuration(secs: number) {
 function ImageSlide({ uri }: { uri: string }) {
   return (
     <View style={styles.slide}>
-      <View style={{ flex: 1, justifyContent: 'center' }}>
-        <Image
-          source={{ uri }}
-          style={styles.roundedImage}
-          resizeMode="cover"
-        />
-      </View>
+      {/* flex: 1 + contain — image fills the card height without cropping,
+          letterboxed on the cream background for any aspect ratio */}
+      <Image
+        source={{ uri }}
+        style={styles.slideImage}
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -291,6 +291,13 @@ const styles = StyleSheet.create({
   slide: {
     width: CARD_W,
     flex: 1,
+  },
+  // Image slide — flex:1 + contain shows the full image at its natural ratio
+  // without any cropping, letterboxed on the cream background
+  slideImage: {
+    flex: 1,
+    width: '100%',
+    borderRadius: 24,
   },
   roundedImage: {
     width: '100%',
