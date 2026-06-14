@@ -21,8 +21,6 @@ import {
 } from 'lucide-react-native';
 import dayjs from 'dayjs';
 import Animated from 'react-native-reanimated';
-import { VideoView } from 'expo-video';
-import { useVideoPlayer } from '@/hooks/use-video-player';
 import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
 import { MemTag, Skeleton } from '@/components/ui';
@@ -32,21 +30,6 @@ import { useStoryDetailLogic } from '@/hooks/use-story-detail-logic';
 import { useBackHandler } from '@/hooks/use-back-handler';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-
-// ─── Video item ───────────────────────────────────────────────────────────────
-
-function VideoItem({ uri, style }: { uri: string; style?: any }) {
-  const { player } = useVideoPlayer(uri, { loop: false, autoPlay: false });
-  return (
-    <VideoView
-      player={player}
-      style={style ?? { width: '100%', aspectRatio: 16 / 9 }}
-      allowsFullscreen
-      allowsPictureInPicture
-      nativeControls
-    />
-  );
-}
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -271,13 +254,28 @@ export default function StoryDetailScreen() {
           </View>
         )}
 
-        {/* Videos — full-width stacked */}
+        {/* Videos — thumbnail with play button, opens MediaPreviewModal on tap */}
         {videos.length > 0 && (
           <View style={{ paddingHorizontal: 20, gap: 8, marginBottom: 8 }}>
             {videos.map((item, idx) => (
-              <View key={item.url ?? idx} style={{ borderRadius: 14, overflow: 'hidden' }}>
-                <VideoItem uri={item.url || ''} style={{ width: '100%', aspectRatio: 16 / 9 }} />
-              </View>
+              <TouchableOpacity
+                key={item.url ?? idx}
+                activeOpacity={0.88}
+                onPress={() => openPreview(item)}
+                style={{ borderRadius: 14, overflow: 'hidden', width: SCREEN_W - 40, height: (SCREEN_W - 40) * (9 / 16), backgroundColor: COLORS.textStrong }}
+              >
+                <Image
+                  source={{ uri: item.url }}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover"
+                />
+                {/* Dark overlay + play icon */}
+                <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ width: 0, height: 0, borderTopWidth: 11, borderBottomWidth: 11, borderLeftWidth: 18, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderLeftColor: '#fff', marginLeft: 4 }} />
+                  </View>
+                </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
