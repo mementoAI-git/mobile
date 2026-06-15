@@ -173,8 +173,8 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
 
 // ─── Publish modal (story mode) ───────────────────────────────────────────────
 
-function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId, onAddAnother, draftId, userEmail }: {
-  visible: boolean; title: string; body: string; attachmentIds: string[];
+function PublishModalInner({ title, body, attachmentIds, onClose, memoryId, onAddAnother, draftId, userEmail }: {
+  title: string; body: string; attachmentIds: string[];
   onClose: () => void; memoryId?: string; onAddAnother?: () => void;
   draftId?: string; userEmail?: string | null;
 }) {
@@ -264,10 +264,12 @@ function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId, 
   }, [onClose]);
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={handleClose}>
-      <SafeAreaProvider>
-        <SafeAreaView style={[{ flex: 1, backgroundColor: COLORS.background }, publishedUrl ? { backgroundColor: 'transparent' } : null]} edges={publishedUrl ? [] : ['top']}>
-          {publishedUrl ? (
+    <SafeAreaProvider>
+      <View style={[
+        { flex: 1, backgroundColor: COLORS.background, paddingTop: insets.top },
+        publishedUrl ? { backgroundColor: 'transparent', paddingTop: 0 } : null,
+      ]}>
+        {publishedUrl ? (
             <PublishSuccessView
               publishedUrl={publishedUrl}
               onAddAnother={onAddAnother ?? handleClose}
@@ -327,8 +329,16 @@ function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId, 
               </TouchableOpacity>
             </ScrollView>
           )}
-        </SafeAreaView>
-      </SafeAreaProvider>
+      </View>
+    </SafeAreaProvider>
+  );
+}
+
+/** Public wrapper — Modal + statusBarTranslucent for correct Android edge-to-edge insets */
+function PublishModal({ visible, ...props }: { visible: boolean } & React.ComponentProps<typeof PublishModalInner>) {
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" statusBarTranslucent onRequestClose={props.onClose}>
+      <PublishModalInner {...props} />
     </Modal>
   );
 }
@@ -911,9 +921,18 @@ export default function EditorScreen() {
             if (isEditing) {
               // Editing mode — go back to story detail
               router.back();
-            } else if (lockMode === 'true') {
-              // Came from stories screen — navigate there
-              router.replace('/(tabs)/stories');
+            } else {
+              // After a successful publish (any flow), clear the editor so pressing
+              // back from the success screen doesn't leave stale content.
+              setTitle('');
+              setStoryBody('');
+              setAttachments([]);
+              setSavedStatus('saved');
+              draftIdRef.current = `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+              setEditorInstanceKey(k => k + 1);
+              if (lockMode === 'true') {
+                router.replace('/(tabs)/stories');
+              }
             }
           }}
           onAddAnother={lockMode === 'true' ? () => {
