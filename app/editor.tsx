@@ -118,14 +118,14 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
 
   return (
     <ImageBackground source={SUCCESS_BG} style={{ flex: 1 }} resizeMode="cover">
-      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top, paddingBottom: insets.bottom + 32 }} bounces={false}>
-        <View style={{ height: 300, width: '100%', position: 'relative' }}>
-          <Image source={SUN} style={{ position: 'absolute', width: 62, height: 62, left: 95, top: 95 }} resizeMode="contain" />
-          <Image source={BIG_CLOUD} style={{ position: 'absolute', width: 100, height: 80, right: '50%', marginRight: -150, top: 50 }} resizeMode="contain" />
-          <Image source={SMALL_CLOUD} style={{ position: 'absolute', width: 52, height: 42, left: '50%', top: 50 }} resizeMode="contain" />
-          <Image source={SURFER_WEBP} style={{ position: 'absolute', width: 280, height: 280, alignSelf: 'center', bottom: 0 }} resizeMode="contain" />
+      <View style={{ flex: 1, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }}>
+        <View style={{ height: 220, width: '100%', position: 'relative' }}>
+          <Image source={SUN} style={{ position: 'absolute', width: 52, height: 52, left: 80, top: 60 }} resizeMode="contain" />
+          <Image source={BIG_CLOUD} style={{ position: 'absolute', width: 90, height: 72, right: '50%', marginRight: -140, top: 20 }} resizeMode="contain" />
+          <Image source={SMALL_CLOUD} style={{ position: 'absolute', width: 44, height: 36, left: '50%', top: 20 }} resizeMode="contain" />
+          <Image source={SURFER_WEBP} style={{ position: 'absolute', width: 220, height: 220, alignSelf: 'center', bottom: 0 }} resizeMode="contain" />
         </View>
-        <Animated.View entering={FadeInDown.duration(400).delay(100)} style={{ paddingHorizontal: 24, paddingTop: 32, alignItems: 'center', gap: 24 }}>
+        <Animated.View entering={FadeInDown.duration(400).delay(100)} style={{ flex: 1, paddingHorizontal: 24, paddingTop: 24, alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={{ fontFamily: FONTS.sansBold, fontSize: 26, color: COLORS.textStrong, textAlign: 'center', lineHeight: 34 }}>
             Story published{'\n'}successfully
           </Text>
@@ -166,15 +166,15 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
             <Text style={{ fontFamily: FONTS.sans, fontSize: 15, color: COLORS.textBase, textAlign: 'center' }}>Dismiss</Text>
           </TouchableOpacity>
         </Animated.View>
-      </ScrollView>
+      </View>
     </ImageBackground>
   );
 }
 
 // ─── Publish modal (story mode) ───────────────────────────────────────────────
 
-function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId, onAddAnother, draftId, userEmail }: {
-  visible: boolean; title: string; body: string; attachmentIds: string[];
+function PublishModalInner({ title, body, attachmentIds, onClose, memoryId, onAddAnother, draftId, userEmail }: {
+  title: string; body: string; attachmentIds: string[];
   onClose: () => void; memoryId?: string; onAddAnother?: () => void;
   draftId?: string; userEmail?: string | null;
 }) {
@@ -264,17 +264,19 @@ function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId, 
   }, [onClose]);
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={handleClose}>
-      <SafeAreaProvider>
-        <SafeAreaView style={[{ flex: 1, backgroundColor: COLORS.background }, publishedUrl ? { backgroundColor: 'transparent' } : null]} edges={publishedUrl ? [] : ['top']}>
-          {publishedUrl ? (
+    <SafeAreaProvider>
+      <View style={[
+        { flex: 1, backgroundColor: COLORS.background, paddingTop: insets.top },
+        publishedUrl ? { backgroundColor: 'transparent', paddingTop: 0 } : null,
+      ]}>
+        {publishedUrl ? (
             <PublishSuccessView
               publishedUrl={publishedUrl}
               onAddAnother={onAddAnother ?? handleClose}
               onDismiss={handleClose}
             />
           ) : (
-            <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: insets.bottom + 24 }} keyboardShouldPersistTaps="handled">
+            <View style={{ flex: 1, paddingHorizontal: 20, paddingBottom: insets.bottom + 24, justifyContent: 'center' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                 <Text style={{ fontFamily: FONTS.serif, fontSize: 22, color: COLORS.textStrong }}>Publish post</Text>
                 <TouchableOpacity onPress={handleClose} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
@@ -284,30 +286,33 @@ function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId, 
               <View style={{ backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16, marginBottom: 24 }}>
                 <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong, marginBottom: 4 }}>Who can see this story?</Text>
                 <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textBase, marginBottom: 14 }}>Stories are visible to all beneficiaries by default.</Text>
-                <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setBeneficiaryMenuOpen(o => !o); }}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, borderWidth: 1, borderColor: COLORS.strokeWeaker }} activeOpacity={0.8}>
-                  <Users size={18} color={COLORS.textBase} strokeWidth={1.8} />
-                  <Text style={{ flex: 1, fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>{visibilityLabel}</Text>
-                  <ChevronDown size={16} color={COLORS.textMuted} strokeWidth={2} />
-                </TouchableOpacity>
-                {beneficiaryMenuOpen && (
-                  <View style={{ marginTop: 8, backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingVertical: 4 }}>
-                    <TouchableOpacity onPress={() => { setSelectedBeneficiaryIds([]); setBeneficiaryMenuOpen(false); Haptics.selectionAsync(); }}
-                      style={[{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 }, !selectedBeneficiaryIds.length && { backgroundColor: `${COLORS.brand}12` }]}>
-                      <Text style={[{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong }, !selectedBeneficiaryIds.length && { color: COLORS.brand, fontFamily: FONTS.sansMedium }]}>Everyone</Text>
-                    </TouchableOpacity>
-                    {beneficiaries.map(b => {
-                      if (!b._id) return null;
-                      const on = selectedBeneficiaryIds.includes(b._id);
-                      return (
-                        <TouchableOpacity key={b._id} onPress={() => { Haptics.selectionAsync(); setSelectedBeneficiaryIds(prev => on ? prev.filter(x => x !== b._id) : [...prev, b._id!]); }}
-                          style={[{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 }, on && { backgroundColor: `${COLORS.brand}12` }]}>
-                          <Text style={[{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong }, on && { color: COLORS.brand, fontFamily: FONTS.sansMedium }]}>{b.name}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                )}
+                {/* Relative container so the absolute dropdown is anchored here */}
+                <View style={{ position: 'relative' }}>
+                  <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setBeneficiaryMenuOpen(o => !o); }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, borderWidth: 1, borderColor: beneficiaryMenuOpen ? COLORS.brand : COLORS.strokeWeaker }} activeOpacity={0.8}>
+                    <Users size={18} color={COLORS.textBase} strokeWidth={1.8} />
+                    <Text style={{ flex: 1, fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>{visibilityLabel}</Text>
+                    <ChevronDown size={16} color={COLORS.textMuted} strokeWidth={2} />
+                  </TouchableOpacity>
+                  {beneficiaryMenuOpen && (
+                    <View style={{ position: 'absolute', top: 54, left: 0, right: 0, zIndex: 20, backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingVertical: 4, shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 }}>
+                      <TouchableOpacity onPress={() => { setSelectedBeneficiaryIds([]); setBeneficiaryMenuOpen(false); Haptics.selectionAsync(); }}
+                        style={[{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 }, !selectedBeneficiaryIds.length && { backgroundColor: `${COLORS.brand}12` }]}>
+                        <Text style={[{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong }, !selectedBeneficiaryIds.length && { color: COLORS.brand, fontFamily: FONTS.sansMedium }]}>Everyone</Text>
+                      </TouchableOpacity>
+                      {beneficiaries.map(b => {
+                        if (!b._id) return null;
+                        const on = selectedBeneficiaryIds.includes(b._id);
+                        return (
+                          <TouchableOpacity key={b._id} onPress={() => { Haptics.selectionAsync(); setSelectedBeneficiaryIds(prev => on ? prev.filter(x => x !== b._id) : [...prev, b._id!]); }}
+                            style={[{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 }, on && { backgroundColor: `${COLORS.brand}12` }]}>
+                            <Text style={[{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong }, on && { color: COLORS.brand, fontFamily: FONTS.sansMedium }]}>{b.name}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
               </View>
               <View style={{ marginBottom: 32 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -325,10 +330,18 @@ function PublishModal({ visible, title, body, attachmentIds, onClose, memoryId, 
                 style={[{ height: 56, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }, ((!title.trim() && !body.trim()) || isPending) && { opacity: 0.45 }]}>
                 {isPending ? <ActivityIndicator color={COLORS.textInverse} /> : <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 16, color: COLORS.textInverse }}>Post now</Text>}
               </TouchableOpacity>
-            </ScrollView>
+            </View>
           )}
-        </SafeAreaView>
-      </SafeAreaProvider>
+      </View>
+    </SafeAreaProvider>
+  );
+}
+
+/** Public wrapper — Modal + statusBarTranslucent for correct Android edge-to-edge insets */
+function PublishModal({ visible, ...props }: { visible: boolean } & React.ComponentProps<typeof PublishModalInner>) {
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" statusBarTranslucent onRequestClose={props.onClose}>
+      <PublishModalInner {...props} />
     </Modal>
   );
 }
@@ -355,7 +368,11 @@ export default function EditorScreen() {
 
   // Multi-draft: each new story session gets its own id so up to 10 drafts can coexist
   const draftIdRef = useRef<string>(isEditing ? '' : `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`);
-  const [draftCount, setDraftCount] = useState(0);
+  // currentDraftId mirrors draftIdRef as state so PublishModal always receives the live value
+  const [currentDraftId, setCurrentDraftId] = useState(draftIdRef.current);
+  const storyDrafts = useUiStore((s) => s.storyDrafts);
+  const setStoryDrafts = useUiStore((s) => s.setStoryDrafts);
+  const draftCount = storyDrafts.length;
   // Incrementing this key forces StoryRichEditor to fully remount (blank WebView)
   const [editorInstanceKey, setEditorInstanceKey] = useState(0);
 
@@ -421,7 +438,7 @@ export default function EditorScreen() {
       // Load QC draft and refresh the draft count badge in parallel
       Promise.all([
         loadDrafts(user?.email).then(d => {
-          if (isMountedRef.current) setDraftCount(d.length);
+          if (isMountedRef.current) setStoryDrafts(d);
         }),
         AsyncStorage.getItem(QC_DRAFT_KEY(user?.email)).then(raw => {
           if (!raw || !isMountedRef.current) return;
@@ -472,9 +489,9 @@ export default function EditorScreen() {
         });
         if (isMountedRef.current) {
           setSavedStatus('saved');
-          // Refresh the badge count
+          // Refresh the badge count via unified store
           loadDrafts(user?.email).then(d => {
-            if (isMountedRef.current) setDraftCount(d.length);
+            if (isMountedRef.current) setStoryDrafts(d);
           });
         }
       } catch {
@@ -599,6 +616,7 @@ export default function EditorScreen() {
                       onLoadDraft: (draft: StoryDraft) => {
                         // Assign this draft's id so autosave continues updating the same slot
                         draftIdRef.current = draft.id;
+                        setCurrentDraftId(draft.id);
                         setTitle(draft.title ?? '');
                         const body = draft.body ?? '';
                         setStoryBody(body);
@@ -630,7 +648,7 @@ export default function EditorScreen() {
                       </View>
                     )}
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => { if (!storyHasContent || anyUploading) return; Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowPublish(true); }}
+                  <TouchableOpacity onPress={() => { if (!title.trim() && !storyBody.trim()) return; if (anyUploading) return; Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowPublish(true); }}
                     disabled={!storyHasContent || anyUploading} activeOpacity={0.8}
                     style={[{ height: 34, paddingHorizontal: 18, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }, (!storyHasContent || anyUploading) && { opacity: 0.4 }]}>
                     {anyUploading && <ActivityIndicator size="small" color={COLORS.textInverse} />}
@@ -902,16 +920,30 @@ export default function EditorScreen() {
           body={storyBody}
           attachmentIds={uploadedIds}
           memoryId={memoryId}
-          draftId={draftIdRef.current}
+          draftId={currentDraftId}
           userEmail={user?.email}
           onClose={() => {
             setShowPublish(false);
             if (isEditing) {
               // Editing mode — go back to story detail
               router.back();
-            } else if (lockMode === 'true') {
-              // Came from stories screen — navigate there
-              router.replace('/(tabs)/stories');
+            } else {
+              // After a successful publish (any flow), clear the editor so pressing
+              // back from the success screen doesn't leave stale content.
+              setTitle('');
+              setStoryBody('');
+              setAttachments([]);
+              setSavedStatus('saved');
+              const newId = `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+              draftIdRef.current = newId;
+              setCurrentDraftId(newId);
+              setEditorInstanceKey(k => k + 1);
+              if (lockMode === 'true') {
+                router.replace('/(tabs)/stories');
+              } else {
+                // Normal flow — close the editor modal entirely
+                router.back();
+              }
             }
           }}
           onAddAnother={lockMode === 'true' ? () => {

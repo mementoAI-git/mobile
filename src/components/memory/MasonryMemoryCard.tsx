@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity, Image, ImageBackground } from 'react-nati
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { MoreHorizontal, Play } from 'lucide-react-native';
+import { MoreHorizontal } from 'lucide-react-native';
+import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { useUiStore } from '@/store';
 import { COLORS, FONTS, CARD_PASTEL_SURFACES } from '@/constants/tokens';
 import type { IMemory } from '@/types';
@@ -103,6 +104,30 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
 
   const renderVisual = () => {
     if (bannerMedia) {
+      const isVideo = bannerMedia.type?.startsWith('video/');
+      if (isVideo && bannerMedia.url) {
+        return (
+          <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
+            {/* VideoThumbnail extracts first frame via expo-video-thumbnails.
+                onPress navigates to the story detail page. */}
+            <VideoThumbnail
+              uri={bannerMedia.url}
+              borderRadius={20}
+              onPress={() => { Haptics.selectionAsync(); handlePress(); }}
+            />
+            {/* In progress badge — overlay top-left */}
+            <InProgressBadge memory={memory} overlay />
+            {/* Actions button */}
+            <TouchableOpacity
+              onPress={handleActions}
+              hitSlop={8}
+              className="absolute top-2 right-2 size-8 rounded-full bg-white/20 items-center justify-center"
+            >
+              <MoreHorizontal size={14} color={COLORS.textInverse} />
+            </TouchableOpacity>
+          </View>
+        );
+      }
       return (
         <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden bg-fill-weaker relative">
           <Image

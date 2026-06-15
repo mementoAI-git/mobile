@@ -25,6 +25,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
 import { MemTag, Skeleton } from '@/components/ui';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
+import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useStoryDetailLogic } from '@/hooks/use-story-detail-logic';
 import { useBackHandler } from '@/hooks/use-back-handler';
@@ -254,28 +255,17 @@ export default function StoryDetailScreen() {
           </View>
         )}
 
-        {/* Videos — thumbnail with play button, opens MediaPreviewModal on tap */}
+        {/* Videos — real extracted thumbnail + play button via VideoThumbnail */}
         {videos.length > 0 && (
           <View style={{ paddingHorizontal: 20, gap: 8, marginBottom: 8 }}>
             {videos.map((item, idx) => (
-              <TouchableOpacity
+              <VideoThumbnail
                 key={item.url ?? idx}
-                activeOpacity={0.88}
+                uri={item.url ?? ''}
+                width={SCREEN_W - 40}
+                height={(SCREEN_W - 40) * (9 / 16)}
                 onPress={() => openPreview(item)}
-                style={{ borderRadius: 14, overflow: 'hidden', width: SCREEN_W - 40, height: (SCREEN_W - 40) * (9 / 16), backgroundColor: COLORS.textStrong }}
-              >
-                <Image
-                  source={{ uri: item.url }}
-                  style={{ width: '100%', height: '100%' }}
-                  resizeMode="cover"
-                />
-                {/* Dark overlay + play icon */}
-                <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' }}>
-                  <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' }}>
-                    <View style={{ width: 0, height: 0, borderTopWidth: 11, borderBottomWidth: 11, borderLeftWidth: 18, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderLeftColor: '#fff', marginLeft: 4 }} />
-                  </View>
-                </View>
-              </TouchableOpacity>
+              />
             ))}
           </View>
         )}
@@ -356,12 +346,16 @@ export default function StoryDetailScreen() {
       {/* Full-screen image previewer */}
       <MediaPreviewModal
         visible={previewVisible}
-        attachments={imageAttachments.map(a => ({
-          clientId: a._id ?? (a.url ?? ''),
-          uri: a.url ?? '',
-          name: a.name ?? '',
-          mimeType: a.type ?? 'image/jpeg',
-        }))}
+        attachments={imageAttachments.map(a => {
+          console.log('[StoryDetail] preview attachment:', a._id, 'type:', a.type, 'url:', a.url?.slice(0, 60));
+          return {
+            clientId: a._id ?? (a.url ?? ''),
+            uri: a.url ?? '',
+            name: a.name ?? '',
+            // Never fall back to image/jpeg — let the modal pick the right renderer
+            mimeType: a.type ?? 'application/octet-stream',
+          };
+        })}
         initialIndex={previewIndex}
         onClose={() => setPreviewVisible(false)}
       />
