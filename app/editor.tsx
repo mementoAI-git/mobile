@@ -355,7 +355,9 @@ export default function EditorScreen() {
 
   // Multi-draft: each new story session gets its own id so up to 10 drafts can coexist
   const draftIdRef = useRef<string>(isEditing ? '' : `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`);
-  const [draftCount, setDraftCount] = useState(0);
+  const storyDrafts = useUiStore((s) => s.storyDrafts);
+  const setStoryDrafts = useUiStore((s) => s.setStoryDrafts);
+  const draftCount = storyDrafts.length;
   // Incrementing this key forces StoryRichEditor to fully remount (blank WebView)
   const [editorInstanceKey, setEditorInstanceKey] = useState(0);
 
@@ -421,7 +423,7 @@ export default function EditorScreen() {
       // Load QC draft and refresh the draft count badge in parallel
       Promise.all([
         loadDrafts(user?.email).then(d => {
-          if (isMountedRef.current) setDraftCount(d.length);
+          if (isMountedRef.current) setStoryDrafts(d);
         }),
         AsyncStorage.getItem(QC_DRAFT_KEY(user?.email)).then(raw => {
           if (!raw || !isMountedRef.current) return;
@@ -472,9 +474,9 @@ export default function EditorScreen() {
         });
         if (isMountedRef.current) {
           setSavedStatus('saved');
-          // Refresh the badge count
+          // Refresh the badge count via unified store
           loadDrafts(user?.email).then(d => {
-            if (isMountedRef.current) setDraftCount(d.length);
+            if (isMountedRef.current) setStoryDrafts(d);
           });
         }
       } catch {

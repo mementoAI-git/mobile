@@ -9,7 +9,7 @@
  * so it stays in sync with the autosave logic in editor.tsx.
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -107,14 +107,27 @@ export function DraftsSheet() {
   const email: string | null = sheetProps.email ?? null;
   const onLoadDraft: (draft: StoryDraft) => void = sheetProps.onLoadDraft ?? (() => {});
 
-  const [drafts, setDrafts] = useState<StoryDraft[]>([]);
+  // Read from unified store — shared with editor.tsx badge
+  const storeDrafts = useUiStore((s) => s.storyDrafts);
+  const setStoryDrafts = useUiStore((s) => s.setStoryDrafts);
 
+  // Sorted newest-first for display
+  const drafts = useMemo(
+    () => [...storeDrafts].sort((a, b) => b.updatedAt - a.updatedAt),
+    [storeDrafts],
+  );
+
+  // Seed from AsyncStorage on first open (editor may not have loaded yet)
   useEffect(() => {
-    loadDrafts(email).then((d) => {
-      // Sort newest-first for display
-      setDrafts([...d].sort((a, b) => b.updatedAt - a.updatedAt));
-    });
-  }, [email]);
+    if (storeDrafts.length === 0) {
+      loadDrafts(email).then((d) => {
+        if (isMountedRef.current) setStoryDrafts(d);
+      });
+    }
+  }, [email]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isMountedRef = useRef(true);
+  useEffect(() => () => { isMountedRef.current = false; }, []);
 
   const handleLoad = useCallback(
     (draft: StoryDraft) => {
@@ -129,9 +142,9 @@ export function DraftsSheet() {
     async (id: string) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       const updated = await deleteDraft(email, id);
-      setDrafts([...updated].sort((a, b) => b.updatedAt - a.updatedAt));
+      setStoryDrafts(updated);
     },
-    [email],
+    [email, setStoryDrafts],
   );
 
   // Strip HTML tags for the body preview

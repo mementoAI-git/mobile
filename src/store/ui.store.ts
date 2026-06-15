@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { StoryDraft } from '@/components/sheets/DraftsSheet';
 
 export type SheetName =
   | 'create-memory'
@@ -30,6 +31,9 @@ interface UiState {
   setPendingDeepLink: (link: any) => void;
   openSheet: (name: SheetName, props?: Record<string, any>) => void;
   closeSheet: () => void;
+  /** Story drafts — single source of truth shared between editor + DraftsSheet */
+  storyDrafts: StoryDraft[];
+  setStoryDrafts: (drafts: StoryDraft[]) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -39,4 +43,6 @@ export const useUiStore = create<UiState>((set) => ({
   setPendingDeepLink: (link) => set({ pendingDeepLink: link }),
   openSheet: (name, props = {}) => set({ activeSheet: name, sheetProps: props }),
   closeSheet: () => set({ activeSheet: null, sheetProps: {} }),
+  storyDrafts: [],
+  setStoryDrafts: (drafts) => set({ storyDrafts: drafts }),
 }));
