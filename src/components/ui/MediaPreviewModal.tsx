@@ -13,7 +13,7 @@
 import React, { useRef, useCallback, useState } from 'react';
 import {
   View, Text, Modal, FlatList, Image,
-  TouchableOpacity, TouchableWithoutFeedback, Dimensions,
+  TouchableOpacity, Dimensions,
   StyleSheet, Share,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
@@ -84,17 +84,20 @@ function ImageSlide({ uri }: { uri: string }) {
  * uri preference: CDN URL (post-upload) → local file:// (during upload)
  */
 function VideoSlide({ uri }: { uri: string }) {
+  console.log('[MediaPreviewModal] VideoSlide mounting, uri:', uri?.slice(0, 60));
   const { player } = useVideoPlayer(uri, { autoPlay: false, loop: false });
   return (
     <View style={styles.slide}>
       <View style={{ flex: 1, justifyContent: 'center' }}>
-        <VideoView
-          player={player}
-          nativeControls
-          style={styles.roundedImage}
-          allowsFullscreen
-          allowsPictureInPicture
-        />
+        {/* 16:9 container — correct for landscape video */}
+        <View style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: 20, overflow: 'hidden', backgroundColor: '#000' }}>
+          <VideoView
+            player={player}
+            nativeControls
+            style={{ flex: 1 }}
+            allowsPictureInPicture
+          />
+        </View>
       </View>
     </View>
   );
@@ -138,6 +141,7 @@ function DocSlide({ item }: { item: PreviewAttachment }) {
 }
 
 function renderSlide(item: PreviewAttachment) {
+  console.log('[MediaPreviewModal] renderSlide mimeType:', item.mimeType, 'uri:', item.uri?.slice(0, 60));
   if (item.mimeType.startsWith('image/')) return <ImageSlide uri={item.uri} />;
   if (item.mimeType.startsWith('video/')) return <VideoSlide uri={item.uri} />;
   if (item.mimeType.startsWith('audio/') || item.isVoice) return <AudioSlide item={item} />;
@@ -220,32 +224,39 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
           </TouchableOpacity>
         </View>
 
-        {/* ── Paging list — TouchableWithoutFeedback wraps the flex:1 area so
-            tapping the cream space above/below the image card closes the modal ── */}
-        <TouchableWithoutFeedback onPress={() => { Haptics.selectionAsync(); onClose(); }}>
-          <View style={{ flex: 1 }}>
-            <FlatList
-              ref={listRef}
-              data={attachments}
-              keyExtractor={(item) => item.clientId}
-              horizontal
-              pagingEnabled={false}
-              snapToInterval={CARD_W + CARD_GAP}
-              snapToAlignment="start"
-              decelerationRate="fast"
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: SIDE_PAD }}
-              ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
-              onViewableItemsChanged={handleViewableChange}
-              viewabilityConfig={viewabilityConfig.current}
-              getItemLayout={(_, index) => ({ length: CARD_W + CARD_GAP, offset: (CARD_W + CARD_GAP) * index, index })}
-              renderItem={({ item }) => renderSlide(item)}
-              initialScrollIndex={initialIndex}
-              onScrollToIndexFailed={() => {}}
-              style={{ flex: 1 }}
-            />
-          </View>
-        </TouchableWithoutFeedback>
+        {/* ── Paging list ──
+            The TouchableWithoutFeedback is intentionally NOT used here — it would
+            intercept taps on native VideoView controls and close the modal.
+            Instead the background close-tap is handled by a Pressable behind the list. ── */}
+        <View style={{ flex: 1 }}>
+          {/* Background Pressable — only fires when tapping the cream margin,
+              not the slide card (pointer events pass through the FlatList content) */}
+          <TouchableOpacity
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => { Haptics.selectionAsync(); onClose(); }}
+            activeOpacity={1}
+          />
+          <FlatList
+            ref={listRef}
+            data={attachments}
+            keyExtractor={(item) => item.clientId}
+            horizontal
+            pagingEnabled={false}
+            snapToInterval={CARD_W + CARD_GAP}
+            snapToAlignment="start"
+            decelerationRate="fast"
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: SIDE_PAD }}
+            ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
+            onViewableItemsChanged={handleViewableChange}
+            viewabilityConfig={viewabilityConfig.current}
+            getItemLayout={(_, index) => ({ length: CARD_W + CARD_GAP, offset: (CARD_W + CARD_GAP) * index, index })}
+            renderItem={({ item }) => renderSlide(item)}
+            initialScrollIndex={initialIndex}
+            onScrollToIndexFailed={() => {}}
+            style={{ flex: 1 }}
+          />
+        </View>
 
         {/* ── Dot pagination ── */}
         <Dots count={attachments.length} active={currentIndex} />
