@@ -10,17 +10,17 @@
  *  - Horizontal swipe between attachments
  */
 
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import {
   View, Text, Modal, FlatList, Image,
-  TouchableOpacity, Dimensions,
+  TouchableOpacity, Dimensions, Animated,
   StyleSheet, Share,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { VideoView } from 'expo-video';
 import { useVideoPlayer } from '@/hooks/use-video-player';
 import * as Haptics from 'expo-haptics';
-import { ChevronLeft, Share2, X, Mic, FileText, Music } from 'lucide-react-native';
+import { ChevronLeft, Share2, X, Mic, FileText, Music, Play, Pause } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -61,44 +61,149 @@ function formatDuration(secs: number) {
 
 // ─── Per-item renderers ───────────────────────────────────────────────────────
 
-function ImageSlide({ uri }: { uri: string }) {
+function ImageSlide({ uri, onClose }: { uri: string; onClose: () => void }) {
   return (
-    <View style={styles.slide}>
-      {/* flex: 1 + contain — image fills the card height without cropping,
-          letterboxed on the cream background for any aspect ratio */}
+    // Tapping the image (or the cream area around it) closes the modal
+    <TouchableOpacity style={styles.slide} onPress={() => { Haptics.selectionAsync(); onClose(); }} activeOpacity={1}>
       <Image
         source={{ uri }}
         style={styles.slideImage}
         resizeMode="contain"
       />
-    </View>
+    </TouchableOpacity>
   );
 }
 
 /**
- * VideoSlide — uses expo-video for in-app playback.
+ * VideoSlide — minimal custom player.
  *
- * useVideoPlayer must be called at the component top level (Rules of Hooks),
- * so VideoSlide is its own component rather than an inline renderer.
- *
- * uri preference: CDN URL (post-upload) → local file:// (during upload)
+ * Layout matches ImageSlide exactly: VideoView fills the full slide card.
+ * No native controls — custom overlay with:
+ *  • Tap anywhere → play/pause + brief icon flash
+ *  • Thin brand-orange progress bar at the bottom edge
  */
-function VideoSlide({ uri }: { uri: string }) {
-  console.log('[MediaPreviewModal] VideoSlide mounting, uri:', uri?.slice(0, 60));
-  const { player } = useVideoPlayer(uri, { autoPlay: false, loop: false });
+const SPEEDS = [1, 1.5, 2, 0.5] as const;
+
+function fmt(secs: number) {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
+  const { player, play, pause } = useVideoPlayer(uri, { autoPlay: false, loop: false });
+
+  // Pause when the slide scrolls out of view
+  useEffect(() => {
+    if (!isActive && player.playing) {
+      pause();
+    }
+  }, [isActive, player, pause]);
+
+
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [speedIdx, setSpeedIdx] = useState(0);
+  const controlsOpacity = useRef(new Animated.Value(1)).current;
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const progress = duration > 0 ? currentTime / duration : 0;
+  const ended = progress >= 0.99;
+
+  // Poll every 250ms
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCurrentTime(player.currentTime ?? 0);
+      setDuration(player.duration ?? 0);
+      setPlaying(player.playing ?? false);
+    }, 250);
+    return () => clearInterval(id);
+  }, [player]);
+
+  // Show controls and schedule auto-hide
+  const showControls = useCallback(() => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    Animated.timing(controlsOpacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+    hideTimer.current = setTimeout(() => {
+      Animated.timing(controlsOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start();
+    }, 3000);
+  }, [controlsOpacity]);
+
+  const handleTap = useCallback(() => {
+    Haptics.selectionAsync();
+    if (ended) {
+      player.seekBy(-(player.currentTime ?? 0));
+      play();
+    } else if (player.playing) {
+      pause();
+    } else {
+      play();
+    }
+    showControls();
+  }, [ended, player, play, pause, showControls]);
+
+  const handleSpeedTap = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const next = (speedIdx + 1) % SPEEDS.length;
+    setSpeedIdx(next);
+    player.playbackRate = SPEEDS[next];
+    // preservesPitch prevents the chipmunk pitch-shift effect when speeding up
+    player.preservesPitch = true;
+    showControls();
+  }, [speedIdx, player, showControls]);
+
+  // Seek on progress bar tap
+  const progressBarRef = useRef<View>(null);
+  const handleSeek = useCallback((e: any) => {
+    progressBarRef.current?.measure((_x, _y, width) => {
+      const ratio = Math.max(0, Math.min(1, e.nativeEvent.locationX / width));
+      player.seekBy((ratio * duration) - (player.currentTime ?? 0));
+      showControls();
+    });
+  }, [player, duration, showControls]);
+
   return (
     <View style={styles.slide}>
-      <View style={{ flex: 1, justifyContent: 'center' }}>
-        {/* 16:9 container — correct for landscape video */}
-        <View style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: 20, overflow: 'hidden', backgroundColor: '#000' }}>
-          <VideoView
-            player={player}
-            nativeControls
-            style={{ flex: 1 }}
-            allowsPictureInPicture
-          />
-        </View>
-      </View>
+      {/* VideoView — no native controls */}
+      <VideoView
+        player={player}
+        style={StyleSheet.absoluteFillObject}
+        contentFit="contain"
+        nativeControls={false}
+      />
+
+      {/* Tap overlay — play/pause/replay */}
+      <TouchableOpacity onPress={handleTap} activeOpacity={0.9} style={StyleSheet.absoluteFillObject}>
+        {!playing && (
+          <View style={styles.videoPlayBtn}>
+            <Play size={32} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 4 }} />
+          </View>
+        )}
+      </TouchableOpacity>
+
+      {/* WhatsApp-style bottom control bar */}
+      <Animated.View style={[styles.videoControls, { opacity: controlsOpacity }]}>
+        <Text style={styles.videoTimeText}>{fmt(currentTime)}</Text>
+
+        {/* Progress bar — tappable */}
+        <TouchableOpacity
+          ref={progressBarRef as any}
+          onPress={handleSeek}
+          activeOpacity={1}
+          style={styles.videoProgressTrack}
+        >
+          <View style={[styles.videoProgressFilled, { width: `${Math.round(progress * 100)}%` as any }]} />
+          <View style={[styles.videoProgressDot, { left: `${Math.round(progress * 100)}%` as any }]} />
+        </TouchableOpacity>
+
+        <Text style={styles.videoTimeText}>{fmt(duration)}</Text>
+
+        {/* Speed pill */}
+        <TouchableOpacity onPress={handleSpeedTap} activeOpacity={0.8} style={styles.videoSpeedPill}>
+          <Text style={styles.videoSpeedText}>{SPEEDS[speedIdx]}×</Text>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 }
@@ -140,12 +245,14 @@ function DocSlide({ item }: { item: PreviewAttachment }) {
   );
 }
 
-function renderSlide(item: PreviewAttachment) {
-  console.log('[MediaPreviewModal] renderSlide mimeType:', item.mimeType, 'uri:', item.uri?.slice(0, 60));
-  if (item.mimeType.startsWith('image/')) return <ImageSlide uri={item.uri} />;
-  if (item.mimeType.startsWith('video/')) return <VideoSlide uri={item.uri} />;
-  if (item.mimeType.startsWith('audio/') || item.isVoice) return <AudioSlide item={item} />;
-  return <DocSlide item={item} />;
+function makeRenderSlide(onClose: () => void, currentIndex: number, attachments: PreviewAttachment[]) {
+  return function renderSlide({ item, index }: { item: PreviewAttachment; index: number }) {
+    const isActive = index === currentIndex;
+    if (item.mimeType.startsWith('image/')) return <ImageSlide uri={item.uri} onClose={onClose} />;
+    if (item.mimeType.startsWith('video/')) return <VideoSlide uri={item.uri} isActive={isActive} />;
+    if (item.mimeType.startsWith('audio/') || item.isVoice) return <AudioSlide item={item} />;
+    return <DocSlide item={item} />;
+  };
 }
 
 // ─── Dot indicator ────────────────────────────────────────────────────────────
@@ -199,6 +306,11 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
     } catch {}
   }, [attachments, currentIndex]);
 
+  const renderSlide = useCallback(
+    makeRenderSlide(onClose, currentIndex, attachments),
+    [onClose, currentIndex, attachments],
+  );
+
   if (!attachments.length) return null;
 
   return (
@@ -251,7 +363,7 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
             onViewableItemsChanged={handleViewableChange}
             viewabilityConfig={viewabilityConfig.current}
             getItemLayout={(_, index) => ({ length: CARD_W + CARD_GAP, offset: (CARD_W + CARD_GAP) * index, index })}
-            renderItem={({ item }) => renderSlide(item)}
+            renderItem={({ item, index }) => renderSlide({ item, index })}
             initialScrollIndex={initialIndex}
             onScrollToIndexFailed={() => {}}
             style={{ flex: 1 }}
@@ -340,6 +452,92 @@ const styles = StyleSheet.create({
   mediaHint: {
     fontFamily: FONTS.sans, fontSize: 13,
     color: COLORS.textMuted, textAlign: 'center',
+  },
+
+  // WhatsApp-style bottom control bar — no background, text shadow for readability
+  videoControls: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+  },
+  videoTimeText: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: 12,
+    color: COLORS.textStrong,
+    minWidth: 36,
+    textAlign: 'center',
+  },
+  videoProgressTrack: {
+    flex: 1,
+    height: 20,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  videoProgressFilled: {
+    height: 3,
+    backgroundColor: COLORS.brand,
+    borderRadius: 2,
+  },
+  videoProgressDot: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#fff',
+    top: '50%',
+    marginTop: -5,
+    marginLeft: -5,
+  },
+  videoSpeedPill: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    minWidth: 36,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.brand,
+  },
+  videoSpeedText: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 12,
+    color: COLORS.textStrong,
+  },
+
+  // Video play button (shown when paused/ended)
+  videoPlayBtn: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Video player custom controls
+  videoIconFlash: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    borderRadius: 24,
+  },
+  videoProgressBg: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+  },
+  videoProgressFill: {
+    height: 3,
+    backgroundColor: COLORS.brand,
   },
 
   // Dots
