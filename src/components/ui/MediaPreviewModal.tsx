@@ -14,13 +14,13 @@ import React, { useRef, useCallback, useState, useEffect } from 'react';
 import {
   View, Text, Modal, FlatList, Image,
   TouchableOpacity, Dimensions, Animated,
-  StyleSheet, Share,
+  StyleSheet, Share, ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView } from 'expo-video';
 import { useVideoPlayer } from '@/hooks/use-video-player';
 import * as Haptics from 'expo-haptics';
-import { ChevronLeft, Share2, X, Mic, FileText, Music, Play, Pause } from 'lucide-react-native';
+import { ChevronLeft, Share2, X, Mic, FileText, Music, Play } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -175,11 +175,17 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
 
       {/* Tap overlay — play/pause/replay */}
       <TouchableOpacity onPress={handleTap} activeOpacity={0.9} style={StyleSheet.absoluteFillObject}>
-        {!playing && (
+        {duration === 0 ? (
+          // Video not yet loaded — show spinner
+          <View style={styles.videoPlayBtn}>
+            <ActivityIndicator size="large" color={COLORS.brand} />
+          </View>
+        ) : !playing ? (
+          // Loaded, paused — show play button
           <View style={styles.videoPlayBtn}>
             <Play size={32} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 4 }} />
           </View>
-        )}
+        ) : null}
       </TouchableOpacity>
 
       {/* WhatsApp-style bottom control bar */}
@@ -276,21 +282,20 @@ function Dots({ count, active }: { count: number; active: number }) {
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Modal inner — reads insets from the scoped SafeAreaProvider ──────────────
 
-export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onClose, onRemove }: Props) {
+function ModalInner({ attachments, initialIndex, onClose, onRemove }: Omit<Props, 'visible' | 'initialIndex'> & { initialIndex: number }) {
+  const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
-  React.useEffect(() => {
-    if (visible) {
-      setCurrentIndex(initialIndex);
-      const t = setTimeout(() => {
-        listRef.current?.scrollToIndex({ index: initialIndex, animated: false });
-      }, 50);
-      return () => clearTimeout(t);
-    }
-  }, [visible, initialIndex]);
+  useEffect(() => {
+    setCurrentIndex(initialIndex);
+    const t = setTimeout(() => {
+      listRef.current?.scrollToIndex({ index: initialIndex, animated: false });
+    }, 50);
+    return () => clearTimeout(t);
+  }, [initialIndex]);
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 });
   const handleViewableChange = useCallback(({ viewableItems }: any) => {
@@ -311,68 +316,71 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
     [onClose, currentIndex, attachments],
   );
 
-  if (!attachments.length) return null;
-
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      {/* SafeAreaProvider scoped to the Modal window — fixes inset delivery
-          on Android edge-to-edge (edgeToEdgeEnabled: true in app.json)
-          which causes the header to be hidden behind the status bar on first open */}
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      {/* ── Header ── */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
+          <ChevronLeft size={20} color={COLORS.textBase} strokeWidth={2} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleShare} style={styles.sharePill} activeOpacity={0.8}>
+          <Share2 size={14} color={COLORS.textBase} strokeWidth={2} />
+          <Text style={styles.shareLabel}>Share</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
+          <X size={18} color={COLORS.textBase} strokeWidth={2.5} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFillObject}
+          onPress={() => { Haptics.selectionAsync(); onClose(); }}
+          activeOpacity={1}
+        />
+        <FlatList
+          ref={listRef}
+          data={attachments}
+          keyExtractor={(item) => item.clientId}
+          horizontal
+          pagingEnabled={false}
+          snapToInterval={CARD_W + CARD_GAP}
+          snapToAlignment="start"
+          decelerationRate="fast"
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: SIDE_PAD }}
+          ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
+          onViewableItemsChanged={handleViewableChange}
+          viewabilityConfig={viewabilityConfig.current}
+          getItemLayout={(_, index) => ({ length: CARD_W + CARD_GAP, offset: (CARD_W + CARD_GAP) * index, index })}
+          renderItem={({ item, index }) => renderSlide({ item, index })}
+          initialScrollIndex={initialIndex}
+          onScrollToIndexFailed={() => {}}
+          style={{ flex: 1 }}
+        />
+      </View>
+
+      <Dots count={attachments.length} active={currentIndex} />
+    </View>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onClose, onRemove }: Props) {
+  if (!attachments.length) return null;
+  return (
+    <Modal visible={visible} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      {/* SafeAreaProvider scoped to the Modal window — gives useSafeAreaInsets
+          correct values for the modal's own native window. Plain View (not
+          SafeAreaView) fills inset zones with COLORS.background — no dark bands. */}
       <SafeAreaProvider>
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        {/* ── Header ── */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
-            <ChevronLeft size={20} color={COLORS.textBase} strokeWidth={2} />
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={handleShare} style={styles.sharePill} activeOpacity={0.8}>
-            <Share2 size={14} color={COLORS.textBase} strokeWidth={2} />
-            <Text style={styles.shareLabel}>Share</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
-            <X size={18} color={COLORS.textBase} strokeWidth={2.5} />
-          </TouchableOpacity>
-        </View>
-
-        {/* ── Paging list ──
-            The TouchableWithoutFeedback is intentionally NOT used here — it would
-            intercept taps on native VideoView controls and close the modal.
-            Instead the background close-tap is handled by a Pressable behind the list. ── */}
-        <View style={{ flex: 1 }}>
-          {/* Background Pressable — only fires when tapping the cream margin,
-              not the slide card (pointer events pass through the FlatList content) */}
-          <TouchableOpacity
-            style={StyleSheet.absoluteFillObject}
-            onPress={() => { Haptics.selectionAsync(); onClose(); }}
-            activeOpacity={1}
-          />
-          <FlatList
-            ref={listRef}
-            data={attachments}
-            keyExtractor={(item) => item.clientId}
-            horizontal
-            pagingEnabled={false}
-            snapToInterval={CARD_W + CARD_GAP}
-            snapToAlignment="start"
-            decelerationRate="fast"
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: SIDE_PAD }}
-            ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
-            onViewableItemsChanged={handleViewableChange}
-            viewabilityConfig={viewabilityConfig.current}
-            getItemLayout={(_, index) => ({ length: CARD_W + CARD_GAP, offset: (CARD_W + CARD_GAP) * index, index })}
-            renderItem={({ item, index }) => renderSlide({ item, index })}
-            initialScrollIndex={initialIndex}
-            onScrollToIndexFailed={() => {}}
-            style={{ flex: 1 }}
-          />
-        </View>
-
-        {/* ── Dot pagination ── */}
-        <Dots count={attachments.length} active={currentIndex} />
-      </SafeAreaView>
+        <ModalInner
+          attachments={attachments}
+          initialIndex={initialIndex}
+          onClose={onClose}
+          onRemove={onRemove}
+        />
       </SafeAreaProvider>
     </Modal>
   );
