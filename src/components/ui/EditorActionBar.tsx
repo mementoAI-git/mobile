@@ -264,11 +264,12 @@ export function EditorActionBar({
   if (isStory) {
     return (
       <View style={{ flexShrink: 0, flexGrow: 0 }}>
-        {/* Transparent backdrop — closes the menu when tapped */}
+        {/* Transparent backdrop — extends infinitely upward to cover the entire
+            editor body so tapping anywhere outside the menu collapses it */}
         {uploadOpen && (
           <Pressable
-            onPress={() => setUploadOpen(false)}
-            style={StyleSheet.absoluteFillObject}
+            onPress={() => { Haptics.selectionAsync(); setUploadOpen(false); }}
+            style={{ position: 'absolute', top: -9999, bottom: 0, left: 0, right: 0, zIndex: 100 }}
           />
         )}
 
