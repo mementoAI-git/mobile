@@ -12,10 +12,11 @@
 
 import React, { useRef, useCallback, useState, useEffect } from 'react';
 import {
-  View, Text, Modal, FlatList, Image,
+  View, Text, Modal, FlatList,
   TouchableOpacity, Dimensions, Animated,
-  StyleSheet, Share, ActivityIndicator,
+  StyleSheet, Share, ActivityIndicator, Image,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView } from 'expo-video';
 import { useVideoPlayer } from '@/hooks/use-video-player';
@@ -64,12 +65,16 @@ function formatDuration(secs: number) {
 function ImageSlide({ uri, onClose }: { uri: string; onClose: () => void }) {
   return (
     // Tapping the image (or the cream area around it) closes the modal
-    <TouchableOpacity style={styles.slide} onPress={() => { Haptics.selectionAsync(); onClose(); }} activeOpacity={1}>
-      <Image
-        source={{ uri }}
-        style={styles.slideImage}
-        resizeMode="contain"
-      />
+    // ExpoImage is used instead of RN Image to correctly apply EXIF orientation
+    // on Android — RN Image ignores EXIF rotation, ExpoImage respects it.
+    <TouchableOpacity style={styles.slide}
+      onPress={() => { Haptics.selectionAsync(); onClose(); }}
+      activeOpacity={1}>
+        <ExpoImage
+          source={{ uri }}
+          style={styles.slideImage}
+          contentFit="contain"
+        />
     </TouchableOpacity>
   );
 }
