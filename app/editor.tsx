@@ -500,10 +500,10 @@ export default function EditorScreen() {
     }, 1200);
   }, [user?.email, isEditing]);
 
-  // Upload helper
+  // Upload helper — new items are prepended so they always appear at the start of the strip
   const uploadAndAdd = useCallback(async (uri: string, mimeType: string, name: string, opts?: { isVoice?: boolean; duration?: number }) => {
     const clientId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    setAttachments(prev => [...prev, { clientId, fileId: '', uri, name, mimeType, isVoice: opts?.isVoice, duration: opts?.duration, isUploading: true }]);
+    setAttachments(prev => [{ clientId, fileId: '', uri, name, mimeType, isVoice: opts?.isVoice, duration: opts?.duration, isUploading: true }, ...prev]);
     try {
       const result = await uploadFileMutation({ uri, type: mimeType, name });
       if (!isMountedRef.current) return;
@@ -665,9 +665,14 @@ export default function EditorScreen() {
             </View>
           </View>
 
-          {/* ── Story mode: title + rich editor (flex layout, no ScrollView) ── */}
+          {/* ── Story mode: unified ScrollView — title + attachments + body scroll together ── */}
           {isStory && (
-            <View style={{ flex: 1 }}>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 16 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
               {/* Title */}
               <TextInput
                 ref={titleRef}
@@ -675,7 +680,7 @@ export default function EditorScreen() {
                 onChangeText={v => { setTitle(v); scheduleSave(v, storyBody); }}
                 placeholder="Title"
                 placeholderTextColor={COLORS.textDisabled}
-                style={{ fontFamily: FONTS.serif, fontSize: 34, fontWeight: '700', color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42 }}
+                style={{ fontFamily: FONTS.serif, fontSize: 34, fontWeight: '700', color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42, marginTop: 4 }}
                 returnKeyType="next"
                 autoCapitalize="sentences"
                 autoCorrect
@@ -683,9 +688,7 @@ export default function EditorScreen() {
                 blurOnSubmit={false}
               />
 
-              {/* ── Attachment strip — horizontal scroll row above the editor so the
-                  editor always has flex:1 space and the strip never gets clipped.
-                  Images: 72×72 square chips. Voice/docs: compact pill chips. ── */}
+              {/* ── Attachment strip ── */}
               {attachments.length > 0 && (
                 <ScrollView
                   horizontal
@@ -765,13 +768,14 @@ export default function EditorScreen() {
                   initialContent={storyBody}
                   onChange={handleStoryBodyChange}
                   onBridgeReady={handleBridgeReady}
+                  scrollEnabled={false}
                 />
               ) : (
-                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ minHeight: 200, alignItems: 'center', justifyContent: 'center' }}>
                   <ActivityIndicator color={COLORS.brand} />
                 </View>
               )}
-            </View>
+            </ScrollView>
           )}
 
           {/* ── Quick-capture content: ScrollView ── */}

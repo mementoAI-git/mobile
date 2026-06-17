@@ -36,6 +36,8 @@ interface Props {
   initialContent?: string;
   onChange?: (html: string) => void;
   onBridgeReady?: (bridge: EditorBridge) => void;
+  /** Set false to disable internal scroll so an outer ScrollView can scroll everything */
+  scrollEnabled?: boolean;
 }
 
 // ─── Toolbar button ────────────────────────────────────────────────────────────
@@ -120,7 +122,7 @@ export function FormattingToolbar({ editor }: { editor: EditorBridge }) {
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export const StoryRichEditor = forwardRef<StoryRichEditorRef, Props>(
-  function StoryRichEditor({ initialContent = '', onChange, onBridgeReady }, ref) {
+  function StoryRichEditor({ initialContent = '', onChange, onBridgeReady, scrollEnabled = true }, ref) {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
 
@@ -180,8 +182,12 @@ export const StoryRichEditor = forwardRef<StoryRichEditorRef, Props>(
     }));
 
     return (
-      <View style={styles.container}>
-        <RichText editor={editor} style={styles.richText} />
+      <View style={scrollEnabled ? styles.container : styles.containerExpand}>
+        <RichText
+          editor={editor}
+          style={scrollEnabled ? styles.richText : styles.richTextExpand}
+          scrollEnabled={scrollEnabled}
+        />
       </View>
     );
   }
@@ -190,10 +196,20 @@ export const StoryRichEditor = forwardRef<StoryRichEditorRef, Props>(
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  // scrollEnabled=true (default) — WebView fills remaining space
   container: { flex: 1 },
-
   richText: {
     flex: 1,
+    backgroundColor: COLORS.background,
+  },
+
+  // scrollEnabled=false — WebView grows with content for outer ScrollView
+  containerExpand: {
+    flexShrink: 0,
+    minHeight: 200,
+  },
+  richTextExpand: {
+    minHeight: 200,
     backgroundColor: COLORS.background,
   },
 
