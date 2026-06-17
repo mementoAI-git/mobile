@@ -44,7 +44,7 @@ const SHEET_CONFIGS: Record<string, {
   'upgrade-prompt': { component: UpgradePromptSheet, dynamic: true },
   'select': { component: SelectSheet, dynamic: true },
   'streak': { component: StreakSheet, dynamic: true },
-  'story-drafts': { component: DraftsSheet, snapPoints: ['70%'] },
+  'story-drafts': { component: DraftsSheet, snapPoints: ['75%'], keyboardBehavior: 'interactive' },
 };
 
 // Sheets that manage their own BottomSheetView / layout

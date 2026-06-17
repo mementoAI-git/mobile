@@ -12,7 +12,7 @@ import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   KeyboardAvoidingView, Platform, StyleSheet, Image,
-  ActivityIndicator, Alert, Modal, ImageBackground, Linking,
+  ActivityIndicator, Alert, Keyboard, Modal, ImageBackground, Linking,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider, initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -368,6 +368,9 @@ export default function EditorScreen() {
 
   // Multi-draft: each new story session gets its own id so up to 10 drafts can coexist
   const draftIdRef = useRef<string>(isEditing ? '' : `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+  // Refs to track latest title/body synchronously — avoids stale closure in Cancel handler
+  const latestTitleRef = useRef('');
+  const latestBodyRef = useRef('');
   // currentDraftId mirrors draftIdRef as state so PublishModal always receives the live value
   const [currentDraftId, setCurrentDraftId] = useState(draftIdRef.current);
   const storyDrafts = useUiStore((s) => s.storyDrafts);
@@ -568,16 +571,29 @@ export default function EditorScreen() {
   }, [selectedBeneficiaryIds, beneficiaries]);
 
   // Stable onChange for StoryRichEditor — avoids recreating the bridge on every render
+  // Note: does NOT call scheduleSave — draft is only saved when the user taps Cancel
+  // latestBodyRef is updated synchronously so Cancel always has the latest content
   const handleStoryBodyChange = useCallback((v: string) => {
     setStoryBody(v);
-    scheduleSave(title, v);
-  }, [title, scheduleSave]);
+    latestBodyRef.current = v;
+  }, []);
 
   const storyHasContent = title.trim().length > 0 || storyBody.trim().length > 0;
   const uploadedIds = attachments.filter(a => a.fileId && !a.isUploading).map(a => a.fileId);
   const anyUploading = attachments.some(a => a.isUploading);
   const qcHasContent = qcBody.trim().length > 0 || uploadedIds.length > 0;
   const canSave = qcHasContent && !anyUploading && !qcPending && !isRecording;
+
+  // Track saved QC draft for restore button
+  const [savedQcBody, setSavedQcBody] = useState('');
+  useEffect(() => {
+    AsyncStorage.getItem(QC_DRAFT_KEY(user?.email)).then(raw => {
+      if (!raw) return;
+      try { const d = JSON.parse(raw); if (d.body) setSavedQcBody(d.body); } catch {}
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const hasQcDraft = savedQcBody.trim().length > 0 && savedQcBody !== qcBody;
 
   const savedDotColor = savedStatus === 'saved' ? COLORS.success : savedStatus === 'saving' ? COLORS.warning : COLORS.error;
   const savedLabel = savedStatus === 'saved' ? 'Saved' : savedStatus === 'saving' ? 'Saving…' : 'Unsaved';
@@ -591,11 +607,56 @@ export default function EditorScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }}>
             <TouchableOpacity onPress={() => {
               Haptics.selectionAsync();
-              // Save QC draft before dismissing
-              if (!isStory && qcBody.trim()) {
-                AsyncStorage.setItem(QC_DRAFT_KEY(user?.email), JSON.stringify({ body: qcBody.trim() })).catch(() => {});
+              const cancelTitle = latestTitleRef.current || title;
+              const cancelBody = latestBodyRef.current || storyBody;
+              const hasContent = isStory
+                ? !isEditing && (cancelTitle.trim() || cancelBody.trim())
+                : qcBody.trim().length > 0;
+
+              if (!hasContent) {
+                // Nothing typed — exit immediately
+                router.back();
+                return;
               }
-              router.back();
+
+              // Dismiss keyboard before showing alert so it animates cleanly
+              Keyboard.dismiss();
+              // Twitter-style: ask the user what to do
+              Alert.alert(
+                'Save to drafts?',
+                isStory
+                  ? 'Your story will be saved to your drafts.'
+                  : 'Your note will be saved to your drafts.',
+                [
+                  {
+                    text: 'Save Draft',
+                    onPress: async () => {
+                      if (isStory) {
+                        const savedAttachments: StoryDraftAttachment[] = attachments
+                          .filter(a => a.fileId && !a.isUploading)
+                          .map(a => ({ fileId: a.fileId, uri: a.file?.url || a.uri, name: a.name, mimeType: a.mimeType, isVoice: a.isVoice, duration: a.duration }));
+                        await upsertDraft(user?.email, {
+                          id: draftIdRef.current, title: cancelTitle, body: cancelBody, updatedAt: Date.now(),
+                          attachments: savedAttachments.length ? savedAttachments : undefined,
+                        }).catch(() => {});
+                        loadDrafts(user?.email).then(d => setStoryDrafts(d)).catch(() => {});
+                      } else {
+                        AsyncStorage.setItem(QC_DRAFT_KEY(user?.email), JSON.stringify({ body: qcBody.trim() })).catch(() => {});
+                      }
+                      router.back();
+                    },
+                  },
+                  {
+                    text: 'Discard',
+                    style: 'destructive',
+                    onPress: () => router.back(),
+                  },
+                  {
+                    text: 'Keep Editing',
+                    style: 'cancel',
+                  },
+                ],
+              );
             }} activeOpacity={0.7}
               style={{ height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textBase }}>Cancel</Text>
@@ -656,6 +717,17 @@ export default function EditorScreen() {
                   </TouchableOpacity>
                 </>
               )}
+              {!isStory && hasQcDraft && !qcHasContent && (
+                // Show restore button when the editor is empty but a saved draft exists
+                <TouchableOpacity onPress={() => {
+                  Haptics.selectionAsync();
+                  setQcBody(savedQcBody);
+                }} activeOpacity={0.7}
+                  style={{ height: 34, paddingHorizontal: 12, borderRadius: 17, backgroundColor: COLORS.fillWeak, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <MoreHorizontal size={14} color={COLORS.textBase} strokeWidth={2} />
+                  <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textBase }}>Draft</Text>
+                </TouchableOpacity>
+              )}
               {!isStory && qcHasContent && (
                 <TouchableOpacity onPress={handleSave} disabled={!canSave || qcPending} activeOpacity={0.7}
                   style={{ height: 34, paddingHorizontal: 16, borderRadius: 17, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }}>
@@ -677,7 +749,7 @@ export default function EditorScreen() {
               <TextInput
                 ref={titleRef}
                 value={title}
-                onChangeText={v => { setTitle(v); scheduleSave(v, storyBody); }}
+                onChangeText={v => { setTitle(v); latestTitleRef.current = v; }}
                 placeholder="Title"
                 placeholderTextColor={COLORS.textDisabled}
                 style={{ fontFamily: FONTS.serif, fontSize: 34, fontWeight: '700', color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42, marginTop: 4 }}
