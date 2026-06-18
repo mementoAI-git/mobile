@@ -5,11 +5,12 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLogin } from '@/hooks/mutations/use-auth-mutations';
 import { useToast } from '@/components/ui/Toast';
+import { useAuthStore } from '@/store';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
-import { Alert } from 'react-native';
+import { storageKeys } from '@/constants/storage-keys';
 
 const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
@@ -98,67 +99,55 @@ export function useLoginLogic() {
 
   const handlePasskeyLogin = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    const enabled = await SecureStore.getItemAsync('memento.biometrics_enabled');
-    
-    if (enabled === 'true') {
-      try {
-        setPasskeyLoading(true);
-        const password = await SecureStore.getItemAsync('memento.biometrics_password', {
-          requireAuthentication: true,
-          authenticationPrompt: 'Authenticate to sign into Memento securely',
-        });
-        const email = await SecureStore.getItemAsync('memento.biometrics_email');
-        
-        if (email && password) {
-          mutate({ email, password }, {
-            onSuccess: (res) => {
-              const resData = res.data as any;
-              const target = resData.onboarding_status === 'never' ? '/(onboard)' : '/(tabs)/overview';
-              router.replace(target as any);
-            },
-            onError: () => {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              Alert.alert('Sign In Failed', 'Biometric authentication failed. Please verify your credentials or sign in with your password.');
-            },
-            onSettled: () => {
-              setPasskeyLoading(false);
-            }
-          });
-        } else {
-          setPasskeyLoading(false);
-          Alert.alert('Not Configured', 'Biometric credentials could not be found. Please log in with your email/password and enable Biometrics in settings.');
-        }
-      } catch (err) {
-        setPasskeyLoading(false);
-        // User cancelled biometrics prompt
-      }
-    } else {
-      Alert.alert(
-        'Passkey & Biometrics',
-        'Biometric sign-in is not registered yet. Log in with your email & password first, then enable Biometrics in Settings.\n\nAlternatively, you can authenticate using a Web Passkey.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Use Web Passkey', 
-            onPress: async () => {
-              try {
-                setPasskeyLoading(true);
-                const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
-                const webBase = apiBase.replace('/api', '');
-                const { openAuthSessionAsync } = await import('expo-web-browser');
-                const redirectUrl = 'memento://oauth-callback';
-                const authUrl = `${webBase}/login?passkey=true&redirect=${encodeURIComponent(redirectUrl)}`;
-                await openAuthSessionAsync(authUrl, 'memento://');
-              } catch (err) {
-                // silent
-              } finally {
-                setPasskeyLoading(false);
-              }
-            }
-          }
-        ]
+
+    const enabled = await SecureStore.getItemAsync(storageKeys.biometricsEnabled);
+
+    if (enabled !== 'true') {
+      // Not enrolled — show guidance via toast (no Alert)
+      toast('Biometric login is not set up. Sign in with your password first, then enable it in Settings → Security.', 'error');
+      return;
+    }
+
+    setPasskeyLoading(true);
+    try {
+      // Retrieve the refresh_token — OS biometric prompt fires here.
+      // v2: replace with native WebAuthn passkey. See TODO.md.
+      const refreshToken = await SecureStore.getItemAsync(
+        storageKeys.biometricsRefreshToken,
+        { requireAuthentication: true, authenticationPrompt: 'Sign in to Memento securely' },
       );
+
+      if (!refreshToken) {
+        toast('Biometric session expired. Please sign in with your password and re-enroll biometrics in Settings.', 'error');
+        setPasskeyLoading(false);
+        return;
+      }
+
+      // Exchange refresh_token for a new access/refresh token pair
+      const res = await client.post(endpoint.refreshToken, { refresh_token: refreshToken });
+      const newTokens = res.data?.data as any;
+
+      if (!newTokens?.access_token) {
+        toast('Session expired. Please sign in with your password.', 'error');
+        setPasskeyLoading(false);
+        return;
+      }
+
+      // Persist the new token pair and update the stored refresh_token silently
+      await useAuthStore.getState().setAuth(newTokens);
+      await SecureStore.setItemAsync(
+        storageKeys.biometricsRefreshToken,
+        newTokens.refresh_token,
+        { requireAuthentication: true },
+      );
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const target = newTokens.onboarding_status === 'never' ? '/(onboard)' : '/(tabs)/overview';
+      router.replace(target as any);
+    } catch {
+      // User cancelled the biometric prompt — no toast needed
+    } finally {
+      setPasskeyLoading(false);
     }
   };
 

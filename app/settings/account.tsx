@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground, Modal, Text} from 'react-native';
+import { View, ScrollView, TouchableOpacity, ImageBackground, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, ShieldCheck, AlertTriangle, Fingerprint, KeyRound } from 'lucide-react-native';
+import { ChevronLeft, ShieldCheck, AlertTriangle, Fingerprint } from 'lucide-react-native';
 import { Button, TextInput } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
 import { Switch } from '@/components/ui/Switch';
@@ -11,7 +11,8 @@ import { useAccountSettingsLogic } from '@/hooks/use-account-settings-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
 import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
-import { useUserStore } from '@/store';
+import { useAuthStore, useUserStore } from '@/store';
+import { storageKeys } from '@/constants/storage-keys';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
@@ -63,55 +64,61 @@ export default function AccountSettingsScreen() {
 
   const { toast } = useToast();
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
-  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [confirmError, setConfirmError] = useState('');
+  const [enrolling, setEnrolling] = useState(false);
   const user = useUserStore((s) => s.user);
+  const authToken = useAuthStore((s) => s.token);
 
   useEffect(() => {
-    SecureStore.getItemAsync('memento.biometrics_enabled').then((v) => {
+    SecureStore.getItemAsync(storageKeys.biometricsEnabled).then((v) => {
       setBiometricsEnabled(v === 'true');
     });
   }, []);
 
   const handleToggleBiometrics = async (value: boolean) => {
     if (!value) {
-      // Disable
+      // Disable — just delete the stored refresh_token
       try {
-        await SecureStore.deleteItemAsync('memento.biometrics_password');
-        await SecureStore.deleteItemAsync('memento.biometrics_email');
-        await SecureStore.setItemAsync('memento.biometrics_enabled', 'false');
+        await SecureStore.deleteItemAsync(storageKeys.biometricsRefreshToken);
+        await SecureStore.deleteItemAsync(storageKeys.biometricsEmail);
+        await SecureStore.setItemAsync(storageKeys.biometricsEnabled, 'false');
         setBiometricsEnabled(false);
+        toast('Biometric login disabled.', 'success');
       } catch {
         toast('Could not disable biometrics. Please try again.', 'error');
       }
     } else {
-      setConfirmPassword('');
-      setConfirmError('');
-      setPasswordModalVisible(true);
+      await enrollBiometrics();
     }
   };
 
   const enrollBiometrics = async () => {
-    const pwd = confirmPassword.trim();
-    if (pwd.length < 6) {
-      setConfirmError('Please enter your valid password (minimum 6 characters).');
-      return;
-    }
     const email = user?.email;
-    if (!email) {
-      setConfirmError('User email not found. Please log in again.');
+    const refreshToken = authToken?.refresh_token;
+
+    if (!email || !refreshToken) {
+      toast('Session not found. Please log out and back in.', 'error');
       return;
     }
+
+    setEnrolling(true);
     try {
-      await SecureStore.setItemAsync('memento.biometrics_password', pwd, { requireAuthentication: true });
-      await SecureStore.setItemAsync('memento.biometrics_email', email);
-      await SecureStore.setItemAsync('memento.biometrics_enabled', 'true');
+      // Store the refresh_token behind biometric authentication.
+      // The OS biometric prompt fires here — no password required.
+      // v2: replace with native WebAuthn passkey. See TODO.md.
+      await SecureStore.setItemAsync(
+        storageKeys.biometricsRefreshToken,
+        refreshToken,
+        { requireAuthentication: true, authenticationPrompt: 'Authenticate to enable biometric login' },
+      );
+      await SecureStore.setItemAsync(storageKeys.biometricsEmail, email);
+      await SecureStore.setItemAsync(storageKeys.biometricsEnabled, 'true');
       setBiometricsEnabled(true);
-      setPasswordModalVisible(false);
       toast('Face ID / Touch ID successfully enrolled!', 'success');
     } catch {
-      toast('Biometric authentication could not be registered on this device.', 'error');
+      // User cancelled the biometric prompt or it failed
+      toast('Biometric enrollment cancelled or unavailable on this device.', 'error');
+    } finally {
+      setEnrolling(false);
     }
   };
 
@@ -182,10 +189,12 @@ export default function AccountSettingsScreen() {
               icon={<Fingerprint size={20} color={COLORS.brand} strokeWidth={1.5} />}
               iconBg={COLORS.brandSubtle}
               label="Face ID / Touch ID"
+              description={enrolling ? 'Awaiting biometric confirmation…' : undefined}
               right={
                 <Switch
                   value={biometricsEnabled}
                   onValueChange={handleToggleBiometrics}
+                  disabled={enrolling}
                 />
               }
             />
@@ -216,37 +225,7 @@ export default function AccountSettingsScreen() {
         </View>
       </ScrollView>
 
-      {/* Biometric enrollment modal */}
-      <Modal visible={passwordModalVisible} transparent animationType="fade" onRequestClose={() => setPasswordModalVisible(false)}>
-        <View className="flex-1 bg-black/50 justify-center px-6">
-            <View className="bg-white rounded-[32px] p-6 gap-5">
-            <View className="items-center gap-2">
-              <Fingerprint size={36} color={COLORS.brand} />
-              <Text className="text-xl text-text-strong text-center" style={{ fontFamily: FONTS.serif }}>
-                Enable Biometric Login
-              </Text>
-              <Text className="text-sm text-text-weak text-center leading-relaxed" style={{ fontFamily: FONTS.sans }}>
-                Confirm your password to register biometric access on this device.
-              </Text>
-            </View>
-            <TextInput label="Password" secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} placeholder="••••••••" error={confirmError} />
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                onPress={() => setPasswordModalVisible(false)}
-                className="flex-1 h-12 rounded-2xl border border-stroke-weak items-center justify-center"
-              >
-                <Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={enrollBiometrics}
-                className="flex-1 h-12 rounded-2xl bg-brand items-center justify-center"
-              >
-                <Text className="text-sm text-white" style={{ fontFamily: FONTS.sansBold }}>Confirm</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* No modal needed — biometric prompt is triggered natively by SecureStore */}
     </SafeAreaView>
   );
 }
