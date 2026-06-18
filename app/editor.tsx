@@ -672,6 +672,8 @@ export default function EditorScreen() {
                   {/* My Drafts button — badge shows count, opens DraftsSheet */}
                   <TouchableOpacity onPress={() => {
                     Haptics.selectionAsync();
+                    editorBridge?.blur(); // dismiss WKWebView keyboard (Tiptap body)
+                    Keyboard.dismiss();   // dismiss native keyboard (title TextInput)
                     useUiStore.getState().openSheet('story-drafts', {
                       email: user?.email,
                       onLoadDraft: (draft: StoryDraft) => {
