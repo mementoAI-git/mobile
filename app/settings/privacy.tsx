@@ -67,7 +67,7 @@ export default function PrivacySettingsScreen() {
               <TouchableOpacity
                 onPress={() => Haptics.selectionAsync()}
                 activeOpacity={0.7}
-                className="flex-row items-center gap-4 px-5 py-4 bg-white rounded-[20px] border border-stroke-weaker"
+                className="flex-row items-center gap-4 px-5 py-4 bg-white rounded-[20px]"
               >
                 <View className="size-11 rounded-2xl items-center justify-center" style={{ backgroundColor: item.iconBg }}>
                   <item.Icon size={20} color={COLORS.textBase} strokeWidth={1.5} />

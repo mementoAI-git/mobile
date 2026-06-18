@@ -210,7 +210,7 @@ export default function BillingSettingsScreen() {
         <View className="px-6 gap-6">
           {/* 1. Subscription Overview Card */}
           <Animated.View entering={FadeInDown.duration(600)}>
-            <View className="bg-white rounded-[32px] border border-stroke-weaker p-6">
+            <View className="bg-white rounded-[32px] p-6">
               <View className="flex-row items-center gap-4 mb-6">
                 <View className="size-12 rounded-2xl bg-brand-tint items-center justify-center">
                   <CreditCard size={24} color={COLORS.brand} />
@@ -317,7 +317,7 @@ export default function BillingSettingsScreen() {
           {/* 2. Usage & Limits Card */}
           {usage && (
             <Animated.View entering={FadeInDown.delay(100).duration(600)}>
-              <View className="bg-white rounded-[32px] border border-stroke-weaker p-6 gap-6">
+              <View className="bg-white rounded-[32px] p-6 gap-6">
                 <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
                   Storage & Usage
                 </Text>
@@ -361,7 +361,7 @@ export default function BillingSettingsScreen() {
 
           {/* 3. Promo Code Card */}
           <Animated.View entering={FadeInDown.delay(200).duration(600)}>
-            <View className="bg-white rounded-[32px] border border-stroke-weaker p-6 gap-5">
+            <View className="bg-white rounded-[32px] p-6 gap-5">
               <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
                 Promo Code
               </Text>
@@ -397,7 +397,7 @@ export default function BillingSettingsScreen() {
           {/* 4. Invoices List Card */}
           {isProOrAbove && (
             <Animated.View entering={FadeInDown.delay(300).duration(600)}>
-              <View className="bg-white rounded-[32px] border border-stroke-weaker p-6 gap-4">
+              <View className="bg-white rounded-[32px] p-6 gap-4">
                 <View className="flex-row items-center gap-2">
                   <Receipt size={16} color={COLORS.textBase} />
                   <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>

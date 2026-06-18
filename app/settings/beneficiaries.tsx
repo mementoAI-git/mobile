@@ -18,7 +18,7 @@ function BeneficiariesSkeleton() {
 
       {/* Row items skeleton */}
       {[1, 2, 3, 4].map((i) => (
-        <View key={i} className="bg-white rounded-[24px] border border-stroke-weaker p-5 flex-row items-center gap-4">
+        <View key={i} className="bg-white rounded-[24px] p-5 flex-row items-center gap-4">
           <Skeleton className="size-12 rounded-full" />
           <View className="flex-1 gap-2">
             <Skeleton className="h-5 w-[45%] rounded-md" />
@@ -141,7 +141,7 @@ export default function BeneficiariesSettingsScreen() {
                 key={b._id}
                 entering={FadeInDown.delay(100 * idx)}
                
-                className="bg-white rounded-[24px] border border-stroke-weaker p-5 flex-row items-center gap-4"
+                className="bg-white rounded-[24px] p-5 flex-row items-center gap-4"
               >
                 <Avatar name={b.name} size="lg" className="border-2 border-brand/5" />
                 <View className="flex-1 gap-1">

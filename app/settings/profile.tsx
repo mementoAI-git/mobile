@@ -1,23 +1,67 @@
-import React from 'react';
-import { View, ScrollView, ImageBackground, TouchableOpacity, Text} from 'react-native';
+import React, { useCallback } from 'react';
+import { View, ScrollView, ImageBackground, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight, Shield, Eye, Users, Smartphone, Zap, MessageSquare, CreditCard, LogOut, Trophy, Flame } from 'lucide-react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { ChevronLeft, ChevronRight, Shield, Eye, Users, Smartphone, MessageSquare, CreditCard, LogOut, Flame } from 'lucide-react-native';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Avatar, Button } from '@/components/ui';
+import { Avatar } from '@/components/ui';
+import { Separator } from '@/components/ui/Separator';
 import { useProfileSettingsLogic } from '@/hooks/use-profile-settings-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
 
 const HEADER_BG = require('../../assets/images/backgrounds/welcome_bg.png');
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
+// ─── Nav items with individual tint colors ──────────────────────────────────
+
 const NAV_ITEMS = [
-  { label: 'Security', Icon: Shield, href: '/settings/account' },
-  { label: 'Privacy', Icon: Eye, href: '/settings/privacy' },
-  { label: 'Beneficiaries', Icon: Users, href: '/settings/beneficiaries' },
-  { label: '2FA', Icon: Smartphone, href: '/settings/two-factor' },
-  { label: 'Billing', Icon: CreditCard, href: '/settings/billing' },
+  { label: 'Security',       Icon: Shield,       href: '/settings/account',      iconBg: `${COLORS.brand}12`,   iconColor: COLORS.brand   },
+  { label: 'Privacy',        Icon: Eye,          href: '/settings/privacy',       iconBg: COLORS.fillWeak,       iconColor: COLORS.textBase },
+  { label: 'Beneficiaries',  Icon: Users,        href: '/settings/beneficiaries', iconBg: `${COLORS.success}12`, iconColor: COLORS.success },
+  { label: '2FA',            Icon: Smartphone,   href: '/settings/two-factor',    iconBg: `${COLORS.info}12`,    iconColor: COLORS.info    },
+  { label: 'Billing',        Icon: CreditCard,   href: '/settings/billing',       iconBg: `${COLORS.warning}12`, iconColor: COLORS.warning },
+  { label: 'Send Feedback',  Icon: MessageSquare, href: '__feedback__',            iconBg: COLORS.fillWeak,       iconColor: COLORS.textBase },
 ];
+
+// ─── Animated pressable row ───────────────────────────────────────────────────
+
+function NavRow({
+  label, Icon, iconBg, iconColor, onPress, isLast,
+}: {
+  label: string;
+  Icon: any;
+  iconBg: string;
+  iconColor: string;
+  onPress: () => void;
+  isLast: boolean;
+}) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const handlePressIn = useCallback(() => { scale.value = withSpring(0.98, { damping: 20, stiffness: 300 }); }, [scale]);
+  const handlePressOut = useCallback(() => { scale.value = withSpring(1, { damping: 20, stiffness: 300 }); }, [scale]);
+
+  return (
+    <Animated.View style={animStyle}>
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={1}
+        style={styles.navRow}
+      >
+        <View style={[styles.iconBadge, { backgroundColor: iconBg }]}>
+          <Icon size={19} color={iconColor} strokeWidth={1.6} />
+        </View>
+        <Text style={styles.navLabel}>{label}</Text>
+        <ChevronRight size={16} color={COLORS.textMuted} strokeWidth={2} />
+      </TouchableOpacity>
+      {!isLast && <Separator style={{ opacity: 0.6 }} />}
+    </Animated.View>
+  );
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProfileSettingsScreen() {
   const {
@@ -28,142 +72,279 @@ export default function ProfileSettingsScreen() {
     enrichmentScore,
     memoriesCount,
     streakCount,
-    topDimension,
     router,
   } = useProfileSettingsLogic();
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
       {/* Header */}
-      <View className="flex-row items-center gap-3 px-6 py-4">
+      <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
-          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
+          onPress={() => {
+            Haptics.selectionAsync();
+            if (router.canGoBack()) router.back();
+            else router.replace('/settings');
+          }}
+          style={styles.backBtn}
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
-        <Text
-          className="text-[28px] text-text-strong"
-          style={{ fontFamily: FONTS.serif }}
-        >
-          Account
-        </Text>
+        <Text style={styles.headerTitle}>Account</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-24">
-        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 96 }}>
+        <ImageBackground source={PATTERN} style={StyleSheet.absoluteFill} imageStyle={{ opacity: 0.03 }} resizeMode="repeat" />
 
-        {/* Profile Header Card */}
-        <Animated.View entering={FadeInDown.duration(600)} className="px-6 mb-8">
+        {/* ── Profile Hero Card ── */}
+        <Animated.View entering={FadeInDown.duration(500)} style={styles.heroWrap}>
           <ImageBackground
             source={HEADER_BG}
-            className="w-full rounded-[32px] overflow-hidden p-7 border border-stroke-weaker bg-white"
+            style={styles.heroCard}
             imageStyle={{ borderRadius: 32 }}
           >
-            <View className="flex-row items-center gap-5">
-              <Avatar uri={profile?.picture_url} name={profile?.fullname ?? profile?.first_name} size="xl" className="border border-stroke-weak" />
-              <View className="flex-1 gap-1">
-                <Text
-                  className="text-[24px] text-text-strong leading-tight"
-                  style={{ fontFamily: FONTS.serif }}
-                >
+            {/* Avatar + name row */}
+            <View style={styles.avatarRow}>
+              <View style={styles.avatarRing}>
+                <Avatar
+                  uri={profile?.picture_url}
+                  name={profile?.fullname ?? profile?.first_name}
+                  size="xl"
+                />
+              </View>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={styles.heroName} numberOfLines={1}>
                   {(profile?.fullname ?? `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim()) || 'Your Name'}
                 </Text>
-                <Text
-                  className="text-sm text-text-weak opacity-60"
-                  style={{ fontFamily: FONTS.sansMedium }}
-                  numberOfLines={1}
-                >
+                <Text style={styles.heroEmail} numberOfLines={1}>
                   {profile?.email}
                 </Text>
               </View>
             </View>
 
-            <View className="flex-row items-center gap-4 mt-8 pt-8 border-t border-stroke-weaker/40">
-              <View className="flex-1 gap-1.5 items-center">
-                <Text className="text-[10px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Enrichment</Text>
-                <Text className="text-xl text-brand font-bold" style={{ fontFamily: FONTS.sansBold }}>{enrichmentScore}%</Text>
+            {/* Stats row */}
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>ENRICHMENT</Text>
+                <Text style={[styles.statValue, { color: COLORS.brand }]}>{enrichmentScore}%</Text>
               </View>
-              <View className="w-px h-10 bg-stroke-weaker" />
-              <View className="flex-1 gap-1.5 items-center">
-                <Text className="text-[10px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Stories</Text>
-                <Text className="text-xl text-text-strong font-bold" style={{ fontFamily: FONTS.sansBold }}>{memoriesCount}</Text>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>STORIES</Text>
+                <Text style={styles.statValue}>{memoriesCount}</Text>
               </View>
-              <View className="w-px h-10 bg-stroke-weaker" />
-              <View className="flex-1 gap-1.5 items-center">
-                <Text className="text-[10px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Streak</Text>
-                <View className="flex-row items-center gap-1">
-                  <Flame size={16} color={COLORS.brand} />
-                  <Text className="text-xl text-text-strong font-bold" style={{ fontFamily: FONTS.sansBold }}>{streakCount}</Text>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>STREAK</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Flame size={15} color={COLORS.brand} />
+                  <Text style={styles.statValue}>{streakCount}</Text>
                 </View>
               </View>
             </View>
           </ImageBackground>
         </Animated.View>
 
-        {/* Navigation Section */}
-        <View className="px-6 gap-3">
-          <Text className="text-[11px] text-text-muted uppercase tracking-[2px] px-1 mb-1" style={{ fontFamily: FONTS.sansBold }}>Settings & Privacy</Text>
-          {NAV_ITEMS.map((item, idx) => (
-            <Animated.View key={item.href} entering={FadeInDown.delay(100 * idx).duration(400)}>
-              <TouchableOpacity
-                onPress={() => { Haptics.selectionAsync(); router.push(item.href as any); }}
-                className="flex-row items-center gap-4 bg-white rounded-[20px] px-5 py-4 border border-stroke-weaker"
-                activeOpacity={0.7}
-              >
-                <View className="size-11 rounded-2xl bg-fill-weaker items-center justify-center">
-                  <item.Icon size={20} color={COLORS.textBase} strokeWidth={1.5} />
-                </View>
-                <Text
-                  className="flex-1 text-[15px] text-text-strong"
-                  style={{ fontFamily: FONTS.sansMedium }}
-                >
-                  {item.label}
-                </Text>
-                <ChevronRight size={18} color={COLORS.textDisabled} />
-              </TouchableOpacity>
-            </Animated.View>
-          ))}
+        {/* ── Settings Group Card ── */}
+        <Animated.View entering={FadeInDown.delay(120).duration(500)} style={styles.groupWrap}>
+          <Text style={styles.sectionLabel}>Settings & Privacy</Text>
 
-          {/* Feedback */}
-          <Animated.View entering={FadeInDown.delay(600).duration(400)}>
-            <TouchableOpacity
-              onPress={() => { Haptics.selectionAsync(); openSheet('feedback'); }}
-              className="flex-row items-center gap-4 bg-white rounded-[20px] px-5 py-4 border border-stroke-weaker"
-              activeOpacity={0.7}
-            >
-              <View className="size-11 rounded-2xl bg-fill-weaker items-center justify-center">
-                <MessageSquare size={20} color={COLORS.textBase} strokeWidth={1.5} />
-              </View>
-              <Text
-                className="flex-1 text-base text-text-strong"
-                style={{ fontFamily: FONTS.sansMedium }}
-              >
-                Send Feedback
-              </Text>
-              <ChevronRight size={18} color={COLORS.textDisabled} />
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
+          <View style={styles.groupCard}>
+            {NAV_ITEMS.map((item, idx) => (
+              <NavRow
+                key={item.href}
+                label={item.label}
+                Icon={item.Icon}
+                iconBg={item.iconBg}
+                iconColor={item.iconColor}
+                isLast={idx === NAV_ITEMS.length - 1}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  if (item.href === '__feedback__') openSheet('feedback');
+                  else router.push(item.href as any);
+                }}
+              />
+            ))}
+          </View>
+        </Animated.View>
 
-        {/* Logout */}
-        <View className="px-6 mt-10">
+        {/* ── Sign Out ── */}
+        <Animated.View entering={FadeInDown.delay(240).duration(500)} style={styles.logoutWrap}>
           <TouchableOpacity
             onPress={handleLogout}
             disabled={isPending}
-            className="flex-row items-center justify-center gap-3 h-14 border rounded-full"
-            style={{ backgroundColor: `${COLORS.error}05`, borderColor: `${COLORS.error}15` }}
+            style={styles.logoutBtn}
+            activeOpacity={0.8}
           >
-            <LogOut size={20} color={COLORS.error} />
-            <Text className="text-base font-bold" style={{ fontFamily: FONTS.sansBold, color: COLORS.error }}>
-              Sign Out
-            </Text>
+            <LogOut size={19} color={COLORS.error} strokeWidth={2} />
+            <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
-          <Text className="text-center text-[10px] text-text-disabled mt-6 uppercase tracking-[3px]" style={{ fontFamily: FONTS.sansBold }}>
-            Memento v1.0.0
-          </Text>
-        </View>
+          <Text style={styles.versionText}>MEMENTO V1.0.0</Text>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.fillWeaker,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontFamily: FONTS.serif,
+    fontSize: 28,
+    color: COLORS.textStrong,
+  },
+
+  // Hero card
+  heroWrap: {
+    paddingHorizontal: 20,
+    marginBottom: 28,
+  },
+  heroCard: {
+    borderRadius: 32,
+    overflow: 'hidden',
+    padding: 24,
+    backgroundColor: COLORS.card,
+  },
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 24,
+  },
+  avatarRing: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeak,
+    overflow: 'hidden',
+  },
+  heroName: {
+    fontFamily: FONTS.serif,
+    fontSize: 22,
+    color: COLORS.textStrong,
+    lineHeight: 28,
+  },
+  heroEmail: {
+    fontFamily: FONTS.sans,
+    fontSize: 13,
+    color: COLORS.textWeak,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: `${COLORS.strokeWeaker}60`,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+  },
+  statLabel: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 9,
+    color: COLORS.textMuted,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+  statValue: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 20,
+    color: COLORS.textStrong,
+  },
+  statDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: COLORS.strokeWeaker,
+  },
+
+  // Settings group
+  groupWrap: {
+    paddingHorizontal: 20,
+    marginBottom: 28,
+    gap: 12,
+  },
+  sectionLabel: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 11,
+    color: COLORS.textMuted,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginLeft: 4,
+    marginBottom: 4,
+  },
+  groupCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 28,
+    overflow: 'hidden',
+  },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 15,
+    minHeight: 64,
+  },
+  iconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navLabel: {
+    flex: 1,
+    fontFamily: FONTS.sansMedium,
+    fontSize: 15,
+    color: COLORS.textStrong,
+  },
+
+  // Logout
+  logoutWrap: {
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    gap: 20,
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    width: '100%',
+    height: 56,
+    borderRadius: 999,
+    backgroundColor: `${COLORS.error}06`,
+    borderWidth: 1,
+    borderColor: `${COLORS.error}18`,
+  },
+  logoutText: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 15,
+    color: COLORS.error,
+  },
+  versionText: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 10,
+    color: COLORS.textDisabled,
+    letterSpacing: 3,
+  },
+});

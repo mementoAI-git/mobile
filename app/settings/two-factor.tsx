@@ -43,7 +43,7 @@ export default function TwoFactorScreen() {
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
 
         {/* Status row */}
-        <View className="flex-row items-center gap-4 px-5 py-4 bg-white rounded-[20px] border border-stroke-weaker">
+        <View className="flex-row items-center gap-4 px-5 py-4 bg-white rounded-[20px]">
           <View
             className="size-11 rounded-2xl items-center justify-center"
             style={{ backgroundColor: is2FAEnabled ? `${COLORS.success}10` : COLORS.fillWeak }}
@@ -79,7 +79,7 @@ export default function TwoFactorScreen() {
 
         {/* Setup flow */}
         {setupData && (
-          <View className="bg-white rounded-[20px] border border-stroke-weaker p-5 gap-4">
+          <View className="bg-white rounded-[20px] p-5 gap-4">
             <View className="flex-row items-start gap-3">
               <View className="size-11 rounded-2xl bg-brand/10 items-center justify-center shrink-0">
                 <Smartphone size={20} color={COLORS.brand} strokeWidth={1.5} />

@@ -217,7 +217,7 @@ export default function AccountSettingsScreen() {
       {/* Biometric enrollment modal */}
       <Modal visible={passwordModalVisible} transparent animationType="fade" onRequestClose={() => setPasswordModalVisible(false)}>
         <View className="flex-1 bg-black/50 justify-center px-6">
-          <View className="bg-white rounded-[32px] p-6 gap-5 border border-stroke-weaker">
+            <View className="bg-white rounded-[32px] p-6 gap-5">
             <View className="items-center gap-2">
               <Fingerprint size={36} color={COLORS.brand} />
               <Text className="text-xl text-text-strong text-center" style={{ fontFamily: FONTS.serif }}>
