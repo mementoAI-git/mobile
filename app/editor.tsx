@@ -443,10 +443,7 @@ export default function EditorScreen() {
         loadDrafts(user?.email).then(d => {
           if (isMountedRef.current) setStoryDrafts(d);
         }),
-        AsyncStorage.getItem(QC_DRAFT_KEY(user?.email)).then(raw => {
-          if (!raw || !isMountedRef.current) return;
-          try { const d = JSON.parse(raw); if (d.body) setQcBody(d.body); } catch {}
-        })
+        Promise.resolve()
       ]).finally(() => {
         if (isMountedRef.current) setIsDraftLoaded(true);
       });
@@ -719,13 +716,17 @@ export default function EditorScreen() {
                   </TouchableOpacity>
                 </>
               )}
-              {!isStory && hasQcDraft && !qcHasContent && (
-                // Show restore button when the editor is empty but a saved draft exists
-                <TouchableOpacity onPress={() => {
-                  Haptics.selectionAsync();
-                  setQcBody(savedQcBody);
-                }} activeOpacity={0.7}
-                  style={{ height: 34, paddingHorizontal: 12, borderRadius: 17, backgroundColor: COLORS.fillWeak, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              {!isStory && (
+                // Always show the Draft button; grayed out when no saved draft exists
+                <TouchableOpacity
+                  onPress={() => {
+                    if (!hasQcDraft) return;
+                    Haptics.selectionAsync();
+                    setQcBody(savedQcBody);
+                  }}
+                  activeOpacity={hasQcDraft ? 0.7 : 1}
+                  style={{ height: 34, paddingHorizontal: 12, borderRadius: 17, backgroundColor: COLORS.fillWeak, flexDirection: 'row', alignItems: 'center', gap: 4, opacity: hasQcDraft ? 1 : 0.35 }}
+                >
                   <MoreHorizontal size={14} color={COLORS.textBase} strokeWidth={2} />
                   <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textBase }}>Draft</Text>
                 </TouchableOpacity>

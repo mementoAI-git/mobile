@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   BookOpen,
+  Pencil,
   PlusCircle,
   Image as ImageIcon,
   ImagePlus,
@@ -152,10 +153,14 @@ function StoryToolbar({
   editor,
   uploadOpen,
   onToggleUpload,
+  onSwitchMode,
+  disableModeSwitch,
 }: {
   editor?: EditorBridge | null;
   uploadOpen: boolean;
   onToggleUpload: () => void;
+  onSwitchMode?: () => void;
+  disableModeSwitch?: boolean;
 }) {
   return (
     <View style={styles.storyRow}>
@@ -175,12 +180,13 @@ function StoryToolbar({
       {/* Divider */}
       <View style={styles.vertDivider} />
 
-      {/* Formatting icons — scrollable */}
+      {/* Formatting icons — scrollable, takes remaining space */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.fmtScroll}
         keyboardShouldPersistTaps="always"
+        style={{ flex: 1 }}
       >
         {editor ? (
           <StoryFormattingTools editor={editor} />
@@ -192,6 +198,21 @@ function StoryToolbar({
           ))
         )}
       </ScrollView>
+
+      {/* Mode switch pill — right side, mirrors quick-capture bar */}
+      {!disableModeSwitch && onSwitchMode && (
+        <>
+          <View style={styles.vertDivider} />
+          <TouchableOpacity
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onSwitchMode(); }}
+            activeOpacity={0.8}
+            style={[styles.modePill, styles.modePillStory]}
+          >
+            <BookOpen size={14} color={COLORS.textInverse} strokeWidth={2} />
+            <Text style={styles.modePillText}>Story mode</Text>
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
 }
@@ -305,6 +326,8 @@ export function EditorActionBar({
             editor={editor}
             uploadOpen={uploadOpen}
             onToggleUpload={toggleUpload}
+            onSwitchMode={handleSwitchMode}
+            disableModeSwitch={disableModeSwitch}
           />
         </ScrollView>
       </View>
@@ -472,6 +495,9 @@ const styles = StyleSheet.create({
   },
   modePillQuick: {
     backgroundColor: '#77C7AF',
+  },
+  modePillStory: {
+    backgroundColor: COLORS.textStrong,
   },
   modePillText: {
     fontFamily: FONTS.sansBold,
