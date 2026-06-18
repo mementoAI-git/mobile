@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ChevronLeft, Pencil, MoreHorizontal,
-  FileText, Download, Music, CalendarDays,
+  FileText, Music, CalendarDays,
 } from 'lucide-react-native';
 import dayjs from 'dayjs';
 import Animated from 'react-native-reanimated';
@@ -68,6 +68,7 @@ export default function StoryDetailScreen() {
     handleOpenActions,
     deleting,
     imageAttachments,
+    audioAttachments,
     otherAttachments,
   } = useStoryDetailLogic();
 
@@ -87,6 +88,9 @@ export default function StoryDetailScreen() {
   const imgOnly = imageAttachments.filter(a => !a.type?.startsWith('video/'));
   const videos  = imageAttachments.filter(a =>  a.type?.startsWith('video/'));
 
+  // All previewable media: images + videos + audio
+  const allPreviewAttachments = [...imageAttachments, ...audioAttachments];
+
   // Mosaic grid: row1 = [0, 1], row2 = [2, 3, 4], rest hidden with "+N"
   const MAX_SHOWN = 5;
   const shownImgs = imgOnly.slice(0, MAX_SHOWN);
@@ -94,8 +98,8 @@ export default function StoryDetailScreen() {
   const row1 = shownImgs.slice(0, 2);
   const row2 = shownImgs.slice(2, 5);
 
-  const openPreview = (item: typeof imgOnly[0]) => {
-    const idx = imageAttachments.findIndex(a => a.url === item.url);
+  const openPreview = (item: typeof allPreviewAttachments[0]) => {
+    const idx = allPreviewAttachments.findIndex(a => a.url === item.url);
     setPreviewIndex(idx >= 0 ? idx : 0);
     setPreviewVisible(true);
     Haptics.selectionAsync();
@@ -270,6 +274,99 @@ export default function StoryDetailScreen() {
           </View>
         )}
 
+        {/* Audio — tappable music/voice card thumbnails → opens MediaPreviewModal */}
+        {audioAttachments.length > 0 && (
+          <View style={{ paddingHorizontal: 20, gap: 8, marginBottom: 8 }}>
+            {audioAttachments.map((item) => {
+              const isVoice = item.name?.startsWith('voice_') && item.type === 'audio/m4a';
+              const albumArt = item.thumbnail;
+              const dur = Number((item as any).duration ?? 0);
+              const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+              const rawFileName = item.name
+                ? item.name.replace(/\.[^.]+$/, '').replace(/_\d{12,}$/, '').replace(/_/g, ' ')
+                : 'Audio';
+              // Prefer the AI-generated memory title over the raw filename
+              const fileName = memory.title && memory.title !== 'Untitled Memory' ? memory.title : rawFileName;
+
+              if (albumArt) {
+                // Album art card (future — when backend extracts ID3 art)
+                return (
+                  <TouchableOpacity
+                    key={item._id}
+                    onPress={() => openPreview(item)}
+                    activeOpacity={0.88}
+                    style={{ borderRadius: 16, overflow: 'hidden', height: 120 }}
+                  >
+                    <Image source={{ uri: albumArt }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: 'rgba(0,0,0,0.45)' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 1.5, height: 14 }}>
+                        {[5, 10, 14, 11, 7, 12, 8, 14].map((h, i) => <View key={i} style={{ width: 2.5, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />)}
+                      </View>
+                      <Text style={{ fontFamily: FONTS.sansBold, fontSize: 12, color: '#fff', flex: 1 }} numberOfLines={1}>{fileName}</Text>
+                      {dur > 0 && <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>{fmt(dur)}</Text>}
+                    </View>
+                  </TouchableOpacity>
+                );
+              }
+
+              if (isVoice) {
+                // Dark voice card — square, half-width, matching MP3 card style
+                let h = 0;
+                const seed = item._id || item.name || '';
+                for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+                const bars = Array.from({ length: 16 }, (_, i) =>
+                  4 + Math.round((Math.sin((Math.abs(h) + i * 997) * 0.013) * 0.5 + 0.5) * 20)
+                );
+                return (
+                  <TouchableOpacity
+                    key={item._id}
+                    onPress={() => openPreview(item)}
+                    activeOpacity={0.88}
+                    style={{ backgroundColor: COLORS.textStrong, borderRadius: 20, aspectRatio: 1, width: (SCREEN_W - 40) / 2, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 32 }}>
+                      {bars.map((barH, i) => (
+                        <View key={i} style={{ flex: 1, height: barH, borderRadius: 2, backgroundColor: `${COLORS.brand}cc`, maxHeight: 28 }} />
+                      ))}
+                    </View>
+                    <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: 'rgba(255,255,255,0.9)', textAlign: 'center' }} numberOfLines={2}>
+                      {fileName}
+                    </Text>
+                    {dur > 0 && (
+                      <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+                        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>{fmt(dur)}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              }
+
+              // Clean music player card for uploaded MP3/WAV/AAC — square card matching masonry
+              return (
+                <TouchableOpacity
+                  key={item._id}
+                  onPress={() => openPreview(item)}
+                  activeOpacity={0.88}
+                  style={{ backgroundColor: COLORS.fillWeak, borderRadius: 20, aspectRatio: 1, width: (SCREEN_W - 40) / 2, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
+                >
+                  {/* Orange waveform bars */}
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 32 }}>
+                    {[8, 16, 24, 20, 12, 22, 14, 24, 18, 8, 16, 24].map((h, i) => (
+                      <View key={i} style={{ width: 3, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />
+                    ))}
+                  </View>
+                  <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>{fileName}</Text>
+                  {dur > 0 && (
+                    <View style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+                      <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: COLORS.textBase }}>{fmt(dur)}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
         {/* ── Body ── */}
         {(memory.body?.replace(/<[^>]+>/g, '').trim() ?? '').length > 0 && (
           <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
@@ -279,81 +376,57 @@ export default function StoryDetailScreen() {
           </View>
         )}
 
-        {/* ── Other attachments ── */}
+        {/* ── Other attachments (documents only) ── */}
         {otherAttachments.length > 0 && (
           <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 8 }}>
-            <Text style={styles.sectionLabel}>ATTACHMENTS</Text>
-            {otherAttachments.map(a => {
-              const isVoice = a.name?.startsWith('voice_') ?? false;
-              const isAudio = a.type?.startsWith('audio/');
-
-              if (isVoice) {
-                let h = 0;
-                const seed = a._id || a.name || '';
-                for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
-                const bars = Array.from({ length: 24 }, (_, i) =>
-                  4 + Math.round((Math.sin((Math.abs(h) + i * 997) * 0.013) * 0.5 + 0.5) * 16)
-                );
-                const dur = Number((a as any).duration ?? 0);
-                const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+            <Text style={styles.sectionLabel}>DOCUMENTS</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {otherAttachments.map(a => {
+                const fileType = a.type?.split('/')[1]?.toUpperCase() ?? 'FILE';
+                const fileSize = ((a as any).size && Number((a as any).size) > 0)
+                  ? `${(Number((a as any).size) / 1024 / 1024).toFixed(1)} MB`
+                  : null;
                 return (
-                  <View key={a._id} style={{ backgroundColor: COLORS.textStrong, borderRadius: 16, padding: 14 }}>
-                    <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 12, color: 'rgba(255,255,255,0.85)', marginBottom: 10 }} numberOfLines={1}>
-                      Voice note{dur > 0 ? ` · ${fmt(dur)}` : ''}
-                    </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
-                      {bars.map((barH, i) => (
-                        <View key={i} style={{ flex: 1, height: barH, borderRadius: 2, backgroundColor: `${COLORS.brand}99`, maxHeight: 24 }} />
-                      ))}
+                  <TouchableOpacity
+                    key={a._id}
+                    onPress={() => handleOpenFile(a.url)}
+                    activeOpacity={0.88}
+                    style={{ backgroundColor: COLORS.fillWeak, borderRadius: 20, aspectRatio: 1, width: (SCREEN_W - 40) / 2, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 20 }}
+                  >
+                    <View style={{ width: 48, height: 48, backgroundColor: COLORS.card, borderRadius: 14, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}>
+                      <FileText size={24} color={COLORS.brand} strokeWidth={1.5} />
                     </View>
-                  </View>
-                );
-              }
-
-              if (isAudio) {
-                return (
-                  <TouchableOpacity key={a._id} onPress={() => handleOpenFile(a.url)} activeOpacity={0.7}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.fillWeak, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, paddingVertical: 10 }}>
-                    <Music size={18} color={COLORS.brand} strokeWidth={1.8} />
-                    <Text style={{ flex: 1, fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textStrong }} numberOfLines={1}>{a.name || 'Audio file'}</Text>
-                    <Download size={16} color={COLORS.brand} />
+                    <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>
+                      {a.name || 'Document'}
+                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <View style={{ backgroundColor: `${COLORS.brand}15`, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+                        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.brand }}>{fileType}</Text>
+                      </View>
+                      {fileSize && <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: COLORS.textMuted }}>{fileSize}</Text>}
+                    </View>
                   </TouchableOpacity>
                 );
-              }
-
-              return (
-                <TouchableOpacity key={a._id} onPress={() => handleOpenFile(a.url)} activeOpacity={0.7}
-                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.fillWeak, borderWidth: 1, borderColor: COLORS.strokeWeaker, padding: 12, borderRadius: 14 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                    <View style={{ width: 40, height: 40, backgroundColor: COLORS.card, borderRadius: 10, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}>
-                      <FileText size={20} color={COLORS.textBase} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textStrong }} numberOfLines={1}>{a.name || 'Document'}</Text>
-                      <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textWeak, textTransform: 'uppercase' }}>
-                        {a.type?.split('/')[1]?.toUpperCase() ?? 'FILE'}{((a as any).size && Number((a as any).size) > 0) ? ` · ${(Number((a as any).size) / 1024 / 1024).toFixed(2)} MB` : ''}
-                      </Text>
-                    </View>
-                  </View>
-                  <Download size={18} color={COLORS.brand} />
-                </TouchableOpacity>
-              );
-            })}
+              })}
+            </View>
           </View>
         )}
       </ScrollView>
 
-      {/* Full-screen image previewer */}
+      {/* Full-screen media previewer — images, videos, and audio */}
       <MediaPreviewModal
         visible={previewVisible}
-        attachments={imageAttachments.map(a => {
-          console.log('[StoryDetail] preview attachment:', a._id, 'type:', a.type, 'url:', a.url?.slice(0, 60));
+        attachments={allPreviewAttachments.map(a => {
+          const isAudio = a.type?.startsWith('audio/');
+          const audioTitle = memory.title && memory.title !== 'Untitled Memory' ? memory.title : undefined;
           return {
             clientId: a._id ?? (a.url ?? ''),
             uri: a.url ?? '',
-            name: a.name ?? '',
-            // Never fall back to image/jpeg — let the modal pick the right renderer
+            // For audio attachments, use the AI-generated memory title as the display name
+            name: (isAudio && audioTitle) ? audioTitle : (a.name ?? ''),
             mimeType: a.type ?? 'application/octet-stream',
+            duration: (a as any).duration,
+            isVoice: a.name?.startsWith('voice_') && a.type === 'audio/m4a',
           };
         })}
         initialIndex={previewIndex}

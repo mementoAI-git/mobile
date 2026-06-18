@@ -21,7 +21,6 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
-  Alert,
   Modal,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
@@ -424,7 +423,7 @@ export default function CreateScreen() {
   const handleImagePicker = useCallback(async () => {
     Haptics.selectionAsync();
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow Memento to access your photos.'); return; }
+    if (status !== 'granted') { toast('Allow Memento to access your photos.', 'error'); return; }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, quality: 0.85 });
     if (!result.canceled) {
       for (const a of result.assets) await uploadAndAdd(a.uri, a.mimeType || 'image/jpeg', a.fileName || `photo_${Date.now()}.jpg`);
@@ -435,7 +434,7 @@ export default function CreateScreen() {
   const handleVideoPicker = useCallback(async () => {
     Haptics.selectionAsync();
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow Memento to access your photos.'); return; }
+    if (status !== 'granted') { toast('Allow Memento to access your photos.', 'error'); return; }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], allowsMultipleSelection: false, quality: 0.85 });
     if (!result.canceled && result.assets[0]) {
       const a = result.assets[0];

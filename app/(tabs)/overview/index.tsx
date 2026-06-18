@@ -16,7 +16,7 @@ import { Plus, Zap, MessageCircle, Trophy, ChevronRight, Folder, UserCheck, Hour
 import { useUiStore } from '@/store';
 import { useUserStats, useMemoriesStats, useCapsuleStats } from '@/hooks/queries/use-overview';
 import { useUserStore } from '@/store';
-import { StatCard, DashboardHeader, Spinner, OverviewSkeleton, GradientText, GreetingIcon, SplineChart, JourneyStatIcon } from '@/components/ui';
+import { StatCard, DashboardHeader, Spinner, OverviewSkeleton, GradientText, GreetingIcon, /* SplineChart, */ JourneyStatIcon } from '@/components/ui';
 import { useStartConversation } from '@/hooks/mutations/use-memory-mutations';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useOverviewPrompts, useDailyPrompts } from '@/hooks/queries/use-prompts';
@@ -408,13 +408,14 @@ export default function OverviewScreen() {
           </View>
 
           {/* ── Interactive Spline Chart ────────────────────────── */}
-          <Animated.View entering={FadeInDown.delay(250)}>
+          {/* <Animated.View entering={FadeInDown.delay(250)}>
             <SplineChart />
-          </Animated.View>
+          </Animated.View> */}
+          {/* Hidden — story trends not tracking meaningful data yet. Restore when data is reliable. */}
 
           {/* ── Stat Column (Web Parity Stack) ────────────────────────── */}
           <View className="gap-4">
-            <View className="flex-row items-center justify-between px-1">
+            <View className="px-1">
               <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>Your Journey</Text>
             </View>
 

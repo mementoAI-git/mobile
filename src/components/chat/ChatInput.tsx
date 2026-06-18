@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, Platform, StyleSheet,
-  Keyboard, ScrollView, Image, Alert, ActivityIndicator,
+  Keyboard, ScrollView, Image, ActivityIndicator,
 } from 'react-native';
 import { ArrowUp, Mic, Square, Phone, Paperclip, X, FileText } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -21,6 +21,7 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVoiceToText } from '@/hooks/use-voice-to-text';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
+import { useToast } from '@/components/ui/Toast';
 import type { IFile } from '@/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -80,6 +81,7 @@ export function ChatInput({
   const btnScale = useSharedValue(1);
   const micPulse = useSharedValue(1);
   const insets = useSafeAreaInsets();
+  const { toast } = useToast();
 
   const textBeforeDictationRef = useRef('');
 
@@ -150,7 +152,7 @@ export function ChatInput({
 
   const uploadAndAdd = useCallback(async (uri: string, mimeType: string, name: string) => {
     if (uri.length > MAX_FILE_BYTES) {
-      Alert.alert('File too large', `Files must be under ${MAX_FILE_MB}MB`);
+      toast(`Files must be under ${MAX_FILE_MB}MB`, 'error');
       return;
     }
     const clientId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -183,7 +185,7 @@ export function ChatInput({
       if (!result.canceled && result.assets.length > 0) {
         for (const asset of result.assets) {
           if (asset.size && asset.size > MAX_FILE_BYTES) {
-            Alert.alert('File too large', `"${asset.name}" exceeds the ${MAX_FILE_MB}MB limit.`);
+            toast(`"${asset.name}" exceeds the ${MAX_FILE_MB}MB limit.`, 'error');
             continue;
           }
           await uploadAndAdd(asset.uri, asset.mimeType || 'application/octet-stream', asset.name);

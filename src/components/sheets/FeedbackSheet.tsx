@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Button, TextInput } from '@/components/ui';
 import { Image as ImageIcon } from 'lucide-react-native';
 import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -59,7 +59,7 @@ export function FeedbackSheet() {
       } catch (err) {
         if (isMountedRef.current) {
           console.error('Upload failed', err);
-          Alert.alert('Upload Failed', 'There was an error uploading your screenshot.');
+          toast('There was an error uploading your screenshot.', 'error');
         }
       }
     }
@@ -84,7 +84,7 @@ export function FeedbackSheet() {
     } catch (error) {
       if (isMountedRef.current) {
         console.error("Failed to send feedback:", error);
-        Alert.alert('Error', 'Failed to send feedback. Please try again.');
+        toast('Failed to send feedback. Please try again.', 'error');
       }
     } finally {
       if (isMountedRef.current) setIsSubmitting(false);

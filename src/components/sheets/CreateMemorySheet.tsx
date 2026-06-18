@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
-  View, Text, TouchableOpacity, Alert, Modal,
+  View, Text, TouchableOpacity, Modal,
   ScrollView, Platform, StyleSheet,
 } from 'react-native';
 import { Button, TextInput, Spinner } from '@/components/ui';
+import { useToast } from '@/components/ui/Toast';
 import {
   Image as ImageIcon, FolderOpen, Check, X, Lock, Globe, Users,
 } from 'lucide-react-native';
@@ -249,6 +250,7 @@ interface Props {
 export function CreateMemorySheet({ onClose, editData }: Props) {
   const openSheet = useUiStore((s) => s.openSheet);
   const insets = useSafeAreaInsets();
+  const { toast } = useToast();
 
   const [title, setTitle] = useState(editData?.title || '');
   const [body, setBody] = useState(editData?.body || '');
@@ -387,7 +389,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
       },
       onError: (err: any) => {
         const detailedErrors = err?.errors ? `\n\nDetails: ${JSON.stringify(err.errors)}` : '';
-        Alert.alert('Save Failed', `${err?.message || 'Could not save'}${detailedErrors}`);
+        toast(`${err?.message || 'Could not save'}${detailedErrors}`, 'error');
       }
     };
 

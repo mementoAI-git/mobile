@@ -24,7 +24,7 @@ const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const MEMORIES_BG = require('../../../assets/images/backgrounds/memories_card_bg.png');
 const STREAK_BG = require('../../../assets/images/backgrounds/streak_card_bg.png');
 
-const FILTERS = ['All', 'Bookmarked', 'Deleted'];
+const FILTERS = ['All', 'Bookmarked', 'Deleted', 'Pending'];
 
 export default function StoriesScreen() {
   const router = useRouter();
@@ -183,24 +183,36 @@ export default function StoriesScreen() {
 
           {/* Filter Pills */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2.5">
-            {FILTERS.map((f) => (
-              <TouchableOpacity
-                key={f}
-                onPress={() => {
-                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                   setActiveFilter(f);
-                }}
-                activeOpacity={0.7}
-                className={`px-6 py-2.5 rounded-full border ${activeFilter === f ? 'bg-brand border-brand' : 'bg-white border-stroke-weaker'}`}
-              >
-                <Animated.Text
-                  className={`text-xs font-bold ${activeFilter === f ? 'text-white' : 'text-text-base'}`}
-                  style={{ fontFamily: FONTS.sansBold }}
+            {FILTERS.map((f) => {
+              // 🔍 TEMP DEBUG
+              if (f === 'All') console.log('[StoriesFilter] stats object:', JSON.stringify(stats));
+              const countMap: Record<string, number | undefined> = {
+                All: stats?.stories_count,
+                Bookmarked: stats?.bookmark_count,
+                Deleted: stats?.stories_deleted_count,
+                Pending: stats?.quick_capture_pending_count,
+              };
+              const count = countMap[f];
+              const label = (count && count > 0) ? `${f} (${count})` : f;
+              return (
+                <TouchableOpacity
+                  key={f}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setActiveFilter(f);
+                  }}
+                  activeOpacity={0.7}
+                  className={`px-6 py-2.5 rounded-full border ${activeFilter === f ? 'bg-brand border-brand' : 'bg-white border-stroke-weaker'}`}
                 >
-                  {f}
-                </Animated.Text>
-              </TouchableOpacity>
-            ))}
+                  <Animated.Text
+                    className={`text-xs font-bold ${activeFilter === f ? 'text-white' : 'text-text-base'}`}
+                    style={{ fontFamily: FONTS.sansBold }}
+                  >
+                    {label}
+                  </Animated.Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
       </Animated.View>

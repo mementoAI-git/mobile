@@ -87,8 +87,18 @@ export function useStoryDetailLogic() {
     (a) => a.type?.startsWith('image/') || a.type?.startsWith('video/'),
   );
 
+  // All audio attachments (voice recordings + uploaded MP3/WAV/AAC etc)
+  // shown as tappable thumbnails that open MediaPreviewModal
+  const audioAttachments = (memory?.attachments ?? []).filter(
+    (a) => a.type?.startsWith('audio/'),
+  );
+
+  // Documents only — image, video, and audio all have dedicated sections
   const otherAttachments = (memory?.attachments ?? []).filter(
-    (a) => !a.type?.startsWith('image/') && !a.type?.startsWith('video/'),
+    (a) =>
+      !a.type?.startsWith('image/') &&
+      !a.type?.startsWith('video/') &&
+      !a.type?.startsWith('audio/'),
   );
 
   return {
@@ -103,6 +113,7 @@ export function useStoryDetailLogic() {
     bookmarking,
     deleting,
     imageAttachments,
+    audioAttachments,
     otherAttachments,
   };
 }

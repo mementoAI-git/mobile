@@ -3,6 +3,7 @@ import { View, ScrollView, TouchableOpacity, ImageBackground, Text} from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft, Database, Eye, Brain, Download, ChevronRight } from 'lucide-react-native';
+import { Separator } from '@/components/ui/Separator';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useRouter } from 'expo-router';
@@ -62,28 +63,32 @@ export default function PrivacySettingsScreen() {
             Controls
           </Text>
 
-          {PRIVACY_ITEMS.map((item, idx) => (
-            <Animated.View key={item.title} entering={FadeInDown.delay(60 * idx).duration(400)}>
-              <TouchableOpacity
-                onPress={() => Haptics.selectionAsync()}
-                activeOpacity={0.7}
-                className="flex-row items-center gap-4 px-5 py-4 bg-white rounded-[20px] border border-stroke-weaker"
-              >
-                <View className="size-11 rounded-2xl items-center justify-center" style={{ backgroundColor: item.iconBg }}>
-                  <item.Icon size={20} color={COLORS.textBase} strokeWidth={1.5} />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
-                    {item.title}
-                  </Text>
-                  <Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
-                    {item.desc}
-                  </Text>
-                </View>
-                <ChevronRight size={18} color={COLORS.textDisabled} strokeWidth={1.5} />
-              </TouchableOpacity>
-            </Animated.View>
-          ))}
+          <Animated.View entering={FadeInDown.duration(400)} className="bg-white rounded-[32px] overflow-hidden">
+            {PRIVACY_ITEMS.map((item, idx) => (
+              <React.Fragment key={item.title}>
+                <TouchableOpacity
+                  onPress={() => Haptics.selectionAsync()}
+                  activeOpacity={0.75}
+                  className="flex-row items-center gap-4 px-5 py-4"
+                  style={{ minHeight: 64 }}
+                >
+                  <View className="size-11 rounded-2xl items-center justify-center" style={{ backgroundColor: item.iconBg }}>
+                    <item.Icon size={20} color={COLORS.textBase} strokeWidth={1.5} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+                      {item.title}
+                    </Text>
+                    <Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
+                      {item.desc}
+                    </Text>
+                  </View>
+                  <ChevronRight size={16} color={COLORS.textMuted} strokeWidth={2} />
+                </TouchableOpacity>
+                {idx < PRIVACY_ITEMS.length - 1 && <Separator style={{ opacity: 0.6 }} />}
+              </React.Fragment>
+            ))}
+          </Animated.View>
         </View>
 
         <View className="px-2">

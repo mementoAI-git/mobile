@@ -10,7 +10,6 @@ import {
   Keyboard,
   LayoutAnimation,
   Text,
-  Alert,
 } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,7 +20,7 @@ import Animated, {
   withDelay,
   Easing,
 } from 'react-native-reanimated';
-import { Button, TextInput, PasswordInput, Logo } from '@/components/ui';
+import { Button, TextInput, PasswordInput, Logo, ConfirmDialog } from '@/components/ui';
 import { useRegisterLogic } from '@/hooks/use-register-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { Fingerprint } from 'lucide-react-native';
@@ -69,6 +68,7 @@ export default function RegisterScreen() {
   const [appleLoading, setAppleLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [passkeyConfirmVisible, setPasskeyConfirmVisible] = useState(false);
 
   // ─── Cascade animation values ────────────────────────────────────────────
   // Each section has its own opacity + translateY shared value.
@@ -121,29 +121,22 @@ export default function RegisterScreen() {
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
-  const handlePasskeySignup = async () => {
+  const handlePasskeySignup = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      'Passkey Registration',
-      'To register a secure cross-device hardware passkey, please register your account or manage security credentials via the Memento Web Application.\n\nWould you like to open the signup portal in your browser?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Open Web Portal',
-          onPress: async () => {
-            try {
-              setPasskeyLoading(true);
-              const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
-              const webBase = apiBase.replace('/api', '');
-              const { openAuthSessionAsync } = await import('expo-web-browser');
-              await openAuthSessionAsync(`${webBase}/signup`, 'memento://');
-            } catch { /* silent */ } finally {
-              setPasskeyLoading(false);
-            }
-          }
-        }
-      ]
-    );
+    setPasskeyConfirmVisible(true);
+  };
+
+  const confirmPasskeyOpen = async () => {
+    setPasskeyConfirmVisible(false);
+    try {
+      setPasskeyLoading(true);
+      const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
+      const webBase = apiBase.replace('/api', '');
+      const { openAuthSessionAsync } = await import('expo-web-browser');
+      await openAuthSessionAsync(`${webBase}/signup`, 'memento://');
+    } catch { /* silent */ } finally {
+      setPasskeyLoading(false);
+    }
   };
 
   const handleGoogleSignup = async () => {
@@ -353,6 +346,17 @@ export default function RegisterScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
       </SafeAreaView>
+
+      <ConfirmDialog
+        visible={passkeyConfirmVisible}
+        title="Register with a passkey"
+        message="To create a secure cross-device passkey, please use the Memento web portal. Would you like to open it now?"
+        onClose={() => setPasskeyConfirmVisible(false)}
+        buttons={[
+          { label: 'Open web portal', variant: 'primary', onPress: confirmPasskeyOpen },
+          { label: 'Not now', variant: 'ghost', onPress: () => setPasskeyConfirmVisible(false) },
+        ]}
+      />
     </ImageBackground>
   );
 }

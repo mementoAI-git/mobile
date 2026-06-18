@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity, Image, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ImageBackground, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
@@ -12,7 +12,7 @@ import dayjs from 'dayjs';
 
 const RECORD_BANNER = require('../../../assets/images/backgrounds/record-banner.png');
 
-/** Mirrors web QuickCaptureProcessingBadge — shown while enrichment is pending */
+/** Small spinner shown while quick capture enrichment is pending */
 function InProgressBadge({ memory, overlay }: { memory: IMemory; overlay?: boolean }) {
   const isPending =
     memory.enrichment_status === 'pending' &&
@@ -22,15 +22,20 @@ function InProgressBadge({ memory, overlay }: { memory: IMemory; overlay?: boole
   if (!isPending) return null;
   return (
     <View
-      className={`rounded-full px-2 py-0.5 ${overlay ? 'absolute left-2 top-2 z-10 w-fit' : ''}`}
-      style={{ backgroundColor: COLORS.brandSubtle, borderWidth: 1, borderColor: COLORS.brandTint }}
+      style={overlay ? { position: 'absolute', top: 8, left: 8, zIndex: 10 } : { alignSelf: 'flex-start' }}
     >
-      <Text
-        className="text-[10px] font-bold uppercase tracking-wide"
-        style={{ fontFamily: FONTS.sansBold, color: COLORS.brand }}
-      >
-        In progress
-      </Text>
+      <ActivityIndicator size="small" color={COLORS.brand} />
+    </View>
+  );
+}
+
+/** 1/N attachment counter pill — top-left overlay when story has multiple attachments */
+function AttachmentCount({ memory }: { memory: IMemory }) {
+  const total = memory.attachments?.length ?? 0;
+  if (total <= 1) return null;
+  return (
+    <View style={{ position: 'absolute', top: 8, left: 8, zIndex: 10, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+      <Text style={{ fontFamily: FONTS.sansBold, fontSize: 12, color: '#fff' }}>1/{total}</Text>
     </View>
   );
 }
@@ -115,8 +120,9 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
               borderRadius={20}
               onPress={() => { Haptics.selectionAsync(); handlePress(); }}
             />
-            {/* In progress badge — overlay top-left */}
+            {/* In progress badge / attachment count — overlay top-left */}
             <InProgressBadge memory={memory} overlay />
+            <AttachmentCount memory={memory} />
             {/* Actions button */}
             <TouchableOpacity
               onPress={handleActions}
@@ -136,8 +142,9 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
             className="w-full h-full"
             resizeMode="cover"
           />
-          {/* In progress badge — overlay top-left */}
+          {/* In progress badge / attachment count — overlay top-left */}
           <InProgressBadge memory={memory} overlay />
+          <AttachmentCount memory={memory} />
           {/* Actions button */}
           <TouchableOpacity
             onPress={handleActions}
@@ -150,58 +157,120 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
       );
     }
 
-    if (audioMedia) {
+    // ── Audio card — only show when body has no actual text content ───────────
+    // Strip HTML tags first (story editor wraps content in <p> tags even when empty)
+    const bodyText = memory.body?.replace(/<[^>]+>/g, '').trim() ?? '';
+    if (audioMedia && !bodyText) {
+      const isVoiceRecording =
+        audioMedia.name?.startsWith('voice_') && audioMedia.type === 'audio/m4a';
+
+      // Album art: populated by backend when MP3 has embedded ID3 cover art.
+      // Currently always undefined — see TODO.md for backend implementation spec.
+      const albumArt = audioMedia.thumbnail;
+
       const duration = audioMedia.duration
         ? dayjs().startOf('day').add(audioMedia.duration, 'second').format('HH:mm:ss')
         : '00:00:00';
-      return (
-        <View
-          style={{ aspectRatio }}
-          className="w-full rounded-[20px] overflow-hidden relative"
-        >
-          {/* record-banner.png as full-bleed bg — mirrors web audio card */}
-          <ImageBackground
-            source={RECORD_BANNER}
-            className="absolute inset-0"
-            resizeMode="cover"
-            style={{ opacity: 0.9 }}
-          />
-          {/* In progress badge — overlay top-left */}
-          <InProgressBadge memory={memory} overlay />
-          {/* Duration pill — centered, glass effect */}
-          <View className="absolute inset-0 items-center justify-center">
+
+      const rawFileName = audioMedia.name
+        ? audioMedia.name.replace(/\.[^.]+$/, '').replace(/_\d{12,}$/, '').replace(/_/g, ' ')
+        : 'Audio';
+      // Prefer the AI-generated memory title (transcription-based) over the raw filename
+      const fileName = memory.title && memory.title !== 'Untitled Memory' ? memory.title : rawFileName;
+
+      // ── Case 1: MP3 with embedded album art ────────────────────────────────
+      if (albumArt) {
+        return (
+          <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
+            <Image source={{ uri: albumArt }} className="w-full h-full" resizeMode="cover" />
+            <InProgressBadge memory={memory} overlay />
+            {/* Glass overlay with waveform + duration at bottom */}
             <View
-              className="items-center gap-2 rounded-[20px] px-5 py-4"
-              style={{ backgroundColor: `${COLORS.textInverse}1a`, borderWidth: 1, borderColor: `${COLORS.textInverse}33` }}
+              className="absolute bottom-0 left-0 right-0 px-4 py-3 flex-row items-center gap-3"
+              style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
             >
-              {/* Wave lines — visual parity with WaveIcon on web */}
-              <View className="flex-row items-end gap-0.5" style={{ height: 20 }}>
-                {[6, 12, 18, 14, 8, 16, 10, 18, 12, 6].map((h, i) => (
-                  <View
-                    key={i}
-                    style={{ width: 3, height: h, backgroundColor: COLORS.textInverse, borderRadius: 2, opacity: 0.8 }}
-                  />
+              <View className="flex-row items-end gap-0.5" style={{ height: 16 }}>
+                {[5, 10, 14, 11, 7, 12, 8, 14, 10, 5].map((h, i) => (
+                  <View key={i} style={{ width: 2.5, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />
                 ))}
               </View>
-              <Text
-                className="text-sm font-semibold tracking-widest"
-                style={{ fontFamily: FONTS.sansBold, color: COLORS.textInverse }}
+              <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: COLORS.textInverse, flex: 1 }} numberOfLines={1}>
+                {fileName}
+              </Text>
+              <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>
+                {duration}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={handleActions} hitSlop={8} className="absolute top-2 right-2 size-8 rounded-full bg-white/20 items-center justify-center">
+              <MoreHorizontal size={14} color={COLORS.textInverse} />
+            </TouchableOpacity>
+          </View>
+        );
+      }
+
+      // ── Case 2: Voice recording (voice_*.m4a) — dark record-banner ─────────
+      if (isVoiceRecording) {
+        return (
+          <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
+            <ImageBackground source={RECORD_BANNER} className="absolute inset-0" resizeMode="cover" style={{ opacity: 0.9 }} />
+            <InProgressBadge memory={memory} overlay />
+            <View className="absolute inset-0 items-center justify-center">
+              <View
+                className="items-center gap-2 rounded-[20px] px-5 py-4"
+                style={{ backgroundColor: `${COLORS.textInverse}1a`, borderWidth: 1, borderColor: `${COLORS.textInverse}33` }}
               >
+                <View className="flex-row items-end gap-0.5" style={{ height: 20 }}>
+                  {[6, 12, 18, 14, 8, 16, 10, 18, 12, 6].map((h, i) => (
+                    <View key={i} style={{ width: 3, height: h, backgroundColor: COLORS.textInverse, borderRadius: 2, opacity: 0.8 }} />
+                  ))}
+                </View>
+                <Text style={{ fontFamily: FONTS.sansBold, color: COLORS.textInverse }} className="text-sm tracking-widest">
+                  {duration}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={handleActions} hitSlop={8} className="absolute top-2 right-2 size-8 rounded-full bg-white/20 items-center justify-center">
+              <MoreHorizontal size={14} color={COLORS.textInverse} />
+            </TouchableOpacity>
+          </View>
+        );
+      }
+
+      // ── Case 3: Uploaded audio file (MP3, WAV, AAC etc) — clean music card ─
+      return (
+        <View
+          style={{ aspectRatio, backgroundColor: COLORS.fillWeak }}
+          className="w-full rounded-[20px] overflow-hidden relative p-5"
+        >
+          <InProgressBadge memory={memory} overlay />
+          <View className="flex-1 items-center justify-center gap-3">
+            {/* Orange waveform bars */}
+            <View className="flex-row items-end gap-1" style={{ height: 32 }}>
+              {[8, 16, 24, 20, 12, 22, 14, 24, 18, 8, 16, 24].map((h, i) => (
+                <View key={i} style={{ width: 3, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />
+              ))}
+            </View>
+            {/* Filename */}
+            <Text
+              style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.textStrong, textAlign: 'center' }}
+              numberOfLines={2}
+            >
+              {fileName}
+            </Text>
+            {/* Duration pill */}
+            <View className="bg-white/80 rounded-full px-3 py-1">
+              <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: COLORS.textBase }}>
                 {duration}
               </Text>
             </View>
           </View>
-          {/* Actions button */}
-          <TouchableOpacity
-            onPress={handleActions}
-            hitSlop={8}
-            className="absolute top-2 right-2 size-8 rounded-full bg-white/20 items-center justify-center"
-          >
-            <MoreHorizontal size={14} color={COLORS.textInverse} />
+          <TouchableOpacity onPress={handleActions} hitSlop={8} className="absolute top-2 right-2 size-7 rounded-full bg-fill-weak items-center justify-center">
+            <MoreHorizontal size={12} color={COLORS.textBase} />
           </TouchableOpacity>
         </View>
       );
     }
+    // Audio + text body → falls through to text card below
 
     // Text-only card
     return (
