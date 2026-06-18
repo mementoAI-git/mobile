@@ -10,18 +10,20 @@
  *  - Horizontal swipe between attachments
  */
 
-import React, { useRef, useCallback, useState, useEffect } from 'react';
+import React, { useRef, useCallback, useState, useEffect, useMemo } from 'react';
 import {
   View, Text, Modal, FlatList,
-  TouchableOpacity, Dimensions, Animated,
-  StyleSheet, Share, ActivityIndicator, Image,
+  TouchableOpacity, Dimensions, Animated as RNAnimated,
+  StyleSheet, Share, ActivityIndicator, Image, ImageBackground,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView } from 'expo-video';
+import { useAudioPlayer } from 'expo-audio';
 import { useVideoPlayer } from '@/hooks/use-video-player';
 import * as Haptics from 'expo-haptics';
-import { ChevronLeft, Share2, X, Mic, FileText, Music, Play } from 'lucide-react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, cancelAnimation } from 'react-native-reanimated';
+import { ChevronLeft, Share2, X, Mic, FileText, Music, Play, Pause, RotateCcw } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -110,7 +112,7 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [speedIdx, setSpeedIdx] = useState(0);
-  const controlsOpacity = useRef(new Animated.Value(1)).current;
+  const controlsOpacity = useRef(new RNAnimated.Value(1)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const progress = duration > 0 ? currentTime / duration : 0;
@@ -129,9 +131,9 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
   // Show controls and schedule auto-hide
   const showControls = useCallback(() => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    Animated.timing(controlsOpacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+    RNAnimated.timing(controlsOpacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
     hideTimer.current = setTimeout(() => {
-      Animated.timing(controlsOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start();
+      RNAnimated.timing(controlsOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start();
     }, 3000);
   }, [controlsOpacity]);
 
@@ -194,7 +196,7 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
       </TouchableOpacity>
 
       {/* WhatsApp-style bottom control bar */}
-      <Animated.View style={[styles.videoControls, { opacity: controlsOpacity }]}>
+      <RNAnimated.View style={[styles.videoControls, { opacity: controlsOpacity }]}>
         <Text style={styles.videoTimeText}>{fmt(currentTime)}</Text>
 
         {/* Progress bar — tappable */}
@@ -214,25 +216,176 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
         <TouchableOpacity onPress={handleSpeedTap} activeOpacity={0.8} style={styles.videoSpeedPill}>
           <Text style={styles.videoSpeedText}>{SPEEDS[speedIdx]}×</Text>
         </TouchableOpacity>
-      </Animated.View>
+      </RNAnimated.View>
     </View>
   );
 }
 
-function AudioSlide({ item }: { item: PreviewAttachment }) {
-  const dur = item.duration ?? 0;
+const RECORD_BANNER_BG = require('../../../assets/images/backgrounds/record-banner.png');
+
+function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boolean }) {
+  const player = useAudioPlayer(item.uri);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(item.duration ?? 0);
+
+  // Auto-pause when slide scrolls out of view
+  useEffect(() => {
+    if (!isActive && player.playing) {
+      player.pause();
+    }
+  }, [isActive, player]);
+
+  // Poll playback state every 250ms
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCurrentTime(player.currentTime ?? 0);
+      if (player.duration && player.duration > 0) setDuration(player.duration);
+      setPlaying(player.playing ?? false);
+    }, 250);
+    return () => clearInterval(id);
+  }, [player]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      try { player.pause(); } catch {}
+    };
+  }, [player]);
+
+  const progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
+  const ended = progress >= 0.99;
+
+  const handlePlayPause = useCallback(() => {
+    Haptics.selectionAsync();
+    if (ended) {
+      player.seekTo(0);
+      player.play();
+    } else if (player.playing) {
+      player.pause();
+    } else {
+      player.play();
+    }
+  }, [ended, player]);
+
+  const progressBarRef = useRef<View>(null);
+  const handleSeek = useCallback((e: any) => {
+    progressBarRef.current?.measure((_x, _y, width) => {
+      const ratio = Math.max(0, Math.min(1, e.nativeEvent.locationX / width));
+      player.seekTo(ratio * duration);
+    });
+  }, [player, duration]);
+
+  const displayName = item.isVoice ? 'Voice note' : (item.name?.replace(/\.[^.]+$/, '').replace(/_\d{12,}$/, '').replace(/_/g, ' ') ?? 'Audio');
+
+  // Static bar heights (seeded so they're consistent per file)
+  const staticBarHeights = useMemo(() => {
+    const BAR_COUNT = 16;
+    let seed = 0;
+    const str = item.uri + (item.name ?? '');
+    for (let i = 0; i < str.length; i++) seed = (seed * 31 + str.charCodeAt(i)) | 0;
+    return Array.from({ length: BAR_COUNT }, (_, i) => {
+      const s = Math.abs((seed + i * 6317) | 0);
+      return 6 + (s % 26); // range 6–32px
+    });
+  }, [item.uri, item.name]);
+
+  // One animated height per bar
+  const barAnims = staticBarHeights.map(() => useSharedValue(1));
+
+  // Start/stop animation based on playing state
+  useEffect(() => {
+    if (playing) {
+      barAnims.forEach((anim, i) => {
+        const min = 0.2;
+        const max = 1;
+        const duration = 300 + (i * 47) % 400; // 300–700ms, staggered
+        anim.value = withRepeat(
+          withSequence(
+            withTiming(min + Math.random() * (max - min), { duration }),
+            withTiming(min + Math.random() * (max - min), { duration }),
+          ),
+          -1,
+          true,
+        );
+      });
+    } else {
+      barAnims.forEach((anim) => {
+        cancelAnimation(anim);
+        anim.value = withTiming(1, { duration: 200 });
+      });
+    }
+  // barAnims is stable (same length/refs) — only react to playing changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing]);
+
+  const innerContent = (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 20 }}>
+      {/* Animated waveform bars */}
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 36 }}>
+        {staticBarHeights.map((h, i) => {
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          const animStyle = useAnimatedStyle(() => ({
+            height: h * barAnims[i].value,
+          }));
+          return (
+            <Animated.View
+              key={i}
+              style={[{ width: 3, borderRadius: 2, backgroundColor: COLORS.brand }, animStyle]}
+            />
+          );
+        })}
+      </View>
+
+      {/* Track name */}
+      <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 16, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>
+        {displayName}
+      </Text>
+
+      {/* Play/Pause button */}
+      <TouchableOpacity
+        onPress={handlePlayPause}
+        activeOpacity={0.8}
+        style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }}
+      >
+        {ended
+          ? <RotateCcw size={26} color="#fff" strokeWidth={2} />
+          : playing
+            ? <Pause size={26} color="#fff" fill="#fff" strokeWidth={0} />
+            : <Play size={26} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 3 }} />
+        }
+      </TouchableOpacity>
+
+      {/* Progress bar + times */}
+      <View style={{ width: '100%', gap: 6 }}>
+        <TouchableOpacity
+          ref={progressBarRef as any}
+          onPress={handleSeek}
+          activeOpacity={1}
+          style={{ height: 4, borderRadius: 2, backgroundColor: COLORS.strokeWeak }}
+        >
+          <View style={{ height: '100%', width: `${Math.round(progress * 100)}%`, borderRadius: 2, backgroundColor: COLORS.brand }} />
+        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak }}>{formatDuration(currentTime)}</Text>
+          <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak }}>{formatDuration(duration)}</Text>
+        </View>
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.slide}>
-      <View style={{ flex: 1, justifyContent: 'center' }}>
-        <View style={[styles.roundedImage, styles.mediaCard]}>
-          <View style={[styles.iconCircle, { backgroundColor: `${COLORS.brand}18` }]}>
-            <Mic size={32} color={COLORS.brand} strokeWidth={1.8} />
+      <View style={[styles.roundedImage, { overflow: 'hidden', justifyContent: 'center' }]}>
+        {item.isVoice ? (
+          <ImageBackground source={RECORD_BANNER_BG} style={{ flex: 1, justifyContent: 'center' }} resizeMode="cover" imageStyle={{ opacity: 0.7 }}>
+            {innerContent}
+          </ImageBackground>
+        ) : (
+          <View style={{ flex: 1, backgroundColor: COLORS.background, justifyContent: 'center' }}>
+            {innerContent}
           </View>
-          <Text style={[styles.mediaName, { color: COLORS.textStrong }]} numberOfLines={2}>
-            {item.isVoice ? 'Voice note' : item.name}
-          </Text>
-          {dur > 0 && <Text style={styles.mediaHint}>{formatDuration(dur)}</Text>}
-        </View>
+        )}
       </View>
     </View>
   );
@@ -261,7 +414,7 @@ function makeRenderSlide(onClose: () => void, currentIndex: number, attachments:
     const isActive = index === currentIndex;
     if (item.mimeType.startsWith('image/')) return <ImageSlide uri={item.uri} onClose={onClose} />;
     if (item.mimeType.startsWith('video/')) return <VideoSlide uri={item.uri} isActive={isActive} />;
-    if (item.mimeType.startsWith('audio/') || item.isVoice) return <AudioSlide item={item} />;
+    if (item.mimeType.startsWith('audio/') || item.isVoice) return <AudioSlide item={item} isActive={isActive} />;
     return <DocSlide item={item} />;
   };
 }
