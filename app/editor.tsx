@@ -12,7 +12,7 @@ import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   KeyboardAvoidingView, Platform, StyleSheet, Image,
-  ActivityIndicator, Alert, Keyboard, Modal, ImageBackground, Linking,
+  ActivityIndicator, Keyboard, Modal, ImageBackground, Linking,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider, initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -38,6 +38,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/constants/query-keys';
 import { useToast } from '@/components/ui/Toast';
 import { upsertDraft, loadDrafts, deleteDraft, type StoryDraft, type StoryDraftAttachment } from '@/components/sheets/DraftsSheet';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useUiStore } from '@/store';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
@@ -399,6 +400,10 @@ export default function EditorScreen() {
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [cameraVisible, setCameraVisible] = useState(false);
+  const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
+  const [cancelConfirmTitle, setCancelConfirmTitle] = useState('');
+  const [cancelConfirmMessage, setCancelConfirmMessage] = useState('');
+  const [cancelConfirmOnSave, setCancelConfirmOnSave] = useState<(() => void) | null>(null);
 
   const { mutate: createMemory } = useCreateMemory();
   const { mutateAsync: quickCapture, isPending: qcPending } = useQuickCapture();
@@ -515,7 +520,7 @@ export default function EditorScreen() {
   const handleImagePicker = useCallback(async () => {
     Haptics.selectionAsync();
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow Memento to access your photos and videos.'); return; }
+    if (status !== 'granted') { toast('Allow Memento to access your photos and videos.', 'error'); return; }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], allowsMultipleSelection: true, quality: 0.85 });
     if (!result.canceled) await Promise.all(result.assets.map(a => {
       const isVideo = a.mimeType?.startsWith('video/');
@@ -616,44 +621,31 @@ export default function EditorScreen() {
                 return;
               }
 
-              // Dismiss keyboard before showing alert so it animates cleanly
+              // Dismiss keyboard then show custom dialog
+              editorBridge?.blur();
               Keyboard.dismiss();
-              // Twitter-style: ask the user what to do
-              Alert.alert(
-                'Save to drafts?',
-                isStory
-                  ? 'Your story will be saved to your drafts.'
-                  : 'Your note will be saved to your drafts.',
-                [
-                  {
-                    text: 'Save Draft',
-                    onPress: async () => {
-                      if (isStory) {
-                        const savedAttachments: StoryDraftAttachment[] = attachments
-                          .filter(a => a.fileId && !a.isUploading)
-                          .map(a => ({ fileId: a.fileId, uri: a.file?.url || a.uri, name: a.name, mimeType: a.mimeType, isVoice: a.isVoice, duration: a.duration }));
-                        await upsertDraft(user?.email, {
-                          id: draftIdRef.current, title: cancelTitle, body: cancelBody, updatedAt: Date.now(),
-                          attachments: savedAttachments.length ? savedAttachments : undefined,
-                        }).catch(() => {});
-                        loadDrafts(user?.email).then(d => setStoryDrafts(d)).catch(() => {});
-                      } else {
-                        AsyncStorage.setItem(QC_DRAFT_KEY(user?.email), JSON.stringify({ body: qcBody.trim() })).catch(() => {});
-                      }
-                      router.back();
-                    },
-                  },
-                  {
-                    text: 'Discard',
-                    style: 'destructive',
-                    onPress: () => router.back(),
-                  },
-                  {
-                    text: 'Keep Editing',
-                    style: 'cancel',
-                  },
-                ],
-              );
+
+              const saveOnPress = async () => {
+                setCancelConfirmVisible(false);
+                if (isStory) {
+                  const savedAttachments: StoryDraftAttachment[] = attachments
+                    .filter(a => a.fileId && !a.isUploading)
+                    .map(a => ({ fileId: a.fileId, uri: a.file?.url || a.uri, name: a.name, mimeType: a.mimeType, isVoice: a.isVoice, duration: a.duration }));
+                  await upsertDraft(user?.email, {
+                    id: draftIdRef.current, title: cancelTitle, body: cancelBody, updatedAt: Date.now(),
+                    attachments: savedAttachments.length ? savedAttachments : undefined,
+                  }).catch(() => {});
+                  loadDrafts(user?.email).then(d => setStoryDrafts(d)).catch(() => {});
+                } else {
+                  AsyncStorage.setItem(QC_DRAFT_KEY(user?.email), JSON.stringify({ body: qcBody.trim() })).catch(() => {});
+                }
+                router.back();
+              };
+
+              setCancelConfirmTitle('Save to drafts?');
+              setCancelConfirmMessage(isStory ? 'Your story will be saved to your drafts.' : 'Your note will be saved to your drafts.');
+              setCancelConfirmOnSave(() => saveOnPress);
+              setCancelConfirmVisible(true);
             }} activeOpacity={0.7}
               style={{ height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textBase }}>Cancel</Text>
@@ -1061,6 +1053,19 @@ export default function EditorScreen() {
         visible={cameraVisible}
         onClose={() => setCameraVisible(false)}
         onCapture={handleCameraCapture}
+      />
+
+      {/* Cancel / discard confirmation — on-brand replacement for Alert.alert */}
+      <ConfirmDialog
+        visible={cancelConfirmVisible}
+        title={cancelConfirmTitle}
+        message={cancelConfirmMessage}
+        onClose={() => setCancelConfirmVisible(false)}
+        buttons={[
+          { label: 'Save draft', variant: 'primary', onPress: () => { cancelConfirmOnSave?.(); } },
+          { label: 'Discard', variant: 'destructive', onPress: () => { setCancelConfirmVisible(false); router.back(); } },
+          { label: 'Keep editing', variant: 'ghost', onPress: () => setCancelConfirmVisible(false) },
+        ]}
       />
     </SafeAreaProvider>
   );

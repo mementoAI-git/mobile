@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground, Alert, Modal, Text} from 'react-native';
+import { View, ScrollView, TouchableOpacity, ImageBackground, Modal, Text} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft, ShieldCheck, AlertTriangle, Fingerprint, KeyRound } from 'lucide-react-native';
 import { Button, TextInput } from '@/components/ui';
+import { useToast } from '@/components/ui/Toast';
 import { Switch } from '@/components/ui/Switch';
 import { Controller } from 'react-hook-form';
 import { useAccountSettingsLogic } from '@/hooks/use-account-settings-logic';
@@ -60,6 +61,7 @@ export default function AccountSettingsScreen() {
     router,
   } = useAccountSettingsLogic();
 
+  const { toast } = useToast();
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -81,7 +83,7 @@ export default function AccountSettingsScreen() {
         await SecureStore.setItemAsync('memento.biometrics_enabled', 'false');
         setBiometricsEnabled(false);
       } catch {
-        Alert.alert('Error', 'Could not disable biometrics. Please try again.');
+        toast('Could not disable biometrics. Please try again.', 'error');
       }
     } else {
       setConfirmPassword('');
@@ -107,9 +109,9 @@ export default function AccountSettingsScreen() {
       await SecureStore.setItemAsync('memento.biometrics_enabled', 'true');
       setBiometricsEnabled(true);
       setPasswordModalVisible(false);
-      Alert.alert('Success', 'Face ID / Touch ID successfully enrolled!');
+      toast('Face ID / Touch ID successfully enrolled!', 'success');
     } catch {
-      Alert.alert('Enrollment Failed', 'Biometric authentication could not be registered on this device.');
+      toast('Biometric authentication could not be registered on this device.', 'error');
     }
   };
 

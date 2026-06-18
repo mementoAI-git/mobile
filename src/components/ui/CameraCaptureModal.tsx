@@ -24,12 +24,13 @@ import React, {
 } from 'react';
 import {
   View, Text, Modal, TouchableOpacity, StyleSheet, Image,
-  ActivityIndicator, Alert, Linking,
+  ActivityIndicator, Linking,
 } from 'react-native';
 import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-context';
 import { CameraView, Camera as ExpoCamera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
+import { useToast } from '@/components/ui/Toast';
 import {
   X, RotateCcw, Camera, Video, Zap, ZapOff, ImageIcon,
 } from 'lucide-react-native';
@@ -60,6 +61,7 @@ export function CameraCaptureModal({
   onCapture,
 }: CameraCaptureModalProps) {
   const insets = useSafeAreaInsets();
+  const { toast } = useToast();
 
   // expo-camera v17: ref to the class component instance
   const cameraRef = useRef<CameraView>(null);
@@ -103,14 +105,8 @@ export function CameraCaptureModal({
       const granted = camResult.status === 'granted' && micResult.status === 'granted';
       setHasPermission(granted);
       if (!granted) {
-        Alert.alert(
-          'Camera access required',
-          'Memento needs access to your camera and microphone to capture memories.',
-          [
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
-            { text: 'Cancel', style: 'cancel', onPress: onClose },
-          ],
-        );
+        toast('Camera & microphone access required. Open Settings to allow.', 'error');
+        onClose();
       }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -211,10 +207,7 @@ export function CameraCaptureModal({
     Haptics.selectionAsync();
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow Memento to access your photos and videos.', [
-        { text: 'Open Settings', onPress: () => Linking.openSettings() },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
+      toast('Allow Memento to access your photos and videos.', 'error');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({

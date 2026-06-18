@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Platform,
   Keyboard,
   Image
@@ -149,7 +148,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
       }
       setRecipientInput('');
     } else if (email) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      toast('Please enter a valid email address.', 'error');
     }
   };
 
@@ -170,11 +169,11 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
 
   const handleSubmit = (submitStatus: 'draft' | 'scheduled') => {
     if (!title.trim()) {
-      Alert.alert('Missing title', 'Please add a title before saving.');
+      toast('Please add a title before saving.', 'error');
       return;
     }
     if (submitStatus === 'scheduled' && !scheduleDate) {
-      Alert.alert('Missing date', 'Pick a delivery date to schedule your capsule.');
+      toast('Pick a delivery date to schedule your capsule.', 'error');
       return;
     }
 

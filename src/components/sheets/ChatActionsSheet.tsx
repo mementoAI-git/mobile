@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Alert,
   ScrollView,
   Share,
 } from 'react-native';
@@ -30,6 +29,7 @@ import {
 } from '@/constants/enrichment';
 import { Progress } from '@/components/ui/Progress';
 import { Separator } from '@/components/ui/Separator';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface ChatActionsSheetProps {
   onClose: () => void;
@@ -41,6 +41,7 @@ export function ChatActionsSheet({ onClose }: ChatActionsSheetProps) {
   const { mutate: deleteMemory, isPending } = useDeleteMemory();
   const [showEnrichment, setShowEnrichment] = useState(false);
   const [showDeepDiveSelector, setShowDeepDiveSelector] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
 
   const chatId: string = sheetProps?.chatId ?? '';
   const chatMode: ChatMode = sheetProps?.chatMode ?? 'open';
@@ -68,25 +69,17 @@ export function ChatActionsSheet({ onClose }: ChatActionsSheetProps) {
   const handleDelete = () => {
     if (!chatId) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    Alert.alert(
-      'Delete Conversation',
-      'Are you sure you want to delete this conversation? This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            deleteMemory(chatId, {
-              onSuccess: () => {
-                closeSheet();
-                router.replace('/(tabs)/chat');
-              },
-            });
-          },
-        },
-      ],
-    );
+    setDeleteConfirmVisible(true);
+  };
+
+  const confirmDelete = () => {
+    setDeleteConfirmVisible(false);
+    deleteMemory(chatId, {
+      onSuccess: () => {
+        closeSheet();
+        router.replace('/(tabs)/chat');
+      },
+    });
   };
 
   // ── Deep dive selector ────────────────────────────────────────────────────
@@ -324,6 +317,16 @@ export function ChatActionsSheet({ onClose }: ChatActionsSheetProps) {
           </View>
         </TouchableOpacity>
       </View>
+      <ConfirmDialog
+        visible={deleteConfirmVisible}
+        title="Delete conversation?"
+        message="This conversation will be permanently removed. This cannot be undone."
+        onClose={() => setDeleteConfirmVisible(false)}
+        buttons={[
+          { label: 'Delete', variant: 'destructive', onPress: confirmDelete },
+          { label: 'Keep it', variant: 'ghost', onPress: () => setDeleteConfirmVisible(false) },
+        ]}
+      />
     </ScrollView>
   );
 }

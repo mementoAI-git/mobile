@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { X, Check, Users } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { Button, Spinner } from '@/components/ui';
+import { useToast } from '@/components/ui/Toast';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useCreateGroup, useUpdateGroup, useAddGroupMembers } from '@/hooks/mutations/use-group-mutations';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +19,7 @@ interface Props {
 export function CreateGroupSheet({ onClose, editData }: Props) {
   const isEdit = !!editData?._id;
   const insets = useSafeAreaInsets();
+  const { toast } = useToast();
   const [name, setName] = useState(editData?.name || '');
   const [description, setDescription] = useState(editData?.description || '');
   
@@ -70,7 +72,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
         onClose();
       }
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to save group.');
+      toast(err?.message || 'Failed to save group.', 'error');
     }
   };
 

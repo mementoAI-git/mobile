@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground, ActivityIndicator, Alert, Text} from 'react-native';
+import { View, ScrollView, TouchableOpacity, ImageBackground, ActivityIndicator, Text} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft, CreditCard, Sparkles, Receipt, RefreshCw, ExternalLink, AlertTriangle, Play, Pause } from 'lucide-react-native';
-import { Button, TextInput, Card, Badge } from '@/components/ui';
+import { Button, TextInput, Card, Badge, ConfirmDialog } from '@/components/ui';
+import { useToast } from '@/components/ui/Toast';
 import { COLORS, FONTS } from '@/constants/tokens';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
@@ -55,6 +56,8 @@ export default function BillingSettingsScreen() {
   const [portalBusy, setPortalBusy] = useState(false);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [resumeBusy, setResumeBusy] = useState(false);
+  const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
+  const { toast } = useToast();
 
   // 1. Invoices Query
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery<Invoice[]>({
@@ -102,10 +105,10 @@ export default function BillingSettingsScreen() {
       if (res?.data?.portal_url) {
         await WebBrowser.openBrowserAsync(res.data.portal_url);
       } else {
-        Alert.alert('Error', 'Could not open billing portal. Please try again.');
+        toast('Could not open billing portal. Please try again.', 'error');
       }
     } catch (err: any) {
-      Alert.alert('Billing Error', err?.message || 'Could not load billing portal.');
+      toast(err?.message || 'Could not load billing portal.', 'error');
     } finally {
       setPortalBusy(false);
     }
@@ -115,7 +118,7 @@ export default function BillingSettingsScreen() {
   const handlePromo = async () => {
     const code = promo.trim();
     if (!code) {
-      Alert.alert('Promo Code', 'Please enter a promo code first.');
+      toast('Please enter a promo code first.', 'error');
       return;
     }
     try {
@@ -123,45 +126,37 @@ export default function BillingSettingsScreen() {
       setPromoBusy(true);
       const res = (await post(endpoint.billingPromoRedeem, { code })) as any;
       if (res?.data?.success || res?.success) {
-        Alert.alert('Success', 'Promo code successfully applied!');
+        toast('Promo code successfully applied!', 'success');
         setPromo('');
         await refetchSub();
       } else {
-        Alert.alert('Error', typeof res?.data?.message === 'string' ? res.data.message : 'Could not redeem promo code.');
+        toast(typeof res?.data?.message === 'string' ? res.data.message : 'Could not redeem promo code.', 'error');
       }
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Could not redeem promo code.');
+      toast(err?.message || 'Could not redeem promo code.', 'error');
     } finally {
       setPromoBusy(false);
     }
   };
 
-  // 5. Cancel Subscription
-  const handleCancel = async () => {
-    Alert.alert(
-      'Cancel Subscription',
-      'Are you sure you want to cancel your subscription? You will retain access until the end of your current billing cycle.',
-      [
-        { text: 'Keep Plan', style: 'cancel' },
-        {
-          text: 'Cancel Plan',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-              setCancelBusy(true);
-              await post(endpoint.billingCancel, {});
-              Alert.alert('Cancelled', 'Your subscription cancellation has been successfully scheduled.');
-              await refetchSub();
-            } catch (err: any) {
-              Alert.alert('Error', err?.message || 'Could not cancel subscription.');
-            } finally {
-              setCancelBusy(false);
-            }
-          }
-        }
-      ]
-    );
+  // 5. Cancel Subscription — shows custom ConfirmDialog
+  const handleCancel = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    setCancelConfirmVisible(true);
+  };
+
+  const confirmCancel = async () => {
+    setCancelConfirmVisible(false);
+    try {
+      setCancelBusy(true);
+      await post(endpoint.billingCancel, {});
+      toast('Your subscription cancellation has been scheduled.', 'success');
+      await refetchSub();
+    } catch (err: any) {
+      toast(err?.message || 'Could not cancel subscription.', 'error');
+    } finally {
+      setCancelBusy(false);
+    }
   };
 
   // 6. Resume Subscription
@@ -170,10 +165,10 @@ export default function BillingSettingsScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setResumeBusy(true);
       await post(endpoint.billingResume, {});
-      Alert.alert('Resumed', 'Your subscription has been successfully resumed!');
+      toast('Your subscription has been successfully resumed!', 'success');
       await refetchSub();
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Could not resume subscription.');
+      toast(err?.message || 'Could not resume subscription.', 'error');
     } finally {
       setResumeBusy(false);
     }
@@ -441,6 +436,17 @@ export default function BillingSettingsScreen() {
           )}
         </View>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={cancelConfirmVisible}
+        title="Cancel subscription?"
+        message="You'll keep access until the end of your current billing cycle. This can be reversed before then."
+        onClose={() => setCancelConfirmVisible(false)}
+        buttons={[
+          { label: 'Cancel plan', variant: 'destructive', onPress: confirmCancel },
+          { label: 'Keep my plan', variant: 'ghost', onPress: () => setCancelConfirmVisible(false) },
+        ]}
+      />
     </SafeAreaView>
   );
 }

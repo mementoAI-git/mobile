@@ -31,3 +31,5 @@ export { Tabs } from './Tabs';
 export type { TabItem } from './Tabs';
 export { Select } from './Select';
 export type { SelectOption, SelectProps } from './Select';
+export { ConfirmDialog } from './ConfirmDialog';
+export type { ConfirmButton, ConfirmButtonVariant, ConfirmDialogProps } from './ConfirmDialog';
