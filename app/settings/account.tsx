@@ -30,7 +30,7 @@ function SettingsRow({
   right?: React.ReactNode;
 }) {
   return (
-    <View className="flex-row items-center gap-4 px-5 py-4 bg-white rounded-[20px] border border-stroke-weaker">
+    <View className="flex-row items-center gap-4 px-5 py-4 bg-white rounded-[20px]">
       <View className="size-11 rounded-2xl items-center justify-center" style={{ backgroundColor: iconBg }}>
         {icon}
       </View>
@@ -139,7 +139,7 @@ export default function AccountSettingsScreen() {
             Update Password
           </Text>
 
-          <View className="gap-2">
+          <View className="bg-white rounded-[32px] p-6 gap-4">
             <Controller control={control} name="current_password" render={({ field: { onChange, onBlur, value } }) => (
               <TextInput label="Current Password" value={value} onChangeText={onChange} onBlur={onBlur} secureTextEntry error={errors.current_password?.message} />
             )} />
@@ -149,26 +149,26 @@ export default function AccountSettingsScreen() {
             <Controller control={control} name="confirm" render={({ field: { onChange, onBlur, value } }) => (
               <TextInput label="Confirm New Password" value={value} onChangeText={onChange} onBlur={onBlur} secureTextEntry error={errors.confirm?.message} />
             )} />
+
+            {error && (
+              <View className="bg-fill-weaker rounded-2xl px-4 py-3">
+                <Text className="text-sm text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+                  {(error as any).message}
+                </Text>
+              </View>
+            )}
+            {isSuccess && (
+              <View className="rounded-2xl px-4 py-3" style={{ backgroundColor: `${COLORS.success}08` }}>
+                <Text className="text-sm" style={{ fontFamily: FONTS.sans, color: COLORS.success }}>
+                  Password updated successfully.
+                </Text>
+              </View>
+            )}
+
+            <Button onPress={onSubmit} loading={isPending} fullWidth size="lg">
+              Save Password
+            </Button>
           </View>
-
-          {error && (
-            <View className="bg-fill-weaker rounded-2xl px-4 py-3 border border-stroke-weaker">
-              <Text className="text-sm text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
-                {(error as any).message}
-              </Text>
-            </View>
-          )}
-          {isSuccess && (
-            <View className="rounded-2xl px-4 py-3 border" style={{ backgroundColor: `${COLORS.success}08`, borderColor: `${COLORS.success}20` }}>
-              <Text className="text-sm" style={{ fontFamily: FONTS.sans, color: COLORS.success }}>
-                Password updated successfully.
-              </Text>
-            </View>
-          )}
-
-          <Button onPress={onSubmit} loading={isPending} fullWidth size="lg">
-            Save Password
-          </Button>
         </View>
 
         {/* ── Device Access ────────────────────────────────────────────── */}
@@ -177,17 +177,19 @@ export default function AccountSettingsScreen() {
             Device Access
           </Text>
 
-          <SettingsRow
-            icon={<Fingerprint size={20} color={COLORS.brand} strokeWidth={1.5} />}
-            iconBg={COLORS.brandSubtle}
-            label="Face ID / Touch ID"
-            right={
-              <Switch
-                value={biometricsEnabled}
-                onValueChange={handleToggleBiometrics}
-              />
-            }
-          />
+          <View className="bg-white rounded-[32px]">
+            <SettingsRow
+              icon={<Fingerprint size={20} color={COLORS.brand} strokeWidth={1.5} />}
+              iconBg={COLORS.brandSubtle}
+              label="Face ID / Touch ID"
+              right={
+                <Switch
+                  value={biometricsEnabled}
+                  onValueChange={handleToggleBiometrics}
+                />
+              }
+            />
+          </View>
         </View>
 
         {/* ── Danger Zone ──────────────────────────────────────────────── */}

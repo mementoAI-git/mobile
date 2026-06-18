@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   },
   navLabel: {
     flex: 1,
-    fontFamily: FONTS.sansMedium,
+    fontFamily: FONTS.sansSemi,
     fontSize: 15,
     color: COLORS.textStrong,
   },
