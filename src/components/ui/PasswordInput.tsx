@@ -28,8 +28,8 @@ export function PasswordInput({ label, error, containerClassName, ...props }: Pa
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           {show
-            ? <EyeOff size={18} color={COLORS.textWeak} />
-            : <Eye size={18} color={COLORS.textWeak} />
+            ? <EyeOff size={18} color={COLORS.textMuted} />
+            : <Eye size={18} color={COLORS.textMuted} />
           }
         </TouchableOpacity>
       }
