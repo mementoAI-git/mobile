@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ChevronLeft, Pencil, MoreHorizontal,
-  FileText, Download, Music, CalendarDays,
+  FileText, Music, CalendarDays,
 } from 'lucide-react-native';
 import dayjs from 'dayjs';
 import Animated from 'react-native-reanimated';
@@ -310,28 +310,33 @@ export default function StoryDetailScreen() {
               }
 
               if (isVoice) {
-                // Dark record-banner voice card
+                // Dark voice card — square, half-width, matching MP3 card style
                 let h = 0;
                 const seed = item._id || item.name || '';
                 for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
-                const bars = Array.from({ length: 24 }, (_, i) =>
-                  4 + Math.round((Math.sin((Math.abs(h) + i * 997) * 0.013) * 0.5 + 0.5) * 16)
+                const bars = Array.from({ length: 16 }, (_, i) =>
+                  4 + Math.round((Math.sin((Math.abs(h) + i * 997) * 0.013) * 0.5 + 0.5) * 20)
                 );
                 return (
                   <TouchableOpacity
                     key={item._id}
                     onPress={() => openPreview(item)}
                     activeOpacity={0.88}
-                    style={{ backgroundColor: COLORS.textStrong, borderRadius: 16, padding: 14 }}
+                    style={{ backgroundColor: COLORS.textStrong, borderRadius: 20, aspectRatio: 1, width: (SCREEN_W - 40) / 2, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
                   >
-                    <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 12, color: 'rgba(255,255,255,0.85)', marginBottom: 10 }} numberOfLines={1}>
-                      Voice note{dur > 0 ? ` · ${fmt(dur)}` : ''}
-                    </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 32 }}>
                       {bars.map((barH, i) => (
-                        <View key={i} style={{ flex: 1, height: barH, borderRadius: 2, backgroundColor: `${COLORS.brand}99`, maxHeight: 24 }} />
+                        <View key={i} style={{ flex: 1, height: barH, borderRadius: 2, backgroundColor: `${COLORS.brand}cc`, maxHeight: 28 }} />
                       ))}
                     </View>
+                    <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: 'rgba(255,255,255,0.9)', textAlign: 'center' }} numberOfLines={2}>
+                      {fileName}
+                    </Text>
+                    {dur > 0 && (
+                      <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+                        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>{fmt(dur)}</Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 );
               }
@@ -374,24 +379,36 @@ export default function StoryDetailScreen() {
         {/* ── Other attachments (documents only) ── */}
         {otherAttachments.length > 0 && (
           <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 8 }}>
-            <Text style={styles.sectionLabel}>ATTACHMENTS</Text>
-            {otherAttachments.map(a => (
-              <TouchableOpacity key={a._id} onPress={() => handleOpenFile(a.url)} activeOpacity={0.7}
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.fillWeak, borderWidth: 1, borderColor: COLORS.strokeWeaker, padding: 12, borderRadius: 14 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                  <View style={{ width: 40, height: 40, backgroundColor: COLORS.card, borderRadius: 10, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}>
-                    <FileText size={20} color={COLORS.textBase} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textStrong }} numberOfLines={1}>{a.name || 'Document'}</Text>
-                    <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textWeak, textTransform: 'uppercase' }}>
-                      {a.type?.split('/')[1]?.toUpperCase() ?? 'FILE'}{((a as any).size && Number((a as any).size) > 0) ? ` · ${(Number((a as any).size) / 1024 / 1024).toFixed(2)} MB` : ''}
+            <Text style={styles.sectionLabel}>DOCUMENTS</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {otherAttachments.map(a => {
+                const fileType = a.type?.split('/')[1]?.toUpperCase() ?? 'FILE';
+                const fileSize = ((a as any).size && Number((a as any).size) > 0)
+                  ? `${(Number((a as any).size) / 1024 / 1024).toFixed(1)} MB`
+                  : null;
+                return (
+                  <TouchableOpacity
+                    key={a._id}
+                    onPress={() => handleOpenFile(a.url)}
+                    activeOpacity={0.88}
+                    style={{ backgroundColor: COLORS.fillWeak, borderRadius: 20, aspectRatio: 1, width: (SCREEN_W - 40) / 2, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 20 }}
+                  >
+                    <View style={{ width: 48, height: 48, backgroundColor: COLORS.card, borderRadius: 14, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}>
+                      <FileText size={24} color={COLORS.brand} strokeWidth={1.5} />
+                    </View>
+                    <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>
+                      {a.name || 'Document'}
                     </Text>
-                  </View>
-                </View>
-                <Download size={18} color={COLORS.brand} />
-              </TouchableOpacity>
-            ))}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <View style={{ backgroundColor: `${COLORS.brand}15`, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+                        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.brand }}>{fileType}</Text>
+                      </View>
+                      {fileSize && <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: COLORS.textMuted }}>{fileSize}</Text>}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
         )}
       </ScrollView>
