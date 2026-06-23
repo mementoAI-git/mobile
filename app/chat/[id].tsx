@@ -154,7 +154,7 @@ export default function ChatScreen() {
     if (!isPromptType || !promptMemory) return null;
 
     return (
-      <View className="mx-5 my-4 p-5 rounded-2xl border border-stroke-weaker bg-fill-weaker shadow-sm">
+      <View className="mx-5 my-4 p-5 rounded-2xl bg-fill-weaker">
         <Animated.Text
           className="text-base text-text-strong leading-relaxed"
           style={{ fontFamily: FONTS.serif }}
@@ -194,7 +194,7 @@ export default function ChatScreen() {
             <TouchableOpacity
               onPress={handleBack}
               activeOpacity={0.7}
-              className="size-10 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
+              className="size-10 rounded-full bg-fill-weaker items-center justify-center"
             >
               <ChevronLeft size={20} color={COLORS.textBase} />
             </TouchableOpacity>
@@ -217,7 +217,7 @@ export default function ChatScreen() {
             <TouchableOpacity
               onPress={handleActions}
               activeOpacity={0.7}
-              className="size-10 rounded-full items-center justify-center border border-stroke-weaker shadow-sm"
+              className="size-10 rounded-full items-center justify-center bg-fill-weaker"
             >
               <MoreVertical size={20} color={COLORS.textWeak} />
             </TouchableOpacity>
@@ -279,11 +279,11 @@ export default function ChatScreen() {
               className="mx-5 mb-3"
             >
               <View
-                className="bg-white rounded-[20px] border border-stroke-weaker px-5 py-4 gap-3 shadow-sm"
+                className="bg-white rounded-[20px] px-5 py-4 gap-3"
               >
                 <View
                   className="self-start rounded-full px-2.5 py-0.5"
-                  style={{ backgroundColor: COLORS.brandSubtle, borderWidth: 1, borderColor: COLORS.brandTint }}
+                  style={{ backgroundColor: COLORS.brandSubtle }}
                 >
                   <Animated.Text
                     className="text-[10px] font-bold uppercase tracking-widest"
@@ -324,7 +324,7 @@ export default function ChatScreen() {
                     <View className="items-center justify-center py-24 gap-8">
                       <Animated.View
                         entering={FadeInUp.duration(600)}
-                        className="size-24 rounded-full bg-white border border-stroke-weaker items-center justify-center shadow-sm"
+                        className="size-24 rounded-full bg-fill-weaker items-center justify-center"
                       >
                         <Animated.Text className="text-4xl">🌱</Animated.Text>
                       </Animated.View>
@@ -355,9 +355,9 @@ export default function ChatScreen() {
           {replyQuote && (
             <Animated.View
               entering={FadeInDown.duration(200)}
-              className="mx-5 mb-2.5 p-3 bg-white border border-stroke-weaker rounded-2xl flex-row items-center justify-between shadow-sm"
+              className="mx-5 mb-2.5 p-3 bg-fill-weaker rounded-2xl flex-row items-center justify-between"
             >
-              <View className="flex-1 pr-3 border-l-2 border-brand/50 pl-3">
+              <View className="flex-1 pr-3 pl-3" style={{ borderLeftWidth: 3, borderLeftColor: COLORS.brand }}>
                 <Text
                   className="text-[10px] text-brand font-bold uppercase tracking-wider mb-0.5"
                   style={{ fontFamily: FONTS.sansBold }}
@@ -378,7 +378,7 @@ export default function ChatScreen() {
                   setReplyQuote(null);
                 }}
                 activeOpacity={0.7}
-                className="size-6 rounded-full bg-fill-weaker items-center justify-center border border-stroke-weaker"
+                className="size-6 rounded-full bg-fill-weaker items-center justify-center"
               >
                 <X size={12} color={COLORS.textWeak} />
               </TouchableOpacity>

@@ -200,7 +200,7 @@ export default function StoriesScreen() {
                     setActiveFilter(f);
                   }}
                   activeOpacity={0.7}
-                  className={`px-6 py-2.5 rounded-full border ${activeFilter === f ? 'bg-brand border-brand' : 'bg-white border-stroke-weaker'}`}
+                  className={`px-6 py-2.5 rounded-full ${activeFilter === f ? 'bg-brand' : 'bg-fill-weaker'}`}
                 >
                   <Animated.Text
                     className={`text-xs font-bold ${activeFilter === f ? 'text-white' : 'text-text-base'}`}

@@ -211,7 +211,7 @@ export default function RegisterScreen() {
                   onPress={handlePasskeySignup}
                   disabled={googleLoading || appleLoading || passkeyLoading || isPending}
                   activeOpacity={0.8}
-                  className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
+                  className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
                 >
                   {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />}
                   <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Sign up with a passkey</Animated.Text>
@@ -220,7 +220,7 @@ export default function RegisterScreen() {
                   onPress={handleGoogleSignup}
                   disabled={googleLoading || appleLoading || passkeyLoading || isPending}
                   activeOpacity={0.8}
-                  className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
+                  className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
                 >
                   {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={18} />}
                   <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Continue with Google</Animated.Text>
@@ -229,7 +229,7 @@ export default function RegisterScreen() {
                   onPress={handleAppleSignup}
                   disabled={googleLoading || appleLoading || passkeyLoading || isPending}
                   activeOpacity={0.8}
-                  className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
+                  className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
                 >
                   {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={18} />}
                   <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Continue with Apple</Animated.Text>
