@@ -9,10 +9,6 @@ export function useStoryDetailLogic() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data: memory, isLoading } = useMemory(id);
-  if (memory) {
-    console.log('[useStoryDetail] memory._id:', memory._id);
-    console.log('[useStoryDetail] attachments:', JSON.stringify(memory.attachments ?? [], null, 2));
-  }
   const { mutate: bookmark, isPending: bookmarking } = useBookmarkMemory();
   const { mutate: deleteMemory, isPending: deleting } = useDeleteMemory();
   const openSheet = useUiStore((s) => s.openSheet);

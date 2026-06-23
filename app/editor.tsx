@@ -37,7 +37,8 @@ import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/constants/query-keys';
 import { useToast } from '@/components/ui/Toast';
-import { upsertDraft, loadDrafts, deleteDraft, type StoryDraft, type StoryDraftAttachment } from '@/components/sheets/DraftsSheet';
+import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { upsertDraft, loadDrafts, deleteDraft, DraftsSheet, type StoryDraft, type StoryDraftAttachment } from '@/components/sheets/DraftsSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useUiStore } from '@/store';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
@@ -405,6 +406,12 @@ export default function EditorScreen() {
   const [cancelConfirmMessage, setCancelConfirmMessage] = useState('');
   const [cancelConfirmOnSave, setCancelConfirmOnSave] = useState<(() => void) | null>(null);
 
+  // Local DraftsSheet — bypasses global SheetManager so it renders inside this
+  // fullScreenModal native window on iOS (not behind it in the tabs window).
+  // Props are injected into the global sheetProps store so DraftsSheet can read them,
+  // but we present via a local BottomSheetModal ref rather than the global SheetManager.
+  const draftsSheetRef = useRef<BottomSheetModal>(null);
+
   const { mutate: createMemory } = useCreateMemory();
   const { mutateAsync: quickCapture, isPending: qcPending } = useQuickCapture();
   const { mutateAsync: uploadFileMutation } = useFileUpload();
@@ -663,17 +670,18 @@ export default function EditorScreen() {
                     Haptics.selectionAsync();
                     editorBridge?.blur(); // dismiss WKWebView keyboard (Tiptap body)
                     Keyboard.dismiss();   // dismiss native keyboard (title TextInput)
-                    useUiStore.getState().openSheet('story-drafts', {
+                    // Inject props into store so DraftsSheet can read them (it reads from useUiStore)
+                    // Use setState directly to update sheetProps without activating the global SheetManager
+                    useUiStore.setState({ sheetProps: {
                       email: user?.email,
                       onLoadDraft: (draft: StoryDraft) => {
-                        // Assign this draft's id so autosave continues updating the same slot
+                        draftsSheetRef.current?.dismiss();
                         draftIdRef.current = draft.id;
                         setCurrentDraftId(draft.id);
                         setTitle(draft.title ?? '');
                         const body = draft.body ?? '';
                         setStoryBody(body);
                         richEditorRef.current?.setContent(body);
-                        // Restore already-uploaded attachments from the draft
                         if (Array.isArray(draft.attachments) && draft.attachments.length) {
                           setAttachments(draft.attachments.map(a => ({
                             clientId: `restored_${a.fileId}_${Math.random().toString(36).slice(2)}`,
@@ -690,7 +698,8 @@ export default function EditorScreen() {
                         }
                         setSavedStatus('saved');
                       },
-                    });
+                    }});
+                    draftsSheetRef.current?.present();
                   }} activeOpacity={0.7}
                     style={{ height: 34, paddingHorizontal: 12, borderRadius: 17, backgroundColor: COLORS.fillWeak, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                     <MoreHorizontal size={16} color={COLORS.textBase} strokeWidth={2} />
@@ -1067,6 +1076,26 @@ export default function EditorScreen() {
           { label: 'Keep editing', variant: 'ghost', onPress: () => setCancelConfirmVisible(false) },
         ]}
       />
+      {/* Local DraftsSheet — must be inside a BottomSheetModalProvider scoped to
+          this editor window so it displays correctly on iOS fullScreenModal */}
+      <BottomSheetModalProvider>
+        <BottomSheetModal
+          ref={draftsSheetRef}
+          snapPoints={['75%']}
+          enablePanDownToClose
+          keyboardBehavior="interactive"
+          keyboardBlurBehavior="restore"
+          backdropComponent={(props: any) => (
+            <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.4} pressBehavior="close" />
+          )}
+          handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
+          backgroundStyle={{ backgroundColor: COLORS.background }}
+        >
+          <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: 32 }}>
+            <DraftsSheet />
+          </BottomSheetView>
+        </BottomSheetModal>
+      </BottomSheetModalProvider>
     </SafeAreaProvider>
   );
 }

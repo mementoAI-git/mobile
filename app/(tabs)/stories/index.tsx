@@ -184,8 +184,6 @@ export default function StoriesScreen() {
           {/* Filter Pills */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2.5">
             {FILTERS.map((f) => {
-              // 🔍 TEMP DEBUG
-              if (f === 'All') console.log('[StoriesFilter] stats object:', JSON.stringify(stats));
               const countMap: Record<string, number | undefined> = {
                 All: stats?.stories_count,
                 Bookmarked: stats?.bookmark_count,
