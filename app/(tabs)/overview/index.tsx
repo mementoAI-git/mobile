@@ -285,7 +285,7 @@ export default function OverviewScreen() {
             <TouchableOpacity
               onPress={() => router.push('/(tabs)/stories')}
               activeOpacity={0.7}
-              className="flex-row items-center gap-3 bg-brand/5 border border-brand/20 rounded-2xl p-4 shadow-sm"
+              className="flex-row items-center gap-3 bg-brand/5 rounded-2xl p-4"
             >
               <View className="size-8 bg-brand rounded-full items-center justify-center">
                 <Zap size={14} color="white" fill="white" />
@@ -303,7 +303,7 @@ export default function OverviewScreen() {
             <Animated.View entering={FadeInDown.delay(100)}>
               <ImageBackground
                 source={WELCOME_BG}
-                className="rounded-2xl overflow-hidden border border-stroke-weaker bg-white"
+                className="rounded-2xl overflow-hidden bg-white"
                 imageStyle={{ borderRadius: 16 }}
               >
                 <View className="p-7 gap-8" style={{ borderRadius: 16 }}>
@@ -348,7 +348,7 @@ export default function OverviewScreen() {
                         router.push({ pathname: '/editor', params: { mode: 'quick-capture' } });
                       }}
                       activeOpacity={0.7}
-                      className="flex-1 flex-row items-center justify-center gap-2 h-14 bg-white border border-stroke-weaker rounded-full shadow-sm"
+                      className="flex-1 flex-row items-center justify-center gap-2 h-14 bg-white rounded-full"
                     >
                       <Zap size={16} color={COLORS.textBase} strokeWidth={2} />
                       <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>Quick capture</Text>
@@ -362,7 +362,7 @@ export default function OverviewScreen() {
             <Animated.View entering={FadeInDown.delay(200)}>
               <ImageBackground
                 source={ENRICHMENT_BG}
-                className="rounded-2xl overflow-hidden border border-stroke-weaker bg-white"
+                className="rounded-2xl overflow-hidden bg-white"
                 imageStyle={{ borderRadius: 16 }}
               >
                 <View className="p-7 gap-5" style={{ borderRadius: 16 }}>

@@ -161,7 +161,7 @@ export default function CapsuleScreen() {
                             setFilter(f.id);
                           }}
                           activeOpacity={0.7}
-                          className={`px-5 py-2.5 rounded-full border ${isActive ? 'bg-brand border-brand' : 'bg-white border-stroke-weaker'}`}
+                          className={`px-5 py-2.5 rounded-full ${isActive ? 'bg-brand' : 'bg-fill-weaker'}`}
                         >
                           <Animated.Text className={`text-xs font-bold ${isActive ? 'text-white' : 'text-text-base'}`} style={{ fontFamily: FONTS.sansBold }}>
                             {label}
@@ -178,7 +178,7 @@ export default function CapsuleScreen() {
                       setShowSearch(prev => !prev);
                     }}
                     activeOpacity={0.7}
-                    className={`size-10 rounded-full border items-center justify-center shrink-0 ${showSearch ? 'bg-brand border-brand' : 'bg-white border-stroke-weaker'}`}
+                    className={`size-10 rounded-full items-center justify-center shrink-0 ${showSearch ? 'bg-brand' : 'bg-fill-weaker'}`}
                   >
                     <Search size={16} color={showSearch ? 'white' : COLORS.textStrong} />
                   </TouchableOpacity>
@@ -190,7 +190,7 @@ export default function CapsuleScreen() {
                       setLayoutMode(prev => prev === 'grid' ? 'list' : 'grid');
                     }}
                     activeOpacity={0.7}
-                    className="size-10 rounded-full bg-white border border-stroke-weaker items-center justify-center shrink-0"
+                    className="size-10 rounded-full bg-fill-weaker items-center justify-center shrink-0"
                   >
                     {layoutMode === 'grid' ? (
                       <Grid size={16} color={COLORS.textStrong} />

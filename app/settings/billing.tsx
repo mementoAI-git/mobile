@@ -235,7 +235,7 @@ export default function BillingSettingsScreen() {
               {subLoading ? (
                 <ActivityIndicator size="small" color={COLORS.brand} className="my-4" />
               ) : (
-                <View className="bg-fill-weaker border border-stroke-weaker/45 rounded-2xl p-4 gap-3">
+                <View className="bg-fill-weaker rounded-2xl p-4 gap-3">
                   <View className="flex-row justify-between items-center">
                     <Text className="text-xs text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Billing Cycle</Text>
                     <Text className="text-sm text-text-strong font-medium" style={{ fontFamily: FONTS.sansMedium }}>
@@ -251,7 +251,7 @@ export default function BillingSettingsScreen() {
                   <TouchableOpacity
                     onPress={handlePortal}
                     disabled={portalBusy}
-                    className="flex-1 h-12 border border-stroke-weak rounded-2xl items-center justify-center bg-white"
+                    className="flex-1 h-12 rounded-2xl items-center justify-center bg-fill-weaker"
                   >
                     {portalBusy ? (
                       <ActivityIndicator size="small" color={COLORS.brand} />
@@ -330,7 +330,7 @@ export default function BillingSettingsScreen() {
                       {formatBytes(usage.storage_used_bytes)} of {formatBytes(usage.storage_limit_bytes || 5368709120)}
                     </Text>
                   </View>
-                  <View className="h-2.5 w-full bg-fill-weaker border border-stroke-weaker/30 rounded-full overflow-hidden">
+                  <View className="h-2.5 w-full bg-fill-weaker rounded-full overflow-hidden">
                     <View 
                       className="h-full bg-brand rounded-full" 
                       style={{ 
@@ -342,13 +342,13 @@ export default function BillingSettingsScreen() {
 
                 {/* Grid stats */}
                 <View className="flex-row gap-4">
-                  <View className="flex-1 bg-fill-weaker rounded-2xl p-4 border border-stroke-weaker/45">
+                  <View className="flex-1 bg-fill-weaker rounded-2xl p-4">
                     <Text className="text-[10px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Trustees</Text>
                     <Text className="text-lg text-text-strong mt-1" style={{ fontFamily: FONTS.sansBold }}>
                       {usage.beneficiary_count ?? 0}
                     </Text>
                   </View>
-                  <View className="flex-1 bg-fill-weaker rounded-2xl p-4 border border-stroke-weaker/45">
+                  <View className="flex-1 bg-fill-weaker rounded-2xl p-4">
                     <Text className="text-[10px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Capsules</Text>
                     <Text className="text-lg text-text-strong mt-1" style={{ fontFamily: FONTS.sansBold }}>
                       {usage.timed_message_count ?? 0}
@@ -380,7 +380,7 @@ export default function BillingSettingsScreen() {
                   onPress={handlePromo}
                   disabled={promoBusy || !promo.trim()}
                   activeOpacity={0.8}
-                  className="h-12 px-6 rounded-2xl bg-brand-tint border border-brand/20 items-center justify-center"
+                  className="h-12 px-6 rounded-2xl bg-brand/10 items-center justify-center"
                 >
                   {promoBusy ? (
                     <ActivityIndicator size="small" color={COLORS.brand} />
@@ -415,7 +415,7 @@ export default function BillingSettingsScreen() {
                         onPress={() => inv.url && WebBrowser.openBrowserAsync(inv.url)}
                         disabled={!inv.url}
                         activeOpacity={0.7}
-                        className="flex-row items-center justify-between bg-fill-weaker px-4 py-3.5 rounded-2xl border border-stroke-weaker/45"
+                        className="flex-row items-center justify-between bg-fill-weaker px-4 py-3.5 rounded-2xl"
                       >
                         <Text className="text-sm text-text-strong font-medium" style={{ fontFamily: FONTS.sansMedium }}>
                           {inv.label || `Invoice #${idx + 1}`}
