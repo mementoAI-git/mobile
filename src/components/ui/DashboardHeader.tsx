@@ -47,12 +47,12 @@ export function DashboardHeader({ title, showStreak = true, rightElement, onStre
                 paddingVertical: 8,
                 // backgroundColor: COLORS.fillWeaker,
                 // backgroundColor: `${COLORS.brand}50`,
-                backgroundColor: `#FFC02E1A`,
+                backgroundColor: COLORS.brandSubtle,
                 borderRadius: 8,
               }}
             >
               <Zap size={16} color={COLORS.brand} fill={COLORS.brand} />
-              <Animated.Text style={{ fontFamily: FONTS.geist, fontSize: 14, color: COLORS.textStrong }}>
+              <Animated.Text style={{ fontFamily: FONTS.sansBold, fontSize: 14, color: COLORS.textStrong }}>
                 {streakCount}
               </Animated.Text>
             </TouchableOpacity>

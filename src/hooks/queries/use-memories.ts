@@ -30,10 +30,7 @@ export function useStories(params?: { limit?: number; filter?: string; search?: 
       if (params?.filter === 'deleted') qs.set('status', 'deleted');
       if (params?.filter === 'pending') { qs.set('enrichment_status', 'pending'); qs.set('capture_source', 'quick'); }
       if (params?.search?.trim()) qs.set('search', params.search.trim());
-      return get<IPagination<IMemory>>(`${endpoint.stories}?${qs.toString()}`).then((r) => {
-        console.log('[useStories] page', pageParam, 'first item attachments:', JSON.stringify(r.data?.docs?.[0]?.attachments ?? [], null, 2));
-        return r.data;
-      });
+      return get<IPagination<IMemory>>(`${endpoint.stories}?${qs.toString()}`).then((r) => r.data);
     },
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,

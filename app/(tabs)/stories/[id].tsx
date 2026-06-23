@@ -466,7 +466,7 @@ const styles = {
     fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textBase,
   },
   title: {
-    fontFamily: FONTS.sansBold,
+    fontFamily: FONTS.serif,
     fontSize: 30,
     lineHeight: 38,
     color: COLORS.textStrong,

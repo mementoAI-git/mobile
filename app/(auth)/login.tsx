@@ -176,8 +176,8 @@ export default function LoginScreen() {
                   activeOpacity={0.8}
                   className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
                 >
-                  {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />}
-                  <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Sign in with a passkey</Animated.Text>
+                   {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />}
+                   <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansBold }}>Sign in with a passkey</Animated.Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleGoogleLogin}
@@ -185,8 +185,8 @@ export default function LoginScreen() {
                   activeOpacity={0.8}
                   className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
                 >
-                  {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={18} />}
-                  <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Continue with Google</Animated.Text>
+                   {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={18} />}
+                   <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansBold }}>Continue with Google</Animated.Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleAppleLogin}
@@ -194,8 +194,8 @@ export default function LoginScreen() {
                   activeOpacity={0.8}
                   className="flex-row items-center justify-center gap-3 border border-stroke-weak rounded-full min-h-[50px] px-4 bg-white"
                 >
-                  {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={18} />}
-                  <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Continue with Apple</Animated.Text>
+                   {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={18} />}
+                   <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansBold }}>Continue with Apple</Animated.Text>
                 </TouchableOpacity>
               </Animated.View>
             )}

@@ -224,7 +224,7 @@ export default function CapsuleScreen() {
                 <TouchableOpacity
                   onPress={handleCreateNew}
                   activeOpacity={0.8}
-                  className="flex-row items-center justify-center gap-2.5 h-14 rounded-2xl bg-brand"
+                  className="flex-row items-center justify-center gap-2.5 h-14 rounded-full bg-brand"
                 >
                   <Plus size={20} color="white" strokeWidth={2.5} />
                   <Animated.Text className="text-base font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Create New Capsule</Animated.Text>
