@@ -8,17 +8,38 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { CornerDownRight, FileText, Music, Play } from 'lucide-react-native';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 
+// ─── Backward-compat helpers for old messages ────────────────────────────────
+// Messages saved before the replyTo API field existed still have the quoted text
+// embedded inside `message.text` as a wrapper string. Parse and strip it so:
+//   - Old messages: replyTo is reconstructed from the wrapper, content is clean
+//   - New messages: replyTo comes from the server field, content is already clean
+
+const REPLY_WRAPPER_RE = /^\[The user is repl[^[]*\n---\]\n\n/s;
+const REPLY_EXTRACT_RE = /^\[The user is replying to ([^\n]+):\n---\n([\s\S]*?)\n---\]\n\n/;
+
+function stripReplyWrapper(text: string): string {
+  return text.replace(REPLY_WRAPPER_RE, '').trim();
+}
+
+function extractReplyQuote(text: string): { role: string; text: string } | null {
+  const m = text.match(REPLY_EXTRACT_RE);
+  if (!m) return null;
+  return { role: m[1].toLowerCase().includes('user') ? 'user' : 'ai', text: m[2].trim() };
+}
+
 interface MessageBubbleProps {
-  message: IMessage | { 
-    role: string; 
-    text: string; 
-    created_at?: string; 
-    ai_model?: string; 
+  message: IMessage | {
+    role: string;
+    text: string;
+    created_at?: string;
+    ai_model?: string;
     _id?: string;
     replyTo?: { role: string; text: string };
     attatchments?: { url: string; name: string; type?: string; _id?: string }[];
   };
   onReply?: () => void;
+  /** Called when the user taps the embedded reply quote to scroll to the original */
+  onScrollToOriginal?: () => void;
 }
 
 // ─── Attachment helpers ────────────────────────────────────────────────────────
@@ -28,7 +49,6 @@ function getMimeCategory(name?: string, type?: string): 'image' | 'video' | 'aud
   if (t.startsWith('image/')) return 'image';
   if (t.startsWith('video/')) return 'video';
   if (t.startsWith('audio/')) return 'audio';
-  // Infer from extension if no type
   const ext = name?.split('.').pop()?.toLowerCase() ?? '';
   if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'].includes(ext)) return 'image';
   if (['mp4', 'mov', 'avi', 'webm'].includes(ext)) return 'video';
@@ -36,7 +56,6 @@ function getMimeCategory(name?: string, type?: string): 'image' | 'video' | 'aud
   return 'file';
 }
 
-// Converts API attachment to PreviewAttachment shape for MediaPreviewModal
 function toPreviewAttachment(a: { url: string; name: string; type?: string; _id?: string }, idx: number): PreviewAttachment {
   return {
     clientId: a._id ?? `att_${idx}`,
@@ -79,7 +98,6 @@ function AttachmentTile({ attachment, onPress }: {
     );
   }
 
-  // Audio or other file — chip
   const Icon = cat === 'audio' ? Music : FileText;
   const shortName = attachment.name.length > 20 ? `${attachment.name.slice(0, 18)}…` : attachment.name;
 
@@ -116,13 +134,11 @@ function AttachmentGrid({ attachments, onTap }: {
 }) {
   if (attachments.length === 0) return null;
 
-  // Split media (image/video) from files (audio/doc) for layout
   const mediaItems = attachments.filter(a => ['image', 'video'].includes(getMimeCategory(a.name, a.type)));
   const fileItems = attachments.filter(a => !['image', 'video'].includes(getMimeCategory(a.name, a.type)));
 
   return (
     <View style={{ gap: 6, marginBottom: 6 }}>
-      {/* Media grid — 2-column wrap */}
       {mediaItems.length > 0 && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
           {mediaItems.map((a) => {
@@ -133,7 +149,6 @@ function AttachmentGrid({ attachments, onTap }: {
           })}
         </View>
       )}
-      {/* File chips — vertical stack */}
       {fileItems.map((a) => {
         const origIdx = attachments.indexOf(a);
         return (
@@ -146,15 +161,24 @@ function AttachmentGrid({ attachments, onTap }: {
 
 // ─── MessageBubble ─────────────────────────────────────────────────────────────
 
-export const MessageBubble = React.memo(function MessageBubble({ message, onReply }: MessageBubbleProps) {
+export const MessageBubble = React.memo(function MessageBubble({ message, onReply, onScrollToOriginal }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const aiModel = (message as any).ai_model;
-  const replyQuote = (message as any).replyTo;
   const rawAttachments: { url: string; name: string; type?: string; _id?: string }[] =
     (message as any).attatchments ?? [];
 
+  const rawContent = message.text || (message as any).content || '';
+
+  // New messages: replyTo field comes from server (persisted since API update).
+  // Old messages: replyTo is absent — reconstruct it by parsing the stored wrapper.
+  const replyQuote: { role: string; text: string } | null =
+    (message as any).replyTo ?? (isUser ? extractReplyQuote(rawContent) : null);
+
+  // Strip the wrapper prefix from old messages so it doesn't show in the bubble body.
+  // New messages have clean text already — stripReplyWrapper is a no-op on them.
+  const content = isUser ? stripReplyWrapper(rawContent) : rawContent;
+
   // Don't render empty bubbles
-  const content = message.text || (message as any).content || '';
   const hasContent = content.trim().length > 0 || rawAttachments.length > 0;
   if (!hasContent) return null;
 
@@ -171,7 +195,7 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
 
   return (
     <>
-      <Animated.View 
+      <Animated.View
         entering={FadeInDown.duration(450).springify()}
         className={cn('mb-5 max-w-[85%]', isUser ? 'self-end' : 'self-start')}
       >
@@ -181,23 +205,21 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
             isUser ? 'bg-fill-weaker' : 'bg-white'
           )}
         >
-          {/* Reply Quote Block */}
+          {/* Reply Quote Block — tappable to scroll to original */}
           {replyQuote && replyQuote.text && (
-            <View className="mb-2.5 border-l-2 border-brand/50 pl-3 py-1 bg-brand/5 rounded-r-lg">
-              <Text 
-                className="text-[10px] text-brand font-bold uppercase tracking-wider mb-0.5"
-                style={{ fontFamily: FONTS.sansBold }}
-              >
-                Replying to {replyQuote.role === 'user' ? 'your message' : 'Memento'}
-              </Text>
-              <Text 
+            <TouchableOpacity
+              onPress={onScrollToOriginal}
+              activeOpacity={onScrollToOriginal ? 0.7 : 1}
+              className="mb-2.5 border-l-2 border-brand/50 pl-3 py-1 bg-brand/5 rounded-r-lg"
+            >
+              <Text
                 className="text-[12px] text-text-weak leading-relaxed"
                 numberOfLines={2}
-                style={{ fontFamily: FONTS.sans }}
+                style={{ fontFamily: FONTS.sans, fontStyle: 'italic' }}
               >
                 {replyQuote.text}
               </Text>
-            </View>
+            </TouchableOpacity>
           )}
 
           {/* Attachment grid — above text */}
@@ -242,13 +264,13 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
             </View>
           )}
           {onReply && (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={onReply}
               activeOpacity={0.7}
               className="flex-row items-center ml-3 bg-brand/5 px-2 py-0.5 rounded-full border border-brand/10"
             >
               <CornerDownRight size={10} color={COLORS.brand} style={{ marginRight: 3 }} />
-              <Text 
+              <Text
                 className="text-[8px] text-brand font-bold uppercase tracking-widest"
                 style={{ fontFamily: FONTS.sansBold }}
               >

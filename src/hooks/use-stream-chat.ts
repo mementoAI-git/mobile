@@ -78,9 +78,12 @@ export function useStreamChat(memoryId?: string) {
           },
           body: JSON.stringify({
             // Field names must match web/src/pages/dashboard/chat/conversation/index.tsx
-            text: apiPrompt,
+            // Send the clean user text — replyTo is now a separate field, not wrapped in text
+            text: text.trim(),
             // Use ref so this always reads the latest memoryId without being a dep
             ...(memoryIdRef.current ? { memory: memoryIdRef.current } : {}),
+            // Reply quote — stored as a separate field on the message document
+            ...(replyTo ? { replyTo } : {}),
             // Host Chat: send mode + dimension to the API (mirrors web)
             ...(chatMode ? { chatMode } : {}),
             ...(chatMode === 'deep_dive' && deepDiveDimension
