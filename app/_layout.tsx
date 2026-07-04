@@ -56,6 +56,7 @@ import { OfflineNotice } from '@/components/ui/OfflineNotice';
 import { useNotifications } from '@/hooks/use-notifications';
 import { COLORS } from '@/constants/tokens';
 import { StatusBar } from 'expo-status-bar';
+import { useShareIntentContext, ShareIntentProvider } from 'expo-share-intent';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -79,6 +80,37 @@ if (SENTRY_DSN) {
     tracesSampleRate: 1.0,
     sendDefaultPii: true,
   });
+}
+
+// ─── Share intent watcher — handles shares while app is already open ──────────
+
+function ShareIntentWatcher() {
+  const { shareIntent } = useShareIntentContext();
+  const router = useRouter();
+  // Guard: only navigate once per unique intent — prevents infinite re-render loop.
+  // expo-share-intent may return a stub in Expo Go; the ref ensures we never
+  // call router.push more than once for the same shareIntent object.
+  const handledRef = React.useRef(false);
+
+  useEffect(() => {
+    if (!shareIntent || handledRef.current) return;
+    handledRef.current = true;
+    // Small defer so navigation stack is fully mounted before pushing
+    const t = setTimeout(() => {
+      router.push('/share' as any);
+    }, 100);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shareIntent]);
+
+  // Reset guard when intent is cleared
+  useEffect(() => {
+    if (!shareIntent) {
+      handledRef.current = false;
+    }
+  }, [shareIntent]);
+
+  return null;
 }
 
 function RootLayout() {
@@ -213,23 +245,25 @@ function RootLayout() {
       <GestureHandlerRootView className="flex-1">
         <QueryClientProvider client={queryClient}>
           <BottomSheetModalProvider>
-            <ToastProvider>
-              <OfflineNotice />
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(onboard)" />
-                <Stack.Screen name="(tabs)" options={{ contentStyle: { backgroundColor: COLORS.background } }} />
-                <Stack.Screen name="chat/[id]" />
-                <Stack.Screen name="editor" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
-                <Stack.Screen name="create" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
-                <Stack.Screen name="article" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
-                <Stack.Screen name="settings" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
-                <Stack.Screen name="accept-invite/[id]" />
-                <Stack.Screen name="+not-found" />
-              </Stack>
-              {/* SheetManager has moved to app/(tabs)/_layout.tsx so it renders inside
-                  a fully-initialised navigation context (required for useRouter() in sheets) */}
-            </ToastProvider>
+            <ShareIntentProvider>
+              <ToastProvider>
+                <OfflineNotice />
+                <ShareIntentWatcher />
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="(onboard)" />
+                  <Stack.Screen name="(tabs)" options={{ contentStyle: { backgroundColor: COLORS.background } }} />
+                  <Stack.Screen name="chat/[id]" />
+                  <Stack.Screen name="share" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+                  <Stack.Screen name="editor" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+                  <Stack.Screen name="create" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
+                  <Stack.Screen name="article" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
+                  <Stack.Screen name="settings" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+                  <Stack.Screen name="accept-invite/[id]" />
+                  <Stack.Screen name="+not-found" />
+                </Stack>
+              </ToastProvider>
+            </ShareIntentProvider>
           </BottomSheetModalProvider>
         </QueryClientProvider>
       </GestureHandlerRootView>
