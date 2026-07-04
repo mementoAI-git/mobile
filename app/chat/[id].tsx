@@ -31,6 +31,7 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { useChatLogic } from '@/hooks/use-chat-logic';
+import { useLocalSearchParams } from 'expo-router';
 import { useBackHandler } from '@/hooks/use-back-handler';
 import * as Haptics from 'expo-haptics';
 import { VoiceModeOverlay } from '@/components/chat/VoiceModeOverlay';
@@ -40,6 +41,9 @@ import { X } from 'lucide-react-native';
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 export default function ChatScreen() {
+  // promptLabel is only set by BrowseTopicsSection topic cards — daily prompts don't set it
+  const { promptLabel } = useLocalSearchParams<{ promptLabel?: string }>();
+
   const {
     isPromptType,
     promptMemory,
@@ -289,7 +293,9 @@ export default function ChatScreen() {
                     className="text-[10px] font-bold uppercase tracking-widest"
                     style={{ fontFamily: FONTS.sansBold, color: COLORS.brand }}
                   >
-                    Today's reflection
+                    {promptLabel
+                      ? promptLabel.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+                      : "Today's reflection"}
                   </Animated.Text>
                 </View>
                 <Animated.Text

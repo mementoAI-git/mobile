@@ -71,7 +71,7 @@ export function BrowseTopicsSection({ prompts, isLoading }: Props) {
               onPress={() => {
                 router.push({
                   pathname: '/chat/[id]',
-                  params: { id: t._id || '', type: 'prompt', promptTitle: t.title || '' },
+                  params: { id: t._id || '', type: 'prompt', promptTitle: t.title || '', promptLabel: t.category || '' },
                 });
               }}
             />
