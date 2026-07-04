@@ -3,10 +3,11 @@ import {
   View, Text, TextInput, TouchableOpacity, Platform, StyleSheet,
   Keyboard, ScrollView, Image, ActivityIndicator,
 } from 'react-native';
-import { ArrowUp, Mic, Square, Phone, Paperclip, X, FileText, Image as ImageIcon } from 'lucide-react-native';
+import { ArrowUp, Mic, Square, Phone, PlusCircle, X, FileText } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import { MediaPickerMenu } from '@/components/ui/MediaPickerMenu';
 import { COLORS, FONTS } from '@/constants/tokens';
 import Animated, {
   useAnimatedStyle,
@@ -77,6 +78,7 @@ export function ChatInput({
   const [multiline, setMultiline] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const btnScale = useSharedValue(1);
   const micPulse = useSharedValue(1);
@@ -172,6 +174,29 @@ export function ChatInput({
   }, [uploadFile]);
 
   // ─── Attachment pickers ───────────────────────────────────────────────────
+
+  // Camera — launches device camera to capture photo or video
+  const handleLaunchCamera = useCallback(async () => {
+    Haptics.selectionAsync();
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        toast('Allow Memento to access your camera.', 'error');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images', 'videos'],
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const isVideo = asset.mimeType?.startsWith('video/');
+        const mime = asset.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg');
+        const name = asset.fileName || `${isVideo ? 'video' : 'photo'}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`;
+        await uploadAndAdd(asset.uri, mime, name, asset.fileSize);
+      }
+    } catch { /* user cancelled */ }
+  }, [uploadAndAdd, toast]);
 
   // Gallery picker — photos + videos via ImagePicker (reliable on iOS & Android)
   const handlePickGallery = useCallback(async () => {
@@ -364,27 +389,15 @@ export function ChatInput({
 
         {/* Right-side controls */}
         <View className="flex-row items-center gap-1.5">
-          {/* Gallery picker — photos + videos */}
+          {/* Single ⊕ button — opens MediaPickerMenu (Gallery, Camera, Voice, File) */}
           {!isRecording && !showStop && (
             <TouchableOpacity
-              onPress={handlePickGallery}
+              onPress={() => { Haptics.selectionAsync(); setPickerOpen(o => !o); }}
               disabled={disabled || anyUploading}
               className="rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
-              style={{ width: scale(28), height: scale(28), borderRadius: scale(14), opacity: disabled || anyUploading ? 0.4 : 1 }}
+              style={{ width: scale(28), height: scale(28), borderRadius: scale(14), opacity: disabled || anyUploading ? 0.4 : 1, backgroundColor: pickerOpen ? `${COLORS.brand}15` : undefined }}
             >
-              <ImageIcon size={scale(12)} color={COLORS.textWeak} strokeWidth={2} />
-            </TouchableOpacity>
-          )}
-
-          {/* Document picker — audio, PDF, text */}
-          {!isRecording && !showStop && (
-            <TouchableOpacity
-              onPress={handlePickDocument}
-              disabled={disabled || anyUploading}
-              className="rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
-              style={{ width: scale(28), height: scale(28), borderRadius: scale(14), opacity: disabled || anyUploading ? 0.4 : 1 }}
-            >
-              <Paperclip size={scale(12)} color={COLORS.textWeak} strokeWidth={2} />
+              <PlusCircle size={scale(14)} color={pickerOpen ? COLORS.brand : COLORS.textWeak} strokeWidth={2} />
             </TouchableOpacity>
           )}
 
@@ -454,6 +467,17 @@ export function ChatInput({
           </Animated.View>
         </View>
       </View>
+
+      {/* Media picker menu — floats above the input bar */}
+      <MediaPickerMenu
+        visible={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onGallery={() => { setPickerOpen(false); handlePickGallery(); }}
+        onCamera={() => { setPickerOpen(false); handleLaunchCamera(); }}
+        onVoice={undefined}
+        onFile={() => { setPickerOpen(false); handlePickDocument(); }}
+        menuLeft={8}
+      />
     </Animated.View>
   );
 }
