@@ -1,10 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, ScrollView, TouchableOpacity, ImageBackground, Text, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import dayjs from 'dayjs';
 import { useActivities, type Activity } from '@/hooks/queries/use-activities';
 import { ActivityListItem } from '@/components/overview/ActivityListItem';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -13,16 +14,91 @@ import { COLORS, FONTS } from '@/constants/tokens';
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 const PAGE_SIZE = 20;
 
+// ─── Editorial hero card ───────────────────────────────────────────────────
+
+const WELCOME_BG = require('../../assets/images/backgrounds/welcome_bg.png');
+
+function EditorialHeroCard({ totalDocs }: { totalDocs: number }) {
+  if (totalDocs === 0) return null;
+
+  const bodyText = totalDocs >= 100
+    ? `${totalDocs} moments captured and preserved. Every story stored, every memory shared — this is the record of your life taking shape.`
+    : `${totalDocs} moments captured so far. Every memory you preserve becomes part of the legacy you leave behind.`;
+
+  return (
+    <Animated.View
+      entering={FadeInDown.duration(500)}
+      style={{ marginHorizontal: 20, marginBottom: 20, borderRadius: 32, overflow: 'hidden', backgroundColor: COLORS.card }}
+    >
+      <ImageBackground source={WELCOME_BG} style={{ padding: 24, gap: 12 }} imageStyle={{ opacity: 0.04 }} resizeMode="repeat">
+        <Text style={{ fontFamily: FONTS.serif, fontSize: 22, color: COLORS.textStrong, lineHeight: 28 }}>
+          Your legacy{'\n'}is growing.
+        </Text>
+        <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, lineHeight: 21 }}>
+          {bodyText}
+        </Text>
+      </ImageBackground>
+    </Animated.View>
+  );
+}
+
+// ─── Stats banner (4 stats, all brand orange) ─────────────────────────────
+
+function StatsBanner({ totalDocs, docs }: { totalDocs: number; docs: Activity[] }) {
+  const thisWeek = useMemo(() => {
+    const cutoff = dayjs().subtract(7, 'day');
+    return docs.filter((d) => dayjs(d.created_at).isAfter(cutoff)).length;
+  }, [docs]);
+
+  const created = useMemo(() => docs.filter((d) => d.action === 'created').length, [docs]);
+  const updated = useMemo(() => docs.filter((d) => d.action === 'updated').length, [docs]);
+
+  const stats = [
+    { label: 'Total', value: totalDocs > 0 ? String(totalDocs) : '—' },
+    { label: 'This week', value: String(thisWeek) },
+    { label: 'Created', value: String(created) },
+    { label: 'Updated', value: String(updated) },
+  ];
+
+  return (
+    <Animated.View
+      entering={FadeInDown.duration(500)}
+      style={{
+        flexDirection: 'row',
+        marginHorizontal: 20,
+        marginBottom: 20,
+        backgroundColor: COLORS.card,
+        borderRadius: 24,
+        overflow: 'hidden',
+      }}
+    >
+      {stats.map((s, i) => (
+        <React.Fragment key={s.label}>
+          {i > 0 && <View style={{ width: 1, backgroundColor: COLORS.strokeWeaker, marginVertical: 14 }} />}
+          <View style={{ flex: 1, alignItems: 'center', paddingVertical: 16, gap: 3 }}>
+            <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.brand, lineHeight: 24 }}>
+              {s.value}
+            </Text>
+            <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: COLORS.textMuted, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+              {s.label}
+            </Text>
+          </View>
+        </React.Fragment>
+      ))}
+    </Animated.View>
+  );
+}
+
+// ─── Screen ────────────────────────────────────────────────────────────────
+
 export default function ActivitiesScreen() {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [allDocs, setAllDocs] = useState<Activity[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Initial fetch — page 1
   const { data: page1, isLoading } = useActivities({ page: 1, limit: PAGE_SIZE });
 
-  // Seed allDocs from page 1 on first load
   React.useEffect(() => {
     if (page1?.docs && allDocs.length === 0) {
       setAllDocs(page1.docs);
@@ -52,6 +128,8 @@ export default function ActivitiesScreen() {
   const totalDocs = page1?.totalDocs ?? 0;
   const displayDocs = allDocs.length > 0 ? allDocs : (page1?.docs ?? []);
 
+  const renderItems = useMemo(() => displayDocs, [displayDocs]);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
       {/* Header */}
@@ -77,7 +155,8 @@ export default function ActivitiesScreen() {
 
         {isLoading && displayDocs.length === 0 ? (
           <View style={{ paddingHorizontal: 20, paddingTop: 12, gap: 12 }}>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton className="h-20 rounded-[24px] mb-2" />
+            {[1, 2, 3, 4, 5].map((i) => (
               <Skeleton key={i} className="h-16 rounded-2xl" />
             ))}
           </View>
@@ -91,20 +170,28 @@ export default function ActivitiesScreen() {
             </Text>
           </Animated.View>
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
-            {/* Activity card — exact same layout as overview's RecentActivitiesSection */}
-            <Animated.View
-              entering={FadeInDown.duration(500)}
-              style={{ marginHorizontal: 20, marginTop: 4, backgroundColor: COLORS.card, borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.strokeWeaker }}
-            >
-              {displayDocs.map((item, idx) => (
-                <ActivityListItem
-                  key={item._id}
-                  activity={item}
-                  showDivider={idx > 0}
-                />
-              ))}
-            </Animated.View>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48, paddingTop: 4 }}>
+
+            {/* Editorial hero card */}
+            <EditorialHeroCard totalDocs={totalDocs} />
+
+            {/* Stats banner */}
+            <StatsBanner totalDocs={totalDocs} docs={displayDocs} />
+
+            {/* Activity items — standalone cards */}
+            {renderItems.map((item) => (
+              <View
+                key={item._id}
+                style={{
+                  marginHorizontal: 20,
+                  marginBottom: 2,
+                  backgroundColor: COLORS.card,
+                  borderRadius: 20,
+                }}
+              >
+                <ActivityListItem activity={item} showDivider={false} />
+              </View>
+            ))}
 
             {/* Load more */}
             {hasMore && (
@@ -127,9 +214,7 @@ export default function ActivitiesScreen() {
                 >
                   {loadingMore
                     ? <ActivityIndicator size="small" color={COLORS.brand} />
-                    : <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textStrong }}>
-                        Load more
-                      </Text>
+                    : <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textStrong }}>Load more</Text>
                   }
                 </TouchableOpacity>
                 <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textMuted, textAlign: 'center' }}>
