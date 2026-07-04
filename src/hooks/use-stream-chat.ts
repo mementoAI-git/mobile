@@ -1,8 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { storageKeys } from '@/constants/storage-keys';
-import { secureStorage } from '@/lib/secure-storage';
 import endpoint from '@/api/endpoint';
-import type { IAuth } from '@/types';
+import { useAuthStore } from '@/store';
 import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import { buildPromptWithReplyQuote, type ChatReplyQuote } from '@/lib/utils';
 
@@ -44,15 +42,6 @@ export function useStreamChat(memoryId?: string) {
     };
   }, []);
 
-  const getToken = async (): Promise<string | null> => {
-    try {
-      const raw = await secureStorage.getItem(storageKeys.auth);
-      return raw ? (JSON.parse(raw) as IAuth).access_token : null;
-    } catch {
-      return null;
-    }
-  };
-
   const send = useCallback(
     async (text: string, options?: SendOptions) => {
       if (!text.trim() || streamingRef.current) return;
@@ -75,7 +64,10 @@ export function useStreamChat(memoryId?: string) {
       abortRef.current = controller;
 
       try {
-        const token = await getToken();
+        // Read from in-memory Zustand store — synchronous, zero native I/O latency.
+        // secureStorage.getItem (expo-secure-store) requires hardware crypto per call: ~50–300ms.
+        // The token was already fetched once at app startup and hydrated into useAuthStore.
+        const token = useAuthStore.getState().token?.access_token ?? null;
         if (!isMountedRef.current) return;
 
         const response = await fetch(`${baseURL}${endpoint.aiPrompt}`, {

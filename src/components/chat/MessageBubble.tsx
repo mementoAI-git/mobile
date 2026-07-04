@@ -24,6 +24,10 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
   const aiModel = (message as any).ai_model;
   const replyQuote = (message as any).replyTo;
 
+  // Don't render empty bubbles — messages with no content are hidden entirely
+  const content = message.text || (message as any).content || '';
+  if (!content.trim()) return null;
+
   return (
     <Animated.View 
       entering={FadeInDown.duration(450).springify()}
@@ -62,7 +66,7 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
             letterSpacing: -0.03
           }}
         >
-          {message.text || (message as any).content || ''}
+          {content}
         </Text>
       </View>
 
