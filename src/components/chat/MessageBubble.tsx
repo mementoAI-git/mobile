@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import type { IMessage } from '@/types';
@@ -32,12 +32,9 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
       {/* Balanced, Cohesive Message Bubble Container */}
       <View
         className={cn(
-          'px-5 py-3.5',
-          isUser
-            ? 'bg-[#FAF7F2] rounded-[20px] rounded-tr-[4px]'
-            : 'bg-white rounded-[20px] rounded-bl-[4px]'
+          'px-5 py-3.5 rounded-[20px]',
+          isUser ? 'bg-fill-weaker' : 'bg-white'
         )}
-        style={isUser ? styles.userShadow : styles.aiShadow}
       >
         {/* Reply Quote Block */}
         {replyQuote && replyQuote.text && (
@@ -114,31 +111,3 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
   );
 });
 
-const styles = StyleSheet.create({
-  userShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.shadow,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.02,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 1,
-      },
-    }),
-  },
-  aiShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 1,
-      },
-    }),
-  },
-});
