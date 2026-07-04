@@ -30,7 +30,6 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FDFAF7"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "intentFilters": [
         {
@@ -95,11 +94,17 @@
       "@sentry/react-native",
       "expo-asset",
       "expo-video",
-      ["expo-speech-recognition", {
-  "microphonePermission": "Allow Memento to use the microphone for voice input.",
-  "speechRecognitionPermission": "Allow Memento to use speech recognition."
-}],
-      "expo-dev-client"
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow Memento to use the microphone for voice input.",
+          "speechRecognitionPermission": "Allow Memento to use speech recognition."
+        }
+      ],
+      "expo-dev-client",
+      "expo-image",
+      "expo-splash-screen",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true
