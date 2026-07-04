@@ -85,11 +85,12 @@ export function useStreamChat(memoryId?: string) {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
-            prompt: apiPrompt,
+            // Field names must match web/src/pages/dashboard/chat/conversation/index.tsx
+            text: apiPrompt,
             // Use ref so this always reads the latest memoryId without being a dep
-            ...(memoryIdRef.current ? { memory_id: memoryIdRef.current } : {}),
+            ...(memoryIdRef.current ? { memory: memoryIdRef.current } : {}),
             // Host Chat: send mode + dimension to the API (mirrors web)
-            ...(chatMode ? { chat_mode: chatMode } : {}),
+            ...(chatMode ? { chatMode } : {}),
             ...(chatMode === 'deep_dive' && deepDiveDimension
               ? { deep_dive_dimension: deepDiveDimension }
               : {}),
