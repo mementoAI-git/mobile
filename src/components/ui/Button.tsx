@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, ActivityIndicator, View } from 'react-native';
+import { Pressable, Text, ActivityIndicator, View, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -99,6 +99,11 @@ export function Button({
       onPressOut={() => {
         scale.value = withTiming(1, { duration: 150 });
       }}
+      android_ripple={
+        Platform.OS === 'android'
+          ? { color: COLORS.brandTint, borderless: false, radius: -1 }
+          : undefined
+      }
       style={animStyle}
       className={cn(
         'flex-row items-center justify-center',

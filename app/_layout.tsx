@@ -1,6 +1,6 @@
 import '../global.css';
 import React, { useEffect } from 'react';
-import { StyleSheet, Platform, LogBox } from 'react-native';
+import { StyleSheet, Platform, LogBox, StatusBar as RNStatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
 
@@ -186,6 +186,15 @@ function RootLayout() {
       });
     }
   }, [token, expoPushToken]);
+
+  // Set Android status bar background to match the app's cream surface.
+  // expo-status-bar doesn't expose backgroundColor — use RN's imperative API.
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      RNStatusBar.setBackgroundColor(COLORS.background, false);
+      RNStatusBar.setTranslucent(false);
+    }
+  }, []);
 
   // Hide splash once both auth is hydrated AND fonts are loaded.
   // .catch() silences the "No native splash screen registered" rejection that fires
