@@ -14,8 +14,14 @@ import React, { useRef, useCallback, useState, useEffect, useMemo } from 'react'
 import {
   View, Text, Modal, FlatList,
   TouchableOpacity, Dimensions, Animated as RNAnimated,
-  StyleSheet, Share, ActivityIndicator, Image, ImageBackground,
+  StyleSheet, Share, ActivityIndicator, Image, ImageBackground, Platform, Alert,
 } from 'react-native';
+// Type-only import: erased at compile time, never triggers the native module
+// lookup — safe to keep even when the real package isn't usable (Expo Go).
+import type * as MediaLibraryType from 'expo-media-library';
+import Constants from 'expo-constants';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Clipboard from 'expo-clipboard';
 import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView } from 'expo-video';
@@ -23,7 +29,7 @@ import { useAudioPlayer } from 'expo-audio';
 import { useVideoPlayer } from '@/hooks/use-video-player';
 import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, cancelAnimation } from 'react-native-reanimated';
-import { ChevronLeft, Share2, X, Mic, FileText, Music, Play, Pause, RotateCcw } from 'lucide-react-native';
+import { ChevronLeft, Share2, X, Mic, FileText, Music, Play, Pause, RotateCcw, Link2, Download } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -34,6 +40,17 @@ const SIDE_PAD = 24;
 const CARD_GAP = 12;
 // Effective card width
 const CARD_W = SCREEN_W - SIDE_PAD * 2;
+
+const isExpoGo = Constants.appOwnership === 'expo';
+
+// Lazily require the real module only when we're NOT in Expo Go — this
+// prevents ExpoMediaLibraryNext's native-module lookup from ever firing
+// under Expo Go, which is what was crashing on import before.
+function getMediaLibrary(): typeof MediaLibraryType | null {
+  if (isExpoGo) return null;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('expo-media-library') as typeof MediaLibraryType;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -52,6 +69,8 @@ interface Props {
   initialIndex?: number;
   onClose: () => void;
   onRemove?: (clientId: string) => void;
+  /** Parent memory ID — used to construct the share link */
+  memoryId?: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -442,7 +461,9 @@ function Dots({ count, active }: { count: number; active: number }) {
 
 // ─── Modal inner — reads insets from the scoped SafeAreaProvider ──────────────
 
-function ModalInner({ attachments, initialIndex, onClose, onRemove }: Omit<Props, 'visible' | 'initialIndex'> & { initialIndex: number }) {
+const PUBLISHED_BASE_URL = 'https://app.mymemento.io/post';
+
+function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: Omit<Props, 'visible' | 'initialIndex'> & { initialIndex: number }) {
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -460,8 +481,65 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove }: Omit<Props
     if (viewableItems.length > 0) setCurrentIndex(viewableItems[0].index ?? 0);
   }, []);
 
-  const handleShare = useCallback(async () => {
+  const [shareMenuVisible, setShareMenuVisible] = useState(false);
+
+  const handleShareButtonPress = useCallback(() => {
     Haptics.selectionAsync();
+    setShareMenuVisible(true);
+  }, []);
+
+  const handleShareLink = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShareMenuVisible(false);
+    if (memoryId) {
+      const url = `${PUBLISHED_BASE_URL}/${memoryId}`;
+      await Clipboard.setStringAsync(url);
+      // Also open native share with the link
+      await Share.share({ url, message: url });
+    }
+  }, [memoryId]);
+
+  const handleSaveToGallery = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShareMenuVisible(false);
+
+    const MediaLibrary = getMediaLibrary();
+    if (!MediaLibrary) {
+      // expo-media-library's native module isn't available in Expo Go.
+      // Keep the action visible (not hidden) but explain why it can't run yet.
+      Alert.alert(
+        'Not available in Expo Go',
+        'Saving to your gallery needs a development build. This will work once we move to EAS builds.',
+      );
+      return;
+    }
+
+    const item = attachments[currentIndex];
+    if (!item) return;
+
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') return;
+
+      // If the URI is remote (http/https), download it first
+      let localUri = item.uri;
+      if (item.uri.startsWith('http')) {
+        const filename = item.name || `memento_${Date.now()}`;
+        const downloadDest = `${FileSystem.cacheDirectory}${filename}`;
+        const { uri } = await FileSystem.downloadAsync(item.uri, downloadDest);
+        localUri = uri;
+      }
+
+      await MediaLibrary.saveToLibraryAsync(localUri);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      // Silent fail — user may have dismissed the permission dialog
+    }
+  }, [attachments, currentIndex]);
+
+  const handleShareFile = useCallback(async () => {
+    Haptics.selectionAsync();
+    setShareMenuVisible(false);
     const item = attachments[currentIndex];
     if (!item) return;
     try {
@@ -481,12 +559,9 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove }: Omit<Props
         <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
           <ChevronLeft size={20} color={COLORS.textBase} strokeWidth={2} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleShare} style={styles.sharePill} activeOpacity={0.8}>
+        <TouchableOpacity onPress={handleShareButtonPress} style={styles.sharePill} activeOpacity={0.8}>
           <Share2 size={14} color={COLORS.textBase} strokeWidth={2} />
           <Text style={styles.shareLabel}>Share</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
-          <X size={18} color={COLORS.textBase} strokeWidth={2.5} />
         </TouchableOpacity>
       </View>
 
@@ -519,13 +594,89 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove }: Omit<Props
       </View>
 
       <Dots count={attachments.length} active={currentIndex} />
+
+      {/* ── Custom share action panel ── */}
+      <Modal
+        visible={shareMenuVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShareMenuVisible(false)}
+      >
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
+          activeOpacity={1}
+          onPress={() => { Haptics.selectionAsync(); setShareMenuVisible(false); }}
+        />
+        <View style={{
+          backgroundColor: COLORS.background,
+          borderTopLeftRadius: 32,
+          borderTopRightRadius: 32,
+          paddingTop: 12,
+          paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+          paddingHorizontal: 24,
+          gap: 8,
+        }}>
+          {/* Handle */}
+          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: COLORS.strokeStrong, opacity: 0.3, alignSelf: 'center', marginBottom: 12 }} />
+
+          {/* Share memory link — only when memoryId is provided */}
+          {memoryId && (
+            <TouchableOpacity
+              onPress={handleShareLink}
+              activeOpacity={0.8}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, paddingHorizontal: 4 }}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
+                <Link2 size={20} color={COLORS.textBase} strokeWidth={1.8} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>Share memory link</Text>
+                <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>Copy and share the public link</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+
+          {/* Save to gallery */}
+          <TouchableOpacity
+            onPress={handleSaveToGallery}
+            activeOpacity={0.8}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, paddingHorizontal: 4 }}
+          >
+            <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
+              <Download size={20} color={COLORS.textBase} strokeWidth={1.8} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>Save to gallery</Text>
+              <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>Download this file to your device</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={{ height: 1, backgroundColor: COLORS.strokeWeaker, marginHorizontal: 4, marginVertical: 4 }} />
+
+          {/* Share file via OS sheet */}
+          <TouchableOpacity
+            onPress={handleShareFile}
+            activeOpacity={0.8}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, paddingHorizontal: 4 }}
+          >
+            <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
+              <Share2 size={20} color={COLORS.textBase} strokeWidth={1.8} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>Share file</Text>
+              <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>Send via message, email or another app</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onClose, onRemove }: Props) {
+export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onClose, onRemove, memoryId }: Props) {
   if (!attachments.length) return null;
   return (
     <Modal visible={visible} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
@@ -538,6 +689,7 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
           initialIndex={initialIndex}
           onClose={onClose}
           onRemove={onRemove}
+          memoryId={memoryId}
         />
       </SafeAreaProvider>
     </Modal>

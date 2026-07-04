@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { View, ScrollView, TouchableOpacity, ImageBackground, ActivityIndicator, Text} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, CreditCard, Sparkles, Receipt, RefreshCw, ExternalLink, AlertTriangle, Play, Pause } from 'lucide-react-native';
+import { ChevronLeft, Sparkles, Play, Pause } from 'lucide-react-native';
+import { UiCreditCard01, UiReceipt, UiRefreshCw05, UiLinkExternal01, UiStars01 } from '@/components/ui/icons/SettingsIcons';
 import { Button, TextInput, Card, Badge, ConfirmDialog } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -188,19 +189,24 @@ export default function BillingSettingsScreen() {
           >
             <ChevronLeft size={22} color={COLORS.textBase} />
           </TouchableOpacity>
-          <Text
-            className="text-[28px] text-text-strong"
-            style={{ fontFamily: FONTS.serif }}
-          >
-            Billing
-          </Text>
+          <View>
+            <Text
+              className="text-[28px] text-text-strong"
+              style={{ fontFamily: FONTS.serif }}
+            >
+              Billing
+            </Text>
+            <Text className="text-[13px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
+              Manage your plan and payments
+            </Text>
+          </View>
         </View>
 
         <TouchableOpacity
           onPress={handleRefresh}
           className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
         >
-          <RefreshCw size={16} color={COLORS.textBase} />
+          <UiRefreshCw05 size={16} color={COLORS.textBase} strokeWidth={1.8} />
         </TouchableOpacity>
       </View>
 
@@ -213,11 +219,11 @@ export default function BillingSettingsScreen() {
             <View className="bg-white rounded-[32px] p-6">
               <View className="flex-row items-center gap-4 mb-6">
                 <View className="size-12 rounded-2xl bg-brand-tint items-center justify-center">
-                  <CreditCard size={24} color={COLORS.brand} />
+                  <UiCreditCard01 size={24} color={COLORS.brand} strokeWidth={1.8} />
                 </View>
                 <View className="flex-1">
                   <View className="flex-row items-center gap-2">
-                    <Text className="text-lg text-text-strong capitalize" style={{ fontFamily: FONTS.sansSemi }}>
+                    <Text className="text-lg text-text-strong capitalize" style={{ fontFamily: FONTS.sansBold }}>
                       {summary?.tier ?? 'Free Tier'}
                     </Text>
                     {isProOrAbove && (
@@ -344,13 +350,13 @@ export default function BillingSettingsScreen() {
                 <View className="flex-row gap-4">
                   <View className="flex-1 bg-fill-weaker rounded-2xl p-4">
                     <Text className="text-[10px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Trustees</Text>
-                    <Text className="text-lg text-text-strong mt-1" style={{ fontFamily: FONTS.sansBold }}>
+                    <Text style={{ fontFamily: FONTS.sansBold, fontSize: 28, color: COLORS.textStrong, marginTop: 4, lineHeight: 34 }}>
                       {usage.beneficiary_count ?? 0}
                     </Text>
                   </View>
                   <View className="flex-1 bg-fill-weaker rounded-2xl p-4">
                     <Text className="text-[10px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>Capsules</Text>
-                    <Text className="text-lg text-text-strong mt-1" style={{ fontFamily: FONTS.sansBold }}>
+                    <Text style={{ fontFamily: FONTS.sansBold, fontSize: 28, color: COLORS.textStrong, marginTop: 4, lineHeight: 34 }}>
                       {usage.timed_message_count ?? 0}
                     </Text>
                   </View>
@@ -398,8 +404,8 @@ export default function BillingSettingsScreen() {
           {isProOrAbove && (
             <Animated.View entering={FadeInDown.delay(300).duration(600)}>
               <View className="bg-white rounded-[32px] p-6 gap-4">
-                <View className="flex-row items-center gap-2">
-                  <Receipt size={16} color={COLORS.textBase} />
+                    <View className="flex-row items-center gap-2">
+                        <UiReceipt size={16} color={COLORS.textBase} strokeWidth={1.8} />
                   <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
                     Invoices
                   </Text>
@@ -421,7 +427,7 @@ export default function BillingSettingsScreen() {
                           {inv.label || `Invoice #${idx + 1}`}
                         </Text>
                         {inv.url && (
-                          <ExternalLink size={14} color={COLORS.brand} strokeWidth={1.5} />
+                          <UiLinkExternal01 size={14} color={COLORS.brand} strokeWidth={1.5} />
                         )}
                       </TouchableOpacity>
                     ))}

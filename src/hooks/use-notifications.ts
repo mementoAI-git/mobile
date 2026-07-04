@@ -1,27 +1,40 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
+// Type-only import: this line is erased at compile time and never triggers
+// the actual expo-notifications module code to run, so it's safe in Expo Go.
+import type * as NotificationsType from 'expo-notifications';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useUiStore, useAuthStore } from '@/store';
 
-// Notifications.setNotificationHandler is moved inside useEffect to avoid issues in Expo Go
+const isExpoGo = Constants.appOwnership === 'expo';
+
+// Lazily require the real module only when we're NOT in Expo Go.
+// This prevents expo-notifications' own module-eval-time throw from ever firing.
+function getNotifications(): typeof NotificationsType | null {
+  if (isExpoGo) return null;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('expo-notifications') as typeof NotificationsType;
+}
 
 export function useNotifications() {
   const router = useRouter();
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
-  const [notification, setNotification] = useState<Notifications.Notification | null>(null);
-  const notificationListener = useRef<Notifications.Subscription | null>(null);
-  const responseListener = useRef<Notifications.Subscription | null>(null);
+  const [notification, setNotification] = useState<NotificationsType.Notification | null>(null);
+  const notificationListener = useRef<NotificationsType.Subscription | null>(null);
+  const responseListener = useRef<NotificationsType.Subscription | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    if (Constants.appOwnership === 'expo') {
+    if (isExpoGo) {
       console.log('Push notifications are not supported in Expo Go (SDK 53+). Please use a development build.');
       return;
     }
+
+    const Notifications = getNotifications();
+    if (!Notifications) return;
 
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
@@ -36,7 +49,7 @@ export function useNotifications() {
       if (isMounted && token) setExpoPushToken(token);
     });
 
-    const handleNotificationResponse = (response: Notifications.NotificationResponse) => {
+    const handleNotificationResponse = (response: NotificationsType.NotificationResponse) => {
       const data = response.notification.request.content.data as { type?: string; id?: string; url?: string };
       console.log('Notification response data:', data);
 
@@ -116,6 +129,9 @@ export function useNotifications() {
 }
 
 async function registerForPushNotificationsAsync() {
+  const Notifications = getNotifications();
+  if (!Notifications) return null;
+
   let token;
 
   if (Platform.OS === 'android') {
@@ -140,7 +156,7 @@ async function registerForPushNotificationsAsync() {
     try {
       const projectId =
         Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
-      
+
       if (!projectId) {
         console.warn('Project ID not found in app config. Ensure EAS is configured.');
         return null;

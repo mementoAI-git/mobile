@@ -70,9 +70,10 @@ const GLASS_BG = Platform.select({
 const SPRING = { damping: 22, stiffness: 280, mass: 0.8 };
 
 // Widths
-const INACTIVE_W = 60;   // tight icon-only touch target
+// Android Material minimum touch target is 48dp; iOS HIG is 44pt.
+const INACTIVE_W = Platform.OS === 'android' ? 64 : 60;
 const ACTIVE_W   = 96;  // expanded pill with label
-const PILL_H     = 58;
+const PILL_H     = Platform.OS === 'android' ? 60 : 58;
 const ICON_SIZE  = 26;
 
 // ─── Single tab item ──────────────────────────────────────────────────────────
@@ -244,7 +245,8 @@ const PILL_SHADOW = Platform.select({
     shadowOpacity: 0.12,
     shadowRadius: 24,
   },
-  android: { elevation: 12 },
+  // Material elevation 8 = floating pill (matches FAB-level prominence)
+  android: { elevation: 8 },
   default: {},
 });
 
@@ -318,10 +320,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
 
-  // Detached search circle
+  // Detached search circle — 56 iOS, 56 Android (already ≥48dp Material minimum)
   searchCircle: {
-    width: 56,
-    height: 56,
+    width: Platform.OS === 'android' ? 56 : 56,
+    height: Platform.OS === 'android' ? 56 : 56,
     borderRadius: 28,
     backgroundColor: GLASS_BG,
     alignItems: 'center',

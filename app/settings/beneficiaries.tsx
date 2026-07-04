@@ -2,7 +2,8 @@ import React from 'react';
 import { View, ScrollView, ImageBackground, TouchableOpacity, Text} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, Plus, Trash2, Mail, ShieldCheck } from 'lucide-react-native';
+import { ChevronLeft, Plus } from 'lucide-react-native';
+import { UiTrash01, UiMail01, UiShieldTick } from '@/components/ui/icons/SettingsIcons';
 import * as Haptics from 'expo-haptics';
 import { Avatar, Button, Spinner, Badge, Skeleton } from '@/components/ui';
 import { useBeneficiariesSettingsLogic } from '@/hooks/use-beneficiaries-settings-logic';
@@ -13,10 +14,7 @@ const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 function BeneficiariesSkeleton() {
   return (
     <View className="flex-grow p-6 gap-4">
-      {/* Intro info box skeleton */}
       <Skeleton className="h-12 w-[90%] rounded-xl mb-2" />
-
-      {/* Row items skeleton */}
       {[1, 2, 3, 4].map((i) => (
         <View key={i} className="bg-white rounded-[24px] p-5 flex-row items-center gap-4">
           <Skeleton className="size-12 rounded-full" />
@@ -45,29 +43,49 @@ export default function BeneficiariesSettingsScreen() {
     router,
   } = useBeneficiariesSettingsLogic();
 
+  const count = beneficiaries?.length ?? 0;
+
+  const headerContent = (
+    <View className="flex-row items-center justify-between px-6 py-4">
+      <View className="flex-row items-center gap-3">
+        <TouchableOpacity
+          onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
+          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
+        >
+          <ChevronLeft size={22} color={COLORS.textBase} />
+        </TouchableOpacity>
+        <View>
+          <Text
+            className="text-[28px] text-text-strong"
+            style={{ fontFamily: FONTS.serif }}
+          >
+            Beneficiaries
+          </Text>
+          <Text className="text-[13px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
+            Your trusted circle
+          </Text>
+        </View>
+      </View>
+      {!isLoading && (
+        <TouchableOpacity
+          onPress={handleAdd}
+          className="size-11 rounded-full bg-brand items-center justify-center"
+        >
+          <Plus size={22} color="white" strokeWidth={2.5} />
+        </TouchableOpacity>
+      )}
+      {isLoading && (
+        <View className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center">
+          <Plus size={22} color={COLORS.textWeak} />
+        </View>
+      )}
+    </View>
+  );
+
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-        {/* Header */}
-        <View className="flex-row items-center justify-between px-6 py-4">
-          <View className="flex-row items-center gap-3">
-            <TouchableOpacity
-              onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
-              className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
-            >
-              <ChevronLeft size={22} color={COLORS.textBase} />
-            </TouchableOpacity>
-            <Text
-              className="text-[28px] text-text-strong"
-              style={{ fontFamily: FONTS.serif }}
-            >
-              Beneficiaries
-            </Text>
-          </View>
-          <View className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center">
-            <Plus size={22} color={COLORS.textWeak} />
-          </View>
-        </View>
+        {headerContent}
         <BeneficiariesSkeleton />
       </SafeAreaView>
     );
@@ -75,43 +93,47 @@ export default function BeneficiariesSettingsScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-      <View className="flex-row items-center justify-between px-6 py-4">
-        <View className="flex-row items-center gap-3">
-          <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
-            className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
-          >
-            <ChevronLeft size={22} color={COLORS.textBase} />
-          </TouchableOpacity>
-          <Text
-            className="text-[28px] text-text-strong"
-            style={{ fontFamily: FONTS.serif }}
-          >
-            Beneficiaries
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={handleAdd}
-          className="size-11 rounded-full bg-brand items-center justify-center"
-        >
-          <Plus size={22} color="white" strokeWidth={2.5} />
-        </TouchableOpacity>
-      </View>
+      {headerContent}
 
       <View className="flex-1">
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pb-24 gap-4">
-          <Animated.View entering={FadeInDown.duration(600)} className="pt-2 pb-4">
-            <Text className="text-base text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+
+          {/* Stat + intro block */}
+          <Animated.View entering={FadeInDown.duration(500)} className="pt-2 pb-2 gap-4">
+            {count > 0 && (
+              <View className="bg-white rounded-[24px] p-5 flex-row items-center gap-4">
+                <View style={{ flex: 1 }}>
+                  <Text className="text-[10px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
+                    Trusted People
+                  </Text>
+                  <View className="flex-row items-baseline gap-1.5 mt-1">
+                    <Text style={{ fontFamily: FONTS.sansBold, fontSize: 32, color: COLORS.success, lineHeight: 38 }}>
+                      {count}
+                    </Text>
+                    <Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+                      {count === 1 ? 'trustee' : 'trustees'}
+                    </Text>
+                  </View>
+                </View>
+                <View
+                  className="size-14 rounded-2xl items-center justify-center"
+                  style={{ backgroundColor: `${COLORS.success}10` }}
+                >
+                  <UiShieldTick size={28} color={COLORS.success} strokeWidth={1.5} />
+                </View>
+              </View>
+            )}
+            <Text className="text-[14px] text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
               These are the trusted people who will receive your memories and capsules according to your wishes.
             </Text>
           </Animated.View>
 
-          {beneficiaries?.length === 0 ? (
-            <Animated.View entering={FadeInDown.delay(200)} className="items-center py-24 gap-8">
+          {count === 0 ? (
+            <Animated.View entering={FadeInDown.delay(200)} className="items-center py-20 gap-8">
               <View className="size-28 rounded-full bg-brand/5 border border-brand/10 items-center justify-center">
-                <ShieldCheck size={52} color={COLORS.brand} strokeWidth={1.2} />
+                <UiShieldTick size={52} color={COLORS.brand} strokeWidth={1.2} />
               </View>
               <View className="items-center gap-3">
                 <Text
@@ -121,7 +143,7 @@ export default function BeneficiariesSettingsScreen() {
                   Protect your legacy
                 </Text>
                 <Text
-                  className="text-base text-text-weak text-center px-8 leading-relaxed"
+                  className="text-[14px] text-text-weak text-center px-8 leading-relaxed"
                   style={{ fontFamily: FONTS.sans }}
                 >
                   Add trusted people who can receive your memories and time capsules in the future.
@@ -139,20 +161,19 @@ export default function BeneficiariesSettingsScreen() {
             beneficiaries?.map((b: any, idx: number) => (
               <Animated.View
                 key={b._id}
-                entering={FadeInDown.delay(100 * idx)}
-               
+                entering={FadeInDown.delay(80 * idx)}
                 className="bg-white rounded-[24px] p-5 flex-row items-center gap-4"
               >
                 <Avatar name={b.name} size="lg" className="border-2 border-brand/5" />
                 <View className="flex-1 gap-1">
                   <Text
-                    className="text-lg text-text-strong leading-tight"
+                    className="text-[18px] text-text-strong leading-tight"
                     style={{ fontFamily: FONTS.serif }}
                   >
                     {b.name || 'Pending Invitation'}
                   </Text>
                   <Text
-                    className="text-xs text-text-weak leading-relaxed"
+                    className="text-[13px] text-text-weak"
                     numberOfLines={1}
                     style={{ fontFamily: FONTS.sansMedium }}
                   >
@@ -171,14 +192,14 @@ export default function BeneficiariesSettingsScreen() {
                     className="size-10 rounded-full items-center justify-center border"
                     style={{ backgroundColor: `${COLORS.error}10`, borderColor: `${COLORS.error}20` }}
                   >
-                    <Trash2 size={16} color={COLORS.error} />
+                    <UiTrash01 size={16} color={COLORS.error} strokeWidth={1.8} />
                   </TouchableOpacity>
                   {b.status === 'pending' && (
                     <TouchableOpacity
                       onPress={() => handleResend(b.email)}
                       className="size-10 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
                     >
-                      <Mail size={16} color={COLORS.textBase} />
+                      <UiMail01 size={16} color={COLORS.textBase} strokeWidth={1.8} />
                     </TouchableOpacity>
                   )}
                 </View>

@@ -13,9 +13,17 @@ export interface Activity {
   updated_at?: string;
 }
 
-interface ActivitiesResponse {
+export interface ActivitiesResponse {
   docs: Activity[];
   totalDocs: number;
+  limit: number;
+  totalPages: number;
+  page: number;
+  pagingCounter: number;
+  hasPrevPage: boolean;
+  hasNextPage: boolean;
+  prevPage: number | null;
+  nextPage: number | null;
 }
 
 export function useActivities(params?: { page?: number; limit?: number }) {

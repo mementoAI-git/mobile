@@ -45,6 +45,7 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { MediaPickerMenu } from './MediaPickerMenu';
 import type { EditorBridge } from '@10play/tentap-editor';
 import { useBridgeState } from '@10play/tentap-editor';
 
@@ -285,36 +286,17 @@ export function EditorActionBar({
   if (isStory) {
     return (
       <View style={{ flexShrink: 0, flexGrow: 0 }}>
-        {/* Transparent backdrop — extends infinitely upward to cover the entire
-            editor body so tapping anywhere outside the menu collapses it */}
-        {uploadOpen && (
-          <Pressable
-            onPress={() => { Haptics.selectionAsync(); setUploadOpen(false); }}
-            style={{ position: 'absolute', top: -9999, bottom: 0, left: 0, right: 0, zIndex: 100 }}
-          />
-        )}
-
-        {/* Upload mini-menu — rendered OUTSIDE the ScrollView so it isn't clipped */}
-        {uploadOpen && (
-          <View style={[styles.uploadMenu, { marginLeft: 12 }]}>
-            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); callAndClose(onPhoto); }} activeOpacity={0.8} style={styles.uploadItem}>
-              <ImageIcon size={18} color={COLORS.textStrong} strokeWidth={1.8} />
-              <Text style={styles.uploadLabel}>Gallery</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); callAndClose(onCamera); }} activeOpacity={0.8} style={styles.uploadItem}>
-              <ImagePlus size={18} color={COLORS.textStrong} strokeWidth={1.8} />
-              <Text style={styles.uploadLabel}>Camera</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); callAndClose(onAudio); }} activeOpacity={0.8} style={[styles.uploadItem, isRecording && { backgroundColor: `${COLORS.error}15` }]}>
-              <AudioLines size={18} color={isRecording ? COLORS.error : COLORS.textStrong} strokeWidth={1.8} />
-              <Text style={[styles.uploadLabel, isRecording && { color: COLORS.error }]}>{isRecording ? 'Recording…' : 'Voice'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); callAndClose(onFile); }} activeOpacity={0.8} style={styles.uploadItem}>
-              <Music size={18} color={COLORS.textStrong} strokeWidth={1.8} />
-              <Text style={styles.uploadLabel}>File</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Shared media picker menu — handles backdrop + tiles */}
+        <MediaPickerMenu
+          visible={uploadOpen}
+          onClose={() => setUploadOpen(false)}
+          onGallery={() => callAndClose(onPhoto)}
+          onCamera={() => callAndClose(onCamera)}
+          onVoice={() => callAndClose(onAudio)}
+          onFile={() => callAndClose(onFile)}
+          isRecording={isRecording}
+          menuLeft={12}
+        />
 
         {/* Keyboard anchor + toolbar row */}
         <ScrollView

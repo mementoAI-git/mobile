@@ -87,7 +87,9 @@ export function useCategoryPromptsLogic() {
       pathname: '/chat/[id]',
       // promptTitle is passed so the chat screen can display the question card
       // immediately — before the async useMemoryByPrompt query resolves.
-      params: { id: prompt._id || '', type: 'prompt', promptTitle: prompt.title || '' },
+      // promptLabel: id is the category slug (e.g. 'career', 'life-transition')
+      // chat/[id].tsx title-cases it to show "Career" / "Life Transition" instead of "Today's reflection"
+      params: { id: prompt._id || '', type: 'prompt', promptTitle: prompt.title || '', promptLabel: id || '' },
     });
   };
 

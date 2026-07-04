@@ -31,6 +31,7 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { useChatLogic } from '@/hooks/use-chat-logic';
+import { useLocalSearchParams } from 'expo-router';
 import { useBackHandler } from '@/hooks/use-back-handler';
 import * as Haptics from 'expo-haptics';
 import { VoiceModeOverlay } from '@/components/chat/VoiceModeOverlay';
@@ -40,6 +41,9 @@ import { X } from 'lucide-react-native';
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 export default function ChatScreen() {
+  // promptLabel is only set by BrowseTopicsSection topic cards — daily prompts don't set it
+  const { promptLabel } = useLocalSearchParams<{ promptLabel?: string }>();
+
   const {
     isPromptType,
     promptMemory,
@@ -127,6 +131,20 @@ export default function ChatScreen() {
     send(starter);
   }, [send]);
 
+  const handleScrollToOriginal = useCallback((quotedText: string) => {
+    // Find the message whose content matches the quoted text snippet
+    const idx = allMessages.findIndex((m: any) => {
+      const body = m.text || m.content || '';
+      return body.includes(quotedText.slice(0, 60));
+    });
+    if (idx >= 0 && flatListRef.current) {
+      try {
+        flatListRef.current.scrollToIndex({ index: idx, animated: true, viewPosition: 0.3 });
+        Haptics.selectionAsync();
+      } catch { /* scrollToIndex can throw if item not yet rendered */ }
+    }
+  }, [allMessages]);
+
   const renderMessage = useCallback(
     ({ item }: { item: any }) => (
       <MessageBubble
@@ -135,9 +153,14 @@ export default function ChatScreen() {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           setReplyQuote({ role: item.role, text: item.text });
         }}
+        onScrollToOriginal={
+          (item as any).replyTo?.text
+            ? () => handleScrollToOriginal((item as any).replyTo.text)
+            : undefined
+        }
       />
     ),
-    [],
+    [handleScrollToOriginal],
   );
 
   const listHeaderComponent = React.useMemo(() => {
@@ -289,7 +312,9 @@ export default function ChatScreen() {
                     className="text-[10px] font-bold uppercase tracking-widest"
                     style={{ fontFamily: FONTS.sansBold, color: COLORS.brand }}
                   >
-                    Today's reflection
+                    {promptLabel
+                      ? promptLabel.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+                      : "Today's reflection"}
                   </Animated.Text>
                 </View>
                 <Animated.Text

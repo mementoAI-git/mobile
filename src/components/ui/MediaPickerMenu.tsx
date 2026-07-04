@@ -1,0 +1,153 @@
+/**
+ * MediaPickerMenu — shared floating media-type picker
+ *
+ * Used in:
+ *  - EditorActionBar (story + quick-capture editor)
+ *  - ChatInput (chat screen attachment picker)
+ *
+ * Renders a horizontal row of icon+label tiles above the trigger button.
+ * A transparent backdrop Pressable dismisses it on outside tap.
+ */
+
+import React from 'react';
+import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
+import { Image as ImageIcon, ImagePlus, AudioLines, Music } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import { COLORS, FONTS } from '@/constants/tokens';
+
+export interface MediaPickerMenuProps {
+  visible: boolean;
+  onClose: () => void;
+  onGallery?: () => void;
+  onCamera?: () => void;
+  onVoice?: () => void;
+  onFile?: () => void;
+  /** Shows recording state on the Voice tile */
+  isRecording?: boolean;
+  /**
+   * Left offset for the menu positioning — defaults to 12.
+   * Pass a number matching the left position of your trigger button.
+   */
+  menuLeft?: number;
+}
+
+export function MediaPickerMenu({
+  visible,
+  onClose,
+  onGallery,
+  onCamera,
+  onVoice,
+  onFile,
+  isRecording = false,
+  menuLeft = 12,
+}: MediaPickerMenuProps) {
+  if (!visible) return null;
+
+  const callAndClose = (fn?: () => void) => {
+    onClose();
+    fn?.();
+  };
+
+  return (
+    <>
+      {/* Transparent backdrop — tap anywhere outside to dismiss */}
+      <Pressable
+        onPress={() => { Haptics.selectionAsync(); onClose(); }}
+        style={styles.backdrop}
+      />
+
+      {/* Menu row */}
+      <View style={[styles.menu, { marginLeft: menuLeft }]}>
+        <TouchableOpacity
+          onPress={() => { Haptics.selectionAsync(); callAndClose(onGallery); }}
+          activeOpacity={0.8}
+          style={styles.item}
+        >
+          <ImageIcon size={18} color={COLORS.textStrong} strokeWidth={1.8} />
+          <Text style={styles.label}>Gallery</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => { Haptics.selectionAsync(); callAndClose(onCamera); }}
+          activeOpacity={0.8}
+          style={styles.item}
+        >
+          <ImagePlus size={18} color={COLORS.textStrong} strokeWidth={1.8} />
+          <Text style={styles.label}>Camera</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => { Haptics.selectionAsync(); callAndClose(onVoice); }}
+          activeOpacity={0.8}
+          style={[styles.item, isRecording && styles.itemRecording]}
+        >
+          <AudioLines size={18} color={isRecording ? COLORS.error : COLORS.textStrong} strokeWidth={1.8} />
+          <Text style={[styles.label, isRecording && styles.labelRecording]}>
+            {isRecording ? 'Recording…' : 'Voice'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => { Haptics.selectionAsync(); callAndClose(onFile); }}
+          activeOpacity={0.8}
+          style={styles.item}
+        >
+          <Music size={18} color={COLORS.textStrong} strokeWidth={1.8} />
+          <Text style={styles.label}>File</Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: {
+    position: 'absolute',
+    top: -9999,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+  },
+  menu: {
+    position: 'absolute',
+    bottom: '100%',
+    left: 0,
+    flexDirection: 'row',
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    gap: 4,
+    marginBottom: 8,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    zIndex: 200,
+  },
+  item: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: COLORS.fillWeak,
+    minWidth: 64,
+  },
+  itemRecording: {
+    backgroundColor: `${COLORS.error}15`,
+  },
+  label: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: 11,
+    color: COLORS.textStrong,
+  },
+  labelRecording: {
+    color: COLORS.error,
+  },
+});
