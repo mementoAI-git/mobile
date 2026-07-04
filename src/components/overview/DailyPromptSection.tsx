@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { Mic, CheckCircle2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useUiStore } from '@/store';
+import { useRouter } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { IDashboardPromptSlot } from '@/types';
@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function DailyPromptSection({ prompts, isLoading }: Props) {
-  const openSheet = useUiStore((s) => s.openSheet);
+  const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
@@ -34,13 +34,18 @@ export function DailyPromptSection({ prompts, isLoading }: Props) {
 
   const handleCapture = () => {
     if (activeRow.answered) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    const payload = activeRow.slot_kind === 'ai'
-      ? { pinned_text: activeRow.ai_prompt_text, prompt_type: 'ai-generated', reflection_day_key: activeRow.reflection_day_key }
-      : { pinned_text: activeRow.prompt?.title, prompt_type: 'static', prompt_id: activeRow.prompt?._id, reflection_day_key: activeRow.reflection_day_key };
-
-    openSheet('quick-capture', { daily_prompt: payload });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Navigate to chat as a prompt reflection — same pattern as explore page
+    // promptTitle is available immediately before the API resolves (shown pinned at top)
+    // AI-generated daily prompts have no stored _id so we use 'new'
+    router.push({
+      pathname: '/chat/[id]',
+      params: {
+        id: activeRow.prompt?._id || 'new',
+        type: 'prompt',
+        promptTitle: promptText || '',
+      },
+    });
   };
 
   return (
