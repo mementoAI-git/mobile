@@ -65,7 +65,7 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
             letterSpacing: -0.03
           }}
         >
-          {message.text}
+          {message.text || (message as any).content || ''}
         </Text>
       </View>
 
