@@ -68,10 +68,12 @@ export function BrowseTopicsSection({ prompts, isLoading }: Props) {
               title={t.title}
               image={meta.image}
               category={t.category}
-              onPress={() => router.push({
-                pathname: '/chat/[id]',
-                params: { id: t._id, title: t.title }
-              })}
+              onPress={() => {
+                router.push({
+                  pathname: '/chat/[id]',
+                  params: { id: t._id || '', type: 'prompt', promptTitle: t.title || '' },
+                });
+              }}
             />
           );
         })}
