@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { View, ScrollView, ImageBackground, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, ChevronRight, Flame } from 'lucide-react-native';
-import { UiLock01, UiEye, UiUsers01, UiPhone01, UiMessageChatSquare, UiCreditCard01, UiLogOut01, UiZapFast } from '@/components/ui/icons/SettingsIcons';
+import { UiLock01, UiEye, UiUsers01, UiPhone01, UiMessageChatSquare, UiCreditCard01, UiLogOut01, UiZapFast, UiDatabase01 } from '@/components/ui/icons/SettingsIcons';
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Avatar } from '@/components/ui';
@@ -16,12 +16,13 @@ const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 // ─── Nav items with individual tint colors ──────────────────────────────────
 
 const NAV_ITEMS = [
-  { label: 'Security',      desc: 'Password, biometrics and login',     Icon: UiLock01,            href: '/settings/account',      iconBg: `${COLORS.brand}12`,   iconColor: COLORS.brand   },
-  { label: 'Privacy',       desc: 'Visibility, data and AI preferences', Icon: UiEye,              href: '/settings/privacy',       iconBg: `${COLORS.info}12`,    iconColor: COLORS.info    },
-  { label: 'Beneficiaries', desc: 'Manage your trusted circle',          Icon: UiUsers01,          href: '/settings/beneficiaries', iconBg: `${COLORS.success}12`, iconColor: COLORS.success },
-  { label: '2FA',           desc: 'Two-factor authentication',           Icon: UiPhone01,          href: '/settings/two-factor',    iconBg: `${COLORS.warning}12`, iconColor: COLORS.warning },
-  { label: 'Billing',       desc: 'Plan, payments and usage',            Icon: UiCreditCard01,     href: '/settings/billing',       iconBg: `${COLORS.brand}12`,   iconColor: COLORS.brand   },
-  { label: 'Feedback',      desc: 'Share thoughts and suggestions',      Icon: UiMessageChatSquare, href: '__feedback__',           iconBg: COLORS.fillWeak,       iconColor: COLORS.textBase },
+  { label: 'Security',      desc: 'Password, biometrics and login',       Icon: UiLock01,            href: '/settings/account',      iconBg: `${COLORS.brand}12`,   iconColor: COLORS.brand   },
+  { label: 'Privacy',       desc: 'Visibility, data and AI preferences',   Icon: UiEye,               href: '/settings/privacy',       iconBg: `${COLORS.info}12`,    iconColor: COLORS.info    },
+  { label: 'Beneficiaries', desc: 'Manage your trusted circle',            Icon: UiUsers01,           href: '/settings/beneficiaries', iconBg: `${COLORS.success}12`, iconColor: COLORS.success },
+  { label: '2FA',           desc: 'Two-factor authentication',             Icon: UiPhone01,           href: '/settings/two-factor',    iconBg: `${COLORS.warning}12`, iconColor: COLORS.warning },
+  { label: 'Billing',       desc: 'Plan, payments and usage',              Icon: UiCreditCard01,      href: '/settings/billing',       iconBg: `${COLORS.brand}12`,   iconColor: COLORS.brand   },
+  { label: 'Activity',      desc: 'Your recent actions and history',       Icon: UiZapFast,           href: '/settings/activities',    iconBg: `${COLORS.success}12`, iconColor: COLORS.success },
+  { label: 'Feedback',      desc: 'Share thoughts and suggestions',        Icon: UiMessageChatSquare, href: '__feedback__',            iconBg: COLORS.fillWeak,       iconColor: COLORS.textBase },
 ];
 
 // ─── Animated pressable row ───────────────────────────────────────────────────
