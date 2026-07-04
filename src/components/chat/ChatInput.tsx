@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, Platform, StyleSheet,
   Keyboard, ScrollView, Image, ActivityIndicator,
 } from 'react-native';
-import { ArrowUp, Mic, Square, Phone, Paperclip, X, FileText } from 'lucide-react-native';
+import { ArrowUp, Mic, Square, Phone, Paperclip, X, FileText, Image as ImageIcon } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -150,8 +150,8 @@ export function ChatInput({
 
   // ─── File upload helper ───────────────────────────────────────────────────
 
-  const uploadAndAdd = useCallback(async (uri: string, mimeType: string, name: string) => {
-    if (uri.length > MAX_FILE_BYTES) {
+  const uploadAndAdd = useCallback(async (uri: string, mimeType: string, name: string, fileSize?: number) => {
+    if (fileSize && fileSize > MAX_FILE_BYTES) {
       toast(`Files must be under ${MAX_FILE_MB}MB`, 'error');
       return;
     }
@@ -171,14 +171,43 @@ export function ChatInput({
     }
   }, [uploadFile]);
 
-  // ─── Attachment picker ────────────────────────────────────────────────────
+  // ─── Attachment pickers ───────────────────────────────────────────────────
 
-  const handleAttach = useCallback(async () => {
+  // Gallery picker — photos + videos via ImagePicker (reliable on iOS & Android)
+  const handlePickGallery = useCallback(async () => {
     Haptics.selectionAsync();
-    // Show action sheet style choice — images/docs via document picker (supports both on iOS/Android)
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        toast('Allow Memento to access your photos and videos.', 'error');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images', 'videos'],
+        allowsMultipleSelection: true,
+        quality: 0.85,
+      });
+      if (!result.canceled) {
+        for (const asset of result.assets) {
+          const isVideo = asset.mimeType?.startsWith('video/');
+          const mime = asset.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg');
+          const name = asset.fileName || `${isVideo ? 'video' : 'photo'}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`;
+          await uploadAndAdd(asset.uri, mime, name, asset.fileSize);
+        }
+      }
+    } catch { /* user cancelled */ }
+  }, [uploadAndAdd, toast]);
+
+  // Document picker — audio, PDF, text, other files
+  const handlePickDocument = useCallback(async () => {
+    Haptics.selectionAsync();
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: SUPPORTED_MIME,
+        type: [
+          'audio/mpeg', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/*',
+          'application/pdf',
+          'text/plain',
+        ],
         copyToCacheDirectory: true,
         multiple: true,
       });
@@ -188,11 +217,11 @@ export function ChatInput({
             toast(`"${asset.name}" exceeds the ${MAX_FILE_MB}MB limit.`, 'error');
             continue;
           }
-          await uploadAndAdd(asset.uri, asset.mimeType || 'application/octet-stream', asset.name);
+          await uploadAndAdd(asset.uri, asset.mimeType || 'application/octet-stream', asset.name, asset.size);
         }
       }
     } catch { /* user cancelled */ }
-  }, [uploadAndAdd]);
+  }, [uploadAndAdd, toast]);
 
   const removeAttachment = useCallback((clientId: string) => {
     Haptics.selectionAsync();
@@ -335,10 +364,22 @@ export function ChatInput({
 
         {/* Right-side controls */}
         <View className="flex-row items-center gap-1.5">
-          {/* Paperclip — attach file */}
+          {/* Gallery picker — photos + videos */}
           {!isRecording && !showStop && (
             <TouchableOpacity
-              onPress={handleAttach}
+              onPress={handlePickGallery}
+              disabled={disabled || anyUploading}
+              className="rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
+              style={{ width: scale(28), height: scale(28), borderRadius: scale(14), opacity: disabled || anyUploading ? 0.4 : 1 }}
+            >
+              <ImageIcon size={scale(12)} color={COLORS.textWeak} strokeWidth={2} />
+            </TouchableOpacity>
+          )}
+
+          {/* Document picker — audio, PDF, text */}
+          {!isRecording && !showStop && (
+            <TouchableOpacity
+              onPress={handlePickDocument}
               disabled={disabled || anyUploading}
               className="rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
               style={{ width: scale(28), height: scale(28), borderRadius: scale(14), opacity: disabled || anyUploading ? 0.4 : 1 }}

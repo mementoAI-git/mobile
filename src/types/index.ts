@@ -229,12 +229,22 @@ export interface IDashboardPromptSlot {
   display_label?: string;
 }
 
+export interface IMessageAttachment {
+  _id?: string;
+  url: string;
+  name: string;
+  type?: string;
+  size?: string | number;
+}
+
 export interface IMessage {
   _id?: string;
   user: string;
   text: string;
   role: string;
   created_at: string;
+  /** Matches web's `attatchments` field (intentional typo preserved for API parity) */
+  attatchments?: IMessageAttachment[];
 }
 
 export interface IOnUploadPayload {
