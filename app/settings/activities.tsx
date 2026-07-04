@@ -22,8 +22,8 @@ function EditorialHeroCard({ totalDocs }: { totalDocs: number }) {
   if (totalDocs === 0) return null;
 
   const bodyText = totalDocs >= 100
-    ? `${totalDocs} moments captured and preserved. Every story stored, every memory shared — this is the record of your life taking shape.`
-    : `${totalDocs} moments captured so far. Every memory you preserve becomes part of the legacy you leave behind.`;
+    ? `You've captured ${totalDocs} moments so far. Every memory you save, every story you write is part of what you'll leave behind. Keep going.`
+    : `You've made a start. ${totalDocs} memories saved and growing. The more you capture, the richer the picture becomes.`;
 
   return (
     <Animated.View
@@ -166,7 +166,7 @@ export default function ActivitiesScreen() {
               No activity yet
             </Text>
             <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, textAlign: 'center', lineHeight: 20 }}>
-              Your actions — creating memories, editing stories, sending capsules — will appear here.
+              Creating memories, editing stories, sending capsules. It all shows up here.
             </Text>
           </Animated.View>
         ) : (
