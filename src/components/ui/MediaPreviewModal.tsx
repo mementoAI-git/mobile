@@ -485,9 +485,6 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove }: Omit<Props
           <Share2 size={14} color={COLORS.textBase} strokeWidth={2} />
           <Text style={styles.shareLabel}>Share</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
-          <X size={18} color={COLORS.textBase} strokeWidth={2.5} />
-        </TouchableOpacity>
       </View>
 
       <View style={{ flex: 1 }}>

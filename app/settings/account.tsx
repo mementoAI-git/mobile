@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, ScrollView, TouchableOpacity, ImageBackground, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, ShieldCheck, AlertTriangle, Fingerprint } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
+import { UiFingerprint01, UiAlertTriangle, UiShieldTick } from '@/components/ui/icons/SettingsIcons';
 import { Button, TextInput } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
 import { Switch } from '@/components/ui/Switch';
@@ -36,7 +37,7 @@ function SettingsRow({
         {icon}
       </View>
       <View className="flex-1">
-        <Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+        <Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>
           {label}
         </Text>
         {description && (
@@ -76,7 +77,6 @@ export default function AccountSettingsScreen() {
 
   const handleToggleBiometrics = async (value: boolean) => {
     if (!value) {
-      // Disable — just delete the stored refresh_token
       try {
         await SecureStore.deleteItemAsync(storageKeys.biometricsRefreshToken);
         await SecureStore.deleteItemAsync(storageKeys.biometricsEmail);
@@ -102,9 +102,6 @@ export default function AccountSettingsScreen() {
 
     setEnrolling(true);
     try {
-      // Store the refresh_token behind biometric authentication.
-      // The OS biometric prompt fires here — no password required.
-      // v2: replace with native WebAuthn passkey. See TODO.md.
       await SecureStore.setItemAsync(
         storageKeys.biometricsRefreshToken,
         refreshToken,
@@ -115,7 +112,6 @@ export default function AccountSettingsScreen() {
       setBiometricsEnabled(true);
       toast('Face ID / Touch ID successfully enrolled!', 'success');
     } catch {
-      // User cancelled the biometric prompt or it failed
       toast('Biometric enrollment cancelled or unavailable on this device.', 'error');
     } finally {
       setEnrolling(false);
@@ -132,19 +128,29 @@ export default function AccountSettingsScreen() {
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
-        <Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
-          Security
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
+            Security
+          </Text>
+          <Text className="text-[13px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
+            Keep your account safe and secure
+          </Text>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pb-16 gap-6">
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
 
         {/* ── Change Password ─────────────────────────────────────────── */}
-        <View className="gap-3">
-          <Text className="text-[11px] text-text-muted uppercase tracking-[2px] px-1" style={{ fontFamily: FONTS.sansBold }}>
-            Update Password
-          </Text>
+        <Animated.View entering={FadeInDown.duration(500)} className="gap-3">
+          <View style={{ gap: 2, paddingLeft: 4 }}>
+            <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
+              Update Password
+            </Text>
+            <Text className="text-[13px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
+              Choose a strong, unique password
+            </Text>
+          </View>
 
           <View className="bg-white rounded-[32px] p-6 gap-4">
             <Controller control={control} name="current_password" render={({ field: { onChange, onBlur, value } }) => (
@@ -176,20 +182,25 @@ export default function AccountSettingsScreen() {
               Save Password
             </Button>
           </View>
-        </View>
+        </Animated.View>
 
         {/* ── Device Access ────────────────────────────────────────────── */}
-        <View className="gap-3">
-          <Text className="text-[11px] text-text-muted uppercase tracking-[2px] px-1" style={{ fontFamily: FONTS.sansBold }}>
-            Device Access
-          </Text>
+        <Animated.View entering={FadeInDown.delay(100).duration(500)} className="gap-3">
+          <View style={{ gap: 2, paddingLeft: 4 }}>
+            <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
+              Device Access
+            </Text>
+            <Text className="text-[13px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
+              Sign in faster with your device biometrics
+            </Text>
+          </View>
 
           <View className="bg-white rounded-[32px]">
             <SettingsRow
-              icon={<Fingerprint size={20} color={COLORS.brand} strokeWidth={1.5} />}
+              icon={<UiFingerprint01 size={20} color={COLORS.brand} strokeWidth={1.5} />}
               iconBg={COLORS.brandSubtle}
               label="Face ID / Touch ID"
-              description={enrolling ? 'Awaiting biometric confirmation…' : undefined}
+              description={enrolling ? 'Awaiting biometric confirmation…' : 'Use biometrics to sign in instantly'}
               right={
                 <Switch
                   value={biometricsEnabled}
@@ -199,22 +210,30 @@ export default function AccountSettingsScreen() {
               }
             />
           </View>
-        </View>
+        </Animated.View>
 
         {/* ── Danger Zone ──────────────────────────────────────────────── */}
-        <View className="gap-3">
-          <Text className="text-[11px] text-text-muted uppercase tracking-[2px] px-1" style={{ fontFamily: FONTS.sansBold }}>
-            Danger Zone
-          </Text>
+        <Animated.View entering={FadeInDown.delay(200).duration(500)} className="gap-3">
+          <View style={{ gap: 2, paddingLeft: 4 }}>
+            <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
+              Danger Zone
+            </Text>
+            <Text className="text-[13px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
+              Permanent actions that cannot be undone
+            </Text>
+          </View>
 
-          <View className="bg-white rounded-[20px] border p-5 gap-3" style={{ borderColor: `${COLORS.error}20` }}>
+          <View className="bg-white rounded-[20px] border p-5 gap-4" style={{ borderColor: `${COLORS.error}20` }}>
             <View className="flex-row items-center gap-3">
               <View className="size-11 rounded-2xl items-center justify-center" style={{ backgroundColor: `${COLORS.error}10` }}>
-                <AlertTriangle size={20} color={COLORS.error} strokeWidth={1.5} />
+                <UiAlertTriangle size={20} color={COLORS.error} strokeWidth={1.5} />
               </View>
               <View className="flex-1">
-                <Text className="text-[15px] text-error-strong" style={{ fontFamily: FONTS.sansMedium }}>
+                <Text className="text-[16px]" style={{ fontFamily: FONTS.sansSemi, color: COLORS.error }}>
                   Delete Account
+                </Text>
+                <Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
+                  All your memories, capsules and data will be permanently removed.
                 </Text>
               </View>
             </View>
@@ -222,10 +241,8 @@ export default function AccountSettingsScreen() {
               Delete My Account
             </Button>
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
-
-      {/* No modal needed — biometric prompt is triggered natively by SecureStore */}
     </SafeAreaView>
   );
 }

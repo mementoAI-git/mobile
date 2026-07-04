@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, ScrollView, TouchableOpacity, ImageBackground, Text} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
-import { ChevronLeft, ShieldCheck, ShieldOff, Smartphone, Copy } from 'lucide-react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { ChevronLeft } from 'lucide-react-native';
+import { UiShieldTick, UiShieldOff, UiPhone01, UiCopy01 } from '@/components/ui/icons/SettingsIcons';
 import { Button, TextInput } from '@/components/ui';
 import { useTwoFactorSettingsLogic } from '@/hooks/use-two-factor-settings-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -27,6 +28,7 @@ export default function TwoFactorScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
+      {/* Header */}
       <View className="flex-row items-center gap-3 px-6 py-4">
         <TouchableOpacity
           onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
@@ -34,58 +36,78 @@ export default function TwoFactorScreen() {
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
-        <Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
-          Two-Factor Auth
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
+            Two-Factor Auth
+          </Text>
+          <Text className="text-[13px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
+            Add a second layer of protection
+          </Text>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pb-16 gap-5">
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
 
-        {/* Status row */}
-        <View className="bg-white rounded-[32px] flex-row items-center gap-4 px-5 py-4">
+        {/* Status card */}
+        <Animated.View entering={FadeInDown.duration(500)} className="bg-white rounded-[32px] flex-row items-center gap-4 px-5 py-5">
           <View
-            className="size-11 rounded-2xl items-center justify-center"
+            className="size-12 rounded-2xl items-center justify-center"
             style={{ backgroundColor: is2FAEnabled ? `${COLORS.success}10` : COLORS.fillWeak }}
           >
             {is2FAEnabled
-              ? <ShieldCheck size={20} color={COLORS.success} strokeWidth={1.5} />
-              : <ShieldOff size={20} color={COLORS.textMuted} strokeWidth={1.5} />
+              ? <UiShieldTick size={22} color={COLORS.success} strokeWidth={1.5} />
+              : <UiShieldOff size={22} color={COLORS.textMuted} strokeWidth={1.5} />
             }
           </View>
           <View className="flex-1">
-            <Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+            <Text className="text-[17px] text-text-strong" style={{ fontFamily: is2FAEnabled ? FONTS.sansSemi : FONTS.sansSemi }}>
               {is2FAEnabled ? 'Enabled' : 'Not enabled'}
             </Text>
-            <Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
-              {is2FAEnabled ? 'Your account has a second factor' : 'Protect your account with an authenticator app'}
+            <Text className="text-[13px] text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
+              {is2FAEnabled
+                ? 'Your account is protected with a second factor'
+                : 'Protect your account with an authenticator app'}
             </Text>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Enable button */}
         {!is2FAEnabled && !setupData && (
-          <Button onPress={handleSetup} loading={loading} fullWidth size="lg">
-            Enable Two-Factor Auth
-          </Button>
+          <Animated.View entering={FadeInDown.delay(100).duration(500)}>
+            <Button onPress={handleSetup} loading={loading} fullWidth size="lg">
+              Enable Two-Factor Auth
+            </Button>
+          </Animated.View>
         )}
 
         {/* Disable */}
         {is2FAEnabled && (
-          <Button onPress={handleDisable} loading={loading} variant="destructive" fullWidth size="lg">
-            Disable Two-Factor Auth
-          </Button>
+          <Animated.View entering={FadeInDown.delay(100).duration(500)}>
+            <Button onPress={handleDisable} loading={loading} variant="destructive" fullWidth size="lg">
+              Disable Two-Factor Auth
+            </Button>
+          </Animated.View>
         )}
 
         {/* Setup flow */}
         {setupData && (
-          <View className="bg-white rounded-[32px] p-6 gap-4">
+          <Animated.View entering={FadeInDown.delay(150).duration(500)} className="bg-white rounded-[32px] p-6 gap-5">
+            <View style={{ gap: 2 }}>
+              <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
+                Setup
+              </Text>
+              <Text className="text-[13px] text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+                Scan the QR code in your authenticator app, or copy the secret key below.
+              </Text>
+            </View>
+
             <View className="flex-row items-start gap-3">
               <View className="size-11 rounded-2xl bg-brand/10 items-center justify-center shrink-0">
-                <Smartphone size={20} color={COLORS.brand} strokeWidth={1.5} />
+                <UiPhone01 size={20} color={COLORS.brand} strokeWidth={1.5} />
               </View>
-              <Text className="text-sm text-text-weak leading-relaxed flex-1" style={{ fontFamily: FONTS.sans }}>
-                Open your authenticator app and scan the QR code, or enter the secret key manually.
+              <Text className="text-[13px] text-text-weak leading-relaxed flex-1" style={{ fontFamily: FONTS.sans }}>
+                Open your authenticator app (Google Authenticator, Authy, etc.) and scan the QR code, or enter the secret key manually.
               </Text>
             </View>
 
@@ -99,14 +121,14 @@ export default function TwoFactorScreen() {
                 className="bg-fill-weaker rounded-2xl p-4 border border-stroke-weaker flex-row items-center justify-between"
               >
                 <View className="flex-1">
-                  <Text className="text-[10px] text-text-muted uppercase tracking-[2px] mb-1" style={{ fontFamily: FONTS.sansBold }}>
+                  <Text className="text-[10px] text-text-muted uppercase tracking-[2px] mb-1.5" style={{ fontFamily: FONTS.sansBold }}>
                     Secret key — tap to copy
                   </Text>
-                  <Text className="text-base text-text-strong tracking-[2px]" style={{ fontFamily: FONTS.mono }}>
+                  <Text className="text-[15px] text-text-strong tracking-[2px]" style={{ fontFamily: FONTS.mono }}>
                     {setupData.secret}
                   </Text>
                 </View>
-                <Copy size={18} color={COLORS.textMuted} strokeWidth={1.5} />
+                <UiCopy01 size={18} color={COLORS.textMuted} strokeWidth={1.5} />
               </TouchableOpacity>
             )}
 
@@ -128,7 +150,7 @@ export default function TwoFactorScreen() {
             <Button onPress={handleVerify} loading={loading} disabled={token.length !== 6} fullWidth size="lg">
               Verify & Enable
             </Button>
-          </View>
+          </Animated.View>
         )}
       </ScrollView>
     </SafeAreaView>

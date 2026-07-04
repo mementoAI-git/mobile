@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react';
 import { View, ScrollView, ImageBackground, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight, Shield, Eye, Users, Smartphone, MessageSquare, CreditCard, LogOut, Flame } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Flame } from 'lucide-react-native';
+import { UiLock01, UiEye, UiUsers01, UiPhone01, UiMessageChatSquare, UiCreditCard01, UiLogOut01, UiZapFast } from '@/components/ui/icons/SettingsIcons';
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Avatar } from '@/components/ui';
@@ -15,20 +16,21 @@ const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 // ─── Nav items with individual tint colors ──────────────────────────────────
 
 const NAV_ITEMS = [
-  { label: 'Security',       Icon: Shield,       href: '/settings/account',      iconBg: `${COLORS.brand}12`,   iconColor: COLORS.brand   },
-  { label: 'Privacy',        Icon: Eye,          href: '/settings/privacy',       iconBg: COLORS.fillWeak,       iconColor: COLORS.textBase },
-  { label: 'Beneficiaries',  Icon: Users,        href: '/settings/beneficiaries', iconBg: `${COLORS.success}12`, iconColor: COLORS.success },
-  { label: '2FA',            Icon: Smartphone,   href: '/settings/two-factor',    iconBg: `${COLORS.info}12`,    iconColor: COLORS.info    },
-  { label: 'Billing',        Icon: CreditCard,   href: '/settings/billing',       iconBg: `${COLORS.warning}12`, iconColor: COLORS.warning },
-  { label: 'Send Feedback',  Icon: MessageSquare, href: '__feedback__',            iconBg: COLORS.fillWeak,       iconColor: COLORS.textBase },
+  { label: 'Security',      desc: 'Password, biometrics and login',     Icon: UiLock01,            href: '/settings/account',      iconBg: `${COLORS.brand}12`,   iconColor: COLORS.brand   },
+  { label: 'Privacy',       desc: 'Visibility, data and AI preferences', Icon: UiEye,              href: '/settings/privacy',       iconBg: `${COLORS.info}12`,    iconColor: COLORS.info    },
+  { label: 'Beneficiaries', desc: 'Manage your trusted circle',          Icon: UiUsers01,          href: '/settings/beneficiaries', iconBg: `${COLORS.success}12`, iconColor: COLORS.success },
+  { label: '2FA',           desc: 'Two-factor authentication',           Icon: UiPhone01,          href: '/settings/two-factor',    iconBg: `${COLORS.warning}12`, iconColor: COLORS.warning },
+  { label: 'Billing',       desc: 'Plan, payments and usage',            Icon: UiCreditCard01,     href: '/settings/billing',       iconBg: `${COLORS.brand}12`,   iconColor: COLORS.brand   },
+  { label: 'Feedback',      desc: 'Share thoughts and suggestions',      Icon: UiMessageChatSquare, href: '__feedback__',           iconBg: COLORS.fillWeak,       iconColor: COLORS.textBase },
 ];
 
 // ─── Animated pressable row ───────────────────────────────────────────────────
 
 function NavRow({
-  label, Icon, iconBg, iconColor, onPress, isLast,
+  label, desc, Icon, iconBg, iconColor, onPress, isLast,
 }: {
   label: string;
+  desc: string;
   Icon: any;
   iconBg: string;
   iconColor: string;
@@ -51,9 +53,12 @@ function NavRow({
         style={styles.navRow}
       >
         <View style={[styles.iconBadge, { backgroundColor: iconBg }]}>
-          <Icon size={19} color={iconColor} strokeWidth={1.6} />
+          <Icon size={19} color={iconColor} strokeWidth={1.8} />
         </View>
-        <Text style={styles.navLabel}>{label}</Text>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={styles.navLabel}>{label}</Text>
+          <Text style={styles.navDesc}>{desc}</Text>
+        </View>
         <ChevronRight size={16} color={COLORS.textMuted} strokeWidth={2} />
       </TouchableOpacity>
       {!isLast && <Separator style={{ opacity: 0.6 }} />}
@@ -89,7 +94,10 @@ export default function ProfileSettingsScreen() {
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Account</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Account</Text>
+          <Text style={styles.headerSubtitle}>Your account, your story.</Text>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 96 }}>
@@ -146,13 +154,17 @@ export default function ProfileSettingsScreen() {
 
         {/* ── Settings Group Card ── */}
         <Animated.View entering={FadeInDown.delay(120).duration(500)} style={styles.groupWrap}>
-          <Text style={styles.sectionLabel}>Settings & Privacy</Text>
+          <View style={{ gap: 4, marginLeft: 4, marginBottom: 8 }}>
+            <Text style={styles.sectionLabel}>Settings & Privacy</Text>
+            <Text style={styles.sectionSubtitle}>Manage your account and preferences</Text>
+          </View>
 
           <View style={styles.groupCard}>
             {NAV_ITEMS.map((item, idx) => (
               <NavRow
                 key={item.href}
                 label={item.label}
+                desc={item.desc}
                 Icon={item.Icon}
                 iconBg={item.iconBg}
                 iconColor={item.iconColor}
@@ -175,7 +187,7 @@ export default function ProfileSettingsScreen() {
             style={styles.logoutBtn}
             activeOpacity={0.8}
           >
-            <LogOut size={19} color={COLORS.error} strokeWidth={2} />
+            <UiLogOut01 size={19} color={COLORS.error} strokeWidth={2} />
             <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
           <Text style={styles.versionText}>MEMENTO V1.0.0</Text>
@@ -210,6 +222,13 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.serif,
     fontSize: 28,
     color: COLORS.textStrong,
+    lineHeight: 34,
+  },
+  headerSubtitle: {
+    fontFamily: FONTS.sans,
+    fontSize: 13,
+    color: COLORS.textWeak,
+    marginTop: 1,
   },
 
   // Hero card
@@ -260,19 +279,20 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontFamily: FONTS.sansBold,
-    fontSize: 9,
+    fontSize: 10,
     color: COLORS.textMuted,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
   statValue: {
     fontFamily: FONTS.sansBold,
-    fontSize: 20,
+    fontSize: 28,
     color: COLORS.textStrong,
+    lineHeight: 34,
   },
   statDivider: {
     width: 1,
-    height: 36,
+    height: 40,
     backgroundColor: COLORS.strokeWeaker,
   },
 
@@ -280,16 +300,18 @@ const styles = StyleSheet.create({
   groupWrap: {
     paddingHorizontal: 20,
     marginBottom: 28,
-    gap: 12,
   },
   sectionLabel: {
-    fontFamily: FONTS.sansBold,
+    fontFamily: FONTS.sansMedium,
     fontSize: 11,
     color: COLORS.textMuted,
-    letterSpacing: 2,
+    letterSpacing: 1,
     textTransform: 'uppercase',
-    marginLeft: 4,
-    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontFamily: FONTS.sans,
+    fontSize: 13,
+    color: COLORS.textWeak,
   },
   groupCard: {
     backgroundColor: COLORS.card,
@@ -312,10 +334,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   navLabel: {
-    flex: 1,
     fontFamily: FONTS.sansSemi,
     fontSize: 15,
     color: COLORS.textStrong,
+  },
+  navDesc: {
+    fontFamily: FONTS.sans,
+    fontSize: 12,
+    color: COLORS.textWeak,
   },
 
   // Logout
@@ -342,9 +368,9 @@ const styles = StyleSheet.create({
     color: COLORS.error,
   },
   versionText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 10,
+    fontFamily: FONTS.sans,
+    fontSize: 11,
     color: COLORS.textDisabled,
-    letterSpacing: 3,
+    letterSpacing: 1.5,
   },
 });
