@@ -13,6 +13,9 @@ export const COLORS = {
   background: '#fefbf8',
   card: '#ffffff',
 
+  // Link preview chip
+  linkPreview: '#22C661',
+
   // Brand
   brand: '#FF5E00',
   brandWeak: 'rgba(255,94,0,0.8)',

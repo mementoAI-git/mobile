@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, Platform, StyleSheet,
   Keyboard, ScrollView, Image, ActivityIndicator,
 } from 'react-native';
-import { ArrowUp, Mic, Square, Phone, PlusCircle, X, FileText } from 'lucide-react-native';
+import { ArrowUp, Mic, Square, Phone, PlusCircle, X, FileText, PhoneCall } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -213,12 +213,13 @@ export function ChatInput({
         quality: 0.85,
       });
       if (!result.canceled) {
-        for (const asset of result.assets) {
+        // Upload all selected files in parallel
+        await Promise.all(result.assets.map(asset => {
           const isVideo = asset.mimeType?.startsWith('video/');
           const mime = asset.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg');
           const name = asset.fileName || `${isVideo ? 'video' : 'photo'}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`;
-          await uploadAndAdd(asset.uri, mime, name, asset.fileSize);
-        }
+          return uploadAndAdd(asset.uri, mime, name, asset.fileSize);
+        }));
       }
     } catch { /* user cancelled */ }
   }, [uploadAndAdd, toast]);
@@ -237,13 +238,17 @@ export function ChatInput({
         multiple: true,
       });
       if (!result.canceled && result.assets.length > 0) {
-        for (const asset of result.assets) {
+        // Filter out oversized files first, then upload remaining in parallel
+        const validAssets = result.assets.filter(asset => {
           if (asset.size && asset.size > MAX_FILE_BYTES) {
             toast(`"${asset.name}" exceeds the ${MAX_FILE_MB}MB limit.`, 'error');
-            continue;
+            return false;
           }
-          await uploadAndAdd(asset.uri, asset.mimeType || 'application/octet-stream', asset.name, asset.size);
-        }
+          return true;
+        });
+        await Promise.all(validAssets.map(asset =>
+          uploadAndAdd(asset.uri, asset.mimeType || 'application/octet-stream', asset.name, asset.size)
+        ));
       }
     } catch { /* user cancelled */ }
   }, [uploadAndAdd, toast]);
@@ -312,11 +317,25 @@ export function ChatInput({
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  // The large orange button style
+  const btnStyle = (isRounded: boolean) => ({
+    width: scale(44),
+    height: scale(44),
+    borderRadius: isRounded ? scale(22) : scale(16),
+    backgroundColor: COLORS.brand,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    shadowColor: COLORS.brand,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  });
+
   return (
     <Animated.View
       entering={FadeInDown.duration(400)}
-      className="px-4 py-2.5 bg-transparent"
-      style={{ paddingBottom: bottomPadding }}
+      style={{ paddingBottom: bottomPadding, paddingHorizontal: 12, paddingTop: 6 }}
     >
       {/* Attachment preview strip */}
       {attachments.length > 0 && (
@@ -349,19 +368,44 @@ export function ChatInput({
         </ScrollView>
       )}
 
+      {/* One unified fluid pill: [+] | [text field flex:1] | [mic] [call] */}
       <View
-        className="flex-row items-center gap-2 bg-white/90 border border-stroke-weaker rounded-[24px] px-3.5 py-1 shadow-md shadow-black/5"
-        style={styles.floatingContainer}
+        style={[
+          styles.floatingContainer,
+          {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingLeft: 12,
+            paddingRight: 8,
+            paddingVertical: 8,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: COLORS.strokeWeaker,
+            gap: 8,
+            minHeight: verticalScale(52),
+          },
+        ]}
       >
-        {/* Text input */}
-        <View
-          className="flex-1 justify-center py-1"
+        {/* ⊕ — far left inside pill */}
+        <TouchableOpacity
+          onPress={() => { Haptics.selectionAsync(); setPickerOpen(o => !o); }}
+          disabled={disabled || anyUploading}
           style={{
-            minHeight: multiline ? verticalScale(32) : undefined,
-            maxHeight: multiline ? verticalScale(96) : undefined,
-            height: multiline ? undefined : verticalScale(32),
+            width: scale(30),
+            height: scale(30),
+            borderRadius: scale(15),
+            backgroundColor: pickerOpen ? `${COLORS.brand}15` : 'transparent',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: disabled || anyUploading ? 0.4 : 1,
+            flexShrink: 0,
           }}
         >
+          <PlusCircle size={scale(18)} color={pickerOpen ? COLORS.brand : COLORS.textMuted} strokeWidth={1.8} />
+        </TouchableOpacity>
+
+        {/* Text field — takes remaining space */}
+        <View style={{ flex: 1 }}>
           <TextInput
             value={text}
             onChangeText={(v) => {
@@ -372,14 +416,19 @@ export function ChatInput({
             placeholder={isRecording ? 'Listening…' : placeholder}
             placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
             multiline
-            className="text-text-strong"
-            style={{ fontFamily: FONTS.sans, paddingVertical: 0, textAlignVertical: 'center', fontSize: moderateScale(13) }}
+            style={{
+              fontFamily: FONTS.sans,
+              fontSize: moderateScale(13),
+              color: COLORS.textStrong,
+              paddingVertical: 0,
+              maxHeight: verticalScale(96),
+            }}
             blurOnSubmit={false}
             editable={!disabled}
           />
           {isRecording && !text.trim() && (
-            <View className="flex-row items-center gap-1.5 mt-0.5">
-              <View className="size-1.5 rounded-full bg-error" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.error }} />
               <Text style={{ fontFamily: FONTS.sansMedium, fontSize: moderateScale(11), color: COLORS.error }}>
                 {formatDuration(duration)} · tap mic to finish
               </Text>
@@ -387,88 +436,55 @@ export function ChatInput({
           )}
         </View>
 
-        {/* Right-side controls */}
-        <View className="flex-row items-center gap-1.5">
-          {/* Single ⊕ button — opens MediaPickerMenu (Gallery, Camera, Voice, File) */}
-          {!isRecording && !showStop && (
+        {/* Right actions — inside the pill */}
+        {showStop ? (
+          <Animated.View style={btnAnimStyle}>
             <TouchableOpacity
-              onPress={() => { Haptics.selectionAsync(); setPickerOpen(o => !o); }}
-              disabled={disabled || anyUploading}
-              className="rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
-              style={{ width: scale(28), height: scale(28), borderRadius: scale(14), opacity: disabled || anyUploading ? 0.4 : 1, backgroundColor: pickerOpen ? `${COLORS.brand}15` : undefined }}
+              onPress={handleStop}
+              onPressIn={() => { btnScale.value = withSpring(0.9); }}
+              onPressOut={() => { btnScale.value = withSpring(1); }}
+              style={{ width: scale(40), height: scale(40), borderRadius: scale(20), backgroundColor: COLORS.error, alignItems: 'center', justifyContent: 'center' }}
             >
-              <PlusCircle size={scale(14)} color={pickerOpen ? COLORS.brand : COLORS.textWeak} strokeWidth={2} />
+              <Square size={scale(14)} color="white" fill="white" strokeWidth={0} />
             </TouchableOpacity>
-          )}
-
-          {/* Voice call button */}
-          {onVoice && !isRecording && !showStop && (
-            <TouchableOpacity
-              onPress={() => { Haptics.selectionAsync(); onVoice(); }}
-              disabled={disabled}
-              className="rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
-              style={{ width: scale(28), height: scale(28), borderRadius: scale(14) }}
-            >
-              <Phone size={scale(12)} color={COLORS.textWeak} strokeWidth={2} />
-            </TouchableOpacity>
-          )}
-
-          {/* Primary action button */}
-          <Animated.View style={[btnAnimStyle]}>
-            {showStop && (
-              <TouchableOpacity
-                onPress={handleStop}
-                onPressIn={() => { btnScale.value = withSpring(0.85); }}
-                onPressOut={() => { btnScale.value = withSpring(1); }}
-                className="rounded-full bg-brand items-center justify-center shadow-md shadow-brand/10"
-                style={{ width: scale(32), height: scale(32), borderRadius: scale(16) }}
-              >
-                <Square size={scale(11)} color={COLORS.textInverse} fill={COLORS.textInverse} />
-              </TouchableOpacity>
-            )}
-
-            {showSend && (
-              <TouchableOpacity
-                onPress={handleSend}
-                onPressIn={() => { btnScale.value = withSpring(0.85); }}
-                onPressOut={() => { btnScale.value = withSpring(1); }}
-                disabled={disabled}
-                className="rounded-full bg-brand items-center justify-center shadow-md shadow-brand/15"
-                style={{ width: scale(32), height: scale(32), borderRadius: scale(16) }}
-              >
-                <ArrowUp size={scale(15)} color={COLORS.textInverse} strokeWidth={3} />
-              </TouchableOpacity>
-            )}
-
-            {showMic && (
-              <Animated.View style={micPulseStyle}>
-                <TouchableOpacity
-                  onPress={handleMicPress}
-                  disabled={disabled || micUnavailable}
-                  className="rounded-full items-center justify-center"
-                  style={{
-                    width: scale(32),
-                    height: scale(32),
-                    borderRadius: scale(16),
-                    backgroundColor: isRecording ? `${COLORS.error}15` : COLORS.fillWeaker,
-                    borderWidth: 1,
-                    borderColor: isRecording ? `${COLORS.error}30` : COLORS.strokeWeaker,
-                    opacity: micUnavailable ? 0.35 : 1,
-                  }}
-                >
-                  <Mic
-                    size={scale(15)}
-                    color={isRecording ? COLORS.error : micUnavailable ? COLORS.textMuted : COLORS.brand}
-                    strokeWidth={2}
-                  />
-                </TouchableOpacity>
-              </Animated.View>
-            )}
           </Animated.View>
-        </View>
+        ) : showSend ? (
+          <Animated.View style={btnAnimStyle}>
+            <TouchableOpacity
+              onPress={handleSend}
+              onPressIn={() => { btnScale.value = withSpring(0.9); }}
+              onPressOut={() => { btnScale.value = withSpring(1); }}
+              disabled={disabled}
+              style={{ width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.brand, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }}
+            >
+              <ArrowUp size={scale(18)} color="white" strokeWidth={2.5} />
+            </TouchableOpacity>
+          </Animated.View>
+        ) : (
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <Animated.View style={micPulseStyle}>
+              <TouchableOpacity
+                onPress={handleMicPress}
+                disabled={disabled || micUnavailable}
+                style={{ width: scale(40), height: scale(40), borderRadius: scale(20), backgroundColor: isRecording ? COLORS.error : COLORS.brand, alignItems: 'center', justifyContent: 'center', shadowColor: isRecording ? COLORS.error : COLORS.brand, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3, opacity: micUnavailable ? 0.4 : 1 }}
+              >
+                <Mic size={scale(17)} color="white" strokeWidth={2} />
+              </TouchableOpacity>
+            </Animated.View>
+            {onVoice && !isRecording && (
+              <TouchableOpacity
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onVoice(); }}
+                disabled={disabled}
+                style={{ width: scale(40), height: scale(40), borderRadius: scale(20), backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.brand, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }}
+              >
+                <PhoneCall size={scale(17)} color="white" strokeWidth={2} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
 
-      {/* Media picker menu — floats above the input bar */}
+      {/* Media picker menu — floats above the input row */}
       <MediaPickerMenu
         visible={pickerOpen}
         onClose={() => setPickerOpen(false)}
@@ -476,7 +492,7 @@ export function ChatInput({
         onCamera={() => { setPickerOpen(false); handleLaunchCamera(); }}
         onVoice={undefined}
         onFile={() => { setPickerOpen(false); handlePickDocument(); }}
-        menuLeft={8}
+        menuLeft={0}
       />
     </Animated.View>
   );

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, Linking } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import type { IMessage } from '@/types';
 import dayjs from 'dayjs';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { CornerDownRight, FileText, Music, Play, ExternalLink } from 'lucide-react-native';
+import { CornerDownRight, FileText, Music, Play, ExternalLink, Copy } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import { useLinkPreview, type LinkPreviewData } from '@/hooks/use-link-preview';
 
@@ -106,6 +108,30 @@ function AttachmentTile({ attachment, onPress }: {
 
 // ─── Link preview chip ─────────────────────────────────────────────────────────
 
+const CHIP_BG = COLORS.linkPreview;
+
+function FaviconBadge({ url, hostname }: { url: string; hostname: string }) {
+  const [failed, setFailed] = React.useState(false);
+  const letter = hostname.charAt(0).toUpperCase();
+
+  if (!url || failed) {
+    return (
+      <View style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: 'rgba(0,0,0,0.15)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: 'white' }}>{letter}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri: url }}
+      style={{ width: 22, height: 22, borderRadius: 5, flexShrink: 0, backgroundColor: 'rgba(255,255,255,0.15)' }}
+      resizeMode="contain"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function LinkPreviewChip({ preview }: { preview: LinkPreviewData }) {
   const handlePress = () => { Linking.openURL(preview.url).catch(() => {}); };
 
@@ -124,26 +150,16 @@ function LinkPreviewChip({ preview }: { preview: LinkPreviewData }) {
       <TouchableOpacity
         onPress={handlePress}
         activeOpacity={0.8}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: `${COLORS.success}10`, borderWidth: 1, borderColor: `${COLORS.success}25` }}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, backgroundColor: CHIP_BG }}
       >
-        {preview.faviconUrl ? (
-          <Image source={{ uri: preview.faviconUrl }} style={{ width: 20, height: 20, borderRadius: 4, flexShrink: 0 }} resizeMode="contain" />
-        ) : (
-          <View style={{ width: 20, height: 20, borderRadius: 4, backgroundColor: `${COLORS.success}20`, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <ExternalLink size={12} color={COLORS.success} strokeWidth={2} />
-          </View>
-        )}
-        <View style={{ flex: 1, gap: 1 }}>
-          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.success, textTransform: 'uppercase', letterSpacing: 0.5 }} numberOfLines={1}>
-            {preview.hostname}
-          </Text>
-          {preview.title ? (
-            <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 12, color: COLORS.textStrong }} numberOfLines={2}>
-              {preview.title}
-            </Text>
-          ) : null}
-        </View>
-        <ExternalLink size={14} color={COLORS.success} strokeWidth={2} style={{ flexShrink: 0 }} />
+        <FaviconBadge url={preview.faviconUrl} hostname={preview.hostname} />
+
+        <Text style={{ flex: 1, fontFamily: FONTS.sansMedium, fontSize: 13, color: 'white' }} numberOfLines={1}>
+          <Text style={{ fontFamily: FONTS.sansBold, color: 'white' }}>{preview.hostname}</Text>
+          {preview.title ? <Text style={{ color: 'rgba(255,255,255,0.8)' }}> · {preview.title}</Text> : null}
+        </Text>
+
+        <ExternalLink size={14} color="rgba(255,255,255,0.85)" strokeWidth={2} style={{ flexShrink: 0 }} />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -160,31 +176,14 @@ function LinkPreviews({ text }: { text: string }) {
   );
 }
 
-// ─── WhatsApp-style attachment grid ───────────────────────────────────────────
+// ─── Image strip grid (always horizontal, max 3 visible) ─────────────────────
+//
+// 1 image  → full bubble width, 4:3
+// 2 images → two equal tiles side-by-side
+// 3+ images → three equal tiles, +N chip on 3rd for overflow
 
 const BUBBLE_MAX_W = 260;
 const GRID_GAP = 3;
-
-function ImageTile({ attachment, size, onPress, borderRadius = 12, overlay }: {
-  attachment: { url: string; name: string; type?: string; _id?: string };
-  size: number;
-  onPress: () => void;
-  borderRadius?: number;
-  overlay?: React.ReactNode;
-}) {
-  const cat = getMimeCategory(attachment.name, attachment.type);
-  return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={{ position: 'relative' }}>
-      <Image source={{ uri: attachment.url }} style={{ width: size, height: size, borderRadius }} resizeMode="cover" />
-      {cat === 'video' && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius }}>
-          <Play size={22} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 3 }} />
-        </View>
-      )}
-      {overlay}
-    </TouchableOpacity>
-  );
-}
 
 function AttachmentGrid({ attachments, onTap }: {
   attachments: { url: string; name: string; type?: string; _id?: string }[];
@@ -200,10 +199,11 @@ function AttachmentGrid({ attachments, onTap }: {
   let imageSection: React.ReactNode = null;
 
   if (count === 1) {
+    // Single image — full width, 4:3
     const a = mediaItems[0];
     const origIdx = attachments.indexOf(a);
     imageSection = (
-      <TouchableOpacity onPress={() => onTap(origIdx)} activeOpacity={0.85}>
+      <TouchableOpacity onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
         <Image source={{ uri: a.url }} style={{ width: fullW, height: Math.round(fullW * (3 / 4)), borderRadius: 12 }} resizeMode="cover" />
         {getMimeCategory(a.name, a.type) === 'video' && (
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
@@ -213,46 +213,63 @@ function AttachmentGrid({ attachments, onTap }: {
       </TouchableOpacity>
     );
   } else if (count <= 3) {
+    // 2-3 images — horizontal strip, equal square tiles
     const tileW = Math.floor((fullW - GRID_GAP * (count - 1)) / count);
+    const tileH = Math.round(tileW * (3 / 4));
     imageSection = (
       <View style={{ flexDirection: 'row', gap: GRID_GAP }}>
-        {mediaItems.map((a) => {
+        {mediaItems.map((a, i) => {
           const origIdx = attachments.indexOf(a);
-          return <ImageTile key={a._id ?? origIdx} attachment={a} size={tileW} onPress={() => onTap(origIdx)} />;
+          const isLast = i === count - 1;
+          const cat = getMimeCategory(a.name, a.type);
+          return (
+            <TouchableOpacity key={a._id ?? origIdx} onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
+              <Image source={{ uri: a.url }} style={{ width: tileW, height: tileH, borderRadius: 10 }} resizeMode="cover" />
+              {cat === 'video' && (
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+                  <Play size={18} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 2 }} />
+                </View>
+              )}
+            </TouchableOpacity>
+          );
         })}
       </View>
     );
   } else {
+    // 4+ images — 2×2 grid, first 4 visible, +N chip on 4th tile
     const tileW = Math.floor((fullW - GRID_GAP) / 2);
+    const tileH = Math.round(tileW * (3 / 4));
     const visible = mediaItems.slice(0, 4);
     const overflow = count - 4;
+    const rows = [visible.slice(0, 2), visible.slice(2, 4)];
     imageSection = (
       <View style={{ gap: GRID_GAP }}>
-        <View style={{ flexDirection: 'row', gap: GRID_GAP }}>
-          {visible.slice(0, 2).map((a) => {
-            const origIdx = attachments.indexOf(a);
-            return <ImageTile key={a._id ?? origIdx} attachment={a} size={tileW} onPress={() => onTap(origIdx)} />;
-          })}
-        </View>
-        <View style={{ flexDirection: 'row', gap: GRID_GAP }}>
-          {visible.slice(2, 4).map((a, i) => {
-            const origIdx = attachments.indexOf(a);
-            const isLast = i === 1;
-            return (
-              <ImageTile
-                key={a._id ?? origIdx}
-                attachment={a}
-                size={tileW}
-                onPress={() => onTap(origIdx)}
-                overlay={isLast && overflow > 0 ? (
-                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: '#fff' }}>+{overflow}</Text>
-                  </View>
-                ) : undefined}
-              />
-            );
-          })}
-        </View>
+        {rows.map((row, rowIdx) => (
+          <View key={rowIdx} style={{ flexDirection: 'row', gap: GRID_GAP }}>
+            {row.map((a, colIdx) => {
+              const globalIdx = rowIdx * 2 + colIdx;
+              const origIdx = attachments.indexOf(a);
+              const isLast = globalIdx === 3;
+              const showOverlay = isLast && overflow > 0;
+              const cat = getMimeCategory(a.name, a.type);
+              return (
+                <TouchableOpacity key={a._id ?? origIdx} onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
+                  <Image source={{ uri: a.url }} style={{ width: tileW, height: tileH, borderRadius: 10 }} resizeMode="cover" />
+                  {cat === 'video' && !showOverlay && (
+                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+                      <Play size={18} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 2 }} />
+                    </View>
+                  )}
+                  {showOverlay && (
+                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.48)', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontFamily: FONTS.sansBold, fontSize: 18, color: '#fff' }}>+{overflow}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
       </View>
     );
   }
@@ -352,8 +369,20 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
               </Text>
             </View>
           )}
+          {content.trim().length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.selectionAsync();
+                Clipboard.setStringAsync(content.trim()).catch(() => {});
+              }}
+              activeOpacity={0.7}
+              className="ml-2 bg-brand/5 p-1 rounded-full border border-brand/10"
+            >
+              <Copy size={10} color={COLORS.brand} strokeWidth={2} />
+            </TouchableOpacity>
+          )}
           {onReply && (
-            <TouchableOpacity onPress={onReply} activeOpacity={0.7} className="flex-row items-center ml-3 bg-brand/5 px-2 py-0.5 rounded-full border border-brand/10">
+            <TouchableOpacity onPress={onReply} activeOpacity={0.7} className="flex-row items-center ml-2 bg-brand/5 px-2 py-0.5 rounded-full border border-brand/10">
               <CornerDownRight size={10} color={COLORS.brand} style={{ marginRight: 3 }} />
               <Text className="text-[8px] text-brand font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>Reply</Text>
             </TouchableOpacity>
