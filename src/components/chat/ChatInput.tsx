@@ -24,7 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVoiceToText } from '@/hooks/use-voice-to-text';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useToast } from '@/components/ui/Toast';
-import type { IFile } from '@/types';
+import type { IFile, IMessageAttachment } from '@/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,10 +38,14 @@ interface AttachmentItem {
   file?: IFile;
 }
 
+type ChatAttachmentPreview = IMessageAttachment;
+
 export interface ChatSendPayload {
   text: string;
   /** IDs of already-uploaded files to pass to the AI as context */
   attachmentIds: string[];
+  /** Uploaded file metadata used for the optimistic chat bubble preview */
+  attachmentPreviews: ChatAttachmentPreview[];
 }
 
 interface ChatInputProps {
@@ -266,12 +270,21 @@ export function ChatInput({
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
     const readyIds = attachments.filter(a => a.fileId && !a.isUploading).map(a => a.fileId as string);
+    const readyAttachmentPreviews = attachments
+      .filter(a => a.fileId && !a.isUploading)
+      .map((a): ChatAttachmentPreview => ({
+        _id: a.fileId ?? undefined,
+        url: a.file?.url ?? a.uri,
+        name: a.file?.name ?? a.name,
+        type: a.file?.type ?? a.mimeType,
+        size: a.file?.size,
+      }));
     if ((!trimmed && readyIds.length === 0) || disabled) return;
     // Block if any upload is still in progress
     if (attachments.some(a => a.isUploading)) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onSend({ text: trimmed, attachmentIds: readyIds });
+    onSend({ text: trimmed, attachmentIds: readyIds, attachmentPreviews: readyAttachmentPreviews });
     setText('');
     setMultiline(false);
     setAttachments([]);

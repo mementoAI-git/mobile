@@ -12,6 +12,7 @@ import { useUiStore } from '@/store';
 import { queryKeys } from '@/constants/query-keys';
 import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import type { ChatReplyQuote } from '@/lib/utils';
+import type { IMessageAttachment } from '@/types';
 
 export function useChatLogic() {
   const { id, type, promptTitle } = useLocalSearchParams<{ id: string; type?: string; promptTitle?: string }>();
@@ -83,8 +84,13 @@ export function useChatLogic() {
   }, [activeChatId, chatMode, deepDiveDimension, enrichmentStats.stats, openSheet]);
 
   const send = useCallback(
-    async (text: string, replyTo?: ChatReplyQuote | null, attachments?: string[]) => {
-      await streamSend(text, { replyTo, chatMode, deepDiveDimension, attachments });
+    async (
+      text: string,
+      replyTo?: ChatReplyQuote | null,
+      attachments?: string[],
+      attachmentPreviews?: IMessageAttachment[],
+    ) => {
+      await streamSend(text, { replyTo, chatMode, deepDiveDimension, attachments, attachmentPreviews });
     },
     [streamSend, chatMode, deepDiveDimension],
   );

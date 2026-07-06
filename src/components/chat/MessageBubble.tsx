@@ -9,6 +9,7 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { CornerDownRight, FileText, Music, Play, ExternalLink, Copy } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
+import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { useLinkPreview, type LinkPreviewData } from '@/hooks/use-link-preview';
 
 // ─── Backward-compat helpers for old messages ────────────────────────────────
@@ -198,38 +199,55 @@ function AttachmentGrid({ attachments, onTap }: {
 
   let imageSection: React.ReactNode = null;
 
+  const renderMediaPreview = (
+    a: { url: string; name: string; type?: string; _id?: string },
+    width: number,
+    height: number,
+    borderRadius: number,
+    onPress: () => void,
+  ) => {
+    if (getMimeCategory(a.name, a.type) === 'video') {
+      return (
+        <VideoThumbnail
+          uri={a.url}
+          thumbnailUrl={(a as any).thumbnail}
+          width={width}
+          height={height}
+          borderRadius={borderRadius}
+          onPress={onPress}
+        />
+      );
+    }
+
+    return (
+      <Image
+        source={{ uri: a.url }}
+        style={{ width, height, borderRadius }}
+        resizeMode="cover"
+      />
+    );
+  };
+
   if (count === 1) {
-    // Single image — full width, 4:3
+    // Single image/video — full width, 4:3
     const a = mediaItems[0];
     const origIdx = attachments.indexOf(a);
     imageSection = (
       <TouchableOpacity onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
-        <Image source={{ uri: a.url }} style={{ width: fullW, height: Math.round(fullW * (3 / 4)), borderRadius: 12 }} resizeMode="cover" />
-        {getMimeCategory(a.name, a.type) === 'video' && (
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
-            <Play size={32} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 4 }} />
-          </View>
-        )}
+        {renderMediaPreview(a, fullW, Math.round(fullW * (3 / 4)), 12, () => onTap(origIdx))}
       </TouchableOpacity>
     );
   } else if (count <= 3) {
-    // 2-3 images — horizontal strip, equal square tiles
+    // 2-3 media items — horizontal strip, equal tiles
     const tileW = Math.floor((fullW - GRID_GAP * (count - 1)) / count);
     const tileH = Math.round(tileW * (3 / 4));
     imageSection = (
       <View style={{ flexDirection: 'row', gap: GRID_GAP }}>
         {mediaItems.map((a, i) => {
           const origIdx = attachments.indexOf(a);
-          const isLast = i === count - 1;
-          const cat = getMimeCategory(a.name, a.type);
           return (
             <TouchableOpacity key={a._id ?? origIdx} onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
-              <Image source={{ uri: a.url }} style={{ width: tileW, height: tileH, borderRadius: 10 }} resizeMode="cover" />
-              {cat === 'video' && (
-                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
-                  <Play size={18} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 2 }} />
-                </View>
-              )}
+              {renderMediaPreview(a, tileW, tileH, 10, () => onTap(origIdx))}
             </TouchableOpacity>
           );
         })}
@@ -251,15 +269,9 @@ function AttachmentGrid({ attachments, onTap }: {
               const origIdx = attachments.indexOf(a);
               const isLast = globalIdx === 3;
               const showOverlay = isLast && overflow > 0;
-              const cat = getMimeCategory(a.name, a.type);
               return (
                 <TouchableOpacity key={a._id ?? origIdx} onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
-                  <Image source={{ uri: a.url }} style={{ width: tileW, height: tileH, borderRadius: 10 }} resizeMode="cover" />
-                  {cat === 'video' && !showOverlay && (
-                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
-                      <Play size={18} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 2 }} />
-                    </View>
-                  )}
+                  {renderMediaPreview(a, tileW, tileH, 10, () => onTap(origIdx))}
                   {showOverlay && (
                     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.48)', alignItems: 'center', justifyContent: 'center' }}>
                       <Text style={{ fontFamily: FONTS.sansBold, fontSize: 18, color: '#fff' }}>+{overflow}</Text>

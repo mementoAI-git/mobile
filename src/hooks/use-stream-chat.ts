@@ -3,11 +3,15 @@ import endpoint from '@/api/endpoint';
 import { useAuthStore } from '@/store';
 import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import { buildPromptWithReplyQuote, type ChatReplyQuote } from '@/lib/utils';
+import type { IMessageAttachment } from '@/types';
+
+type ChatAttachmentPreview = IMessageAttachment;
 
 interface StreamMessage {
   role: 'user' | 'ai';
   text: string;
   replyTo?: ChatReplyQuote;
+  attatchments?: ChatAttachmentPreview[];
 }
 
 interface SendOptions {
@@ -16,6 +20,8 @@ interface SendOptions {
   deepDiveDimension?: LifeDimension | null;
   /** IDs of already-uploaded files to pass as context to the AI */
   attachments?: string[];
+  /** Uploaded file metadata used for the optimistic chat bubble preview */
+  attachmentPreviews?: ChatAttachmentPreview[];
 }
 
 const baseURL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
@@ -44,7 +50,7 @@ export function useStreamChat(memoryId?: string) {
 
   const send = useCallback(
     async (text: string, options?: SendOptions) => {
-      const { replyTo, chatMode, deepDiveDimension, attachments } = options ?? {};
+      const { replyTo, chatMode, deepDiveDimension, attachments, attachmentPreviews } = options ?? {};
       // Block if both text and attachments are empty, or if already streaming
       const hasText = text.trim().length > 0;
       const hasAttachments = (attachments ?? []).length > 0;
@@ -54,9 +60,9 @@ export function useStreamChat(memoryId?: string) {
 
       const userMessage: StreamMessage = {
         role: 'user',
-        // Show a placeholder in the UI for media-only messages
-        text: hasText ? text : `📎 ${attachments!.length} attachment${attachments!.length > 1 ? 's' : ''}`,
+        text: hasText ? text : '',
         ...(replyTo ? { replyTo } : {}),
+        ...(attachmentPreviews?.length ? { attatchments: attachmentPreviews } : {}),
       };
       setMessages((prev) => [...prev, userMessage]);
       streamingRef.current = true;
