@@ -11,16 +11,13 @@ export function useForgotPasswordLogic() {
 
   const handleSubmit = () => {
     if (!email.trim()) return;
-    console.log('[ForgotPassword] 🌐 API base URL:', process.env.EXPO_PUBLIC_API_BASE_URL);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     mutate(email.trim(), {
-      onSuccess: (res) => {
-        console.log('[ForgotPassword] ✅ Success response:', JSON.stringify(res?.data ?? res, null, 2));
+      onSuccess: () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setSent(true);
       },
-      onError: (err: any) => {
-        console.log('[ForgotPassword] ❌ Error response:', JSON.stringify(err?.response?.data ?? err?.message ?? err, null, 2));
+      onError: () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       },
     });

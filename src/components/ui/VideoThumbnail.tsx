@@ -92,10 +92,9 @@ export function VideoThumbnail({ uri, thumbnailUrl, width, height, borderRadius 
   }, [uri, hasServerThumb]);
 
   const handlePress = useCallback(() => {
-    console.log('[VideoThumbnail] pressed uri:', uri?.slice(0, 60), 'hasOnPress:', !!onPress);
     Haptics.selectionAsync();
     onPress?.();
-  }, [onPress, uri]);
+  }, [onPress]);
 
   return (
     <TouchableOpacity

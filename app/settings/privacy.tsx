@@ -209,10 +209,10 @@ export default function PrivacySettingsScreen() {
           </View>
           <View style={{ flex: 1, gap: 4 }}>
             <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 13, color: COLORS.textStrong }}>
-              End-to-end encrypted
+              Private by default
             </Text>
             <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textWeak, lineHeight: 19 }}>
-              Your reflections are private by default. Memento cannot read your memories without your explicit permission.
+              Your reflections stay visible only to you unless you choose who can receive or view them.
             </Text>
           </View>
         </Animated.View>

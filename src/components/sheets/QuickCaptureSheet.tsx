@@ -12,6 +12,7 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { RecordingIconButton } from '@/components/ui/RecordingIconButton';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
 import type { IDailyPromptCapture } from '@/types';
+import { logger } from '@/lib/logger';
 
 export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
   const [text, setText] = useState<string>('');
@@ -58,7 +59,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
             setAttachments(prev => [...prev, uploaded._id]);
           }
         } catch (err) {
-          if (isMountedRef.current) console.error('Upload failed', err);
+          if (isMountedRef.current) logger.error('Upload failed', err);
         }
       }
     } else {
@@ -92,7 +93,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
           setAttachments(prev => [...prev, uploaded._id]);
         }
       } catch (err) {
-        if (isMountedRef.current) console.error('Upload failed', err);
+        if (isMountedRef.current) logger.error('Upload failed', err);
       }
     }
     if (isMountedRef.current) {

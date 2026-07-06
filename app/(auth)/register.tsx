@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Keyboard,
   LayoutAnimation,
+  Linking,
   Text,
 } from 'react-native';
 import { Controller } from 'react-hook-form';
@@ -28,8 +29,11 @@ import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
+import { API_BASE_URL } from '@/lib/env';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
+const TERMS_URL = 'https://memento.ai/terms';
+const PRIVACY_URL = 'https://memento.ai/privacy';
 
 // ─── Easing presets ───────────────────────────────────────────────────────────
 const EASE_OUT = Easing.out(Easing.cubic);
@@ -130,8 +134,7 @@ export default function RegisterScreen() {
     setPasskeyConfirmVisible(false);
     try {
       setPasskeyLoading(true);
-      const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
-      const webBase = apiBase.replace('/api', '');
+      const webBase = API_BASE_URL.replace('/api', '');
       const { openAuthSessionAsync } = await import('expo-web-browser');
       await openAuthSessionAsync(`${webBase}/signup`, 'memento://');
     } catch { /* silent */ } finally {
@@ -328,8 +331,20 @@ export default function RegisterScreen() {
           <View className="items-center justify-center px-4 mt-6">
             <Text className="text-xs text-text-weak text-center leading-normal" style={{ fontFamily: FONTS.sans }}>
               By creating an account, you agree to our{' '}
-              <Text className="text-brand underline font-semibold">Terms of Service</Text> and{' '}
-              <Text className="text-brand underline font-semibold">Privacy Policy</Text>.
+              <Text
+                className="text-brand underline font-semibold"
+                onPress={() => Linking.openURL(TERMS_URL)}
+              >
+                Terms of Service
+              </Text>
+              {' '}and{' '}
+              <Text
+                className="text-brand underline font-semibold"
+                onPress={() => Linking.openURL(PRIVACY_URL)}
+              >
+                Privacy Policy
+              </Text>
+              .
             </Text>
           </View>
 

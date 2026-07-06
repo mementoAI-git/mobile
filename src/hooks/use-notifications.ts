@@ -7,6 +7,7 @@ import type * as NotificationsType from 'expo-notifications';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useUiStore, useAuthStore } from '@/store';
+import { logger } from '@/lib/logger';
 
 const isExpoGo = Constants.appOwnership === 'expo';
 
@@ -29,7 +30,7 @@ export function useNotifications() {
     let isMounted = true;
 
     if (isExpoGo) {
-      console.log('Push notifications are not supported in Expo Go (SDK 53+). Please use a development build.');
+      logger.debug('Push notifications are not supported in Expo Go. Please use a development build.');
       return;
     }
 
@@ -51,7 +52,6 @@ export function useNotifications() {
 
     const handleNotificationResponse = (response: NotificationsType.NotificationResponse) => {
       const data = response.notification.request.content.data as { type?: string; id?: string; url?: string };
-      console.log('Notification response data:', data);
 
       const isAuthenticated = useAuthStore.getState().token;
       const setPendingDeepLink = useUiStore.getState().setPendingDeepLink;
@@ -102,7 +102,7 @@ export function useNotifications() {
         try {
           notificationListener.current.remove();
         } catch (e) {
-          console.log('Error removing notification subscription', e);
+          logger.error('Error removing notification subscription', e);
         } finally {
           notificationListener.current = null;
         }
@@ -111,7 +111,7 @@ export function useNotifications() {
         try {
           responseListener.current.remove();
         } catch (e) {
-          console.log('Error removing response subscription', e);
+          logger.error('Error removing response subscription', e);
         } finally {
           responseListener.current = null;
         }
@@ -158,7 +158,7 @@ async function registerForPushNotificationsAsync() {
         Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
 
       if (!projectId) {
-        console.warn('Project ID not found in app config. Ensure EAS is configured.');
+        logger.warn('Project ID not found in app config. Ensure EAS is configured.');
         return null;
       }
 
@@ -168,10 +168,10 @@ async function registerForPushNotificationsAsync() {
         })
       ).data;
     } catch (e) {
-      console.error('Failed to get push token:', e);
+      logger.error('Failed to get push token:', e);
     }
   } else {
-    console.log('Must use physical device for Push Notifications');
+    logger.debug('Must use physical device for Push Notifications');
   }
 
   return token;

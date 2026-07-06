@@ -10,6 +10,7 @@ import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import { useToast } from '@/components/ui/Toast';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { logger } from '@/lib/logger';
 
 const FEEDBACK_OPTIONS = ['Bug', 'Feature Request', 'UI/UX Issue', 'General Feedback', 'Other'];
 
@@ -58,7 +59,7 @@ export function FeedbackSheet() {
         }
       } catch (err) {
         if (isMountedRef.current) {
-          console.error('Upload failed', err);
+          logger.error('Upload failed', err);
           toast('There was an error uploading your screenshot.', 'error');
         }
       }
@@ -83,7 +84,7 @@ export function FeedbackSheet() {
       }
     } catch (error) {
       if (isMountedRef.current) {
-        console.error("Failed to send feedback:", error);
+        logger.error('Failed to send feedback:', error);
         toast('Failed to send feedback. Please try again.', 'error');
       }
     } finally {

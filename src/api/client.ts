@@ -5,6 +5,7 @@ import axios, {
 } from 'axios';
 import { storageKeys } from '@/constants/storage-keys';
 import { secureStorage } from '@/lib/secure-storage';
+import { API_BASE_URL } from '@/lib/env';
 import type { ApiError, RequestOptions } from './interface';
 import type { IAuth } from '@/types';
 
@@ -17,10 +18,8 @@ const getAuthToken = async (): Promise<string | null> => {
   }
 };
 
-const baseURL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
-
 const client: AxiosInstance = axios.create({
-  baseURL,
+  baseURL: API_BASE_URL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

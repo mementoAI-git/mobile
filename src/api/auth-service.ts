@@ -1,11 +1,10 @@
 import Axios from 'axios';
 import dayjs from 'dayjs';
 import { secureStorage } from '@/lib/secure-storage';
+import { API_BASE_URL } from '@/lib/env';
 import type { IAuth } from '@/types';
 import { storageKeys } from '@/constants/storage-keys';
 import endpoint from './endpoint';
-
-const baseURL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
 // Injected at startup by root _layout.tsx so the class stays testable
 let _redirectFn: (() => void) | null = null;
@@ -71,7 +70,7 @@ class AuthService {
     }
 
     try {
-      const response = await Axios.post(`${baseURL}${endpoint.refreshToken}`, {
+      const response = await Axios.post(`${API_BASE_URL}${endpoint.refreshToken}`, {
         refresh_token: authData.refresh_token,
       });
 
@@ -91,7 +90,7 @@ class AuthService {
     try {
       const authData = await this.getAuthData();
       if (authData) {
-        await Axios.delete(`${baseURL}${endpoint.logout}`, {
+        await Axios.delete(`${API_BASE_URL}${endpoint.logout}`, {
           headers: { Authorization: `Bearer ${authData.access_token}` },
         });
       }

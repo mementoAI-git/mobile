@@ -55,6 +55,8 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { OfflineNotice } from '@/components/ui/OfflineNotice';
 import { useNotifications } from '@/hooks/use-notifications';
 import { COLORS } from '@/constants/tokens';
+import { SENTRY_DSN, SENTRY_TRACES_SAMPLE_RATE } from '@/lib/env';
+import { logger } from '@/lib/logger';
 import { StatusBar } from 'expo-status-bar';
 import { useShareIntentContext, ShareIntentProvider } from 'expo-share-intent';
 
@@ -71,14 +73,12 @@ const queryClient = new QueryClient({
   },
 });
 
-const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
-
 if (SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
     debug: __DEV__,
-    tracesSampleRate: 1.0,
-    sendDefaultPii: true,
+    tracesSampleRate: Number.isFinite(SENTRY_TRACES_SAMPLE_RATE) ? SENTRY_TRACES_SAMPLE_RATE : 0.2,
+    sendDefaultPii: false,
   });
 }
 
@@ -213,7 +213,9 @@ function RootLayout() {
     if (token && expoPushToken) {
       import('@/api/mutations').then(({ put }) => {
         import('@/api/endpoint').then(({ default: endpoint }) => {
-          put(endpoint.profile, { push_token: expoPushToken }).catch(console.error);
+          put(endpoint.profile, { push_token: expoPushToken }).catch((error) => {
+            logger.error('Failed to sync push token', error);
+          });
         });
       });
     }

@@ -8,6 +8,7 @@ import * as Linking from 'expo-linking';
 import { useQueryClient } from '@tanstack/react-query';
 import { post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
+import { logger } from '@/lib/logger';
 
 interface UpgradePromptSheetProps {
   onClose?: () => void;
@@ -44,7 +45,7 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
         alert('Could not start checkout. Please try again.');
       }
     } catch (err: any) {
-      console.error('Checkout error:', err);
+      logger.error('Checkout error:', err);
       alert(err?.message || 'A billing error occurred. Please try again.');
     } finally {
       setLoading(false);
