@@ -3,7 +3,8 @@ import {
   View, Text, TextInput, TouchableOpacity, Platform, StyleSheet,
   Keyboard, ScrollView, Image, ActivityIndicator,
 } from 'react-native';
-import { ArrowUp, Mic, Square, Phone, PlusCircle, X, FileText, PhoneCall } from 'lucide-react-native';
+import { ArrowUp, Mic, Square, Phone, PlusCircle, X, FileText, PhoneCall, Play } from 'lucide-react-native';
+import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -79,6 +80,8 @@ export function ChatInput({
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [previewVisible, setPreviewVisible] = useState(false);
 
   const btnScale = useSharedValue(1);
   const micPulse = useSharedValue(1);
@@ -338,35 +341,75 @@ export function ChatInput({
       style={{ paddingBottom: bottomPadding, paddingHorizontal: 12, paddingTop: 6 }}
     >
       {/* Attachment preview strip */}
-      {attachments.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ marginBottom: 8 }}
-          contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
-        >
-          {attachments.map(a => (
-            <View key={a.clientId} style={styles.attachChip}>
-              {a.mimeType.startsWith('image/') ? (
-                <Image source={{ uri: a.uri }} style={styles.attachThumb} resizeMode="cover" />
-              ) : (
-                <View style={styles.attachIcon}>
-                  <FileText size={14} color={COLORS.brand} strokeWidth={1.8} />
-                </View>
-              )}
-              <Text style={styles.attachName} numberOfLines={1}>{a.name}</Text>
-              {a.isUploading
-                ? <ActivityIndicator size="small" color={COLORS.brand} style={{ marginLeft: 4 }} />
-                : (
-                  <TouchableOpacity onPress={() => removeAttachment(a.clientId)} hitSlop={6}>
-                    <X size={12} color={COLORS.textWeak} strokeWidth={2.5} />
+      {attachments.length > 0 && (() => {
+        // Build PreviewAttachment list for MediaPreviewModal (only uploaded items)
+        const previewable: PreviewAttachment[] = attachments
+          .filter(a => a.fileId && a.uri)
+          .map((a, idx) => ({ clientId: a.clientId, uri: a.uri, name: a.name, mimeType: a.mimeType }));
+
+        return (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginBottom: 8 }}
+            contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
+          >
+            {attachments.map((a, idx) => {
+              const isMedia = a.mimeType.startsWith('image/') || a.mimeType.startsWith('video/');
+              const isVideo = a.mimeType.startsWith('video/');
+              const previewIdx = previewable.findIndex(p => p.clientId === a.clientId);
+
+              return (
+                <View key={a.clientId} style={styles.attachChip}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (!a.isUploading && previewIdx >= 0) {
+                        Haptics.selectionAsync();
+                        setPreviewIndex(previewIdx);
+                        setPreviewVisible(true);
+                      }
+                    }}
+                    activeOpacity={previewIdx >= 0 ? 0.8 : 1}
+                    style={{ position: 'relative' }}
+                  >
+                    {isMedia ? (
+                      <>
+                        <Image source={{ uri: a.uri }} style={styles.attachThumb} resizeMode="cover" />
+                        {isVideo && (
+                          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                            <Play size={10} color="white" fill="white" strokeWidth={0} />
+                          </View>
+                        )}
+                      </>
+                    ) : (
+                      <View style={styles.attachIcon}>
+                        <FileText size={14} color={COLORS.brand} strokeWidth={1.8} />
+                      </View>
+                    )}
                   </TouchableOpacity>
-                )
-              }
-            </View>
-          ))}
-        </ScrollView>
-      )}
+                  <Text style={styles.attachName} numberOfLines={1}>{a.name}</Text>
+                  {a.isUploading
+                    ? <ActivityIndicator size="small" color={COLORS.brand} style={{ marginLeft: 4 }} />
+                    : (
+                      <TouchableOpacity onPress={() => removeAttachment(a.clientId)} hitSlop={6}>
+                        <X size={12} color={COLORS.textWeak} strokeWidth={2.5} />
+                      </TouchableOpacity>
+                    )
+                  }
+                </View>
+              );
+            })}
+          </ScrollView>
+        );
+      })()}
+
+      {/* Preview modal for attachment chips */}
+      <MediaPreviewModal
+        visible={previewVisible}
+        attachments={attachments.filter(a => a.fileId && a.uri).map(a => ({ clientId: a.clientId, uri: a.uri, name: a.name, mimeType: a.mimeType }))}
+        initialIndex={previewIndex}
+        onClose={() => setPreviewVisible(false)}
+      />
 
       {/* One unified fluid pill: [+] | [text field flex:1] | [mic] [call] */}
       <View
@@ -375,10 +418,10 @@ export function ChatInput({
           {
             flexDirection: 'row',
             alignItems: 'center',
-            paddingLeft: 12,
+            paddingLeft: 8,
             paddingRight: 8,
-            paddingVertical: 8,
-            borderRadius: 999,
+            paddingVertical: 0,
+            borderRadius: 16,
             borderWidth: 1,
             borderColor: COLORS.strokeWeaker,
             gap: 8,
@@ -404,14 +447,14 @@ export function ChatInput({
           <PlusCircle size={scale(18)} color={pickerOpen ? COLORS.brand : COLORS.textMuted} strokeWidth={1.8} />
         </TouchableOpacity>
 
-        {/* Text field — takes remaining space */}
+        {/* Text field — grows with content */}
         <View style={{ flex: 1 }}>
           <TextInput
             value={text}
             onChangeText={(v) => {
               if (isRecording) textBeforeDictationRef.current = v;
               setText(v);
-              setMultiline(v.includes('\n') || v.length > 80);
+              setMultiline(v.includes('\n') || v.length > 60);
             }}
             placeholder={isRecording ? 'Listening…' : placeholder}
             placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
@@ -421,7 +464,7 @@ export function ChatInput({
               fontSize: moderateScale(13),
               color: COLORS.textStrong,
               paddingVertical: 0,
-              maxHeight: verticalScale(96),
+              // No maxHeight cap — pill grows naturally with text
             }}
             blurOnSubmit={false}
             editable={!disabled}
@@ -455,7 +498,7 @@ export function ChatInput({
               onPressIn={() => { btnScale.value = withSpring(0.9); }}
               onPressOut={() => { btnScale.value = withSpring(1); }}
               disabled={disabled}
-              style={{ width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.brand, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }}
+              style={{ width: scale(40), height: scale(40), borderRadius: scale(20), backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.brand, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }}
             >
               <ArrowUp size={scale(18)} color="white" strokeWidth={2.5} />
             </TouchableOpacity>

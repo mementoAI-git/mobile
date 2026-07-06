@@ -43,6 +43,11 @@ function cachePut(uri: string, thumbnailUri: string) {
 interface VideoThumbnailProps {
   uri: string;
   /**
+   * Server-provided thumbnail URL (e.g. from Cloudinary fetch transformation).
+   * When provided, skips `expo-video-thumbnails` extraction entirely — instant load.
+   */
+  thumbnailUrl?: string | null;
+  /**
    * Explicit pixel width. When omitted (or 0) the component fills its parent via
    * StyleSheet.absoluteFillObject — useful inside aspectRatio containers.
    */
@@ -52,13 +57,22 @@ interface VideoThumbnailProps {
   onPress?: () => void;
 }
 
-export function VideoThumbnail({ uri, width, height, borderRadius = 14, onPress }: VideoThumbnailProps) {
+export function VideoThumbnail({ uri, thumbnailUrl, width, height, borderRadius = 14, onPress }: VideoThumbnailProps) {
   const fillParent = !width || !height;
-  const [thumbUri, setThumbUri] = useState<string | null>(() => thumbnailCache.get(uri) ?? null);
-  const [loading, setLoading] = useState(!thumbnailCache.has(uri));
+
+  // If the server already provides a thumbnail URL, use it directly.
+  // Otherwise fall back to client-side extraction via expo-video-thumbnails.
+  const hasServerThumb = Boolean(thumbnailUrl);
+
+  const [thumbUri, setThumbUri] = useState<string | null>(() => {
+    if (thumbnailUrl) return thumbnailUrl;
+    return thumbnailCache.get(uri) ?? null;
+  });
+  const [loading, setLoading] = useState(!hasServerThumb && !thumbnailCache.has(uri));
 
   useEffect(() => {
-    if (!uri || thumbnailCache.has(uri)) return;
+    // Skip extraction if server already gave us a thumbnail
+    if (hasServerThumb || !uri || thumbnailCache.has(uri)) return;
     let cancelled = false;
 
     getThumbnailAsync(uri, { time: 0, quality: 0.4 })
@@ -75,7 +89,7 @@ export function VideoThumbnail({ uri, width, height, borderRadius = 14, onPress 
       });
 
     return () => { cancelled = true; };
-  }, [uri]);
+  }, [uri, hasServerThumb]);
 
   const handlePress = useCallback(() => {
     console.log('[VideoThumbnail] pressed uri:', uri?.slice(0, 60), 'hasOnPress:', !!onPress);
@@ -89,23 +103,23 @@ export function VideoThumbnail({ uri, width, height, borderRadius = 14, onPress 
       onPress={handlePress}
       style={[
         styles.container,
-        fillParent ? StyleSheet.absoluteFillObject : { width, height },
+        fillParent ? StyleSheet.absoluteFill : { width, height },
         { borderRadius },
       ]}
     >
       {thumbUri ? (
         <Image
           source={{ uri: thumbUri }}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           resizeMode="cover"
         />
       ) : (
         // Dark placeholder while loading or on error
-        <View style={[StyleSheet.absoluteFillObject, styles.placeholder]} />
+        <View style={[StyleSheet.absoluteFill, styles.placeholder]} />
       )}
 
       {/* Translucent dark overlay */}
-      <View style={[StyleSheet.absoluteFillObject, styles.overlay]} />
+      <View style={[StyleSheet.absoluteFill, styles.overlay]} />
 
       {/* Centred play button */}
       <View style={styles.playBtn}>
