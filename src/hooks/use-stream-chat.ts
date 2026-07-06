@@ -10,6 +10,7 @@ type ChatAttachmentPreview = IMessageAttachment;
 interface StreamMessage {
   role: 'user' | 'ai';
   text: string;
+  created_at?: string;
   replyTo?: ChatReplyQuote;
   attatchments?: ChatAttachmentPreview[];
 }
@@ -125,7 +126,7 @@ export function useStreamChat(memoryId?: string) {
         }
 
         if (isMountedRef.current && !controller.signal.aborted) {
-          setMessages((prev) => [...prev, { role: 'ai', text: accumulated }]);
+          setMessages((prev) => [...prev, { role: 'ai', text: accumulated, created_at: new Date().toISOString() }]);
           setStreamingText('');
         }
       } catch (err: any) {

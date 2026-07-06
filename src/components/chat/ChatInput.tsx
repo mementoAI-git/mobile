@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, Platform, StyleSheet,
   Keyboard, ScrollView, Image, ActivityIndicator,
 } from 'react-native';
-import { ArrowUp, Mic, Square, Phone, PlusCircle, X, FileText, PhoneCall, Play } from 'lucide-react-native';
+import { ArrowUp, Mic, Square, PlusCircle, X, FileText, PhoneCall, Play } from 'lucide-react-native';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -68,6 +68,14 @@ const SUPPORTED_MIME = [
   'application/pdf',
   'text/plain',
 ];
+
+const INPUT_PILL_RADIUS = 999;
+const INPUT_PILL_INSET = scale(8);
+const INPUT_PILL_GAP = scale(6);
+const SECONDARY_ACTION_SIZE = scale(44);
+const PRIMARY_ACTION_SIZE = scale(56);
+const INPUT_PILL_VERTICAL_INSET = scale(6);
+const INPUT_PILL_HEIGHT = PRIMARY_ACTION_SIZE + INPUT_PILL_VERTICAL_INSET * 2;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -319,8 +327,6 @@ export function ChatInput({
   const hasContent = text.trim().length > 0 || attachments.filter(a => a.fileId).length > 0;
   const showStop = loading;
   const showSend = !loading && hasContent && !isRecording && !anyUploading;
-  const showMic = !loading && !showSend;
-
   const bottomPadding = keyboardVisible
     ? verticalScale(8)
     : insets.bottom
@@ -332,21 +338,6 @@ export function ChatInput({
     const s = secs % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
-
-  // The large orange button style
-  const btnStyle = (isRounded: boolean) => ({
-    width: scale(44),
-    height: scale(44),
-    borderRadius: isRounded ? scale(22) : scale(16),
-    backgroundColor: COLORS.brand,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    shadowColor: COLORS.brand,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  });
 
   return (
     <Animated.View
@@ -431,14 +422,14 @@ export function ChatInput({
           {
             flexDirection: 'row',
             alignItems: 'center',
-            paddingLeft: 8,
-            paddingRight: 8,
+            paddingLeft: INPUT_PILL_INSET,
+            paddingRight: INPUT_PILL_INSET,
             paddingVertical: 0,
-            borderRadius: 16,
+            borderRadius: INPUT_PILL_RADIUS,
             borderWidth: 1,
             borderColor: COLORS.strokeWeaker,
-            gap: 8,
-            minHeight: verticalScale(52),
+            gap: INPUT_PILL_GAP,
+            minHeight: INPUT_PILL_HEIGHT,
           },
         ]}
       >
@@ -447,9 +438,9 @@ export function ChatInput({
           onPress={() => { Haptics.selectionAsync(); setPickerOpen(o => !o); }}
           disabled={disabled || anyUploading}
           style={{
-            width: scale(30),
-            height: scale(30),
-            borderRadius: scale(15),
+            width: SECONDARY_ACTION_SIZE,
+            height: SECONDARY_ACTION_SIZE,
+            borderRadius: SECONDARY_ACTION_SIZE / 2,
             backgroundColor: pickerOpen ? `${COLORS.brand}15` : 'transparent',
             alignItems: 'center',
             justifyContent: 'center',
@@ -457,11 +448,11 @@ export function ChatInput({
             flexShrink: 0,
           }}
         >
-          <PlusCircle size={scale(18)} color={pickerOpen ? COLORS.brand : COLORS.textMuted} strokeWidth={1.8} />
+          <PlusCircle size={scale(22)} color={pickerOpen ? COLORS.brand : COLORS.textMuted} strokeWidth={1.9} />
         </TouchableOpacity>
 
         {/* Text field — grows with content */}
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, minHeight: SECONDARY_ACTION_SIZE, justifyContent: 'center' }}>
           <TextInput
             value={text}
             onChangeText={(v) => {
@@ -474,9 +465,11 @@ export function ChatInput({
             multiline
             style={{
               fontFamily: FONTS.sans,
-              fontSize: moderateScale(13),
+              fontSize: moderateScale(15),
               color: COLORS.textStrong,
               paddingVertical: 0,
+              minHeight: verticalScale(24),
+              textAlignVertical: 'center',
               // No maxHeight cap — pill grows naturally with text
             }}
             blurOnSubmit={false}
@@ -499,9 +492,9 @@ export function ChatInput({
               onPress={handleStop}
               onPressIn={() => { btnScale.value = withSpring(0.9); }}
               onPressOut={() => { btnScale.value = withSpring(1); }}
-              style={{ width: scale(40), height: scale(40), borderRadius: scale(20), backgroundColor: COLORS.error, alignItems: 'center', justifyContent: 'center' }}
+              style={{ width: PRIMARY_ACTION_SIZE, height: PRIMARY_ACTION_SIZE, borderRadius: PRIMARY_ACTION_SIZE / 2, backgroundColor: COLORS.error, alignItems: 'center', justifyContent: 'center' }}
             >
-              <Square size={scale(14)} color="white" fill="white" strokeWidth={0} />
+              <Square size={scale(16)} color="white" fill="white" strokeWidth={0} />
             </TouchableOpacity>
           </Animated.View>
         ) : showSend ? (
@@ -511,29 +504,29 @@ export function ChatInput({
               onPressIn={() => { btnScale.value = withSpring(0.9); }}
               onPressOut={() => { btnScale.value = withSpring(1); }}
               disabled={disabled}
-              style={{ width: scale(40), height: scale(40), borderRadius: scale(20), backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.brand, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }}
+              style={{ width: PRIMARY_ACTION_SIZE, height: PRIMARY_ACTION_SIZE, borderRadius: PRIMARY_ACTION_SIZE / 2, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.brand, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.24, shadowRadius: 8, elevation: 3 }}
             >
-              <ArrowUp size={scale(18)} color="white" strokeWidth={2.5} />
+              <ArrowUp size={scale(22)} color="white" strokeWidth={2.5} />
             </TouchableOpacity>
           </Animated.View>
         ) : (
-          <View style={{ flexDirection: 'row', gap: 6 }}>
+          <View style={{ flexDirection: 'row', gap: INPUT_PILL_GAP, alignItems: 'center' }}>
             <Animated.View style={micPulseStyle}>
               <TouchableOpacity
                 onPress={handleMicPress}
                 disabled={disabled || micUnavailable}
-                style={{ width: scale(40), height: scale(40), borderRadius: scale(20), backgroundColor: isRecording ? COLORS.error : COLORS.brand, alignItems: 'center', justifyContent: 'center', shadowColor: isRecording ? COLORS.error : COLORS.brand, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3, opacity: micUnavailable ? 0.4 : 1 }}
+                style={{ width: SECONDARY_ACTION_SIZE, height: SECONDARY_ACTION_SIZE, borderRadius: SECONDARY_ACTION_SIZE / 2, backgroundColor: isRecording ? COLORS.error : COLORS.fillWeaker, alignItems: 'center', justifyContent: 'center', opacity: micUnavailable ? 0.4 : 1 }}
               >
-                <Mic size={scale(17)} color="white" strokeWidth={2} />
+                <Mic size={scale(20)} color={isRecording ? COLORS.textInverse : COLORS.textBase} strokeWidth={2} />
               </TouchableOpacity>
             </Animated.View>
             {onVoice && !isRecording && (
               <TouchableOpacity
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onVoice(); }}
                 disabled={disabled}
-                style={{ width: scale(40), height: scale(40), borderRadius: scale(20), backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.brand, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }}
+                style={{ width: PRIMARY_ACTION_SIZE, height: PRIMARY_ACTION_SIZE, borderRadius: PRIMARY_ACTION_SIZE / 2, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.brand, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.24, shadowRadius: 8, elevation: 3 }}
               >
-                <PhoneCall size={scale(17)} color="white" strokeWidth={2} />
+                <PhoneCall size={scale(24)} color="white" strokeWidth={2} />
               </TouchableOpacity>
             )}
           </View>
@@ -556,9 +549,7 @@ export function ChatInput({
 
 const styles = StyleSheet.create({
   floatingContainer: {
-    ...Platform.select({
-      ios: { backgroundColor: 'rgba(255, 255, 255, 0.85)' },
-    }),
+    backgroundColor: COLORS.background,
   },
 
   // Attachment chip

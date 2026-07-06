@@ -181,7 +181,7 @@ function LinkPreviews({ text }: { text: string }) {
 //
 // 1 image  → full bubble width, 4:3
 // 2 images → two equal tiles side-by-side
-// 3+ images → three equal tiles, +N chip on 3rd for overflow
+// 3+ images → grid tiles, +N counter on the final darkened tile for overflow
 
 const BUBBLE_MAX_W = 260;
 const GRID_GAP = 3;
@@ -254,7 +254,7 @@ function AttachmentGrid({ attachments, onTap }: {
       </View>
     );
   } else {
-    // 4+ images — 2×2 grid, first 4 visible, +N chip on 4th tile
+    // 4+ images — 2×2 grid, first 4 visible, +N counter on the 4th tile overlay
     const tileW = Math.floor((fullW - GRID_GAP) / 2);
     const tileH = Math.round(tileW * (3 / 4));
     const visible = mediaItems.slice(0, 4);
@@ -273,7 +273,7 @@ function AttachmentGrid({ attachments, onTap }: {
                 <TouchableOpacity key={a._id ?? origIdx} onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
                   {renderMediaPreview(a, tileW, tileH, 10, () => onTap(origIdx))}
                   {showOverlay && (
-                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.48)', alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.62)', alignItems: 'center', justifyContent: 'center' }}>
                       <Text style={{ fontFamily: FONTS.sansBold, fontSize: 18, color: '#fff' }}>+{overflow}</Text>
                     </View>
                   )}
@@ -309,6 +309,9 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
   const replyQuote: { role: string; text: string } | null =
     (message as any).replyTo ?? (isUser ? extractReplyQuote(rawContent) : null);
   const content = isUser ? stripReplyWrapper(rawContent) : rawContent;
+  const responseTime = 'created_at' in message && message.created_at
+    ? dayjs(message.created_at).format('h:mm A')
+    : null;
 
   const hasContent = content.trim().length > 0 || rawAttachments.length > 0;
   if (!hasContent) return null;
@@ -364,14 +367,14 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
 
         {/* Meta row */}
         <View className={cn('flex-row items-center mt-1.5 px-2', isUser ? 'justify-end' : 'justify-start')}>
-          {!isUser && (
-            <View className="size-4 bg-brand/10 rounded-full items-center justify-center mr-1.5 border border-brand/5">
-              <Text className="text-[9px]">🌱</Text>
-            </View>
-          )}
-          {'created_at' in message && message.created_at && (
+          {!isUser && responseTime && (
             <Text className="text-[9px] text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>
-              {dayjs(message.created_at).format('h:mm A')}
+              {responseTime}
+            </Text>
+          )}
+          {isUser && responseTime && (
+            <Text className="text-[9px] text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>
+              {responseTime}
             </Text>
           )}
           {!isUser && aiModel && (
