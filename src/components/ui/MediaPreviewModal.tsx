@@ -117,7 +117,23 @@ function fmt(secs: number) {
 }
 
 function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
+  // autoPlay is handled via useEffect after mount — NOT in the player initializer.
+  // This modal renders VideoView inside a horizontally snapping FlatList with
+  // overlays. Android's default SurfaceView can fail to paint frames there, so
+  // the view below opts into TextureView and starts playback after mount.
   const { player, play, pause } = useVideoPlayer(uri, { autoPlay: false, loop: false });
+
+  // Start playback after <VideoView> has mounted and attached to the view hierarchy.
+  // A short delay gives the modal window and native video view time to settle.
+  useEffect(() => {
+    if (!isActive) return;
+    const t = setTimeout(() => {
+      play();
+    }, 50);
+    return () => clearTimeout(t);
+  // Only run when isActive changes from false→true (slide scrolled into view)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive]);
 
   // Pause when the slide scrolls out of view
   useEffect(() => {
@@ -137,7 +153,7 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
   const progress = duration > 0 ? currentTime / duration : 0;
   const ended = progress >= 0.99;
 
-  // Poll every 250ms
+  // Poll every 250ms to sync player state into React state
   useEffect(() => {
     const id = setInterval(() => {
       setCurrentTime(player.currentTime ?? 0);
@@ -190,17 +206,19 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
   }, [player, duration, showControls]);
 
   return (
-    <View style={styles.slide}>
+    // Keep a native parent for the Android video view inside the modal window.
+    <View style={styles.slide} collapsable={false}>
       {/* VideoView — no native controls */}
       <VideoView
         player={player}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         contentFit="contain"
         nativeControls={false}
+        surfaceType="textureView"
       />
 
       {/* Tap overlay — play/pause/replay */}
-      <TouchableOpacity onPress={handleTap} activeOpacity={0.9} style={StyleSheet.absoluteFillObject}>
+      <TouchableOpacity onPress={handleTap} activeOpacity={0.9} style={StyleSheet.absoluteFill}>
         {duration === 0 ? (
           // Video not yet loaded — show spinner
           <View style={styles.videoPlayBtn}>
@@ -428,12 +446,17 @@ function DocSlide({ item }: { item: PreviewAttachment }) {
   );
 }
 
+// Memoised slide wrappers — prevent VideoSlide/AudioSlide from remounting
+// when the FlatList re-renders due to currentIndex state changes in ModalInner.
+const MemoVideoSlide = React.memo(VideoSlide);
+const MemoAudioSlide = React.memo(AudioSlide);
+
 function makeRenderSlide(onClose: () => void, currentIndex: number, attachments: PreviewAttachment[]) {
   return function renderSlide({ item, index }: { item: PreviewAttachment; index: number }) {
     const isActive = index === currentIndex;
     if (item.mimeType.startsWith('image/')) return <ImageSlide uri={item.uri} onClose={onClose} />;
-    if (item.mimeType.startsWith('video/')) return <VideoSlide uri={item.uri} isActive={isActive} />;
-    if (item.mimeType.startsWith('audio/') || item.isVoice) return <AudioSlide item={item} isActive={isActive} />;
+    if (item.mimeType.startsWith('video/')) return <MemoVideoSlide uri={item.uri} isActive={isActive} />;
+    if (item.mimeType.startsWith('audio/') || item.isVoice) return <MemoAudioSlide item={item} isActive={isActive} />;
     return <DocSlide item={item} />;
   };
 }
@@ -478,7 +501,10 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: 
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 });
   const handleViewableChange = useCallback(({ viewableItems }: any) => {
-    if (viewableItems.length > 0) setCurrentIndex(viewableItems[0].index ?? 0);
+    if (viewableItems.length > 0) {
+      const idx = viewableItems[0].index ?? 0;
+      setCurrentIndex(idx);
+    }
   }, []);
 
   const [shareMenuVisible, setShareMenuVisible] = useState(false);
@@ -552,6 +578,11 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: 
     [onClose, currentIndex, attachments],
   );
 
+  const renderItem = useCallback(
+    ({ item, index }: { item: PreviewAttachment; index: number }) => renderSlide({ item, index }),
+    [renderSlide],
+  );
+
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       {/* ── Header ── */}
@@ -567,7 +598,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: 
 
       <View style={{ flex: 1 }}>
         <TouchableOpacity
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           onPress={() => { Haptics.selectionAsync(); onClose(); }}
           activeOpacity={1}
         />
@@ -586,7 +617,8 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: 
           onViewableItemsChanged={handleViewableChange}
           viewabilityConfig={viewabilityConfig.current}
           getItemLayout={(_, index) => ({ length: CARD_W + CARD_GAP, offset: (CARD_W + CARD_GAP) * index, index })}
-          renderItem={({ item, index }) => renderSlide({ item, index })}
+          renderItem={renderItem}
+          extraData={currentIndex}
           initialScrollIndex={initialIndex}
           onScrollToIndexFailed={() => {}}
           style={{ flex: 1 }}

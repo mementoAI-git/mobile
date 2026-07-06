@@ -3,11 +3,16 @@ import {
   View, Text, TextInput, TouchableOpacity, Platform, StyleSheet,
   Keyboard, ScrollView, Image, ActivityIndicator,
 } from 'react-native';
-import { ArrowUp, Mic, Square, Phone, PlusCircle, X, FileText } from 'lucide-react-native';
+import { ArrowUp, AudioLines, Mic, Square, PlusCircle, X, FileText, PhoneCall, Play } from 'lucide-react-native';
+import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { MediaPickerMenu } from '@/components/ui/MediaPickerMenu';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import {
+  ChatAttachmentPickerSheet,
+  type ChatPickerAsset,
+} from '@/components/chat/ChatAttachmentPickerSheet';
 import { COLORS, FONTS } from '@/constants/tokens';
 import Animated, {
   useAnimatedStyle,
@@ -23,7 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVoiceToText } from '@/hooks/use-voice-to-text';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useToast } from '@/components/ui/Toast';
-import type { IFile } from '@/types';
+import type { IFile, IMessageAttachment } from '@/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,10 +42,14 @@ interface AttachmentItem {
   file?: IFile;
 }
 
+type ChatAttachmentPreview = IMessageAttachment;
+
 export interface ChatSendPayload {
   text: string;
   /** IDs of already-uploaded files to pass to the AI as context */
   attachmentIds: string[];
+  /** Uploaded file metadata used for the optimistic chat bubble preview */
+  attachmentPreviews: ChatAttachmentPreview[];
 }
 
 interface ChatInputProps {
@@ -64,6 +73,14 @@ const SUPPORTED_MIME = [
   'text/plain',
 ];
 
+const INPUT_PILL_RADIUS = 999;
+const INPUT_PILL_INSET = scale(8);
+const INPUT_PILL_GAP = scale(6);
+const SECONDARY_ACTION_SIZE = scale(44);
+const PRIMARY_ACTION_SIZE = scale(56);
+const INPUT_PILL_VERTICAL_INSET = scale(6);
+const INPUT_PILL_HEIGHT = PRIMARY_ACTION_SIZE + INPUT_PILL_VERTICAL_INSET * 2;
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ChatInput({
@@ -78,7 +95,8 @@ export function ChatInput({
   const [multiline, setMultiline] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [previewVisible, setPreviewVisible] = useState(false);
 
   const btnScale = useSharedValue(1);
   const micPulse = useSharedValue(1);
@@ -86,6 +104,7 @@ export function ChatInput({
   const { toast } = useToast();
 
   const textBeforeDictationRef = useRef('');
+  const attachmentPickerRef = useRef<BottomSheetModal>(null);
 
   const { mutateAsync: uploadFile } = useFileUpload();
 
@@ -198,30 +217,11 @@ export function ChatInput({
     } catch { /* user cancelled */ }
   }, [uploadAndAdd, toast]);
 
-  // Gallery picker — photos + videos via ImagePicker (reliable on iOS & Android)
-  const handlePickGallery = useCallback(async () => {
-    Haptics.selectionAsync();
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        toast('Allow Memento to access your photos and videos.', 'error');
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images', 'videos'],
-        allowsMultipleSelection: true,
-        quality: 0.85,
-      });
-      if (!result.canceled) {
-        for (const asset of result.assets) {
-          const isVideo = asset.mimeType?.startsWith('video/');
-          const mime = asset.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg');
-          const name = asset.fileName || `${isVideo ? 'video' : 'photo'}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`;
-          await uploadAndAdd(asset.uri, mime, name, asset.fileSize);
-        }
-      }
-    } catch { /* user cancelled */ }
-  }, [uploadAndAdd, toast]);
+  const handleAddPickerAssets = useCallback(async (pickedAssets: ChatPickerAsset[]) => {
+    await Promise.all(pickedAssets.map(asset =>
+      uploadAndAdd(asset.uploadUri, asset.mimeType, asset.name)
+    ));
+  }, [uploadAndAdd]);
 
   // Document picker — audio, PDF, text, other files
   const handlePickDocument = useCallback(async () => {
@@ -237,13 +237,17 @@ export function ChatInput({
         multiple: true,
       });
       if (!result.canceled && result.assets.length > 0) {
-        for (const asset of result.assets) {
+        // Filter out oversized files first, then upload remaining in parallel
+        const validAssets = result.assets.filter(asset => {
           if (asset.size && asset.size > MAX_FILE_BYTES) {
             toast(`"${asset.name}" exceeds the ${MAX_FILE_MB}MB limit.`, 'error');
-            continue;
+            return false;
           }
-          await uploadAndAdd(asset.uri, asset.mimeType || 'application/octet-stream', asset.name, asset.size);
-        }
+          return true;
+        });
+        await Promise.all(validAssets.map(asset =>
+          uploadAndAdd(asset.uri, asset.mimeType || 'application/octet-stream', asset.name, asset.size)
+        ));
       }
     } catch { /* user cancelled */ }
   }, [uploadAndAdd, toast]);
@@ -258,12 +262,21 @@ export function ChatInput({
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
     const readyIds = attachments.filter(a => a.fileId && !a.isUploading).map(a => a.fileId as string);
+    const readyAttachmentPreviews = attachments
+      .filter(a => a.fileId && !a.isUploading)
+      .map((a): ChatAttachmentPreview => ({
+        _id: a.fileId ?? undefined,
+        url: a.file?.url ?? a.uri,
+        name: a.file?.name ?? a.name,
+        type: a.file?.type ?? a.mimeType,
+        size: a.file?.size,
+      }));
     if ((!trimmed && readyIds.length === 0) || disabled) return;
     // Block if any upload is still in progress
     if (attachments.some(a => a.isUploading)) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onSend({ text: trimmed, attachmentIds: readyIds });
+    onSend({ text: trimmed, attachmentIds: readyIds, attachmentPreviews: readyAttachmentPreviews });
     setText('');
     setMultiline(false);
     setAttachments([]);
@@ -295,16 +308,24 @@ export function ChatInput({
   // ─── Derived ──────────────────────────────────────────────────────────────
 
   const anyUploading = attachments.some(a => a.isUploading);
+  const hasAttachments = attachments.length > 0;
   const hasContent = text.trim().length > 0 || attachments.filter(a => a.fileId).length > 0;
   const showStop = loading;
   const showSend = !loading && hasContent && !isRecording && !anyUploading;
-  const showMic = !loading && !showSend;
-
+  const previewable: PreviewAttachment[] = attachments
+    .filter(a => a.fileId && a.uri)
+    .map(a => ({ clientId: a.clientId, uri: a.uri, name: a.name, mimeType: a.mimeType }));
   const bottomPadding = keyboardVisible
     ? verticalScale(8)
     : insets.bottom
     ? insets.bottom + verticalScale(8)
     : verticalScale(16);
+
+  const handleOpenAttachmentPicker = useCallback(() => {
+    if (disabled || anyUploading) return;
+    Haptics.selectionAsync();
+    attachmentPickerRef.current?.present();
+  }, [anyUploading, disabled]);
 
   const formatDuration = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -315,168 +336,239 @@ export function ChatInput({
   return (
     <Animated.View
       entering={FadeInDown.duration(400)}
-      className="px-4 py-2.5 bg-transparent"
-      style={{ paddingBottom: bottomPadding }}
+      style={{ paddingBottom: bottomPadding, paddingHorizontal: 12, paddingTop: 6 }}
     >
-      {/* Attachment preview strip */}
-      {attachments.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ marginBottom: 8 }}
-          contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
-        >
-          {attachments.map(a => (
-            <View key={a.clientId} style={styles.attachChip}>
-              {a.mimeType.startsWith('image/') ? (
-                <Image source={{ uri: a.uri }} style={styles.attachThumb} resizeMode="cover" />
-              ) : (
-                <View style={styles.attachIcon}>
-                  <FileText size={14} color={COLORS.brand} strokeWidth={1.8} />
-                </View>
-              )}
-              <Text style={styles.attachName} numberOfLines={1}>{a.name}</Text>
-              {a.isUploading
-                ? <ActivityIndicator size="small" color={COLORS.brand} style={{ marginLeft: 4 }} />
-                : (
-                  <TouchableOpacity onPress={() => removeAttachment(a.clientId)} hitSlop={6}>
-                    <X size={12} color={COLORS.textWeak} strokeWidth={2.5} />
-                  </TouchableOpacity>
-                )
-              }
-            </View>
-          ))}
-        </ScrollView>
-      )}
+      {/* Preview modal for selected media assets */}
+      <MediaPreviewModal
+        visible={previewVisible}
+        attachments={previewable}
+        initialIndex={previewIndex}
+        onClose={() => setPreviewVisible(false)}
+      />
 
       <View
-        className="flex-row items-center gap-2 bg-white/90 border border-stroke-weaker rounded-[24px] px-3.5 py-1 shadow-md shadow-black/5"
-        style={styles.floatingContainer}
+        style={[
+          styles.floatingContainer,
+          hasAttachments ? styles.expandedComposer : styles.compactComposer,
+        ]}
       >
-        {/* Text input */}
-        <View
-          className="flex-1 justify-center py-1"
-          style={{
-            minHeight: multiline ? verticalScale(32) : undefined,
-            maxHeight: multiline ? verticalScale(96) : undefined,
-            height: multiline ? undefined : verticalScale(32),
-          }}
-        >
-          <TextInput
-            value={text}
-            onChangeText={(v) => {
-              if (isRecording) textBeforeDictationRef.current = v;
-              setText(v);
-              setMultiline(v.includes('\n') || v.length > 80);
-            }}
-            placeholder={isRecording ? 'Listening…' : placeholder}
-            placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
-            multiline
-            className="text-text-strong"
-            style={{ fontFamily: FONTS.sans, paddingVertical: 0, textAlignVertical: 'center', fontSize: moderateScale(13) }}
-            blurOnSubmit={false}
-            editable={!disabled}
-          />
-          {isRecording && !text.trim() && (
-            <View className="flex-row items-center gap-1.5 mt-0.5">
-              <View className="size-1.5 rounded-full bg-error" />
-              <Text style={{ fontFamily: FONTS.sansMedium, fontSize: moderateScale(11), color: COLORS.error }}>
-                {formatDuration(duration)} · tap mic to finish
-              </Text>
+        {hasAttachments ? (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.assetStrip}
+              contentContainerStyle={styles.assetStripContent}
+            >
+              {attachments.map(a => {
+                const isMedia = a.mimeType.startsWith('image/') || a.mimeType.startsWith('video/');
+                const isVideo = a.mimeType.startsWith('video/');
+                const isAudio = a.mimeType.startsWith('audio/');
+                const previewIdx = previewable.findIndex(p => p.clientId === a.clientId);
+
+                return (
+                  <View key={a.clientId} style={styles.selectedAsset}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (!a.isUploading && previewIdx >= 0) {
+                          Haptics.selectionAsync();
+                          setPreviewIndex(previewIdx);
+                          setPreviewVisible(true);
+                        }
+                      }}
+                      activeOpacity={previewIdx >= 0 ? 0.84 : 1}
+                      style={styles.assetPressable}
+                    >
+                      {isMedia ? (
+                        <>
+                          <Image source={{ uri: a.uri }} style={styles.assetThumb} resizeMode="cover" />
+                          {isVideo && (
+                            <View style={styles.videoAssetOverlay}>
+                              <Play size={scale(18)} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+                            </View>
+                          )}
+                        </>
+                      ) : isAudio ? (
+                        <View style={styles.assetAudioTile}>
+                          <AudioLines size={scale(23)} color={COLORS.brand} strokeWidth={2.3} />
+                        </View>
+                      ) : (
+                        <View style={styles.assetFileTile}>
+                          <FileText size={scale(22)} color={COLORS.brand} strokeWidth={2} />
+                        </View>
+                      )}
+                      {a.isUploading && (
+                        <View style={styles.assetUploadingOverlay}>
+                          <ActivityIndicator color={COLORS.textInverse} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => removeAttachment(a.clientId)}
+                      activeOpacity={0.82}
+                      hitSlop={6}
+                      style={styles.assetRemoveButton}
+                    >
+                      <X size={scale(13)} color={COLORS.textInverse} strokeWidth={2.6} />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            <TextInput
+              value={text}
+              onChangeText={(v) => {
+                if (isRecording) textBeforeDictationRef.current = v;
+                setText(v);
+                setMultiline(v.includes('\n') || v.length > 60);
+              }}
+              placeholder={isRecording ? 'Listening…' : placeholder}
+              placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
+              multiline
+              style={styles.expandedTextInput}
+              blurOnSubmit={false}
+              editable={!disabled}
+            />
+
+            <View style={styles.expandedFooter}>
+              {isRecording && !text.trim() ? (
+                <View style={styles.recordingHint}>
+                  <View style={styles.recordingDot} />
+                  <Text style={styles.recordingText}>
+                    {formatDuration(duration)} · tap mic to finish
+                  </Text>
+                </View>
+              ) : (
+                <View />
+              )}
+
+              {showStop ? (
+                <Animated.View style={btnAnimStyle}>
+                  <TouchableOpacity
+                    onPress={handleStop}
+                    onPressIn={() => { btnScale.value = withSpring(0.9); }}
+                    onPressOut={() => { btnScale.value = withSpring(1); }}
+                    style={styles.expandedStopButton}
+                  >
+                    <Square size={scale(16)} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+                  </TouchableOpacity>
+                </Animated.View>
+              ) : (
+                <Animated.View style={btnAnimStyle}>
+                  <TouchableOpacity
+                    onPress={handleSend}
+                    onPressIn={() => { btnScale.value = withSpring(0.9); }}
+                    onPressOut={() => { btnScale.value = withSpring(1); }}
+                    disabled={disabled || !showSend}
+                    style={[
+                      styles.expandedSendButton,
+                      (disabled || !showSend) && styles.expandedSendButtonDisabled,
+                    ]}
+                  >
+                    {anyUploading ? (
+                      <ActivityIndicator color={COLORS.textInverse} />
+                    ) : (
+                      <ArrowUp size={scale(25)} color={COLORS.textInverse} strokeWidth={2.5} />
+                    )}
+                  </TouchableOpacity>
+                </Animated.View>
+              )}
             </View>
-          )}
-        </View>
-
-        {/* Right-side controls */}
-        <View className="flex-row items-center gap-1.5">
-          {/* Single ⊕ button — opens MediaPickerMenu (Gallery, Camera, Voice, File) */}
-          {!isRecording && !showStop && (
+          </>
+        ) : (
+          <>
             <TouchableOpacity
-              onPress={() => { Haptics.selectionAsync(); setPickerOpen(o => !o); }}
+              onPress={handleOpenAttachmentPicker}
               disabled={disabled || anyUploading}
-              className="rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
-              style={{ width: scale(28), height: scale(28), borderRadius: scale(14), opacity: disabled || anyUploading ? 0.4 : 1, backgroundColor: pickerOpen ? `${COLORS.brand}15` : undefined }}
+              style={styles.plusButton}
             >
-              <PlusCircle size={scale(14)} color={pickerOpen ? COLORS.brand : COLORS.textWeak} strokeWidth={2} />
+              <PlusCircle size={scale(50)} color={COLORS.textMuted} strokeWidth={1.9} />
             </TouchableOpacity>
-          )}
 
-          {/* Voice call button */}
-          {onVoice && !isRecording && !showStop && (
-            <TouchableOpacity
-              onPress={() => { Haptics.selectionAsync(); onVoice(); }}
-              disabled={disabled}
-              className="rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
-              style={{ width: scale(28), height: scale(28), borderRadius: scale(14) }}
-            >
-              <Phone size={scale(12)} color={COLORS.textWeak} strokeWidth={2} />
-            </TouchableOpacity>
-          )}
+            <View style={styles.compactInputWrap}>
+              <TextInput
+                value={text}
+                onChangeText={(v) => {
+                  if (isRecording) textBeforeDictationRef.current = v;
+                  setText(v);
+                  setMultiline(v.includes('\n') || v.length > 60);
+                }}
+                placeholder={isRecording ? 'Listening…' : placeholder}
+                placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
+                multiline
+                style={styles.compactTextInput}
+                blurOnSubmit={false}
+                editable={!disabled}
+              />
+              {isRecording && !text.trim() && (
+                <View style={styles.recordingHint}>
+                  <View style={styles.recordingDot} />
+                  <Text style={styles.recordingText}>
+                    {formatDuration(duration)} · tap mic to finish
+                  </Text>
+                </View>
+              )}
+            </View>
 
-          {/* Primary action button */}
-          <Animated.View style={[btnAnimStyle]}>
-            {showStop && (
-              <TouchableOpacity
-                onPress={handleStop}
-                onPressIn={() => { btnScale.value = withSpring(0.85); }}
-                onPressOut={() => { btnScale.value = withSpring(1); }}
-                className="rounded-full bg-brand items-center justify-center shadow-md shadow-brand/10"
-                style={{ width: scale(32), height: scale(32), borderRadius: scale(16) }}
-              >
-                <Square size={scale(11)} color={COLORS.textInverse} fill={COLORS.textInverse} />
-              </TouchableOpacity>
-            )}
-
-            {showSend && (
-              <TouchableOpacity
-                onPress={handleSend}
-                onPressIn={() => { btnScale.value = withSpring(0.85); }}
-                onPressOut={() => { btnScale.value = withSpring(1); }}
-                disabled={disabled}
-                className="rounded-full bg-brand items-center justify-center shadow-md shadow-brand/15"
-                style={{ width: scale(32), height: scale(32), borderRadius: scale(16) }}
-              >
-                <ArrowUp size={scale(15)} color={COLORS.textInverse} strokeWidth={3} />
-              </TouchableOpacity>
-            )}
-
-            {showMic && (
-              <Animated.View style={micPulseStyle}>
+            {showStop ? (
+              <Animated.View style={btnAnimStyle}>
                 <TouchableOpacity
-                  onPress={handleMicPress}
-                  disabled={disabled || micUnavailable}
-                  className="rounded-full items-center justify-center"
-                  style={{
-                    width: scale(32),
-                    height: scale(32),
-                    borderRadius: scale(16),
-                    backgroundColor: isRecording ? `${COLORS.error}15` : COLORS.fillWeaker,
-                    borderWidth: 1,
-                    borderColor: isRecording ? `${COLORS.error}30` : COLORS.strokeWeaker,
-                    opacity: micUnavailable ? 0.35 : 1,
-                  }}
+                  onPress={handleStop}
+                  onPressIn={() => { btnScale.value = withSpring(0.9); }}
+                  onPressOut={() => { btnScale.value = withSpring(1); }}
+                  style={styles.compactStopButton}
                 >
-                  <Mic
-                    size={scale(15)}
-                    color={isRecording ? COLORS.error : micUnavailable ? COLORS.textMuted : COLORS.brand}
-                    strokeWidth={2}
-                  />
+                  <Square size={scale(16)} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
                 </TouchableOpacity>
               </Animated.View>
+            ) : showSend ? (
+              <Animated.View style={btnAnimStyle}>
+                <TouchableOpacity
+                  onPress={handleSend}
+                  onPressIn={() => { btnScale.value = withSpring(0.9); }}
+                  onPressOut={() => { btnScale.value = withSpring(1); }}
+                  disabled={disabled}
+                  style={styles.compactSendButton}
+                >
+                  <ArrowUp size={scale(22)} color={COLORS.textInverse} strokeWidth={2.5} />
+                </TouchableOpacity>
+              </Animated.View>
+            ) : (
+              <View style={styles.compactActionRow}>
+                <Animated.View style={micPulseStyle}>
+                  <TouchableOpacity
+                    onPress={handleMicPress}
+                    disabled={disabled || micUnavailable}
+                    style={[
+                      styles.micButton,
+                      isRecording && styles.micButtonRecording,
+                      micUnavailable && styles.disabledButton,
+                    ]}
+                  >
+                    <Mic size={scale(20)} color={isRecording ? COLORS.textInverse : COLORS.textBase} strokeWidth={2} />
+                  </TouchableOpacity>
+                </Animated.View>
+                {onVoice && !isRecording && (
+                  <TouchableOpacity
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onVoice(); }}
+                    disabled={disabled}
+                    style={[styles.callButton, disabled && styles.disabledButton]}
+                  >
+                    <PhoneCall size={scale(24)} color={COLORS.textInverse} strokeWidth={2} />
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
-          </Animated.View>
-        </View>
+          </>
+        )}
       </View>
 
-      {/* Media picker menu — floats above the input bar */}
-      <MediaPickerMenu
-        visible={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        onGallery={() => { setPickerOpen(false); handlePickGallery(); }}
-        onCamera={() => { setPickerOpen(false); handleLaunchCamera(); }}
-        onVoice={undefined}
-        onFile={() => { setPickerOpen(false); handlePickDocument(); }}
-        menuLeft={8}
+      <ChatAttachmentPickerSheet
+        ref={attachmentPickerRef}
+        onCamera={handleLaunchCamera}
+        onDocs={handlePickDocument}
+        onConfirm={handleAddPickerAssets}
       />
     </Animated.View>
   );
@@ -484,41 +576,216 @@ export function ChatInput({
 
 const styles = StyleSheet.create({
   floatingContainer: {
-    ...Platform.select({
-      ios: { backgroundColor: 'rgba(255, 255, 255, 0.85)' },
-    }),
-  },
-
-  // Attachment chip
-  attachChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.fillWeak,
-    borderRadius: 10,
+    backgroundColor: COLORS.background,
     borderWidth: 1,
     borderColor: COLORS.strokeWeaker,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    maxWidth: 180,
   },
-  attachThumb: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
+  compactComposer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: INPUT_PILL_GAP,
+    minHeight: INPUT_PILL_HEIGHT,
+    borderRadius: INPUT_PILL_RADIUS,
+    paddingLeft: INPUT_PILL_INSET,
+    paddingRight: INPUT_PILL_INSET,
   },
-  attachIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: `${COLORS.brand}12`,
+  expandedComposer: {
+    minHeight: verticalScale(214),
+    borderRadius: 28,
+    paddingTop: scale(10),
+    paddingHorizontal: scale(12),
+    paddingBottom: scale(12),
+  },
+  plusButton: {
+    width: SECONDARY_ACTION_SIZE,
+    height: SECONDARY_ACTION_SIZE,
+    borderRadius: SECONDARY_ACTION_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  compactInputWrap: {
+    flex: 1,
+    minHeight: SECONDARY_ACTION_SIZE,
+    justifyContent: 'center',
+  },
+  compactTextInput: {
+    fontFamily: FONTS.sans,
+    fontSize: moderateScale(15),
+    color: COLORS.textStrong,
+    paddingVertical: 0,
+    minHeight: verticalScale(24),
+    textAlignVertical: 'center',
+  },
+  compactActionRow: {
+    flexDirection: 'row',
+    gap: INPUT_PILL_GAP,
+    alignItems: 'center',
+  },
+  micButton: {
+    width: SECONDARY_ACTION_SIZE,
+    height: SECONDARY_ACTION_SIZE,
+    borderRadius: SECONDARY_ACTION_SIZE / 2,
+    backgroundColor: COLORS.fillWeaker,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  attachName: {
+  micButtonRecording: {
+    backgroundColor: COLORS.error,
+  },
+  callButton: {
+    width: PRIMARY_ACTION_SIZE,
+    height: PRIMARY_ACTION_SIZE,
+    borderRadius: PRIMARY_ACTION_SIZE / 2,
+    backgroundColor: COLORS.brand,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.brand,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  compactSendButton: {
+    width: PRIMARY_ACTION_SIZE,
+    height: PRIMARY_ACTION_SIZE,
+    borderRadius: PRIMARY_ACTION_SIZE / 2,
+    backgroundColor: COLORS.brand,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.brand,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  compactStopButton: {
+    width: PRIMARY_ACTION_SIZE,
+    height: PRIMARY_ACTION_SIZE,
+    borderRadius: PRIMARY_ACTION_SIZE / 2,
+    backgroundColor: COLORS.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disabledButton: {
+    opacity: 0.4,
+  },
+  recordingHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  recordingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.error,
+  },
+  recordingText: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: moderateScale(11),
+    color: COLORS.error,
+  },
+  assetStrip: {
+    flexGrow: 0,
+  },
+  assetStripContent: {
+    gap: scale(8),
+    paddingRight: scale(8),
+  },
+  selectedAsset: {
+    width: scale(82),
+    height: scale(82),
+    position: 'relative',
+  },
+  assetPressable: {
+    width: scale(78),
+    height: scale(78),
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: COLORS.fillWeak,
+  },
+  assetThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  assetAudioTile: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    backgroundColor: COLORS.fillWeaker,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assetFileTile: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    backgroundColor: COLORS.fillWeaker,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assetRemoveButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    zIndex: 2,
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(12),
+    backgroundColor: COLORS.textStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.background,
+  },
+  assetUploadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoAssetOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.22)',
+  },
+  expandedTextInput: {
     flex: 1,
     fontFamily: FONTS.sans,
-    fontSize: 11,
+    fontSize: moderateScale(15),
     color: COLORS.textStrong,
+    paddingTop: scale(12),
+    paddingBottom: scale(4),
+    paddingHorizontal: 0,
+    minHeight: verticalScale(76),
+    textAlignVertical: 'top',
+  },
+  expandedFooter: {
+    minHeight: scale(64),
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  expandedSendButton: {
+    width: scale(64),
+    height: scale(64),
+    borderRadius: 16,
+    backgroundColor: COLORS.brand,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expandedSendButtonDisabled: {
+    opacity: 0.55,
+  },
+  expandedStopButton: {
+    width: scale(64),
+    height: scale(64),
+    borderRadius: 16,
+    backgroundColor: COLORS.error,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

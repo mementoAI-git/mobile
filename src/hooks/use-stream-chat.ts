@@ -3,11 +3,16 @@ import endpoint from '@/api/endpoint';
 import { useAuthStore } from '@/store';
 import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import { buildPromptWithReplyQuote, type ChatReplyQuote } from '@/lib/utils';
+import type { IMessageAttachment } from '@/types';
+
+type ChatAttachmentPreview = IMessageAttachment;
 
 interface StreamMessage {
   role: 'user' | 'ai';
   text: string;
+  created_at?: string;
   replyTo?: ChatReplyQuote;
+  attatchments?: ChatAttachmentPreview[];
 }
 
 interface SendOptions {
@@ -16,6 +21,8 @@ interface SendOptions {
   deepDiveDimension?: LifeDimension | null;
   /** IDs of already-uploaded files to pass as context to the AI */
   attachments?: string[];
+  /** Uploaded file metadata used for the optimistic chat bubble preview */
+  attachmentPreviews?: ChatAttachmentPreview[];
 }
 
 const baseURL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
@@ -44,15 +51,19 @@ export function useStreamChat(memoryId?: string) {
 
   const send = useCallback(
     async (text: string, options?: SendOptions) => {
-      if (!text.trim() || streamingRef.current) return;
+      const { replyTo, chatMode, deepDiveDimension, attachments, attachmentPreviews } = options ?? {};
+      // Block if both text and attachments are empty, or if already streaming
+      const hasText = text.trim().length > 0;
+      const hasAttachments = (attachments ?? []).length > 0;
+      if ((!hasText && !hasAttachments) || streamingRef.current) return;
 
-      const { replyTo, chatMode, deepDiveDimension, attachments } = options ?? {};
       const apiPrompt = buildPromptWithReplyQuote(text, replyTo ?? null);
 
       const userMessage: StreamMessage = {
         role: 'user',
-        text,
+        text: hasText ? text : '',
         ...(replyTo ? { replyTo } : {}),
+        ...(attachmentPreviews?.length ? { attatchments: attachmentPreviews } : {}),
       };
       setMessages((prev) => [...prev, userMessage]);
       streamingRef.current = true;
@@ -77,9 +88,8 @@ export function useStreamChat(memoryId?: string) {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
-            // Field names must match web/src/pages/dashboard/chat/conversation/index.tsx
-            // Send the clean user text — replyTo is now a separate field, not wrapped in text
-            text: text.trim(),
+            // Send text only if non-empty — media-only messages omit the text field entirely
+            ...(text.trim() ? { text: text.trim() } : {}),
             // Use ref so this always reads the latest memoryId without being a dep
             ...(memoryIdRef.current ? { memory: memoryIdRef.current } : {}),
             // Reply quote — stored as a separate field on the message document
@@ -116,7 +126,7 @@ export function useStreamChat(memoryId?: string) {
         }
 
         if (isMountedRef.current && !controller.signal.aborted) {
-          setMessages((prev) => [...prev, { role: 'ai', text: accumulated }]);
+          setMessages((prev) => [...prev, { role: 'ai', text: accumulated, created_at: new Date().toISOString() }]);
           setStreamingText('');
         }
       } catch (err: any) {

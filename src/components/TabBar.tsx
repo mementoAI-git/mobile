@@ -21,7 +21,6 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import { type BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Timer, Search, Home, MessageCircle, BookOpen, Compass } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -75,6 +74,28 @@ const INACTIVE_W = Platform.OS === 'android' ? 64 : 60;
 const ACTIVE_W   = 96;  // expanded pill with label
 const PILL_H     = Platform.OS === 'android' ? 60 : 58;
 const ICON_SIZE  = 26;
+
+type TabRoute = {
+  key: string;
+  name: string;
+};
+
+type TabNavigation = {
+  emit: (event: {
+    type: 'tabPress';
+    target: string;
+    canPreventDefault: true;
+  }) => { defaultPrevented: boolean };
+  navigate: (routeName: string) => void;
+};
+
+type TabBarProps = {
+  state: {
+    index: number;
+    routes: TabRoute[];
+  };
+  navigation: TabNavigation;
+};
 
 // ─── Single tab item ──────────────────────────────────────────────────────────
 
@@ -160,7 +181,7 @@ const TabItem = memo(function TabItem({
 
 // ─── Main TabBar ──────────────────────────────────────────────────────────────
 
-export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+export function TabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const openSheet = useUiStore(s => s.openSheet);

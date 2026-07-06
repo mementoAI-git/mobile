@@ -143,7 +143,7 @@ export function ConfirmDialog({
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(23,11,0,0.5)',
   },
 

@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { View, Text, TouchableOpacity, Image, Linking } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import type { IMessage } from '@/types';
 import dayjs from 'dayjs';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { CornerDownRight, FileText, Music, Play } from 'lucide-react-native';
+import { CornerDownRight, FileText, Music, Play, ExternalLink, Copy } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
+import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
+import { useLinkPreview, type LinkPreviewData } from '@/hooks/use-link-preview';
 
 // ─── Backward-compat helpers for old messages ────────────────────────────────
-// Messages saved before the replyTo API field existed still have the quoted text
-// embedded inside `message.text` as a wrapper string. Parse and strip it so:
-//   - Old messages: replyTo is reconstructed from the wrapper, content is clean
-//   - New messages: replyTo comes from the server field, content is already clean
 
 const REPLY_WRAPPER_RE = /^\[The user is repl[^[]*\n---\]\n\n/s;
 const REPLY_EXTRACT_RE = /^\[The user is replying to ([^\n]+):\n---\n([\s\S]*?)\n---\]\n\n/;
@@ -27,6 +27,8 @@ function extractReplyQuote(text: string): { role: string; text: string } | null 
   return { role: m[1].toLowerCase().includes('user') ? 'user' : 'ai', text: m[2].trim() };
 }
 
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
 interface MessageBubbleProps {
   message: IMessage | {
     role: string;
@@ -38,7 +40,6 @@ interface MessageBubbleProps {
     attatchments?: { url: string; name: string; type?: string; _id?: string }[];
   };
   onReply?: () => void;
-  /** Called when the user taps the embedded reply quote to scroll to the original */
   onScrollToOriginal?: () => void;
 }
 
@@ -65,7 +66,7 @@ function toPreviewAttachment(a: { url: string; name: string; type?: string; _id?
   };
 }
 
-// ─── Single attachment tile ────────────────────────────────────────────────────
+// ─── Single file chip ──────────────────────────────────────────────────────────
 
 function AttachmentTile({ attachment, onPress }: {
   attachment: { url: string; name: string; type?: string; _id?: string };
@@ -76,11 +77,7 @@ function AttachmentTile({ attachment, onPress }: {
   if (cat === 'image') {
     return (
       <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-        <Image
-          source={{ uri: attachment.url }}
-          style={{ width: 120, height: 120, borderRadius: 12 }}
-          resizeMode="cover"
-        />
+        <Image source={{ uri: attachment.url }} style={{ width: 120, height: 120, borderRadius: 12 }} resizeMode="cover" />
       </TouchableOpacity>
     );
   }
@@ -90,9 +87,7 @@ function AttachmentTile({ attachment, onPress }: {
       <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
         <View style={{ width: 120, height: 120, borderRadius: 12, backgroundColor: COLORS.textStrong, alignItems: 'center', justifyContent: 'center' }}>
           <Play size={28} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 4 }} />
-          <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 4 }} numberOfLines={1}>
-            {attachment.name}
-          </Text>
+          <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 4 }} numberOfLines={1}>{attachment.name}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -100,33 +95,96 @@ function AttachmentTile({ attachment, onPress }: {
 
   const Icon = cat === 'audio' ? Music : FileText;
   const shortName = attachment.name.length > 20 ? `${attachment.name.slice(0, 18)}…` : attachment.name;
-
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 12,
-        backgroundColor: COLORS.fillWeak,
-        borderWidth: 1,
-        borderColor: COLORS.strokeWeaker,
-        maxWidth: 200,
-      }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: COLORS.fillWeak, borderWidth: 1, borderColor: COLORS.strokeWeaker, maxWidth: 200 }}>
         <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: `${COLORS.brand}12`, alignItems: 'center', justifyContent: 'center' }}>
           <Icon size={16} color={COLORS.brand} strokeWidth={1.8} />
         </View>
-        <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 12, color: COLORS.textStrong, flex: 1 }} numberOfLines={1}>
-          {shortName}
-        </Text>
+        <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 12, color: COLORS.textStrong, flex: 1 }} numberOfLines={1}>{shortName}</Text>
       </View>
     </TouchableOpacity>
   );
 }
 
-// ─── Attachment grid ───────────────────────────────────────────────────────────
+// ─── Link preview chip ─────────────────────────────────────────────────────────
+
+const CHIP_BG = COLORS.linkPreview;
+
+function FaviconBadge({ url, hostname }: { url: string; hostname: string }) {
+  const [failed, setFailed] = React.useState(false);
+  const letter = hostname.charAt(0).toUpperCase();
+
+  if (!url || failed) {
+    return (
+      <View style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: 'rgba(0,0,0,0.15)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: 'white' }}>{letter}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri: url }}
+      style={{ width: 22, height: 22, borderRadius: 5, flexShrink: 0, backgroundColor: 'rgba(255,255,255,0.15)' }}
+      resizeMode="contain"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+function LinkPreviewChip({ preview }: { preview: LinkPreviewData }) {
+  const handlePress = () => { Linking.openURL(preview.url).catch(() => {}); };
+
+  if (!preview.loaded) {
+    return (
+      <TouchableOpacity onPress={handlePress} activeOpacity={0.7} style={{ marginTop: 4 }}>
+        <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.brand, textDecorationLine: 'underline' }} numberOfLines={1}>
+          {preview.url}
+        </Text>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <Animated.View entering={FadeIn.duration(300)}>
+      <TouchableOpacity
+        onPress={handlePress}
+        activeOpacity={0.8}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, backgroundColor: CHIP_BG }}
+      >
+        <FaviconBadge url={preview.faviconUrl} hostname={preview.hostname} />
+
+        <Text style={{ flex: 1, fontFamily: FONTS.sansMedium, fontSize: 13, color: 'white' }} numberOfLines={1}>
+          <Text style={{ fontFamily: FONTS.sansBold, color: 'white' }}>{preview.hostname}</Text>
+          {preview.title ? <Text style={{ color: 'rgba(255,255,255,0.8)' }}> · {preview.title}</Text> : null}
+        </Text>
+
+        <ExternalLink size={14} color="rgba(255,255,255,0.85)" strokeWidth={2} style={{ flexShrink: 0 }} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+// Wrapper component that calls the hook (hooks can't be called inside render callbacks)
+function LinkPreviews({ text }: { text: string }) {
+  const previews = useLinkPreview(text);
+  if (previews.length === 0) return null;
+  return (
+    <View style={{ gap: 2 }}>
+      {previews.map(p => <LinkPreviewChip key={p.url} preview={p} />)}
+    </View>
+  );
+}
+
+// ─── Image strip grid (always horizontal, max 3 visible) ─────────────────────
+//
+// 1 image  → full bubble width, 4:3
+// 2 images → two equal tiles side-by-side
+// 3+ images → grid tiles, +N counter on the final darkened tile for overflow
+
+const BUBBLE_MAX_W = 260;
+const GRID_GAP = 3;
 
 function AttachmentGrid({ attachments, onTap }: {
   attachments: { url: string; name: string; type?: string; _id?: string }[];
@@ -136,24 +194,104 @@ function AttachmentGrid({ attachments, onTap }: {
 
   const mediaItems = attachments.filter(a => ['image', 'video'].includes(getMimeCategory(a.name, a.type)));
   const fileItems = attachments.filter(a => !['image', 'video'].includes(getMimeCategory(a.name, a.type)));
+  const count = mediaItems.length;
+  const fullW = BUBBLE_MAX_W;
+
+  let imageSection: React.ReactNode = null;
+
+  const renderMediaPreview = (
+    a: { url: string; name: string; type?: string; _id?: string },
+    width: number,
+    height: number,
+    borderRadius: number,
+    onPress: () => void,
+  ) => {
+    if (getMimeCategory(a.name, a.type) === 'video') {
+      return (
+        <VideoThumbnail
+          uri={a.url}
+          thumbnailUrl={(a as any).thumbnail}
+          width={width}
+          height={height}
+          borderRadius={borderRadius}
+          onPress={onPress}
+        />
+      );
+    }
+
+    return (
+      <Image
+        source={{ uri: a.url }}
+        style={{ width, height, borderRadius }}
+        resizeMode="cover"
+      />
+    );
+  };
+
+  if (count === 1) {
+    // Single image/video — full width, 4:3
+    const a = mediaItems[0];
+    const origIdx = attachments.indexOf(a);
+    imageSection = (
+      <TouchableOpacity onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
+        {renderMediaPreview(a, fullW, Math.round(fullW * (3 / 4)), 12, () => onTap(origIdx))}
+      </TouchableOpacity>
+    );
+  } else if (count <= 3) {
+    // 2-3 media items — horizontal strip, equal tiles
+    const tileW = Math.floor((fullW - GRID_GAP * (count - 1)) / count);
+    const tileH = Math.round(tileW * (3 / 4));
+    imageSection = (
+      <View style={{ flexDirection: 'row', gap: GRID_GAP }}>
+        {mediaItems.map((a, i) => {
+          const origIdx = attachments.indexOf(a);
+          return (
+            <TouchableOpacity key={a._id ?? origIdx} onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
+              {renderMediaPreview(a, tileW, tileH, 10, () => onTap(origIdx))}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  } else {
+    // 4+ images — 2×2 grid, first 4 visible, +N counter on the 4th tile overlay
+    const tileW = Math.floor((fullW - GRID_GAP) / 2);
+    const tileH = Math.round(tileW * (3 / 4));
+    const visible = mediaItems.slice(0, 4);
+    const overflow = count - 4;
+    const rows = [visible.slice(0, 2), visible.slice(2, 4)];
+    imageSection = (
+      <View style={{ gap: GRID_GAP }}>
+        {rows.map((row, rowIdx) => (
+          <View key={rowIdx} style={{ flexDirection: 'row', gap: GRID_GAP }}>
+            {row.map((a, colIdx) => {
+              const globalIdx = rowIdx * 2 + colIdx;
+              const origIdx = attachments.indexOf(a);
+              const isLast = globalIdx === 3;
+              const showOverlay = isLast && overflow > 0;
+              return (
+                <TouchableOpacity key={a._id ?? origIdx} onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
+                  {renderMediaPreview(a, tileW, tileH, 10, () => onTap(origIdx))}
+                  {showOverlay && (
+                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.62)', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontFamily: FONTS.sansBold, fontSize: 18, color: '#fff' }}>+{overflow}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
+      </View>
+    );
+  }
 
   return (
-    <View style={{ gap: 6, marginBottom: 6 }}>
-      {mediaItems.length > 0 && (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
-          {mediaItems.map((a) => {
-            const origIdx = attachments.indexOf(a);
-            return (
-              <AttachmentTile key={a._id ?? origIdx} attachment={a} onPress={() => onTap(origIdx)} />
-            );
-          })}
-        </View>
-      )}
+    <View style={{ gap: 4, marginBottom: 4 }}>
+      {imageSection}
       {fileItems.map((a) => {
         const origIdx = attachments.indexOf(a);
-        return (
-          <AttachmentTile key={a._id ?? origIdx} attachment={a} onPress={() => onTap(origIdx)} />
-        );
+        return <AttachmentTile key={a._id ?? origIdx} attachment={a} onPress={() => onTap(origIdx)} />;
       })}
     </View>
   );
@@ -168,24 +306,18 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
     (message as any).attatchments ?? [];
 
   const rawContent = message.text || (message as any).content || '';
-
-  // New messages: replyTo field comes from server (persisted since API update).
-  // Old messages: replyTo is absent — reconstruct it by parsing the stored wrapper.
   const replyQuote: { role: string; text: string } | null =
     (message as any).replyTo ?? (isUser ? extractReplyQuote(rawContent) : null);
-
-  // Strip the wrapper prefix from old messages so it doesn't show in the bubble body.
-  // New messages have clean text already — stripReplyWrapper is a no-op on them.
   const content = isUser ? stripReplyWrapper(rawContent) : rawContent;
+  const responseTime = 'created_at' in message && message.created_at
+    ? dayjs(message.created_at).format('h:mm A')
+    : null;
 
-  // Don't render empty bubbles
   const hasContent = content.trim().length > 0 || rawAttachments.length > 0;
   if (!hasContent) return null;
 
-  // MediaPreviewModal state
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
-
   const previewAttachments: PreviewAttachment[] = rawAttachments.map(toPreviewAttachment);
 
   const handleAttachmentTap = (index: number) => {
@@ -199,30 +331,22 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
         entering={FadeInDown.duration(450).springify()}
         className={cn('mb-5 max-w-[85%]', isUser ? 'self-end' : 'self-start')}
       >
-        <View
-          className={cn(
-            'px-5 py-3.5 rounded-[20px]',
-            isUser ? 'bg-fill-weaker' : 'bg-white'
-          )}
-        >
-          {/* Reply Quote Block — tappable to scroll to original */}
+        <View className={cn('px-5 py-3.5 rounded-[20px]', isUser ? 'bg-fill-weaker' : 'bg-white')}>
+
+          {/* Reply quote */}
           {replyQuote && replyQuote.text && (
             <TouchableOpacity
               onPress={onScrollToOriginal}
               activeOpacity={onScrollToOriginal ? 0.7 : 1}
               className="mb-2.5 border-l-2 border-brand/50 pl-3 py-1 bg-brand/5 rounded-r-lg"
             >
-              <Text
-                className="text-[12px] text-text-weak leading-relaxed"
-                numberOfLines={2}
-                style={{ fontFamily: FONTS.sans, fontStyle: 'italic' }}
-              >
+              <Text className="text-[12px] text-text-weak leading-relaxed" numberOfLines={2} style={{ fontFamily: FONTS.sans, fontStyle: 'italic' }}>
                 {replyQuote.text}
               </Text>
             </TouchableOpacity>
           )}
 
-          {/* Attachment grid — above text */}
+          {/* Attachments */}
           {rawAttachments.length > 0 && (
             <AttachmentGrid attachments={rawAttachments} onTap={handleAttachmentTap} />
           )}
@@ -231,57 +355,56 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
           {content.trim().length > 0 && (
             <Text
               className="text-[15px] leading-[23px] text-text-strong"
-              style={{ fontFamily: FONTS.serif, letterSpacing: -0.03 }}
+              style={{ fontFamily: FONTS.serif, letterSpacing: -0.03, marginTop: rawAttachments.length > 0 ? 4 : 0 }}
             >
               {content}
             </Text>
           )}
+
+          {/* Link preview chips */}
+          {content.trim().length > 0 && <LinkPreviews text={content} />}
         </View>
 
-        {/* Meta Info */}
+        {/* Meta row */}
         <View className={cn('flex-row items-center mt-1.5 px-2', isUser ? 'justify-end' : 'justify-start')}>
-          {!isUser && (
-            <View className="size-4 bg-brand/10 rounded-full items-center justify-center mr-1.5 border border-brand/5">
-              <Text className="text-[9px]">🌱</Text>
-            </View>
+          {!isUser && responseTime && (
+            <Text className="text-[9px] text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>
+              {responseTime}
+            </Text>
           )}
-          {'created_at' in message && message.created_at && (
-            <Text
-              className="text-[9px] text-text-muted font-bold uppercase tracking-widest"
-              style={{ fontFamily: FONTS.sansBold }}
-            >
-              {dayjs(message.created_at).format('h:mm A')}
+          {isUser && responseTime && (
+            <Text className="text-[9px] text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>
+              {responseTime}
             </Text>
           )}
           {!isUser && aiModel && (
             <View className="flex-row items-center ml-2 bg-brand/5 px-2 py-0.5 rounded-full border border-brand/10">
-              <Text
-                className="text-[8px] text-brand font-bold uppercase tracking-widest"
-                style={{ fontFamily: FONTS.sansBold }}
-              >
+              <Text className="text-[8px] text-brand font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>
                 {aiModel}
               </Text>
             </View>
           )}
-          {onReply && (
+          {content.trim().length > 0 && (
             <TouchableOpacity
-              onPress={onReply}
+              onPress={() => {
+                Haptics.selectionAsync();
+                Clipboard.setStringAsync(content.trim()).catch(() => {});
+              }}
               activeOpacity={0.7}
-              className="flex-row items-center ml-3 bg-brand/5 px-2 py-0.5 rounded-full border border-brand/10"
+              className="ml-2 bg-brand/5 p-1 rounded-full border border-brand/10"
             >
+              <Copy size={10} color={COLORS.brand} strokeWidth={2} />
+            </TouchableOpacity>
+          )}
+          {onReply && (
+            <TouchableOpacity onPress={onReply} activeOpacity={0.7} className="flex-row items-center ml-2 bg-brand/5 px-2 py-0.5 rounded-full border border-brand/10">
               <CornerDownRight size={10} color={COLORS.brand} style={{ marginRight: 3 }} />
-              <Text
-                className="text-[8px] text-brand font-bold uppercase tracking-widest"
-                style={{ fontFamily: FONTS.sansBold }}
-              >
-                Reply
-              </Text>
+              <Text className="text-[8px] text-brand font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>Reply</Text>
             </TouchableOpacity>
           )}
         </View>
       </Animated.View>
 
-      {/* Full-screen media preview */}
       {previewAttachments.length > 0 && (
         <MediaPreviewModal
           visible={previewVisible}

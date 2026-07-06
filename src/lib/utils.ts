@@ -1,6 +1,11 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import type { Router } from 'expo-router';
+
+type SafeBackRouter = {
+  canGoBack: () => boolean;
+  back: () => void;
+  replace: (href: string) => void;
+};
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -14,11 +19,11 @@ export function cn(...inputs: ClassValue[]) {
  * Usage:
  *   safeBack(router, '/(tabs)/overview');
  */
-export function safeBack(router: Router, fallback: string = '/(tabs)/overview') {
+export function safeBack(router: SafeBackRouter, fallback: string = '/(tabs)/overview') {
   if (router.canGoBack()) {
     router.back();
   } else {
-    router.replace(fallback as any);
+    router.replace(fallback);
   }
 }
 

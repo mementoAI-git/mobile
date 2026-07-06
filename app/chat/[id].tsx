@@ -413,7 +413,12 @@ export default function ChatScreen() {
           {/* ── Chat Input ────────────────────────────────────────────── */}
           <ChatInput
             onSend={(payload: ChatSendPayload) => {
-              send(payload.text, replyQuote, payload.attachmentIds.length ? payload.attachmentIds : undefined);
+              send(
+                payload.text,
+                replyQuote,
+                payload.attachmentIds.length ? payload.attachmentIds : undefined,
+                payload.attachmentPreviews.length ? payload.attachmentPreviews : undefined,
+              );
               setReplyQuote(null);
             }}
             onStop={stop}
