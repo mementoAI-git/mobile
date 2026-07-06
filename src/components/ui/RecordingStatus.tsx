@@ -1,0 +1,96 @@
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-native';
+import { X } from 'lucide-react-native';
+import { COLORS, FONTS } from '@/constants/tokens';
+
+interface RecordingStatusProps {
+  seconds?: number;
+  label?: string;
+  compact?: boolean;
+  onCancel?: () => void;
+  style?: StyleProp<ViewStyle>;
+}
+
+function formatDuration(seconds = 0): string {
+  const whole = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(whole / 60);
+  const remaining = whole % 60;
+  return `${minutes}:${remaining.toString().padStart(2, '0')}`;
+}
+
+export function RecordingStatus({
+  seconds,
+  label,
+  compact,
+  onCancel,
+  style,
+}: RecordingStatusProps) {
+  const display = label ?? formatDuration(seconds);
+
+  return (
+    <View style={[styles.root, compact && styles.compact, style]}>
+      <View style={styles.pulse}>
+        <View style={styles.pulseDot} />
+      </View>
+      <Text style={styles.text}>Listening · {display}</Text>
+      {onCancel ? (
+        <TouchableOpacity
+          onPress={onCancel}
+          activeOpacity={0.78}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Discard recording"
+          style={styles.cancelButton}
+        >
+          <X size={13} color={COLORS.textBase} strokeWidth={2.4} />
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    minHeight: 28,
+    paddingLeft: 10,
+    paddingRight: 8,
+    borderRadius: 14,
+    backgroundColor: COLORS.brandSubtle,
+    borderWidth: 1,
+    borderColor: `${COLORS.brand}20`,
+  },
+  compact: {
+    marginTop: 4,
+  },
+  pulse: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.brandSubtle,
+  },
+  pulseDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: COLORS.brand,
+  },
+  text: {
+    fontFamily: FONTS.sansSemi,
+    fontSize: 11,
+    color: COLORS.textBase,
+  },
+  cancelButton: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.fillWeak,
+  },
+});

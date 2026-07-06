@@ -9,6 +9,8 @@ import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { RecordingIconButton } from '@/components/ui/RecordingIconButton';
+import { RecordingStatus } from '@/components/ui/RecordingStatus';
 import type { IDailyPromptCapture } from '@/types';
 
 export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
@@ -180,21 +182,21 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
 
         <View className="flex-row items-center justify-between mt-4">
           <View className="flex-row items-center gap-4">
-            <TouchableOpacity
+            <RecordingIconButton
               onPress={handleRecord}
-              className="p-2 rounded-full border shadow-sm"
-              style={{ 
-                backgroundColor: isRecording ? `${COLORS.error}10` : COLORS.card,
-                borderColor: isRecording ? `${COLORS.error}20` : COLORS.strokeWeak
+              active={isRecording}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: COLORS.card,
+                borderWidth: 1,
+                borderColor: COLORS.strokeWeak,
               }}
             >
-              <Mic size={20} color={isRecording ? COLORS.error : COLORS.brand} />
-            </TouchableOpacity>
-            {isRecording && (
-              <Text className="font-medium text-xs" style={{ color: COLORS.error }}>
-                {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
-              </Text>
-            )}
+              <Mic size={20} color={isRecording ? COLORS.textInverse : COLORS.brand} />
+            </RecordingIconButton>
+            {isRecording && <RecordingStatus seconds={duration} />}
             <TouchableOpacity
               onPress={handlePickImage}
               disabled={isUploading || isRecording}
