@@ -142,7 +142,7 @@ export function ChatInput({
   useEffect(() => {
     if (isRecording) {
       micPulse.value = withRepeat(
-        withSequence(withTiming(1.3, { duration: 500 }), withTiming(1, { duration: 500 })),
+        withSequence(withTiming(1.08, { duration: 650 }), withTiming(1, { duration: 650 })),
         -1,
         true,
       );
@@ -432,16 +432,7 @@ export function ChatInput({
             />
 
             <View style={styles.expandedFooter}>
-              {isRecording && !text.trim() ? (
-                <View style={styles.recordingHint}>
-                  <View style={styles.recordingDot} />
-                  <Text style={styles.recordingText}>
-                    {formatDuration(duration)} · tap mic to finish
-                  </Text>
-                </View>
-              ) : (
-                <View />
-              )}
+              {isRecording ? <RecordingStatus label={formatDuration(duration)} /> : <View />}
 
               {showStop ? (
                 <Animated.View style={btnAnimStyle}>
@@ -501,14 +492,7 @@ export function ChatInput({
                 blurOnSubmit={false}
                 editable={!disabled}
               />
-              {isRecording && !text.trim() && (
-                <View style={styles.recordingHint}>
-                  <View style={styles.recordingDot} />
-                  <Text style={styles.recordingText}>
-                    {formatDuration(duration)} · tap mic to finish
-                  </Text>
-                </View>
-              )}
+              {isRecording && <RecordingStatus label={formatDuration(duration)} compact />}
             </View>
 
             {showStop ? (
@@ -574,6 +558,17 @@ export function ChatInput({
   );
 }
 
+function RecordingStatus({ label, compact }: { label: string; compact?: boolean }) {
+  return (
+    <View style={[styles.recordingStatus, compact && styles.recordingStatusCompact]}>
+      <View style={styles.recordingPulse}>
+        <View style={styles.recordingPulseDot} />
+      </View>
+      <Text style={styles.recordingText}>Listening · {label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   floatingContainer: {
     backgroundColor: COLORS.background,
@@ -631,7 +626,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   micButtonRecording: {
-    backgroundColor: COLORS.error,
+    backgroundColor: COLORS.brand,
+    shadowColor: COLORS.brand,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 3,
   },
   callButton: {
     width: PRIMARY_ACTION_SIZE,
@@ -670,22 +670,39 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.4,
   },
-  recordingHint: {
+  recordingStatus: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 2,
+    alignSelf: 'flex-start',
+    gap: 8,
+    minHeight: 28,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    backgroundColor: COLORS.brandSubtle,
+    borderWidth: 1,
+    borderColor: `${COLORS.brand}20`,
   },
-  recordingDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.error,
+  recordingStatusCompact: {
+    marginTop: 4,
+  },
+  recordingPulse: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.brandSubtle,
+  },
+  recordingPulseDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: COLORS.brand,
   },
   recordingText: {
-    fontFamily: FONTS.sansMedium,
+    fontFamily: FONTS.sansSemi,
     fontSize: moderateScale(11),
-    color: COLORS.error,
+    color: COLORS.textBase,
   },
   assetStrip: {
     flexGrow: 0,
