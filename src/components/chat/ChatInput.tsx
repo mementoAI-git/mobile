@@ -3,12 +3,16 @@ import {
   View, Text, TextInput, TouchableOpacity, Platform, StyleSheet,
   Keyboard, ScrollView, Image, ActivityIndicator,
 } from 'react-native';
-import { ArrowUp, Mic, Square, PlusCircle, X, FileText, PhoneCall, Play } from 'lucide-react-native';
+import { ArrowUp, AudioLines, Mic, Square, PlusCircle, X, FileText, PhoneCall, Play } from 'lucide-react-native';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { MediaPickerMenu } from '@/components/ui/MediaPickerMenu';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import {
+  ChatAttachmentPickerSheet,
+  type ChatPickerAsset,
+} from '@/components/chat/ChatAttachmentPickerSheet';
 import { COLORS, FONTS } from '@/constants/tokens';
 import Animated, {
   useAnimatedStyle,
@@ -91,7 +95,6 @@ export function ChatInput({
   const [multiline, setMultiline] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
 
@@ -101,6 +104,7 @@ export function ChatInput({
   const { toast } = useToast();
 
   const textBeforeDictationRef = useRef('');
+  const attachmentPickerRef = useRef<BottomSheetModal>(null);
 
   const { mutateAsync: uploadFile } = useFileUpload();
 
@@ -213,31 +217,11 @@ export function ChatInput({
     } catch { /* user cancelled */ }
   }, [uploadAndAdd, toast]);
 
-  // Gallery picker — photos + videos via ImagePicker (reliable on iOS & Android)
-  const handlePickGallery = useCallback(async () => {
-    Haptics.selectionAsync();
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        toast('Allow Memento to access your photos and videos.', 'error');
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images', 'videos'],
-        allowsMultipleSelection: true,
-        quality: 0.85,
-      });
-      if (!result.canceled) {
-        // Upload all selected files in parallel
-        await Promise.all(result.assets.map(asset => {
-          const isVideo = asset.mimeType?.startsWith('video/');
-          const mime = asset.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg');
-          const name = asset.fileName || `${isVideo ? 'video' : 'photo'}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`;
-          return uploadAndAdd(asset.uri, mime, name, asset.fileSize);
-        }));
-      }
-    } catch { /* user cancelled */ }
-  }, [uploadAndAdd, toast]);
+  const handleAddPickerAssets = useCallback(async (pickedAssets: ChatPickerAsset[]) => {
+    await Promise.all(pickedAssets.map(asset =>
+      uploadAndAdd(asset.uploadUri, asset.mimeType, asset.name)
+    ));
+  }, [uploadAndAdd]);
 
   // Document picker — audio, PDF, text, other files
   const handlePickDocument = useCallback(async () => {
@@ -324,14 +308,24 @@ export function ChatInput({
   // ─── Derived ──────────────────────────────────────────────────────────────
 
   const anyUploading = attachments.some(a => a.isUploading);
+  const hasAttachments = attachments.length > 0;
   const hasContent = text.trim().length > 0 || attachments.filter(a => a.fileId).length > 0;
   const showStop = loading;
   const showSend = !loading && hasContent && !isRecording && !anyUploading;
+  const previewable: PreviewAttachment[] = attachments
+    .filter(a => a.fileId && a.uri)
+    .map(a => ({ clientId: a.clientId, uri: a.uri, name: a.name, mimeType: a.mimeType }));
   const bottomPadding = keyboardVisible
     ? verticalScale(8)
     : insets.bottom
     ? insets.bottom + verticalScale(8)
     : verticalScale(16);
+
+  const handleOpenAttachmentPicker = useCallback(() => {
+    if (disabled || anyUploading) return;
+    Haptics.selectionAsync();
+    attachmentPickerRef.current?.present();
+  }, [anyUploading, disabled]);
 
   const formatDuration = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -344,204 +338,237 @@ export function ChatInput({
       entering={FadeInDown.duration(400)}
       style={{ paddingBottom: bottomPadding, paddingHorizontal: 12, paddingTop: 6 }}
     >
-      {/* Attachment preview strip */}
-      {attachments.length > 0 && (() => {
-        // Build PreviewAttachment list for MediaPreviewModal (only uploaded items)
-        const previewable: PreviewAttachment[] = attachments
-          .filter(a => a.fileId && a.uri)
-          .map((a, idx) => ({ clientId: a.clientId, uri: a.uri, name: a.name, mimeType: a.mimeType }));
-
-        return (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ marginBottom: 8 }}
-            contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
-          >
-            {attachments.map((a, idx) => {
-              const isMedia = a.mimeType.startsWith('image/') || a.mimeType.startsWith('video/');
-              const isVideo = a.mimeType.startsWith('video/');
-              const previewIdx = previewable.findIndex(p => p.clientId === a.clientId);
-
-              return (
-                <View key={a.clientId} style={styles.attachChip}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (!a.isUploading && previewIdx >= 0) {
-                        Haptics.selectionAsync();
-                        setPreviewIndex(previewIdx);
-                        setPreviewVisible(true);
-                      }
-                    }}
-                    activeOpacity={previewIdx >= 0 ? 0.8 : 1}
-                    style={{ position: 'relative' }}
-                  >
-                    {isMedia ? (
-                      <>
-                        <Image source={{ uri: a.uri }} style={styles.attachThumb} resizeMode="cover" />
-                        {isVideo && (
-                          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
-                            <Play size={10} color="white" fill="white" strokeWidth={0} />
-                          </View>
-                        )}
-                      </>
-                    ) : (
-                      <View style={styles.attachIcon}>
-                        <FileText size={14} color={COLORS.brand} strokeWidth={1.8} />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                  <Text style={styles.attachName} numberOfLines={1}>{a.name}</Text>
-                  {a.isUploading
-                    ? <ActivityIndicator size="small" color={COLORS.brand} style={{ marginLeft: 4 }} />
-                    : (
-                      <TouchableOpacity onPress={() => removeAttachment(a.clientId)} hitSlop={6}>
-                        <X size={12} color={COLORS.textWeak} strokeWidth={2.5} />
-                      </TouchableOpacity>
-                    )
-                  }
-                </View>
-              );
-            })}
-          </ScrollView>
-        );
-      })()}
-
-      {/* Preview modal for attachment chips */}
+      {/* Preview modal for selected media assets */}
       <MediaPreviewModal
         visible={previewVisible}
-        attachments={attachments.filter(a => a.fileId && a.uri).map(a => ({ clientId: a.clientId, uri: a.uri, name: a.name, mimeType: a.mimeType }))}
+        attachments={previewable}
         initialIndex={previewIndex}
         onClose={() => setPreviewVisible(false)}
       />
 
-      {/* One unified fluid pill: [+] | [text field flex:1] | [mic] [call] */}
       <View
         style={[
           styles.floatingContainer,
-          {
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingLeft: INPUT_PILL_INSET,
-            paddingRight: INPUT_PILL_INSET,
-            paddingVertical: 0,
-            borderRadius: INPUT_PILL_RADIUS,
-            borderWidth: 1,
-            borderColor: COLORS.strokeWeaker,
-            gap: INPUT_PILL_GAP,
-            minHeight: INPUT_PILL_HEIGHT,
-          },
+          hasAttachments ? styles.expandedComposer : styles.compactComposer,
         ]}
       >
-        {/* ⊕ — far left inside pill */}
-        <TouchableOpacity
-          onPress={() => { Haptics.selectionAsync(); setPickerOpen(o => !o); }}
-          disabled={disabled || anyUploading}
-          style={{
-            width: SECONDARY_ACTION_SIZE,
-            height: SECONDARY_ACTION_SIZE,
-            borderRadius: SECONDARY_ACTION_SIZE / 2,
-            backgroundColor: pickerOpen ? `${COLORS.brand}15` : 'transparent',
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: disabled || anyUploading ? 0.4 : 1,
-            flexShrink: 0,
-          }}
-        >
-          <PlusCircle size={scale(22)} color={pickerOpen ? COLORS.brand : COLORS.textMuted} strokeWidth={1.9} />
-        </TouchableOpacity>
+        {hasAttachments ? (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.assetStrip}
+              contentContainerStyle={styles.assetStripContent}
+            >
+              {attachments.map(a => {
+                const isMedia = a.mimeType.startsWith('image/') || a.mimeType.startsWith('video/');
+                const isVideo = a.mimeType.startsWith('video/');
+                const isAudio = a.mimeType.startsWith('audio/');
+                const previewIdx = previewable.findIndex(p => p.clientId === a.clientId);
 
-        {/* Text field — grows with content */}
-        <View style={{ flex: 1, minHeight: SECONDARY_ACTION_SIZE, justifyContent: 'center' }}>
-          <TextInput
-            value={text}
-            onChangeText={(v) => {
-              if (isRecording) textBeforeDictationRef.current = v;
-              setText(v);
-              setMultiline(v.includes('\n') || v.length > 60);
-            }}
-            placeholder={isRecording ? 'Listening…' : placeholder}
-            placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
-            multiline
-            style={{
-              fontFamily: FONTS.sans,
-              fontSize: moderateScale(15),
-              color: COLORS.textStrong,
-              paddingVertical: 0,
-              minHeight: verticalScale(24),
-              textAlignVertical: 'center',
-              // No maxHeight cap — pill grows naturally with text
-            }}
-            blurOnSubmit={false}
-            editable={!disabled}
-          />
-          {isRecording && !text.trim() && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.error }} />
-              <Text style={{ fontFamily: FONTS.sansMedium, fontSize: moderateScale(11), color: COLORS.error }}>
-                {formatDuration(duration)} · tap mic to finish
-              </Text>
+                return (
+                  <View key={a.clientId} style={styles.selectedAsset}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (!a.isUploading && previewIdx >= 0) {
+                          Haptics.selectionAsync();
+                          setPreviewIndex(previewIdx);
+                          setPreviewVisible(true);
+                        }
+                      }}
+                      activeOpacity={previewIdx >= 0 ? 0.84 : 1}
+                      style={styles.assetPressable}
+                    >
+                      {isMedia ? (
+                        <>
+                          <Image source={{ uri: a.uri }} style={styles.assetThumb} resizeMode="cover" />
+                          {isVideo && (
+                            <View style={styles.videoAssetOverlay}>
+                              <Play size={scale(18)} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+                            </View>
+                          )}
+                        </>
+                      ) : isAudio ? (
+                        <View style={styles.assetAudioTile}>
+                          <AudioLines size={scale(23)} color={COLORS.brand} strokeWidth={2.3} />
+                        </View>
+                      ) : (
+                        <View style={styles.assetFileTile}>
+                          <FileText size={scale(22)} color={COLORS.brand} strokeWidth={2} />
+                        </View>
+                      )}
+                      {a.isUploading && (
+                        <View style={styles.assetUploadingOverlay}>
+                          <ActivityIndicator color={COLORS.textInverse} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => removeAttachment(a.clientId)}
+                      activeOpacity={0.82}
+                      hitSlop={6}
+                      style={styles.assetRemoveButton}
+                    >
+                      <X size={scale(13)} color={COLORS.textInverse} strokeWidth={2.6} />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            <TextInput
+              value={text}
+              onChangeText={(v) => {
+                if (isRecording) textBeforeDictationRef.current = v;
+                setText(v);
+                setMultiline(v.includes('\n') || v.length > 60);
+              }}
+              placeholder={isRecording ? 'Listening…' : placeholder}
+              placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
+              multiline
+              style={styles.expandedTextInput}
+              blurOnSubmit={false}
+              editable={!disabled}
+            />
+
+            <View style={styles.expandedFooter}>
+              {isRecording && !text.trim() ? (
+                <View style={styles.recordingHint}>
+                  <View style={styles.recordingDot} />
+                  <Text style={styles.recordingText}>
+                    {formatDuration(duration)} · tap mic to finish
+                  </Text>
+                </View>
+              ) : (
+                <View />
+              )}
+
+              {showStop ? (
+                <Animated.View style={btnAnimStyle}>
+                  <TouchableOpacity
+                    onPress={handleStop}
+                    onPressIn={() => { btnScale.value = withSpring(0.9); }}
+                    onPressOut={() => { btnScale.value = withSpring(1); }}
+                    style={styles.expandedStopButton}
+                  >
+                    <Square size={scale(16)} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+                  </TouchableOpacity>
+                </Animated.View>
+              ) : (
+                <Animated.View style={btnAnimStyle}>
+                  <TouchableOpacity
+                    onPress={handleSend}
+                    onPressIn={() => { btnScale.value = withSpring(0.9); }}
+                    onPressOut={() => { btnScale.value = withSpring(1); }}
+                    disabled={disabled || !showSend}
+                    style={[
+                      styles.expandedSendButton,
+                      (disabled || !showSend) && styles.expandedSendButtonDisabled,
+                    ]}
+                  >
+                    {anyUploading ? (
+                      <ActivityIndicator color={COLORS.textInverse} />
+                    ) : (
+                      <ArrowUp size={scale(25)} color={COLORS.textInverse} strokeWidth={2.5} />
+                    )}
+                  </TouchableOpacity>
+                </Animated.View>
+              )}
             </View>
-          )}
-        </View>
-
-        {/* Right actions — inside the pill */}
-        {showStop ? (
-          <Animated.View style={btnAnimStyle}>
-            <TouchableOpacity
-              onPress={handleStop}
-              onPressIn={() => { btnScale.value = withSpring(0.9); }}
-              onPressOut={() => { btnScale.value = withSpring(1); }}
-              style={{ width: PRIMARY_ACTION_SIZE, height: PRIMARY_ACTION_SIZE, borderRadius: PRIMARY_ACTION_SIZE / 2, backgroundColor: COLORS.error, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <Square size={scale(16)} color="white" fill="white" strokeWidth={0} />
-            </TouchableOpacity>
-          </Animated.View>
-        ) : showSend ? (
-          <Animated.View style={btnAnimStyle}>
-            <TouchableOpacity
-              onPress={handleSend}
-              onPressIn={() => { btnScale.value = withSpring(0.9); }}
-              onPressOut={() => { btnScale.value = withSpring(1); }}
-              disabled={disabled}
-              style={{ width: PRIMARY_ACTION_SIZE, height: PRIMARY_ACTION_SIZE, borderRadius: PRIMARY_ACTION_SIZE / 2, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.brand, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.24, shadowRadius: 8, elevation: 3 }}
-            >
-              <ArrowUp size={scale(22)} color="white" strokeWidth={2.5} />
-            </TouchableOpacity>
-          </Animated.View>
+          </>
         ) : (
-          <View style={{ flexDirection: 'row', gap: INPUT_PILL_GAP, alignItems: 'center' }}>
-            <Animated.View style={micPulseStyle}>
-              <TouchableOpacity
-                onPress={handleMicPress}
-                disabled={disabled || micUnavailable}
-                style={{ width: SECONDARY_ACTION_SIZE, height: SECONDARY_ACTION_SIZE, borderRadius: SECONDARY_ACTION_SIZE / 2, backgroundColor: isRecording ? COLORS.error : COLORS.fillWeaker, alignItems: 'center', justifyContent: 'center', opacity: micUnavailable ? 0.4 : 1 }}
-              >
-                <Mic size={scale(20)} color={isRecording ? COLORS.textInverse : COLORS.textBase} strokeWidth={2} />
-              </TouchableOpacity>
-            </Animated.View>
-            {onVoice && !isRecording && (
-              <TouchableOpacity
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onVoice(); }}
-                disabled={disabled}
-                style={{ width: PRIMARY_ACTION_SIZE, height: PRIMARY_ACTION_SIZE, borderRadius: PRIMARY_ACTION_SIZE / 2, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.brand, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.24, shadowRadius: 8, elevation: 3 }}
-              >
-                <PhoneCall size={scale(24)} color="white" strokeWidth={2} />
-              </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              onPress={handleOpenAttachmentPicker}
+              disabled={disabled || anyUploading}
+              style={styles.plusButton}
+            >
+              <PlusCircle size={scale(50)} color={COLORS.textMuted} strokeWidth={1.9} />
+            </TouchableOpacity>
+
+            <View style={styles.compactInputWrap}>
+              <TextInput
+                value={text}
+                onChangeText={(v) => {
+                  if (isRecording) textBeforeDictationRef.current = v;
+                  setText(v);
+                  setMultiline(v.includes('\n') || v.length > 60);
+                }}
+                placeholder={isRecording ? 'Listening…' : placeholder}
+                placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
+                multiline
+                style={styles.compactTextInput}
+                blurOnSubmit={false}
+                editable={!disabled}
+              />
+              {isRecording && !text.trim() && (
+                <View style={styles.recordingHint}>
+                  <View style={styles.recordingDot} />
+                  <Text style={styles.recordingText}>
+                    {formatDuration(duration)} · tap mic to finish
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {showStop ? (
+              <Animated.View style={btnAnimStyle}>
+                <TouchableOpacity
+                  onPress={handleStop}
+                  onPressIn={() => { btnScale.value = withSpring(0.9); }}
+                  onPressOut={() => { btnScale.value = withSpring(1); }}
+                  style={styles.compactStopButton}
+                >
+                  <Square size={scale(16)} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+                </TouchableOpacity>
+              </Animated.View>
+            ) : showSend ? (
+              <Animated.View style={btnAnimStyle}>
+                <TouchableOpacity
+                  onPress={handleSend}
+                  onPressIn={() => { btnScale.value = withSpring(0.9); }}
+                  onPressOut={() => { btnScale.value = withSpring(1); }}
+                  disabled={disabled}
+                  style={styles.compactSendButton}
+                >
+                  <ArrowUp size={scale(22)} color={COLORS.textInverse} strokeWidth={2.5} />
+                </TouchableOpacity>
+              </Animated.View>
+            ) : (
+              <View style={styles.compactActionRow}>
+                <Animated.View style={micPulseStyle}>
+                  <TouchableOpacity
+                    onPress={handleMicPress}
+                    disabled={disabled || micUnavailable}
+                    style={[
+                      styles.micButton,
+                      isRecording && styles.micButtonRecording,
+                      micUnavailable && styles.disabledButton,
+                    ]}
+                  >
+                    <Mic size={scale(20)} color={isRecording ? COLORS.textInverse : COLORS.textBase} strokeWidth={2} />
+                  </TouchableOpacity>
+                </Animated.View>
+                {onVoice && !isRecording && (
+                  <TouchableOpacity
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onVoice(); }}
+                    disabled={disabled}
+                    style={[styles.callButton, disabled && styles.disabledButton]}
+                  >
+                    <PhoneCall size={scale(24)} color={COLORS.textInverse} strokeWidth={2} />
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
-          </View>
+          </>
         )}
       </View>
 
-      {/* Media picker menu — floats above the input row */}
-      <MediaPickerMenu
-        visible={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        onGallery={() => { setPickerOpen(false); handlePickGallery(); }}
-        onCamera={() => { setPickerOpen(false); handleLaunchCamera(); }}
-        onVoice={undefined}
-        onFile={() => { setPickerOpen(false); handlePickDocument(); }}
-        menuLeft={0}
+      <ChatAttachmentPickerSheet
+        ref={attachmentPickerRef}
+        onCamera={handleLaunchCamera}
+        onDocs={handlePickDocument}
+        onConfirm={handleAddPickerAssets}
       />
     </Animated.View>
   );
@@ -550,38 +577,215 @@ export function ChatInput({
 const styles = StyleSheet.create({
   floatingContainer: {
     backgroundColor: COLORS.background,
-  },
-
-  // Attachment chip
-  attachChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.fillWeak,
-    borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.strokeWeaker,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    maxWidth: 180,
   },
-  attachThumb: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
+  compactComposer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: INPUT_PILL_GAP,
+    minHeight: INPUT_PILL_HEIGHT,
+    borderRadius: INPUT_PILL_RADIUS,
+    paddingLeft: INPUT_PILL_INSET,
+    paddingRight: INPUT_PILL_INSET,
   },
-  attachIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: `${COLORS.brand}12`,
+  expandedComposer: {
+    minHeight: verticalScale(214),
+    borderRadius: 28,
+    paddingTop: scale(10),
+    paddingHorizontal: scale(12),
+    paddingBottom: scale(12),
+  },
+  plusButton: {
+    width: SECONDARY_ACTION_SIZE,
+    height: SECONDARY_ACTION_SIZE,
+    borderRadius: SECONDARY_ACTION_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  compactInputWrap: {
+    flex: 1,
+    minHeight: SECONDARY_ACTION_SIZE,
+    justifyContent: 'center',
+  },
+  compactTextInput: {
+    fontFamily: FONTS.sans,
+    fontSize: moderateScale(15),
+    color: COLORS.textStrong,
+    paddingVertical: 0,
+    minHeight: verticalScale(24),
+    textAlignVertical: 'center',
+  },
+  compactActionRow: {
+    flexDirection: 'row',
+    gap: INPUT_PILL_GAP,
+    alignItems: 'center',
+  },
+  micButton: {
+    width: SECONDARY_ACTION_SIZE,
+    height: SECONDARY_ACTION_SIZE,
+    borderRadius: SECONDARY_ACTION_SIZE / 2,
+    backgroundColor: COLORS.fillWeaker,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  attachName: {
+  micButtonRecording: {
+    backgroundColor: COLORS.error,
+  },
+  callButton: {
+    width: PRIMARY_ACTION_SIZE,
+    height: PRIMARY_ACTION_SIZE,
+    borderRadius: PRIMARY_ACTION_SIZE / 2,
+    backgroundColor: COLORS.brand,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.brand,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  compactSendButton: {
+    width: PRIMARY_ACTION_SIZE,
+    height: PRIMARY_ACTION_SIZE,
+    borderRadius: PRIMARY_ACTION_SIZE / 2,
+    backgroundColor: COLORS.brand,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.brand,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  compactStopButton: {
+    width: PRIMARY_ACTION_SIZE,
+    height: PRIMARY_ACTION_SIZE,
+    borderRadius: PRIMARY_ACTION_SIZE / 2,
+    backgroundColor: COLORS.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disabledButton: {
+    opacity: 0.4,
+  },
+  recordingHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  recordingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.error,
+  },
+  recordingText: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: moderateScale(11),
+    color: COLORS.error,
+  },
+  assetStrip: {
+    flexGrow: 0,
+  },
+  assetStripContent: {
+    gap: scale(8),
+    paddingRight: scale(8),
+  },
+  selectedAsset: {
+    width: scale(82),
+    height: scale(82),
+    position: 'relative',
+  },
+  assetPressable: {
+    width: scale(78),
+    height: scale(78),
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: COLORS.fillWeak,
+  },
+  assetThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  assetAudioTile: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    backgroundColor: COLORS.fillWeaker,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assetFileTile: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    backgroundColor: COLORS.fillWeaker,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assetRemoveButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    zIndex: 2,
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(12),
+    backgroundColor: COLORS.textStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.background,
+  },
+  assetUploadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoAssetOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.22)',
+  },
+  expandedTextInput: {
     flex: 1,
     fontFamily: FONTS.sans,
-    fontSize: 11,
+    fontSize: moderateScale(15),
     color: COLORS.textStrong,
+    paddingTop: scale(12),
+    paddingBottom: scale(4),
+    paddingHorizontal: 0,
+    minHeight: verticalScale(76),
+    textAlignVertical: 'top',
+  },
+  expandedFooter: {
+    minHeight: scale(64),
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  expandedSendButton: {
+    width: scale(64),
+    height: scale(64),
+    borderRadius: 16,
+    backgroundColor: COLORS.brand,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expandedSendButtonDisabled: {
+    opacity: 0.55,
+  },
+  expandedStopButton: {
+    width: scale(64),
+    height: scale(64),
+    borderRadius: 16,
+    backgroundColor: COLORS.error,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
