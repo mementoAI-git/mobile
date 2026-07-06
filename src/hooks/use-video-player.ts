@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useVideoPlayer as useExpoVideoPlayer, VideoPlayer } from 'expo-video';
 
 interface UseVideoPlayerOptions {
@@ -30,10 +31,17 @@ interface UseVideoPlayerResult {
 export function useVideoPlayer(uri: string, options: UseVideoPlayerOptions = {}): UseVideoPlayerResult {
   const { loop = true, autoPlay = true } = options;
 
+  // Do NOT call p.play() here — the initializer runs before <VideoView> mounts.
+  // On Android, SurfaceView can't display frames until it's attached to the view
+  // hierarchy. Callers that want autoPlay must call play() in a useEffect after mount.
   const player = useExpoVideoPlayer(uri, (p) => {
     p.loop = loop;
-    if (autoPlay) p.play();
   });
+
+  useEffect(() => {
+    if (!autoPlay) return;
+    player.play();
+  }, [autoPlay, player]);
 
   const play = () => player.play();
   const pause = () => player.pause();

@@ -44,14 +44,18 @@ export function useStreamChat(memoryId?: string) {
 
   const send = useCallback(
     async (text: string, options?: SendOptions) => {
-      if (!text.trim() || streamingRef.current) return;
-
       const { replyTo, chatMode, deepDiveDimension, attachments } = options ?? {};
+      // Block if both text and attachments are empty, or if already streaming
+      const hasText = text.trim().length > 0;
+      const hasAttachments = (attachments ?? []).length > 0;
+      if ((!hasText && !hasAttachments) || streamingRef.current) return;
+
       const apiPrompt = buildPromptWithReplyQuote(text, replyTo ?? null);
 
       const userMessage: StreamMessage = {
         role: 'user',
-        text,
+        // Show a placeholder in the UI for media-only messages
+        text: hasText ? text : `📎 ${attachments!.length} attachment${attachments!.length > 1 ? 's' : ''}`,
         ...(replyTo ? { replyTo } : {}),
       };
       setMessages((prev) => [...prev, userMessage]);
@@ -77,9 +81,8 @@ export function useStreamChat(memoryId?: string) {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
-            // Field names must match web/src/pages/dashboard/chat/conversation/index.tsx
-            // Send the clean user text — replyTo is now a separate field, not wrapped in text
-            text: text.trim(),
+            // Send text only if non-empty — media-only messages omit the text field entirely
+            ...(text.trim() ? { text: text.trim() } : {}),
             // Use ref so this always reads the latest memoryId without being a dep
             ...(memoryIdRef.current ? { memory: memoryIdRef.current } : {}),
             // Reply quote — stored as a separate field on the message document
