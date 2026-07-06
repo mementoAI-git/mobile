@@ -53,6 +53,7 @@ import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useToast } from '@/components/ui/Toast';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
+import { RecordingStatus } from '@/components/ui/RecordingStatus';
 import type { IBeneficiary, IFile } from '@/types';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -532,7 +533,7 @@ export default function CreateScreen() {
             value={body}
             onChangeText={(v) => setBody(v.slice(0, NOTE_CHAR_MAX))}
             placeholder="What's on your mind?"
-            placeholderTextColor={isRecording ? COLORS.error : COLORS.textMuted}
+            placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
             multiline
             autoFocus
             style={styles.input}
@@ -542,12 +543,7 @@ export default function CreateScreen() {
           />
 
           {/* Recording badge */}
-          {isRecording && (
-            <View style={styles.recBadge}>
-              <View style={styles.recDot} />
-              <Text style={styles.recText}>{Math.floor(recDuration / 60)}:{String(recDuration % 60).padStart(2, '0')} · Tap mic to finish</Text>
-            </View>
-          )}
+          {isRecording && <RecordingStatus seconds={recDuration} style={styles.recBadge} />}
 
           {/* Attachments */}
           {imageAttachments.length > 0 && (
@@ -662,9 +658,7 @@ const styles = StyleSheet.create({
     color: COLORS.textStrong, padding: 0, margin: 0, minHeight: 80, textAlignVertical: 'top',
   },
 
-  recBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
-  recDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.error },
-  recText: { fontFamily: FONTS.sansMedium, fontSize: 11, color: COLORS.error },
+  recBadge: { marginTop: 8 },
 
   imageGrid: { marginTop: 12 },
   imgOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
@@ -786,10 +780,5 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: COLORS.strokeWeaker,
   },
-  mediaBtnActive: {
-    backgroundColor: `${COLORS.error}12`,
-    borderColor: `${COLORS.error}30`,
-  },
-
   errorText: { fontFamily: FONTS.sans, fontSize: 13, color: COLORS.error, marginTop: 8, paddingHorizontal: 4 },
 });

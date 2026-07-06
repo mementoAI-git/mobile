@@ -4,6 +4,7 @@ import {
   AudioModule,
   RecordingPresets,
 } from 'expo-audio';
+import { logger } from '@/lib/logger';
 
 export function useAudioRecorder() {
   // expo-audio's built-in recorder hook — replaces expo-av Audio.Recording
@@ -37,7 +38,7 @@ export function useAudioRecorder() {
       // expo-audio manages audio mode internally — no setAudioModeAsync needed
       await recorder.record();
     } catch (err) {
-      console.error('Failed to start recording', err);
+      logger.error('Failed to start recording', err);
     }
   }, [recorder]);
 
@@ -52,7 +53,7 @@ export function useAudioRecorder() {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
       return recorder.uri ?? null;
     } catch (err) {
-      console.error('Failed to stop recording', err);
+      logger.error('Failed to stop recording', err);
       return null;
     }
   }, [recorder]);

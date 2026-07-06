@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { Button } from '@/components/ui';
 import { useUiStore } from '@/store';
+import { logger } from '@/lib/logger';
 
 export function ShareMemorySheet() {
   const sheetProps = useUiStore((s) => s.sheetProps);
@@ -33,7 +34,7 @@ export function ShareMemorySheet() {
         url: shareUrl,
       });
     } catch (error) {
-      console.error(error);
+      logger.error('Native share failed', error);
     }
   };
 

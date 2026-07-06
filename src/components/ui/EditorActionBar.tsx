@@ -46,6 +46,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { MediaPickerMenu } from './MediaPickerMenu';
+import { RecordingIconButton } from './RecordingIconButton';
 import type { EditorBridge } from '@10play/tentap-editor';
 import { useBridgeState } from '@10play/tentap-editor';
 
@@ -355,9 +356,13 @@ export function EditorActionBar({
         <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onCamera?.(); }} activeOpacity={0.75} style={styles.mediaBtn}>
           <ImagePlus size={20} color={COLORS.textBase} strokeWidth={1.8} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onAudio?.(); }} activeOpacity={0.75} style={[styles.mediaBtn, isRecording && styles.mediaBtnRecording]}>
-          <AudioLines size={20} color={isRecording ? COLORS.error : COLORS.textBase} strokeWidth={1.8} />
-        </TouchableOpacity>
+        <RecordingIconButton
+          onPress={() => { Haptics.selectionAsync(); onAudio?.(); }}
+          active={isRecording}
+          style={styles.mediaBtn}
+        >
+          <AudioLines size={20} color={isRecording ? COLORS.textInverse : COLORS.textBase} strokeWidth={1.8} />
+        </RecordingIconButton>
         <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onFile?.(); }} activeOpacity={0.75} style={styles.mediaBtn}>
           <Music size={20} color={COLORS.textBase} strokeWidth={1.8} />
         </TouchableOpacity>
@@ -494,10 +499,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mediaBtnRecording: {
-    backgroundColor: `${COLORS.error}15`,
-  },
-
   // ── Tooltip ─────────────────────────────────────────────────────────────────
   tooltip: {
     position: 'absolute',

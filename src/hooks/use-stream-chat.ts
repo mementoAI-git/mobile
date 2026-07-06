@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import endpoint from '@/api/endpoint';
 import { useAuthStore } from '@/store';
+import { API_BASE_URL } from '@/lib/env';
 import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import { buildPromptWithReplyQuote, type ChatReplyQuote } from '@/lib/utils';
 import type { IMessageAttachment } from '@/types';
@@ -24,8 +25,6 @@ interface SendOptions {
   /** Uploaded file metadata used for the optimistic chat bubble preview */
   attachmentPreviews?: ChatAttachmentPreview[];
 }
-
-const baseURL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
 export function useStreamChat(memoryId?: string) {
   const [messages, setMessages] = useState<StreamMessage[]>([]);
@@ -81,7 +80,7 @@ export function useStreamChat(memoryId?: string) {
         const token = useAuthStore.getState().token?.access_token ?? null;
         if (!isMountedRef.current) return;
 
-        const response = await fetch(`${baseURL}${endpoint.aiPrompt}`, {
+        const response = await fetch(`${API_BASE_URL}${endpoint.aiPrompt}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

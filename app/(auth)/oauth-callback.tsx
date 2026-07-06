@@ -7,8 +7,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { useUserStore } from '@/store/user.store';
 import endpoint from '@/api/endpoint';
 import { COLORS } from '@/constants/tokens';
-
-const baseURL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
+import { API_BASE_URL } from '@/lib/env';
 
 export default function OAuthCallbackScreen() {
   const router = useRouter();
@@ -76,7 +75,7 @@ export default function OAuthCallbackScreen() {
 
   async function exchangeCode() {
     try {
-      const res = await fetch(`${baseURL}${endpoint.oauth}${resolvedProvider}`, {
+      const res = await fetch(`${API_BASE_URL}${endpoint.oauth}${resolvedProvider}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code }),

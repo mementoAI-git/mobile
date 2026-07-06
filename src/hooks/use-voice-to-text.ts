@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 
 // ─── Graceful Expo Go fallback ────────────────────────────────────────────────
 // expo-speech-recognition requires a native build (the pod must be compiled in).
@@ -172,7 +173,7 @@ export function useVoiceToText({
 
   const start = useCallback(async () => {
     if (!_moduleAvailable || !SpeechModule) {
-      console.warn('[VoiceToText] ExpoSpeechRecognition not available (Expo Go). Use a dev build.');
+      logger.warn('[VoiceToText] ExpoSpeechRecognition not available. Use a dev build.');
       return;
     }
     if (status !== 'idle') return;

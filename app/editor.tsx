@@ -44,6 +44,7 @@ import { useUiStore } from '@/store';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
 import { CameraCaptureModal } from '@/components/ui/CameraCaptureModal';
+import { RecordingStatus } from '@/components/ui/RecordingStatus';
 import { StoryRichEditor, FormattingToolbar, type StoryRichEditorRef } from '@/components/ui/StoryRichEditor';
 import type { EditorBridge } from '@10play/tentap-editor';
 import client from '@/api/client';
@@ -859,14 +860,11 @@ export default function EditorScreen() {
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <>
                 <TextInput ref={bodyRef} value={qcBody} onChangeText={v => setQcBody(v.slice(0, NOTE_CHAR_MAX))}
-                  placeholder="What's on your mind?" placeholderTextColor={isRecording ? COLORS.error : COLORS.textMuted}
+                  placeholder="What's on your mind?" placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
                   style={{ fontFamily: FONTS.sans, fontSize: 16, lineHeight: 24, color: COLORS.textStrong, padding: 0, margin: 0, textAlignVertical: 'top', minHeight: 56 }}
                   multiline autoFocus autoCorrect autoCapitalize="sentences" blurOnSubmit={false} scrollEnabled={false} maxLength={NOTE_CHAR_MAX} />
                 {isRecording && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.error }} />
-                    <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 11, color: COLORS.error }}>{Math.floor(recDuration/60)}:{String(recDuration%60).padStart(2,'0')} · Tap mic to finish</Text>
-                  </View>
+                  <RecordingStatus seconds={recDuration} style={{ marginTop: 8 }} />
                 )}
                 {/* Attachment previews — images AND videos shown as tappable thumbnails */}
                 {(() => {

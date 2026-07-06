@@ -3,6 +3,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { useToast } from '@/components/ui/Toast';
+import { logger } from '@/lib/logger';
 
 const MAX_FILE_SIZE = 120 * 1024 * 1024; // 120MB
 
@@ -31,7 +32,7 @@ export function useFileUpload() {
       }
       throw new Error('Upload failed');
     } catch (error) {
-      console.error('File upload error:', error);
+      logger.error('File upload error:', error);
       toast('Failed to upload file', 'error');
       return null;
     } finally {
@@ -68,7 +69,7 @@ export function useFileUpload() {
       
       return null;
     } catch (error) {
-      console.error('Error picking document:', error);
+      logger.error('Error picking document:', error);
       toast('Failed to select file', 'error');
       return null;
     }

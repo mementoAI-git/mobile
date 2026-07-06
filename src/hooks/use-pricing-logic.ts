@@ -6,6 +6,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
+import { logger } from '@/lib/logger';
 
 export type BillingInterval = 'monthly' | 'annual';
 export type Currency = 'USD' | 'NGN';
@@ -60,7 +61,7 @@ export function usePricingLogic() {
         Alert.alert('Error', 'Could not start checkout. Please try again.');
       }
     } catch (err: any) {
-      console.error('Checkout error:', err);
+      logger.error('Checkout error:', err);
       Alert.alert('Billing Error', err?.message || 'A billing error occurred. Please try again.');
     } finally {
       setLoading(false);

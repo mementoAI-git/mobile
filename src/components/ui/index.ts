@@ -20,6 +20,8 @@ export { ExploreSkeleton } from './ExploreSkeleton';
 export { GradientText } from './GradientText';
 export { SplineChart } from './SplineChart';
 export { JourneyStatIcon } from './JourneyStatIcon';
+export { RecordingIconButton } from './RecordingIconButton';
+export { RecordingStatus } from './RecordingStatus';
 export * from './icons/CapsuleStatIcons';
 
 // ── New parity components (matching web shadcn primitives) ────────────────

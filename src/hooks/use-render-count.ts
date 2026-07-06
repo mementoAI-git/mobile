@@ -12,6 +12,7 @@
  *   stream tick, you know a dep array or selector is too broad.
  */
 import { useRef, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 
 export function useRenderCount(componentName: string): void {
   if (!__DEV__) return; // tree-shaken in prod
@@ -22,6 +23,6 @@ export function useRenderCount(componentName: string): void {
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
-    console.log(`[render] ${componentName} #${countRef.current}`);
+    logger.debug(`[render] ${componentName} #${countRef.current}`);
   });
 }

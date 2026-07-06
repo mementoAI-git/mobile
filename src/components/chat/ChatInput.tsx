@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, Platform, StyleSheet,
-  Keyboard, ScrollView, Image, ActivityIndicator,
+  View, TextInput, TouchableOpacity, Platform, StyleSheet,
+  Keyboard, ScrollView, Image, ActivityIndicator, AccessibilityInfo,
 } from 'react-native';
 import { ArrowUp, AudioLines, Mic, Square, PlusCircle, X, FileText, PhoneCall, Play } from 'lucide-react-native';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
@@ -13,6 +13,8 @@ import {
   ChatAttachmentPickerSheet,
   type ChatPickerAsset,
 } from '@/components/chat/ChatAttachmentPickerSheet';
+import { RecordingIconButton } from '@/components/ui/RecordingIconButton';
+import { RecordingStatus } from '@/components/ui/RecordingStatus';
 import { COLORS, FONTS } from '@/constants/tokens';
 import Animated, {
   useAnimatedStyle,
@@ -97,6 +99,7 @@ export function ChatInput({
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
 
   const btnScale = useSharedValue(1);
   const micPulse = useSharedValue(1);
@@ -109,6 +112,14 @@ export function ChatInput({
   const { mutateAsync: uploadFile } = useFileUpload();
 
   // ─── Voice-to-text ──────────────────────────────────────────────────────
+
+  const handleVoiceError = useCallback((err: Error) => {
+    const lower = err.message.toLowerCase();
+    const message = lower.includes('permission')
+      ? 'Allow microphone access to dictate in Memento.'
+      : 'Voice dictation stopped. Try again.';
+    toast(message, 'info');
+  }, [toast]);
 
   const handlePartial = useCallback((liveText: string) => {
     const prefix = textBeforeDictationRef.current;
@@ -135,12 +146,13 @@ export function ChatInput({
   } = useVoiceToText({
     onPartial: handlePartial,
     onTranscript: handleTranscript,
+    onError: handleVoiceError,
   });
 
   // ─── Mic pulse animation ─────────────────────────────────────────────────
 
   useEffect(() => {
-    if (isRecording) {
+    if (isRecording && !reduceMotionEnabled) {
       micPulse.value = withRepeat(
         withSequence(withTiming(1.08, { duration: 650 }), withTiming(1, { duration: 650 })),
         -1,
@@ -149,7 +161,7 @@ export function ChatInput({
     } else {
       micPulse.value = withSpring(1);
     }
-  }, [isRecording, micPulse]);
+  }, [isRecording, micPulse, reduceMotionEnabled]);
 
   const micPulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: micPulse.value }],
@@ -167,6 +179,21 @@ export function ChatInput({
       () => setKeyboardVisible(false),
     );
     return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => {
+        if (mounted) setReduceMotionEnabled(enabled);
+      })
+      .catch(() => {});
+
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotionEnabled);
+    return () => {
+      mounted = false;
+      sub.remove();
+    };
   }, []);
 
   // ─── File upload helper ───────────────────────────────────────────────────
@@ -285,6 +312,11 @@ export function ChatInput({
 
   const handleMicPress = useCallback(async () => {
     if (disabled) return;
+    if (micUnavailable) {
+      Haptics.selectionAsync();
+      toast('Voice dictation is not available in this build.', 'info');
+      return;
+    }
     if (isRecording) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       stopRecording();
@@ -293,7 +325,17 @@ export function ChatInput({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await startRecording();
     }
-  }, [disabled, isRecording, text, stopRecording, startRecording]);
+  }, [disabled, isRecording, micUnavailable, text, stopRecording, startRecording, toast]);
+
+  const handleCancelRecording = useCallback(() => {
+    if (!isRecording) return;
+    Haptics.selectionAsync();
+    cancelRecording();
+    const previousText = textBeforeDictationRef.current;
+    setText(previousText);
+    setMultiline(previousText.includes('\n') || previousText.length > 80);
+    textBeforeDictationRef.current = '';
+  }, [cancelRecording, isRecording]);
 
   const handleStop = useCallback(() => {
     if (!onStop) return;
@@ -326,12 +368,6 @@ export function ChatInput({
     Haptics.selectionAsync();
     attachmentPickerRef.current?.present();
   }, [anyUploading, disabled]);
-
-  const formatDuration = (secs: number) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
 
   return (
     <Animated.View
@@ -425,14 +461,19 @@ export function ChatInput({
               }}
               placeholder={isRecording ? 'Listening…' : placeholder}
               placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
+              selectionColor={isRecording ? COLORS.brand : COLORS.textStrong}
               multiline
-              style={styles.expandedTextInput}
+              style={[styles.expandedTextInput, isRecording && styles.recordingTextInput]}
               blurOnSubmit={false}
               editable={!disabled}
             />
 
             <View style={styles.expandedFooter}>
-              {isRecording ? <RecordingStatus label={formatDuration(duration)} /> : <View />}
+              {isRecording ? (
+                <RecordingStatus seconds={duration} onCancel={handleCancelRecording} />
+              ) : (
+                <View />
+              )}
 
               {showStop ? (
                 <Animated.View style={btnAnimStyle}>
@@ -477,7 +518,7 @@ export function ChatInput({
               <PlusCircle size={scale(50)} color={COLORS.textMuted} strokeWidth={1.9} />
             </TouchableOpacity>
 
-            <View style={styles.compactInputWrap}>
+            <View style={[styles.compactInputWrap, isRecording && styles.recordingInputWrap]}>
               <TextInput
                 value={text}
                 onChangeText={(v) => {
@@ -487,12 +528,15 @@ export function ChatInput({
                 }}
                 placeholder={isRecording ? 'Listening…' : placeholder}
                 placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
+                selectionColor={isRecording ? COLORS.brand : COLORS.textStrong}
                 multiline
-                style={styles.compactTextInput}
+                style={[styles.compactTextInput, isRecording && styles.recordingTextInput]}
                 blurOnSubmit={false}
                 editable={!disabled}
               />
-              {isRecording && <RecordingStatus label={formatDuration(duration)} compact />}
+              {isRecording && (
+                <RecordingStatus seconds={duration} compact onCancel={handleCancelRecording} />
+              )}
             </View>
 
             {showStop ? (
@@ -521,17 +565,14 @@ export function ChatInput({
             ) : (
               <View style={styles.compactActionRow}>
                 <Animated.View style={micPulseStyle}>
-                  <TouchableOpacity
+                  <RecordingIconButton
                     onPress={handleMicPress}
-                    disabled={disabled || micUnavailable}
-                    style={[
-                      styles.micButton,
-                      isRecording && styles.micButtonRecording,
-                      micUnavailable && styles.disabledButton,
-                    ]}
+                    active={isRecording}
+                    disabled={disabled}
+                    muted={micUnavailable}
                   >
                     <Mic size={scale(20)} color={isRecording ? COLORS.textInverse : COLORS.textBase} strokeWidth={2} />
-                  </TouchableOpacity>
+                  </RecordingIconButton>
                 </Animated.View>
                 {onVoice && !isRecording && (
                   <TouchableOpacity
@@ -555,17 +596,6 @@ export function ChatInput({
         onConfirm={handleAddPickerAssets}
       />
     </Animated.View>
-  );
-}
-
-function RecordingStatus({ label, compact }: { label: string; compact?: boolean }) {
-  return (
-    <View style={[styles.recordingStatus, compact && styles.recordingStatusCompact]}>
-      <View style={styles.recordingPulse}>
-        <View style={styles.recordingPulseDot} />
-      </View>
-      <Text style={styles.recordingText}>Listening · {label}</Text>
-    </View>
   );
 }
 
@@ -604,6 +634,12 @@ const styles = StyleSheet.create({
     minHeight: SECONDARY_ACTION_SIZE,
     justifyContent: 'center',
   },
+  recordingInputWrap: {
+    borderRadius: 18,
+    backgroundColor: COLORS.brandSubtle,
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(4),
+  },
   compactTextInput: {
     fontFamily: FONTS.sans,
     fontSize: moderateScale(15),
@@ -612,26 +648,15 @@ const styles = StyleSheet.create({
     minHeight: verticalScale(24),
     textAlignVertical: 'center',
   },
+  recordingTextInput: {
+    backgroundColor: COLORS.brandSubtle,
+    borderRadius: 14,
+    paddingHorizontal: scale(8),
+  },
   compactActionRow: {
     flexDirection: 'row',
     gap: INPUT_PILL_GAP,
     alignItems: 'center',
-  },
-  micButton: {
-    width: SECONDARY_ACTION_SIZE,
-    height: SECONDARY_ACTION_SIZE,
-    borderRadius: SECONDARY_ACTION_SIZE / 2,
-    backgroundColor: COLORS.fillWeaker,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  micButtonRecording: {
-    backgroundColor: COLORS.brand,
-    shadowColor: COLORS.brand,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    elevation: 3,
   },
   callButton: {
     width: PRIMARY_ACTION_SIZE,
@@ -669,40 +694,6 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.4,
-  },
-  recordingStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 8,
-    minHeight: 28,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    backgroundColor: COLORS.brandSubtle,
-    borderWidth: 1,
-    borderColor: `${COLORS.brand}20`,
-  },
-  recordingStatusCompact: {
-    marginTop: 4,
-  },
-  recordingPulse: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.brandSubtle,
-  },
-  recordingPulseDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: COLORS.brand,
-  },
-  recordingText: {
-    fontFamily: FONTS.sansSemi,
-    fontSize: moderateScale(11),
-    color: COLORS.textBase,
   },
   assetStrip: {
     flexGrow: 0,

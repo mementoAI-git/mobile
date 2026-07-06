@@ -81,9 +81,9 @@ export function MediaPickerMenu({
           activeOpacity={0.8}
           style={[styles.item, isRecording && styles.itemRecording]}
         >
-          <AudioLines size={18} color={isRecording ? COLORS.error : COLORS.textStrong} strokeWidth={1.8} />
+          <AudioLines size={18} color={isRecording ? COLORS.brand : COLORS.textStrong} strokeWidth={1.8} />
           <Text style={[styles.label, isRecording && styles.labelRecording]}>
-            {isRecording ? 'Recording…' : 'Voice'}
+            {isRecording ? 'Listening' : 'Voice'}
           </Text>
         </TouchableOpacity>
 
@@ -140,7 +140,9 @@ const styles = StyleSheet.create({
     minWidth: 64,
   },
   itemRecording: {
-    backgroundColor: `${COLORS.error}15`,
+    backgroundColor: COLORS.brandSubtle,
+    borderWidth: 1,
+    borderColor: `${COLORS.brand}20`,
   },
   label: {
     fontFamily: FONTS.sansMedium,
@@ -148,6 +150,6 @@ const styles = StyleSheet.create({
     color: COLORS.textStrong,
   },
   labelRecording: {
-    color: COLORS.error,
+    color: COLORS.brand,
   },
 });
