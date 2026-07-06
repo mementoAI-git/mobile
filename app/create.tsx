@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
   recText: { fontFamily: FONTS.sansMedium, fontSize: 11, color: COLORS.error },
 
   imageGrid: { marginTop: 12 },
-  imgOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  imgOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   imgOverlayText: { fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' },
   removeBtn: {
     position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 10,
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
   },
 
   // Emoji picker
-  emojiBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
+  emojiBackdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'transparent' },
   emojiPicker: {
     position: 'absolute', bottom: 80, left: 16, right: 16,
     backgroundColor: COLORS.card, borderRadius: 16,

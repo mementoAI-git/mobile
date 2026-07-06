@@ -49,7 +49,7 @@ interface VideoThumbnailProps {
   thumbnailUrl?: string | null;
   /**
    * Explicit pixel width. When omitted (or 0) the component fills its parent via
-   * StyleSheet.absoluteFillObject — useful inside aspectRatio containers.
+   * StyleSheet.absoluteFill — useful inside aspectRatio containers.
    */
   width?: number;
   height?: number;

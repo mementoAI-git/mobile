@@ -784,12 +784,12 @@ export default function EditorScreen() {
                         <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                         {/* Play overlay for videos */}
                         {isVideo && !a.isUploading && (
-                          <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' }}>
+                          <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' }}>
                             <Play size={18} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
                           </View>
                         )}
                         {a.isUploading && (
-                          <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
+                          <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
                             <ActivityIndicator color={COLORS.textInverse} />
                           </View>
                         )}
@@ -885,17 +885,17 @@ export default function EditorScreen() {
                             <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                             {/* Play overlay for videos */}
                             {isVideo && !a.isUploading && (
-                              <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' }}>
+                              <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' }}>
                                 <Play size={22} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
                               </View>
                             )}
                             {isLast && (
-                              <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
+                              <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
                                 <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' }}>+{mediaAttachments.length - 6}</Text>
                               </View>
                             )}
                             {a.isUploading && (
-                              <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', borderRadius: 12 }}>
+                              <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', borderRadius: 12 }}>
                                 <ActivityIndicator color={COLORS.textInverse} />
                               </View>
                             )}
