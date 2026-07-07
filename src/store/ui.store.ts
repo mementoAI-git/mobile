@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { Href } from 'expo-router';
 import type { StoryDraft } from '@/components/sheets/DraftsSheet';
 
 export type SheetName =
@@ -27,8 +28,8 @@ export type SheetName =
 interface UiState {
   activeSheet: SheetName;
   sheetProps: Record<string, any>;
-  pendingDeepLink: any; // Can be string or { pathname, params }
-  setPendingDeepLink: (link: any) => void;
+  pendingDeepLink: Href | null;
+  setPendingDeepLink: (link: Href | null) => void;
   openSheet: (name: SheetName, props?: Record<string, any>) => void;
   closeSheet: () => void;
   /** Story drafts — single source of truth shared between editor + DraftsSheet */

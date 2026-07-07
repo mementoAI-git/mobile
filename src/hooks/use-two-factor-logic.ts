@@ -3,6 +3,7 @@ import { TextInput as RNTextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVerify2FA } from '@/hooks/mutations/use-auth-mutations';
 import * as Haptics from 'expo-haptics';
+import { getPostAuthHref } from '@/lib/navigation';
 
 export function useTwoFactorLogic() {
   const router = useRouter();
@@ -47,9 +48,7 @@ export function useTwoFactorLogic() {
     mutate({ two_fa_token: token!, code: fullCode }, {
       onSuccess: (res) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        const data = res.data;
-        const target = data.onboarding_status === 'never' ? '/(onboard)' : '/(tabs)/overview';
-        router.replace(target as any);
+        router.replace(getPostAuthHref(res.data.onboarding_status));
       },
       onError: (err: any) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

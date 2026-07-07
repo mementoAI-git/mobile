@@ -5,9 +5,11 @@ import * as Device from 'expo-device';
 // the actual expo-notifications module code to run, so it's safe in Expo Go.
 import type * as NotificationsType from 'expo-notifications';
 import Constants from 'expo-constants';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useUiStore, useAuthStore } from '@/store';
 import { logger } from '@/lib/logger';
+import { normalizeAppHref } from '@/lib/navigation';
+import { COLORS } from '@/constants/tokens';
 
 const isExpoGo = Constants.appOwnership === 'expo';
 
@@ -51,12 +53,14 @@ export function useNotifications() {
     });
 
     const handleNotificationResponse = (response: NotificationsType.NotificationResponse) => {
-      const data = response.notification.request.content.data as { type?: string; id?: string; url?: string };
+      const data = response.notification.request.content.data as { type?: unknown; id?: unknown; url?: unknown };
+      const type = typeof data?.type === 'string' ? data.type : null;
+      const id = typeof data?.id === 'string' ? data.id : null;
 
       const isAuthenticated = useAuthStore.getState().token;
       const setPendingDeepLink = useUiStore.getState().setPendingDeepLink;
 
-      const navigate = (dest: any) => {
+      const navigate = (dest: Href) => {
         if (isAuthenticated) {
           router.push(dest);
         } else {
@@ -66,19 +70,24 @@ export function useNotifications() {
 
       // Priority 1: Direct URL if provided
       if (data?.url) {
-        navigate(data.url);
+        const href = normalizeAppHref(data.url);
+        if (href) {
+          navigate(href);
+        } else {
+          logger.warn('Ignored unsafe notification URL', data.url);
+        }
         return;
       }
 
       // Priority 2: Typed data
-      if (data?.type === 'capsule') {
+      if (type === 'capsule') {
         navigate('/(tabs)/capsule');
-      } else if (data?.type === 'memory' && data.id) {
-        navigate({ pathname: '/(tabs)/stories/[id]', params: { id: data.id } });
-      } else if (data?.type === 'chat' && data.id) {
-        navigate({ pathname: '/chat/[id]', params: { id: data.id } });
-      } else if (data?.type === 'explore' && data.id) {
-        navigate({ pathname: '/(tabs)/explore/[id]', params: { id: data.id } });
+      } else if (type === 'memory' && id) {
+        navigate({ pathname: '/(tabs)/stories/[id]', params: { id } });
+      } else if (type === 'chat' && id) {
+        navigate({ pathname: '/chat/[id]', params: { id } });
+      } else if (type === 'explore' && id) {
+        navigate({ pathname: '/(tabs)/explore/[id]', params: { id } });
       }
     };
 
@@ -139,7 +148,7 @@ async function registerForPushNotificationsAsync() {
       name: 'default',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF5E00',
+      lightColor: COLORS.brand,
     });
   }
 

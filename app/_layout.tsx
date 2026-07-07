@@ -98,7 +98,7 @@ function ShareIntentWatcher() {
     handledRef.current = true;
     // Small defer so navigation stack is fully mounted before pushing
     const t = setTimeout(() => {
-      router.push('/share' as any);
+      router.push('/share');
     }, 100);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -203,7 +203,7 @@ function RootLayout() {
     if (token && pendingDeepLink && inTabs) {
       // Wait a tiny bit for the initial tab navigation to settle
       const timer = setTimeout(() => {
-        router.push(pendingDeepLink as any);
+        router.push(pendingDeepLink);
         setPendingDeepLink(null);
       }, 500);
 

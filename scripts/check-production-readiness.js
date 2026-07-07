@@ -132,6 +132,26 @@ assert(
   `Zustand stores must use field-level selectors. Offenders: ${broadStoreSubscribers.join(', ')}`,
 );
 
+const uiStoreSource = read('src/store/ui.store.ts');
+assert(!/pendingDeepLink:\s*any/.test(uiStoreSource), 'pendingDeepLink must not be typed as any.');
+assert(/pendingDeepLink:\s*Href \| null/.test(uiStoreSource), 'pendingDeepLink must use Expo Router Href typing.');
+
+const notificationsSource = read('src/hooks/use-notifications.ts');
+assert(/normalizeAppHref/.test(notificationsSource), 'Notification URLs must be normalized before navigation.');
+assert(!/const navigate = \(dest: any\)/.test(notificationsSource), 'Notification navigation destinations must not be any.');
+assert(!/navigate\(data\.url\)/.test(notificationsSource), 'Notification raw URLs must not be navigated directly.');
+
+const authRedirectFiles = [
+  'src/hooks/use-login-logic.ts',
+  'src/hooks/use-two-factor-logic.ts',
+  'app/(auth)/oauth-callback.tsx',
+];
+const unsafeAuthRedirects = authRedirectFiles.filter((file) => /router\.replace\(target as any\)/.test(read(file)));
+assert(
+  unsafeAuthRedirects.length === 0,
+  `Auth redirects must use typed post-auth hrefs. Offenders: ${unsafeAuthRedirects.join(', ')}`,
+);
+
 const registerSource = read('app/(auth)/register.tsx');
 assert(/TERMS_URL/.test(registerSource) && /PRIVACY_URL/.test(registerSource), 'Signup legal links must be wired to URLs.');
 assert(/Linking\.openURL\(TERMS_URL\)/.test(registerSource), 'Terms link must open a URL.');

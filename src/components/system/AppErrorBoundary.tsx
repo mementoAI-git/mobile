@@ -53,7 +53,7 @@ export class AppErrorBoundary extends React.Component<AppErrorBoundaryProps, App
           </View>
           <Text style={styles.title}>Something went off track</Text>
           <Text style={styles.body}>
-            Your memories are still safe. Try reopening this screen, and if it keeps happening we will have the crash report.
+            Try reopening this screen. If it keeps happening, we will have the crash report and enough detail to investigate.
           </Text>
           <Button onPress={this.handleReset} size="lg" className="mt-4 px-8">
             Try again

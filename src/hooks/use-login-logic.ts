@@ -11,6 +11,7 @@ import endpoint from '@/api/endpoint';
 import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
 import { storageKeys } from '@/constants/storage-keys';
+import { getPostAuthHref } from '@/lib/navigation';
 
 const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
@@ -44,8 +45,7 @@ export function useLoginLogic() {
           router.push(`/(auth)/two-factor?token=${resData.two_fa_token}`);
           return;
         }
-        const target = resData.onboarding_status === 'never' ? '/(onboard)' : '/(tabs)/overview';
-        router.replace(target as any);
+        router.replace(getPostAuthHref(resData.onboarding_status));
       },
       onError: (err: any) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -142,8 +142,7 @@ export function useLoginLogic() {
       );
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      const target = newTokens.onboarding_status === 'never' ? '/(onboard)' : '/(tabs)/overview';
-      router.replace(target as any);
+      router.replace(getPostAuthHref(newTokens.onboarding_status));
     } catch {
       // User cancelled the biometric prompt — no toast needed
     } finally {

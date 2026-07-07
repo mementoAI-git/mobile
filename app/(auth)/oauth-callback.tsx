@@ -8,6 +8,7 @@ import { useUserStore } from '@/store/user.store';
 import endpoint from '@/api/endpoint';
 import { COLORS } from '@/constants/tokens';
 import { API_BASE_URL } from '@/lib/env';
+import { getPostAuthHref } from '@/lib/navigation';
 
 export default function OAuthCallbackScreen() {
   const router = useRouter();
@@ -66,8 +67,7 @@ export default function OAuthCallbackScreen() {
       }
       
       setDone(true);
-      const target = getSingleParam(onboarding_status) === 'never' ? '/(onboard)' : '/(tabs)/overview';
-      router.replace(target as any);
+      router.replace(getPostAuthHref(getSingleParam(onboarding_status)));
     } catch {
       setError('Authentication failed. Please try again.');
     }
@@ -93,8 +93,7 @@ export default function OAuthCallbackScreen() {
       setUser(user);
       setDone(true);
 
-      const target = data.onboarding_status === 'never' ? '/(onboard)' : '/(tabs)/overview';
-      router.replace(target as any);
+      router.replace(getPostAuthHref(data.onboarding_status));
     } catch {
       setError('Something went wrong. Please try again.');
     }
