@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { FlatList, RefreshControl, View, ScrollView, ImageBackground, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Search, Grid, List, X } from 'lucide-react-native';
@@ -63,6 +63,17 @@ export default function CapsuleScreen() {
       )
     );
   }, [capsules, searchQuery]);
+
+  const renderCapsuleItem = useCallback(
+    ({ item }: { item: (typeof filteredCapsules)[number] }) => (
+      <CapsuleCard
+        capsule={item}
+        layoutMode={layoutMode}
+        onPress={() => useUiStore.getState().openSheet('capsule-detail', { capsule: item })}
+      />
+    ),
+    [layoutMode],
+  );
 
   const getFilterCount = (id: string) => {
     if (!stats) return null;
@@ -233,13 +244,7 @@ export default function CapsuleScreen() {
             }
             contentContainerClassName="px-6 pb-24 flex-grow"
             showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <CapsuleCard
-                capsule={item}
-                layoutMode={layoutMode}
-                onPress={() => useUiStore.getState().openSheet('capsule-detail', { capsule: item })}
-              />
-            )}
+            renderItem={renderCapsuleItem}
             refreshControl={
               <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.brand} />
             }

@@ -1,4 +1,4 @@
-import React, { forwardRef, useCallback, useMemo, useState } from 'react';
+import React, { forwardRef, useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   BottomSheetBackdrop,
@@ -79,6 +79,7 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
     const [permissionDenied, setPermissionDenied] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
     const [hasNextPage, setHasNextPage] = useState(false);
+    const loadRequestIdRef = useRef(0);
 
     const selectedAssets = useMemo(() => Object.values(selected), [selected]);
     const selectedCount = selectedAssets.length;
@@ -93,12 +94,14 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
     }, []);
 
     const loadAssets = useCallback(async (nextMode: PickerMode, after?: string | null) => {
+      const requestId = ++loadRequestIdRef.current;
       setLoading(true);
       setPermissionDenied(false);
       try {
         const granularPermissions: MediaLibrary.GranularPermission[] =
           nextMode === 'videos' ? ['video'] : nextMode === 'audio' ? ['audio'] : ['photo'];
         const permission = await MediaLibrary.requestPermissionsAsync(false, granularPermissions);
+        if (requestId !== loadRequestIdRef.current) return;
         if (!permission.granted) {
           setPermissionDenied(true);
           if (!after) setAssets([]);
@@ -119,11 +122,14 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
           sortBy: [[MediaLibrary.SortBy.creationTime, false]],
         });
 
+        if (requestId !== loadRequestIdRef.current) return;
         setAssets(prev => (after ? [...prev, ...page.assets] : page.assets));
         setNextCursor(page.endCursor);
         setHasNextPage(page.hasNextPage);
       } finally {
-        setLoading(false);
+        if (requestId === loadRequestIdRef.current) {
+          setLoading(false);
+        }
       }
     }, []);
 
@@ -134,13 +140,14 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
     }, [assets.length, loadAssets, loading, mode]);
 
     const selectMode = useCallback((nextMode: PickerMode) => {
+      if (nextMode === mode) return;
       Haptics.selectionAsync();
       setMode(nextMode);
       setAssets([]);
       setNextCursor(null);
       setHasNextPage(false);
       loadAssets(nextMode, null);
-    }, [loadAssets]);
+    }, [loadAssets, mode]);
 
     const handleCamera = useCallback(() => {
       Haptics.selectionAsync();

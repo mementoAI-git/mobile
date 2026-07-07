@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View, TextInput, TouchableOpacity, Platform, StyleSheet,
   Keyboard, ScrollView, Image, ActivityIndicator, AccessibilityInfo,
@@ -349,14 +349,34 @@ export function ChatInput({
 
   // ─── Derived ──────────────────────────────────────────────────────────────
 
-  const anyUploading = attachments.some(a => a.isUploading);
+  const attachmentState = useMemo(() => {
+    let anyUploading = false;
+    let readyCount = 0;
+    const previewable: PreviewAttachment[] = [];
+
+    for (const attachment of attachments) {
+      if (attachment.isUploading) anyUploading = true;
+      if (attachment.fileId) {
+        readyCount += 1;
+        if (attachment.uri) {
+          previewable.push({
+            clientId: attachment.clientId,
+            uri: attachment.uri,
+            name: attachment.name,
+            mimeType: attachment.mimeType,
+          });
+        }
+      }
+    }
+
+    return { anyUploading, readyCount, previewable };
+  }, [attachments]);
+  const anyUploading = attachmentState.anyUploading;
   const hasAttachments = attachments.length > 0;
-  const hasContent = text.trim().length > 0 || attachments.filter(a => a.fileId).length > 0;
+  const hasContent = text.trim().length > 0 || attachmentState.readyCount > 0;
   const showStop = loading;
   const showSend = !loading && hasContent && !isRecording && !anyUploading;
-  const previewable: PreviewAttachment[] = attachments
-    .filter(a => a.fileId && a.uri)
-    .map(a => ({ clientId: a.clientId, uri: a.uri, name: a.name, mimeType: a.mimeType }));
+  const previewable = attachmentState.previewable;
   const bottomPadding = keyboardVisible
     ? verticalScale(8)
     : insets.bottom

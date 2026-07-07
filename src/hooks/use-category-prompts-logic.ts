@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { useState, useMemo } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import { useCategoryDetailsPrompts } from '@/hooks/queries/use-prompts';
 import { useStartConversation } from '@/hooks/mutations/use-memory-mutations';
 import type { IMemory, IPrompt } from '@/types';
@@ -66,7 +66,7 @@ export function useCategoryPromptsLogic() {
   // tab 0: Uploaded (undefined), tab 1: Answered (true), tab 2: Unanswered (false)
   const answeredParam = activeTab === 0 ? undefined : activeTab === 1;
 
-  const { data, isLoading, refetch, isRefetching } = useCategoryDetailsPrompts(id || '', answeredParam);
+  const { data, isLoading, refetch, isRefetching, isStale } = useCategoryDetailsPrompts(id || '', answeredParam);
   const { mutate: start, isPending } = useStartConversation();
 
   const prompts = data?.prompts ?? [];
@@ -81,7 +81,7 @@ export function useCategoryPromptsLogic() {
     };
   }, [id]);
 
-  const handlePromptPress = (prompt: IPrompt) => {
+  const handlePromptPress = useCallback((prompt: IPrompt) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({
       pathname: '/chat/[id]',
@@ -91,9 +91,9 @@ export function useCategoryPromptsLogic() {
       // chat/[id].tsx title-cases it to show "Career" / "Life Transition" instead of "Today's reflection"
       params: { id: prompt._id || '', type: 'prompt', promptTitle: prompt.title || '', promptLabel: id || '' },
     });
-  };
+  }, [id, router]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     Haptics.selectionAsync();
     // Explore category can be opened via deep link as root screen
     if (router.canGoBack()) {
@@ -101,7 +101,11 @@ export function useCategoryPromptsLogic() {
     } else {
       router.replace('/(tabs)/explore');
     }
-  };
+  }, [router]);
+
+  const refetchIfStale = useCallback(() => {
+    if (isStale) void refetch();
+  }, [isStale, refetch]);
 
   return {
     id,
@@ -114,6 +118,7 @@ export function useCategoryPromptsLogic() {
     isLoading,
     isRefetching,
     refetch,
+    refetchIfStale,
     isPending,
     handlePromptPress,
     handleBack,

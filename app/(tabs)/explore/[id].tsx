@@ -8,6 +8,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useCategoryPromptsLogic } from '@/hooks/use-category-prompts-logic';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
+import type { IPrompt } from '@/types';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const QUESTION_ICON = require('../../../assets/images/question-2.png');
@@ -23,6 +24,7 @@ export default function CategoryPromptsScreen() {
     isLoading,
     isRefetching,
     refetch,
+    refetchIfStale,
     isPending,
     handlePromptPress,
     handleBack,
@@ -30,8 +32,59 @@ export default function CategoryPromptsScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      refetch();
-    }, [refetch])
+      refetchIfStale();
+    }, [refetchIfStale])
+  );
+
+  const renderPromptItem = React.useCallback(
+    ({ item }: { item: IPrompt }) => (
+      <View
+        className="bg-card rounded-2xl p-5 border border-stroke-weaker shadow-sm gap-4 relative"
+      >
+        {/* Question Tag */}
+        <View className="absolute top-4 right-4 px-2 py-0.5 rounded-full bg-brand/5 border border-brand/10">
+          <Animated.Text className="text-[10px] text-brand font-bold capitalize" style={{ fontFamily: FONTS.sans }}>
+            Question
+          </Animated.Text>
+        </View>
+
+        {/* Main content: icon + question */}
+        <View className="flex-row items-start gap-4 pr-12">
+          <View className="size-14 items-center justify-center bg-fill-weaker rounded-2xl border border-stroke-weaker">
+            <Image
+              source={QUESTION_ICON}
+              className="size-9"
+              resizeMode="contain"
+            />
+          </View>
+          <View className="flex-1 pt-1">
+            <Animated.Text
+              className="text-[17px] text-text-strong leading-relaxed"
+              style={{ fontFamily: FONTS.serif }}
+            >
+              {item.title}
+            </Animated.Text>
+          </View>
+        </View>
+
+        {/* Action reply button */}
+        <View className="flex-row pt-2">
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => handlePromptPress(item)}
+            className="px-5 py-2 rounded-full border border-stroke-strong bg-white active:bg-fill-weaker"
+          >
+            <Animated.Text
+              className="text-xs text-text-strong font-semibold"
+              style={{ fontFamily: FONTS.sans }}
+            >
+              Reply question
+            </Animated.Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    ),
+    [handlePromptPress],
   );
 
   return (
@@ -73,7 +126,7 @@ export default function CategoryPromptsScreen() {
         ) : (
           <FlatList
             data={prompts}
-            keyExtractor={(item) => item._id}
+            keyExtractor={(item, index) => item._id ?? `prompt-${index}`}
             contentContainerClassName="p-5 gap-5"
             showsVerticalScrollIndicator={false}
             refreshControl={
@@ -147,53 +200,7 @@ export default function CategoryPromptsScreen() {
                 </View>
               </View>
             }
-            renderItem={({ item }) => (
-              <View
-                className="bg-card rounded-2xl p-5 border border-stroke-weaker shadow-sm gap-4 relative"
-              >
-                {/* Question Tag */}
-                <View className="absolute top-4 right-4 px-2 py-0.5 rounded-full bg-brand/5 border border-brand/10">
-                  <Animated.Text className="text-[10px] text-brand font-bold capitalize" style={{ fontFamily: FONTS.sans }}>
-                    Question
-                  </Animated.Text>
-                </View>
-
-                {/* Main content: icon + question */}
-                <View className="flex-row items-start gap-4 pr-12">
-                  <View className="size-14 items-center justify-center bg-fill-weaker rounded-2xl border border-stroke-weaker">
-                    <Image
-                      source={QUESTION_ICON}
-                      className="size-9"
-                      resizeMode="contain"
-                    />
-                  </View>
-                  <View className="flex-1 pt-1">
-                    <Animated.Text
-                      className="text-[17px] text-text-strong leading-relaxed"
-                      style={{ fontFamily: FONTS.serif }}
-                    >
-                      {item.title}
-                    </Animated.Text>
-                  </View>
-                </View>
-
-                {/* Action reply button */}
-                <View className="flex-row pt-2">
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => handlePromptPress(item)}
-                    className="px-5 py-2 rounded-full border border-stroke-strong bg-white active:bg-fill-weaker"
-                  >
-                    <Animated.Text
-                      className="text-xs text-text-strong font-semibold"
-                      style={{ fontFamily: FONTS.sans }}
-                    >
-                      Reply question
-                    </Animated.Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
+            renderItem={renderPromptItem}
             ListEmptyComponent={
               <View className="items-center justify-center py-16 gap-3">
                 <Inbox size={40} color={COLORS.textDisabled} strokeWidth={1.5} />
