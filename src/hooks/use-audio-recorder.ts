@@ -5,11 +5,18 @@ import {
   RecordingPresets,
 } from 'expo-audio';
 import { logger } from '@/lib/logger';
+import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 
-export function useAudioRecorder() {
+interface UseAudioRecorderOptions {
+  onPermissionDenied?: (permission: PermissionLike) => void;
+  onError?: (err: unknown) => void;
+}
+
+export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   // expo-audio's built-in recorder hook — replaces expo-av Audio.Recording
   const recorder = useExpoAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const isMountedRef = useRef(true);
+  const { onPermissionDenied, onError } = options;
 
   useEffect(() => {
     return () => {
@@ -30,17 +37,23 @@ export function useAudioRecorder() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (): Promise<boolean> => {
     try {
-      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
-      if (!granted) throw new Error('Microphone permission denied');
-      if (!isMountedRef.current) return;
+      const permission = await AudioModule.requestRecordingPermissionsAsync();
+      if (!isPermissionGranted(permission)) {
+        onPermissionDenied?.(permission);
+        return false;
+      }
+      if (!isMountedRef.current) return false;
       // expo-audio manages audio mode internally — no setAudioModeAsync needed
       await recorder.record();
+      return true;
     } catch (err) {
       logger.error('Failed to start recording', err);
+      onError?.(err);
+      return false;
     }
-  }, [recorder]);
+  }, [onError, onPermissionDenied, recorder]);
 
   const stop = useCallback(async (): Promise<string | null> => {
     try {

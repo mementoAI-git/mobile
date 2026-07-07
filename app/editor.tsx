@@ -51,6 +51,8 @@ import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import type { IBeneficiary, IFile } from '@/types';
 import { publishedPostUrl } from '@/lib/env';
+import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -417,8 +419,18 @@ export default function EditorScreen() {
   const { mutateAsync: quickCapture, isPending: qcPending } = useQuickCapture();
   const { mutateAsync: uploadFileMutation } = useFileUpload();
   const { data: beneficiariesRaw } = useBeneficiaries();
-  const { start: startRecording, stop: stopRecording, isRecording, duration: recDuration } = useAudioRecorder();
   const { toast } = useToast();
+  const handleMicrophonePermissionDenied = useCallback((permission: PermissionLike) => {
+    showPermissionRecoveryAlert({
+      permission,
+      title: 'Microphone is off',
+      description: 'Allow microphone access to add a voice note to this memory.',
+      settingsDescription: 'Microphone access is turned off in Settings. Turn it back on to add a voice note to this memory.',
+    });
+  }, []);
+  const { start: startRecording, stop: stopRecording, isRecording, duration: recDuration } = useAudioRecorder({
+    onPermissionDenied: handleMicrophonePermissionDenied,
+  });
 
   const beneficiaries: IBeneficiary[] = useMemo(() => {
     if (!beneficiariesRaw) return [];
@@ -527,8 +539,16 @@ export default function EditorScreen() {
 
   const handleImagePicker = useCallback(async () => {
     Haptics.selectionAsync();
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { toast('Allow Memento to access your photos and videos.', 'error'); return; }
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!isPermissionGranted(permission)) {
+      showPermissionRecoveryAlert({
+        permission,
+        title: 'Media is tucked away',
+        description: 'Allow photo and video access to attach media to this memory.',
+        settingsDescription: 'Photo and video access is turned off in Settings. Turn it back on to attach media to this memory.',
+      });
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], allowsMultipleSelection: true, quality: 0.85 });
     if (!result.canceled) await Promise.all(result.assets.map(a => {
       const isVideo = a.mimeType?.startsWith('video/');

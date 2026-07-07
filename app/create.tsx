@@ -54,6 +54,8 @@ import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useToast } from '@/components/ui/Toast';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
+import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import type { IBeneficiary, IFile } from '@/types';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -313,8 +315,18 @@ export default function CreateScreen() {
   const { mutateAsync: quickCapture, isPending } = useQuickCapture();
   const { mutateAsync: uploadFileMutation } = useFileUpload();
   const { data: beneficiariesRaw } = useBeneficiaries();
-  const { start: startRecording, stop: stopRecording, isRecording, duration: recDuration } = useAudioRecorder();
   const { toast } = useToast();
+  const handleMicrophonePermissionDenied = useCallback((permission: PermissionLike) => {
+    showPermissionRecoveryAlert({
+      permission,
+      title: 'Microphone is off',
+      description: 'Allow microphone access to add a voice note to this memory.',
+      settingsDescription: 'Microphone access is turned off in Settings. Turn it back on to add a voice note to this memory.',
+    });
+  }, []);
+  const { start: startRecording, stop: stopRecording, isRecording, duration: recDuration } = useAudioRecorder({
+    onPermissionDenied: handleMicrophonePermissionDenied,
+  });
 
   const beneficiaries: IBeneficiary[] = useMemo(() => {
     if (!beneficiariesRaw) return [];
@@ -449,8 +461,16 @@ export default function CreateScreen() {
   // Image toolbar button — images + videos from gallery (matches web's Image icon)
   const handleImagePicker = useCallback(async () => {
     Haptics.selectionAsync();
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { toast('Allow Memento to access your photos.', 'error'); return; }
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!isPermissionGranted(permission)) {
+      showPermissionRecoveryAlert({
+        permission,
+        title: 'Photos are tucked away',
+        description: 'Allow photo access to attach images to this memory.',
+        settingsDescription: 'Photo access is turned off in Settings. Turn it back on to attach images to this memory.',
+      });
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, quality: 0.85 });
     if (!result.canceled) {
       for (const a of result.assets) await uploadAndAdd(a.uri, a.mimeType || 'image/jpeg', a.fileName || `photo_${Date.now()}.jpg`);
@@ -460,8 +480,16 @@ export default function CreateScreen() {
   // Video toolbar button — video from gallery (matches web's Video icon)
   const handleVideoPicker = useCallback(async () => {
     Haptics.selectionAsync();
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { toast('Allow Memento to access your photos.', 'error'); return; }
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!isPermissionGranted(permission)) {
+      showPermissionRecoveryAlert({
+        permission,
+        title: 'Videos are tucked away',
+        description: 'Allow video access to attach a clip to this memory.',
+        settingsDescription: 'Video access is turned off in Settings. Turn it back on to attach a clip to this memory.',
+      });
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], allowsMultipleSelection: false, quality: 0.85 });
     if (!result.canceled && result.assets[0]) {
       const a = result.assets[0];

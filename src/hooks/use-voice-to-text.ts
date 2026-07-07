@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { logger } from '@/lib/logger';
+import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 
 // ─── Graceful Expo Go fallback ────────────────────────────────────────────────
 // expo-speech-recognition requires a native build (the pod must be compiled in).
@@ -55,6 +56,8 @@ export interface UseVoiceToTextOptions {
   onTranscript: (text: string) => void;
   /** Called on a real recognition error (silence is NOT an error). */
   onError?: (err: Error) => void;
+  /** Called when the OS denies microphone or speech-recognition access. */
+  onPermissionDenied?: (permission: PermissionLike) => void;
 }
 
 /**
@@ -77,6 +80,7 @@ export function useVoiceToText({
   onPartial,
   onTranscript,
   onError,
+  onPermissionDenied,
 }: UseVoiceToTextOptions): UseVoiceToTextResult {
   const [status, setStatus] = useState<VoiceToTextStatus>('idle');
   const [duration, setDuration] = useState(0);
@@ -178,8 +182,11 @@ export function useVoiceToText({
     }
     if (status !== 'idle') return;
     try {
-      const { granted } = await SpeechModule.requestPermissionsAsync();
-      if (!granted) throw new Error('Microphone permission denied');
+      const permission = await SpeechModule.requestPermissionsAsync();
+      if (!isPermissionGranted(permission)) {
+        onPermissionDenied?.(permission);
+        return;
+      }
       if (!isMountedRef.current) return;
 
       committedRef.current = '';
@@ -205,7 +212,7 @@ export function useVoiceToText({
       }, 2000);
       onError?.(err instanceof Error ? err : new Error(String(err)));
     }
-  }, [status, onError]);
+  }, [status, onError, onPermissionDenied]);
 
   const stop = useCallback(() => {
     if (!_moduleAvailable || !SpeechModule) return;

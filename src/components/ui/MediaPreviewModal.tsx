@@ -32,6 +32,8 @@ import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, w
 import { ChevronLeft, Share2, X, Mic, FileText, Music, Play, Pause, RotateCcw, Link2, Download } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { publishedPostUrl } from '@/lib/env';
+import { isPermissionGranted } from '@/lib/permission-recovery';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -567,8 +569,16 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: 
     if (!item) return;
 
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') return;
+      const permission = await MediaLibrary.requestPermissionsAsync();
+      if (!isPermissionGranted(permission)) {
+        showPermissionRecoveryAlert({
+          permission,
+          title: 'Gallery access is tucked away',
+          description: 'Allow gallery access to save this memory to your library.',
+          settingsDescription: 'Gallery access is turned off in Settings. Turn it back on to save this memory to your library.',
+        });
+        return;
+      }
 
       // If the URI is remote (http/https), download it first
       let localUri = item.uri;
@@ -582,7 +592,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: 
       await MediaLibrary.saveToLibraryAsync(localUri);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      // Silent fail — user may have dismissed the permission dialog
+      Alert.alert('Could not save media', 'Please try again in a moment.');
     }
   }, [attachments, currentIndex]);
 

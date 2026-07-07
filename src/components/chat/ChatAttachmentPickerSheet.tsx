@@ -1,5 +1,5 @@
-import React, { forwardRef, useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, Dimensions, Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   BottomSheetBackdrop,
   BottomSheetFlatList,
@@ -8,9 +8,15 @@ import {
 } from '@gorhom/bottom-sheet';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import * as Haptics from 'expo-haptics';
-import { Camera, Check, FileText, Film, Image as ImageIcon, Music, Play, X } from 'lucide-react-native';
+import { Camera, Check, FileText, Film, Image as ImageIcon, ImageOff, Music, Play, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PermissionRecoveryState } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
+import {
+  getPermissionRecoveryAction,
+  isPermissionGranted,
+  type PermissionLike,
+} from '@/lib/permission-recovery';
 
 type PickerMode = 'gallery' | 'videos' | 'audio';
 
@@ -33,8 +39,12 @@ interface ChatAttachmentPickerSheetProps {
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_COLUMNS = 4;
 const GRID_GAP = 8;
+const ACTION_COLUMNS = 5;
+const ACTION_GAP = 6;
 const SHEET_HORIZONTAL = 20;
 const TILE_SIZE = Math.floor((SCREEN_WIDTH - SHEET_HORIZONTAL * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS);
+const ACTION_TILE_SIZE = Math.floor((SCREEN_WIDTH - SHEET_HORIZONTAL * 2 - ACTION_GAP * (ACTION_COLUMNS - 1)) / ACTION_COLUMNS);
+const ACTION_ICON_SIZE = Math.max(24, Math.min(30, Math.floor(ACTION_TILE_SIZE * 0.42)));
 const PAGE_SIZE = 80;
 
 function getAssetMimeType(asset: MediaLibrary.Asset): string {
@@ -68,6 +78,10 @@ function getSelectionLabel(assets: MediaLibrary.Asset[]): string {
   return assets.length === 1 ? 'item' : 'items';
 }
 
+function getGranularPermissions(mode: PickerMode): MediaLibrary.GranularPermission[] {
+  return mode === 'videos' ? ['video'] : mode === 'audio' ? ['audio'] : ['photo'];
+}
+
 export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttachmentPickerSheetProps>(
   function ChatAttachmentPickerSheet({ onCamera, onDocs, onConfirm }, ref) {
     const insets = useSafeAreaInsets();
@@ -76,7 +90,8 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
     const [selected, setSelected] = useState<Record<string, MediaLibrary.Asset>>({});
     const [loading, setLoading] = useState(false);
     const [resolving, setResolving] = useState(false);
-    const [permissionDenied, setPermissionDenied] = useState(false);
+    const [permissionIssue, setPermissionIssue] = useState<PermissionLike | null>(null);
+    const [isOpen, setIsOpen] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
     const [hasNextPage, setHasNextPage] = useState(false);
     const loadRequestIdRef = useRef(0);
@@ -91,19 +106,19 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
 
     const handleDismiss = useCallback(() => {
       setSelected({});
+      setIsOpen(false);
     }, []);
 
     const loadAssets = useCallback(async (nextMode: PickerMode, after?: string | null) => {
       const requestId = ++loadRequestIdRef.current;
       setLoading(true);
-      setPermissionDenied(false);
+      setPermissionIssue(null);
       try {
-        const granularPermissions: MediaLibrary.GranularPermission[] =
-          nextMode === 'videos' ? ['video'] : nextMode === 'audio' ? ['audio'] : ['photo'];
+        const granularPermissions = getGranularPermissions(nextMode);
         const permission = await MediaLibrary.requestPermissionsAsync(false, granularPermissions);
         if (requestId !== loadRequestIdRef.current) return;
-        if (!permission.granted) {
-          setPermissionDenied(true);
+        if (!isPermissionGranted(permission)) {
+          setPermissionIssue(permission);
           if (!after) setAssets([]);
           return;
         }
@@ -134,10 +149,49 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
     }, []);
 
     const handleSheetChange = useCallback((index: number) => {
+      setIsOpen(index >= 0);
       if (index >= 0 && assets.length === 0 && !loading) {
         loadAssets(mode, null);
       }
     }, [assets.length, loadAssets, loading, mode]);
+
+    useEffect(() => {
+      if (!isOpen || !permissionIssue) return undefined;
+
+      const subscription = AppState.addEventListener('change', async (state) => {
+        if (state !== 'active') return;
+
+        const permission = await MediaLibrary.getPermissionsAsync(false, getGranularPermissions(mode));
+        if (isPermissionGranted(permission)) {
+          setPermissionIssue(null);
+          loadAssets(mode, null);
+        } else {
+          setPermissionIssue(permission);
+        }
+      });
+
+      return () => subscription.remove();
+    }, [isOpen, loadAssets, mode, permissionIssue]);
+
+    const permissionRecoveryAction = getPermissionRecoveryAction(permissionIssue);
+    const permissionCopy = useMemo(() => {
+      const noun = mode === 'videos' ? 'videos' : mode === 'audio' ? 'audio' : 'photos';
+      return {
+        title: `${noun[0].toUpperCase()}${noun.slice(1)} are tucked away`,
+        description:
+          permissionRecoveryAction === 'settings'
+            ? `Memento cannot see your ${noun} because access is turned off in Settings. Turn it back on to attach them here.`
+            : `Allow Memento to show your recent ${noun} so you can attach them without leaving the chat.`,
+      };
+    }, [mode, permissionRecoveryAction]);
+
+    const handlePermissionAction = useCallback(() => {
+      if (permissionRecoveryAction === 'settings') {
+        Linking.openSettings();
+        return;
+      }
+      loadAssets(mode, null);
+    }, [loadAssets, mode, permissionRecoveryAction]);
 
     const selectMode = useCallback((nextMode: PickerMode) => {
       if (nextMode === mode) return;
@@ -249,6 +303,7 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
       <BottomSheetModal
         ref={ref}
         snapPoints={['72%', '94%']}
+        enableDynamicSizing={false}
         backdropComponent={renderBackdrop}
         enablePanDownToClose
         onChange={handleSheetChange}
@@ -265,36 +320,44 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
           </View>
 
           <View style={styles.actionRow}>
-            <PickerAction label="Camera" icon={<Camera size={36} color={COLORS.textInverse} strokeWidth={2} />} onPress={handleCamera} />
-            <PickerAction label="Gallery" active={mode === 'gallery'} icon={<ImageIcon size={36} color={COLORS.textInverse} strokeWidth={2} />} onPress={() => selectMode('gallery')} />
-            <PickerAction label="Videos" active={mode === 'videos'} icon={<Film size={36} color={COLORS.textInverse} strokeWidth={2} />} onPress={() => selectMode('videos')} />
-            <PickerAction label="Audio" active={mode === 'audio'} icon={<Music size={36} color={COLORS.textInverse} strokeWidth={2} />} onPress={() => selectMode('audio')} />
-            <PickerAction label="Docs" icon={<FileText size={36} color={COLORS.textInverse} strokeWidth={2} />} onPress={handleDocs} />
+            <PickerAction label="Camera" icon={<Camera size={ACTION_ICON_SIZE} color={COLORS.textInverse} strokeWidth={2} />} onPress={handleCamera} />
+            <PickerAction label="Gallery" active={mode === 'gallery'} icon={<ImageIcon size={ACTION_ICON_SIZE} color={COLORS.textInverse} strokeWidth={2} />} onPress={() => selectMode('gallery')} />
+            <PickerAction label="Videos" active={mode === 'videos'} icon={<Film size={ACTION_ICON_SIZE} color={COLORS.textInverse} strokeWidth={2} />} onPress={() => selectMode('videos')} />
+            <PickerAction label="Audio" active={mode === 'audio'} icon={<Music size={ACTION_ICON_SIZE} color={COLORS.textInverse} strokeWidth={2} />} onPress={() => selectMode('audio')} />
+            <PickerAction label="Docs" icon={<FileText size={ACTION_ICON_SIZE} color={COLORS.textInverse} strokeWidth={2} />} onPress={handleDocs} />
           </View>
 
           <View style={styles.divider} />
 
-          {permissionDenied ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>Media access needed</Text>
-              <Text style={styles.emptyText}>Allow Memento to show your recent media here.</Text>
-              <TouchableOpacity onPress={() => loadAssets(mode, null)} style={styles.permissionButton}>
-                <Text style={styles.permissionButtonText}>Allow access</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <BottomSheetFlatList
-              data={assets}
-              keyExtractor={(item) => item.id}
-              renderItem={renderAsset}
-              numColumns={4}
-              columnWrapperStyle={styles.gridRow}
-              contentContainerStyle={[styles.gridContent, { paddingBottom: insets.bottom + 118 }]}
-              onEndReached={loadMore}
-              onEndReachedThreshold={0.6}
-              ListFooterComponent={loading ? <ActivityIndicator color={COLORS.brand} style={styles.loader} /> : null}
-            />
-          )}
+          <View style={styles.contentArea}>
+            {permissionIssue ? (
+              <View style={styles.emptyState}>
+                <PermissionRecoveryState
+                  icon={ImageOff}
+                  title={permissionCopy.title}
+                  description={permissionCopy.description}
+                  actionLabel={permissionRecoveryAction === 'settings' ? 'Open Settings' : 'Allow access'}
+                  onAction={handlePermissionAction}
+                  secondaryLabel="Dismiss"
+                  onSecondary={dismiss}
+                  tone="dark"
+                />
+              </View>
+            ) : (
+              <BottomSheetFlatList
+                data={assets}
+                keyExtractor={(item) => item.id}
+                renderItem={renderAsset}
+                numColumns={4}
+                style={styles.assetList}
+                columnWrapperStyle={styles.gridRow}
+                contentContainerStyle={styles.gridContent}
+                onEndReached={loadMore}
+                onEndReachedThreshold={0.6}
+                ListFooterComponent={loading ? <ActivityIndicator color={COLORS.brand} style={styles.loader} /> : null}
+              />
+            )}
+          </View>
 
           <View style={[styles.footer, { paddingBottom: insets.bottom ? insets.bottom + 12 : 20 }]}>
             <TouchableOpacity onPress={dismiss} activeOpacity={0.86} style={styles.dismissButton}>
@@ -376,16 +439,16 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     paddingHorizontal: SHEET_HORIZONTAL,
-    gap: 8,
+    gap: ACTION_GAP,
   },
   actionTile: {
-    flex: 1,
-    height: 128,
-    borderRadius: 14,
+    width: ACTION_TILE_SIZE,
+    height: ACTION_TILE_SIZE,
+    borderRadius: Math.max(12, Math.floor(ACTION_TILE_SIZE * 0.18)),
     backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 14,
+    gap: Math.max(5, Math.floor(ACTION_TILE_SIZE * 0.1)),
     borderWidth: 1,
     borderColor: 'transparent',
   },
@@ -395,7 +458,7 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     fontFamily: FONTS.sansMedium,
-    fontSize: 16,
+    fontSize: ACTION_TILE_SIZE < 60 ? 10 : 12,
     color: COLORS.textInverse,
   },
   divider: {
@@ -407,6 +470,14 @@ const styles = StyleSheet.create({
   },
   gridContent: {
     paddingHorizontal: SHEET_HORIZONTAL,
+    paddingBottom: 16,
+  },
+  contentArea: {
+    flex: 1,
+    minHeight: 0,
+  },
+  assetList: {
+    flex: 1,
   },
   gridRow: {
     gap: GRID_GAP,
@@ -468,42 +539,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
-    paddingBottom: 160,
-  },
-  emptyTitle: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 18,
-    color: COLORS.textInverse,
-  },
-  emptyText: {
-    marginTop: 8,
-    fontFamily: FONTS.sans,
-    fontSize: 14,
-    textAlign: 'center',
-    color: 'rgba(255,255,255,0.68)',
-  },
-  permissionButton: {
-    marginTop: 18,
-    height: 48,
-    paddingHorizontal: 22,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.brand,
-  },
-  permissionButtonText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 14,
-    color: COLORS.textInverse,
+    paddingBottom: 24,
   },
   loader: {
     paddingVertical: 24,
   },
   footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     flexDirection: 'row',
     gap: 24,
     paddingTop: 32,

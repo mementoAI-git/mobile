@@ -11,6 +11,7 @@ export { StatCard } from './StatCard';
 export { DashboardHeader } from './DashboardHeader';
 export { Skeleton } from './Skeleton';
 export { EmptyState } from './EmptyState';
+export { PermissionRecoveryState } from './PermissionRecoveryState';
 export { OverviewSkeleton } from './OverviewSkeleton';
 export * from './GreetingIcon';
 export { StoriesSkeleton } from './StoriesSkeleton';

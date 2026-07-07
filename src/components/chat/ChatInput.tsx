@@ -30,6 +30,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVoiceToText } from '@/hooks/use-voice-to-text';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useToast } from '@/components/ui/Toast';
+import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import type { IFile, IMessageAttachment } from '@/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -121,6 +123,15 @@ export function ChatInput({
     toast(message, 'info');
   }, [toast]);
 
+  const handleDictationPermissionDenied = useCallback((permission: PermissionLike) => {
+    showPermissionRecoveryAlert({
+      permission,
+      title: 'Microphone is off',
+      description: 'Allow microphone access to dictate your message.',
+      settingsDescription: 'Microphone access is turned off in Settings. Turn it back on to dictate your message.',
+    });
+  }, []);
+
   const handlePartial = useCallback((liveText: string) => {
     const prefix = textBeforeDictationRef.current;
     const combined = prefix ? `${prefix} ${liveText}` : liveText;
@@ -147,6 +158,7 @@ export function ChatInput({
     onPartial: handlePartial,
     onTranscript: handleTranscript,
     onError: handleVoiceError,
+    onPermissionDenied: handleDictationPermissionDenied,
   });
 
   // ─── Mic pulse animation ─────────────────────────────────────────────────
@@ -225,9 +237,14 @@ export function ChatInput({
   const handleLaunchCamera = useCallback(async () => {
     Haptics.selectionAsync();
     try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        toast('Allow Memento to access your camera.', 'error');
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!isPermissionGranted(permission)) {
+        showPermissionRecoveryAlert({
+          permission,
+          title: 'Camera is tucked away',
+          description: 'Allow camera access to capture a photo or video from the chat.',
+          settingsDescription: 'Camera access is turned off in Settings. Turn it back on to capture a photo or video from the chat.',
+        });
         return;
       }
       const result = await ImagePicker.launchCameraAsync({

@@ -11,6 +11,8 @@ import endpoint from '@/api/endpoint';
 import { useToast } from '@/components/ui/Toast';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { logger } from '@/lib/logger';
+import { isPermissionGranted } from '@/lib/permission-recovery';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 
 const FEEDBACK_OPTIONS = ['Bug', 'Feature Request', 'UI/UX Issue', 'General Feedback', 'Other'];
 
@@ -35,6 +37,17 @@ export function FeedbackSheet() {
   const { mutateAsync: uploadFile, isPending: isUploading } = useFileUpload();
 
   const handlePickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!isPermissionGranted(permission)) {
+      showPermissionRecoveryAlert({
+        permission,
+        title: 'Screenshots are tucked away',
+        description: 'Allow photo access to attach a screenshot to your feedback.',
+        settingsDescription: 'Photo access is turned off in Settings. Turn it back on to attach a screenshot to your feedback.',
+      });
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: false,

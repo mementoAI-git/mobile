@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Keyboard, TextInput as RNTextInput, Platform } from 'react-native';
 import { Mic, Send, Image as ImageIcon, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -13,6 +13,8 @@ import { RecordingIconButton } from '@/components/ui/RecordingIconButton';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
 import type { IDailyPromptCapture } from '@/types';
 import { logger } from '@/lib/logger';
+import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 
 export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
   const [text, setText] = useState<string>('');
@@ -26,7 +28,18 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
   useEffect(() => {
     return () => { isMountedRef.current = false; };
   }, []);
-  const { isRecording, duration, start, stop } = useAudioRecorder();
+  const handleMicrophonePermissionDenied = useCallback((permission: PermissionLike) => {
+    showPermissionRecoveryAlert({
+      permission,
+      title: 'Microphone is off',
+      description: 'Allow microphone access to add a voice note to this quick capture.',
+      settingsDescription: 'Microphone access is turned off in Settings. Turn it back on to add a voice note to this quick capture.',
+    });
+  }, []);
+
+  const { isRecording, duration, start, stop } = useAudioRecorder({
+    onPermissionDenied: handleMicrophonePermissionDenied,
+  });
 
   const closeSheet = useUiStore((s) => s.closeSheet);
   const sheetProps = useUiStore((s) => s.sheetProps);
@@ -70,6 +83,19 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
   const handlePickImage = async () => {
     if (!isMountedRef.current) return;
     setIsPickingImage(true);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!isPermissionGranted(permission)) {
+      if (isMountedRef.current) {
+        setIsPickingImage(false);
+        showPermissionRecoveryAlert({
+          permission,
+          title: 'Photos are tucked away',
+          description: 'Allow photo access to add an image to this quick capture.',
+          settingsDescription: 'Photo access is turned off in Settings. Turn it back on to add an image to this quick capture.',
+        });
+      }
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: false,
