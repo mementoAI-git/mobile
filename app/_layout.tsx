@@ -53,6 +53,7 @@ import { useAuthStore, useUserStore, useUiStore } from '@/store';
 import { authService } from '@/api/auth-service';
 import { ToastProvider } from '@/components/ui/Toast';
 import { OfflineNotice } from '@/components/ui/OfflineNotice';
+import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
 import { useNotifications } from '@/hooks/use-notifications';
 import { COLORS } from '@/constants/tokens';
 import { SENTRY_DSN, SENTRY_TRACES_SAMPLE_RATE } from '@/lib/env';
@@ -114,7 +115,9 @@ function ShareIntentWatcher() {
 }
 
 function RootLayout() {
-  const { token, hydrated, hydrate } = useAuthStore();
+  const token = useAuthStore((s) => s.token);
+  const hydrated = useAuthStore((s) => s.hydrated);
+  const hydrate = useAuthStore((s) => s.hydrate);
   const router = useRouter();
   const segments = useSegments();
   const rootNavigationState = useRootNavigationState();
@@ -245,29 +248,31 @@ function RootLayout() {
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <StatusBar style="dark" />
       <GestureHandlerRootView className="flex-1">
-        <QueryClientProvider client={queryClient}>
-          <BottomSheetModalProvider>
-            <ShareIntentProvider>
-              <ToastProvider>
-                <OfflineNotice />
-                <ShareIntentWatcher />
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="(onboard)" />
-                  <Stack.Screen name="(tabs)" options={{ contentStyle: { backgroundColor: COLORS.background } }} />
-                  <Stack.Screen name="chat/[id]" />
-                  <Stack.Screen name="share" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
-                  <Stack.Screen name="editor" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
-                  <Stack.Screen name="create" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
-                  <Stack.Screen name="article" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
-                  <Stack.Screen name="settings" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
-                  <Stack.Screen name="accept-invite/[id]" />
-                  <Stack.Screen name="+not-found" />
-                </Stack>
-              </ToastProvider>
-            </ShareIntentProvider>
-          </BottomSheetModalProvider>
-        </QueryClientProvider>
+        <AppErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <BottomSheetModalProvider>
+              <ShareIntentProvider>
+                <ToastProvider>
+                  <OfflineNotice />
+                  <ShareIntentWatcher />
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="(auth)" />
+                    <Stack.Screen name="(onboard)" />
+                    <Stack.Screen name="(tabs)" options={{ contentStyle: { backgroundColor: COLORS.background } }} />
+                    <Stack.Screen name="chat/[id]" />
+                    <Stack.Screen name="share" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+                    <Stack.Screen name="editor" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+                    <Stack.Screen name="create" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
+                    <Stack.Screen name="article" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
+                    <Stack.Screen name="settings" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+                    <Stack.Screen name="accept-invite/[id]" />
+                    <Stack.Screen name="+not-found" />
+                  </Stack>
+                </ToastProvider>
+              </ShareIntentProvider>
+            </BottomSheetModalProvider>
+          </QueryClientProvider>
+        </AppErrorBoundary>
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );

@@ -122,6 +122,16 @@ assert(
   `Runtime console calls must go through src/lib/logger.ts. Offenders: ${consoleOffenders.join(', ')}`,
 );
 
+const broadStoreSubscribers = runtimeFiles.flatMap((file) => {
+  const source = fs.readFileSync(file, 'utf8');
+  return /\buse[A-Z]\w*Store\(\s*\)/.test(source) ? [path.relative(root, file)] : [];
+});
+
+assert(
+  broadStoreSubscribers.length === 0,
+  `Zustand stores must use field-level selectors. Offenders: ${broadStoreSubscribers.join(', ')}`,
+);
+
 const registerSource = read('app/(auth)/register.tsx');
 assert(/TERMS_URL/.test(registerSource) && /PRIVACY_URL/.test(registerSource), 'Signup legal links must be wired to URLs.');
 assert(/Linking\.openURL\(TERMS_URL\)/.test(registerSource), 'Terms link must open a URL.');
@@ -133,5 +143,11 @@ assert(!/cannot read your memories/i.test(privacySource), 'Do not ship unverifie
 
 const layoutSource = read('app/_layout.tsx');
 assert(/sendDefaultPii:\s*false/.test(layoutSource), 'Sentry must not send default PII in production config.');
+assert(/AppErrorBoundary/.test(layoutSource), 'Root layout must wrap the app shell in AppErrorBoundary.');
+
+const errorBoundarySource = read('src/components/system/AppErrorBoundary.tsx');
+assert(/componentDidCatch/.test(errorBoundarySource), 'AppErrorBoundary must catch render errors.');
+assert(/Sentry\.captureException/.test(errorBoundarySource), 'AppErrorBoundary must report render errors to Sentry when configured.');
+assert(/COLORS\.background/.test(errorBoundarySource), 'AppErrorBoundary fallback must use the app background token.');
 
 console.log('Production readiness checks passed.');
