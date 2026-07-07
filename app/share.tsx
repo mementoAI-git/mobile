@@ -31,7 +31,6 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { UiZapFast, UiDatabase01 } from '@/components/ui/icons/SettingsIcons';
 
 const PATTERN = require('../assets/images/backgrounds/welcome_bg.png');
-const PUBLISHED_BASE_URL = 'https://app.mymemento.io/post';
 
 // ─── File type helpers ────────────────────────────────────────────────────────
 

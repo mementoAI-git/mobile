@@ -21,10 +21,19 @@ export function useCreateMemory() {
   return useMutation({
     mutationFn: (payload: CreateMemoryPayload) =>
       post<IMemory>(endpoint.memories, payload),
-    onSuccess: () => {
+    onSuccess: (_res, variables) => {
       queryClient.invalidateQueries({ queryKey: ['memories'] });
       queryClient.invalidateQueries({ queryKey: ['stories'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.memoriesStats });
+      if (variables.daily_prompt?.prompt_id || variables.daily_prompt?.pinned_text || variables.daily_prompt?.reflection_day_key) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.dailyPrompts() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.categoryDetailsPrompts() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.overviewPrompts });
+        queryClient.invalidateQueries({ queryKey: queryKeys.prompts() });
+      }
+      if (variables.daily_prompt?.prompt_id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.memoryByPrompt(variables.daily_prompt.prompt_id) });
+      }
     },
   });
 }

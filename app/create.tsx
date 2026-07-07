@@ -353,20 +353,46 @@ export default function CreateScreen() {
   useEffect(() => { return () => saveDraft(); }, [saveDraft]);
 
   // ── Derived ────────────────────────────────────────────────────────────────
-  const uploadedIds = useMemo(
-    () => attachments.filter((a) => a.fileId && !a.isUploading).map((a) => a.fileId),
-    [attachments],
-  );
-  const anyUploading = attachments.some((a) => a.isUploading);
+  const attachmentGroups = useMemo(() => {
+    const uploadedIds: string[] = [];
+    const imageAttachments: AttachmentItem[] = [];
+    const videoAttachments: AttachmentItem[] = [];
+    const voiceAttachments: AttachmentItem[] = [];
+    const audioAttachments: AttachmentItem[] = [];
+    const fileAttachments: AttachmentItem[] = [];
+    let anyUploading = false;
+
+    for (const attachment of attachments) {
+      if (attachment.isUploading) anyUploading = true;
+      if (attachment.fileId && !attachment.isUploading) uploadedIds.push(attachment.fileId);
+
+      if (attachment.mimeType.startsWith('image/')) {
+        imageAttachments.push(attachment);
+      } else if (attachment.mimeType.startsWith('video/')) {
+        videoAttachments.push(attachment);
+      } else if (attachment.isVoice) {
+        voiceAttachments.push(attachment);
+      } else if (attachment.mimeType.startsWith('audio/')) {
+        audioAttachments.push(attachment);
+      } else {
+        fileAttachments.push(attachment);
+      }
+    }
+
+    return {
+      anyUploading,
+      uploadedIds,
+      imageAttachments,
+      videoAttachments,
+      voiceAttachments,
+      audioAttachments,
+      fileAttachments,
+    };
+  }, [attachments]);
+  const { anyUploading, uploadedIds, imageAttachments, videoAttachments, voiceAttachments, audioAttachments, fileAttachments } = attachmentGroups;
   const canSave = (body.trim().length > 0 || uploadedIds.length > 0) && !anyUploading && !isPending && !isRecording;
   const hasContent = body.trim().length > 0 || uploadedIds.length > 0;
   const nearLimit = body.length > NOTE_CHAR_MAX * 0.8;
-
-  const imageAttachments = attachments.filter((a) => a.mimeType.startsWith('image/'));
-  const videoAttachments = attachments.filter((a) => a.mimeType.startsWith('video/'));
-  const voiceAttachments = attachments.filter((a) => a.isVoice);
-  const audioAttachments = attachments.filter((a) => a.mimeType.startsWith('audio/') && !a.isVoice);
-  const fileAttachments = attachments.filter((a) => !a.mimeType.startsWith('image/') && !a.mimeType.startsWith('video/') && !a.mimeType.startsWith('audio/'));
 
   const visibilityLabel = useMemo(() => {
     if (!selectedBeneficiaryIds.length) return 'Everyone can see this';

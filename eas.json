@@ -7,6 +7,10 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://dev.mymemento.io/api",
+        "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "1"
+      },
       "android": {
         "buildType": "apk"
       }
@@ -14,12 +18,16 @@
     "preview": {
       "distribution": "internal",
       "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://dev.mymemento.io/api",
+        "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "0.2",
         "SENTRY_ALLOW_FAILURE": "true"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://app.mymemento.io/api",
+        "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "0.2",
         "SENTRY_ALLOW_FAILURE": "true"
       }
     }

@@ -7,8 +7,8 @@ export const storageKeys = {
   onboardingState: 'memento.onboarding_state',
 
   // ── Biometric login (interim — stores refresh_token, NOT password) ─────────
-  // v2 upgrade path: replace with native WebAuthn passkeys once domain
-  // .well-known association files are deployed. See TODO.md.
+  // v2 upgrade path: replace with native WebAuthn passkeys once the app-link
+  // association files are live on app.mymemento.io.
   biometricsEnabled: 'memento.biometrics_enabled',
   biometricsEmail: 'memento.biometrics_email',
   biometricsRefreshToken: 'memento.biometrics_refresh_token',

@@ -22,7 +22,7 @@ export function usePrompts(params?: { category?: string; limit?: number }) {
 export function useDailyPrompts() {
   const dateKey = dayjs().format('YYYY-MM-DD');
   return useQuery({
-    queryKey: ['daily-prompts', dateKey],
+    queryKey: queryKeys.dailyPrompts(dateKey),
     queryFn: () =>
       get<IDashboardPromptSlot[]>(`${endpoint.prompts}?date_key=${dateKey}`).then(
         (r) => r.data,
@@ -49,7 +49,7 @@ export function useOverviewPrompts() {
 
 export function useCategoryDetailsPrompts(slug: string, answered?: boolean) {
   return useQuery({
-    queryKey: ['category-details-prompts', slug, answered],
+    queryKey: queryKeys.categoryDetailsPrompts(slug, answered),
     queryFn: () => {
       const qs = new URLSearchParams();
       if (answered !== undefined) {
@@ -80,7 +80,7 @@ export function useCategoryDetailsPrompts(slug: string, answered?: boolean) {
 
 export function useMemoryByPrompt(promptId: string) {
   return useQuery({
-    queryKey: ['memory-by-prompt', promptId],
+    queryKey: queryKeys.memoryByPrompt(promptId),
     queryFn: () =>
       get<any>(`${endpoint.memoryPrompt}/${promptId}`).then((r) => r.data),
     enabled: !!promptId,

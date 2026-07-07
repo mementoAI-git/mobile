@@ -53,9 +53,11 @@ import { useAuthStore, useUserStore, useUiStore } from '@/store';
 import { authService } from '@/api/auth-service';
 import { ToastProvider } from '@/components/ui/Toast';
 import { OfflineNotice } from '@/components/ui/OfflineNotice';
+import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
 import { useNotifications } from '@/hooks/use-notifications';
 import { COLORS } from '@/constants/tokens';
 import { SENTRY_DSN, SENTRY_TRACES_SAMPLE_RATE } from '@/lib/env';
+import { normalizeAppHref } from '@/lib/navigation';
 import { logger } from '@/lib/logger';
 import { StatusBar } from 'expo-status-bar';
 import { useShareIntentContext, ShareIntentProvider } from 'expo-share-intent';
@@ -97,7 +99,7 @@ function ShareIntentWatcher() {
     handledRef.current = true;
     // Small defer so navigation stack is fully mounted before pushing
     const t = setTimeout(() => {
-      router.push('/share' as any);
+      router.push('/share');
     }, 100);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -114,7 +116,9 @@ function ShareIntentWatcher() {
 }
 
 function RootLayout() {
-  const { token, hydrated, hydrate } = useAuthStore();
+  const token = useAuthStore((s) => s.token);
+  const hydrated = useAuthStore((s) => s.hydrated);
+  const hydrate = useAuthStore((s) => s.hydrate);
   const router = useRouter();
   const segments = useSegments();
   const rootNavigationState = useRootNavigationState();
@@ -177,7 +181,14 @@ function RootLayout() {
 
     const timer = setTimeout(() => {
       if (!token) {
-        if (!inAuth) router.replace('/(auth)/login');
+        if (!inAuth) {
+          const currentPath = `/${segments.join('/')}`;
+          const pendingHref = normalizeAppHref(currentPath);
+          if (pendingHref) {
+            useUiStore.getState().setPendingDeepLink(pendingHref);
+          }
+          router.replace('/(auth)/login');
+        }
       } else {
         const user = useUserStore.getState().user;
         if (user && user.onboarding_status === 'never' && !inOnboard) {
@@ -200,7 +211,7 @@ function RootLayout() {
     if (token && pendingDeepLink && inTabs) {
       // Wait a tiny bit for the initial tab navigation to settle
       const timer = setTimeout(() => {
-        router.push(pendingDeepLink as any);
+        router.push(pendingDeepLink);
         setPendingDeepLink(null);
       }, 500);
 
@@ -245,29 +256,31 @@ function RootLayout() {
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <StatusBar style="dark" />
       <GestureHandlerRootView className="flex-1">
-        <QueryClientProvider client={queryClient}>
-          <BottomSheetModalProvider>
-            <ShareIntentProvider>
-              <ToastProvider>
-                <OfflineNotice />
-                <ShareIntentWatcher />
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="(onboard)" />
-                  <Stack.Screen name="(tabs)" options={{ contentStyle: { backgroundColor: COLORS.background } }} />
-                  <Stack.Screen name="chat/[id]" />
-                  <Stack.Screen name="share" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
-                  <Stack.Screen name="editor" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
-                  <Stack.Screen name="create" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
-                  <Stack.Screen name="article" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
-                  <Stack.Screen name="settings" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
-                  <Stack.Screen name="accept-invite/[id]" />
-                  <Stack.Screen name="+not-found" />
-                </Stack>
-              </ToastProvider>
-            </ShareIntentProvider>
-          </BottomSheetModalProvider>
-        </QueryClientProvider>
+        <AppErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <BottomSheetModalProvider>
+              <ShareIntentProvider>
+                <ToastProvider>
+                  <OfflineNotice />
+                  <ShareIntentWatcher />
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="(auth)" />
+                    <Stack.Screen name="(onboard)" />
+                    <Stack.Screen name="(tabs)" options={{ contentStyle: { backgroundColor: COLORS.background } }} />
+                    <Stack.Screen name="chat/[id]" />
+                    <Stack.Screen name="share" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+                    <Stack.Screen name="editor" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+                    <Stack.Screen name="create" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
+                    <Stack.Screen name="article" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
+                    <Stack.Screen name="settings" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+                    <Stack.Screen name="accept-invite/[id]" />
+                    <Stack.Screen name="+not-found" />
+                  </Stack>
+                </ToastProvider>
+              </ShareIntentProvider>
+            </BottomSheetModalProvider>
+          </QueryClientProvider>
+        </AppErrorBoundary>
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );

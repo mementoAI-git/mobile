@@ -71,9 +71,29 @@ export function VideoThumbnail({ uri, thumbnailUrl, width, height, borderRadius 
   const [loading, setLoading] = useState(!hasServerThumb && !thumbnailCache.has(uri));
 
   useEffect(() => {
+    if (thumbnailUrl) {
+      setThumbUri(thumbnailUrl);
+      setLoading(false);
+      return;
+    }
+
+    const cached = thumbnailCache.get(uri);
+    if (cached) {
+      setThumbUri(cached);
+      setLoading(false);
+      return;
+    }
+
     // Skip extraction if server already gave us a thumbnail
-    if (hasServerThumb || !uri || thumbnailCache.has(uri)) return;
+    if (!uri) {
+      setThumbUri(null);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
+    setThumbUri(null);
+    setLoading(true);
 
     getThumbnailAsync(uri, { time: 0, quality: 0.4 })
       .then(({ uri: t }: { uri: string }) => {
@@ -89,7 +109,7 @@ export function VideoThumbnail({ uri, thumbnailUrl, width, height, borderRadius 
       });
 
     return () => { cancelled = true; };
-  }, [uri, hasServerThumb]);
+  }, [uri, thumbnailUrl]);
 
   const handlePress = useCallback(() => {
     Haptics.selectionAsync();

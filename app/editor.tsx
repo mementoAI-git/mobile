@@ -50,12 +50,12 @@ import type { EditorBridge } from '@10play/tentap-editor';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import type { IBeneficiary, IFile } from '@/types';
+import { publishedPostUrl } from '@/lib/env';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STORY_DRAFT_KEY = (email?: string | null) => `article_draft_${email ?? 'anon'}`;
 const QC_DRAFT_KEY = (email?: string | null) => `qc_draft_${email ?? 'anon'}`;
-const PUBLISHED_BASE_URL = 'https://app.mymemento.io/post';
 const NOTE_CHAR_MAX = 8000;
 const MAX_FILE_MB = 15;
 const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
@@ -248,7 +248,7 @@ function PublishModalInner({ title, body, attachmentIds, onClose, memoryId, onAd
         const id = res?.data?._id ?? res?.data?.data?._id ?? '';
         // Delete the draft slot now that the story has been published
         if (draftId) deleteDraft(userEmail, draftId).catch(() => {});
-        setPublishedUrl(id ? `${PUBLISHED_BASE_URL}/${id}` : PUBLISHED_BASE_URL);
+        setPublishedUrl(publishedPostUrl(id));
       }
     };
     const onError = (err: any) => toast(err?.message ?? 'Could not publish. Try again.', 'error');
@@ -562,8 +562,31 @@ export default function EditorScreen() {
     else { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); await startRecording(); }
   }, [isRecording, stopRecording, startRecording, recDuration, uploadAndAdd]);
 
+  const attachmentGroups = useMemo(() => {
+    const uploadedIds: string[] = [];
+    const mediaAttachments: AttachmentItem[] = [];
+    const voiceAttachments: AttachmentItem[] = [];
+    const documentAttachments: AttachmentItem[] = [];
+    let anyUploading = false;
+
+    for (const attachment of attachments) {
+      if (attachment.isUploading) anyUploading = true;
+      if (attachment.fileId && !attachment.isUploading) uploadedIds.push(attachment.fileId);
+
+      if (attachment.mimeType.startsWith('image/') || attachment.mimeType.startsWith('video/')) {
+        mediaAttachments.push(attachment);
+      } else if (attachment.isVoice) {
+        voiceAttachments.push(attachment);
+      } else {
+        documentAttachments.push(attachment);
+      }
+    }
+
+    return { anyUploading, uploadedIds, mediaAttachments, voiceAttachments, documentAttachments };
+  }, [attachments]);
+  const { anyUploading, uploadedIds, mediaAttachments, voiceAttachments, documentAttachments } = attachmentGroups;
+
   const handleSave = useCallback(async () => {
-    const uploadedIds = attachments.filter(a => a.fileId && !a.isUploading).map(a => a.fileId);
     setSaveError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
@@ -572,7 +595,7 @@ export default function EditorScreen() {
       toast('Got it. Processing in the background…', 'success');
       router.back();
     } catch (err: any) { setSaveError(err?.message ?? 'Could not save. Try again.'); }
-  }, [attachments, quickCapture, qcBody, selectedBeneficiaryIds, router, user?.email, toast]);
+  }, [quickCapture, qcBody, selectedBeneficiaryIds, router, uploadedIds, user?.email, toast]);
 
   const visibilityLabel = useMemo(() => {
     if (!selectedBeneficiaryIds.length) return 'Everyone can see this';
@@ -589,8 +612,6 @@ export default function EditorScreen() {
   }, []);
 
   const storyHasContent = title.trim().length > 0 || storyBody.trim().length > 0;
-  const uploadedIds = attachments.filter(a => a.fileId && !a.isUploading).map(a => a.fileId);
-  const anyUploading = attachments.some(a => a.isUploading);
   const qcHasContent = qcBody.trim().length > 0 || uploadedIds.length > 0;
   const canSave = qcHasContent && !anyUploading && !qcPending && !isRecording;
 
@@ -775,7 +796,7 @@ export default function EditorScreen() {
                   contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 10, gap: 8, flexDirection: 'row', alignItems: 'center' }}
                 >
                   {/* Image / video chips */}
-                  {attachments.filter(a => a.mimeType.startsWith('image/') || a.mimeType.startsWith('video/')).map((a, idx) => {
+                  {mediaAttachments.map((a, idx) => {
                     const globalIdx = attachments.findIndex(x => x.clientId === a.clientId);
                     const isVideo = a.mimeType.startsWith('video/');
                     return (
@@ -802,7 +823,7 @@ export default function EditorScreen() {
                     );
                   })}
                   {/* Voice chips */}
-                  {attachments.filter(a => a.isVoice).map(a => {
+                  {voiceAttachments.map(a => {
                     const dur = a.duration ?? 0;
                     return (
                       <View key={a.clientId} style={{ height: 44, backgroundColor: COLORS.textStrong, borderRadius: 22, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -819,7 +840,7 @@ export default function EditorScreen() {
                     );
                   })}
                   {/* Document chips */}
-                  {attachments.filter(a => !a.mimeType.startsWith('image/') && !a.mimeType.startsWith('video/') && !a.isVoice).map(a => (
+                  {documentAttachments.map(a => (
                     <View key={a.clientId} style={{ height: 44, backgroundColor: COLORS.fillWeak, borderRadius: 22, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 180 }}>
                       <FileText size={13} color={COLORS.brand} strokeWidth={1.8} />
                       <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textStrong, flexShrink: 1 }} numberOfLines={1}>{a.name}</Text>
@@ -867,10 +888,7 @@ export default function EditorScreen() {
                   <RecordingStatus seconds={recDuration} style={{ marginTop: 8 }} />
                 )}
                 {/* Attachment previews — images AND videos shown as tappable thumbnails */}
-                {(() => {
-                  const mediaAttachments = attachments.filter(a => a.mimeType.startsWith('image/') || a.mimeType.startsWith('video/'));
-                  if (!mediaAttachments.length) return null;
-                  return (
+                {mediaAttachments.length > 0 && (
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
                       {mediaAttachments.slice(0, 6).map((a, idx) => {
                         const isLast = idx === 5 && mediaAttachments.length > 6;
@@ -905,9 +923,8 @@ export default function EditorScreen() {
                         );
                       })}
                     </View>
-                  );
-                })()}
-                {attachments.filter(a => a.isVoice).map(a => {
+                )}
+                {voiceAttachments.map(a => {
                   const dur = a.duration ?? 0;
                   return (
                     <View key={a.clientId} style={{ marginTop: 8, backgroundColor: COLORS.textStrong, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -923,7 +940,7 @@ export default function EditorScreen() {
                   );
                 })}
                 {/* Document chips */}
-                {attachments.filter(a => !a.mimeType.startsWith('image/') && !a.mimeType.startsWith('video/') && !a.isVoice).map(a => (
+                {documentAttachments.map(a => (
                   <View key={a.clientId} style={{ marginTop: 6, backgroundColor: COLORS.fillWeak, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <FileText size={14} color={COLORS.brand} strokeWidth={1.8} />
                     <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textStrong }} numberOfLines={1}>{a.name}</Text>

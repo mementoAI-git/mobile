@@ -31,6 +31,7 @@ import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, cancelAnimation } from 'react-native-reanimated';
 import { ChevronLeft, Share2, X, Mic, FileText, Music, Play, Pause, RotateCcw, Link2, Download } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { publishedPostUrl } from '@/lib/env';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -484,8 +485,6 @@ function Dots({ count, active }: { count: number; active: number }) {
 
 // ─── Modal inner — reads insets from the scoped SafeAreaProvider ──────────────
 
-const PUBLISHED_BASE_URL = 'https://app.mymemento.io/post';
-
 function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: Omit<Props, 'visible' | 'initialIndex'> & { initialIndex: number }) {
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList>(null);
@@ -518,7 +517,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShareMenuVisible(false);
     if (memoryId) {
-      const url = `${PUBLISHED_BASE_URL}/${memoryId}`;
+      const url = publishedPostUrl(memoryId);
       await Clipboard.setStringAsync(url);
       // Also open native share with the link
       await Share.share({ url, message: url });

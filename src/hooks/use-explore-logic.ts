@@ -18,8 +18,20 @@ const STATIC_CATEGORIES = [
 
 export function useExploreLogic() {
   const router = useRouter();
-  const { data: categories, isLoading: categoriesLoading, refetch, isRefetching } = usePromptCategories();
-  const { data: slots, isLoading: promptsLoading } = useDailyPrompts();
+  const {
+    data: categories,
+    isLoading: categoriesLoading,
+    refetch: refetchCategories,
+    isRefetching: isRefetchingCategories,
+    isStale: categoriesStale,
+  } = usePromptCategories();
+  const {
+    data: slots,
+    isLoading: promptsLoading,
+    refetch: refetchDailyPrompts,
+    isRefetching: isRefetchingDailyPrompts,
+    isStale: dailyPromptsStale,
+  } = useDailyPrompts();
   const { mutate: startConversation, isPending: isStartingConversation } = useStartConversation();
 
   const staticPrompts = useMemo(() => {
@@ -55,6 +67,16 @@ export function useExploreLogic() {
     [categories],
   );
 
+  const refetch = useCallback(() => {
+    void refetchCategories();
+    void refetchDailyPrompts();
+  }, [refetchCategories, refetchDailyPrompts]);
+
+  const refetchIfStale = useCallback(() => {
+    if (categoriesStale) void refetchCategories();
+    if (dailyPromptsStale) void refetchDailyPrompts();
+  }, [categoriesStale, dailyPromptsStale, refetchCategories, refetchDailyPrompts]);
+
   return {
     router,
     categories: displayCategories,
@@ -62,7 +84,8 @@ export function useExploreLogic() {
     isLoading: (categoriesLoading && (!categories || (categories as any[]).length === 0)) || promptsLoading,
     isStartingConversation,
     refetch,
-    isRefetching,
+    refetchIfStale,
+    isRefetching: isRefetchingCategories || isRefetchingDailyPrompts,
     handleOpenCategory,
     handlePromptPress,
     handleBackToOverview,

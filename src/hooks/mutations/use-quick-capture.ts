@@ -33,12 +33,21 @@ export function useQuickCapture() {
   return useMutation({
     mutationFn: (payload: QuickCapturePayload) =>
       post(endpoint.memoriesQuickCapture, payload),
-    onSuccess: () => {
+    onSuccess: (_res, variables) => {
       // Invalidate stories + stats so the processing badge appears
       queryClient.invalidateQueries({ queryKey: ['stories'] });
       queryClient.invalidateQueries({ queryKey: ['memories'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.memoriesStats });
       queryClient.invalidateQueries({ queryKey: queryKeys.userStats });
+      if (variables.prompt_id || variables.prompt_text || variables.reflection_day_key) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.dailyPrompts() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.categoryDetailsPrompts() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.overviewPrompts });
+        queryClient.invalidateQueries({ queryKey: queryKeys.prompts() });
+      }
+      if (variables.prompt_id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.memoryByPrompt(variables.prompt_id) });
+      }
     },
   });
 }

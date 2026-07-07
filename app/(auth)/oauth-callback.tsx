@@ -4,10 +4,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui';
 import { useAuthStore } from '@/store/auth.store';
+import { useUiStore } from '@/store/ui.store';
 import { useUserStore } from '@/store/user.store';
 import endpoint from '@/api/endpoint';
 import { COLORS } from '@/constants/tokens';
 import { API_BASE_URL } from '@/lib/env';
+import { getPostAuthRedirectHref } from '@/lib/navigation';
 
 export default function OAuthCallbackScreen() {
   const router = useRouter();
@@ -66,8 +68,9 @@ export default function OAuthCallbackScreen() {
       }
       
       setDone(true);
-      const target = getSingleParam(onboarding_status) === 'never' ? '/(onboard)' : '/(tabs)/overview';
-      router.replace(target as any);
+      const pendingHref = useUiStore.getState().pendingDeepLink;
+      useUiStore.getState().setPendingDeepLink(null);
+      router.replace(getPostAuthRedirectHref(getSingleParam(onboarding_status), pendingHref));
     } catch {
       setError('Authentication failed. Please try again.');
     }
@@ -93,8 +96,9 @@ export default function OAuthCallbackScreen() {
       setUser(user);
       setDone(true);
 
-      const target = data.onboarding_status === 'never' ? '/(onboard)' : '/(tabs)/overview';
-      router.replace(target as any);
+      const pendingHref = useUiStore.getState().pendingDeepLink;
+      useUiStore.getState().setPendingDeepLink(null);
+      router.replace(getPostAuthRedirectHref(data.onboarding_status, pendingHref));
     } catch {
       setError('Something went wrong. Please try again.');
     }

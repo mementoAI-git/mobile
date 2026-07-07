@@ -61,6 +61,7 @@ export default function ExploreScreen() {
     isLoading,
     isStartingConversation,
     refetch,
+    refetchIfStale,
     isRefetching,
     handleOpenCategory,
     handlePromptPress,
@@ -69,8 +70,27 @@ export default function ExploreScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      refetch();
-    }, [refetch])
+      refetchIfStale();
+    }, [refetchIfStale])
+  );
+
+  const renderCategoryItem = useCallback(
+    ({ item }: { item: any }) => {
+      const meta = CATEGORY_META[item.slug || item.name?.toLowerCase()] || {
+        title: item.name || 'Category',
+        subtitle: 'Explore prompts in this category',
+        image: null,
+      };
+      return (
+        <CategoryCard
+          title={meta.title}
+          subtitle={meta.subtitle}
+          image={meta.image}
+          onPress={() => handleOpenCategory(item._id ?? item.name)}
+        />
+      );
+    },
+    [handleOpenCategory],
   );
 
   return (
@@ -130,22 +150,7 @@ export default function ExploreScreen() {
             }
             contentContainerClassName="px-6 pb-24 flex-grow"
             showsVerticalScrollIndicator={false}
-            renderItem={useCallback(({ item }: { item: any }) => {
-              const meta = CATEGORY_META[item.slug || item.name?.toLowerCase()] || {
-                title: item.name || 'Category',
-                subtitle: 'Explore prompts in this category',
-                image: null,
-              };
-              return (
-                <CategoryCard
-                  title={meta.title}
-                  subtitle={meta.subtitle}
-                  image={meta.image}
-                  onPress={() => handleOpenCategory(item._id ?? item.name)}
-                />
-              );
-            // eslint-disable-next-line react-hooks/exhaustive-deps
-            }, [handleOpenCategory])}
+            renderItem={renderCategoryItem}
             refreshControl={
               <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.brand} />
             }
