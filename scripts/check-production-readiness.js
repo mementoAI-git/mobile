@@ -107,17 +107,30 @@ assert(/(^|\n)\.env(\n|$)/.test(gitignore), '.gitignore must ignore .env.');
 assert(/(^|\n)!\.env\.example(\n|$)/.test(gitignore), '.gitignore must allow .env.example.');
 assert(/EXPO_PUBLIC_API_BASE_URL=/.test(envExample), '.env.example must document EXPO_PUBLIC_API_BASE_URL.');
 assert(/EXPO_PUBLIC_SENTRY_DSN=/.test(envExample), '.env.example must document EXPO_PUBLIC_SENTRY_DSN.');
+assert(/EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=0\.2/.test(envExample), '.env.example must document the default Sentry trace sample rate.');
 assert(
   easJson.build?.development?.env?.EXPO_PUBLIC_API_BASE_URL === 'https://dev.mymemento.io/api',
   'EAS development builds must use dev.mymemento.io API.',
+);
+assert(
+  easJson.build?.development?.env?.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE === '1',
+  'EAS development builds must use full Sentry trace sampling.',
 );
 assert(
   easJson.build?.preview?.env?.EXPO_PUBLIC_API_BASE_URL === 'https://dev.mymemento.io/api',
   'EAS preview builds must use dev.mymemento.io API.',
 );
 assert(
+  easJson.build?.preview?.env?.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE === '0.2',
+  'EAS preview builds must use bounded Sentry trace sampling.',
+);
+assert(
   easJson.build?.production?.env?.EXPO_PUBLIC_API_BASE_URL === 'https://app.mymemento.io/api',
   'EAS production builds must use app.mymemento.io API.',
+);
+assert(
+  easJson.build?.production?.env?.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE === '0.2',
+  'EAS production builds must use bounded Sentry trace sampling.',
 );
 
 const trackedFiles = execFileSync('git', ['ls-files', '.env'], { cwd: root, encoding: 'utf8' }).trim();
