@@ -313,12 +313,12 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
     ? dayjs(message.created_at).format('h:mm A')
     : null;
 
-  const hasContent = content.trim().length > 0 || rawAttachments.length > 0;
-  if (!hasContent) return null;
-
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const previewAttachments: PreviewAttachment[] = rawAttachments.map(toPreviewAttachment);
+
+  const hasContent = content.trim().length > 0 || rawAttachments.length > 0;
+  if (!hasContent) return null;
 
   const handleAttachmentTap = (index: number) => {
     setPreviewIndex(index);

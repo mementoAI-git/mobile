@@ -8,9 +8,13 @@
     "ios": "npx expo run:ios",
     "ios:run": "npx expo run:ios",
     "web": "npx expo start --web",
+    "lint": "eslint . --quiet",
     "typecheck": "tsc --noEmit --ignoreDeprecations 6.0",
     "check:prod": "node scripts/check-production-readiness.js",
-    "doctor": "npx expo-doctor"
+    "doctor": "npx expo-doctor",
+    "verify": "bun run lint && bun run typecheck && bun run check:prod",
+    "verify:full": "bun run verify && bun run doctor",
+    "prepare": "husky"
   },
   "dependencies": {
     "@10play/tentap-editor": "^1.0.1",
@@ -89,6 +93,9 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.14",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "^57.0.0",
+    "husky": "^9.1.7",
     "typescript": "~6.0.3"
   },
   "overrides": {

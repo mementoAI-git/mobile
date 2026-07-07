@@ -36,14 +36,14 @@ function RecentActivityIcon({ size = 40 }: { size?: number }) {
 }
 
 export function ConversationBar({ memory, onPress, index = 0 }: ConversationBarProps) {
-  if (!memory) return null;
-  const msgCount = (memory as any).message_count ?? 0;
-
   const scaleValue = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scaleValue.value }],
   }));
+
+  if (!memory) return null;
+  const msgCount = (memory as any).message_count ?? 0;
 
   const handlePressIn = () => {
     scaleValue.value = withSpring(0.97, { damping: 15 });

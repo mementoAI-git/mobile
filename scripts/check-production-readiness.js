@@ -48,6 +48,7 @@ const packageJson = readJson('package.json');
 const appJson = readJson('app.json');
 const easJson = readJson('eas.json');
 const ciWorkflow = read('.github/workflows/mobile-quality.yml');
+const preCommitHook = read('.husky/pre-commit');
 const expo = appJson.expo;
 const gitignore = read('.gitignore');
 const envExample = read('.env.example');
@@ -73,9 +74,14 @@ assert(
 );
 
 assert(packageJson.dependencies['expo-share-intent']?.startsWith('^7.'), 'Expo SDK 56 must use expo-share-intent 7.x.');
+assert(packageJson.devDependencies?.husky, 'package.json must include Husky as a dev dependency.');
+assert(packageJson.scripts.lint, 'package.json must expose a lint script.');
 assert(packageJson.scripts.typecheck, 'package.json must expose a typecheck script.');
 assert(packageJson.scripts.doctor, 'package.json must expose an Expo Doctor script.');
 assert(packageJson.scripts['check:prod'], 'package.json must expose a production check script.');
+assert(packageJson.scripts.verify, 'package.json must expose a commit verification script.');
+assert(packageJson.scripts.prepare === 'husky', 'package.json must install Husky hooks via prepare.');
+assert(/bun run verify/.test(preCommitHook), 'Husky pre-commit hook must run bun run verify.');
 assert(/bun-version:\s*1\.3\.6/.test(ciWorkflow), 'CI must pin the Bun version for reproducible installs.');
 assert(/bun install --frozen-lockfile/.test(ciWorkflow), 'CI must install dependencies with a frozen lockfile.');
 assert(/bun run typecheck/.test(ciWorkflow), 'CI must run TypeScript checks.');
