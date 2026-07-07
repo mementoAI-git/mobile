@@ -34,6 +34,7 @@ function walk(dir, files = []) {
 const packageJson = readJson('package.json');
 const appJson = readJson('app.json');
 const easJson = readJson('eas.json');
+const ciWorkflow = read('.github/workflows/mobile-quality.yml');
 const expo = appJson.expo;
 const gitignore = read('.gitignore');
 const envExample = read('.env.example');
@@ -42,6 +43,11 @@ assert(packageJson.dependencies['expo-share-intent']?.startsWith('^7.'), 'Expo S
 assert(packageJson.scripts.typecheck, 'package.json must expose a typecheck script.');
 assert(packageJson.scripts.doctor, 'package.json must expose an Expo Doctor script.');
 assert(packageJson.scripts['check:prod'], 'package.json must expose a production check script.');
+assert(/bun-version:\s*1\.3\.6/.test(ciWorkflow), 'CI must pin the Bun version for reproducible installs.');
+assert(/bun install --frozen-lockfile/.test(ciWorkflow), 'CI must install dependencies with a frozen lockfile.');
+assert(/bun run typecheck/.test(ciWorkflow), 'CI must run TypeScript checks.');
+assert(/bun run check:prod/.test(ciWorkflow), 'CI must run production readiness checks.');
+assert(/bun run doctor/.test(ciWorkflow), 'CI must run Expo Doctor.');
 
 function findPlugin(name) {
   return expo.plugins.find((plugin) => {
