@@ -4,7 +4,7 @@
  *
  * Parity notes:
  *  - `textMuted` (0.3) is a mobile-only addition; web uses only 0.9/0.65/0.45/0.1.
- *  - `error` is intentionally #4A3728 (earthy brown) per AGENTS.md — web uses #C73A3A (brick red). Pending team alignment.
+ *  - `error` matches the web brick-red semantic token for destructive states.
  *  - `blue.*` and `gray.*` ramps mirror web/src/index.css for cross-platform consistency.
  *  - `onboarding.*` full 13-token set mirrors web's --onboarding-* CSS vars.
  */

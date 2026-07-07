@@ -111,7 +111,7 @@ export function useLoginLogic() {
     setPasskeyLoading(true);
     try {
       // Retrieve the refresh_token — OS biometric prompt fires here.
-      // v2: replace with native WebAuthn passkey. See TODO.md.
+      // v2: replace with native WebAuthn passkey once app-link associations are live.
       const refreshToken = await SecureStore.getItemAsync(
         storageKeys.biometricsRefreshToken,
         { requireAuthentication: true, authenticationPrompt: 'Sign in to Memento securely' },

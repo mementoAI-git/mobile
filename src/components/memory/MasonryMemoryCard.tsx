@@ -165,7 +165,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
         audioMedia.name?.startsWith('voice_') && audioMedia.type === 'audio/m4a';
 
       // Album art: populated by backend when MP3 has embedded ID3 cover art.
-      // Currently always undefined — see TODO.md for backend implementation spec.
+      // The mobile client already consumes this field when the backend provides it.
       const albumArt = audioMedia.thumbnail;
 
       const duration = audioMedia.duration
