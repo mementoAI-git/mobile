@@ -57,6 +57,7 @@ import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
 import { useNotifications } from '@/hooks/use-notifications';
 import { COLORS } from '@/constants/tokens';
 import { SENTRY_DSN, SENTRY_TRACES_SAMPLE_RATE } from '@/lib/env';
+import { normalizeAppHref } from '@/lib/navigation';
 import { logger } from '@/lib/logger';
 import { StatusBar } from 'expo-status-bar';
 import { useShareIntentContext, ShareIntentProvider } from 'expo-share-intent';
@@ -180,7 +181,14 @@ function RootLayout() {
 
     const timer = setTimeout(() => {
       if (!token) {
-        if (!inAuth) router.replace('/(auth)/login');
+        if (!inAuth) {
+          const currentPath = `/${segments.join('/')}`;
+          const pendingHref = normalizeAppHref(currentPath);
+          if (pendingHref) {
+            useUiStore.getState().setPendingDeepLink(pendingHref);
+          }
+          router.replace('/(auth)/login');
+        }
       } else {
         const user = useUserStore.getState().user;
         if (user && user.onboarding_status === 'never' && !inOnboard) {

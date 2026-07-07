@@ -56,6 +56,11 @@ export function getPostAuthHref(onboardingStatus: unknown): Href {
   return onboardingStatus === 'never' ? '/(onboard)' : '/(tabs)/overview';
 }
 
+export function getPostAuthRedirectHref(onboardingStatus: unknown, preferredHref?: Href | null): Href {
+  if (onboardingStatus === 'never') return '/(onboard)';
+  return preferredHref ?? '/(tabs)/overview';
+}
+
 export function oauthCallbackUrl(provider: OAuthProvider): string {
   return `${AUTH_SESSION_RETURN_URL}oauth-callback?provider=${provider}`;
 }

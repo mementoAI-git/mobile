@@ -3,11 +3,12 @@ import { TextInput as RNTextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVerify2FA } from '@/hooks/mutations/use-auth-mutations';
 import * as Haptics from 'expo-haptics';
-import { getPostAuthHref } from '@/lib/navigation';
+import { getPostAuthRedirectHref, normalizeAppHref } from '@/lib/navigation';
+import { useUiStore } from '@/store';
 
 export function useTwoFactorLogic() {
   const router = useRouter();
-  const { token } = useLocalSearchParams<{ token: string }>();
+  const { token, redirect } = useLocalSearchParams<{ token: string; redirect?: string | string[] }>();
   const { mutate, isPending } = useVerify2FA();
 
   const [code, setCode] = useState(['', '', '', '', '', '']);
@@ -48,7 +49,10 @@ export function useTwoFactorLogic() {
     mutate({ two_fa_token: token!, code: fullCode }, {
       onSuccess: (res) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace(getPostAuthHref(res.data.onboarding_status));
+        const redirectValue = Array.isArray(redirect) ? redirect[0] : redirect;
+        const preferredHref = normalizeAppHref(redirectValue) ?? useUiStore.getState().pendingDeepLink;
+        useUiStore.getState().setPendingDeepLink(null);
+        router.replace(getPostAuthRedirectHref(res.data.onboarding_status, preferredHref));
       },
       onError: (err: any) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

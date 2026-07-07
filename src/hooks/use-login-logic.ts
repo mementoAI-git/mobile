@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLogin } from '@/hooks/mutations/use-auth-mutations';
 import { useToast } from '@/components/ui/Toast';
-import { useAuthStore } from '@/store';
+import { useAuthStore, useUiStore } from '@/store';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
 import { storageKeys } from '@/constants/storage-keys';
-import { AUTH_SESSION_RETURN_URL, getPostAuthHref, oauthCallbackUrl } from '@/lib/navigation';
+import { AUTH_SESSION_RETURN_URL, getPostAuthRedirectHref, normalizeAppHref, oauthCallbackUrl } from '@/lib/navigation';
 
 const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
@@ -22,6 +22,7 @@ export type LoginFormData = z.infer<typeof schema>;
 
 export function useLoginLogic() {
   const router = useRouter();
+  const { redirect } = useLocalSearchParams<{ redirect?: string | string[] }>();
   const { toast } = useToast();
   const { mutate, isPending } = useLogin();
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -36,16 +37,33 @@ export function useLoginLogic() {
     },
   });
 
+  const getPreferredPostAuthHref = () => {
+    const redirectValue = Array.isArray(redirect) ? redirect[0] : redirect;
+    return normalizeAppHref(redirectValue) ?? useUiStore.getState().pendingDeepLink;
+  };
+
+  const clearPendingDeepLink = () => {
+    useUiStore.getState().setPendingDeepLink(null);
+  };
+
   const onSubmit = (data: LoginFormData) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     mutate(data, {
       onSuccess: (res) => {
         const resData = res.data as any;
         if (resData.requires_2fa) {
-          router.push(`/(auth)/two-factor?token=${resData.two_fa_token}`);
+          router.push({
+            pathname: '/(auth)/two-factor',
+            params: {
+              token: resData.two_fa_token,
+              ...(getPreferredPostAuthHref() ? { redirect: getPreferredPostAuthHref() as string } : {}),
+            },
+          });
           return;
         }
-        router.replace(getPostAuthHref(resData.onboarding_status));
+        const preferredHref = getPreferredPostAuthHref();
+        clearPendingDeepLink();
+        router.replace(getPostAuthRedirectHref(resData.onboarding_status, preferredHref));
       },
       onError: (err: any) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -142,7 +160,9 @@ export function useLoginLogic() {
       );
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace(getPostAuthHref(newTokens.onboarding_status));
+      const preferredHref = getPreferredPostAuthHref();
+      clearPendingDeepLink();
+      router.replace(getPostAuthRedirectHref(newTokens.onboarding_status, preferredHref));
     } catch {
       // User cancelled the biometric prompt — no toast needed
     } finally {
