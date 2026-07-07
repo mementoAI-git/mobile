@@ -183,6 +183,7 @@ assert(/https:\/\/dev\.mymemento\.io/.test(envSource), 'Dev legal URLs must use 
 assert(/https:\/\/app\.mymemento\.io/.test(envSource), 'Production legal URLs must use app.mymemento.io.');
 assert(/TERMS_URL = `\$\{WEB_BASE_URL\}\/terms`/.test(envSource), 'Terms URL must be based on WEB_BASE_URL.');
 assert(/PRIVACY_URL = `\$\{WEB_BASE_URL\}\/privacy`/.test(envSource), 'Privacy URL must be based on WEB_BASE_URL.');
+assert(/SIGNUP_URL = `\$\{WEB_BASE_URL\}\/signup`/.test(envSource), 'Signup URL must be based on WEB_BASE_URL.');
 assert(/publishedPostUrl/.test(envSource), 'Published post URLs must be centralized in env utilities.');
 
 const publishedUrlOffenders = runtimeFiles.flatMap((file) => {
@@ -195,6 +196,18 @@ assert(
   publishedUrlOffenders.length === 0,
   `Published post URLs must use publishedPostUrl(). Offenders: ${publishedUrlOffenders.join(', ')}`,
 );
+
+const registerSourceForUrls = read('app/(auth)/register.tsx');
+const loginSourceForUrls = read('src/hooks/use-login-logic.ts');
+assert(!/API_BASE_URL\.replace\('\/api'/.test(registerSourceForUrls), 'Signup web URL must use SIGNUP_URL, not API_BASE_URL string replacement.');
+assert(/SIGNUP_URL/.test(registerSourceForUrls), 'Passkey signup must use SIGNUP_URL.');
+assert(!/memento:\/\/oauth-callback/.test(registerSourceForUrls), 'Register OAuth redirects must use oauthCallbackUrl().');
+assert(!/memento:\/\/oauth-callback/.test(loginSourceForUrls), 'Login OAuth redirects must use oauthCallbackUrl().');
+assert(!/openAuthSessionAsync\([^,]+,\s*'memento:\/\/'/.test(registerSourceForUrls), 'Register auth sessions must use AUTH_SESSION_RETURN_URL.');
+assert(!/openAuthSessionAsync\([^,]+,\s*'memento:\/\/'/.test(loginSourceForUrls), 'Login auth sessions must use AUTH_SESSION_RETURN_URL.');
+assert(/oauthCallbackUrl\('google'\)/.test(registerSourceForUrls) && /oauthCallbackUrl\('apple'\)/.test(registerSourceForUrls), 'Register OAuth redirects must use centralized provider callback URLs.');
+assert(/oauthCallbackUrl\('google'\)/.test(loginSourceForUrls) && /oauthCallbackUrl\('apple'\)/.test(loginSourceForUrls), 'Login OAuth redirects must use centralized provider callback URLs.');
+assert(/AUTH_SESSION_RETURN_URL/.test(navigationSource), 'Auth session return URL must be centralized.');
 
 const privacySource = read('app/settings/privacy.tsx');
 assert(!/End-to-end encrypted/.test(privacySource), 'Do not ship unverified end-to-end encryption claims.');

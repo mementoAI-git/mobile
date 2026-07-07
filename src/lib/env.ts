@@ -26,6 +26,7 @@ function webBaseUrlFromApiBaseUrl(apiBaseUrl: string): string {
 export const WEB_BASE_URL = webBaseUrlFromApiBaseUrl(API_BASE_URL);
 export const TERMS_URL = `${WEB_BASE_URL}/terms`;
 export const PRIVACY_URL = `${WEB_BASE_URL}/privacy`;
+export const SIGNUP_URL = `${WEB_BASE_URL}/signup`;
 
 export function publishedPostUrl(memoryId?: string | null): string {
   return memoryId ? `${WEB_BASE_URL}/post/${memoryId}` : `${WEB_BASE_URL}/post`;

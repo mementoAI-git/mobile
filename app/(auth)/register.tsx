@@ -29,7 +29,8 @@ import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
-import { API_BASE_URL, PRIVACY_URL, TERMS_URL } from '@/lib/env';
+import { PRIVACY_URL, SIGNUP_URL, TERMS_URL } from '@/lib/env';
+import { AUTH_SESSION_RETURN_URL, oauthCallbackUrl } from '@/lib/navigation';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
@@ -132,9 +133,8 @@ export default function RegisterScreen() {
     setPasskeyConfirmVisible(false);
     try {
       setPasskeyLoading(true);
-      const webBase = API_BASE_URL.replace('/api', '');
       const { openAuthSessionAsync } = await import('expo-web-browser');
-      await openAuthSessionAsync(`${webBase}/signup`, 'memento://');
+      await openAuthSessionAsync(SIGNUP_URL, AUTH_SESSION_RETURN_URL);
     } catch { /* silent */ } finally {
       setPasskeyLoading(false);
     }
@@ -145,12 +145,12 @@ export default function RegisterScreen() {
     setGoogleLoading(true);
     try {
       const res = await client.get(`${endpoint.oauth}google`, {
-        params: { redirect_uri: 'memento://oauth-callback?provider=google' },
+        params: { redirect_uri: oauthCallbackUrl('google') },
       });
       const url: string | undefined = res.data?.data?.url;
       if (!url) return;
       const { openAuthSessionAsync } = await import('expo-web-browser');
-      await openAuthSessionAsync(url, 'memento://');
+      await openAuthSessionAsync(url, AUTH_SESSION_RETURN_URL);
     } catch { /* silent */ } finally {
       setGoogleLoading(false);
     }
@@ -161,12 +161,12 @@ export default function RegisterScreen() {
     setAppleLoading(true);
     try {
       const res = await client.get(`${endpoint.oauth}apple`, {
-        params: { redirect_uri: 'memento://oauth-callback?provider=apple' },
+        params: { redirect_uri: oauthCallbackUrl('apple') },
       });
       const url: string | undefined = res.data?.data?.url;
       if (!url) return;
       const { openAuthSessionAsync } = await import('expo-web-browser');
-      await openAuthSessionAsync(url, 'memento://');
+      await openAuthSessionAsync(url, AUTH_SESSION_RETURN_URL);
     } catch { /* silent */ } finally {
       setAppleLoading(false);
     }

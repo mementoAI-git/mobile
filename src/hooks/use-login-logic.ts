@@ -11,7 +11,7 @@ import endpoint from '@/api/endpoint';
 import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
 import { storageKeys } from '@/constants/storage-keys';
-import { getPostAuthHref } from '@/lib/navigation';
+import { AUTH_SESSION_RETURN_URL, getPostAuthHref, oauthCallbackUrl } from '@/lib/navigation';
 
 const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
@@ -64,13 +64,13 @@ export function useLoginLogic() {
     setGoogleLoading(true);
     try {
       const res = await client.get(`${endpoint.oauth}google`, {
-        params: { redirect_uri: 'memento://oauth-callback?provider=google' },
+        params: { redirect_uri: oauthCallbackUrl('google') },
       });
       const url: string | undefined = res.data?.data?.url;
       if (!url) return;
 
       const { openAuthSessionAsync } = await import('expo-web-browser');
-      await openAuthSessionAsync(url, 'memento://');
+      await openAuthSessionAsync(url, AUTH_SESSION_RETURN_URL);
     } catch {
       // silent
     } finally {
@@ -83,13 +83,13 @@ export function useLoginLogic() {
     setAppleLoading(true);
     try {
       const res = await client.get(`${endpoint.oauth}apple`, {
-        params: { redirect_uri: 'memento://oauth-callback?provider=apple' },
+        params: { redirect_uri: oauthCallbackUrl('apple') },
       });
       const url: string | undefined = res.data?.data?.url;
       if (!url) return;
 
       const { openAuthSessionAsync } = await import('expo-web-browser');
-      await openAuthSessionAsync(url, 'memento://');
+      await openAuthSessionAsync(url, AUTH_SESSION_RETURN_URL);
     } catch {
       // silent
     } finally {

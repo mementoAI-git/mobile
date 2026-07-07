@@ -1,5 +1,8 @@
 import type { Href } from 'expo-router';
 
+type OAuthProvider = 'google' | 'apple';
+export const AUTH_SESSION_RETURN_URL = 'memento://';
+
 const TRUSTED_APP_LINK_HOSTS = new Set(['app.mymemento.io', 'dev.mymemento.io']);
 
 const INTERNAL_ROUTE_PREFIXES = [
@@ -51,4 +54,8 @@ export function normalizeAppHref(value: unknown): Href | null {
 
 export function getPostAuthHref(onboardingStatus: unknown): Href {
   return onboardingStatus === 'never' ? '/(onboard)' : '/(tabs)/overview';
+}
+
+export function oauthCallbackUrl(provider: OAuthProvider): string {
+  return `${AUTH_SESSION_RETURN_URL}oauth-callback?provider=${provider}`;
 }
