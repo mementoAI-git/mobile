@@ -33,6 +33,7 @@ function walk(dir, files = []) {
 
 const packageJson = readJson('package.json');
 const appJson = readJson('app.json');
+const easJson = readJson('eas.json');
 const expo = appJson.expo;
 const gitignore = read('.gitignore');
 const envExample = read('.env.example');
@@ -106,6 +107,18 @@ assert(/(^|\n)\.env(\n|$)/.test(gitignore), '.gitignore must ignore .env.');
 assert(/(^|\n)!\.env\.example(\n|$)/.test(gitignore), '.gitignore must allow .env.example.');
 assert(/EXPO_PUBLIC_API_BASE_URL=/.test(envExample), '.env.example must document EXPO_PUBLIC_API_BASE_URL.');
 assert(/EXPO_PUBLIC_SENTRY_DSN=/.test(envExample), '.env.example must document EXPO_PUBLIC_SENTRY_DSN.');
+assert(
+  easJson.build?.development?.env?.EXPO_PUBLIC_API_BASE_URL === 'https://dev.mymemento.io/api',
+  'EAS development builds must use dev.mymemento.io API.',
+);
+assert(
+  easJson.build?.preview?.env?.EXPO_PUBLIC_API_BASE_URL === 'https://dev.mymemento.io/api',
+  'EAS preview builds must use dev.mymemento.io API.',
+);
+assert(
+  easJson.build?.production?.env?.EXPO_PUBLIC_API_BASE_URL === 'https://app.mymemento.io/api',
+  'EAS production builds must use app.mymemento.io API.',
+);
 
 const trackedFiles = execFileSync('git', ['ls-files', '.env'], { cwd: root, encoding: 'utf8' }).trim();
 assert(!trackedFiles, '.env must not be tracked by git. Keep real values local and commit .env.example only.');
