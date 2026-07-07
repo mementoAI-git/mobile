@@ -43,5 +43,7 @@ yarn-error.*
 /ios
 /android
 
+.env.local
+
 # Agents
 CODEBASE_MAP.md
