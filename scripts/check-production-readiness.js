@@ -92,7 +92,15 @@ const androidFilters = expo.android?.intentFilters ?? [];
 assert(androidFilters.some((filter) => filter.action === 'VIEW' && filter.autoVerify === true), 'Android app link intent filter must be configured.');
 assert(androidFilters.some((filter) => filter.action === 'SEND'), 'Android single-share intent filter must be configured.');
 assert(androidFilters.some((filter) => filter.action === 'SEND_MULTIPLE'), 'Android multi-share intent filter must be configured.');
-assert(expo.ios?.associatedDomains?.includes('applinks:app.memento.ai'), 'iOS associated domain must be configured.');
+assert(expo.ios?.associatedDomains?.includes('applinks:app.mymemento.io'), 'iOS associated domain must use app.mymemento.io.');
+assert(
+  androidFilters.some((filter) =>
+    filter.action === 'VIEW' &&
+    filter.autoVerify === true &&
+    (filter.data ?? []).some((item) => item.host === 'app.mymemento.io')
+  ),
+  'Android app link intent filter must use app.mymemento.io.',
+);
 
 assert(/(^|\n)\.env(\n|$)/.test(gitignore), '.gitignore must ignore .env.');
 assert(/(^|\n)!\.env\.example(\n|$)/.test(gitignore), '.gitignore must allow .env.example.');
@@ -141,6 +149,16 @@ assert(/normalizeAppHref/.test(notificationsSource), 'Notification URLs must be 
 assert(!/const navigate = \(dest: any\)/.test(notificationsSource), 'Notification navigation destinations must not be any.');
 assert(!/navigate\(data\.url\)/.test(notificationsSource), 'Notification raw URLs must not be navigated directly.');
 
+const navigationSource = read('src/lib/navigation.ts');
+assert(!/url\.protocol === 'http:'/.test(navigationSource), 'Notification app links must not accept plain HTTP URLs.');
+assert(/app\.mymemento\.io/.test(navigationSource), 'Trusted app link hosts must include app.mymemento.io.');
+assert(/dev\.mymemento\.io/.test(navigationSource), 'Trusted app link hosts must include dev.mymemento.io.');
+assert(!/app\.memento\.ai/.test(navigationSource), 'Trusted app link hosts must not use the old app.memento.ai domain.');
+
+const createMemorySheetSource = read('src/components/sheets/CreateMemorySheet.tsx');
+assert(!/from 'react-native';[\s\S]*\bModal\b/.test(createMemorySheetSource), 'CreateMemorySheet must not use React Native Modal for sheet-like privacy controls.');
+assert(/BottomSheetModal/.test(createMemorySheetSource), 'CreateMemorySheet privacy controls must use BottomSheetModal.');
+
 const authRedirectFiles = [
   'src/hooks/use-login-logic.ts',
   'src/hooks/use-two-factor-logic.ts',
@@ -156,6 +174,15 @@ const registerSource = read('app/(auth)/register.tsx');
 assert(/TERMS_URL/.test(registerSource) && /PRIVACY_URL/.test(registerSource), 'Signup legal links must be wired to URLs.');
 assert(/Linking\.openURL\(TERMS_URL\)/.test(registerSource), 'Terms link must open a URL.');
 assert(/Linking\.openURL\(PRIVACY_URL\)/.test(registerSource), 'Privacy link must open a URL.');
+assert(!/https:\/\/mymemento\.io\/terms/.test(registerSource), 'Terms URL must not use the apex domain.');
+assert(!/https:\/\/mymemento\.io\/privacy/.test(registerSource), 'Privacy URL must not use the apex domain.');
+
+const envSource = read('src/lib/env.ts');
+assert(/WEB_BASE_URL/.test(envSource), 'Legal URLs must be derived from a web base URL.');
+assert(/https:\/\/dev\.mymemento\.io/.test(envSource), 'Dev legal URLs must use dev.mymemento.io.');
+assert(/https:\/\/app\.mymemento\.io/.test(envSource), 'Production legal URLs must use app.mymemento.io.');
+assert(/TERMS_URL = `\$\{WEB_BASE_URL\}\/terms`/.test(envSource), 'Terms URL must be based on WEB_BASE_URL.');
+assert(/PRIVACY_URL = `\$\{WEB_BASE_URL\}\/privacy`/.test(envSource), 'Privacy URL must be based on WEB_BASE_URL.');
 
 const privacySource = read('app/settings/privacy.tsx');
 assert(!/End-to-end encrypted/.test(privacySource), 'Do not ship unverified end-to-end encryption claims.');

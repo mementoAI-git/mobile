@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
-  View, Text, TouchableOpacity, Modal,
-  ScrollView, Platform, StyleSheet,
+  View, Text, TouchableOpacity, StyleSheet,
 } from 'react-native';
 import { Button, TextInput, Spinner } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
@@ -13,7 +12,7 @@ import { useFileUpload } from '@/hooks/use-file-upload';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useGroups } from '@/hooks/queries/use-groups';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SelectFromMediaModal } from './SelectFromMediaModal';
 import * as Haptics from 'expo-haptics';
@@ -56,8 +55,6 @@ const PRIVACY_OPTIONS: PrivacyOption[] = [
 // ─── Privacy modal ────────────────────────────────────────────────────────────
 
 interface PrivacyModalProps {
-  visible: boolean;
-  onClose: () => void;
   privacyMode: PrivacyMode;
   onPrivacyChange: (mode: PrivacyMode) => void;
   selectedBeneficiaries: string[];
@@ -66,11 +63,10 @@ interface PrivacyModalProps {
   onToggleGroup: (id: string) => void;
   beneficiariesList: IBeneficiary[];
   groupsList: IGroup[];
+  onClose: () => void;
 }
 
-function PrivacyModal({
-  visible,
-  onClose,
+const PrivacyModal = React.forwardRef<BottomSheetModal, PrivacyModalProps>(function PrivacyModal({
   privacyMode,
   onPrivacyChange,
   selectedBeneficiaries,
@@ -79,7 +75,8 @@ function PrivacyModal({
   onToggleGroup,
   beneficiariesList,
   groupsList,
-}: PrivacyModalProps) {
+  onClose,
+}, ref) {
   const insets = useSafeAreaInsets();
   const hasSpecific = selectedBeneficiaries.length > 0 || selectedGroups.length > 0;
 
@@ -88,25 +85,30 @@ function PrivacyModal({
     onPrivacyChange(mode);
   }, [onPrivacyChange]);
 
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      {/* Backdrop — tapping outside closes */}
-      <TouchableOpacity
-        style={styles.backdrop}
-        activeOpacity={1}
-        onPress={() => { Haptics.selectionAsync(); onClose(); }}
+  const renderBackdrop = useCallback(
+    (backdropProps: any) => (
+      <BottomSheetBackdrop
+        {...backdropProps}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.4}
+        pressBehavior="close"
       />
+    ),
+    []
+  );
 
-      {/* Panel */}
-      <View style={[styles.panel, { paddingBottom: insets.bottom ? insets.bottom + 12 : 24 }]}>
-        {/* Handle */}
-        <View style={styles.handle} />
-
+  return (
+    <BottomSheetModal
+      ref={ref}
+      index={0}
+      snapPoints={['72%', '90%']}
+      backdropComponent={renderBackdrop}
+      enablePanDownToClose
+      handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
+      backgroundStyle={{ backgroundColor: COLORS.background }}
+    >
+      <View style={[styles.privacySheet, { paddingBottom: insets.bottom ? insets.bottom + 12 : 24 }]}>
         {/* Header */}
         <View style={styles.panelHeader}>
           <Text style={styles.panelTitle}>Who can see this?</Text>
@@ -118,7 +120,7 @@ function PrivacyModal({
           </TouchableOpacity>
         </View>
 
-        <ScrollView
+        <BottomSheetScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           style={{ maxHeight: 520 }}
@@ -225,7 +227,7 @@ function PrivacyModal({
               )}
             </Animated.View>
           )}
-        </ScrollView>
+        </BottomSheetScrollView>
 
         {/* Done button */}
         <TouchableOpacity
@@ -236,9 +238,9 @@ function PrivacyModal({
           <Text style={styles.doneBtnText}>Done</Text>
         </TouchableOpacity>
       </View>
-    </Modal>
+    </BottomSheetModal>
   );
-}
+});
 
 // ─── Main sheet ───────────────────────────────────────────────────────────────
 
@@ -268,9 +270,8 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
   const [selectedGroups, setSelectedGroups] = useState<string[]>(
     editData?.groups?.map(g => g._id).filter((id): id is string => !!id) || []
   );
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-
   const mediaModalRef = React.useRef<BottomSheetModal>(null);
+  const privacyModalRef = React.useRef<BottomSheetModal>(null);
 
   const { data: beneficiariesData } = useBeneficiaries();
   const { data: groupsData } = useGroups();
@@ -515,7 +516,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
 
           {/* Privacy / Sharing button */}
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); setShowPrivacyModal(true); }}
+            onPress={() => { Haptics.selectionAsync(); privacyModalRef.current?.present(); }}
             activeOpacity={0.8}
             className={`flex-row items-center justify-center gap-2 h-12 rounded-full border ${privacyIsActive ? 'bg-brand/5 border-brand' : 'bg-fill-weaker border-stroke-weaker'}`}
           >
@@ -555,10 +556,9 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
         />
       </BottomSheetScrollView>
 
-      {/* Privacy modal — rendered outside BottomSheetScrollView so the backdrop covers the sheet */}
       <PrivacyModal
-        visible={showPrivacyModal}
-        onClose={() => setShowPrivacyModal(false)}
+        ref={privacyModalRef}
+        onClose={() => privacyModalRef.current?.dismiss()}
         privacyMode={privacyMode}
         onPrivacyChange={setPrivacyMode}
         selectedBeneficiaries={selectedBeneficiaries}
@@ -575,32 +575,9 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // Backdrop
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-
-  // Panel
-  panel: {
-    backgroundColor: COLORS.background,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingTop: 12,
+  privacySheet: {
     paddingHorizontal: 20,
-    ...Platform.select({
-      ios: { shadowColor: '#170B00', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 20 },
-      android: { elevation: 16 },
-    }),
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.strokeStrong,
-    opacity: 0.3,
-    marginBottom: 16,
+    paddingTop: 8,
   },
   panelHeader: {
     flexDirection: 'row',

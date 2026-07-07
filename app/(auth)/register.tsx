@@ -29,11 +29,9 @@ import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
-import { API_BASE_URL } from '@/lib/env';
+import { API_BASE_URL, PRIVACY_URL, TERMS_URL } from '@/lib/env';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
-const TERMS_URL = 'https://memento.ai/terms';
-const PRIVACY_URL = 'https://memento.ai/privacy';
 
 // ─── Easing presets ───────────────────────────────────────────────────────────
 const EASE_OUT = Easing.out(Easing.cubic);
