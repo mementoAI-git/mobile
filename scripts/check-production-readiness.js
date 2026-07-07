@@ -31,6 +31,19 @@ function walk(dir, files = []) {
   return files;
 }
 
+function collectFiles(dir, pattern, files = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name === '.expo' || entry.name === '.git') continue;
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      collectFiles(fullPath, pattern, files);
+    } else if (pattern.test(entry.name)) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
+
 const packageJson = readJson('package.json');
 const appJson = readJson('app.json');
 const easJson = readJson('eas.json');
@@ -38,6 +51,26 @@ const ciWorkflow = read('.github/workflows/mobile-quality.yml');
 const expo = appJson.expo;
 const gitignore = read('.gitignore');
 const envExample = read('.env.example');
+
+const domainScanFiles = [
+  ...collectFiles(path.join(root, 'app'), /\.(ts|tsx)$/),
+  ...collectFiles(path.join(root, 'src'), /\.(ts|tsx)$/),
+  path.join(root, 'app.json'),
+  path.join(root, 'eas.json'),
+  path.join(root, '.env.example'),
+];
+
+const oldDomainOffenders = domainScanFiles.flatMap((file) => {
+  const source = fs.readFileSync(file, 'utf8');
+  return /\bmemento\.ai\b|\bmemento\.com\b|https:\/\/mymemento\.io\/(?:terms|privacy)/.test(source)
+    ? [path.relative(root, file)]
+    : [];
+});
+
+assert(
+  oldDomainOffenders.length === 0,
+  `Old or incorrect Memento domains found. Offenders: ${oldDomainOffenders.join(', ')}`,
+);
 
 assert(packageJson.dependencies['expo-share-intent']?.startsWith('^7.'), 'Expo SDK 56 must use expo-share-intent 7.x.');
 assert(packageJson.scripts.typecheck, 'package.json must expose a typecheck script.');
