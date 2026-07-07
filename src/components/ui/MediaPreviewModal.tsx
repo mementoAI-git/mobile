@@ -28,7 +28,7 @@ import { VideoView } from 'expo-video';
 import { useAudioPlayer } from 'expo-audio';
 import { useVideoPlayer } from '@/hooks/use-video-player';
 import * as Haptics from 'expo-haptics';
-import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, cancelAnimation } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, cancelAnimation, type SharedValue } from 'react-native-reanimated';
 import { ChevronLeft, Share2, X, Mic, FileText, Music, Play, Pause, RotateCcw, Link2, Download } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { publishedPostUrl } from '@/lib/env';
@@ -261,6 +261,39 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
 
 const RECORD_BANNER_BG = require('../../../assets/images/backgrounds/record-banner.png');
 
+function useAudioWaveAnims() {
+  return [
+    useSharedValue(1),
+    useSharedValue(1),
+    useSharedValue(1),
+    useSharedValue(1),
+    useSharedValue(1),
+    useSharedValue(1),
+    useSharedValue(1),
+    useSharedValue(1),
+    useSharedValue(1),
+    useSharedValue(1),
+    useSharedValue(1),
+    useSharedValue(1),
+    useSharedValue(1),
+    useSharedValue(1),
+    useSharedValue(1),
+    useSharedValue(1),
+  ];
+}
+
+function AnimatedWaveBar({ baseHeight, anim }: { baseHeight: number; anim: SharedValue<number> }) {
+  const animStyle = useAnimatedStyle(() => ({
+    height: baseHeight * anim.value,
+  }));
+
+  return (
+    <Animated.View
+      style={[{ width: 3, borderRadius: 2, backgroundColor: COLORS.brand }, animStyle]}
+    />
+  );
+}
+
 function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boolean }) {
   const player = useAudioPlayer(item.uri);
   const [playing, setPlaying] = useState(false);
@@ -328,8 +361,8 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
     });
   }, [item.uri, item.name]);
 
-  // One animated height per bar
-  const barAnims = staticBarHeights.map(() => useSharedValue(1));
+  // One animated height per bar. Count must match BAR_COUNT above.
+  const barAnims = useAudioWaveAnims();
 
   // Start/stop animation based on playing state
   useEffect(() => {
@@ -361,18 +394,9 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 20 }}>
       {/* Animated waveform bars */}
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 36 }}>
-        {staticBarHeights.map((h, i) => {
-          // eslint-disable-next-line react-hooks/rules-of-hooks
-          const animStyle = useAnimatedStyle(() => ({
-            height: h * barAnims[i].value,
-          }));
-          return (
-            <Animated.View
-              key={i}
-              style={[{ width: 3, borderRadius: 2, backgroundColor: COLORS.brand }, animStyle]}
-            />
-          );
-        })}
+        {staticBarHeights.map((h, i) => (
+          <AnimatedWaveBar key={i} baseHeight={h} anim={barAnims[i]} />
+        ))}
       </View>
 
       {/* Track name */}
