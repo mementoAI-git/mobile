@@ -23,13 +23,12 @@ import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { IMemory, IBeneficiary } from '@/types';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { toast } from '@/components/ui/Toast';
+import { publishedPostUrl } from '@/lib/env';
 
 interface Props {
   memory: IMemory;
   onClose?: () => void;
 }
-
-const PUBLISHED_BASE = 'https://app.mymemento.io/post';
 
 export function MemoryActionsSheet({ memory, onClose }: Props) {
   const { mutate: deleteMemory, isPending: isDeleting } = useDeleteMemory();
@@ -90,7 +89,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       await Share.share({
-        message: `${memory.title || 'Check out my story'}\n\n${PUBLISHED_BASE}/${memory._id}`,
+        message: `${memory.title || 'Check out my story'}\n\n${publishedPostUrl(memory._id)}`,
       });
     } catch {}
     onClose?.();

@@ -50,12 +50,12 @@ import type { EditorBridge } from '@10play/tentap-editor';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import type { IBeneficiary, IFile } from '@/types';
+import { publishedPostUrl } from '@/lib/env';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STORY_DRAFT_KEY = (email?: string | null) => `article_draft_${email ?? 'anon'}`;
 const QC_DRAFT_KEY = (email?: string | null) => `qc_draft_${email ?? 'anon'}`;
-const PUBLISHED_BASE_URL = 'https://app.mymemento.io/post';
 const NOTE_CHAR_MAX = 8000;
 const MAX_FILE_MB = 15;
 const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
@@ -248,7 +248,7 @@ function PublishModalInner({ title, body, attachmentIds, onClose, memoryId, onAd
         const id = res?.data?._id ?? res?.data?.data?._id ?? '';
         // Delete the draft slot now that the story has been published
         if (draftId) deleteDraft(userEmail, draftId).catch(() => {});
-        setPublishedUrl(id ? `${PUBLISHED_BASE_URL}/${id}` : PUBLISHED_BASE_URL);
+        setPublishedUrl(publishedPostUrl(id));
       }
     };
     const onError = (err: any) => toast(err?.message ?? 'Could not publish. Try again.', 'error');

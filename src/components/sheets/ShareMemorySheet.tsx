@@ -8,6 +8,7 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { Button } from '@/components/ui';
 import { useUiStore } from '@/store';
 import { logger } from '@/lib/logger';
+import { publishedPostUrl } from '@/lib/env';
 
 export function ShareMemorySheet() {
   const sheetProps = useUiStore((s) => s.sheetProps);
@@ -16,8 +17,7 @@ export function ShareMemorySheet() {
   const memoryId = sheetProps?.id;
   const [copied, setCopied] = useState(false);
 
-  // In a real app, this would be the actual web domain url
-  const shareUrl = `https://memento.com/post/${memoryId}`;
+  const shareUrl = publishedPostUrl(typeof memoryId === 'string' ? memoryId : undefined);
 
   const handleCopy = async () => {
     Haptics.selectionAsync();

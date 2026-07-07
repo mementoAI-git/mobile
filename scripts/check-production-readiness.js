@@ -183,6 +183,18 @@ assert(/https:\/\/dev\.mymemento\.io/.test(envSource), 'Dev legal URLs must use 
 assert(/https:\/\/app\.mymemento\.io/.test(envSource), 'Production legal URLs must use app.mymemento.io.');
 assert(/TERMS_URL = `\$\{WEB_BASE_URL\}\/terms`/.test(envSource), 'Terms URL must be based on WEB_BASE_URL.');
 assert(/PRIVACY_URL = `\$\{WEB_BASE_URL\}\/privacy`/.test(envSource), 'Privacy URL must be based on WEB_BASE_URL.');
+assert(/publishedPostUrl/.test(envSource), 'Published post URLs must be centralized in env utilities.');
+
+const publishedUrlOffenders = runtimeFiles.flatMap((file) => {
+  if (file.endsWith(path.join('src', 'lib', 'env.ts'))) return [];
+  const source = fs.readFileSync(file, 'utf8');
+  return /https:\/\/(?:app\.mymemento\.io|memento\.com)\/post/.test(source) ? [path.relative(root, file)] : [];
+});
+
+assert(
+  publishedUrlOffenders.length === 0,
+  `Published post URLs must use publishedPostUrl(). Offenders: ${publishedUrlOffenders.join(', ')}`,
+);
 
 const privacySource = read('app/settings/privacy.tsx');
 assert(!/End-to-end encrypted/.test(privacySource), 'Do not ship unverified end-to-end encryption claims.');

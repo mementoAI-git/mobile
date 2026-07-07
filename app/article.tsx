@@ -55,8 +55,7 @@ import { useToast } from '@/components/ui/Toast';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import type { IBeneficiary } from '@/types';
-
-const PUBLISHED_BASE_URL = 'https://app.mymemento.io/post';
+import { publishedPostUrl } from '@/lib/env';
 
 // ─── Surfer illustration asset ────────────────────────────────────────────────
 
@@ -302,7 +301,7 @@ function PublishModal({
           queryClient.invalidateQueries({ queryKey: queryKeys.memoriesStats });
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           const memoryId = res?.data?._id ?? res?.data?.data?._id ?? '';
-          setPublishedUrl(memoryId ? `${PUBLISHED_BASE_URL}/${memoryId}` : PUBLISHED_BASE_URL);
+          setPublishedUrl(publishedPostUrl(memoryId));
         },
         onError: (err: any) => {
           toast(err?.message ?? 'Could not publish. Try again.', 'error');

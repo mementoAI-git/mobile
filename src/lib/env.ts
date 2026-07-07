@@ -27,6 +27,10 @@ export const WEB_BASE_URL = webBaseUrlFromApiBaseUrl(API_BASE_URL);
 export const TERMS_URL = `${WEB_BASE_URL}/terms`;
 export const PRIVACY_URL = `${WEB_BASE_URL}/privacy`;
 
+export function publishedPostUrl(memoryId?: string | null): string {
+  return memoryId ? `${WEB_BASE_URL}/post/${memoryId}` : `${WEB_BASE_URL}/post`;
+}
+
 export const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() ?? '';
 
 export const SENTRY_TRACES_SAMPLE_RATE = Number(
