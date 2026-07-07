@@ -9,6 +9,7 @@
     "ios:run": "npx expo run:ios",
     "web": "npx expo start --web",
     "typecheck": "tsc --noEmit --ignoreDeprecations 6.0",
+    "check:prod": "node scripts/check-production-readiness.js",
     "doctor": "npx expo-doctor"
   },
   "dependencies": {
