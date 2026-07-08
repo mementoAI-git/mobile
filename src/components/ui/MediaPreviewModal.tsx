@@ -3,7 +3,7 @@
  *
  * Design:
  *  - Cream background (COLORS.background)
- *  - Header: ← back | Share pill | × close
+ *  - Header: default Share chrome or composer close-only chrome
  *  - Images: rounded corners, horizontal padding, peek of next image
  *  - Media vertically centered
  *  - Dot pagination — brand orange active, stroke-weak inactive
@@ -74,6 +74,7 @@ interface Props {
   onRemove?: (clientId: string) => void;
   /** Parent memory ID — used to construct the share link */
   memoryId?: string;
+  headerMode?: 'default' | 'close-only';
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -530,7 +531,7 @@ function Dots({ count, active }: { count: number; active: number }) {
 
 // ─── Modal inner — reads insets from the scoped SafeAreaProvider ──────────────
 
-function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: Omit<Props, 'visible' | 'initialIndex'> & { initialIndex: number }) {
+function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, headerMode = 'default' }: Omit<Props, 'visible' | 'initialIndex'> & { initialIndex: number }) {
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -639,13 +640,24 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: 
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
-          <ChevronLeft size={20} color={COLORS.textBase} strokeWidth={2} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleShareButtonPress} style={styles.sharePill} activeOpacity={0.8}>
-          <Share2 size={14} color={COLORS.textBase} strokeWidth={2} />
-          <Text style={styles.shareLabel}>Share</Text>
-        </TouchableOpacity>
+        {headerMode === 'close-only' ? (
+          <>
+            <View style={styles.headerSpacer} />
+            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
+              <X size={20} color={COLORS.textBase} strokeWidth={2} />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
+              <ChevronLeft size={20} color={COLORS.textBase} strokeWidth={2} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleShareButtonPress} style={styles.sharePill} activeOpacity={0.8}>
+              <Share2 size={14} color={COLORS.textBase} strokeWidth={2} />
+              <Text style={styles.shareLabel}>Share</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       <View style={{ flex: 1 }}>
@@ -760,7 +772,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: 
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onClose, onRemove, memoryId }: Props) {
+export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onClose, onRemove, memoryId, headerMode = 'default' }: Props) {
   if (!attachments.length) return null;
   return (
     <Modal visible={visible} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
@@ -774,6 +786,7 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
           onClose={onClose}
           onRemove={onRemove}
           memoryId={memoryId}
+          headerMode={headerMode}
         />
       </SafeAreaProvider>
     </Modal>
@@ -801,6 +814,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.fillWeak,
     borderWidth: 1, borderColor: COLORS.strokeWeaker,
     alignItems: 'center', justifyContent: 'center',
+  },
+  headerSpacer: {
+    width: 36,
+    height: 36,
   },
   sharePill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,

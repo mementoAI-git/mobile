@@ -3,8 +3,10 @@ import { ActivityIndicator, AppState, Dimensions, Image, Linking, StyleSheet, Te
 import {
   BottomSheetBackdrop,
   BottomSheetFlatList,
+  BottomSheetFooter,
   BottomSheetModal,
   BottomSheetView,
+  type BottomSheetFooterProps,
 } from '@gorhom/bottom-sheet';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import * as Haptics from 'expo-haptics';
@@ -17,6 +19,7 @@ import {
   isPermissionGranted,
   type PermissionLike,
 } from '@/lib/permission-recovery';
+import { getPickerAssetUploadUri } from '@/features/media/picker-assets';
 
 type PickerMode = 'gallery' | 'videos' | 'audio';
 
@@ -230,11 +233,11 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
       setResolving(true);
       try {
         const resolved = await Promise.all(selectedAssets.map(async (asset): Promise<ChatPickerAsset> => {
-          const info = await MediaLibrary.getAssetInfoAsync(asset.id);
+          const uploadUri = await getPickerAssetUploadUri(asset, MediaLibrary.getAssetInfoAsync);
           return {
             id: asset.id,
             uri: asset.uri,
-            uploadUri: info.localUri ?? info.uri ?? asset.uri,
+            uploadUri,
             name: asset.filename || `${asset.mediaType}_${Date.now()}`,
             mimeType: getAssetMimeType(asset),
             mediaType: asset.mediaType as 'photo' | 'video' | 'audio',
@@ -278,12 +281,39 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
       />
     ), [selected, toggleAsset]);
 
+    const renderFooter = useCallback((props: BottomSheetFooterProps) => (
+      <BottomSheetFooter
+        {...props}
+        bottomInset={0}
+        style={styles.footerContainer}
+      >
+        <View style={[styles.footerContent, { paddingBottom: insets.bottom ? insets.bottom + 20 : 20 }]}>
+          <TouchableOpacity onPress={dismiss} activeOpacity={0.86} style={styles.dismissButton}>
+            <Text style={styles.dismissText}>Dismiss</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleAddSelected}
+            disabled={selectedCount === 0 || resolving}
+            activeOpacity={0.86}
+            style={[styles.addButton, selectedCount === 0 && styles.addButtonDisabled]}
+          >
+            {resolving ? (
+              <ActivityIndicator color={COLORS.textInverse} />
+            ) : (
+              <Text style={styles.addText}>Add {selectedCount} {selectionLabel}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </BottomSheetFooter>
+    ), [dismiss, handleAddSelected, insets.bottom, resolving, selectedCount, selectionLabel]);
+
     return (
       <BottomSheetModal
         ref={ref}
         snapPoints={['72%', '94%']}
         enableDynamicSizing={false}
         backdropComponent={renderBackdrop}
+        footerComponent={renderFooter}
         enablePanDownToClose
         onChange={handleSheetChange}
         onDismiss={handleDismiss}
@@ -334,27 +364,10 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
                 contentContainerStyle={styles.gridContent}
                 onEndReached={loadMore}
                 onEndReachedThreshold={0.6}
+                enableFooterMarginAdjustment
                 ListFooterComponent={loading ? <ActivityIndicator color={COLORS.brand} style={styles.loader} /> : null}
               />
             )}
-          </View>
-
-          <View style={[styles.footer, { paddingBottom: insets.bottom ? insets.bottom + 12 : 20 }]}>
-            <TouchableOpacity onPress={dismiss} activeOpacity={0.86} style={styles.dismissButton}>
-              <Text style={styles.dismissText}>Dismiss</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleAddSelected}
-              disabled={selectedCount === 0 || resolving}
-              activeOpacity={0.86}
-              style={[styles.addButton, selectedCount === 0 && styles.addButtonDisabled]}
-            >
-              {resolving ? (
-                <ActivityIndicator color={COLORS.textInverse} />
-              ) : (
-                <Text style={styles.addText}>Add {selectedCount} {selectionLabel}</Text>
-              )}
-            </TouchableOpacity>
           </View>
         </BottomSheetView>
       </BottomSheetModal>
@@ -497,6 +510,7 @@ const styles = StyleSheet.create({
   contentArea: {
     flex: 1,
     minHeight: 0,
+    marginBottom: 0,
   },
   assetList: {
     flex: 1,
@@ -561,12 +575,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
-    paddingBottom: 24,
+    paddingBottom: 150,
   },
   loader: {
     paddingVertical: 24,
   },
-  footer: {
+  footerContainer: {
+    backgroundColor: COLORS.textStrong,
+  },
+  footerContent: {
     flexDirection: 'row',
     gap: 24,
     paddingTop: 32,

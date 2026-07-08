@@ -37,8 +37,17 @@ import * as Haptics from 'expo-haptics';
 import { VoiceModeOverlay } from '@/components/chat/VoiceModeOverlay';
 import type { ChatReplyQuote } from '@/lib/utils';
 import { X } from 'lucide-react-native';
+import { verticalScale } from 'react-native-size-matters';
+import {
+  getComposerOverlayBottomPadding,
+  getComposerOverlayMaxHeight,
+} from '@/features/chat/composer-layout';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
+const COLLAPSED_COMPOSER_HEIGHT = verticalScale(86);
+const COMPOSER_OVERLAY_GAP = verticalScale(10);
+const COMPOSER_OVERLAY_MIN_HEIGHT = verticalScale(180);
+const DEFAULT_HEADER_HEIGHT = verticalScale(72);
 
 export default function ChatScreen() {
   // promptLabel is only set by BrowseTopicsSection topic cards — daily prompts don't set it
@@ -71,6 +80,9 @@ export default function ChatScreen() {
 
   const [voiceModeVisible, setVoiceModeVisible] = useState(false);
   const [replyQuote, setReplyQuote] = useState<ChatReplyQuote | null>(null);
+  const [replyQuoteHeight, setReplyQuoteHeight] = useState(0);
+  const [headerHeight, setHeaderHeight] = useState(DEFAULT_HEADER_HEIGHT);
+  const [chatSurfaceHeight, setChatSurfaceHeight] = useState(0);
   const [nudgeHidden, setNudgeHidden] = useState(false);
 
   // Pulsing live indicator
@@ -88,6 +100,26 @@ export default function ChatScreen() {
   }));
 
   const isActuallyStreaming = streaming || isStartingConversation;
+
+  React.useEffect(() => {
+    if (!replyQuote) setReplyQuoteHeight(0);
+  }, [replyQuote]);
+
+  const composerOverlayMaxHeight = React.useMemo(() => (
+    getComposerOverlayMaxHeight({
+      visibleHeight: chatSurfaceHeight || COMPOSER_OVERLAY_MIN_HEIGHT + headerHeight,
+      headerHeight,
+      minHeight: COMPOSER_OVERLAY_MIN_HEIGHT,
+    })
+  ), [chatSurfaceHeight, headerHeight]);
+
+  const messageBottomPadding = React.useMemo(() => (
+    getComposerOverlayBottomPadding({
+      collapsedComposerHeight: COLLAPSED_COMPOSER_HEIGHT,
+      replyQuoteHeight: replyQuote ? replyQuoteHeight : 0,
+      gap: COMPOSER_OVERLAY_GAP,
+    })
+  ), [replyQuote, replyQuoteHeight]);
 
   // Month keys for jump pills (from persisted server messages)
   const allServerMessages = serverMessages?.messages;
@@ -210,10 +242,16 @@ export default function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
       <ImageBackground source={PATTERN} className="flex-1" imageStyle={{ opacity: 0.03 }}>
-        <View className="flex-1">
+        <View
+          className="flex-1"
+          onLayout={(event) => setChatSurfaceHeight(event.nativeEvent.layout.height)}
+        >
 
           {/* ── Header ───────────────────────────────────────────────────── */}
-          <View className="flex-row items-center gap-3 px-6 py-4">
+          <View
+            className="flex-row items-center gap-3 px-6 py-4"
+            onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
+          >
             <TouchableOpacity
               onPress={handleBack}
               activeOpacity={0.7}
@@ -338,7 +376,7 @@ export default function ChatScreen() {
                 inverted
                 keyExtractor={(item, i) => (item as any)._id ?? String(i)}
                 renderItem={renderMessage}
-                contentContainerClassName="px-5 pb-6 pt-4"
+                contentContainerStyle={[styles.messagesContent, { paddingTop: messageBottomPadding }]}
                 showsVerticalScrollIndicator={false}
                 onScrollToIndexFailed={() => {}}
                 ListHeaderComponent={listHeaderComponent}
@@ -376,58 +414,62 @@ export default function ChatScreen() {
             )}
           </View>
 
-          {/* ── Reply Quote Preview Panel ────────────────────────────── */}
-          {replyQuote && (
-            <Animated.View
-              entering={FadeInDown.duration(200)}
-              className="mx-5 mb-2.5 p-3 bg-fill-weaker rounded-2xl flex-row items-center justify-between"
-            >
-              <View className="flex-1 pr-3 pl-3" style={{ borderLeftWidth: 3, borderLeftColor: COLORS.brand }}>
-                <Text
-                  className="text-[10px] text-brand font-bold uppercase tracking-wider mb-0.5"
-                  style={{ fontFamily: FONTS.sansBold }}
-                >
-                  Replying to {replyQuote.role === 'user' ? 'your message' : 'Memento'}
-                </Text>
-                <Text
-                  className="text-[12px] text-text-weak leading-relaxed"
-                  numberOfLines={1}
-                  style={{ fontFamily: FONTS.sans }}
-                >
-                  {replyQuote.text}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setReplyQuote(null);
-                }}
-                activeOpacity={0.7}
-                className="size-6 rounded-full bg-fill-weaker items-center justify-center"
+          <View pointerEvents="box-none" style={styles.composerOverlay}>
+            {/* ── Reply Quote Preview Panel ────────────────────────────── */}
+            {replyQuote && (
+              <Animated.View
+                entering={FadeInDown.duration(200)}
+                className="mx-5 mb-2.5 p-3 bg-fill-weaker rounded-2xl flex-row items-center justify-between"
+                onLayout={(event) => setReplyQuoteHeight(event.nativeEvent.layout.height)}
               >
-                <X size={12} color={COLORS.textWeak} />
-              </TouchableOpacity>
-            </Animated.View>
-          )}
+                <View className="flex-1 pr-3 pl-3" style={{ borderLeftWidth: 3, borderLeftColor: COLORS.brand }}>
+                  <Text
+                    className="text-[10px] text-brand font-bold uppercase tracking-wider mb-0.5"
+                    style={{ fontFamily: FONTS.sansBold }}
+                  >
+                    Replying to {replyQuote.role === 'user' ? 'your message' : 'Memento'}
+                  </Text>
+                  <Text
+                    className="text-[12px] text-text-weak leading-relaxed"
+                    numberOfLines={1}
+                    style={{ fontFamily: FONTS.sans }}
+                  >
+                    {replyQuote.text}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setReplyQuote(null);
+                  }}
+                  activeOpacity={0.7}
+                  className="size-6 rounded-full bg-fill-weaker items-center justify-center"
+                >
+                  <X size={12} color={COLORS.textWeak} />
+                </TouchableOpacity>
+              </Animated.View>
+            )}
 
-          {/* ── Chat Input ────────────────────────────────────────────── */}
-          <ChatInput
-            onSend={(payload: ChatSendPayload) => {
-              send(
-                payload.text,
-                replyQuote,
-                payload.attachmentIds.length ? payload.attachmentIds : undefined,
-                payload.attachmentPreviews.length ? payload.attachmentPreviews : undefined,
-              );
-              setReplyQuote(null);
-            }}
-            onStop={stop}
-            onVoice={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              setVoiceModeVisible(true);
-            }}
-            loading={isActuallyStreaming || isLoading}
-          />
+            {/* ── Chat Input ────────────────────────────────────────────── */}
+            <ChatInput
+              maxComposerHeight={composerOverlayMaxHeight}
+              onSend={(payload: ChatSendPayload) => {
+                send(
+                  payload.text,
+                  replyQuote,
+                  payload.attachmentIds.length ? payload.attachmentIds : undefined,
+                  payload.attachmentPreviews.length ? payload.attachmentPreviews : undefined,
+                );
+                setReplyQuote(null);
+              }}
+              onStop={stop}
+              onVoice={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setVoiceModeVisible(true);
+              }}
+              loading={isActuallyStreaming || isLoading}
+            />
+          </View>
 
           <VoiceModeOverlay
             visible={voiceModeVisible}
@@ -445,4 +487,16 @@ export default function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  messagesContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  composerOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 20,
+  },
+});
