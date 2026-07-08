@@ -49,8 +49,6 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { useUserStore } from '@/store';
 import { useCreateMemory } from '@/hooks/mutations/use-memory-mutations';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
-import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/constants/query-keys';
 import { useToast } from '@/components/ui/Toast';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
@@ -244,7 +242,6 @@ function PublishModal({
   const { mutate: createMemory, isPending } = useCreateMemory();
   const { data: beneficiariesRaw } = useBeneficiaries();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const beneficiaries: IBeneficiary[] = useMemo(() => {
     if (!beneficiariesRaw) return [];
@@ -297,8 +294,6 @@ function PublishModal({
       },
       {
         onSuccess: (res: any) => {
-          queryClient.invalidateQueries({ queryKey: ['stories'] });
-          queryClient.invalidateQueries({ queryKey: queryKeys.memoriesStats });
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           const memoryId = res?.data?._id ?? res?.data?.data?._id ?? '';
           setPublishedUrl(publishedPostUrl(memoryId));
@@ -308,7 +303,7 @@ function PublishModal({
         },
       }
     );
-  }, [title, subtitle, body, tags, selectedBeneficiaryIds, createMemory, queryClient, toast, onClose]);
+  }, [title, subtitle, body, tags, selectedBeneficiaryIds, createMemory, toast, onClose]);
 
   const toggleBeneficiary = useCallback((id: string) => {
     Haptics.selectionAsync();

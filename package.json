@@ -9,10 +9,11 @@
     "ios:run": "npx expo run:ios",
     "web": "npx expo start --web",
     "lint": "eslint . --quiet",
+    "test": "bun test",
     "typecheck": "tsc --noEmit --ignoreDeprecations 6.0",
     "check:prod": "node scripts/check-production-readiness.js",
     "doctor": "npx expo-doctor",
-    "verify": "bun run lint && bun run typecheck && bun run check:prod",
+    "verify": "bun run lint && bun run typecheck && bun run test && bun run check:prod",
     "verify:full": "bun run verify && bun run doctor",
     "prepare": "husky"
   },

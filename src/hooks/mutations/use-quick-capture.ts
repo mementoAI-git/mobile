@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
-import { queryKeys } from '@/constants/query-keys';
+import { invalidateMemoryQueries } from '@/features/memories/cache';
 
 export interface QuickCapturePayload {
   /** Plain text body — AI enriches title/tags server-side */
@@ -35,19 +35,12 @@ export function useQuickCapture() {
       post(endpoint.memoriesQuickCapture, payload),
     onSuccess: (_res, variables) => {
       // Invalidate stories + stats so the processing badge appears
-      queryClient.invalidateQueries({ queryKey: ['stories'] });
-      queryClient.invalidateQueries({ queryKey: ['memories'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.memoriesStats });
-      queryClient.invalidateQueries({ queryKey: queryKeys.userStats });
-      if (variables.prompt_id || variables.prompt_text || variables.reflection_day_key) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.dailyPrompts() });
-        queryClient.invalidateQueries({ queryKey: queryKeys.categoryDetailsPrompts() });
-        queryClient.invalidateQueries({ queryKey: queryKeys.overviewPrompts });
-        queryClient.invalidateQueries({ queryKey: queryKeys.prompts() });
-      }
-      if (variables.prompt_id) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.memoryByPrompt(variables.prompt_id) });
-      }
+      invalidateMemoryQueries(queryClient, {
+        includeUserStats: true,
+        promptId: variables.prompt_id,
+        promptText: variables.prompt_text,
+        reflectionDayKey: variables.reflection_day_key,
+      });
     },
   });
 }

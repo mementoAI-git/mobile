@@ -255,6 +255,8 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
       }
     }, [hasNextPage, loadAssets, loading, mode, nextCursor]);
 
+    const keyExtractor = useCallback((item: MediaLibrary.Asset) => item.id, []);
+
     const renderBackdrop = useCallback(
       (props: any) => (
         <BottomSheetBackdrop
@@ -268,36 +270,13 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
       [],
     );
 
-    const renderAsset = useCallback(({ item }: { item: MediaLibrary.Asset }) => {
-      const isSelected = Boolean(selected[item.id]);
-      const isVideo = item.mediaType === MediaLibrary.MediaType.video;
-      const isAudio = item.mediaType === MediaLibrary.MediaType.audio;
-
-      return (
-        <TouchableOpacity
-          onPress={() => toggleAsset(item)}
-          activeOpacity={0.88}
-          style={styles.assetTile}
-        >
-          {isAudio ? (
-            <View style={styles.audioTile}>
-              <Music size={28} color={COLORS.textInverse} strokeWidth={2} />
-              <Text style={styles.audioLabel}>Audio</Text>
-            </View>
-          ) : (
-            <Image source={{ uri: item.uri }} style={styles.assetImage} resizeMode="cover" />
-          )}
-          {isVideo && (
-            <View style={styles.playOverlay}>
-              <Play size={18} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
-            </View>
-          )}
-          <View style={isSelected ? styles.selectedCheck : styles.unselectedDot}>
-            {isSelected ? <Check size={13} color={COLORS.textStrong} strokeWidth={3} /> : null}
-          </View>
-        </TouchableOpacity>
-      );
-    }, [selected, toggleAsset]);
+    const renderAsset = useCallback(({ item }: { item: MediaLibrary.Asset }) => (
+      <AssetTile
+        asset={item}
+        isSelected={Boolean(selected[item.id])}
+        onToggle={toggleAsset}
+      />
+    ), [selected, toggleAsset]);
 
     return (
       <BottomSheetModal
@@ -346,8 +325,9 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
             ) : (
               <BottomSheetFlatList
                 data={assets}
-                keyExtractor={(item) => item.id}
+                keyExtractor={keyExtractor}
                 renderItem={renderAsset}
+                extraData={selected}
                 numColumns={4}
                 style={styles.assetList}
                 columnWrapperStyle={styles.gridRow}
@@ -381,6 +361,48 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
     );
   },
 );
+
+const AssetTile = React.memo(function AssetTile({
+  asset,
+  isSelected,
+  onToggle,
+}: {
+  asset: MediaLibrary.Asset;
+  isSelected: boolean;
+  onToggle: (asset: MediaLibrary.Asset) => void;
+}) {
+  const isVideo = asset.mediaType === MediaLibrary.MediaType.video;
+  const isAudio = asset.mediaType === MediaLibrary.MediaType.audio;
+
+  const handlePress = useCallback(() => {
+    onToggle(asset);
+  }, [asset, onToggle]);
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.88}
+      style={styles.assetTile}
+    >
+      {isAudio ? (
+        <View style={styles.audioTile}>
+          <Music size={28} color={COLORS.textInverse} strokeWidth={2} />
+          <Text style={styles.audioLabel}>Audio</Text>
+        </View>
+      ) : (
+        <Image source={{ uri: asset.uri }} style={styles.assetImage} resizeMode="cover" />
+      )}
+      {isVideo && (
+        <View style={styles.playOverlay}>
+          <Play size={18} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+        </View>
+      )}
+      <View style={isSelected ? styles.selectedCheck : styles.unselectedDot}>
+        {isSelected ? <Check size={13} color={COLORS.textStrong} strokeWidth={3} /> : null}
+      </View>
+    </TouchableOpacity>
+  );
+});
 
 function PickerAction({
   label,

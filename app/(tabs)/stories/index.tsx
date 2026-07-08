@@ -12,7 +12,6 @@ import Animated, {
   FadeInDown,
   useSharedValue,
   useAnimatedStyle,
-  useAnimatedScrollHandler,
   interpolate,
   Extrapolation,
   withTiming,
@@ -54,14 +53,19 @@ export default function StoriesScreen() {
     [router],
   );
 
+  const handleGridMemoryPress = useCallback(
+    (memory: { _id: string }) => handleMemoryPress(memory._id),
+    [handleMemoryPress],
+  );
+
+  const handleGridEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
   // Reanimated scroll tracking
   const scrollY = useSharedValue(0);
-
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
 
   // Floating button animations: transition from a wide pill to a compact circle
   const floatBtnStyle = useAnimatedStyle(() => {
@@ -247,11 +251,12 @@ export default function StoriesScreen() {
           <MasonryMemoryGrid
             memories={stories}
             ListHeaderComponent={listHeader}
-            onMemoryPress={(m) => handleMemoryPress(m._id)}
-            onEndReached={() => hasNextPage && fetchNextPage()}
+            onMemoryPress={handleGridMemoryPress}
+            onEndReached={handleGridEndReached}
             refreshing={isRefetching}
+            loadingMore={isFetchingNextPage}
             onRefresh={refetch}
-            onScroll={scrollHandler}
+            scrollY={scrollY}
           />
           /* List view — commented out for now
         ) : (

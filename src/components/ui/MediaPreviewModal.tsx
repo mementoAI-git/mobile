@@ -125,6 +125,12 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
   // overlays. Android's default SurfaceView can fail to paint frames there, so
   // the view below opts into TextureView and starts playback after mount.
   const { player, play, pause } = useVideoPlayer(uri, { autoPlay: false, loop: false });
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [speedIdx, setSpeedIdx] = useState(0);
+  const controlsOpacity = useRef(new RNAnimated.Value(1)).current;
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Start playback after <VideoView> has mounted and attached to the view hierarchy.
   // A short delay gives the modal window and native video view time to settle.
@@ -140,31 +146,34 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
 
   // Pause when the slide scrolls out of view
   useEffect(() => {
-    if (!isActive && player.playing) {
-      pause();
+    if (!isActive) {
+      if (player.playing) {
+        pause();
+      }
+      setPlaying(false);
     }
   }, [isActive, player, pause]);
 
 
-  const [playing, setPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [speedIdx, setSpeedIdx] = useState(0);
-  const controlsOpacity = useRef(new RNAnimated.Value(1)).current;
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const progress = duration > 0 ? currentTime / duration : 0;
   const ended = progress >= 0.99;
 
-  // Poll every 250ms to sync player state into React state
+  // Poll only the active slide to keep background media from updating React state.
   useEffect(() => {
-    const id = setInterval(() => {
+    if (!isActive) return undefined;
+
+    const syncPlayerState = () => {
       setCurrentTime(player.currentTime ?? 0);
       setDuration(player.duration ?? 0);
       setPlaying(player.playing ?? false);
+    };
+
+    syncPlayerState();
+    const id = setInterval(() => {
+      syncPlayerState();
     }, 250);
     return () => clearInterval(id);
-  }, [player]);
+  }, [isActive, player]);
 
   // Show controls and schedule auto-hide
   const showControls = useCallback(() => {
@@ -304,20 +313,30 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
 
   // Auto-pause when slide scrolls out of view
   useEffect(() => {
-    if (!isActive && player.playing) {
-      player.pause();
+    if (!isActive) {
+      if (player.playing) {
+        player.pause();
+      }
+      setPlaying(false);
     }
   }, [isActive, player]);
 
-  // Poll playback state every 250ms
+  // Poll only the active slide to avoid background intervals for mounted media.
   useEffect(() => {
-    const id = setInterval(() => {
+    if (!isActive) return undefined;
+
+    const syncPlayerState = () => {
       setCurrentTime(player.currentTime ?? 0);
       if (player.duration && player.duration > 0) setDuration(player.duration);
       setPlaying(player.playing ?? false);
+    };
+
+    syncPlayerState();
+    const id = setInterval(() => {
+      syncPlayerState();
     }, 250);
     return () => clearInterval(id);
-  }, [player]);
+  }, [isActive, player]);
 
   // Cleanup on unmount
   useEffect(() => {

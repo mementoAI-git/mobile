@@ -311,9 +311,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
   const handlePickFile = async () => {
     Haptics.selectionAsync();
     const uploadedFile = await pickAndUpload();
-    if (uploadedFile && uploadedFile.data?._id) {
-      setAttachments(prev => [...prev, uploadedFile.data._id]);
-    } else if (uploadedFile && uploadedFile._id) {
+    if (uploadedFile?._id) {
       setAttachments(prev => [...prev, uploadedFile._id]);
     }
   };

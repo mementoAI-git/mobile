@@ -1,44 +1,42 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
-import { post } from '@/api/mutations';
-import endpoint from '@/api/endpoint';
 import { useToast } from '@/components/ui/Toast';
+import {
+  getDocumentUploadInput,
+  getUploadedFileFromResponse,
+  isFileTooLarge,
+} from '@/features/media/attachments';
+import { useFileUpload as useFileUploadMutation } from '@/hooks/mutations/use-file-upload';
 import { logger } from '@/lib/logger';
+import type { IFile } from '@/types';
 
-const MAX_FILE_SIZE = 120 * 1024 * 1024; // 120MB
+const LEGACY_MAX_FILE_MB = 120;
+const LEGACY_MAX_FILE_BYTES = LEGACY_MAX_FILE_MB * 1024 * 1024;
 
 export function useFileUpload() {
-  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+  const { mutateAsync: uploadFileMutation, isPending: isUploading } = useFileUploadMutation();
 
   const uploadFile = useCallback(async (fileUri: string, mimeType: string, fileName: string) => {
-    setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', {
+      const uploadResult = await uploadFileMutation({
         uri: fileUri,
         type: mimeType,
         name: fileName,
-      } as any);
-
-      const response = await post(endpoint.upload, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
       });
 
-      if (response.data) {
-        return response.data;
+      const file = getUploadedFileFromResponse<IFile>(uploadResult);
+      if (file) {
+        return file;
       }
+
       throw new Error('Upload failed');
     } catch (error) {
       logger.error('File upload error:', error);
       toast('Failed to upload file', 'error');
       return null;
-    } finally {
-      setIsUploading(false);
     }
-  }, []);
+  }, [toast, uploadFileMutation]);
 
   const pickAndUpload = useCallback(async () => {
     try {
@@ -52,16 +50,15 @@ export function useFileUpload() {
       }
 
       const file = result.assets[0];
-      
-      if (file.size && file.size > MAX_FILE_SIZE) {
-        toast('File size exceeds 120MB limit', 'error');
+      const upload = getDocumentUploadInput(file);
+
+      if (isFileTooLarge(upload.fileSize, LEGACY_MAX_FILE_BYTES)) {
+        toast(`File size exceeds ${LEGACY_MAX_FILE_MB}MB limit`, 'error');
         return null;
       }
 
-      const mimeType = file.mimeType || 'application/octet-stream';
-      
-      const uploadResult = await uploadFile(file.uri, mimeType, file.name);
-      
+      const uploadResult = await uploadFile(upload.uri, upload.mimeType, upload.name);
+
       if (uploadResult) {
         toast('File uploaded successfully', 'success');
         return uploadResult;
@@ -73,7 +70,7 @@ export function useFileUpload() {
       toast('Failed to select file', 'error');
       return null;
     }
-  }, [uploadFile]);
+  }, [toast, uploadFile]);
 
   return {
     pickAndUpload,

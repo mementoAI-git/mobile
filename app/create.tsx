@@ -56,13 +56,24 @@ import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
+import {
+  DOCUMENT_PICKER_MIME_TYPES,
+  MAX_ATTACHMENT_FILE_MB,
+  getDocumentUploadInput,
+  getMediaUploadInput,
+  isFileTooLarge,
+} from '@/features/media/attachments';
+import {
+  getUploadedAttachmentIds,
+  hasUploadingAttachments,
+  type UploadAttachment,
+} from '@/features/media/attachment-upload-state';
+import { useAttachmentUploads } from '@/features/media/use-attachment-uploads';
 import type { IBeneficiary, IFile } from '@/types';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const NOTE_CHAR_MAX = 8000;
-const MAX_FILE_MB = 15;
-const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
 const DRAFT_STORAGE_KEY = (email?: string | null) => `qc_draft_${email ?? 'anon'}`;
 
@@ -75,33 +86,11 @@ const EMOJI_ROWS = [
 ];
 
 // File types accepted by the document picker (audio + documents)
-const FILE_INPUT_MIME = [
-  // Audio
-  'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/mp4',
-  'audio/aac', 'audio/flac', 'audio/ogg', 'audio/*',
-  // Documents
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/plain',
-  'application/rtf',
-];
+const FILE_INPUT_MIME = DOCUMENT_PICKER_MIME_TYPES;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface AttachmentItem {
-  clientId: string;
-  fileId: string;
-  uri: string;
-  name: string;
-  mimeType: string;
-  duration?: number;
-  isVoice?: boolean;
-  isUploading?: boolean;
-  file?: IFile;
-}
+type AttachmentItem = UploadAttachment<IFile>;
 
 // ─── Char ring ────────────────────────────────────────────────────────────────
 
@@ -304,7 +293,6 @@ export default function CreateScreen() {
   const isMountedRef = useRef(true);
 
   const [body, setBody] = useState('');
-  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>([]);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
@@ -316,6 +304,18 @@ export default function CreateScreen() {
   const { mutateAsync: uploadFileMutation } = useFileUpload();
   const { data: beneficiariesRaw } = useBeneficiaries();
   const { toast } = useToast();
+  const {
+    attachments,
+    setAttachments,
+    uploadAndAdd,
+  } = useAttachmentUploads<IFile>({
+    uploadFile: uploadFileMutation,
+    insert: 'append',
+    isMountedRef,
+    onUploadFailure: () => {
+      toast('Failed to upload attachment', 'error');
+    },
+  });
   const handleMicrophonePermissionDenied = useCallback((permission: PermissionLike) => {
     showPermissionRecoveryAlert({
       permission,
@@ -366,18 +366,13 @@ export default function CreateScreen() {
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const attachmentGroups = useMemo(() => {
-    const uploadedIds: string[] = [];
     const imageAttachments: AttachmentItem[] = [];
     const videoAttachments: AttachmentItem[] = [];
     const voiceAttachments: AttachmentItem[] = [];
     const audioAttachments: AttachmentItem[] = [];
     const fileAttachments: AttachmentItem[] = [];
-    let anyUploading = false;
 
     for (const attachment of attachments) {
-      if (attachment.isUploading) anyUploading = true;
-      if (attachment.fileId && !attachment.isUploading) uploadedIds.push(attachment.fileId);
-
       if (attachment.mimeType.startsWith('image/')) {
         imageAttachments.push(attachment);
       } else if (attachment.mimeType.startsWith('video/')) {
@@ -392,8 +387,8 @@ export default function CreateScreen() {
     }
 
     return {
-      anyUploading,
-      uploadedIds,
+      anyUploading: hasUploadingAttachments(attachments),
+      uploadedIds: getUploadedAttachmentIds(attachments),
       imageAttachments,
       videoAttachments,
       voiceAttachments,
@@ -412,27 +407,6 @@ export default function CreateScreen() {
     if (names.length === 1) return `Shared with ${names[0]}`;
     return `Shared with ${names.length} people`;
   }, [selectedBeneficiaryIds, beneficiaries]);
-
-  // ── Upload helper ──────────────────────────────────────────────────────────
-  const uploadAndAdd = useCallback(async (uri: string, mimeType: string, name: string, opts?: { isVoice?: boolean; duration?: number }) => {
-    const clientId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    setAttachments((prev) => [...prev, { clientId, fileId: '', uri, name, mimeType, isVoice: opts?.isVoice, duration: opts?.duration, isUploading: true }]);
-    try {
-      const result = await uploadFileMutation({ uri, type: mimeType, name });
-      if (!isMountedRef.current) return;
-      if (result?._id) {
-        setAttachments((prev) => prev.map((a) => a.clientId === clientId ? { ...a, fileId: result._id, isUploading: false, file: result } : a));
-      } else {
-        setAttachments((prev) => prev.filter((a) => a.clientId !== clientId));
-        toast('Failed to upload attachment', 'error');
-      }
-    } catch {
-      if (isMountedRef.current) {
-        setAttachments((prev) => prev.filter((a) => a.clientId !== clientId));
-        toast('Failed to upload attachment', 'error');
-      }
-    }
-  }, [uploadFileMutation, toast]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -473,7 +447,10 @@ export default function CreateScreen() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, quality: 0.85 });
     if (!result.canceled) {
-      for (const a of result.assets) await uploadAndAdd(a.uri, a.mimeType || 'image/jpeg', a.fileName || `photo_${Date.now()}.jpg`);
+      for (const a of result.assets) {
+        const upload = getMediaUploadInput(a);
+        await uploadAndAdd(upload.uri, upload.mimeType, upload.name);
+      }
     }
   }, [uploadAndAdd]);
 
@@ -492,8 +469,8 @@ export default function CreateScreen() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], allowsMultipleSelection: false, quality: 0.85 });
     if (!result.canceled && result.assets[0]) {
-      const a = result.assets[0];
-      await uploadAndAdd(a.uri, a.mimeType || 'video/mp4', a.fileName || `video_${Date.now()}.mp4`);
+      const upload = getMediaUploadInput(result.assets[0]);
+      await uploadAndAdd(upload.uri, upload.mimeType, upload.name);
     }
   }, [uploadAndAdd]);
 
@@ -503,9 +480,9 @@ export default function CreateScreen() {
     try {
       const result = await DocumentPicker.getDocumentAsync({ type: FILE_INPUT_MIME, copyToCacheDirectory: true });
       if (!result.canceled && result.assets[0]) {
-        const a = result.assets[0];
-        if (a.size && a.size > MAX_FILE_BYTES) { toast(`File exceeds ${MAX_FILE_MB}MB limit`, 'error'); return; }
-        await uploadAndAdd(a.uri, a.mimeType || 'application/octet-stream', a.name);
+        const upload = getDocumentUploadInput(result.assets[0]);
+        if (isFileTooLarge(upload.fileSize)) { toast(`File exceeds ${MAX_ATTACHMENT_FILE_MB}MB limit`, 'error'); return; }
+        await uploadAndAdd(upload.uri, upload.mimeType, upload.name);
       }
     } catch { /* user cancelled */ }
   }, [uploadAndAdd, toast]);

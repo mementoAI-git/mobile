@@ -32,19 +32,24 @@ import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useToast } from '@/components/ui/Toast';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
+import {
+  DOCUMENT_PICKER_MIME_TYPES,
+  MAX_ATTACHMENT_FILE_MB,
+  getDocumentUploadInput,
+  getMediaUploadInput,
+  isFileTooLarge,
+} from '@/features/media/attachments';
+import {
+  getUploadedAttachments,
+  hasUploadingAttachments,
+  type UploadAttachment,
+} from '@/features/media/attachment-upload-state';
+import { useAttachmentUploads } from '@/features/media/use-attachment-uploads';
 import type { IFile, IMessageAttachment } from '@/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface AttachmentItem {
-  clientId: string;
-  fileId: string | null;   // null while uploading
-  uri: string;
-  name: string;
-  mimeType: string;
-  isUploading: boolean;
-  file?: IFile;
-}
+type AttachmentItem = UploadAttachment<IFile>;
 
 type ChatAttachmentPreview = IMessageAttachment;
 
@@ -65,9 +70,6 @@ interface ChatInputProps {
   placeholder?: string;
   loading?: boolean;
 }
-
-const MAX_FILE_MB = 15;
-const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
 const SUPPORTED_MIME = [
   'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic',
@@ -98,7 +100,6 @@ export function ChatInput({
   const [text, setText] = useState('');
   const [multiline, setMultiline] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
@@ -112,6 +113,18 @@ export function ChatInput({
   const attachmentPickerRef = useRef<BottomSheetModal>(null);
 
   const { mutateAsync: uploadFile } = useFileUpload();
+  const {
+    attachments,
+    setAttachments,
+    uploadAndAdd,
+    removeAttachment: removeUploadedAttachment,
+  } = useAttachmentUploads<IFile>({
+    uploadFile,
+    insert: 'append',
+    onFileTooLarge: (maxFileMb) => {
+      toast(`Files must be under ${maxFileMb}MB`, 'error');
+    },
+  });
 
   // ─── Voice-to-text ──────────────────────────────────────────────────────
 
@@ -208,29 +221,6 @@ export function ChatInput({
     };
   }, []);
 
-  // ─── File upload helper ───────────────────────────────────────────────────
-
-  const uploadAndAdd = useCallback(async (uri: string, mimeType: string, name: string, fileSize?: number) => {
-    if (fileSize && fileSize > MAX_FILE_BYTES) {
-      toast(`Files must be under ${MAX_FILE_MB}MB`, 'error');
-      return;
-    }
-    const clientId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    setAttachments(prev => [...prev, { clientId, fileId: null, uri, name, mimeType, isUploading: true }]);
-    try {
-      const result = await uploadFile({ uri, type: mimeType, name });
-      if (result?._id) {
-        setAttachments(prev => prev.map(a =>
-          a.clientId === clientId ? { ...a, fileId: result._id, isUploading: false, file: result } : a
-        ));
-      } else {
-        setAttachments(prev => prev.filter(a => a.clientId !== clientId));
-      }
-    } catch {
-      setAttachments(prev => prev.filter(a => a.clientId !== clientId));
-    }
-  }, [uploadFile]);
-
   // ─── Attachment pickers ───────────────────────────────────────────────────
 
   // Camera — launches device camera to capture photo or video
@@ -252,14 +242,11 @@ export function ChatInput({
         quality: 0.85,
       });
       if (!result.canceled && result.assets.length > 0) {
-        const asset = result.assets[0];
-        const isVideo = asset.mimeType?.startsWith('video/');
-        const mime = asset.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg');
-        const name = asset.fileName || `${isVideo ? 'video' : 'photo'}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`;
-        await uploadAndAdd(asset.uri, mime, name, asset.fileSize);
+        const asset = getMediaUploadInput(result.assets[0]);
+        await uploadAndAdd(asset.uri, asset.mimeType, asset.name, { fileSize: asset.fileSize });
       }
     } catch { /* user cancelled */ }
-  }, [uploadAndAdd, toast]);
+  }, [uploadAndAdd]);
 
   const handleAddPickerAssets = useCallback(async (pickedAssets: ChatPickerAsset[]) => {
     await Promise.all(pickedAssets.map(asset =>
@@ -272,44 +259,41 @@ export function ChatInput({
     Haptics.selectionAsync();
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: [
-          'audio/mpeg', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/*',
-          'application/pdf',
-          'text/plain',
-        ],
+        type: DOCUMENT_PICKER_MIME_TYPES,
         copyToCacheDirectory: true,
         multiple: true,
       });
       if (!result.canceled && result.assets.length > 0) {
         // Filter out oversized files first, then upload remaining in parallel
         const validAssets = result.assets.filter(asset => {
-          if (asset.size && asset.size > MAX_FILE_BYTES) {
-            toast(`"${asset.name}" exceeds the ${MAX_FILE_MB}MB limit.`, 'error');
+          if (isFileTooLarge(asset.size)) {
+            toast(`"${asset.name}" exceeds the ${MAX_ATTACHMENT_FILE_MB}MB limit.`, 'error');
             return false;
           }
           return true;
         });
-        await Promise.all(validAssets.map(asset =>
-          uploadAndAdd(asset.uri, asset.mimeType || 'application/octet-stream', asset.name, asset.size)
-        ));
+        await Promise.all(validAssets.map((asset) => {
+          const upload = getDocumentUploadInput(asset);
+          return uploadAndAdd(upload.uri, upload.mimeType, upload.name, { fileSize: upload.fileSize });
+        }));
       }
     } catch { /* user cancelled */ }
   }, [uploadAndAdd, toast]);
 
   const removeAttachment = useCallback((clientId: string) => {
     Haptics.selectionAsync();
-    setAttachments(prev => prev.filter(a => a.clientId !== clientId));
-  }, []);
+    removeUploadedAttachment(clientId);
+  }, [removeUploadedAttachment]);
 
   // ─── Send ─────────────────────────────────────────────────────────────────
 
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
-    const readyIds = attachments.filter(a => a.fileId && !a.isUploading).map(a => a.fileId as string);
-    const readyAttachmentPreviews = attachments
-      .filter(a => a.fileId && !a.isUploading)
+    const uploadedAttachments = getUploadedAttachments(attachments);
+    const readyIds = uploadedAttachments.map(a => a.fileId);
+    const readyAttachmentPreviews = uploadedAttachments
       .map((a): ChatAttachmentPreview => ({
-        _id: a.fileId ?? undefined,
+        _id: a.fileId,
         url: a.file?.url ?? a.uri,
         name: a.file?.name ?? a.name,
         type: a.file?.type ?? a.mimeType,
@@ -317,7 +301,7 @@ export function ChatInput({
       }));
     if ((!trimmed && readyIds.length === 0) || disabled) return;
     // Block if any upload is still in progress
-    if (attachments.some(a => a.isUploading)) return;
+    if (hasUploadingAttachments(attachments)) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onSend({ text: trimmed, attachmentIds: readyIds, attachmentPreviews: readyAttachmentPreviews });
@@ -325,7 +309,7 @@ export function ChatInput({
     setMultiline(false);
     setAttachments([]);
     textBeforeDictationRef.current = '';
-  }, [text, attachments, disabled, onSend]);
+  }, [text, attachments, disabled, onSend, setAttachments]);
 
   const handleMicPress = useCallback(async () => {
     if (disabled) return;
@@ -367,26 +351,25 @@ export function ChatInput({
   // ─── Derived ──────────────────────────────────────────────────────────────
 
   const attachmentState = useMemo(() => {
-    let anyUploading = false;
-    let readyCount = 0;
+    const uploadedAttachments = getUploadedAttachments(attachments);
     const previewable: PreviewAttachment[] = [];
 
-    for (const attachment of attachments) {
-      if (attachment.isUploading) anyUploading = true;
-      if (attachment.fileId) {
-        readyCount += 1;
-        if (attachment.uri) {
-          previewable.push({
-            clientId: attachment.clientId,
-            uri: attachment.uri,
-            name: attachment.name,
-            mimeType: attachment.mimeType,
-          });
-        }
+    for (const attachment of uploadedAttachments) {
+      if (attachment.uri) {
+        previewable.push({
+          clientId: attachment.clientId,
+          uri: attachment.uri,
+          name: attachment.name,
+          mimeType: attachment.mimeType,
+        });
       }
     }
 
-    return { anyUploading, readyCount, previewable };
+    return {
+      anyUploading: hasUploadingAttachments(attachments),
+      readyCount: uploadedAttachments.length,
+      previewable,
+    };
   }, [attachments]);
   const anyUploading = attachmentState.anyUploading;
   const hasAttachments = attachments.length > 0;

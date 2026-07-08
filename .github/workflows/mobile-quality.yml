@@ -28,6 +28,9 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      - name: Unit tests
+        run: bun run test
+
       - name: Production readiness checks
         run: bun run check:prod
 
