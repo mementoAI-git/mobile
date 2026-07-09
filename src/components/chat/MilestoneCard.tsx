@@ -8,7 +8,6 @@ import Animated, {
   withSpring,
   withSequence,
 } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
 import { Trophy } from 'lucide-react-native';
 import { FONTS, COLORS } from '@/constants/tokens';
 
@@ -29,7 +28,6 @@ export function MilestoneCard({ enrichmentDelta, milestoneLabel }: MilestoneCard
 
   useEffect(() => {
     if (enrichmentDelta && enrichmentDelta > 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       scale.value = withSequence(withSpring(1.08), withSpring(1));
     }
   }, [enrichmentDelta]);

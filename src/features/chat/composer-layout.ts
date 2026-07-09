@@ -40,6 +40,7 @@ interface ExpandedTextComposerInput {
   textHeight: number;
   collapsedActionSize: number;
   expansionBuffer: number;
+  isExpanded?: boolean;
 }
 
 export function getComposerTextHeight({
@@ -96,9 +97,11 @@ export function shouldUseExpandedTextComposer({
   textHeight,
   collapsedActionSize,
   expansionBuffer,
+  isExpanded = false,
 }: ExpandedTextComposerInput) {
   if (hasAttachments) return true;
   if (!hasText) return false;
+  if (isExpanded) return true;
 
   return textHeight > collapsedActionSize + expansionBuffer;
 }

@@ -71,7 +71,10 @@ export default function CategoryPromptsScreen() {
         <View className="flex-row pt-2">
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => handlePromptPress(item)}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              handlePromptPress(item);
+            }}
             className="px-5 py-2 rounded-full border border-stroke-strong bg-white active:bg-fill-weaker"
           >
             <Animated.Text
@@ -92,7 +95,10 @@ export default function CategoryPromptsScreen() {
       {/* Header */}
       <View className="flex-row items-center gap-3 px-6 py-4 border-b border-stroke-weaker bg-card shadow-sm">
         <TouchableOpacity
-          onPress={handleBack}
+          onPress={() => {
+            Haptics.selectionAsync();
+            handleBack();
+          }}
           activeOpacity={0.7}
           className="size-10 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center -ml-2"
         >
@@ -178,6 +184,7 @@ export default function CategoryPromptsScreen() {
                         key={tab}
                         activeOpacity={0.7}
                         onPress={() => {
+                          if (isActive) return;
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                           setActiveTab(idx as 0 | 1 | 2);
                         }}

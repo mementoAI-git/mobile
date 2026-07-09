@@ -8,18 +8,22 @@ import { useMemoryByPrompt } from '@/hooks/queries/use-prompts';
 import { useStartConversation } from '@/hooks/mutations/use-memory-mutations';
 import { useStreamChat } from '@/hooks/use-stream-chat';
 import { useEnrichmentStats } from '@/hooks/use-enrichment-stats';
-import { useUiStore } from '@/store';
+import { useProfile } from '@/hooks/queries/use-profile';
+import { useUiStore, useUserStore } from '@/store';
 import { queryKeys } from '@/constants/query-keys';
 import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import type { ChatReplyQuote } from '@/lib/utils';
 import type { IMessageAttachment } from '@/types';
+import { resolveChatConversationId } from '@/features/chat/navigation';
 
 export function useChatLogic() {
-  const { id, type, promptTitle } = useLocalSearchParams<{ id: string; type?: string; promptTitle?: string }>();
+  const { id, type, promptTitle } = useLocalSearchParams<{ id?: string; type?: string; promptTitle?: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
   const flatListRef = useRef<FlatList>(null);
   const openSheet = useUiStore((s) => s.openSheet);
+  const userPrimaryConversationId = useUserStore((s) => s.user?.primary_conversation_id);
+  const { data: profile, isLoading: isLoadingProfile } = useProfile();
 
   // ── Chat mode (open vs deep_dive) ────────────────────────────────────────
   const [chatMode, setChatMode] = useState<ChatMode>('open');
@@ -27,7 +31,7 @@ export function useChatLogic() {
 
   const isPromptType = type === 'prompt';
   const { data: promptMemoryRes, isLoading: isLoadingPromptMemory } = useMemoryByPrompt(
-    isPromptType ? id : '',
+    isPromptType ? (id ?? '') : '',
   );
 
   const promptMemory = promptMemoryRes?.data;
@@ -36,7 +40,10 @@ export function useChatLogic() {
   // Passing 'new' as a memory_id to the AI endpoint or the messages query causes backend errors.
   const activeChatId = isPromptType
     ? (promptMemory?._id ?? null)
-    : (id && id !== 'new' ? id : null);
+    : resolveChatConversationId(
+        id,
+        profile?.primary_conversation_id ?? userPrimaryConversationId,
+      );
 
   const { data: serverMessages, isLoading: isLoadingMessages } = useConversationMessages(
     activeChatId ?? '',
@@ -60,8 +67,6 @@ export function useChatLogic() {
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();
-    // The HostChatEntryScreen uses router.replace() → clears back stack.
-    // Must guard before calling back() or it throws GO_BACK not handled.
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -122,7 +127,11 @@ export function useChatLogic() {
     setDeepDiveDimension(null);
   }, []);
 
-  const isLoading = isLoadingMessages || (isPromptType && isLoadingPromptMemory);
+  const isHostChatTab = !id && !isPromptType;
+  const isLoading =
+    isLoadingMessages ||
+    (isPromptType && isLoadingPromptMemory) ||
+    (isHostChatTab && isLoadingProfile);
 
   return {
     id,

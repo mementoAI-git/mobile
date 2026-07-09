@@ -192,9 +192,9 @@ export function TabBar({ state, navigation }: TabBarProps) {
       target: routeKey,
       canPreventDefault: true,
     });
-    if (!isFocused && !event.defaultPrevented) {
-      navigation.navigate(routeName);
-    }
+    if (isFocused || event.defaultPrevented) return;
+
+    navigation.navigate(routeName);
   }, [navigation]);
 
   const handleSearchPress = useCallback(() => {
@@ -202,8 +202,9 @@ export function TabBar({ state, navigation }: TabBarProps) {
     openSheet('search-memory');
   }, [openSheet]);
 
-  // Hide on detail screens
+  // Host Chat owns the full bottom interaction area; detail screens do as well.
   if (
+    pathname === '/chat' ||
     pathname.match(/^\/chat\/[^/]+$/) ||
     pathname.match(/^\/(tabs\/)?stories\/[^/]+$/)
   ) {

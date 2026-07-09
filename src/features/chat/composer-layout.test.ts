@@ -95,4 +95,15 @@ describe('chat composer layout', () => {
       expansionBuffer: 8,
     })).toBe(true);
   });
+
+  test('keeps expanded text composer stable after line-wrap expansion', () => {
+    expect(shouldUseExpandedTextComposer({
+      hasAttachments: false,
+      hasText: true,
+      textHeight: 34,
+      collapsedActionSize: 40,
+      expansionBuffer: 8,
+      isExpanded: true,
+    })).toBe(true);
+  });
 });

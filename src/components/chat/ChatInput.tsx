@@ -128,6 +128,7 @@ export function ChatInput({
   const [compactMeasuredHeight, setCompactMeasuredHeight] = useState(COMPACT_TEXT_MIN_HEIGHT);
   const [compactMeasuredPadding, setCompactMeasuredPadding] = useState(0);
   const [expandedMeasuredHeight, setExpandedMeasuredHeight] = useState(EXPANDED_TEXT_MIN_HEIGHT);
+  const [isTextComposerExpanded, setIsTextComposerExpanded] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -347,6 +348,7 @@ export function ChatInput({
     setCompactMeasuredHeight(COMPACT_TEXT_MIN_HEIGHT);
     setCompactMeasuredPadding(0);
     setExpandedMeasuredHeight(EXPANDED_TEXT_MIN_HEIGHT);
+    setIsTextComposerExpanded(false);
     setAttachments([]);
     textBeforeDictationRef.current = '';
   }, [text, attachments, disabled, onSend, setAttachments]);
@@ -381,6 +383,7 @@ export function ChatInput({
       setCompactMeasuredHeight(COMPACT_TEXT_MIN_HEIGHT);
       setCompactMeasuredPadding(0);
       setExpandedMeasuredHeight(EXPANDED_TEXT_MIN_HEIGHT);
+      setIsTextComposerExpanded(false);
     }
     textBeforeDictationRef.current = '';
   }, [cancelRecording, isRecording]);
@@ -448,11 +451,12 @@ export function ChatInput({
     composerChromeHeight: EXPANDED_COMPOSER_CHROME_HEIGHT,
     minHeight: EXPANDED_TEXT_MIN_HEIGHT,
   });
+  const activeExpandedTextMaxHeight = hasAttachments ? expandedTextMaxHeight : textOnlyTextMaxHeight;
 
   useEffect(() => {
     setCompactTextHeight((prev) => Math.min(prev, compactTextMaxHeight));
-    setExpandedTextHeight((prev) => Math.min(prev, expandedTextMaxHeight));
-  }, [compactTextMaxHeight, expandedTextMaxHeight]);
+    setExpandedTextHeight((prev) => Math.min(prev, activeExpandedTextMaxHeight));
+  }, [activeExpandedTextMaxHeight, compactTextMaxHeight]);
 
   const handleOpenAttachmentPicker = useCallback(() => {
     if (disabled || anyUploading) return;
@@ -470,6 +474,7 @@ export function ChatInput({
       setCompactMeasuredHeight(COMPACT_TEXT_MIN_HEIGHT);
       setCompactMeasuredPadding(0);
       setExpandedMeasuredHeight(EXPANDED_TEXT_MIN_HEIGHT);
+      setIsTextComposerExpanded(false);
     }
   }, [isRecording]);
 
@@ -497,13 +502,13 @@ export function ChatInput({
     const nextHeight = getComposerTextHeight({
       measuredHeight,
       minHeight: EXPANDED_TEXT_MIN_HEIGHT,
-      maxHeight: expandedTextMaxHeight,
+      maxHeight: activeExpandedTextMaxHeight,
       verticalPadding: EXPANDED_TEXT_VERTICAL_PADDING,
       buffer: TEXT_HEIGHT_BUFFER,
     });
 
     setExpandedTextHeight((prev) => (Math.abs(prev - nextHeight) > 1 ? nextHeight : prev));
-  }, [expandedTextMaxHeight]);
+  }, [activeExpandedTextMaxHeight]);
 
   const compactTextScrollable = getComposerTextScrollEnabled({
     measuredHeight: compactMeasuredHeight,
@@ -517,7 +522,7 @@ export function ChatInput({
     renderedHeight: expandedTextHeight,
     verticalPadding: EXPANDED_TEXT_VERTICAL_PADDING,
     buffer: TEXT_HEIGHT_BUFFER,
-    maxHeight: expandedTextMaxHeight,
+    maxHeight: activeExpandedTextMaxHeight,
   });
   const useExpandedComposer = shouldUseExpandedTextComposer({
     hasAttachments,
@@ -525,7 +530,19 @@ export function ChatInput({
     textHeight: compactTextHeight,
     collapsedActionSize: SECONDARY_ACTION_SIZE,
     expansionBuffer: COMPACT_TEXT_EXPANSION_BUFFER,
+    isExpanded: isTextComposerExpanded,
   });
+
+  useEffect(() => {
+    if (!hasText) {
+      if (isTextComposerExpanded) setIsTextComposerExpanded(false);
+      return;
+    }
+
+    if (useExpandedComposer && !isTextComposerExpanded) {
+      setIsTextComposerExpanded(true);
+    }
+  }, [hasText, isTextComposerExpanded, useExpandedComposer]);
 
   return (
     <Animated.View
@@ -635,7 +652,7 @@ export function ChatInput({
                   scrollEnabled={expandedTextScrollable}
                   style={[
                     styles.expandedTextInput,
-                    { height: expandedTextHeight, maxHeight: expandedTextMaxHeight },
+                    { height: expandedTextHeight, maxHeight: activeExpandedTextMaxHeight },
                     isRecording && styles.recordingTextInput,
                   ]}
                   blurOnSubmit={false}
@@ -685,15 +702,15 @@ export function ChatInput({
               <TextInput
                 value={text}
                 onChangeText={handleTextChange}
-                onContentSizeChange={handleCompactContentSizeChange}
-                scrollEnabled={compactTextScrollable}
+                onContentSizeChange={handleExpandedContentSizeChange}
+                scrollEnabled={expandedTextScrollable}
                 placeholder={isRecording ? 'Listening…' : placeholder}
                 placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
                 selectionColor={isRecording ? COLORS.brand : COLORS.textStrong}
                 multiline
                 style={[
                   styles.expandedTextInput,
-                  { height: compactTextHeight, maxHeight: compactTextMaxHeight },
+                  { height: expandedTextHeight, maxHeight: activeExpandedTextMaxHeight },
                   isRecording && styles.recordingTextInput,
                 ]}
                 blurOnSubmit={false}

@@ -1,5 +1,4 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { useCallback, useState, useMemo } from 'react';
 import { useCategoryDetailsPrompts } from '@/hooks/queries/use-prompts';
 import { useStartConversation } from '@/hooks/mutations/use-memory-mutations';
@@ -82,7 +81,6 @@ export function useCategoryPromptsLogic() {
   }, [id]);
 
   const handlePromptPress = useCallback((prompt: IPrompt) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({
       pathname: '/chat/[id]',
       // promptTitle is passed so the chat screen can display the question card
@@ -94,7 +92,6 @@ export function useCategoryPromptsLogic() {
   }, [id, router]);
 
   const handleBack = useCallback(() => {
-    Haptics.selectionAsync();
     // Explore category can be opened via deep link as root screen
     if (router.canGoBack()) {
       router.back();
