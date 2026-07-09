@@ -24,17 +24,23 @@ import React, {
 } from 'react';
 import {
   View, Text, Modal, TouchableOpacity, StyleSheet, Image,
-  ActivityIndicator, Linking,
+  ActivityIndicator, AppState, Linking,
 } from 'react-native';
 import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-context';
 import { CameraView, Camera as ExpoCamera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import { useToast } from '@/components/ui/Toast';
+import { PermissionRecoveryState } from '@/components/ui/PermissionRecoveryState';
 import {
-  X, RotateCcw, Camera, Video, Zap, ZapOff, ImageIcon,
+  X, RotateCcw, Camera, Video, Zap, ZapOff, ImageIcon, Mic,
 } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
+import {
+  getPermissionRecoveryAction,
+  isPermissionGranted,
+  type PermissionLike,
+} from '@/lib/permission-recovery';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -61,7 +67,6 @@ export function CameraCaptureModal({
   onCapture,
 }: CameraCaptureModalProps) {
   const insets = useSafeAreaInsets();
-  const { toast } = useToast();
 
   // expo-camera v17: ref to the class component instance
   const cameraRef = useRef<CameraView>(null);
@@ -73,7 +78,9 @@ export function CameraCaptureModal({
   const [isCapturing, setIsCapturing] = useState(false);   // photo shutter busy
   const [isRecording, setIsRecording] = useState(false);   // video recording active
   const [recordSeconds, setRecordSeconds] = useState(0);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [cameraPermission, setCameraPermission] = useState<PermissionLike | null>(null);
+  const [microphonePermission, setMicrophonePermission] = useState<PermissionLike | null>(null);
+  const [permissionLoading, setPermissionLoading] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMountedRef = useRef(true);
@@ -88,29 +95,117 @@ export function CameraCaptureModal({
     };
   }, []);
 
-  // Request both camera + mic when the modal first opens
+  // Request camera when the modal first opens. Microphone is requested only
+  // when the user chooses video, so denied mic access never blocks photos.
   useEffect(() => {
     if (!visible) return;
     setIsCameraReady(false);
     setIsRecording(false);
     setIsCapturing(false);
     setRecordSeconds(0);
+    setCameraPermission(null);
+    setPermissionLoading(true);
 
     (async () => {
-      const [camResult, micResult] = await Promise.all([
-        ExpoCamera.requestCameraPermissionsAsync(),
-        ExpoCamera.requestMicrophonePermissionsAsync(),
-      ]);
-      if (!isMountedRef.current) return;
-      const granted = camResult.status === 'granted' && micResult.status === 'granted';
-      setHasPermission(granted);
-      if (!granted) {
-        toast('Camera & microphone access required. Open Settings to allow.', 'error');
-        onClose();
+      try {
+        const camResult = await ExpoCamera.requestCameraPermissionsAsync();
+        if (!isMountedRef.current) return;
+        setCameraPermission(camResult);
+      } finally {
+        if (isMountedRef.current) {
+          setPermissionLoading(false);
+        }
       }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
+
+  const requestMicrophonePermission = useCallback(async () => {
+    const micResult = await ExpoCamera.requestMicrophonePermissionsAsync();
+    if (isMountedRef.current) {
+      setMicrophonePermission(micResult);
+    }
+    return micResult;
+  }, []);
+
+  const refreshPermissions = useCallback(async () => {
+    const camResult = await ExpoCamera.getCameraPermissionsAsync();
+    if (!isMountedRef.current) return;
+    setCameraPermission(camResult);
+
+    if (captureMode === 'video') {
+      const micResult = await ExpoCamera.getMicrophonePermissionsAsync();
+      if (isMountedRef.current) {
+        setMicrophonePermission(micResult);
+      }
+    }
+  }, [captureMode]);
+
+  const cameraGranted = isPermissionGranted(cameraPermission);
+  const microphoneGranted = isPermissionGranted(microphonePermission);
+  const cameraIssue = cameraPermission && !cameraGranted ? cameraPermission : null;
+  const microphoneIssue =
+    captureMode === 'video' && microphonePermission && !microphoneGranted
+      ? microphonePermission
+      : null;
+  const activePermissionIssue = cameraIssue ?? microphoneIssue;
+  const activePermissionKind = cameraIssue ? 'camera' : microphoneIssue ? 'microphone' : null;
+  const activePermissionAction = getPermissionRecoveryAction(activePermissionIssue);
+
+  const handlePermissionAction = useCallback(async () => {
+    if (activePermissionAction === 'settings') {
+      Linking.openSettings();
+      return;
+    }
+
+    if (activePermissionKind === 'camera') {
+      setPermissionLoading(true);
+      try {
+        const result = await ExpoCamera.requestCameraPermissionsAsync();
+        if (isMountedRef.current) setCameraPermission(result);
+      } finally {
+        if (isMountedRef.current) setPermissionLoading(false);
+      }
+      return;
+    }
+
+    if (activePermissionKind === 'microphone') {
+      await requestMicrophonePermission();
+    }
+  }, [activePermissionAction, activePermissionKind, requestMicrophonePermission]);
+
+  const handlePermissionSecondary = useCallback(() => {
+    if (activePermissionKind === 'microphone') {
+      setCaptureMode('photo');
+      return;
+    }
+    onClose();
+  }, [activePermissionKind, onClose]);
+
+  const permissionRecoveryCopy = {
+    icon: activePermissionKind === 'microphone' ? Mic : Camera,
+    title: activePermissionKind === 'microphone' ? 'Microphone is off' : 'Camera is tucked away',
+    description:
+      activePermissionKind === 'microphone'
+        ? activePermissionAction === 'settings'
+          ? 'Video memories need microphone access for sound. Turn it back on in Settings, or keep capturing photos.'
+          : 'Allow microphone access to record sound with your videos. Photo capture still works without it.'
+        : activePermissionAction === 'settings'
+        ? 'Memento cannot open the camera because access is turned off in Settings. Turn it back on to capture a memory here.'
+        : 'Allow camera access to capture photos and videos directly into your memories.',
+    secondaryLabel: activePermissionKind === 'microphone' ? 'Use Photo' : 'Dismiss',
+  };
+
+  useEffect(() => {
+    if (!visible || !activePermissionIssue) return undefined;
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        refreshPermissions();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [activePermissionIssue, refreshPermissions, visible]);
 
   // ── Recording timer ───────────────────────────────────────────────────────
 
@@ -158,6 +253,10 @@ export function CameraCaptureModal({
 
   const handleStartRecording = useCallback(async () => {
     if (!isCameraReady || isRecording || !cameraRef.current) return;
+    if (!microphoneGranted) {
+      const micResult = await requestMicrophonePermission();
+      if (!isPermissionGranted(micResult)) return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setIsRecording(true);
     startTimer();
@@ -179,7 +278,7 @@ export function CameraCaptureModal({
         setRecordSeconds(0);
       }
     }
-  }, [isCameraReady, isRecording, startTimer, clearTimer, onCapture, onClose]);
+  }, [isCameraReady, isRecording, microphoneGranted, requestMicrophonePermission, startTimer, clearTimer, onCapture, onClose]);
 
   const handleStopRecording = useCallback(() => {
     if (!isRecording || !cameraRef.current) return;
@@ -205,9 +304,14 @@ export function CameraCaptureModal({
   const handleGallery = useCallback(async () => {
     if (isRecording) return;
     Haptics.selectionAsync();
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      toast('Allow Memento to access your photos and videos.', 'error');
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!isPermissionGranted(permission)) {
+      showPermissionRecoveryAlert({
+        permission,
+        title: 'Media is tucked away',
+        description: 'Allow photo and video access to choose media from your library.',
+        settingsDescription: 'Photo and video access is turned off in Settings. Turn it back on to choose media from your library.',
+      });
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -229,11 +333,14 @@ export function CameraCaptureModal({
 
   // ── Mode switch (only allowed while not recording) ────────────────────────
 
-  const handleSetMode = useCallback((m: CaptureMode) => {
+  const handleSetMode = useCallback(async (m: CaptureMode) => {
     if (isRecording) return;
     Haptics.selectionAsync();
     setCaptureMode(m);
-  }, [isRecording]);
+    if (m === 'video' && !microphoneGranted) {
+      await requestMicrophonePermission();
+    }
+  }, [isRecording, microphoneGranted, requestMicrophonePermission]);
 
   // ── Early-exit: Modal not visible ─────────────────────────────────────────
 
@@ -255,27 +362,29 @@ export function CameraCaptureModal({
       <View style={styles.root}>
 
         {/* ── Loading / denied ── */}
-        {hasPermission === null && (
+        {permissionLoading && !activePermissionIssue && (
           <View style={styles.centred}>
             <ActivityIndicator color={COLORS.textInverse} size="large" />
           </View>
         )}
 
-        {hasPermission === false && (
+        {activePermissionIssue && (
           <View style={styles.centred}>
-            <Text style={styles.permText}>Camera permission required</Text>
-            <TouchableOpacity
-              onPress={() => Linking.openSettings()}
-              style={styles.permBtn}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.permBtnText}>Open Settings</Text>
-            </TouchableOpacity>
+            <PermissionRecoveryState
+              icon={permissionRecoveryCopy.icon}
+              title={permissionRecoveryCopy.title}
+              description={permissionRecoveryCopy.description}
+              actionLabel={activePermissionAction === 'settings' ? 'Open Settings' : 'Allow access'}
+              onAction={handlePermissionAction}
+              secondaryLabel={permissionRecoveryCopy.secondaryLabel}
+              onSecondary={handlePermissionSecondary}
+              tone="dark"
+            />
           </View>
         )}
 
         {/* ── Camera live view ── */}
-        {hasPermission === true && (
+        {cameraGranted && !activePermissionIssue && (
           <>
             <CameraView
               ref={cameraRef}
@@ -463,24 +572,6 @@ const styles = StyleSheet.create({
     padding: 32,
     gap: 16,
   },
-  permText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 16,
-    color: COLORS.textInverse,
-    textAlign: 'center',
-  },
-  permBtn: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 999,
-    backgroundColor: COLORS.brand,
-  },
-  permBtnText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 14,
-    color: COLORS.textInverse,
-  },
-
   // ── Top bar ──────────────────────────────────────────────────────────────
   topBar: {
     position: 'absolute',

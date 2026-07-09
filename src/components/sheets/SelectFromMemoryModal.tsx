@@ -1,12 +1,13 @@
 import React, { forwardRef, useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { X, Search } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { Button } from '@/components/ui';
 import { useMemories } from '@/hooks/queries/use-memories';
 import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { IMemory } from '@/types';
 
 interface SelectFromMemoryModalProps {
   selectedIds: string[];
@@ -20,11 +21,16 @@ export const SelectFromMemoryModal = forwardRef<BottomSheetModal, SelectFromMemo
   const [query, setQuery] = useState('');
   
   const { data } = useMemories();
-  const memories = data?.pages.flatMap((p) => p.docs) ?? [];
+  const memories = useMemo(() => data?.pages.flatMap((p) => p.docs) ?? [], [data?.pages]);
+  const selectedSet = useMemo(() => new Set(localSelected), [localSelected]);
   
   const results = useMemo(() => {
     if (!query.trim()) return memories;
-    return memories.filter(m => m.title?.toLowerCase().includes(query.toLowerCase()) || m.body?.toLowerCase().includes(query.toLowerCase()));
+    const normalizedQuery = query.trim().toLowerCase();
+    return memories.filter(m => (
+      m.title?.toLowerCase().includes(normalizedQuery) ||
+      m.body?.toLowerCase().includes(normalizedQuery)
+    ));
   }, [query, memories]);
 
   const renderBackdrop = useCallback(
@@ -34,19 +40,53 @@ export const SelectFromMemoryModal = forwardRef<BottomSheetModal, SelectFromMemo
     []
   );
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (ref && 'current' in ref && ref.current) {
       ref.current.dismiss();
     }
-  };
+  }, [ref]);
 
   const handlePresent = useCallback(() => {
     setLocalSelected(selectedIds);
   }, [selectedIds]);
 
-  const toggleSelection = (id: string) => {
+  const toggleSelection = useCallback((id: string) => {
     setLocalSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    onConfirm(localSelected);
+    handleClose();
+  }, [handleClose, localSelected, onConfirm]);
+
+  const keyExtractor = useCallback((item: IMemory) => item._id, []);
+
+  const renderMemoryItem = useCallback(({ item: memory }: { item: IMemory }) => {
+    const isSelected = selectedSet.has(memory._id);
+
+    return (
+      <TouchableOpacity
+        onPress={() => toggleSelection(memory._id)}
+        activeOpacity={0.8}
+        className={`w-[48%] rounded-xl border-2 ${isSelected ? 'border-brand' : 'border-transparent'}`}
+      >
+        <View className="pointer-events-none flex-1">
+          <MasonryMemoryCard memory={memory} />
+        </View>
+        {isSelected && (
+          <View className="absolute top-2 right-2 bg-brand rounded-full p-1 z-10 shadow-sm">
+            <X size={12} color="white" style={{ transform: [{ rotate: '45deg' }] }} />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  }, [selectedSet, toggleSelection]);
+
+  const renderEmptyState = useCallback(() => (
+    <Text className="text-center text-text-weak mt-10" style={{ fontFamily: FONTS.sans }}>
+      No memories found.
+    </Text>
+  ), []);
 
   const insets = useSafeAreaInsets();
 
@@ -89,36 +129,19 @@ export const SelectFromMemoryModal = forwardRef<BottomSheetModal, SelectFromMemo
           </View>
         </View>
 
-        {/* Grid (Scrollable) */}
-        <BottomSheetScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}>
-          <View className="flex-row flex-wrap justify-between">
-            {results.map((m) => {
-              const isSelected = localSelected.includes(m._id);
-              return (
-                <TouchableOpacity
-                  key={m._id}
-                  onPress={() => toggleSelection(m._id)}
-                  activeOpacity={0.8}
-                  className={`w-[48%] mb-4 rounded-xl border-2 ${isSelected ? 'border-brand' : 'border-transparent'}`}
-                >
-                  <View className="pointer-events-none flex-1">
-                    <MasonryMemoryCard memory={m} />
-                  </View>
-                  {isSelected && (
-                    <View className="absolute top-2 right-2 bg-brand rounded-full p-1 z-10 shadow-sm">
-                      <X size={12} color="white" style={{ transform: [{ rotate: '45deg' }] }} />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          {results.length === 0 && (
-            <Text className="text-center text-text-weak mt-10" style={{ fontFamily: FONTS.sans }}>
-              No memories found.
-            </Text>
-          )}
-        </BottomSheetScrollView>
+        <BottomSheetFlatList
+          data={results}
+          keyExtractor={keyExtractor}
+          renderItem={renderMemoryItem}
+          numColumns={2}
+          initialNumToRender={6}
+          maxToRenderPerBatch={4}
+          windowSize={5}
+          removeClippedSubviews
+          columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 16 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+          ListEmptyComponent={renderEmptyState}
+        />
 
         {/* Footer (Sticky) */}
         <View 
@@ -129,10 +152,7 @@ export const SelectFromMemoryModal = forwardRef<BottomSheetModal, SelectFromMemo
             <Text className="text-sm font-medium text-text-strong">Cancel</Text>
           </Button>
           <Button 
-            onPress={() => {
-              onConfirm(localSelected);
-              handleClose();
-            }} 
+            onPress={handleConfirm} 
             className="flex-1 bg-brand rounded-full"
           >
             <Text className="text-sm font-medium text-white">

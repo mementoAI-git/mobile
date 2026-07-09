@@ -3,7 +3,7 @@
  *
  * Design:
  *  - Cream background (COLORS.background)
- *  - Header: ← back | Share pill | × close
+ *  - Header: default Share chrome or composer close-only chrome
  *  - Images: rounded corners, horizontal padding, peek of next image
  *  - Media vertically centered
  *  - Dot pagination — brand orange active, stroke-weak inactive
@@ -32,6 +32,8 @@ import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, w
 import { ChevronLeft, Share2, X, Mic, FileText, Music, Play, Pause, RotateCcw, Link2, Download } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { publishedPostUrl } from '@/lib/env';
+import { isPermissionGranted } from '@/lib/permission-recovery';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -72,6 +74,7 @@ interface Props {
   onRemove?: (clientId: string) => void;
   /** Parent memory ID — used to construct the share link */
   memoryId?: string;
+  headerMode?: 'default' | 'close-only';
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -123,6 +126,12 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
   // overlays. Android's default SurfaceView can fail to paint frames there, so
   // the view below opts into TextureView and starts playback after mount.
   const { player, play, pause } = useVideoPlayer(uri, { autoPlay: false, loop: false });
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [speedIdx, setSpeedIdx] = useState(0);
+  const controlsOpacity = useRef(new RNAnimated.Value(1)).current;
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Start playback after <VideoView> has mounted and attached to the view hierarchy.
   // A short delay gives the modal window and native video view time to settle.
@@ -138,31 +147,34 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
 
   // Pause when the slide scrolls out of view
   useEffect(() => {
-    if (!isActive && player.playing) {
-      pause();
+    if (!isActive) {
+      if (player.playing) {
+        pause();
+      }
+      setPlaying(false);
     }
   }, [isActive, player, pause]);
 
 
-  const [playing, setPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [speedIdx, setSpeedIdx] = useState(0);
-  const controlsOpacity = useRef(new RNAnimated.Value(1)).current;
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const progress = duration > 0 ? currentTime / duration : 0;
   const ended = progress >= 0.99;
 
-  // Poll every 250ms to sync player state into React state
+  // Poll only the active slide to keep background media from updating React state.
   useEffect(() => {
-    const id = setInterval(() => {
+    if (!isActive) return undefined;
+
+    const syncPlayerState = () => {
       setCurrentTime(player.currentTime ?? 0);
       setDuration(player.duration ?? 0);
       setPlaying(player.playing ?? false);
+    };
+
+    syncPlayerState();
+    const id = setInterval(() => {
+      syncPlayerState();
     }, 250);
     return () => clearInterval(id);
-  }, [player]);
+  }, [isActive, player]);
 
   // Show controls and schedule auto-hide
   const showControls = useCallback(() => {
@@ -302,20 +314,30 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
 
   // Auto-pause when slide scrolls out of view
   useEffect(() => {
-    if (!isActive && player.playing) {
-      player.pause();
+    if (!isActive) {
+      if (player.playing) {
+        player.pause();
+      }
+      setPlaying(false);
     }
   }, [isActive, player]);
 
-  // Poll playback state every 250ms
+  // Poll only the active slide to avoid background intervals for mounted media.
   useEffect(() => {
-    const id = setInterval(() => {
+    if (!isActive) return undefined;
+
+    const syncPlayerState = () => {
       setCurrentTime(player.currentTime ?? 0);
       if (player.duration && player.duration > 0) setDuration(player.duration);
       setPlaying(player.playing ?? false);
+    };
+
+    syncPlayerState();
+    const id = setInterval(() => {
+      syncPlayerState();
     }, 250);
     return () => clearInterval(id);
-  }, [player]);
+  }, [isActive, player]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -509,7 +531,7 @@ function Dots({ count, active }: { count: number; active: number }) {
 
 // ─── Modal inner — reads insets from the scoped SafeAreaProvider ──────────────
 
-function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: Omit<Props, 'visible' | 'initialIndex'> & { initialIndex: number }) {
+function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, headerMode = 'default' }: Omit<Props, 'visible' | 'initialIndex'> & { initialIndex: number }) {
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -567,8 +589,16 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: 
     if (!item) return;
 
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') return;
+      const permission = await MediaLibrary.requestPermissionsAsync();
+      if (!isPermissionGranted(permission)) {
+        showPermissionRecoveryAlert({
+          permission,
+          title: 'Gallery access is tucked away',
+          description: 'Allow gallery access to save this memory to your library.',
+          settingsDescription: 'Gallery access is turned off in Settings. Turn it back on to save this memory to your library.',
+        });
+        return;
+      }
 
       // If the URI is remote (http/https), download it first
       let localUri = item.uri;
@@ -582,7 +612,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: 
       await MediaLibrary.saveToLibraryAsync(localUri);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      // Silent fail — user may have dismissed the permission dialog
+      Alert.alert('Could not save media', 'Please try again in a moment.');
     }
   }, [attachments, currentIndex]);
 
@@ -610,13 +640,24 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: 
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
-          <ChevronLeft size={20} color={COLORS.textBase} strokeWidth={2} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleShareButtonPress} style={styles.sharePill} activeOpacity={0.8}>
-          <Share2 size={14} color={COLORS.textBase} strokeWidth={2} />
-          <Text style={styles.shareLabel}>Share</Text>
-        </TouchableOpacity>
+        {headerMode === 'close-only' ? (
+          <>
+            <View style={styles.headerSpacer} />
+            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
+              <X size={20} color={COLORS.textBase} strokeWidth={2} />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
+              <ChevronLeft size={20} color={COLORS.textBase} strokeWidth={2} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleShareButtonPress} style={styles.sharePill} activeOpacity={0.8}>
+              <Share2 size={14} color={COLORS.textBase} strokeWidth={2} />
+              <Text style={styles.shareLabel}>Share</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       <View style={{ flex: 1 }}>
@@ -731,7 +772,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId }: 
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onClose, onRemove, memoryId }: Props) {
+export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onClose, onRemove, memoryId, headerMode = 'default' }: Props) {
   if (!attachments.length) return null;
   return (
     <Modal visible={visible} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
@@ -745,6 +786,7 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
           onClose={onClose}
           onRemove={onRemove}
           memoryId={memoryId}
+          headerMode={headerMode}
         />
       </SafeAreaProvider>
     </Modal>
@@ -772,6 +814,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.fillWeak,
     borderWidth: 1, borderColor: COLORS.strokeWeaker,
     alignItems: 'center', justifyContent: 'center',
+  },
+  headerSpacer: {
+    width: 36,
+    height: 36,
   },
   sharePill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,

@@ -31,6 +31,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
@@ -192,9 +193,9 @@ export function TabBar({ state, navigation }: TabBarProps) {
       target: routeKey,
       canPreventDefault: true,
     });
-    if (!isFocused && !event.defaultPrevented) {
-      navigation.navigate(routeName);
-    }
+    if (isFocused || event.defaultPrevented) return;
+
+    navigation.navigate(routeName);
   }, [navigation]);
 
   const handleSearchPress = useCallback(() => {
@@ -202,20 +203,33 @@ export function TabBar({ state, navigation }: TabBarProps) {
     openSheet('search-memory');
   }, [openSheet]);
 
-  // Hide on detail screens
-  if (
-    pathname.match(/^\/chat\/[^/]+$/) ||
-    pathname.match(/^\/(tabs\/)?stories\/[^/]+$/)
-  ) {
-    return null;
-  }
+  // Host Chat owns the full bottom interaction area; detail screens do as well.
+  const isHidden =
+    pathname === '/chat' ||
+    !!pathname.match(/^\/chat\/[^/]+$/) ||
+    !!pathname.match(/^\/(tabs\/)?stories\/[^/]+$/);
 
   const bottomPad = insets.bottom ? insets.bottom + 24 : 36;
 
+  // Keep the view always mounted — avoid the remount/race-condition that causes
+  // the bar to freeze on returning from a hidden screen. Animate via shared value.
+  const translateY = useSharedValue(isHidden ? 120 : 0);
+  const opacity = useSharedValue(isHidden ? 0 : 1);
+
+  React.useEffect(() => {
+    translateY.value = withTiming(isHidden ? 120 : 0, { duration: 220 });
+    opacity.value = withTiming(isHidden ? 0 : 1, { duration: 200 });
+  }, [isHidden, translateY, opacity]);
+
+  const visibilityStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+    opacity: opacity.value,
+  }));
+
   return (
-    <View
-      style={[styles.root, { bottom: bottomPad }]}
-      pointerEvents="box-none"
+    <Animated.View
+      style={[styles.root, { bottom: bottomPad }, visibilityStyle]}
+      pointerEvents={isHidden ? 'none' : 'box-none'}
     >
       {/* ── Main pill ── */}
       <View style={styles.pill}>
@@ -253,7 +267,7 @@ export function TabBar({ state, navigation }: TabBarProps) {
           <Search size={22} color={COLORS.textBase} strokeWidth={1.8} />
         )}
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }
 

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View, TextInput, TouchableOpacity, Platform, StyleSheet,
-  Keyboard, ScrollView, Image, ActivityIndicator, AccessibilityInfo,
+  Keyboard, ScrollView, Image, ActivityIndicator, AccessibilityInfo, useWindowDimensions, InteractionManager,
 } from 'react-native';
-import { ArrowUp, AudioLines, Mic, Square, PlusCircle, X, FileText, PhoneCall, Play } from 'lucide-react-native';
+import { ArrowUp, AudioLines, Mic, Square, Plus, X, FileText, PhoneCall, Play } from 'lucide-react-native';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -30,58 +30,75 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVoiceToText } from '@/hooks/use-voice-to-text';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useToast } from '@/components/ui/Toast';
+import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
+import {
+  DOCUMENT_PICKER_MIME_TYPES,
+  MAX_ATTACHMENT_FILE_MB,
+  getDocumentUploadInput,
+  getMediaUploadInput,
+  isFileTooLarge,
+} from '@/features/media/attachments';
+import {
+  getUploadedAttachments,
+  hasUploadingAttachments,
+  type UploadAttachment,
+} from '@/features/media/attachment-upload-state';
+import { useAttachmentUploads } from '@/features/media/use-attachment-uploads';
+import {
+  getComposerTextHeight,
+  getComposerTextScrollEnabled,
+  getExpandedComposerTextMaxHeight,
+  shouldUseExpandedTextComposer,
+} from '@/features/chat/composer-layout';
 import type { IFile, IMessageAttachment } from '@/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface AttachmentItem {
-  clientId: string;
-  fileId: string | null;   // null while uploading
-  uri: string;
-  name: string;
-  mimeType: string;
-  isUploading: boolean;
-  file?: IFile;
-}
-
+type AttachmentItem = UploadAttachment<IFile>;
 type ChatAttachmentPreview = IMessageAttachment;
 
 export interface ChatSendPayload {
   text: string;
-  /** IDs of already-uploaded files to pass to the AI as context */
   attachmentIds: string[];
-  /** Uploaded file metadata used for the optimistic chat bubble preview */
   attachmentPreviews: ChatAttachmentPreview[];
 }
 
 interface ChatInputProps {
   onSend: (payload: ChatSendPayload) => void;
-  /** Opens the voice call overlay (separate from voice-to-text dictation) */
   onVoice?: () => void;
   onStop?: () => void;
   disabled?: boolean;
   placeholder?: string;
   loading?: boolean;
+  maxComposerHeight?: number;
 }
 
-const MAX_FILE_MB = 15;
-const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
-
-const SUPPORTED_MIME = [
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic',
-  'video/mp4', 'video/quicktime',
-  'audio/mpeg', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/*',
-  'application/pdf',
-  'text/plain',
-];
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const INPUT_PILL_RADIUS = 999;
 const INPUT_PILL_INSET = scale(8);
 const INPUT_PILL_GAP = scale(6);
-const SECONDARY_ACTION_SIZE = scale(44);
-const PRIMARY_ACTION_SIZE = scale(56);
+const SECONDARY_ACTION_SIZE = scale(40);
+const PRIMARY_ACTION_SIZE = scale(50);
+const EXPANDED_ACTION_SIZE = scale(52);
 const INPUT_PILL_VERTICAL_INSET = scale(6);
 const INPUT_PILL_HEIGHT = PRIMARY_ACTION_SIZE + INPUT_PILL_VERTICAL_INSET * 2;
+const COMPACT_COMPOSER_CONTENT_RADIUS = scale(24);
+const PLUS_ICON_SURFACE_SIZE = scale(34);
+const PLUS_ICON_EMPTY_RADIUS = PLUS_ICON_SURFACE_SIZE / 2;
+const PLUS_ICON_ACTIVE_RADIUS = scale(12);
+const ACTION_SQUIRCLE_RADIUS = scale(15);
+const COMPACT_TEXT_MIN_HEIGHT = verticalScale(24);
+const EXPANDED_TEXT_MIN_HEIGHT = verticalScale(34);
+const SELECTED_ASSET_OUTER_SIZE = scale(74);
+const SELECTED_ASSET_SIZE = scale(70);
+const CHAT_HEADER_RESERVE = verticalScale(72);
+const TEXT_HEIGHT_BUFFER = verticalScale(6);
+const COMPACT_MULTILINE_VERTICAL_PADDING = scale(12);
+const EXPANDED_TEXT_VERTICAL_PADDING = scale(6);
+const EXPANDED_COMPOSER_CHROME_HEIGHT = scale(30);
+const COMPACT_TEXT_EXPANSION_BUFFER = scale(8);
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -92,11 +109,18 @@ export function ChatInput({
   disabled,
   placeholder = 'Share a thought...',
   loading,
+  maxComposerHeight,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const [multiline, setMultiline] = useState(false);
+  const [compactTextHeight, setCompactTextHeight] = useState(COMPACT_TEXT_MIN_HEIGHT);
+  const [expandedTextHeight, setExpandedTextHeight] = useState(EXPANDED_TEXT_MIN_HEIGHT);
+  const [compactMeasuredHeight, setCompactMeasuredHeight] = useState(COMPACT_TEXT_MIN_HEIGHT);
+  const [compactMeasuredPadding, setCompactMeasuredPadding] = useState(0);
+  const [expandedMeasuredHeight, setExpandedMeasuredHeight] = useState(EXPANDED_TEXT_MIN_HEIGHT);
+  const [isTextComposerExpanded, setIsTextComposerExpanded] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
@@ -104,14 +128,28 @@ export function ChatInput({
   const btnScale = useSharedValue(1);
   const micPulse = useSharedValue(1);
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const { toast } = useToast();
 
+  const textInputRef = useRef<TextInput>(null);
   const textBeforeDictationRef = useRef('');
   const attachmentPickerRef = useRef<BottomSheetModal>(null);
 
   const { mutateAsync: uploadFile } = useFileUpload();
+  const {
+    attachments,
+    setAttachments,
+    uploadAndAdd,
+    removeAttachment: removeUploadedAttachment,
+  } = useAttachmentUploads<IFile>({
+    uploadFile,
+    insert: 'append',
+    onFileTooLarge: (maxFileMb) => {
+      toast(`Files must be under ${maxFileMb}MB`, 'error');
+    },
+  });
 
-  // ─── Voice-to-text ──────────────────────────────────────────────────────
+  // ─── Voice-to-text ────────────────────────────────────────────────────────
 
   const handleVoiceError = useCallback((err: Error) => {
     const lower = err.message.toLowerCase();
@@ -121,18 +159,25 @@ export function ChatInput({
     toast(message, 'info');
   }, [toast]);
 
+  const handleDictationPermissionDenied = useCallback((permission: PermissionLike) => {
+    showPermissionRecoveryAlert({
+      permission,
+      title: 'Microphone is off',
+      description: 'Allow microphone access to dictate your message.',
+      settingsDescription: 'Microphone access is turned off in Settings. Turn it back on to dictate your message.',
+    });
+  }, []);
+
   const handlePartial = useCallback((liveText: string) => {
     const prefix = textBeforeDictationRef.current;
     const combined = prefix ? `${prefix} ${liveText}` : liveText;
     setText(combined);
-    setMultiline(combined.includes('\n') || combined.length > 80);
   }, []);
 
   const handleTranscript = useCallback((finalText: string) => {
     const prefix = textBeforeDictationRef.current;
     const combined = prefix ? `${prefix} ${finalText}` : finalText;
     setText(combined);
-    setMultiline(combined.includes('\n') || combined.length > 80);
     textBeforeDictationRef.current = '';
   }, []);
 
@@ -147,9 +192,10 @@ export function ChatInput({
     onPartial: handlePartial,
     onTranscript: handleTranscript,
     onError: handleVoiceError,
+    onPermissionDenied: handleDictationPermissionDenied,
   });
 
-  // ─── Mic pulse animation ─────────────────────────────────────────────────
+  // ─── Mic pulse animation ──────────────────────────────────────────────────
 
   useEffect(() => {
     if (isRecording && !reduceMotionEnabled) {
@@ -172,11 +218,17 @@ export function ChatInput({
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setKeyboardVisible(true),
+      (event) => {
+        setKeyboardVisible(true);
+        setKeyboardHeight(event.endCoordinates?.height ?? 0);
+      },
     );
     const hideSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardVisible(false),
+      () => {
+        setKeyboardVisible(false);
+        setKeyboardHeight(0);
+      },
     );
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
@@ -184,65 +236,34 @@ export function ChatInput({
   useEffect(() => {
     let mounted = true;
     AccessibilityInfo.isReduceMotionEnabled()
-      .then((enabled) => {
-        if (mounted) setReduceMotionEnabled(enabled);
-      })
+      .then((enabled) => { if (mounted) setReduceMotionEnabled(enabled); })
       .catch(() => {});
-
     const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotionEnabled);
-    return () => {
-      mounted = false;
-      sub.remove();
-    };
+    return () => { mounted = false; sub.remove(); };
   }, []);
-
-  // ─── File upload helper ───────────────────────────────────────────────────
-
-  const uploadAndAdd = useCallback(async (uri: string, mimeType: string, name: string, fileSize?: number) => {
-    if (fileSize && fileSize > MAX_FILE_BYTES) {
-      toast(`Files must be under ${MAX_FILE_MB}MB`, 'error');
-      return;
-    }
-    const clientId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    setAttachments(prev => [...prev, { clientId, fileId: null, uri, name, mimeType, isUploading: true }]);
-    try {
-      const result = await uploadFile({ uri, type: mimeType, name });
-      if (result?._id) {
-        setAttachments(prev => prev.map(a =>
-          a.clientId === clientId ? { ...a, fileId: result._id, isUploading: false, file: result } : a
-        ));
-      } else {
-        setAttachments(prev => prev.filter(a => a.clientId !== clientId));
-      }
-    } catch {
-      setAttachments(prev => prev.filter(a => a.clientId !== clientId));
-    }
-  }, [uploadFile]);
 
   // ─── Attachment pickers ───────────────────────────────────────────────────
 
-  // Camera — launches device camera to capture photo or video
   const handleLaunchCamera = useCallback(async () => {
     Haptics.selectionAsync();
     try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        toast('Allow Memento to access your camera.', 'error');
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!isPermissionGranted(permission)) {
+        showPermissionRecoveryAlert({
+          permission,
+          title: 'Camera is tucked away',
+          description: 'Allow camera access to capture a photo or video from the chat.',
+          settingsDescription: 'Camera access is turned off in Settings. Turn it back on to capture a photo or video from the chat.',
+        });
         return;
       }
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images', 'videos'],
-        quality: 0.85,
-      });
+      const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images', 'videos'], quality: 0.85 });
       if (!result.canceled && result.assets.length > 0) {
-        const asset = result.assets[0];
-        const isVideo = asset.mimeType?.startsWith('video/');
-        const mime = asset.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg');
-        const name = asset.fileName || `${isVideo ? 'video' : 'photo'}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`;
-        await uploadAndAdd(asset.uri, mime, name, asset.fileSize);
+        const asset = getMediaUploadInput(result.assets[0]);
+        await uploadAndAdd(asset.uri, asset.mimeType, asset.name, { fileSize: asset.fileSize });
       }
     } catch { /* user cancelled */ }
-  }, [uploadAndAdd, toast]);
+  }, [uploadAndAdd]);
 
   const handleAddPickerAssets = useCallback(async (pickedAssets: ChatPickerAsset[]) => {
     await Promise.all(pickedAssets.map(asset =>
@@ -250,65 +271,64 @@ export function ChatInput({
     ));
   }, [uploadAndAdd]);
 
-  // Document picker — audio, PDF, text, other files
   const handlePickDocument = useCallback(async () => {
     Haptics.selectionAsync();
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: [
-          'audio/mpeg', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/*',
-          'application/pdf',
-          'text/plain',
-        ],
+        type: DOCUMENT_PICKER_MIME_TYPES,
         copyToCacheDirectory: true,
         multiple: true,
       });
       if (!result.canceled && result.assets.length > 0) {
-        // Filter out oversized files first, then upload remaining in parallel
         const validAssets = result.assets.filter(asset => {
-          if (asset.size && asset.size > MAX_FILE_BYTES) {
-            toast(`"${asset.name}" exceeds the ${MAX_FILE_MB}MB limit.`, 'error');
+          if (isFileTooLarge(asset.size)) {
+            toast(`"${asset.name}" exceeds the ${MAX_ATTACHMENT_FILE_MB}MB limit.`, 'error');
             return false;
           }
           return true;
         });
-        await Promise.all(validAssets.map(asset =>
-          uploadAndAdd(asset.uri, asset.mimeType || 'application/octet-stream', asset.name, asset.size)
-        ));
+        await Promise.all(validAssets.map((asset) => {
+          const upload = getDocumentUploadInput(asset);
+          return uploadAndAdd(upload.uri, upload.mimeType, upload.name, { fileSize: upload.fileSize });
+        }));
       }
     } catch { /* user cancelled */ }
   }, [uploadAndAdd, toast]);
 
   const removeAttachment = useCallback((clientId: string) => {
     Haptics.selectionAsync();
-    setAttachments(prev => prev.filter(a => a.clientId !== clientId));
-  }, []);
+    removeUploadedAttachment(clientId);
+  }, [removeUploadedAttachment]);
 
   // ─── Send ─────────────────────────────────────────────────────────────────
 
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
-    const readyIds = attachments.filter(a => a.fileId && !a.isUploading).map(a => a.fileId as string);
-    const readyAttachmentPreviews = attachments
-      .filter(a => a.fileId && !a.isUploading)
-      .map((a): ChatAttachmentPreview => ({
-        _id: a.fileId ?? undefined,
-        url: a.file?.url ?? a.uri,
-        name: a.file?.name ?? a.name,
-        type: a.file?.type ?? a.mimeType,
-        size: a.file?.size,
-      }));
+    const uploadedAttachments = getUploadedAttachments(attachments);
+    const readyIds = uploadedAttachments.map(a => a.fileId);
+    const readyAttachmentPreviews = uploadedAttachments.map((a): ChatAttachmentPreview => ({
+      _id: a.fileId,
+      url: a.file?.url ?? a.uri,
+      name: a.file?.name ?? a.name,
+      type: a.file?.type ?? a.mimeType,
+      size: a.file?.size,
+    }));
     if ((!trimmed && readyIds.length === 0) || disabled) return;
-    // Block if any upload is still in progress
-    if (attachments.some(a => a.isUploading)) return;
+    if (hasUploadingAttachments(attachments)) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onSend({ text: trimmed, attachmentIds: readyIds, attachmentPreviews: readyAttachmentPreviews });
     setText('');
     setMultiline(false);
+    setCompactTextHeight(COMPACT_TEXT_MIN_HEIGHT);
+    setExpandedTextHeight(EXPANDED_TEXT_MIN_HEIGHT);
+    setCompactMeasuredHeight(COMPACT_TEXT_MIN_HEIGHT);
+    setCompactMeasuredPadding(0);
+    setExpandedMeasuredHeight(EXPANDED_TEXT_MIN_HEIGHT);
+    setIsTextComposerExpanded(false);
     setAttachments([]);
     textBeforeDictationRef.current = '';
-  }, [text, attachments, disabled, onSend]);
+  }, [text, attachments, disabled, onSend, setAttachments]);
 
   const handleMicPress = useCallback(async () => {
     if (disabled) return;
@@ -333,7 +353,15 @@ export function ChatInput({
     cancelRecording();
     const previousText = textBeforeDictationRef.current;
     setText(previousText);
-    setMultiline(previousText.includes('\n') || previousText.length > 80);
+    if (!previousText) {
+      setMultiline(false);
+      setCompactTextHeight(COMPACT_TEXT_MIN_HEIGHT);
+      setExpandedTextHeight(EXPANDED_TEXT_MIN_HEIGHT);
+      setCompactMeasuredHeight(COMPACT_TEXT_MIN_HEIGHT);
+      setCompactMeasuredPadding(0);
+      setExpandedMeasuredHeight(EXPANDED_TEXT_MIN_HEIGHT);
+      setIsTextComposerExpanded(false);
+    }
     textBeforeDictationRef.current = '';
   }, [cancelRecording, isRecording]);
 
@@ -347,47 +375,197 @@ export function ChatInput({
     transform: [{ scale: btnScale.value }],
   }));
 
-  // ─── Derived ──────────────────────────────────────────────────────────────
+  // ─── Derived layout values ────────────────────────────────────────────────
 
   const attachmentState = useMemo(() => {
-    let anyUploading = false;
-    let readyCount = 0;
+    const uploadedAttachments = getUploadedAttachments(attachments);
     const previewable: PreviewAttachment[] = [];
-
-    for (const attachment of attachments) {
-      if (attachment.isUploading) anyUploading = true;
-      if (attachment.fileId) {
-        readyCount += 1;
-        if (attachment.uri) {
-          previewable.push({
-            clientId: attachment.clientId,
-            uri: attachment.uri,
-            name: attachment.name,
-            mimeType: attachment.mimeType,
-          });
-        }
+    for (const attachment of uploadedAttachments) {
+      if (attachment.uri) {
+        previewable.push({
+          clientId: attachment.clientId,
+          uri: attachment.uri,
+          name: attachment.name,
+          mimeType: attachment.mimeType,
+        });
       }
     }
-
-    return { anyUploading, readyCount, previewable };
+    return {
+      anyUploading: hasUploadingAttachments(attachments),
+      readyCount: uploadedAttachments.length,
+      previewable,
+    };
   }, [attachments]);
+
   const anyUploading = attachmentState.anyUploading;
   const hasAttachments = attachments.length > 0;
   const hasContent = text.trim().length > 0 || attachmentState.readyCount > 0;
+  const hasText = text.trim().length > 0;
   const showStop = loading;
   const showSend = !loading && hasContent && !isRecording && !anyUploading;
   const previewable = attachmentState.previewable;
-  const bottomPadding = keyboardVisible
-    ? verticalScale(8)
-    : insets.bottom
-    ? insets.bottom + verticalScale(8)
-    : verticalScale(16);
+
+  const bottomPadding = keyboardVisible ? verticalScale(8) : insets.bottom;
+  const visibleHeight = Math.max(
+    verticalScale(280),
+    windowHeight - (keyboardVisible ? keyboardHeight : 0) - insets.top - bottomPadding,
+  );
+  const keyboardAwareComposerMaxHeight = Math.max(verticalScale(180), visibleHeight - CHAT_HEADER_RESERVE);
+  const composerMaxHeight = maxComposerHeight ?? keyboardAwareComposerMaxHeight;
+  const textOnlyTextMaxHeight = Math.max(
+    COMPACT_TEXT_MIN_HEIGHT,
+    composerMaxHeight - EXPANDED_ACTION_SIZE - EXPANDED_COMPOSER_CHROME_HEIGHT,
+  );
+  const compactTextMaxHeight = hasText
+    ? textOnlyTextMaxHeight
+    : Math.max(COMPACT_TEXT_MIN_HEIGHT, composerMaxHeight - scale(18));
+  const expandedTextMaxHeight = getExpandedComposerTextMaxHeight({
+    composerMaxHeight,
+    assetStripHeight: SELECTED_ASSET_OUTER_SIZE,
+    actionRowHeight: EXPANDED_ACTION_SIZE,
+    composerChromeHeight: EXPANDED_COMPOSER_CHROME_HEIGHT,
+    minHeight: EXPANDED_TEXT_MIN_HEIGHT,
+  });
+  const activeExpandedTextMaxHeight = hasAttachments ? expandedTextMaxHeight : textOnlyTextMaxHeight;
+
+  useEffect(() => {
+    setCompactTextHeight((prev) => Math.min(prev, compactTextMaxHeight));
+    setExpandedTextHeight((prev) => Math.min(prev, activeExpandedTextMaxHeight));
+  }, [activeExpandedTextMaxHeight, compactTextMaxHeight]);
+
+  // ─── Expansion state — declared early so handleContentSizeChange can read it ──
+
+  const useExpandedComposer = shouldUseExpandedTextComposer({
+    hasAttachments,
+    hasText,
+    textHeight: compactTextHeight,
+    collapsedActionSize: SECONDARY_ACTION_SIZE,
+    expansionBuffer: COMPACT_TEXT_EXPANSION_BUFFER,
+    isExpanded: isTextComposerExpanded,
+  });
+
+  useEffect(() => {
+    if (!hasText) {
+      if (isTextComposerExpanded) setIsTextComposerExpanded(false);
+      return;
+    }
+    if (useExpandedComposer && !isTextComposerExpanded) {
+      setIsTextComposerExpanded(true);
+    }
+  }, [hasText, isTextComposerExpanded, useExpandedComposer]);
+
+  // ─── Attachment picker opener ─────────────────────────────────────────────
 
   const handleOpenAttachmentPicker = useCallback(() => {
     if (disabled || anyUploading) return;
     Haptics.selectionAsync();
+    Keyboard.dismiss();
+    if (Platform.OS === 'android') {
+      const task = InteractionManager.runAfterInteractions(() => {
+        attachmentPickerRef.current?.present();
+      });
+      return () => task.cancel();
+    }
     attachmentPickerRef.current?.present();
   }, [anyUploading, disabled]);
+
+  // ─── Text change handler ──────────────────────────────────────────────────
+
+  const handleTextChange = useCallback((nextText: string) => {
+    if (isRecording) textBeforeDictationRef.current = nextText;
+    setText(nextText);
+    if (!nextText) {
+      setMultiline(false);
+      setCompactTextHeight(COMPACT_TEXT_MIN_HEIGHT);
+      setExpandedTextHeight(EXPANDED_TEXT_MIN_HEIGHT);
+      setCompactMeasuredHeight(COMPACT_TEXT_MIN_HEIGHT);
+      setCompactMeasuredPadding(0);
+      setExpandedMeasuredHeight(EXPANDED_TEXT_MIN_HEIGHT);
+      setIsTextComposerExpanded(false);
+    }
+  }, [isRecording]);
+
+  // ─── Content size change handlers ────────────────────────────────────────
+  // A single onContentSizeChange handler is used regardless of expansion state.
+  // This avoids switching handlers when the composer expands, which would cause
+  // one render cycle of stale height data.
+
+  const handleContentSizeChange = useCallback((event: any) => {
+    const measuredHeight = Math.ceil(event.nativeEvent.contentSize.height);
+
+    if (useExpandedComposer) {
+      setExpandedMeasuredHeight(measuredHeight);
+      const nextHeight = getComposerTextHeight({
+        measuredHeight,
+        minHeight: EXPANDED_TEXT_MIN_HEIGHT,
+        maxHeight: activeExpandedTextMaxHeight,
+        verticalPadding: EXPANDED_TEXT_VERTICAL_PADDING,
+        buffer: TEXT_HEIGHT_BUFFER,
+      });
+      setExpandedTextHeight((prev) => (Math.abs(prev - nextHeight) > 1 ? nextHeight : prev));
+    } else {
+      const shouldExpand = measuredHeight > COMPACT_TEXT_MIN_HEIGHT + 1;
+      const verticalPadding = shouldExpand ? COMPACT_MULTILINE_VERTICAL_PADDING : 0;
+      setCompactMeasuredHeight(measuredHeight);
+      setCompactMeasuredPadding(verticalPadding);
+      const nextHeight = getComposerTextHeight({
+        measuredHeight,
+        minHeight: COMPACT_TEXT_MIN_HEIGHT,
+        maxHeight: compactTextMaxHeight,
+        verticalPadding,
+        buffer: TEXT_HEIGHT_BUFFER,
+      });
+      setMultiline(shouldExpand);
+      setCompactTextHeight((prev) => (Math.abs(prev - nextHeight) > 1 ? nextHeight : prev));
+    }
+  }, [useExpandedComposer, activeExpandedTextMaxHeight, compactTextMaxHeight]);
+
+  const compactTextScrollable = getComposerTextScrollEnabled({
+    measuredHeight: compactMeasuredHeight,
+    renderedHeight: compactTextHeight,
+    verticalPadding: compactMeasuredPadding,
+    buffer: TEXT_HEIGHT_BUFFER,
+    maxHeight: compactTextMaxHeight,
+  });
+  const expandedTextScrollable = getComposerTextScrollEnabled({
+    measuredHeight: expandedMeasuredHeight,
+    renderedHeight: expandedTextHeight,
+    verticalPadding: EXPANDED_TEXT_VERTICAL_PADDING,
+    buffer: TEXT_HEIGHT_BUFFER,
+    maxHeight: activeExpandedTextMaxHeight,
+  });
+
+  // ─── Derived text input style ─────────────────────────────────────────────
+  // The TextInput style adapts between compact and expanded — but the instance
+  // stays mounted the entire time so the keyboard never dismisses.
+
+  const textInputStyle = useMemo(() => {
+    if (useExpandedComposer) {
+      return [
+        styles.sharedTextInput,
+        styles.expandedTextInput,
+        { height: expandedTextHeight, maxHeight: activeExpandedTextMaxHeight },
+        isRecording && styles.recordingTextInput,
+      ];
+    }
+    return [
+      styles.sharedTextInput,
+      styles.compactTextInput,
+      multiline && styles.compactTextInputMultiline,
+      { height: compactTextHeight, maxHeight: compactTextMaxHeight },
+      isRecording && styles.recordingTextInput,
+    ];
+  }, [
+    useExpandedComposer,
+    expandedTextHeight,
+    activeExpandedTextMaxHeight,
+    compactTextHeight,
+    compactTextMaxHeight,
+    multiline,
+    isRecording,
+  ]);
+
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <Animated.View
@@ -399,214 +577,192 @@ export function ChatInput({
         visible={previewVisible}
         attachments={previewable}
         initialIndex={previewIndex}
+        headerMode="close-only"
         onClose={() => setPreviewVisible(false)}
       />
 
+      {/* ── Outer composer container — shape changes but TextInput stays mounted ── */}
       <View
         style={[
           styles.floatingContainer,
-          hasAttachments ? styles.expandedComposer : styles.compactComposer,
+          useExpandedComposer ? styles.expandedComposer : styles.compactComposer,
+          !useExpandedComposer && hasContent && styles.compactComposerWithContent,
         ]}
       >
-        {hasAttachments ? (
-          <>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.assetStrip}
-              contentContainerStyle={styles.assetStripContent}
-            >
-              {attachments.map(a => {
-                const isMedia = a.mimeType.startsWith('image/') || a.mimeType.startsWith('video/');
-                const isVideo = a.mimeType.startsWith('video/');
-                const isAudio = a.mimeType.startsWith('audio/');
-                const previewIdx = previewable.findIndex(p => p.clientId === a.clientId);
+        {/* ── Asset strip (expanded with attachments) ── */}
+        {hasAttachments && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.assetStrip}
+            contentContainerStyle={styles.assetStripContent}
+          >
+            {attachments.map(a => {
+              const isMedia = a.mimeType.startsWith('image/') || a.mimeType.startsWith('video/');
+              const isVideo = a.mimeType.startsWith('video/');
+              const isAudio = a.mimeType.startsWith('audio/');
+              const previewIdx = previewable.findIndex(p => p.clientId === a.clientId);
 
-                return (
-                  <View key={a.clientId} style={styles.selectedAsset}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        if (!a.isUploading && previewIdx >= 0) {
-                          Haptics.selectionAsync();
-                          setPreviewIndex(previewIdx);
-                          setPreviewVisible(true);
-                        }
-                      }}
-                      activeOpacity={previewIdx >= 0 ? 0.84 : 1}
-                      style={styles.assetPressable}
-                    >
-                      {isMedia ? (
-                        <>
-                          <Image source={{ uri: a.uri }} style={styles.assetThumb} resizeMode="cover" />
-                          {isVideo && (
-                            <View style={styles.videoAssetOverlay}>
-                              <Play size={scale(18)} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
-                            </View>
-                          )}
-                        </>
-                      ) : isAudio ? (
-                        <View style={styles.assetAudioTile}>
-                          <AudioLines size={scale(23)} color={COLORS.brand} strokeWidth={2.3} />
-                        </View>
-                      ) : (
-                        <View style={styles.assetFileTile}>
-                          <FileText size={scale(22)} color={COLORS.brand} strokeWidth={2} />
-                        </View>
-                      )}
-                      {a.isUploading && (
-                        <View style={styles.assetUploadingOverlay}>
-                          <ActivityIndicator color={COLORS.textInverse} />
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => removeAttachment(a.clientId)}
-                      activeOpacity={0.82}
-                      hitSlop={6}
-                      style={styles.assetRemoveButton}
-                    >
-                      <X size={scale(13)} color={COLORS.textInverse} strokeWidth={2.6} />
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </ScrollView>
+              return (
+                <View key={a.clientId} style={styles.selectedAsset}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (!a.isUploading && previewIdx >= 0) {
+                        Haptics.selectionAsync();
+                        setPreviewIndex(previewIdx);
+                        setPreviewVisible(true);
+                      }
+                    }}
+                    activeOpacity={previewIdx >= 0 ? 0.84 : 1}
+                    style={styles.assetPressable}
+                  >
+                    {isMedia ? (
+                      <>
+                        <Image source={{ uri: a.uri }} style={styles.assetThumb} resizeMode="cover" />
+                        {isVideo && (
+                          <View style={styles.videoAssetOverlay}>
+                            <Play size={scale(18)} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+                          </View>
+                        )}
+                      </>
+                    ) : isAudio ? (
+                      <View style={styles.assetAudioTile}>
+                        <AudioLines size={scale(23)} color={COLORS.brand} strokeWidth={2.3} />
+                      </View>
+                    ) : (
+                      <View style={styles.assetFileTile}>
+                        <FileText size={scale(22)} color={COLORS.brand} strokeWidth={2} />
+                      </View>
+                    )}
+                    {a.isUploading && (
+                      <View style={styles.assetUploadingOverlay}>
+                        <ActivityIndicator color={COLORS.textInverse} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => removeAttachment(a.clientId)}
+                    activeOpacity={0.82}
+                    hitSlop={6}
+                    style={styles.assetRemoveButton}
+                  >
+                    <X size={scale(13)} color={COLORS.textInverse} strokeWidth={2.6} />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </ScrollView>
+        )}
 
+        {/* ── Main input row — always rendered, never unmounted ── */}
+        <View style={[
+          styles.inputRow,
+          useExpandedComposer ? styles.inputRowExpanded : styles.inputRowCompact,
+        ]}>
+
+          {/* Plus / attach button */}
+          <TouchableOpacity
+            onPress={handleOpenAttachmentPicker}
+            disabled={disabled || anyUploading}
+            style={styles.plusButton}
+          >
+            <View style={[
+              styles.plusIconSurface,
+              (hasText || hasAttachments) ? styles.plusIconSurfaceActive : styles.plusIconSurfaceEmpty,
+            ]}>
+              <Plus size={scale(18)} color={COLORS.textBase} strokeWidth={1.8} />
+            </View>
+          </TouchableOpacity>
+
+          {/* ── THE SINGLE STABLE TEXT INPUT ── */}
+          <View style={[
+            styles.textWrap,
+            isRecording && styles.recordingInputWrap,
+          ]}>
             <TextInput
+              ref={textInputRef}
               value={text}
-              onChangeText={(v) => {
-                if (isRecording) textBeforeDictationRef.current = v;
-                setText(v);
-                setMultiline(v.includes('\n') || v.length > 60);
-              }}
+              onChangeText={handleTextChange}
+              onContentSizeChange={handleContentSizeChange}
+              scrollEnabled={useExpandedComposer ? expandedTextScrollable : compactTextScrollable}
               placeholder={isRecording ? 'Listening…' : placeholder}
               placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
               selectionColor={isRecording ? COLORS.brand : COLORS.textStrong}
               multiline
-              style={[styles.expandedTextInput, isRecording && styles.recordingTextInput]}
+              style={textInputStyle}
               blurOnSubmit={false}
               editable={!disabled}
             />
-
-            <View style={styles.expandedFooter}>
-              {isRecording ? (
-                <RecordingStatus seconds={duration} onCancel={handleCancelRecording} />
-              ) : (
-                <View />
-              )}
-
-              {showStop ? (
-                <Animated.View style={btnAnimStyle}>
-                  <TouchableOpacity
-                    onPress={handleStop}
-                    onPressIn={() => { btnScale.value = withSpring(0.9); }}
-                    onPressOut={() => { btnScale.value = withSpring(1); }}
-                    style={styles.expandedStopButton}
-                  >
-                    <Square size={scale(16)} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
-                  </TouchableOpacity>
-                </Animated.View>
-              ) : (
-                <Animated.View style={btnAnimStyle}>
-                  <TouchableOpacity
-                    onPress={handleSend}
-                    onPressIn={() => { btnScale.value = withSpring(0.9); }}
-                    onPressOut={() => { btnScale.value = withSpring(1); }}
-                    disabled={disabled || !showSend}
-                    style={[
-                      styles.expandedSendButton,
-                      (disabled || !showSend) && styles.expandedSendButtonDisabled,
-                    ]}
-                  >
-                    {anyUploading ? (
-                      <ActivityIndicator color={COLORS.textInverse} />
-                    ) : (
-                      <ArrowUp size={scale(25)} color={COLORS.textInverse} strokeWidth={2.5} />
-                    )}
-                  </TouchableOpacity>
-                </Animated.View>
-              )}
-            </View>
-          </>
-        ) : (
-          <>
-            <TouchableOpacity
-              onPress={handleOpenAttachmentPicker}
-              disabled={disabled || anyUploading}
-              style={styles.plusButton}
-            >
-              <PlusCircle size={scale(50)} color={COLORS.textMuted} strokeWidth={1.9} />
-            </TouchableOpacity>
-
-            <View style={[styles.compactInputWrap, isRecording && styles.recordingInputWrap]}>
-              <TextInput
-                value={text}
-                onChangeText={(v) => {
-                  if (isRecording) textBeforeDictationRef.current = v;
-                  setText(v);
-                  setMultiline(v.includes('\n') || v.length > 60);
-                }}
-                placeholder={isRecording ? 'Listening…' : placeholder}
-                placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
-                selectionColor={isRecording ? COLORS.brand : COLORS.textStrong}
-                multiline
-                style={[styles.compactTextInput, isRecording && styles.recordingTextInput]}
-                blurOnSubmit={false}
-                editable={!disabled}
-              />
-              {isRecording && (
-                <RecordingStatus seconds={duration} compact onCancel={handleCancelRecording} />
-              )}
-            </View>
-
-            {showStop ? (
-              <Animated.View style={btnAnimStyle}>
-                <TouchableOpacity
-                  onPress={handleStop}
-                  onPressIn={() => { btnScale.value = withSpring(0.9); }}
-                  onPressOut={() => { btnScale.value = withSpring(1); }}
-                  style={styles.compactStopButton}
-                >
-                  <Square size={scale(16)} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
-                </TouchableOpacity>
-              </Animated.View>
-            ) : showSend ? (
-              <Animated.View style={btnAnimStyle}>
-                <TouchableOpacity
-                  onPress={handleSend}
-                  onPressIn={() => { btnScale.value = withSpring(0.9); }}
-                  onPressOut={() => { btnScale.value = withSpring(1); }}
-                  disabled={disabled}
-                  style={styles.compactSendButton}
-                >
-                  <ArrowUp size={scale(22)} color={COLORS.textInverse} strokeWidth={2.5} />
-                </TouchableOpacity>
-              </Animated.View>
-            ) : (
-              <View style={styles.compactActionRow}>
-                <Animated.View style={micPulseStyle}>
-                  <RecordingIconButton
-                    onPress={handleMicPress}
-                    active={isRecording}
-                    disabled={disabled}
-                    muted={micUnavailable}
-                  >
-                    <Mic size={scale(20)} color={isRecording ? COLORS.textInverse : COLORS.textBase} strokeWidth={2} />
-                  </RecordingIconButton>
-                </Animated.View>
-                {onVoice && !isRecording && (
-                  <TouchableOpacity
-                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onVoice(); }}
-                    disabled={disabled}
-                    style={[styles.callButton, disabled && styles.disabledButton]}
-                  >
-                    <PhoneCall size={scale(24)} color={COLORS.textInverse} strokeWidth={2} />
-                  </TouchableOpacity>
-                )}
-              </View>
+            {isRecording && (
+              <RecordingStatus seconds={duration} compact onCancel={handleCancelRecording} />
             )}
-          </>
-        )}
+          </View>
+
+          {/* ── Action buttons ── */}
+          {showStop ? (
+            <Animated.View style={btnAnimStyle}>
+              <TouchableOpacity
+                onPress={handleStop}
+                onPressIn={() => { btnScale.value = withSpring(0.9); }}
+                onPressOut={() => { btnScale.value = withSpring(1); }}
+                style={useExpandedComposer ? styles.expandedStopButton : styles.compactStopButton}
+              >
+                <Square
+                  size={scale(14)}
+                  color={COLORS.textBase}
+                  fill={COLORS.textBase}
+                  strokeWidth={0}
+                />
+              </TouchableOpacity>
+            </Animated.View>
+          ) : showSend ? (
+            <Animated.View style={btnAnimStyle}>
+              <TouchableOpacity
+                onPress={handleSend}
+                onPressIn={() => { btnScale.value = withSpring(0.9); }}
+                onPressOut={() => { btnScale.value = withSpring(1); }}
+                disabled={disabled}
+                style={useExpandedComposer ? styles.expandedSendButton : styles.compactSendButton}
+              >
+                {anyUploading ? (
+                  <ActivityIndicator color={COLORS.textInverse} />
+                ) : (
+                  <ArrowUp
+                    size={useExpandedComposer ? scale(22) : scale(20)}
+                    color={COLORS.textInverse}
+                    strokeWidth={2.5}
+                  />
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+          ) : (
+            <View style={styles.compactActionRow}>
+              <Animated.View style={micPulseStyle}>
+                <RecordingIconButton
+                  onPress={handleMicPress}
+                  active={isRecording}
+                  disabled={disabled}
+                  muted={micUnavailable}
+                >
+                  <Mic
+                    size={scale(18)}
+                    color={isRecording ? COLORS.textInverse : COLORS.textBase}
+                    strokeWidth={2}
+                  />
+                </RecordingIconButton>
+              </Animated.View>
+              {onVoice && !isRecording && (
+                <TouchableOpacity
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onVoice(); }}
+                  disabled={disabled}
+                  style={[styles.callButton, disabled && styles.disabledButton]}
+                >
+                  <PhoneCall size={scale(21)} color={COLORS.textInverse} strokeWidth={2} />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </View>
       </View>
 
       <ChatAttachmentPickerSheet
@@ -619,39 +775,141 @@ export function ChatInput({
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   floatingContainer: {
     backgroundColor: COLORS.background,
     borderWidth: 1,
     borderColor: COLORS.strokeWeaker,
   },
+
+  // Composer shape variants
   compactComposer: {
+    flexDirection: 'column',
+    borderRadius: INPUT_PILL_RADIUS,
+    paddingHorizontal: INPUT_PILL_INSET,
+    minHeight: INPUT_PILL_HEIGHT,
+  },
+  compactComposerWithContent: {
+    borderRadius: COMPACT_COMPOSER_CONTENT_RADIUS,
+  },
+  expandedComposer: {
+    borderRadius: 26,
+    paddingTop: scale(8),
+    paddingHorizontal: scale(10),
+    paddingBottom: scale(10),
+    gap: scale(6),
+  },
+
+  // Asset strip
+  assetStrip: {
+    flexGrow: 0,
+  },
+  assetStripContent: {
+    gap: scale(8),
+    paddingRight: scale(8),
+    alignItems: 'center',
+  },
+  selectedAsset: {
+    width: SELECTED_ASSET_OUTER_SIZE,
+    height: SELECTED_ASSET_OUTER_SIZE,
+    position: 'relative',
+  },
+  assetPressable: {
+    width: SELECTED_ASSET_SIZE,
+    height: SELECTED_ASSET_SIZE,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: COLORS.fillWeak,
+  },
+  assetThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  assetAudioTile: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+    backgroundColor: COLORS.fillWeaker,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assetFileTile: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+    backgroundColor: COLORS.fillWeaker,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assetRemoveButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    zIndex: 2,
+    width: scale(22),
+    height: scale(22),
+    borderRadius: scale(11),
+    backgroundColor: COLORS.textStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.background,
+  },
+  assetUploadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoAssetOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.22)',
+  },
+
+  // Input row
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: INPUT_PILL_GAP,
+  },
+  inputRowCompact: {
     minHeight: INPUT_PILL_HEIGHT,
-    borderRadius: INPUT_PILL_RADIUS,
-    paddingLeft: INPUT_PILL_INSET,
-    paddingRight: INPUT_PILL_INSET,
+    alignItems: 'center',
   },
-  expandedComposer: {
-    minHeight: verticalScale(214),
-    borderRadius: 28,
-    paddingTop: scale(10),
-    paddingHorizontal: scale(12),
-    paddingBottom: scale(12),
+  inputRowExpanded: {
+    minHeight: EXPANDED_ACTION_SIZE,
+    alignItems: 'flex-end',
   },
+
+  // Plus button
   plusButton: {
     width: SECONDARY_ACTION_SIZE,
     height: SECONDARY_ACTION_SIZE,
-    borderRadius: SECONDARY_ACTION_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  compactInputWrap: {
+  plusIconSurface: {
+    width: PLUS_ICON_SURFACE_SIZE,
+    height: PLUS_ICON_SURFACE_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.fillWeak,
+  },
+  plusIconSurfaceEmpty: {
+    borderRadius: PLUS_ICON_EMPTY_RADIUS,
+  },
+  plusIconSurfaceActive: {
+    borderRadius: PLUS_ICON_ACTIVE_RADIUS,
+  },
+
+  // Text wrap
+  textWrap: {
     flex: 1,
-    minHeight: SECONDARY_ACTION_SIZE,
     justifyContent: 'center',
   },
   recordingInputWrap: {
@@ -660,19 +918,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(8),
     paddingVertical: scale(4),
   },
-  compactTextInput: {
+
+  // Shared text input base
+  sharedTextInput: {
     fontFamily: FONTS.sans,
     fontSize: moderateScale(15),
     color: COLORS.textStrong,
+  },
+
+  // Compact variant
+  compactTextInput: {
     paddingVertical: 0,
-    minHeight: verticalScale(24),
+    minHeight: COMPACT_TEXT_MIN_HEIGHT,
     textAlignVertical: 'center',
   },
+  compactTextInputMultiline: {
+    paddingTop: scale(6),
+    paddingBottom: scale(6),
+    textAlignVertical: 'top',
+  },
+
+  // Expanded variant
+  expandedTextInput: {
+    paddingTop: scale(3),
+    paddingBottom: scale(3),
+    paddingHorizontal: scale(4),
+    minHeight: EXPANDED_TEXT_MIN_HEIGHT,
+    textAlignVertical: 'top',
+  },
+
+  // Recording text tint
   recordingTextInput: {
     backgroundColor: COLORS.brandSubtle,
     borderRadius: 14,
     paddingHorizontal: scale(8),
   },
+
+  // Action button variants
   compactActionRow: {
     flexDirection: 'row',
     gap: INPUT_PILL_GAP,
@@ -694,7 +976,7 @@ const styles = StyleSheet.create({
   compactSendButton: {
     width: PRIMARY_ACTION_SIZE,
     height: PRIMARY_ACTION_SIZE,
-    borderRadius: PRIMARY_ACTION_SIZE / 2,
+    borderRadius: ACTION_SQUIRCLE_RADIUS,
     backgroundColor: COLORS.brand,
     alignItems: 'center',
     justifyContent: 'center',
@@ -707,113 +989,32 @@ const styles = StyleSheet.create({
   compactStopButton: {
     width: PRIMARY_ACTION_SIZE,
     height: PRIMARY_ACTION_SIZE,
-    borderRadius: PRIMARY_ACTION_SIZE / 2,
-    backgroundColor: COLORS.error,
+    borderRadius: ACTION_SQUIRCLE_RADIUS,
+    backgroundColor: COLORS.fillWeak,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeak,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expandedSendButton: {
+    width: EXPANDED_ACTION_SIZE,
+    height: EXPANDED_ACTION_SIZE,
+    borderRadius: ACTION_SQUIRCLE_RADIUS,
+    backgroundColor: COLORS.brand,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expandedStopButton: {
+    width: EXPANDED_ACTION_SIZE,
+    height: EXPANDED_ACTION_SIZE,
+    borderRadius: ACTION_SQUIRCLE_RADIUS,
+    backgroundColor: COLORS.fillWeak,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeak,
     alignItems: 'center',
     justifyContent: 'center',
   },
   disabledButton: {
     opacity: 0.4,
-  },
-  assetStrip: {
-    flexGrow: 0,
-  },
-  assetStripContent: {
-    gap: scale(8),
-    paddingRight: scale(8),
-  },
-  selectedAsset: {
-    width: scale(82),
-    height: scale(82),
-    position: 'relative',
-  },
-  assetPressable: {
-    width: scale(78),
-    height: scale(78),
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: COLORS.fillWeak,
-  },
-  assetThumb: {
-    width: '100%',
-    height: '100%',
-  },
-  assetAudioTile: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
-    backgroundColor: COLORS.fillWeaker,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  assetFileTile: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
-    backgroundColor: COLORS.fillWeaker,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  assetRemoveButton: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    zIndex: 2,
-    width: scale(24),
-    height: scale(24),
-    borderRadius: scale(12),
-    backgroundColor: COLORS.textStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.background,
-  },
-  assetUploadingOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.38)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  videoAssetOverlay: {
-    ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.22)',
-  },
-  expandedTextInput: {
-    flex: 1,
-    fontFamily: FONTS.sans,
-    fontSize: moderateScale(15),
-    color: COLORS.textStrong,
-    paddingTop: scale(12),
-    paddingBottom: scale(4),
-    paddingHorizontal: 0,
-    minHeight: verticalScale(76),
-    textAlignVertical: 'top',
-  },
-  expandedFooter: {
-    minHeight: scale(64),
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-  },
-  expandedSendButton: {
-    width: scale(64),
-    height: scale(64),
-    borderRadius: 16,
-    backgroundColor: COLORS.brand,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  expandedSendButtonDisabled: {
-    opacity: 0.55,
-  },
-  expandedStopButton: {
-    width: scale(64),
-    height: scale(64),
-    borderRadius: 16,
-    backgroundColor: COLORS.error,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

@@ -1,5 +1,4 @@
 import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { usePromptCategories, useDailyPrompts } from '@/hooks/queries/use-prompts';
 import { useStartConversation } from '@/hooks/mutations/use-memory-mutations';
 import { useCallback, useMemo } from 'react';
@@ -42,7 +41,6 @@ export function useExploreLogic() {
   }, [slots]);
 
   const handleOpenCategory = useCallback((id: string) => {
-    Haptics.selectionAsync();
     router.push({
       pathname: '/(tabs)/explore/[id]',
       params: { id },
@@ -50,7 +48,6 @@ export function useExploreLogic() {
   }, [router]);
 
   const handlePromptPress = useCallback((prompt: IPrompt) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({
       pathname: '/chat/[id]',
       params: { id: prompt._id || '', type: 'prompt', promptTitle: prompt.title || '' },
@@ -58,7 +55,6 @@ export function useExploreLogic() {
   }, [router]);
 
   const handleBackToOverview = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.replace('/(tabs)/overview');
   }, [router]);
 

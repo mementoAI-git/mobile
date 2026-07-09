@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Keyboard, TextInput as RNTextInput, Platform } from 'react-native';
 import { Mic, Send, Image as ImageIcon, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -13,10 +13,18 @@ import { RecordingIconButton } from '@/components/ui/RecordingIconButton';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
 import type { IDailyPromptCapture } from '@/types';
 import { logger } from '@/lib/logger';
+import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
+import { getMediaUploadInput } from '@/features/media/attachments';
+import {
+  getUploadedAttachmentIds,
+  hasUploadingAttachments,
+} from '@/features/media/attachment-upload-state';
+import { useAttachmentUploads } from '@/features/media/use-attachment-uploads';
+import type { IFile } from '@/types';
 
 export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
   const [text, setText] = useState<string>('');
-  const [attachments, setAttachments] = useState<string[]>([]);
   const [isPickingImage, setIsPickingImage] = useState<boolean>(false);
 
   // Cast to any: BottomSheetTextInput ref type doesn't perfectly overlap RNTextInput
@@ -26,10 +34,44 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
   useEffect(() => {
     return () => { isMountedRef.current = false; };
   }, []);
-  const { isRecording, duration, start, stop } = useAudioRecorder();
+  const handleMicrophonePermissionDenied = useCallback((permission: PermissionLike) => {
+    showPermissionRecoveryAlert({
+      permission,
+      title: 'Microphone is off',
+      description: 'Allow microphone access to add a voice note to this quick capture.',
+      settingsDescription: 'Microphone access is turned off in Settings. Turn it back on to add a voice note to this quick capture.',
+    });
+  }, []);
+
+  const { isRecording, duration, start, stop } = useAudioRecorder({
+    onPermissionDenied: handleMicrophonePermissionDenied,
+  });
 
   const closeSheet = useUiStore((s) => s.closeSheet);
   const sheetProps = useUiStore((s) => s.sheetProps);
+  const dailyPrompt = sheetProps?.daily_prompt as IDailyPromptCapture | undefined;
+  const { mutate: quickCapture, isPending: isCreating } = useQuickCapture();
+  const { mutateAsync: uploadFile } = useFileUpload();
+  const {
+    attachments,
+    clearAttachments,
+    uploadAndAdd,
+  } = useAttachmentUploads<IFile>({
+    uploadFile,
+    insert: 'append',
+    isMountedRef,
+    onUploadFailure: () => {
+      logger.error('Upload failed');
+    },
+  });
+  const uploadedAttachmentIds = useMemo(
+    () => getUploadedAttachmentIds(attachments),
+    [attachments],
+  );
+  const isUploadingAttachment = useMemo(
+    () => hasUploadingAttachments(attachments),
+    [attachments],
+  );
 
   useEffect(() => {
     const eventName = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
@@ -40,27 +82,16 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
     });
     return () => sub.remove();
   }, [isRecording, isPickingImage, text, attachments, onClose]);
-  const dailyPrompt = sheetProps?.daily_prompt as IDailyPromptCapture | undefined;
-  const { mutate: quickCapture, isPending: isCreating } = useQuickCapture();
-  const { mutateAsync: uploadFile, isPending: isUploading } = useFileUpload();
 
   const handleRecord = async () => {
     if (isRecording) {
       const uri = await stop();
       if (!isMountedRef.current) return;
       if (uri) {
-        try {
-          const uploaded = await uploadFile({
-            uri,
-            name: 'voice_note.m4a',
-            type: 'audio/m4a',
-          });
-          if (isMountedRef.current && uploaded && uploaded._id) {
-            setAttachments(prev => [...prev, uploaded._id]);
-          }
-        } catch (err) {
-          if (isMountedRef.current) logger.error('Upload failed', err);
-        }
+        await uploadAndAdd(uri, 'audio/m4a', 'voice_note.m4a', {
+          isVoice: true,
+          duration,
+        });
       }
     } else {
       await start();
@@ -70,44 +101,51 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
   const handlePickImage = async () => {
     if (!isMountedRef.current) return;
     setIsPickingImage(true);
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets.length > 0) {
-      const asset = result.assets[0];
-      try {
-        const fileUri = asset.uri;
-        const fileName = fileUri.split('/').pop() || 'upload.jpg';
-        const fileType = asset.mimeType || 'image/jpeg';
-
-        const uploaded = await uploadFile({
-          uri: fileUri,
-          name: fileName,
-          type: fileType,
-        });
-
-        if (isMountedRef.current && uploaded && uploaded._id) {
-          setAttachments(prev => [...prev, uploaded._id]);
+    let shouldFocusInput = true;
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!isPermissionGranted(permission)) {
+        shouldFocusInput = false;
+        if (isMountedRef.current) {
+          showPermissionRecoveryAlert({
+            permission,
+            title: 'Photos are tucked away',
+            description: 'Allow photo access to add an image to this quick capture.',
+            settingsDescription: 'Photo access is turned off in Settings. Turn it back on to add an image to this quick capture.',
+          });
         }
-      } catch (err) {
-        if (isMountedRef.current) logger.error('Upload failed', err);
+        return;
       }
-    }
-    if (isMountedRef.current) {
-      setIsPickingImage(false);
-      setTimeout(() => inputRef.current?.focus(), 100);
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        const asset = getMediaUploadInput(result.assets[0]);
+        await uploadAndAdd(asset.uri, asset.mimeType, asset.name, {
+          fileSize: asset.fileSize,
+        });
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsPickingImage(false);
+        if (shouldFocusInput) {
+          setTimeout(() => inputRef.current?.focus(), 100);
+        }
+      }
     }
   };
 
   const handleSave = () => {
-    if (!text.trim() && attachments.length === 0) return;
+    if (isUploadingAttachment) return;
+    if (!text.trim() && uploadedAttachmentIds.length === 0) return;
 
     const payload: import('@/hooks/mutations/use-quick-capture').QuickCapturePayload = {
       body: text.trim(),
-      attachments: attachments.length > 0 ? attachments : undefined,
+      attachments: uploadedAttachmentIds.length > 0 ? uploadedAttachmentIds : undefined,
       // Wire up daily prompt context so the server can link enrichment to the prompt
       ...(dailyPrompt?.prompt_type === 'static' && dailyPrompt.prompt_id
         ? { prompt_type: 'static', prompt_id: dailyPrompt.prompt_id }
@@ -121,6 +159,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
 
     quickCapture(payload, {
       onSuccess: () => {
+        clearAttachments();
         if (onClose) onClose();
         else closeSheet();
       },
@@ -200,7 +239,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
             {isRecording && <RecordingStatus seconds={duration} />}
             <TouchableOpacity
               onPress={handlePickImage}
-              disabled={isUploading || isRecording}
+              disabled={isUploadingAttachment || isPickingImage || isRecording}
               className={`p-2 rounded-full border shadow-sm flex-row items-center gap-1 ${attachments.length > 0 ? 'bg-brand-tint border-brand-weak' : 'bg-white border-stroke-weaker'} ${isRecording ? 'opacity-50' : ''}`}
             >
               <ImageIcon size={20} color={attachments.length > 0 ? COLORS.brand : COLORS.textBase} />
@@ -210,14 +249,14 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
 
           <TouchableOpacity
             onPress={handleSave}
-            disabled={isCreating || isUploading || (!text.trim() && attachments.length === 0)}
-            className={`p-3 rounded-full flex-row items-center justify-center ${(text.trim() || attachments.length > 0) && !isCreating && !isUploading ? 'bg-brand' : 'bg-fill-weak'
+            disabled={isCreating || isUploadingAttachment || (!text.trim() && uploadedAttachmentIds.length === 0)}
+            className={`p-3 rounded-full flex-row items-center justify-center ${(text.trim() || uploadedAttachmentIds.length > 0) && !isCreating && !isUploadingAttachment ? 'bg-brand' : 'bg-fill-weak'
               }`}
           >
-            {isCreating || isUploading ? (
+            {isCreating || isUploadingAttachment ? (
               <ActivityIndicator size="small" color={COLORS.textInverse} />
             ) : (
-              <Send size={18} color={(text.trim() || attachments.length > 0) ? COLORS.textInverse : COLORS.textMuted} />
+              <Send size={18} color={(text.trim() || uploadedAttachmentIds.length > 0) ? COLORS.textInverse : COLORS.textMuted} />
             )}
           </TouchableOpacity>
         </View>

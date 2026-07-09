@@ -1,16 +1,45 @@
-import React, { forwardRef, useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  AppState,
+  Dimensions,
+  Image,
+  Linking,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import {
   BottomSheetBackdrop,
   BottomSheetFlatList,
+  BottomSheetFooter,
   BottomSheetModal,
   BottomSheetView,
+  type BottomSheetFooterProps,
 } from '@gorhom/bottom-sheet';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import * as Haptics from 'expo-haptics';
-import { Camera, Check, FileText, Film, Image as ImageIcon, Music, Play, X } from 'lucide-react-native';
+import {
+  Camera,
+  Check,
+  FileText,
+  Film,
+  Image as ImageIcon,
+  ImageOff,
+  Music,
+  Play,
+  X,
+} from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PermissionRecoveryState } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
+import {
+  getPermissionRecoveryAction,
+  isPermissionGranted,
+  type PermissionLike,
+} from '@/lib/permission-recovery';
+import { getPickerAssetUploadUri } from '@/features/media/picker-assets';
 
 type PickerMode = 'gallery' | 'videos' | 'audio';
 
@@ -32,10 +61,30 @@ interface ChatAttachmentPickerSheetProps {
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_COLUMNS = 4;
-const GRID_GAP = 8;
-const SHEET_HORIZONTAL = 20;
+const GRID_GAP = 3;
+const SHEET_HORIZONTAL = 16;
 const TILE_SIZE = Math.floor((SCREEN_WIDTH - SHEET_HORIZONTAL * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS);
 const PAGE_SIZE = 80;
+
+// ─── Asset cache — persists per-mode between opens within the same session ────
+const assetCache = new Map<PickerMode, { assets: MediaLibrary.Asset[]; cursor: string | null; hasNextPage: boolean; ts: number }>();
+const CACHE_TTL_MS = 60_000; // 60 seconds
+
+function getCachedAssets(mode: PickerMode) {
+  const entry = assetCache.get(mode);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) {
+    assetCache.delete(mode);
+    return null;
+  }
+  return entry;
+}
+
+function setCachedAssets(mode: PickerMode, assets: MediaLibrary.Asset[], cursor: string | null, hasNextPage: boolean) {
+  assetCache.set(mode, { assets, cursor, hasNextPage, ts: Date.now() });
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getAssetMimeType(asset: MediaLibrary.Asset): string {
   const ext = asset.filename?.split('.').pop()?.toLowerCase() ?? '';
@@ -68,6 +117,12 @@ function getSelectionLabel(assets: MediaLibrary.Asset[]): string {
   return assets.length === 1 ? 'item' : 'items';
 }
 
+function getGranularPermissions(mode: PickerMode): MediaLibrary.GranularPermission[] {
+  return mode === 'videos' ? ['video'] : mode === 'audio' ? ['audio'] : ['photo'];
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttachmentPickerSheetProps>(
   function ChatAttachmentPickerSheet({ onCamera, onDocs, onConfirm }, ref) {
     const insets = useSafeAreaInsets();
@@ -76,7 +131,8 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
     const [selected, setSelected] = useState<Record<string, MediaLibrary.Asset>>({});
     const [loading, setLoading] = useState(false);
     const [resolving, setResolving] = useState(false);
-    const [permissionDenied, setPermissionDenied] = useState(false);
+    const [permissionIssue, setPermissionIssue] = useState<PermissionLike | null>(null);
+    const [isOpen, setIsOpen] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
     const [hasNextPage, setHasNextPage] = useState(false);
     const loadRequestIdRef = useRef(0);
@@ -91,19 +147,31 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
 
     const handleDismiss = useCallback(() => {
       setSelected({});
+      setIsOpen(false);
     }, []);
 
     const loadAssets = useCallback(async (nextMode: PickerMode, after?: string | null) => {
+      // Use cache for first page loads (after === null/undefined) if available
+      if (!after) {
+        const cached = getCachedAssets(nextMode);
+        if (cached) {
+          setAssets(cached.assets);
+          setNextCursor(cached.cursor);
+          setHasNextPage(cached.hasNextPage);
+          setPermissionIssue(null);
+          return;
+        }
+      }
+
       const requestId = ++loadRequestIdRef.current;
       setLoading(true);
-      setPermissionDenied(false);
+      setPermissionIssue(null);
       try {
-        const granularPermissions: MediaLibrary.GranularPermission[] =
-          nextMode === 'videos' ? ['video'] : nextMode === 'audio' ? ['audio'] : ['photo'];
+        const granularPermissions = getGranularPermissions(nextMode);
         const permission = await MediaLibrary.requestPermissionsAsync(false, granularPermissions);
         if (requestId !== loadRequestIdRef.current) return;
-        if (!permission.granted) {
-          setPermissionDenied(true);
+        if (!isPermissionGranted(permission)) {
+          setPermissionIssue(permission);
           if (!after) setAssets([]);
           return;
         }
@@ -123,30 +191,86 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
         });
 
         if (requestId !== loadRequestIdRef.current) return;
-        setAssets(prev => (after ? [...prev, ...page.assets] : page.assets));
+
+        const nextAssets = after ? [...assets, ...page.assets] : page.assets;
+        setAssets(nextAssets);
         setNextCursor(page.endCursor);
         setHasNextPage(page.hasNextPage);
+
+        // Cache first-page results
+        if (!after) {
+          setCachedAssets(nextMode, nextAssets, page.endCursor, page.hasNextPage);
+        }
       } finally {
         if (requestId === loadRequestIdRef.current) {
           setLoading(false);
         }
       }
-    }, []);
+    }, [assets]);
 
     const handleSheetChange = useCallback((index: number) => {
-      if (index >= 0 && assets.length === 0 && !loading) {
+      const opening = index >= 0;
+      setIsOpen(opening);
+      if (opening && assets.length === 0 && !loading) {
         loadAssets(mode, null);
       }
     }, [assets.length, loadAssets, loading, mode]);
+
+    // Re-check permission if user returns from Settings
+    useEffect(() => {
+      if (!isOpen || !permissionIssue) return undefined;
+
+      const subscription = AppState.addEventListener('change', async (state) => {
+        if (state !== 'active') return;
+        const permission = await MediaLibrary.getPermissionsAsync(false, getGranularPermissions(mode));
+        if (isPermissionGranted(permission)) {
+          setPermissionIssue(null);
+          loadAssets(mode, null);
+        } else {
+          setPermissionIssue(permission);
+        }
+      });
+
+      return () => subscription.remove();
+    }, [isOpen, loadAssets, mode, permissionIssue]);
+
+    const permissionRecoveryAction = getPermissionRecoveryAction(permissionIssue);
+    const permissionCopy = useMemo(() => {
+      const noun = mode === 'videos' ? 'videos' : mode === 'audio' ? 'audio' : 'photos';
+      return {
+        title: `${noun[0].toUpperCase()}${noun.slice(1)} are tucked away`,
+        description:
+          permissionRecoveryAction === 'settings'
+            ? `Memento cannot see your ${noun} because access is turned off in Settings. Turn it back on to attach them here.`
+            : `Allow Memento to show your recent ${noun} so you can attach them without leaving the chat.`,
+      };
+    }, [mode, permissionRecoveryAction]);
+
+    const handlePermissionAction = useCallback(() => {
+      if (permissionRecoveryAction === 'settings') {
+        Linking.openSettings();
+        return;
+      }
+      loadAssets(mode, null);
+    }, [loadAssets, mode, permissionRecoveryAction]);
 
     const selectMode = useCallback((nextMode: PickerMode) => {
       if (nextMode === mode) return;
       Haptics.selectionAsync();
       setMode(nextMode);
-      setAssets([]);
-      setNextCursor(null);
-      setHasNextPage(false);
-      loadAssets(nextMode, null);
+      // Check cache first — if available, no loading state needed
+      const cached = getCachedAssets(nextMode);
+      if (cached) {
+        setAssets(cached.assets);
+        setNextCursor(cached.cursor);
+        setHasNextPage(cached.hasNextPage);
+        setPermissionIssue(null);
+      } else {
+        setAssets([]);
+        setNextCursor(null);
+        setHasNextPage(false);
+        loadAssets(nextMode, null);
+      }
     }, [loadAssets, mode]);
 
     const handleCamera = useCallback(() => {
@@ -176,11 +300,11 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
       setResolving(true);
       try {
         const resolved = await Promise.all(selectedAssets.map(async (asset): Promise<ChatPickerAsset> => {
-          const info = await MediaLibrary.getAssetInfoAsync(asset.id);
+          const uploadUri = await getPickerAssetUploadUri(asset, MediaLibrary.getAssetInfoAsync);
           return {
             id: asset.id,
             uri: asset.uri,
-            uploadUri: info.localUri ?? info.uri ?? asset.uri,
+            uploadUri,
             name: asset.filename || `${asset.mediaType}_${Date.now()}`,
             mimeType: getAssetMimeType(asset),
             mediaType: asset.mediaType as 'photo' | 'video' | 'audio',
@@ -201,55 +325,64 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
       }
     }, [hasNextPage, loadAssets, loading, mode, nextCursor]);
 
+    const keyExtractor = useCallback((item: MediaLibrary.Asset) => item.id, []);
+
     const renderBackdrop = useCallback(
       (props: any) => (
         <BottomSheetBackdrop
           {...props}
           disappearsOnIndex={-1}
           appearsOnIndex={0}
-          opacity={0.45}
+          opacity={0.3}
           pressBehavior="close"
         />
       ),
       [],
     );
 
-    const renderAsset = useCallback(({ item }: { item: MediaLibrary.Asset }) => {
-      const isSelected = Boolean(selected[item.id]);
-      const isVideo = item.mediaType === MediaLibrary.MediaType.video;
-      const isAudio = item.mediaType === MediaLibrary.MediaType.audio;
+    const renderAsset = useCallback(({ item }: { item: MediaLibrary.Asset }) => (
+      <AssetTile
+        asset={item}
+        isSelected={Boolean(selected[item.id])}
+        onToggle={toggleAsset}
+      />
+    ), [selected, toggleAsset]);
 
-      return (
-        <TouchableOpacity
-          onPress={() => toggleAsset(item)}
-          activeOpacity={0.88}
-          style={styles.assetTile}
-        >
-          {isAudio ? (
-            <View style={styles.audioTile}>
-              <Music size={28} color={COLORS.textInverse} strokeWidth={2} />
-              <Text style={styles.audioLabel}>Audio</Text>
-            </View>
-          ) : (
-            <Image source={{ uri: item.uri }} style={styles.assetImage} resizeMode="cover" />
-          )}
-          {isVideo && (
-            <View style={styles.playOverlay}>
-              <Play size={18} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
-            </View>
-          )}
-          <View style={isSelected ? styles.selectedCheck : styles.unselectedDot}>
-            {isSelected ? <Check size={13} color={COLORS.textStrong} strokeWidth={3} /> : null}
-          </View>
-        </TouchableOpacity>
-      );
-    }, [selected, toggleAsset]);
+    const renderFooter = useCallback((props: BottomSheetFooterProps) => (
+      <BottomSheetFooter
+        {...props}
+        bottomInset={0}
+        style={styles.footerContainer}
+      >
+        <View style={[styles.footerContent, { paddingBottom: insets.bottom ? insets.bottom + 12 : 16 }]}>
+          <TouchableOpacity onPress={dismiss} activeOpacity={0.86} style={styles.dismissButton}>
+            <Text style={styles.dismissText}>Dismiss</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleAddSelected}
+            disabled={selectedCount === 0 || resolving}
+            activeOpacity={0.86}
+            style={[styles.addButton, selectedCount === 0 && styles.addButtonDisabled]}
+          >
+            {resolving ? (
+              <ActivityIndicator color={COLORS.textInverse} />
+            ) : (
+              <Text style={styles.addText}>
+                {selectedCount > 0 ? `Add ${selectedCount} ${selectionLabel}` : 'Select to add'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </BottomSheetFooter>
+    ), [dismiss, handleAddSelected, insets.bottom, resolving, selectedCount, selectionLabel]);
 
     return (
       <BottomSheetModal
         ref={ref}
-        snapPoints={['72%', '94%']}
+        snapPoints={['60%', '92%']}
+        enableDynamicSizing={false}
         backdropComponent={renderBackdrop}
+        footerComponent={renderFooter}
         enablePanDownToClose
         onChange={handleSheetChange}
         onDismiss={handleDismiss}
@@ -257,67 +390,150 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
         backgroundStyle={styles.sheetBackground}
       >
         <BottomSheetView style={styles.container}>
+          {/* ── Header ── */}
           <View style={styles.header}>
-            <Text style={styles.title}>Attach media</Text>
+            <View>
+              <Text style={styles.title}>Attach media</Text>
+              {selectedCount > 0 && (
+                <Text style={styles.subtitle}>{selectedCount} {selectionLabel} selected</Text>
+              )}
+            </View>
             <TouchableOpacity onPress={dismiss} activeOpacity={0.8} style={styles.closeButton}>
-              <X size={26} color={COLORS.textInverse} strokeWidth={2.2} />
+              <X size={18} color={COLORS.textBase} strokeWidth={2.2} />
             </TouchableOpacity>
           </View>
 
+          {/* ── Action row ── */}
           <View style={styles.actionRow}>
-            <PickerAction label="Camera" icon={<Camera size={36} color={COLORS.textInverse} strokeWidth={2} />} onPress={handleCamera} />
-            <PickerAction label="Gallery" active={mode === 'gallery'} icon={<ImageIcon size={36} color={COLORS.textInverse} strokeWidth={2} />} onPress={() => selectMode('gallery')} />
-            <PickerAction label="Videos" active={mode === 'videos'} icon={<Film size={36} color={COLORS.textInverse} strokeWidth={2} />} onPress={() => selectMode('videos')} />
-            <PickerAction label="Audio" active={mode === 'audio'} icon={<Music size={36} color={COLORS.textInverse} strokeWidth={2} />} onPress={() => selectMode('audio')} />
-            <PickerAction label="Docs" icon={<FileText size={36} color={COLORS.textInverse} strokeWidth={2} />} onPress={handleDocs} />
+            <PickerAction
+              label="Camera"
+              icon={<Camera size={20} color={COLORS.textBase} strokeWidth={1.8} />}
+              onPress={handleCamera}
+            />
+            <PickerAction
+              label="Gallery"
+              active={mode === 'gallery'}
+              icon={<ImageIcon size={20} color={mode === 'gallery' ? COLORS.brand : COLORS.textBase} strokeWidth={1.8} />}
+              onPress={() => selectMode('gallery')}
+            />
+            <PickerAction
+              label="Videos"
+              active={mode === 'videos'}
+              icon={<Film size={20} color={mode === 'videos' ? COLORS.brand : COLORS.textBase} strokeWidth={1.8} />}
+              onPress={() => selectMode('videos')}
+            />
+            <PickerAction
+              label="Audio"
+              active={mode === 'audio'}
+              icon={<Music size={20} color={mode === 'audio' ? COLORS.brand : COLORS.textBase} strokeWidth={1.8} />}
+              onPress={() => selectMode('audio')}
+            />
+            <PickerAction
+              label="Docs"
+              icon={<FileText size={20} color={COLORS.textBase} strokeWidth={1.8} />}
+              onPress={handleDocs}
+            />
           </View>
 
           <View style={styles.divider} />
 
-          {permissionDenied ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>Media access needed</Text>
-              <Text style={styles.emptyText}>Allow Memento to show your recent media here.</Text>
-              <TouchableOpacity onPress={() => loadAssets(mode, null)} style={styles.permissionButton}>
-                <Text style={styles.permissionButtonText}>Allow access</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <BottomSheetFlatList
-              data={assets}
-              keyExtractor={(item) => item.id}
-              renderItem={renderAsset}
-              numColumns={4}
-              columnWrapperStyle={styles.gridRow}
-              contentContainerStyle={[styles.gridContent, { paddingBottom: insets.bottom + 118 }]}
-              onEndReached={loadMore}
-              onEndReachedThreshold={0.6}
-              ListFooterComponent={loading ? <ActivityIndicator color={COLORS.brand} style={styles.loader} /> : null}
-            />
-          )}
-
-          <View style={[styles.footer, { paddingBottom: insets.bottom ? insets.bottom + 12 : 20 }]}>
-            <TouchableOpacity onPress={dismiss} activeOpacity={0.86} style={styles.dismissButton}>
-              <Text style={styles.dismissText}>Dismiss</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleAddSelected}
-              disabled={selectedCount === 0 || resolving}
-              activeOpacity={0.86}
-              style={[styles.addButton, selectedCount === 0 && styles.addButtonDisabled]}
-            >
-              {resolving ? (
-                <ActivityIndicator color={COLORS.textInverse} />
-              ) : (
-                <Text style={styles.addText}>Add {selectedCount} {selectionLabel}</Text>
-              )}
-            </TouchableOpacity>
+          {/* ── Content ── */}
+          <View style={styles.contentArea}>
+            {permissionIssue ? (
+              <View style={styles.emptyState}>
+                <PermissionRecoveryState
+                  icon={ImageOff}
+                  title={permissionCopy.title}
+                  description={permissionCopy.description}
+                  actionLabel={permissionRecoveryAction === 'settings' ? 'Open Settings' : 'Allow access'}
+                  onAction={handlePermissionAction}
+                  secondaryLabel="Dismiss"
+                  onSecondary={dismiss}
+                  tone="light"
+                />
+              </View>
+            ) : (
+              <BottomSheetFlatList
+                data={assets}
+                keyExtractor={keyExtractor}
+                renderItem={renderAsset}
+                extraData={selected}
+                numColumns={4}
+                style={styles.assetList}
+                columnWrapperStyle={styles.gridRow}
+                contentContainerStyle={styles.gridContent}
+                onEndReached={loadMore}
+                onEndReachedThreshold={0.6}
+                enableFooterMarginAdjustment
+                initialNumToRender={24}
+                maxToRenderPerBatch={12}
+                windowSize={5}
+                removeClippedSubviews
+                ListEmptyComponent={
+                  loading ? null : (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyText}>No {mode === 'gallery' ? 'photos' : mode} found</Text>
+                    </View>
+                  )
+                }
+                ListFooterComponent={loading ? <ActivityIndicator color={COLORS.brand} style={styles.loader} /> : null}
+              />
+            )}
           </View>
         </BottomSheetView>
       </BottomSheetModal>
     );
   },
 );
+
+// ─── Asset tile ───────────────────────────────────────────────────────────────
+
+const AssetTile = React.memo(function AssetTile({
+  asset,
+  isSelected,
+  onToggle,
+}: {
+  asset: MediaLibrary.Asset;
+  isSelected: boolean;
+  onToggle: (asset: MediaLibrary.Asset) => void;
+}) {
+  const isVideo = asset.mediaType === MediaLibrary.MediaType.video;
+  const isAudio = asset.mediaType === MediaLibrary.MediaType.audio;
+
+  const handlePress = useCallback(() => {
+    onToggle(asset);
+  }, [asset, onToggle]);
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.88}
+      style={styles.assetTile}
+    >
+      {isAudio ? (
+        <View style={styles.audioTile}>
+          <Music size={22} color={COLORS.textWeak} strokeWidth={1.8} />
+          <Text style={styles.audioLabel} numberOfLines={1}>{asset.filename?.replace(/\.[^.]+$/, '') || 'Audio'}</Text>
+        </View>
+      ) : (
+        <Image source={{ uri: asset.uri }} style={styles.assetImage} resizeMode="cover" />
+      )}
+      {isVideo && (
+        <View style={styles.playOverlay}>
+          <Play size={14} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+        </View>
+      )}
+      {/* Selection indicator */}
+      <View style={isSelected ? styles.selectedCheck : styles.unselectedDot}>
+        {isSelected && <Check size={11} color={COLORS.textInverse} strokeWidth={3} />}
+      </View>
+      {/* Selection overlay tint */}
+      {isSelected && <View style={styles.selectedOverlay} />}
+    </TouchableOpacity>
+  );
+});
+
+// ─── Picker action tile ───────────────────────────────────────────────────────
 
 function PickerAction({
   label,
@@ -331,48 +547,68 @@ function PickerAction({
   active?: boolean;
 }) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.86} style={[styles.actionTile, active && styles.actionTileActive]}>
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.82}
+      style={[styles.actionTile, active && styles.actionTileActive]}
+    >
       {icon}
-      <Text style={styles.actionLabel}>{label}</Text>
+      <Text style={[styles.actionLabel, active && styles.actionLabelActive]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   sheetBackground: {
-    backgroundColor: COLORS.textStrong,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
   },
   handle: {
-    width: 96,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    width: 40,
+    height: 4,
+    backgroundColor: COLORS.strokeStrong,
+    opacity: 0.3,
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.textStrong,
+    backgroundColor: COLORS.background,
   },
+
+  // Header
   header: {
     paddingHorizontal: SHEET_HORIZONTAL,
-    paddingTop: 22,
-    paddingBottom: 28,
+    paddingTop: 18,
+    paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   title: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 30,
-    color: COLORS.textInverse,
+    fontFamily: FONTS.serif,
+    fontSize: 22,
+    color: COLORS.textStrong,
+  },
+  subtitle: {
+    fontFamily: FONTS.sans,
+    fontSize: 12,
+    color: COLORS.textWeak,
+    marginTop: 2,
   },
   closeButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.fillWeak,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
   },
+
+  // Action row
   actionRow: {
     flexDirection: 'row',
     paddingHorizontal: SHEET_HORIZONTAL,
@@ -380,33 +616,52 @@ const styles = StyleSheet.create({
   },
   actionTile: {
     flex: 1,
-    height: 128,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 14,
+    backgroundColor: COLORS.fillWeaker,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: COLORS.strokeWeaker,
+    gap: 5,
+    minHeight: 64,
   },
   actionTileActive: {
-    borderColor: `${COLORS.brand}99`,
-    backgroundColor: 'rgba(255,255,255,0.11)',
+    backgroundColor: `${COLORS.brand}08`,
+    borderColor: `${COLORS.brand}30`,
   },
   actionLabel: {
     fontFamily: FONTS.sansMedium,
-    fontSize: 16,
-    color: COLORS.textInverse,
+    fontSize: 10,
+    color: COLORS.textWeak,
+    textAlign: 'center',
   },
+  actionLabelActive: {
+    color: COLORS.brand,
+    fontFamily: FONTS.sansSemi,
+  },
+
+  // Divider
   divider: {
     marginHorizontal: SHEET_HORIZONTAL,
-    marginTop: 30,
-    marginBottom: 32,
+    marginTop: 16,
+    marginBottom: 12,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: COLORS.strokeWeaker,
+  },
+
+  // Grid
+  contentArea: {
+    flex: 1,
+    minHeight: 0,
+  },
+  assetList: {
+    flex: 1,
   },
   gridContent: {
     paddingHorizontal: SHEET_HORIZONTAL,
+    paddingBottom: 16,
   },
   gridRow: {
     gap: GRID_GAP,
@@ -415,9 +670,9 @@ const styles = StyleSheet.create({
   assetTile: {
     width: TILE_SIZE,
     height: TILE_SIZE,
-    borderRadius: 12,
+    borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: COLORS.fillWeak,
   },
   assetImage: {
     width: '100%',
@@ -427,118 +682,118 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: COLORS.fillWeak,
+    paddingHorizontal: 4,
+    gap: 4,
   },
   audioLabel: {
-    marginTop: 8,
-    fontFamily: FONTS.sansBold,
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.68)',
+    fontFamily: FONTS.sansMedium,
+    fontSize: 9,
+    color: COLORS.textMuted,
+    textAlign: 'center',
   },
   playOverlay: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.18)',
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   selectedCheck: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    top: 5,
+    right: 5,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: COLORS.brand,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: COLORS.brand,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 2,
   },
   unselectedDot: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(255,255,255,0.78)',
+    top: 5,
+    right: 5,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.9)',
   },
+  selectedOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: `${COLORS.brand}18`,
+  },
+
+  // Empty / loading
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 48,
     paddingHorizontal: 32,
-    paddingBottom: 160,
-  },
-  emptyTitle: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 18,
-    color: COLORS.textInverse,
   },
   emptyText: {
-    marginTop: 8,
     fontFamily: FONTS.sans,
     fontSize: 14,
-    textAlign: 'center',
-    color: 'rgba(255,255,255,0.68)',
-  },
-  permissionButton: {
-    marginTop: 18,
-    height: 48,
-    paddingHorizontal: 22,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.brand,
-  },
-  permissionButtonText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 14,
-    color: COLORS.textInverse,
+    color: COLORS.textWeak,
   },
   loader: {
     paddingVertical: 24,
   },
-  footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    gap: 24,
-    paddingTop: 32,
-    paddingHorizontal: SHEET_HORIZONTAL,
+
+  // Footer
+  footerContainer: {
+    backgroundColor: COLORS.background,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.16)',
-    backgroundColor: COLORS.textStrong,
+    borderTopColor: COLORS.strokeWeaker,
+  },
+  footerContent: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingTop: 12,
+    paddingHorizontal: SHEET_HORIZONTAL,
+    backgroundColor: COLORS.background,
   },
   dismissButton: {
     flex: 1,
-    height: 74,
-    borderRadius: 37,
+    height: 56,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: COLORS.fillWeak,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeak,
   },
   dismissText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 18,
-    color: COLORS.textInverse,
+    fontFamily: FONTS.sansSemi,
+    fontSize: 15,
+    color: COLORS.textBase,
   },
   addButton: {
-    flex: 1,
-    height: 74,
-    borderRadius: 37,
+    flex: 2,
+    height: 56,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.brand,
+    shadowColor: COLORS.brand,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
   addButtonDisabled: {
     opacity: 0.45,
   },
   addText: {
     fontFamily: FONTS.sansBold,
-    fontSize: 18,
+    fontSize: 15,
     color: COLORS.textInverse,
   },
 });

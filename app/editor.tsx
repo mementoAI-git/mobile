@@ -34,8 +34,6 @@ import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
-import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/constants/query-keys';
 import { useToast } from '@/components/ui/Toast';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { upsertDraft, loadDrafts, deleteDraft, DraftsSheet, type StoryDraft, type StoryDraftAttachment } from '@/components/sheets/DraftsSheet';
@@ -51,26 +49,28 @@ import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import type { IBeneficiary, IFile } from '@/types';
 import { publishedPostUrl } from '@/lib/env';
+import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
+import {
+  DOCUMENT_PICKER_MIME_TYPES,
+  MAX_ATTACHMENT_FILE_MB,
+  getDocumentUploadInput,
+  getMediaUploadInput,
+  isFileTooLarge,
+} from '@/features/media/attachments';
+import {
+  getUploadedAttachmentIds,
+  hasUploadingAttachments,
+  type UploadAttachment,
+} from '@/features/media/attachment-upload-state';
+import { useAttachmentUploads } from '@/features/media/use-attachment-uploads';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STORY_DRAFT_KEY = (email?: string | null) => `article_draft_${email ?? 'anon'}`;
 const QC_DRAFT_KEY = (email?: string | null) => `qc_draft_${email ?? 'anon'}`;
 const NOTE_CHAR_MAX = 8000;
-const MAX_FILE_MB = 15;
-const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
-const FILE_INPUT_MIME = [
-  // Audio
-  'audio/mpeg','audio/wav','audio/webm','audio/mp4','audio/aac','audio/flac','audio/ogg','audio/*',
-  // Documents
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/plain',
-  'application/rtf',
-];
+const FILE_INPUT_MIME = DOCUMENT_PICKER_MIME_TYPES;
 
 const SURFER_WEBP = require('../assets/images/illustrations/surfer.webp');
 const SUCCESS_BG = require('../assets/images/backgrounds/published_success_bg.png');
@@ -84,10 +84,22 @@ const SOCIAL_X = require('../assets/images/icons/x.png');
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface AttachmentItem {
-  clientId: string; fileId: string; uri: string; name: string;
-  mimeType: string; duration?: number; isVoice?: boolean;
-  isUploading?: boolean; file?: IFile;
+type AttachmentItem = UploadAttachment<IFile>;
+
+function toStoryDraftAttachments(attachments: AttachmentItem[]): StoryDraftAttachment[] {
+  return attachments.flatMap((attachment) => {
+    const fileId = attachment.fileId;
+    if (!fileId || attachment.isUploading) return [];
+
+    return [{
+      fileId,
+      uri: attachment.file?.url || attachment.uri,
+      name: attachment.name,
+      mimeType: attachment.mimeType,
+      isVoice: attachment.isVoice,
+      duration: attachment.duration,
+    }];
+  });
 }
 
 // ─── Publish success screen ───────────────────────────────────────────────────
@@ -194,7 +206,6 @@ function PublishModalInner({ title, body, attachmentIds, onClose, memoryId, onAd
   const isPending = isEditMode ? updatePending : createPending;
   const { data: beneficiariesRaw } = useBeneficiaries();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const beneficiaries: IBeneficiary[] = useMemo(() => {
     if (!beneficiariesRaw) return [];
@@ -237,8 +248,6 @@ function PublishModalInner({ title, body, attachmentIds, onClose, memoryId, onAd
       beneficiaries: selectedBeneficiaryIds.length ? selectedBeneficiaryIds : undefined,
     };
     const onSuccess = (res: any) => {
-      queryClient.invalidateQueries({ queryKey: ['stories'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.memoriesStats });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (isEditMode) {
         // Edit: show a success toast and close — no share screen
@@ -260,7 +269,7 @@ function PublishModalInner({ title, body, attachmentIds, onClose, memoryId, onAd
     }
   // attachmentIds must be in deps — without it the closure captures the initial
   // empty array and voice notes / images added before publishing are silently dropped.
-  }, [title, body, tags, attachmentIds, selectedBeneficiaryIds, isEditMode, createMemory, updateMemory, queryClient, toast, onClose]);
+  }, [title, body, tags, attachmentIds, selectedBeneficiaryIds, isEditMode, createMemory, updateMemory, toast, onClose]);
 
   const handleClose = useCallback(() => {
     setPublishedUrl(null); setTags(''); setSelectedBeneficiaryIds([]); setBeneficiaryMenuOpen(false); onClose();
@@ -393,7 +402,6 @@ export default function EditorScreen() {
 
   // Quick-capture state
   const [qcBody, setQcBody] = useState('');
-  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Shared
@@ -417,8 +425,30 @@ export default function EditorScreen() {
   const { mutateAsync: quickCapture, isPending: qcPending } = useQuickCapture();
   const { mutateAsync: uploadFileMutation } = useFileUpload();
   const { data: beneficiariesRaw } = useBeneficiaries();
-  const { start: startRecording, stop: stopRecording, isRecording, duration: recDuration } = useAudioRecorder();
   const { toast } = useToast();
+  const {
+    attachments,
+    setAttachments,
+    uploadAndAdd,
+  } = useAttachmentUploads<IFile>({
+    uploadFile: uploadFileMutation,
+    insert: 'prepend',
+    isMountedRef,
+    onUploadFailure: () => {
+      toast('Failed to upload attachment', 'error');
+    },
+  });
+  const handleMicrophonePermissionDenied = useCallback((permission: PermissionLike) => {
+    showPermissionRecoveryAlert({
+      permission,
+      title: 'Microphone is off',
+      description: 'Allow microphone access to add a voice note to this memory.',
+      settingsDescription: 'Microphone access is turned off in Settings. Turn it back on to add a voice note to this memory.',
+    });
+  }, []);
+  const { start: startRecording, stop: stopRecording, isRecording, duration: recDuration } = useAudioRecorder({
+    onPermissionDenied: handleMicrophonePermissionDenied,
+  });
 
   const beneficiaries: IBeneficiary[] = useMemo(() => {
     if (!beneficiariesRaw) return [];
@@ -482,16 +512,7 @@ export default function EditorScreen() {
       }
       try {
         // Snapshot already-uploaded attachments so they can be restored on load
-        const savedAttachments: StoryDraftAttachment[] = attachments
-          .filter(a => a.fileId && !a.isUploading)
-          .map(a => ({
-            fileId: a.fileId,
-            uri: a.file?.url || a.uri,
-            name: a.name,
-            mimeType: a.mimeType,
-            isVoice: a.isVoice,
-            duration: a.duration,
-          }));
+        const savedAttachments = toStoryDraftAttachments(attachments);
 
         await upsertDraft(user?.email, {
           id: draftIdRef.current,
@@ -513,26 +534,22 @@ export default function EditorScreen() {
     }, 1200);
   }, [user?.email, isEditing]);
 
-  // Upload helper — new items are prepended so they always appear at the start of the strip
-  const uploadAndAdd = useCallback(async (uri: string, mimeType: string, name: string, opts?: { isVoice?: boolean; duration?: number }) => {
-    const clientId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    setAttachments(prev => [{ clientId, fileId: '', uri, name, mimeType, isVoice: opts?.isVoice, duration: opts?.duration, isUploading: true }, ...prev]);
-    try {
-      const result = await uploadFileMutation({ uri, type: mimeType, name });
-      if (!isMountedRef.current) return;
-      if (result?._id) setAttachments(prev => prev.map(a => a.clientId === clientId ? { ...a, fileId: result._id, isUploading: false, file: result } : a));
-      else { setAttachments(prev => prev.filter(a => a.clientId !== clientId)); toast('Failed to upload attachment', 'error'); }
-    } catch { if (isMountedRef.current) { setAttachments(prev => prev.filter(a => a.clientId !== clientId)); toast('Failed to upload attachment', 'error'); } }
-  }, [uploadFileMutation, toast]);
-
   const handleImagePicker = useCallback(async () => {
     Haptics.selectionAsync();
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { toast('Allow Memento to access your photos and videos.', 'error'); return; }
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!isPermissionGranted(permission)) {
+      showPermissionRecoveryAlert({
+        permission,
+        title: 'Media is tucked away',
+        description: 'Allow photo and video access to attach media to this memory.',
+        settingsDescription: 'Photo and video access is turned off in Settings. Turn it back on to attach media to this memory.',
+      });
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], allowsMultipleSelection: true, quality: 0.85 });
-    if (!result.canceled) await Promise.all(result.assets.map(a => {
-      const isVideo = a.mimeType?.startsWith('video/');
-      return uploadAndAdd(a.uri, a.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg'), a.fileName || `${isVideo ? 'video' : 'photo'}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`);
+    if (!result.canceled) await Promise.all(result.assets.map((a) => {
+      const upload = getMediaUploadInput(a);
+      return uploadAndAdd(upload.uri, upload.mimeType, upload.name);
     }));
   }, [uploadAndAdd]);
 
@@ -553,7 +570,11 @@ export default function EditorScreen() {
     Haptics.selectionAsync();
     try {
       const result = await DocumentPicker.getDocumentAsync({ type: FILE_INPUT_MIME, copyToCacheDirectory: true });
-      if (!result.canceled && result.assets[0]) { const a = result.assets[0]; if (a.size && a.size > MAX_FILE_BYTES) { toast(`File exceeds ${MAX_FILE_MB}MB limit`, 'error'); return; } await uploadAndAdd(a.uri, a.mimeType || 'application/octet-stream', a.name); }
+      if (!result.canceled && result.assets[0]) {
+        const upload = getDocumentUploadInput(result.assets[0]);
+        if (isFileTooLarge(upload.fileSize)) { toast(`File exceeds ${MAX_ATTACHMENT_FILE_MB}MB limit`, 'error'); return; }
+        await uploadAndAdd(upload.uri, upload.mimeType, upload.name);
+      }
     } catch {}
   }, [uploadAndAdd, toast]);
 
@@ -563,16 +584,11 @@ export default function EditorScreen() {
   }, [isRecording, stopRecording, startRecording, recDuration, uploadAndAdd]);
 
   const attachmentGroups = useMemo(() => {
-    const uploadedIds: string[] = [];
     const mediaAttachments: AttachmentItem[] = [];
     const voiceAttachments: AttachmentItem[] = [];
     const documentAttachments: AttachmentItem[] = [];
-    let anyUploading = false;
 
     for (const attachment of attachments) {
-      if (attachment.isUploading) anyUploading = true;
-      if (attachment.fileId && !attachment.isUploading) uploadedIds.push(attachment.fileId);
-
       if (attachment.mimeType.startsWith('image/') || attachment.mimeType.startsWith('video/')) {
         mediaAttachments.push(attachment);
       } else if (attachment.isVoice) {
@@ -582,7 +598,13 @@ export default function EditorScreen() {
       }
     }
 
-    return { anyUploading, uploadedIds, mediaAttachments, voiceAttachments, documentAttachments };
+    return {
+      anyUploading: hasUploadingAttachments(attachments),
+      uploadedIds: getUploadedAttachmentIds(attachments),
+      mediaAttachments,
+      voiceAttachments,
+      documentAttachments,
+    };
   }, [attachments]);
   const { anyUploading, uploadedIds, mediaAttachments, voiceAttachments, documentAttachments } = attachmentGroups;
 
@@ -657,9 +679,7 @@ export default function EditorScreen() {
               const saveOnPress = async () => {
                 setCancelConfirmVisible(false);
                 if (isStory) {
-                  const savedAttachments: StoryDraftAttachment[] = attachments
-                    .filter(a => a.fileId && !a.isUploading)
-                    .map(a => ({ fileId: a.fileId, uri: a.file?.url || a.uri, name: a.name, mimeType: a.mimeType, isVoice: a.isVoice, duration: a.duration }));
+                  const savedAttachments = toStoryDraftAttachments(attachments);
                   await upsertDraft(user?.email, {
                     id: draftIdRef.current, title: cancelTitle, body: cancelBody, updatedAt: Date.now(),
                     attachments: savedAttachments.length ? savedAttachments : undefined,

@@ -1,6 +1,8 @@
 import React from 'react';
-import { Stack } from 'expo-router';
+import { Slot } from 'expo-router';
 
-export default function ChatStack() {
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }} />;
+// Using Slot instead of a Stack navigator so the index screen mounts directly
+// without an extra navigation event — prevents the double-haptic on first cold launch.
+export default function ChatLayout() {
+  return <Slot />;
 }

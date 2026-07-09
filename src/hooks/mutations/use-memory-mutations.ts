@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { post, put, del } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
+import { invalidateMemoryQueries } from '@/features/memories/cache';
 import { queryKeys } from '@/constants/query-keys';
 import type { IMemory, IDailyPromptCapture } from '@/types';
 
@@ -22,18 +23,11 @@ export function useCreateMemory() {
     mutationFn: (payload: CreateMemoryPayload) =>
       post<IMemory>(endpoint.memories, payload),
     onSuccess: (_res, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['memories'] });
-      queryClient.invalidateQueries({ queryKey: ['stories'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.memoriesStats });
-      if (variables.daily_prompt?.prompt_id || variables.daily_prompt?.pinned_text || variables.daily_prompt?.reflection_day_key) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.dailyPrompts() });
-        queryClient.invalidateQueries({ queryKey: queryKeys.categoryDetailsPrompts() });
-        queryClient.invalidateQueries({ queryKey: queryKeys.overviewPrompts });
-        queryClient.invalidateQueries({ queryKey: queryKeys.prompts() });
-      }
-      if (variables.daily_prompt?.prompt_id) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.memoryByPrompt(variables.daily_prompt.prompt_id) });
-      }
+      invalidateMemoryQueries(queryClient, {
+        promptId: variables.daily_prompt?.prompt_id,
+        promptText: variables.daily_prompt?.pinned_text,
+        reflectionDayKey: variables.daily_prompt?.reflection_day_key,
+      });
     },
   });
 }
@@ -69,7 +63,13 @@ export function useUpdateMemory(id: string) {
 
       // Silently invalidate the individual memory for the detail screen.
       // The MasonryMemoryGrid key change handles thumbnail updates on the card.
-      queryClient.invalidateQueries({ queryKey: queryKeys.memory(id) });
+      invalidateMemoryQueries(queryClient, {
+        memoryId: id,
+        includeStats: false,
+        promptId: variables.daily_prompt?.prompt_id,
+        promptText: variables.daily_prompt?.pinned_text,
+        reflectionDayKey: variables.daily_prompt?.reflection_day_key,
+      });
     },
   });
 }
@@ -94,7 +94,7 @@ export function useDeleteMemory() {
       queryClient.setQueriesData({ queryKey: ['stories'] }, remover);
       queryClient.setQueriesData({ queryKey: ['memories'] }, remover);
       // Stats counter needs a server refetch since we can't decrement it locally
-      queryClient.invalidateQueries({ queryKey: queryKeys.memoriesStats });
+      invalidateMemoryQueries(queryClient, { memoryId: id });
     },
   });
 }
@@ -105,9 +105,7 @@ export function useRestoreMemory() {
     mutationFn: (id: string) =>
       post(endpoint.restoreMemory.replace(':id', id)),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['memories'] });
-      queryClient.invalidateQueries({ queryKey: ['stories'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.memoriesStats });
+      invalidateMemoryQueries(queryClient);
     },
   });
 }
