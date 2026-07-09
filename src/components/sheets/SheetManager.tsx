@@ -37,7 +37,7 @@ const SHEET_CONFIGS: Record<string, {
   'create-group': { component: CreateGroupSheet, snapPoints: ['90%'], keyboardBehavior: 'extend' },
   'quick-capture': { component: QuickCaptureSheet, dynamic: true, keyboardBlurBehavior: 'none' },
   'memory-insights': { component: MemoryInsightsSheet, snapPoints: ['88%'] },
-  'search-memory': { component: SearchMemorySheet, snapPoints: ['90%'], keyboardBehavior: 'fillParent' },
+  'search-memory': { component: SearchMemorySheet, snapPoints: ['90%'], keyboardBehavior: 'extend', keyboardBlurBehavior: 'none' },
   'chat-actions': { component: ChatActionsSheet, dynamic: true },
   'feedback': { component: FeedbackSheet, snapPoints: ['90%'], dynamic: true, keyboardBehavior: 'fillParent' },
   'capsule-detail': { component: CapsuleDetailSheet, snapPoints: ['92%'] },

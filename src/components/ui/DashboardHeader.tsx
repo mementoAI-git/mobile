@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, ImageBackground, TouchableOpacity } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Zap } from 'lucide-react-native';
 import { Avatar } from './Avatar';
-import { useUserStore } from '@/store';
+import { useUserStore, useUiStore } from '@/store';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
 import * as Haptics from 'expo-haptics';
@@ -14,14 +14,24 @@ interface DashboardHeaderProps {
   title: string;
   showStreak?: boolean;
   rightElement?: React.ReactNode;
-  /** Called when the streak pill is tapped — use to open a streak modal. */
+  /** Optional override — if not provided, DashboardHeader opens the streak sheet itself. */
   onStreakPress?: () => void;
 }
 
 export function DashboardHeader({ title, showStreak = true, rightElement, onStreakPress }: DashboardHeaderProps) {
   const router = useRouter();
   const user = useUserStore((s) => s.user);
+  const openSheet = useUiStore((s) => s.openSheet);
   const streakCount = Number(user?.streak) || 0;
+
+  const handleStreakPress = useCallback(() => {
+    Haptics.selectionAsync();
+    if (onStreakPress) {
+      onStreakPress();
+    } else {
+      openSheet('streak');
+    }
+  }, [onStreakPress, openSheet]);
 
   return (
     <View className="relative bg-background overflow-hidden">
@@ -37,7 +47,7 @@ export function DashboardHeader({ title, showStreak = true, rightElement, onStre
           {rightElement}
           {showStreak && (
             <TouchableOpacity
-              onPress={() => { Haptics.selectionAsync(); onStreakPress?.(); }}
+              onPress={handleStreakPress}
               activeOpacity={0.8}
               style={{
                 flexDirection: 'row',
