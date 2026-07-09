@@ -115,6 +115,10 @@ export default function ExploreScreen() {
           <FlatList
             data={categories}
             keyExtractor={(item, i) => item._id ?? String(i)}
+            initialNumToRender={8}
+            maxToRenderPerBatch={5}
+            windowSize={5}
+            removeClippedSubviews
             ListHeaderComponent={
               <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-6">
                 <Animated.Text className="text-base text-text-weak leading-relaxed mb-6" style={{ fontFamily: FONTS.sans }}>

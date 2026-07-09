@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View, TextInput, TouchableOpacity, Platform, StyleSheet,
-  Keyboard, ScrollView, Image, ActivityIndicator, AccessibilityInfo, useWindowDimensions,
+  Keyboard, ScrollView, Image, ActivityIndicator, AccessibilityInfo, useWindowDimensions, InteractionManager,
 } from 'react-native';
 import { ArrowUp, AudioLines, Mic, Square, Plus, X, FileText, PhoneCall, Play } from 'lucide-react-native';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
@@ -117,7 +117,7 @@ export function ChatInput({
   onVoice,
   onStop,
   disabled,
-  placeholder = 'Share a thought...',
+  placeholder = 'Type here to start a conversation',
   loading,
   maxComposerHeight,
 }: ChatInputProps) {
@@ -461,6 +461,16 @@ export function ChatInput({
   const handleOpenAttachmentPicker = useCallback(() => {
     if (disabled || anyUploading) return;
     Haptics.selectionAsync();
+    // Dismiss the keyboard first so it doesn't overlay the sheet as it rises.
+    // On Android a small delay is needed to let the keyboard begin animating away
+    // before the sheet snaps up.
+    Keyboard.dismiss();
+    if (Platform.OS === 'android') {
+      const task = InteractionManager.runAfterInteractions(() => {
+        attachmentPickerRef.current?.present();
+      });
+      return () => task.cancel();
+    }
     attachmentPickerRef.current?.present();
   }, [anyUploading, disabled]);
 

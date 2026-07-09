@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   modePillQuick: {
-    backgroundColor: '#77C7AF',
+    backgroundColor: COLORS.success,
   },
   modePillStory: {
     backgroundColor: COLORS.textStrong,

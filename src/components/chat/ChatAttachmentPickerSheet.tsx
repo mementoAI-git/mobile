@@ -1,5 +1,15 @@
 import React, { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Dimensions, Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  AppState,
+  Dimensions,
+  Image,
+  Linking,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import {
   BottomSheetBackdrop,
   BottomSheetFlatList,
@@ -10,7 +20,17 @@ import {
 } from '@gorhom/bottom-sheet';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import * as Haptics from 'expo-haptics';
-import { Camera, Check, FileText, Film, Image as ImageIcon, ImageOff, Music, Play, X } from 'lucide-react-native';
+import {
+  Camera,
+  Check,
+  FileText,
+  Film,
+  Image as ImageIcon,
+  ImageOff,
+  Music,
+  Play,
+  X,
+} from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PermissionRecoveryState } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -41,14 +61,30 @@ interface ChatAttachmentPickerSheetProps {
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_COLUMNS = 4;
-const GRID_GAP = 8;
-const ACTION_COLUMNS = 5;
-const ACTION_GAP = 6;
-const SHEET_HORIZONTAL = 20;
+const GRID_GAP = 3;
+const SHEET_HORIZONTAL = 16;
 const TILE_SIZE = Math.floor((SCREEN_WIDTH - SHEET_HORIZONTAL * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS);
-const ACTION_TILE_SIZE = Math.floor((SCREEN_WIDTH - SHEET_HORIZONTAL * 2 - ACTION_GAP * (ACTION_COLUMNS - 1)) / ACTION_COLUMNS);
-const ACTION_ICON_SIZE = Math.max(24, Math.min(30, Math.floor(ACTION_TILE_SIZE * 0.42)));
 const PAGE_SIZE = 80;
+
+// ─── Asset cache — persists per-mode between opens within the same session ────
+const assetCache = new Map<PickerMode, { assets: MediaLibrary.Asset[]; cursor: string | null; hasNextPage: boolean; ts: number }>();
+const CACHE_TTL_MS = 60_000; // 60 seconds
+
+function getCachedAssets(mode: PickerMode) {
+  const entry = assetCache.get(mode);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) {
+    assetCache.delete(mode);
+    return null;
+  }
+  return entry;
+}
+
+function setCachedAssets(mode: PickerMode, assets: MediaLibrary.Asset[], cursor: string | null, hasNextPage: boolean) {
+  assetCache.set(mode, { assets, cursor, hasNextPage, ts: Date.now() });
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getAssetMimeType(asset: MediaLibrary.Asset): string {
   const ext = asset.filename?.split('.').pop()?.toLowerCase() ?? '';
@@ -85,6 +121,8 @@ function getGranularPermissions(mode: PickerMode): MediaLibrary.GranularPermissi
   return mode === 'videos' ? ['video'] : mode === 'audio' ? ['audio'] : ['photo'];
 }
 
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttachmentPickerSheetProps>(
   function ChatAttachmentPickerSheet({ onCamera, onDocs, onConfirm }, ref) {
     const insets = useSafeAreaInsets();
@@ -113,6 +151,18 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
     }, []);
 
     const loadAssets = useCallback(async (nextMode: PickerMode, after?: string | null) => {
+      // Use cache for first page loads (after === null/undefined) if available
+      if (!after) {
+        const cached = getCachedAssets(nextMode);
+        if (cached) {
+          setAssets(cached.assets);
+          setNextCursor(cached.cursor);
+          setHasNextPage(cached.hasNextPage);
+          setPermissionIssue(null);
+          return;
+        }
+      }
+
       const requestId = ++loadRequestIdRef.current;
       setLoading(true);
       setPermissionIssue(null);
@@ -141,29 +191,37 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
         });
 
         if (requestId !== loadRequestIdRef.current) return;
-        setAssets(prev => (after ? [...prev, ...page.assets] : page.assets));
+
+        const nextAssets = after ? [...assets, ...page.assets] : page.assets;
+        setAssets(nextAssets);
         setNextCursor(page.endCursor);
         setHasNextPage(page.hasNextPage);
+
+        // Cache first-page results
+        if (!after) {
+          setCachedAssets(nextMode, nextAssets, page.endCursor, page.hasNextPage);
+        }
       } finally {
         if (requestId === loadRequestIdRef.current) {
           setLoading(false);
         }
       }
-    }, []);
+    }, [assets]);
 
     const handleSheetChange = useCallback((index: number) => {
-      setIsOpen(index >= 0);
-      if (index >= 0 && assets.length === 0 && !loading) {
+      const opening = index >= 0;
+      setIsOpen(opening);
+      if (opening && assets.length === 0 && !loading) {
         loadAssets(mode, null);
       }
     }, [assets.length, loadAssets, loading, mode]);
 
+    // Re-check permission if user returns from Settings
     useEffect(() => {
       if (!isOpen || !permissionIssue) return undefined;
 
       const subscription = AppState.addEventListener('change', async (state) => {
         if (state !== 'active') return;
-
         const permission = await MediaLibrary.getPermissionsAsync(false, getGranularPermissions(mode));
         if (isPermissionGranted(permission)) {
           setPermissionIssue(null);
@@ -200,10 +258,19 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
       if (nextMode === mode) return;
       Haptics.selectionAsync();
       setMode(nextMode);
-      setAssets([]);
-      setNextCursor(null);
-      setHasNextPage(false);
-      loadAssets(nextMode, null);
+      // Check cache first — if available, no loading state needed
+      const cached = getCachedAssets(nextMode);
+      if (cached) {
+        setAssets(cached.assets);
+        setNextCursor(cached.cursor);
+        setHasNextPage(cached.hasNextPage);
+        setPermissionIssue(null);
+      } else {
+        setAssets([]);
+        setNextCursor(null);
+        setHasNextPage(false);
+        loadAssets(nextMode, null);
+      }
     }, [loadAssets, mode]);
 
     const handleCamera = useCallback(() => {
@@ -266,7 +333,7 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
           {...props}
           disappearsOnIndex={-1}
           appearsOnIndex={0}
-          opacity={0.45}
+          opacity={0.3}
           pressBehavior="close"
         />
       ),
@@ -287,7 +354,7 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
         bottomInset={0}
         style={styles.footerContainer}
       >
-        <View style={[styles.footerContent, { paddingBottom: insets.bottom ? insets.bottom + 20 : 20 }]}>
+        <View style={[styles.footerContent, { paddingBottom: insets.bottom ? insets.bottom + 12 : 16 }]}>
           <TouchableOpacity onPress={dismiss} activeOpacity={0.86} style={styles.dismissButton}>
             <Text style={styles.dismissText}>Dismiss</Text>
           </TouchableOpacity>
@@ -300,7 +367,9 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
             {resolving ? (
               <ActivityIndicator color={COLORS.textInverse} />
             ) : (
-              <Text style={styles.addText}>Add {selectedCount} {selectionLabel}</Text>
+              <Text style={styles.addText}>
+                {selectedCount > 0 ? `Add ${selectedCount} ${selectionLabel}` : 'Select to add'}
+              </Text>
             )}
           </TouchableOpacity>
         </View>
@@ -310,7 +379,7 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
     return (
       <BottomSheetModal
         ref={ref}
-        snapPoints={['72%', '94%']}
+        snapPoints={['60%', '92%']}
         enableDynamicSizing={false}
         backdropComponent={renderBackdrop}
         footerComponent={renderFooter}
@@ -321,23 +390,54 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
         backgroundStyle={styles.sheetBackground}
       >
         <BottomSheetView style={styles.container}>
+          {/* ── Header ── */}
           <View style={styles.header}>
-            <Text style={styles.title}>Attach media</Text>
+            <View>
+              <Text style={styles.title}>Attach media</Text>
+              {selectedCount > 0 && (
+                <Text style={styles.subtitle}>{selectedCount} {selectionLabel} selected</Text>
+              )}
+            </View>
             <TouchableOpacity onPress={dismiss} activeOpacity={0.8} style={styles.closeButton}>
-              <X size={26} color={COLORS.textInverse} strokeWidth={2.2} />
+              <X size={18} color={COLORS.textBase} strokeWidth={2.2} />
             </TouchableOpacity>
           </View>
 
+          {/* ── Action row ── */}
           <View style={styles.actionRow}>
-            <PickerAction label="Camera" icon={<Camera size={ACTION_ICON_SIZE} color={COLORS.textInverse} strokeWidth={2} />} onPress={handleCamera} />
-            <PickerAction label="Gallery" active={mode === 'gallery'} icon={<ImageIcon size={ACTION_ICON_SIZE} color={COLORS.textInverse} strokeWidth={2} />} onPress={() => selectMode('gallery')} />
-            <PickerAction label="Videos" active={mode === 'videos'} icon={<Film size={ACTION_ICON_SIZE} color={COLORS.textInverse} strokeWidth={2} />} onPress={() => selectMode('videos')} />
-            <PickerAction label="Audio" active={mode === 'audio'} icon={<Music size={ACTION_ICON_SIZE} color={COLORS.textInverse} strokeWidth={2} />} onPress={() => selectMode('audio')} />
-            <PickerAction label="Docs" icon={<FileText size={ACTION_ICON_SIZE} color={COLORS.textInverse} strokeWidth={2} />} onPress={handleDocs} />
+            <PickerAction
+              label="Camera"
+              icon={<Camera size={20} color={COLORS.textBase} strokeWidth={1.8} />}
+              onPress={handleCamera}
+            />
+            <PickerAction
+              label="Gallery"
+              active={mode === 'gallery'}
+              icon={<ImageIcon size={20} color={mode === 'gallery' ? COLORS.brand : COLORS.textBase} strokeWidth={1.8} />}
+              onPress={() => selectMode('gallery')}
+            />
+            <PickerAction
+              label="Videos"
+              active={mode === 'videos'}
+              icon={<Film size={20} color={mode === 'videos' ? COLORS.brand : COLORS.textBase} strokeWidth={1.8} />}
+              onPress={() => selectMode('videos')}
+            />
+            <PickerAction
+              label="Audio"
+              active={mode === 'audio'}
+              icon={<Music size={20} color={mode === 'audio' ? COLORS.brand : COLORS.textBase} strokeWidth={1.8} />}
+              onPress={() => selectMode('audio')}
+            />
+            <PickerAction
+              label="Docs"
+              icon={<FileText size={20} color={COLORS.textBase} strokeWidth={1.8} />}
+              onPress={handleDocs}
+            />
           </View>
 
           <View style={styles.divider} />
 
+          {/* ── Content ── */}
           <View style={styles.contentArea}>
             {permissionIssue ? (
               <View style={styles.emptyState}>
@@ -349,7 +449,7 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
                   onAction={handlePermissionAction}
                   secondaryLabel="Dismiss"
                   onSecondary={dismiss}
-                  tone="dark"
+                  tone="light"
                 />
               </View>
             ) : (
@@ -365,6 +465,17 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
                 onEndReached={loadMore}
                 onEndReachedThreshold={0.6}
                 enableFooterMarginAdjustment
+                initialNumToRender={24}
+                maxToRenderPerBatch={12}
+                windowSize={5}
+                removeClippedSubviews
+                ListEmptyComponent={
+                  loading ? null : (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyText}>No {mode === 'gallery' ? 'photos' : mode} found</Text>
+                    </View>
+                  )
+                }
                 ListFooterComponent={loading ? <ActivityIndicator color={COLORS.brand} style={styles.loader} /> : null}
               />
             )}
@@ -374,6 +485,8 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
     );
   },
 );
+
+// ─── Asset tile ───────────────────────────────────────────────────────────────
 
 const AssetTile = React.memo(function AssetTile({
   asset,
@@ -399,23 +512,28 @@ const AssetTile = React.memo(function AssetTile({
     >
       {isAudio ? (
         <View style={styles.audioTile}>
-          <Music size={28} color={COLORS.textInverse} strokeWidth={2} />
-          <Text style={styles.audioLabel}>Audio</Text>
+          <Music size={22} color={COLORS.textWeak} strokeWidth={1.8} />
+          <Text style={styles.audioLabel} numberOfLines={1}>{asset.filename?.replace(/\.[^.]+$/, '') || 'Audio'}</Text>
         </View>
       ) : (
         <Image source={{ uri: asset.uri }} style={styles.assetImage} resizeMode="cover" />
       )}
       {isVideo && (
         <View style={styles.playOverlay}>
-          <Play size={18} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+          <Play size={14} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
         </View>
       )}
+      {/* Selection indicator */}
       <View style={isSelected ? styles.selectedCheck : styles.unselectedDot}>
-        {isSelected ? <Check size={13} color={COLORS.textStrong} strokeWidth={3} /> : null}
+        {isSelected && <Check size={11} color={COLORS.textInverse} strokeWidth={3} />}
       </View>
+      {/* Selection overlay tint */}
+      {isSelected && <View style={styles.selectedOverlay} />}
     </TouchableOpacity>
   );
 });
+
+// ─── Picker action tile ───────────────────────────────────────────────────────
 
 function PickerAction({
   label,
@@ -429,91 +547,121 @@ function PickerAction({
   active?: boolean;
 }) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.86} style={[styles.actionTile, active && styles.actionTileActive]}>
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.82}
+      style={[styles.actionTile, active && styles.actionTileActive]}
+    >
       {icon}
-      <Text style={styles.actionLabel}>{label}</Text>
+      <Text style={[styles.actionLabel, active && styles.actionLabelActive]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   sheetBackground: {
-    backgroundColor: COLORS.textStrong,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
   },
   handle: {
-    width: 96,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    width: 40,
+    height: 4,
+    backgroundColor: COLORS.strokeStrong,
+    opacity: 0.3,
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.textStrong,
+    backgroundColor: COLORS.background,
   },
+
+  // Header
   header: {
     paddingHorizontal: SHEET_HORIZONTAL,
-    paddingTop: 22,
-    paddingBottom: 28,
+    paddingTop: 18,
+    paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   title: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 30,
-    color: COLORS.textInverse,
+    fontFamily: FONTS.serif,
+    fontSize: 22,
+    color: COLORS.textStrong,
+  },
+  subtitle: {
+    fontFamily: FONTS.sans,
+    fontSize: 12,
+    color: COLORS.textWeak,
+    marginTop: 2,
   },
   closeButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.fillWeak,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
   },
+
+  // Action row
   actionRow: {
     flexDirection: 'row',
     paddingHorizontal: SHEET_HORIZONTAL,
-    gap: ACTION_GAP,
+    gap: 8,
   },
   actionTile: {
-    width: ACTION_TILE_SIZE,
-    height: ACTION_TILE_SIZE,
-    borderRadius: Math.max(12, Math.floor(ACTION_TILE_SIZE * 0.18)),
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Math.max(5, Math.floor(ACTION_TILE_SIZE * 0.1)),
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 14,
+    backgroundColor: COLORS.fillWeaker,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: COLORS.strokeWeaker,
+    gap: 5,
+    minHeight: 64,
   },
   actionTileActive: {
-    borderColor: `${COLORS.brand}99`,
-    backgroundColor: 'rgba(255,255,255,0.11)',
+    backgroundColor: `${COLORS.brand}08`,
+    borderColor: `${COLORS.brand}30`,
   },
   actionLabel: {
     fontFamily: FONTS.sansMedium,
-    fontSize: ACTION_TILE_SIZE < 60 ? 10 : 12,
-    color: COLORS.textInverse,
+    fontSize: 10,
+    color: COLORS.textWeak,
+    textAlign: 'center',
   },
+  actionLabelActive: {
+    color: COLORS.brand,
+    fontFamily: FONTS.sansSemi,
+  },
+
+  // Divider
   divider: {
     marginHorizontal: SHEET_HORIZONTAL,
-    marginTop: 30,
-    marginBottom: 32,
+    marginTop: 16,
+    marginBottom: 12,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: COLORS.strokeWeaker,
+  },
+
+  // Grid
+  contentArea: {
+    flex: 1,
+    minHeight: 0,
+  },
+  assetList: {
+    flex: 1,
   },
   gridContent: {
     paddingHorizontal: SHEET_HORIZONTAL,
     paddingBottom: 16,
-  },
-  contentArea: {
-    flex: 1,
-    minHeight: 0,
-    marginBottom: 0,
-  },
-  assetList: {
-    flex: 1,
   },
   gridRow: {
     gap: GRID_GAP,
@@ -522,9 +670,9 @@ const styles = StyleSheet.create({
   assetTile: {
     width: TILE_SIZE,
     height: TILE_SIZE,
-    borderRadius: 12,
+    borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: COLORS.fillWeak,
   },
   assetImage: {
     width: '100%',
@@ -534,91 +682,118 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: COLORS.fillWeak,
+    paddingHorizontal: 4,
+    gap: 4,
   },
   audioLabel: {
-    marginTop: 8,
-    fontFamily: FONTS.sansBold,
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.68)',
+    fontFamily: FONTS.sansMedium,
+    fontSize: 9,
+    color: COLORS.textMuted,
+    textAlign: 'center',
   },
   playOverlay: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.18)',
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   selectedCheck: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    top: 5,
+    right: 5,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: COLORS.brand,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: COLORS.brand,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 2,
   },
   unselectedDot: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(255,255,255,0.78)',
+    top: 5,
+    right: 5,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.9)',
   },
+  selectedOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: `${COLORS.brand}18`,
+  },
+
+  // Empty / loading
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 48,
     paddingHorizontal: 32,
-    paddingBottom: 150,
+  },
+  emptyText: {
+    fontFamily: FONTS.sans,
+    fontSize: 14,
+    color: COLORS.textWeak,
   },
   loader: {
     paddingVertical: 24,
   },
+
+  // Footer
   footerContainer: {
-    backgroundColor: COLORS.textStrong,
+    backgroundColor: COLORS.background,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: COLORS.strokeWeaker,
   },
   footerContent: {
     flexDirection: 'row',
-    gap: 24,
-    paddingTop: 32,
+    gap: 12,
+    paddingTop: 12,
     paddingHorizontal: SHEET_HORIZONTAL,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.16)',
-    backgroundColor: COLORS.textStrong,
+    backgroundColor: COLORS.background,
   },
   dismissButton: {
     flex: 1,
-    height: 74,
-    borderRadius: 37,
+    height: 56,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: COLORS.fillWeak,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeak,
   },
   dismissText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 18,
-    color: COLORS.textInverse,
+    fontFamily: FONTS.sansSemi,
+    fontSize: 15,
+    color: COLORS.textBase,
   },
   addButton: {
-    flex: 1,
-    height: 74,
-    borderRadius: 37,
+    flex: 2,
+    height: 56,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.brand,
+    shadowColor: COLORS.brand,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
   addButtonDisabled: {
     opacity: 0.45,
   },
   addText: {
     fontFamily: FONTS.sansBold,
-    fontSize: 18,
+    fontSize: 15,
     color: COLORS.textInverse,
   },
 });

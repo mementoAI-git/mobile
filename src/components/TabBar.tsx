@@ -31,8 +31,11 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
   FadeIn,
   FadeOut,
+  SlideOutDown,
+  SlideInUp,
 } from 'react-native-reanimated';
 
 // ─── Assets ────────────────────────────────────────────────────────────────────
@@ -203,18 +206,19 @@ export function TabBar({ state, navigation }: TabBarProps) {
   }, [openSheet]);
 
   // Host Chat owns the full bottom interaction area; detail screens do as well.
-  if (
+  const isHidden =
     pathname === '/chat' ||
-    pathname.match(/^\/chat\/[^/]+$/) ||
-    pathname.match(/^\/(tabs\/)?stories\/[^/]+$/)
-  ) {
-    return null;
-  }
+    !!pathname.match(/^\/chat\/[^/]+$/) ||
+    !!pathname.match(/^\/(tabs\/)?stories\/[^/]+$/);
+
+  if (isHidden) return null;
 
   const bottomPad = insets.bottom ? insets.bottom + 24 : 36;
 
   return (
-    <View
+    <Animated.View
+      entering={SlideInUp.duration(220).springify().damping(22).stiffness(260)}
+      exiting={SlideOutDown.duration(180)}
       style={[styles.root, { bottom: bottomPad }]}
       pointerEvents="box-none"
     >
@@ -254,7 +258,7 @@ export function TabBar({ state, navigation }: TabBarProps) {
           <Search size={22} color={COLORS.textBase} strokeWidth={1.8} />
         )}
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }
 
