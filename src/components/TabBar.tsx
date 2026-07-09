@@ -34,8 +34,6 @@ import Animated, {
   withTiming,
   FadeIn,
   FadeOut,
-  SlideOutDown,
-  SlideInUp,
 } from 'react-native-reanimated';
 
 // ─── Assets ────────────────────────────────────────────────────────────────────
@@ -211,16 +209,27 @@ export function TabBar({ state, navigation }: TabBarProps) {
     !!pathname.match(/^\/chat\/[^/]+$/) ||
     !!pathname.match(/^\/(tabs\/)?stories\/[^/]+$/);
 
-  if (isHidden) return null;
-
   const bottomPad = insets.bottom ? insets.bottom + 24 : 36;
+
+  // Keep the view always mounted — avoid the remount/race-condition that causes
+  // the bar to freeze on returning from a hidden screen. Animate via shared value.
+  const translateY = useSharedValue(isHidden ? 120 : 0);
+  const opacity = useSharedValue(isHidden ? 0 : 1);
+
+  React.useEffect(() => {
+    translateY.value = withTiming(isHidden ? 120 : 0, { duration: 220 });
+    opacity.value = withTiming(isHidden ? 0 : 1, { duration: 200 });
+  }, [isHidden, translateY, opacity]);
+
+  const visibilityStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+    opacity: opacity.value,
+  }));
 
   return (
     <Animated.View
-      entering={SlideInUp.duration(220).springify().damping(22).stiffness(260)}
-      exiting={SlideOutDown.duration(180)}
-      style={[styles.root, { bottom: bottomPad }]}
-      pointerEvents="box-none"
+      style={[styles.root, { bottom: bottomPad }, visibilityStyle]}
+      pointerEvents={isHidden ? 'none' : 'box-none'}
     >
       {/* ── Main pill ── */}
       <View style={styles.pill}>
