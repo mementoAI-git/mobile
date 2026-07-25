@@ -26,9 +26,7 @@ import { useCreateCapsule, useUpdateCapsule } from '@/hooks/mutations/use-capsul
 import { COLORS, FONTS } from '@/constants/tokens';
 import { StylePicker } from '@/components/capsule/StylePicker';
 import dayjs from 'dayjs';
-import { useQuery } from '@tanstack/react-query';
-import { get } from '@/api/mutations';
-import endpoint from '@/api/endpoint';
+import { useFiles } from '@/hooks/queries/use-files';
 import { useFileUpload } from '@/hooks/use-file-upload';
 import type { IBeneficiary, ICapsule } from '@/types';
 import { getThemeById } from '@/constants/themes';
@@ -122,10 +120,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
 
   const { pickAndUpload, isUploading } = useFileUpload();
 
-  const { data: recentMedia, isLoading: loadingMedia } = useQuery({
-    queryKey: ['recent-files'],
-    queryFn: () => get<any>(`${endpoint.files}?limit=10`).then((r) => r.data?.docs || []),
-  });
+  const { data: recentMedia, isLoading: loadingMedia } = useFiles<any>({ limit: 10 });
 
   const renderBackdrop = useCallback(
     (backdropProps: any) => (

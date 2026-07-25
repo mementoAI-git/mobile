@@ -143,10 +143,12 @@ export function SearchMemorySheet() {
   }, [query]);
 
   // Server-side search — only fires when debouncedQuery has content
+  const hasSearchQuery = debouncedQuery.trim().length > 0;
   const { data: searchData, isFetching } = useStories(
-    debouncedQuery ? { search: debouncedQuery, limit: 20 } : undefined
+    hasSearchQuery ? { search: debouncedQuery, limit: 20 } : undefined,
+    { enabled: hasSearchQuery },
   );
-  const results = debouncedQuery
+  const results = hasSearchQuery
     ? (searchData?.pages.flatMap((p) => p.docs) ?? [])
     : [];
 
@@ -154,7 +156,7 @@ export function SearchMemorySheet() {
   const { data: overviewPromptsData } = useOverviewPrompts();
   const suggestions = (overviewPromptsData ?? []).slice(0, 6);
 
-  const isEmpty = debouncedQuery ? !isFetching && results.length === 0 : false;
+  const isEmpty = hasSearchQuery ? !isFetching && results.length === 0 : false;
 
   // ── Navigate only after the keyboard has fully dismissed ──────────────
   // Calling router.push() while the keyboard is still animating down causes

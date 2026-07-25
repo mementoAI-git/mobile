@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { get } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
+import { getNextActivitiesPage } from '@/features/activities/pagination';
 
 export interface Activity {
   _id: string;
@@ -37,6 +38,26 @@ export function useActivities(params?: { page?: number; limit?: number }) {
         (r) => r.data
       );
     },
+    staleTime: 60_000,
+  });
+}
+
+export function useInfiniteActivities(params?: { limit?: number }) {
+  const limit = params?.limit ?? 20;
+
+  return useInfiniteQuery({
+    queryKey: ['activities', 'infinite', { limit }],
+    queryFn: ({ pageParam = 1 }) => {
+      const qs = new URLSearchParams({
+        page: String(pageParam),
+        limit: String(limit),
+      });
+      return get<ActivitiesResponse>(`${endpoint.activities}?${qs.toString()}`).then(
+        (r) => r.data,
+      );
+    },
+    initialPageParam: 1,
+    getNextPageParam: getNextActivitiesPage,
     staleTime: 60_000,
   });
 }

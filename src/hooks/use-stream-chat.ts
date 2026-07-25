@@ -5,10 +5,12 @@ import { API_BASE_URL } from '@/lib/env';
 import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import { buildPromptWithReplyQuote, type ChatReplyQuote } from '@/lib/utils';
 import type { IMessageAttachment } from '@/types';
+import { createChatMessageIdFactory } from '@/features/chat/message-list';
 
 type ChatAttachmentPreview = IMessageAttachment;
 
 interface StreamMessage {
+  _id: string;
   role: 'user' | 'ai';
   text: string;
   created_at?: string;
@@ -38,6 +40,11 @@ export function useStreamChat(memoryId?: string) {
   const streamingRef = useRef(false);
   const memoryIdRef = useRef(memoryId);
   memoryIdRef.current = memoryId;
+  const createMessageIdRef = useRef<ReturnType<typeof createChatMessageIdFactory> | null>(null);
+  if (!createMessageIdRef.current) {
+    createMessageIdRef.current = createChatMessageIdFactory();
+  }
+  const createMessageId = createMessageIdRef.current;
 
   useEffect(() => {
     return () => {
@@ -59,6 +66,7 @@ export function useStreamChat(memoryId?: string) {
       const apiPrompt = buildPromptWithReplyQuote(text, replyTo ?? null);
 
       const userMessage: StreamMessage = {
+        _id: createMessageId(),
         role: 'user',
         text: hasText ? text : '',
         ...(replyTo ? { replyTo } : {}),
@@ -125,14 +133,23 @@ export function useStreamChat(memoryId?: string) {
         }
 
         if (isMountedRef.current && !controller.signal.aborted) {
-          setMessages((prev) => [...prev, { role: 'ai', text: accumulated, created_at: new Date().toISOString() }]);
+          setMessages((prev) => [...prev, {
+            _id: createMessageId(),
+            role: 'ai',
+            text: accumulated,
+            created_at: new Date().toISOString(),
+          }]);
           setStreamingText('');
         }
       } catch (err: any) {
         if (isMountedRef.current && err?.name !== 'AbortError') {
           setMessages((prev) => [
             ...prev,
-            { role: 'ai', text: 'Sorry, something went wrong. Please try again.' },
+            {
+              _id: createMessageId(),
+              role: 'ai',
+              text: 'Sorry, something went wrong. Please try again.',
+            },
           ]);
           setStreamingText('');
         }

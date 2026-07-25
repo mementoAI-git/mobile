@@ -139,11 +139,6 @@ export const FONTS = {
   serifMedium: 'EBGaramond_500Medium',
   serifBold: 'EBGaramond_700Bold',
   mono: 'AzeretMono_400Regular',
-  averia: 'AveriaSerifLibre_400Regular',
-  averiaBold: 'AveriaSerifLibre_700Bold',
-  /** Geist — geometric sans used by web for UI numerics and mono-code contexts */
-  geist: 'Geist_400Regular',
-  geistBold: 'Geist_700Bold',
   /** Georgia — system serif used on web for category card subtitles (18px body) */
   georgia: 'Georgia',
 };

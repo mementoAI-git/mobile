@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, Linking } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
@@ -8,7 +8,7 @@ import dayjs from 'dayjs';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { CornerDownRight, FileText, Music, Play, ExternalLink, Copy } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
+import type { PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { useLinkPreview, type LinkPreviewData } from '@/hooks/use-link-preview';
 
@@ -29,6 +29,11 @@ function extractReplyQuote(text: string): { role: string; text: string } | null 
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
+export interface ChatAttachmentPreviewRequest {
+  attachments: PreviewAttachment[];
+  initialIndex: number;
+}
+
 interface MessageBubbleProps {
   message: IMessage | {
     role: string;
@@ -41,6 +46,7 @@ interface MessageBubbleProps {
   };
   onReply?: () => void;
   onScrollToOriginal?: () => void;
+  onPreviewAttachments?: (request: ChatAttachmentPreviewRequest) => void;
 }
 
 // ─── Attachment helpers ────────────────────────────────────────────────────────
@@ -114,6 +120,8 @@ const CHIP_BG = COLORS.linkPreview;
 function FaviconBadge({ url, hostname }: { url: string; hostname: string }) {
   const [failed, setFailed] = React.useState(false);
   const letter = hostname.charAt(0).toUpperCase();
+
+  useEffect(() => setFailed(false), [url]);
 
   if (!url || failed) {
     return (
@@ -299,7 +307,12 @@ function AttachmentGrid({ attachments, onTap }: {
 
 // ─── MessageBubble ─────────────────────────────────────────────────────────────
 
-export const MessageBubble = React.memo(function MessageBubble({ message, onReply, onScrollToOriginal }: MessageBubbleProps) {
+export const MessageBubble = React.memo(function MessageBubble({
+  message,
+  onReply,
+  onScrollToOriginal,
+  onPreviewAttachments,
+}: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const aiModel = (message as any).ai_model;
   const rawAttachments: { url: string; name: string; type?: string; _id?: string }[] =
@@ -313,24 +326,20 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
     ? dayjs(message.created_at).format('h:mm A')
     : null;
 
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewIndex, setPreviewIndex] = useState(0);
   const previewAttachments: PreviewAttachment[] = rawAttachments.map(toPreviewAttachment);
 
   const hasContent = content.trim().length > 0 || rawAttachments.length > 0;
   if (!hasContent) return null;
 
   const handleAttachmentTap = (index: number) => {
-    setPreviewIndex(index);
-    setPreviewVisible(true);
+    onPreviewAttachments?.({ attachments: previewAttachments, initialIndex: index });
   };
 
   return (
-    <>
-      <Animated.View
-        entering={FadeInDown.duration(450).springify()}
-        className={cn('mb-5 max-w-[85%]', isUser ? 'self-end' : 'self-start')}
-      >
+    <Animated.View
+      entering={FadeInDown.duration(450).springify()}
+      className={cn('mb-5 max-w-[85%]', isUser ? 'self-end' : 'self-start')}
+    >
         <View className={cn('px-5 py-3.5 rounded-[20px]', isUser ? 'bg-fill-weaker' : 'bg-white')}>
 
           {/* Reply quote */}
@@ -403,16 +412,6 @@ export const MessageBubble = React.memo(function MessageBubble({ message, onRepl
             </TouchableOpacity>
           )}
         </View>
-      </Animated.View>
-
-      {previewAttachments.length > 0 && (
-        <MediaPreviewModal
-          visible={previewVisible}
-          attachments={previewAttachments}
-          initialIndex={previewIndex}
-          onClose={() => setPreviewVisible(false)}
-        />
-      )}
-    </>
+    </Animated.View>
   );
 });
