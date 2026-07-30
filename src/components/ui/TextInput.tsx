@@ -25,6 +25,7 @@ export function TextInput({
   inputClassName,
   rightElement,
   leftElement,
+  InputComponent,
   onFocus,
   onBlur,
   ...props
@@ -93,8 +94,8 @@ export function TextInput({
       >
         {leftElement && <View style={{ marginRight: 8 }}>{leftElement}</View>}
 
-        {props.InputComponent ? (
-          <props.InputComponent
+        {InputComponent ? (
+          <InputComponent
             className={cn('flex-1 text-base text-text-strong', inputClassName)}
             style={{
               fontFamily: FONTS.sans,

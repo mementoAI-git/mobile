@@ -9,6 +9,7 @@ interface PasswordInputProps extends Omit<TextInputProps, 'secureTextEntry'> {
   label?: string;
   error?: string;
   containerClassName?: string;
+  InputComponent?: React.ElementType<TextInputProps>;
 }
 
 // Eye / EyeOff icon toggle — matches web password input behaviour
