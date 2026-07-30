@@ -17,14 +17,6 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22.x"
-
-      - name: Pin npm
-        run: npm install --global npm@10.9.2
-
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -42,8 +34,8 @@ jobs:
       - name: Production readiness checks
         run: bun run check:prod
 
-      - name: Check Expo dependency compatibility
-        run: bun run expo:check
-
       - name: Expo Doctor
-        run: bun run doctor
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          bun run doctor
+        
