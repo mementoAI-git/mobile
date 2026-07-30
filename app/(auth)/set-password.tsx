@@ -33,7 +33,7 @@ export default function SetPasswordScreen() {
         >
           Your new password is set. You can now sign in.
         </Animated.Text>
-        <Button onPress={() => router.replace('/(auth)/login')} fullWidth size="lg">Go to Sign In</Button>
+        <Button onPress={() => router.replace('/(auth)/login')} fullWidth size="lg">Sign in</Button>
       </SafeAreaView>
     );
   }
@@ -63,7 +63,7 @@ export default function SetPasswordScreen() {
 
           <View className="gap-4">
             <Controller control={control} name="password" render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput label="New Password" value={value} onChangeText={onChange} onBlur={onBlur} secureTextEntry error={errors.password?.message} placeholder="••••••••" />
+              <TextInput label="New password" value={value} onChangeText={onChange} onBlur={onBlur} secureTextEntry error={errors.password?.message} placeholder="••••••••" />
             )} />
             <Controller control={control} name="confirm" render={({ field: { onChange, onBlur, value } }) => (
               <TextInput label="Confirm Password" value={value} onChangeText={onChange} onBlur={onBlur} secureTextEntry error={errors.confirm?.message} placeholder="••••••••" />
@@ -75,7 +75,7 @@ export default function SetPasswordScreen() {
                   className="text-sm text-error-strong text-center"
                   style={{ fontFamily: FONTS.sansMedium }}
                 >
-                  {(error as any).message ?? 'Failed to update password.'}
+                  {(error as any).message ?? 'Couldn’t update your password. Try again.'}
                 </Animated.Text>
               </View>
             )}

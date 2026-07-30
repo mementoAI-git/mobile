@@ -44,7 +44,7 @@ export default function AcceptInviteScreen() {
           {fetchError}
         </Animated.Text>
         <Button onPress={() => router.replace('/(auth)/login')} variant="outline" size="lg">
-          Go to Sign In
+          Sign in
         </Button>
       </SafeAreaView>
     );
@@ -116,7 +116,7 @@ export default function AcceptInviteScreen() {
               className="text-sm text-error-strong text-center"
               style={{ fontFamily: FONTS.sansMedium }}
             >
-              {(acceptError as any).message ?? 'Failed to accept invite.'}
+              {(acceptError as any).message ?? 'Couldn’t accept the invitation. Try again.'}
             </Animated.Text>
           </View>
         )}
@@ -136,7 +136,7 @@ export default function AcceptInviteScreen() {
             fullWidth
             size="lg"
           >
-            {token ? 'Accept Invite' : 'Sign In to Accept'}
+            {token ? 'Accept invite' : 'Sign in to accept'}
           </Button>
         </View>
       </View>

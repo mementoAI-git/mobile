@@ -142,7 +142,7 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
         </View>
         <Animated.View entering={FadeInDown.duration(400).delay(100)} style={{ flex: 1, paddingHorizontal: 24, paddingTop: 24, alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={{ fontFamily: FONTS.sansBold, fontSize: 26, color: COLORS.textStrong, textAlign: 'center', lineHeight: 34 }}>
-            Story published{'\n'}successfully
+            Story published
           </Text>
           <View style={{ width: '100%', backgroundColor: COLORS.fillWeak, borderRadius: 20, padding: 20, gap: 16 }}>
             <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textBase }}>Share this story with friends</Text>
@@ -251,7 +251,7 @@ function PublishModalInner({ title, body, attachmentIds, onClose, memoryId, onAd
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (isEditMode) {
         // Edit: show a success toast and close — no share screen
-        toast('Story updated successfully', 'success');
+        toast('Story updated.', 'success');
         onClose();
       } else {
         const id = res?.data?._id ?? res?.data?.data?._id ?? '';

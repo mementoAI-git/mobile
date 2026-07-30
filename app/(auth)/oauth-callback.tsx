@@ -110,7 +110,7 @@ export default function OAuthCallbackScreen() {
         <Text className="text-2xl font-serif text-text-strong mb-3">Sign in failed</Text>
         <Text className="text-base text-text-weak text-center mb-8">{error}</Text>
         <Button onPress={() => router.replace('/(auth)/login')} fullWidth size="lg">
-          Back to login
+          Back to sign in
         </Button>
       </SafeAreaView>
     );

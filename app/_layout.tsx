@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { StyleSheet, Platform, LogBox, StatusBar as RNStatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 // Suppress Reanimated strict-mode "reading from value during render" warnings.
 // These come from useSharedValue + direct .value reads in card press handlers
@@ -226,9 +227,10 @@ function RootLayout() {
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <StatusBar style="dark" />
       <GestureHandlerRootView className="flex-1">
-        <AppErrorBoundary>
-          <QueryClientProvider client={queryClient}>
-            <BottomSheetModalProvider>
+        <KeyboardProvider preload={false}>
+          <AppErrorBoundary>
+            <QueryClientProvider client={queryClient}>
+              <BottomSheetModalProvider>
               <ShareIntentProvider>
                 <ToastProvider>
                   <OfflineNotice />
@@ -240,6 +242,8 @@ function RootLayout() {
                     <Stack.Screen name="(auth)" />
                     <Stack.Screen name="(onboard)" />
                     <Stack.Screen name="(tabs)" options={{ contentStyle: { backgroundColor: COLORS.background } }} />
+          <Stack.Screen name="account" options={{ presentation: 'fullScreenModal', animation: 'slide_from_right' }} />
+          <Stack.Screen name="insights" options={{ presentation: 'fullScreenModal', animation: 'slide_from_right' }} />
                     <Stack.Screen name="chat/[id]" />
                     <Stack.Screen name="share" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
                     <Stack.Screen name="editor" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
@@ -251,9 +255,10 @@ function RootLayout() {
                   </Stack>
                 </ToastProvider>
               </ShareIntentProvider>
-            </BottomSheetModalProvider>
-          </QueryClientProvider>
-        </AppErrorBoundary>
+              </BottomSheetModalProvider>
+            </QueryClientProvider>
+          </AppErrorBoundary>
+        </KeyboardProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );

@@ -100,7 +100,7 @@ export default function ForgotPasswordScreen() {
           We've sent a reset link to {email}. Check your email and follow the instructions.
         </Animated.Text>
         <Button onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/(auth)/login'); } }} variant="outline" fullWidth>
-          Back to Sign In
+          Back to sign in
         </Button>
       </SafeAreaView>
     );
@@ -133,7 +133,7 @@ export default function ForgotPasswordScreen() {
                 className="text-sm text-brand"
                 style={{ fontFamily: FONTS.sansMedium }}
               >
-                ← Back to Sign In
+                ← Back to sign in
               </Animated.Text>
             </TouchableOpacity>
           </Animated.View>
@@ -171,7 +171,7 @@ export default function ForgotPasswordScreen() {
                   className="text-sm text-error-strong"
                   style={{ fontFamily: FONTS.sans }}
                 >
-                  {(error as any).message ?? 'Failed to send reset link. Please try again.'}
+                  {(error as any).message ?? 'Couldn’t send the reset link. Try again.'}
                 </Animated.Text>
               </View>
             )}

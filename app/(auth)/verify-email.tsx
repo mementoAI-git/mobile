@@ -38,7 +38,7 @@ export default function VerifyEmailScreen() {
             Your email has been confirmed. You can now sign in.
           </Animated.Text>
           <Button onPress={() => router.replace('/(auth)/login')} fullWidth size="lg">
-            Go to Sign In
+            Sign in
           </Button>
         </View>
       </SafeAreaView>

@@ -74,7 +74,7 @@ export default function PricingScreen() {
               className="text-xs text-text-weak mt-3"
               style={{ fontFamily: FONTS.sans }}
             >
-              Annual billing — per-month equivalent shown below.
+              Billed annually. Monthly equivalent shown below.
             </Animated.Text>
           )}
         </View>
