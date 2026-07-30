@@ -11,6 +11,7 @@
 
 export const COLORS = {
   background: '#fefbf8',
+  backgroundInverse: "#12131A",
   card: '#ffffff',
 
   // Link preview chip

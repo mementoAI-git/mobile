@@ -188,14 +188,14 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
     if (isEdit) {
       updateCapsule(payload, {
         onSuccess: () => {
-          toast('Time capsule updated successfully!', 'success');
+          toast('Capsule updated.', 'success');
           onClose();
         }
       });
     } else {
       createCapsule(payload, {
         onSuccess: () => {
-          toast('Time capsule scheduled successfully!', 'success');
+          toast('Capsule scheduled.', 'success');
           onClose();
         }
       });
@@ -242,7 +242,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
               value={recipientInput}
               onChangeText={setRecipientInput}
               onSubmitEditing={handleRecipientInputSubmit}
-              placeholder="Enter email address..."
+              placeholder="Enter email address"
               placeholderTextColor={COLORS.textDisabled}
               style={{ flex: 1, minWidth: 120, fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong, padding: 0 }}
               autoCapitalize="none"
@@ -401,7 +401,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
             <Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sans }}>
               {scheduleDate
                 ? `${dayjs(scheduleDate).format('MM/DD/YYYY')} (In ${Math.abs(dayjs(scheduleDate).diff(dayjs(), 'year'))} Years)`
-                : 'Select Delivery Date...'}
+                : 'Select delivery date'}
             </Text>
             <ChevronDown size={16} color={COLORS.textWeak} />
           </TouchableOpacity>
@@ -474,7 +474,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
                   }}
                   numberOfLines={6}
                 >
-                  {body || 'Your message preview...'}
+                  {body || 'Your message preview'}
                 </Text>
               </View>
 

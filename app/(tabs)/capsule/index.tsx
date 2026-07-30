@@ -218,7 +218,7 @@ export default function CapsuleScreen() {
                     <TextInput
                       value={searchQuery}
                       onChangeText={setSearchQuery}
-                      placeholder="Search title, body, or recipient..."
+                      placeholder="Search title, body, or recipient"
                       placeholderTextColor={COLORS.textMuted}
                       className="flex-1 text-sm text-text-strong h-8 p-0"
                       autoFocus

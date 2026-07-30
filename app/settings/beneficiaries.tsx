@@ -1,212 +1,214 @@
-import React from 'react';
-import { View, ScrollView, ImageBackground, TouchableOpacity, Text} from 'react-native';
+import React, { useCallback, useState } from 'react';
+import {
+  ImageBackground,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, Plus } from 'lucide-react-native';
-import { UiTrash01, UiMail01, UiShieldTick } from '@/components/ui/icons/SettingsIcons';
+import { ArrowLeft, FolderPlus, UserRoundPlus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { Avatar, Button, Spinner, Badge, Skeleton } from '@/components/ui';
+import { Button, Skeleton } from '@/components/ui';
+import { BeneficiaryEmptyState } from '@/components/beneficiaries/BeneficiaryEmptyState';
+import { BeneficiaryGroupRow } from '@/components/beneficiaries/BeneficiaryGroupRow';
+import { BeneficiaryPersonRow } from '@/components/beneficiaries/BeneficiaryPersonRow';
 import { useBeneficiariesSettingsLogic } from '@/hooks/use-beneficiaries-settings-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import type { IBeneficiary, IGroup } from '@/types';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
+type BeneficiaryTab = 'people' | 'groups';
 
-function BeneficiariesSkeleton() {
+function CollectionSkeleton() {
   return (
-    <View className="flex-grow p-6 gap-4">
-      <Skeleton className="h-12 w-[90%] rounded-xl mb-2" />
-      {[1, 2, 3, 4].map((i) => (
-        <View key={i} className="bg-white rounded-[24px] p-5 flex-row items-center gap-4">
-          <Skeleton className="size-12 rounded-full" />
-          <View className="flex-1 gap-2">
-            <Skeleton className="h-5 w-[45%] rounded-md" />
-            <Skeleton className="h-3.5 w-[75%] rounded-md" />
-            <Skeleton className="h-4 w-16 rounded-full mt-1" />
-          </View>
-          <View className="gap-2">
-            <Skeleton className="size-10 rounded-full" />
-          </View>
-        </View>
+    <View className="gap-3 px-6 pt-6">
+      {[1, 2, 3].map((item) => (
+        <Skeleton key={item} className="h-24 w-full rounded-[24px]" />
       ))}
     </View>
+  );
+}
+
+function CountTab({
+  label,
+  count,
+  active,
+  onPress,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.78}
+      className={`min-h-12 flex-row items-center rounded-2xl px-4 ${active ? 'bg-text-strong' : 'bg-fill-weak'}`}
+    >
+      <Text
+        className={`text-[16px] ${active ? 'text-white' : 'text-text-strong'}`}
+        style={{ fontFamily: FONTS.sansMedium }}
+      >
+        {label}
+      </Text>
+      <View className={`ml-3 min-w-8 items-center rounded-full px-2 py-1 ${active ? 'bg-white/15' : 'bg-fill-weak'}`}>
+        <Text
+          className={`text-[13px] ${active ? 'text-white' : 'text-text-weak'}`}
+          style={{ fontFamily: FONTS.sansMedium }}
+        >
+          {count > 9 ? '9+' : count}
+        </Text>
+      </View>
+    </TouchableOpacity>
   );
 }
 
 export default function BeneficiariesSettingsScreen() {
   const {
     beneficiaries,
+    groups,
     isLoading,
+    isError,
+    refetch,
     handleRemove,
     handleResend,
-    handleAdd,
     openSheet,
     router,
   } = useBeneficiariesSettingsLogic();
+  const [tab, setTab] = useState<BeneficiaryTab>('people');
+  const [refreshing, setRefreshing] = useState(false);
 
-  const count = beneficiaries?.length ?? 0;
+  const handleBack = useCallback(() => {
+    Haptics.selectionAsync();
+    if (router.canGoBack()) router.back();
+    else router.replace('/settings');
+  }, [router]);
 
-  const headerContent = (
-    <View className="flex-row items-center justify-between px-6 py-4">
-      <View className="flex-row items-center gap-3">
-        <TouchableOpacity
-          onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
-          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
-        >
-          <ChevronLeft size={22} color={COLORS.textBase} />
-        </TouchableOpacity>
-        <View>
-          <Text
-            className="text-[28px] text-text-strong"
-            style={{ fontFamily: FONTS.serif }}
-          >
-            Beneficiaries
-          </Text>
-          <Text className="text-[13px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
-            Your trusted circle
-          </Text>
-        </View>
-      </View>
-      {!isLoading && (
-        <TouchableOpacity
-          onPress={handleAdd}
-          className="size-11 rounded-full bg-brand items-center justify-center"
-        >
-          <Plus size={22} color="white" strokeWidth={2.5} />
-        </TouchableOpacity>
-      )}
-      {isLoading && (
-        <View className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center">
-          <Plus size={22} color={COLORS.textWeak} />
-        </View>
-      )}
-    </View>
-  );
+  const selectTab = useCallback((nextTab: BeneficiaryTab) => {
+    Haptics.selectionAsync();
+    setTab(nextTab);
+  }, []);
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-        {headerContent}
-        <BeneficiariesSkeleton />
-      </SafeAreaView>
-    );
-  }
+  const invite = useCallback(() => {
+    openSheet('add-beneficiary');
+  }, [openSheet]);
+
+  const createGroup = useCallback(() => {
+    openSheet('create-group');
+  }, [openSheet]);
+
+  const showPerson = useCallback((beneficiary: IBeneficiary) => {
+    openSheet('beneficiary-actions', {
+      beneficiary,
+      onResend: handleResend,
+      onRemove: handleRemove,
+    });
+  }, [handleRemove, handleResend, openSheet]);
+
+  const editGroup = useCallback((group: IGroup) => {
+    openSheet('create-group', { editData: group });
+  }, [openSheet]);
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
+
+  const hasItems = tab === 'people' ? beneficiaries.length > 0 : groups.length > 0;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-      {headerContent}
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <View className="h-[88px] flex-row items-center justify-between px-6">
+        <TouchableOpacity
+          onPress={handleBack}
+          activeOpacity={0.78}
+          className="size-11 items-center justify-center rounded-full bg-fill-weak"
+        >
+          <ArrowLeft size={23} color={COLORS.textBase} />
+        </TouchableOpacity>
+        <Text style={SETTINGS_TYPE.screenTitle}>
+          Beneficiaries
+        </Text>
+        <View className="size-11" />
+      </View>
 
+      <View className="px-6 pb-5 pt-6">
+        <Text style={SETTINGS_TYPE.sectionTitle}>
+          Beneficiaries and groups
+        </Text>
+        <Text className="mt-3" style={SETTINGS_TYPE.body}>
+          Invite the people who matter most. They’ll be able to receive your memories and interact with your Memento Agent.
+        </Text>
+        <View className="mt-7 flex-row gap-3">
+          <CountTab label="People" count={beneficiaries.length} active={tab === 'people'} onPress={() => selectTab('people')} />
+          <CountTab label="Groups" count={groups.length} active={tab === 'groups'} onPress={() => selectTab('groups')} />
+        </View>
+      </View>
+
+      <View className="h-px bg-stroke-weaker" />
       <View className="flex-1">
-        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
-
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pb-24 gap-4">
-
-          {/* Stat + intro block */}
-          <Animated.View entering={FadeInDown.duration(500)} className="pt-2 pb-2 gap-4">
-            {count > 0 && (
-              <View className="bg-white rounded-[24px] p-5 flex-row items-center gap-4">
-                <View style={{ flex: 1 }}>
-                  <Text className="text-[10px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
-                    Trusted People
-                  </Text>
-                  <View className="flex-row items-baseline gap-1.5 mt-1">
-                    <Text style={{ fontFamily: FONTS.sansBold, fontSize: 32, color: COLORS.success, lineHeight: 38 }}>
-                      {count}
-                    </Text>
-                    <Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
-                      {count === 1 ? 'trustee' : 'trustees'}
-                    </Text>
-                  </View>
-                </View>
-                <View
-                  className="size-14 rounded-2xl items-center justify-center"
-                  style={{ backgroundColor: `${COLORS.success}10` }}
+        <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
+        {isLoading ? (
+          <CollectionSkeleton />
+        ) : isError ? (
+          <View className="flex-1 items-center justify-center px-8">
+            <Text className="text-center" style={SETTINGS_TYPE.cardTitle}>
+              Your trusted circle needs a refresh
+            </Text>
+            <Text className="mt-2 text-center" style={SETTINGS_TYPE.body}>
+              We couldn’t load these details right now.
+            </Text>
+            <Button onPress={refresh} size="lg" className="mt-5 h-14 px-9">Try again</Button>
+          </View>
+        ) : (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={COLORS.brand} />}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 48 }}
+          >
+            {!hasItems ? (
+              <BeneficiaryEmptyState mode={tab} onAction={tab === 'people' ? invite : createGroup} />
+            ) : (
+              <View className="gap-3">
+                {tab === 'people'
+                  ? beneficiaries.map((beneficiary) => (
+                    <BeneficiaryPersonRow
+                      key={beneficiary._id ?? beneficiary.email}
+                      beneficiary={beneficiary}
+                      onPress={() => showPerson(beneficiary)}
+                    />
+                  ))
+                  : groups.map((group, index) => (
+                    <BeneficiaryGroupRow
+                      key={group._id}
+                      group={group}
+                      index={index}
+                      onPress={() => editGroup(group)}
+                    />
+                  ))}
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="mt-2 h-14"
+                  leftIcon={tab === 'people'
+                    ? <UserRoundPlus size={21} color={COLORS.textStrong} />
+                    : <FolderPlus size={21} color={COLORS.textStrong} />}
+                  onPress={tab === 'people' ? invite : createGroup}
                 >
-                  <UiShieldTick size={28} color={COLORS.success} strokeWidth={1.5} />
-                </View>
+                  {tab === 'people' ? 'Invite new Beneficiary' : 'Create New Group'}
+                </Button>
               </View>
             )}
-            <Text className="text-[14px] text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
-              These are the trusted people who will receive your memories and capsules according to your wishes.
-            </Text>
-          </Animated.View>
-
-          {count === 0 ? (
-            <Animated.View entering={FadeInDown.delay(200)} className="items-center py-20 gap-8">
-              <View className="size-28 rounded-full bg-brand/5 border border-brand/10 items-center justify-center">
-                <UiShieldTick size={52} color={COLORS.brand} strokeWidth={1.2} />
-              </View>
-              <View className="items-center gap-3">
-                <Text
-                  className="text-2xl text-text-strong text-center"
-                  style={{ fontFamily: FONTS.serif }}
-                >
-                  Protect your legacy
-                </Text>
-                <Text
-                  className="text-[14px] text-text-weak text-center px-8 leading-relaxed"
-                  style={{ fontFamily: FONTS.sans }}
-                >
-                  Add trusted people who can receive your memories and time capsules in the future.
-                </Text>
-              </View>
-              <Button
-                onPress={() => openSheet('add-beneficiary')}
-                size="lg"
-                className="px-10 rounded-full"
-              >
-                <Text className="text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>Add First Beneficiary</Text>
-              </Button>
-            </Animated.View>
-          ) : (
-            beneficiaries?.map((b: any, idx: number) => (
-              <Animated.View
-                key={b._id}
-                entering={FadeInDown.delay(80 * idx)}
-                className="bg-white rounded-[24px] p-5 flex-row items-center gap-4"
-              >
-                <Avatar name={b.name} size="lg" className="border-2 border-brand/5" />
-                <View className="flex-1 gap-1">
-                  <Text
-                    className="text-[18px] text-text-strong leading-tight"
-                    style={{ fontFamily: FONTS.serif }}
-                  >
-                    {b.name || 'Pending Invitation'}
-                  </Text>
-                  <Text
-                    className="text-[13px] text-text-weak"
-                    numberOfLines={1}
-                    style={{ fontFamily: FONTS.sansMedium }}
-                  >
-                    {b.email}
-                  </Text>
-                  <View className="flex-row mt-1">
-                    <Badge
-                      label={b.status === 'pending' ? 'Invited' : 'Verified'}
-                      variant={b.status === 'pending' ? 'warning' : 'success'}
-                    />
-                  </View>
-                </View>
-                <View className="gap-2">
-                  <TouchableOpacity
-                    onPress={() => handleRemove(b._id ?? '', b.name)}
-                    className="size-10 rounded-full items-center justify-center border"
-                    style={{ backgroundColor: `${COLORS.error}10`, borderColor: `${COLORS.error}20` }}
-                  >
-                    <UiTrash01 size={16} color={COLORS.error} strokeWidth={1.8} />
-                  </TouchableOpacity>
-                  {b.status === 'pending' && (
-                    <TouchableOpacity
-                      onPress={() => handleResend(b.email)}
-                      className="size-10 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
-                    >
-                      <UiMail01 size={16} color={COLORS.textBase} strokeWidth={1.8} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </Animated.View>
-            ))
-          )}
-        </ScrollView>
+          </ScrollView>
+        )}
       </View>
     </SafeAreaView>
   );

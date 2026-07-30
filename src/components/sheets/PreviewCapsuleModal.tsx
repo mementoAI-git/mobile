@@ -141,7 +141,7 @@ export const PreviewCapsuleModal = forwardRef<BottomSheetModal, PreviewCapsuleMo
                   }}
                   numberOfLines={10}
                 >
-                  {body || 'Your message preview...'}
+                  {body || 'Your message preview'}
                 </Text>
              </View>
           </View>

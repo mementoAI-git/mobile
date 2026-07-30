@@ -10,6 +10,7 @@ import { useInfiniteActivities, type Activity } from '@/hooks/queries/use-activi
 import { ActivityListItem } from '@/components/overview/ActivityListItem';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 const PAGE_SIZE = 20;
@@ -124,10 +125,10 @@ export default function ActivitiesScreen() {
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontFamily: FONTS.serif, fontSize: 28, color: COLORS.textStrong, lineHeight: 34 }}>
+          <Text style={SETTINGS_TYPE.screenTitle}>
             Activity
           </Text>
-          <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textWeak, marginTop: 1 }}>
+          <Text style={[SETTINGS_TYPE.supporting, { marginTop: 1 }]}>
             {totalDocs > 0 ? `${totalDocs} actions across your account` : 'Your recent actions'}
           </Text>
         </View>
@@ -145,10 +146,10 @@ export default function ActivitiesScreen() {
           </View>
         ) : displayDocs.length === 0 ? (
           <Animated.View entering={FadeInDown.duration(400)} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 }}>
-            <Text style={{ fontFamily: FONTS.serif, fontSize: 22, color: COLORS.textStrong, textAlign: 'center' }}>
+            <Text style={[SETTINGS_TYPE.sectionTitle, { textAlign: 'center' }]}>
               No activity yet
             </Text>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, textAlign: 'center', lineHeight: 20 }}>
+            <Text style={[SETTINGS_TYPE.body, { textAlign: 'center' }]}>
               Creating memories, editing stories, sending capsules. It all shows up here.
             </Text>
           </Animated.View>

@@ -26,16 +26,18 @@ export function useTwoFactorSettingsLogic() {
       const res = await post<any>(endpoint.setup2FA);
       setSetupData(res.data);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      return res.data;
     } catch (err: any) {
-      setError(err.message ?? 'Failed to setup 2FA');
+      setError(err.message ?? 'Couldn’t set up two-factor authentication.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setLoading(false);
     }
+    return null;
   };
 
   const handleVerify = async () => {
-    if (!token.trim()) return;
+    if (!token.trim()) return false;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setLoading(true);
     setError('');
@@ -45,9 +47,27 @@ export function useTwoFactorSettingsLogic() {
       setSetupData(null);
       setToken('');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      return true;
     } catch (err: any) {
-      setError(err.message ?? 'Invalid token');
+      setError(err.message ?? 'Enter a valid verification code.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const disableNow = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    setLoading(true);
+    try {
+      await del(endpoint.disable2FA);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      setError(err.message ?? 'Couldn’t turn off two-factor authentication.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -55,24 +75,15 @@ export function useTwoFactorSettingsLogic() {
 
   const handleDisable = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    Alert.alert('Disable 2FA', 'Are you sure you want to disable two-factor authentication?', [
+    Alert.alert('Turn off two-factor authentication?', 'New sign-ins will no longer require an authenticator code.', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Disable',
+        text: 'Turn off',
         style: 'destructive',
         onPress: async () => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
           setLoading(true);
-          try {
-            await del(endpoint.disable2FA);
-            queryClient.invalidateQueries({ queryKey: queryKeys.profile });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          } catch (err: any) {
-            setError(err.message ?? 'Failed to disable 2FA');
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          } finally {
-            setLoading(false);
-          }
+          await disableNow();
         },
       },
     ]);
@@ -88,6 +99,7 @@ export function useTwoFactorSettingsLogic() {
     handleSetup,
     handleVerify,
     handleDisable,
+    disableNow,
     router,
   };
 }

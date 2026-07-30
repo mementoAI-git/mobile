@@ -13,4 +13,6 @@ export const storageKeys = {
   biometricsEnabled: 'memento.biometrics_enabled',
   biometricsEmail: 'memento.biometrics_email',
   biometricsRefreshToken: 'memento.biometrics_refresh_token',
+  passkeyCredentialId: 'memento.passkey_credential_id',
+  passkeyEmail: 'memento.passkey_email',
 } as const;

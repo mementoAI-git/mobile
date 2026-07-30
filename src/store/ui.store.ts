@@ -6,6 +6,7 @@ export type SheetName =
   | 'create-memory'
   | 'create-capsule'
   | 'add-beneficiary'
+  | 'beneficiary-actions'
   | 'create-group'
   | 'group-actions'
   | 'share-memory'
@@ -23,6 +24,10 @@ export type SheetName =
   | 'publish-article'
   | 'streak'
   | 'story-drafts'
+  | 'edit-profile'
+  | 'change-password'
+  | 'setup-two-factor'
+  | 'security-confirmation'
   | null;
 
 interface UiState {

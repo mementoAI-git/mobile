@@ -195,7 +195,7 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                     numberOfLines={2}
                     style={{ fontFamily: FONTS.sans, fontSize: moderateScale(10) }}
                   >
-                    {capsule.body || 'No message content...'}
+                    {capsule.body || 'No message'}
                   </Text>
                 </View>
  
@@ -297,7 +297,7 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                 numberOfLines={2}
                 style={{ fontFamily: FONTS.sans, fontSize: moderateScale(12) }}
               >
-                {capsule.body || 'No message content...'}
+                {capsule.body || 'No message'}
               </Text>
             </View>
  

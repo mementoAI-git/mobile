@@ -32,4 +32,5 @@ export const queryKeys = {
   files: ['files'] as const,
 
   subscription: ['subscription'] as const,
+  passkeys: ['passkeys'] as const,
 };

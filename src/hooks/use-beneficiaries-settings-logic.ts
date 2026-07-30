@@ -1,40 +1,34 @@
-import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
+import { useGroups } from '@/hooks/queries/use-groups';
 import { useRemoveBeneficiary, useResendInvite } from '@/hooks/mutations/use-beneficiary-mutations';
+import { normalizeCollection } from '@/features/beneficiaries/collections';
 import { useUiStore } from '@/store';
 import * as Haptics from 'expo-haptics';
+import type { IBeneficiary, IGroup } from '@/types';
 
 export function useBeneficiariesSettingsLogic() {
   const router = useRouter();
   const openSheet = useUiStore((s) => s.openSheet);
-  const { data: beneficiariesData, isLoading } = useBeneficiaries();
-  const beneficiaries = (beneficiariesData as any)?.data || [];
-  const { mutate: remove } = useRemoveBeneficiary();
-  const { mutate: resend } = useResendInvite();
+  const beneficiariesQuery = useBeneficiaries();
+  const groupsQuery = useGroups();
+  const beneficiaries = normalizeCollection<IBeneficiary>(beneficiariesQuery.data);
+  const groups = normalizeCollection<IGroup>(groupsQuery.data);
+  const remove = useRemoveBeneficiary();
+  const resend = useResendInvite();
 
   const handleRemove = (id: string, name: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    Alert.alert(
-      'Remove Trustee',
-      `Are you sure you want to remove ${name}? They will no longer have access to your memories.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Remove', 
-          style: 'destructive', 
-          onPress: () => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            remove(id);
-          } 
-        },
-      ],
-    );
+    openSheet('security-confirmation', {
+      kind: 'remove-beneficiary',
+      subjectName: name,
+      onConfirm: () => remove.mutateAsync(id),
+    });
   };
 
   const handleResend = (email: string) => {
     Haptics.selectionAsync();
-    resend(email);
+    resend.mutate(email);
   };
 
   const handleAdd = () => {
@@ -44,7 +38,10 @@ export function useBeneficiariesSettingsLogic() {
 
   return {
     beneficiaries: beneficiaries ?? [],
-    isLoading,
+    groups,
+    isLoading: beneficiariesQuery.isLoading || groupsQuery.isLoading,
+    isError: beneficiariesQuery.isError || groupsQuery.isError,
+    refetch: () => Promise.all([beneficiariesQuery.refetch(), groupsQuery.refetch()]),
     handleRemove,
     handleResend,
     handleAdd,

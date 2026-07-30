@@ -233,7 +233,7 @@ export function SearchMemorySheet() {
           ref={inputRef}
           value={query}
           onChangeText={setQuery}
-          placeholder="Search your memories..."
+          placeholder="Search your memories"
           placeholderTextColor={COLORS.textMuted}
           autoFocus
           style={styles.input}

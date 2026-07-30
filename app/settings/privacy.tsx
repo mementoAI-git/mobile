@@ -1,221 +1,159 @@
-import React from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground, Text } from 'react-native';
+import React, { useCallback } from 'react';
+import {
+  ImageBackground,
+  Linking,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { ChevronLeft, ChevronRight, Brain } from 'lucide-react-native';
-import { UiDatabase01, UiEye, UiDownloadCloud01, UiLock01 } from '@/components/ui/icons/SettingsIcons';
+import { ArrowLeft } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS } from '@/constants/tokens';
 import { useRouter } from 'expo-router';
+import { UiShieldTick } from '@/components/ui/icons/SettingsIcons';
+import { useDeleteAccount } from '@/hooks/mutations/use-auth-mutations';
+import { PRIVACY_URL, TERMS_URL } from '@/lib/env';
+import { useUiStore } from '@/store';
+import { COLORS, FONTS } from '@/constants/tokens';
+import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
-const PRIVACY_ITEMS = [
-  {
-    title: 'Data & Storage',
-    desc: 'View how much space you use and manage stored files.',
-    Icon: UiDatabase01,
-    iconBg: `${COLORS.info}14`,
-    iconColor: COLORS.info,
-    status: 'active' as const,
-  },
-  {
-    title: 'Memory Visibility',
-    desc: 'Set a default audience for new memories — private, trustees, or specific people.',
-    Icon: UiEye,
-    iconBg: `${COLORS.brand}12`,
-    iconColor: COLORS.brand,
-    status: 'active' as const,
-  },
-  {
-    title: 'AI Personalization',
-    desc: 'Let your companion learn from reflections to give you richer, more personal responses.',
-    Icon: Brain,
-    iconBg: `${COLORS.success}12`,
-    iconColor: COLORS.success,
-    status: 'active' as const,
-  },
-  {
-    title: 'Export Data',
-    desc: 'Download a complete archive of all your memories, capsules and account data.',
-    Icon: UiDownloadCloud01,
-    iconBg: `${COLORS.warning}12`,
-    iconColor: COLORS.warning,
-    status: 'coming_soon' as const,
-  },
-];
-
-// ─── Individual card row ──────────────────────────────────────────────────────
-
-function PrivacyCard({
-  title, desc, Icon, iconBg, iconColor, status, entering,
-}: {
-  title: string;
-  desc: string;
-  Icon: any;
-  iconBg: string;
-  iconColor: string;
-  status: 'active' | 'coming_soon';
-  entering: any;
-}) {
-  const scale = useSharedValue(1);
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  const isComingSoon = status === 'coming_soon';
-
+function ComingSoonRow({ label }: { label: string }) {
   return (
-    <Animated.View entering={entering} style={animStyle}>
-      <TouchableOpacity
-        onPress={() => {
-          if (!isComingSoon) Haptics.selectionAsync();
-        }}
-        onPressIn={() => { if (!isComingSoon) scale.value = withSpring(0.98, { damping: 20, stiffness: 300 }); }}
-        onPressOut={() => { scale.value = withSpring(1, { damping: 20, stiffness: 300 }); }}
-        activeOpacity={isComingSoon ? 1 : 0.95}
-        style={{ opacity: isComingSoon ? 0.6 : 1 }}
-      >
-        <View
-          style={{
-            backgroundColor: COLORS.card,
-            borderRadius: 24,
-            padding: 20,
-            flexDirection: 'row',
-            alignItems: 'flex-start',
-            gap: 16,
-          }}
-        >
-          {/* Icon badge */}
-          <View
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 16,
-              backgroundColor: iconBg,
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Icon size={22} color={iconColor} strokeWidth={1.5} />
-          </View>
-
-          {/* Text */}
-          <View style={{ flex: 1, gap: 4 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>
-                {title}
-              </Text>
-              {isComingSoon && (
-                <View
-                  style={{
-                    paddingHorizontal: 8,
-                    paddingVertical: 2,
-                    borderRadius: 999,
-                    backgroundColor: COLORS.fillWeak,
-                    borderWidth: 1,
-                    borderColor: COLORS.strokeWeaker,
-                  }}
-                >
-                  <Text style={{ fontFamily: FONTS.sansBold, fontSize: 9, color: COLORS.textMuted, letterSpacing: 1, textTransform: 'uppercase' }}>
-                    Soon
-                  </Text>
-                </View>
-              )}
-            </View>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textWeak, lineHeight: 19 }}>
-              {desc}
-            </Text>
-          </View>
-
-          {/* Chevron */}
-          {!isComingSoon && (
-            <ChevronRight size={16} color={COLORS.textMuted} strokeWidth={2} style={{ marginTop: 4, flexShrink: 0 }} />
-          )}
-        </View>
-      </TouchableOpacity>
-    </Animated.View>
+    <View className="min-h-[68px] flex-row items-center justify-between gap-4">
+      <Text className="flex-1" style={SETTINGS_TYPE.rowLabel}>
+        {label}
+      </Text>
+      <View className="min-h-11 items-center justify-center rounded-2xl border border-stroke-weak bg-fill-weaker px-4 opacity-50">
+        <Text style={SETTINGS_TYPE.supporting}>
+          Coming soon
+        </Text>
+      </View>
+    </View>
   );
 }
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
-
 export default function PrivacySettingsScreen() {
   const router = useRouter();
+  const openSheet = useUiStore((state) => state.openSheet);
+  const deleteAccount = useDeleteAccount();
+
+  const handleBack = useCallback(() => {
+    Haptics.selectionAsync();
+    if (router.canGoBack()) router.back();
+    else router.replace('/settings');
+  }, [router]);
+
+  const openLegalUrl = useCallback((url: string) => {
+    Haptics.selectionAsync();
+    Linking.openURL(url);
+  }, []);
+
+  const requestDeletion = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    openSheet('security-confirmation', {
+      kind: 'delete-account',
+      onConfirm: () => deleteAccount.mutateAsync(),
+    });
+  }, [deleteAccount, openSheet]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-      {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 24, paddingVertical: 16 }}>
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <View className="h-[88px] flex-row items-center justify-between px-6">
         <TouchableOpacity
-          onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
-          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.fillWeaker, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}
+          onPress={handleBack}
+          activeOpacity={0.78}
+          className="size-11 items-center justify-center rounded-full bg-fill-weak"
         >
-          <ChevronLeft size={22} color={COLORS.textBase} />
+          <ArrowLeft size={23} color={COLORS.textBase} />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontFamily: FONTS.serif, fontSize: 28, color: COLORS.textStrong, lineHeight: 34 }}>
-            Privacy
-          </Text>
-          <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textWeak, marginTop: 1 }}>
-            You decide what's shared and with whom
-          </Text>
-        </View>
+        <Text style={SETTINGS_TYPE.screenTitle}>
+          Privacy
+        </Text>
+        <View className="size-11" />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 12 }}>
-        <ImageBackground source={PATTERN} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} imageStyle={{ opacity: 0.03 }} resizeMode="repeat" />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: 52 }}
+      >
+        <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
 
-        {/* Intro line */}
-        <Animated.Text
-          entering={FadeInDown.duration(400)}
-          style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, lineHeight: 20, paddingTop: 4, paddingBottom: 8, paddingHorizontal: 4 }}
-        >
-          Fine-tune how your memories and data are handled across Memento.
-        </Animated.Text>
-
-        {/* Individual cards */}
-        {PRIVACY_ITEMS.map((item, idx) => (
-          <PrivacyCard
-            key={item.title}
-            {...item}
-            entering={FadeInDown.delay(80 * idx).duration(450)}
-          />
-        ))}
-
-        {/* Promise card */}
-        <Animated.View
-          entering={FadeInDown.delay(400).duration(450)}
-          style={{
-          backgroundColor: COLORS.card,
-          borderRadius: 24,
-          padding: 20,
-          flexDirection: 'row',
-          gap: 14,
-          alignItems: 'flex-start',
-          marginTop: 4,
-          }}
-        >
-          <View
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 12,
-              backgroundColor: `${COLORS.success}14`,
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
+        <Text style={SETTINGS_TYPE.sectionTitle}>
+          Manage your account privacy settings
+        </Text>
+        <Text className="mt-4" style={SETTINGS_TYPE.body}>
+          Memento AI believes in transparent data practices. Learn how your information is protected when using our products, and visit our{' '}
+          <Text
+            onPress={() => openLegalUrl(PRIVACY_URL)}
+            className="text-brand"
+            style={{ fontFamily: FONTS.sansBold }}
           >
-            <UiLock01 size={16} color={COLORS.success} strokeWidth={1.5} />
-          </View>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 13, color: COLORS.textStrong }}>
-              Private by default
+            Privacy Policy
+          </Text>
+          {' '}and{' '}
+          <Text
+            onPress={() => openLegalUrl(TERMS_URL)}
+            className="text-brand"
+            style={{ fontFamily: FONTS.sansBold }}
+          >
+            Terms
+          </Text>
+          {' '}pages for more details.
+        </Text>
+
+        <View className="mt-7 rounded-[24px] border border-stroke-weak bg-card p-5">
+          <View className="flex-row items-center gap-3">
+            <View className="size-8 items-center justify-center rounded-xl bg-success">
+              <UiShieldTick size={18} color={COLORS.textInverse} strokeWidth={2.2} />
+            </View>
+            <Text className="flex-1" style={SETTINGS_TYPE.cardTitle}>
+              How we protect your information
             </Text>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textWeak, lineHeight: 19 }}>
-              Your reflections stay visible only to you unless you choose who can receive or view them.
+          </View>
+          <Text className="mt-4" style={[SETTINGS_TYPE.body, { color: COLORS.textStrong }]}>
+            Memento AI employs industry-standard security measures to protect your data.
+          </Text>
+          <View className="mt-4 gap-1.5 pl-3">
+            <Text className="text-[14px] leading-[21px] text-text-strong" style={{ fontFamily: FONTS.sans }}>
+              •  Memento AI encrypts your information and shared data in transit and at rest.
+            </Text>
+            <Text className="text-[14px] leading-[21px] text-text-strong" style={{ fontFamily: FONTS.sans }}>
+              •  You control your conversations and data, and can change your sharing preferences at any time.
+            </Text>
+            <Text className="text-[14px] leading-[21px] text-text-strong" style={{ fontFamily: FONTS.sans }}>
+              •  Memento AI deletes your account data when requested, subject to legal and safety obligations.
+            </Text>
+            <Text className="text-[14px] leading-[21px] text-text-strong" style={{ fontFamily: FONTS.sans }}>
+              •  Memento AI doesn’t sell your personal data to third parties.
             </Text>
           </View>
-        </Animated.View>
+        </View>
+
+        <View className="mt-6 rounded-[24px] border border-stroke-weak bg-card p-5">
+          <Text className="mb-2" style={SETTINGS_TYPE.cardTitle}>
+            Privacy Settings
+          </Text>
+          <ComingSoonRow label="Export your information" />
+          <ComingSoonRow label="Share stories" />
+          <View className="min-h-[68px] flex-row items-center justify-between gap-4">
+            <Text className="flex-1" style={SETTINGS_TYPE.rowLabel}>
+              Delete your account
+            </Text>
+            <TouchableOpacity
+              onPress={requestDeletion}
+              disabled={deleteAccount.isPending}
+              activeOpacity={0.76}
+              className="min-h-11 items-center justify-center rounded-2xl border border-error/20 bg-error/5 px-4"
+            >
+              <Text className="text-[14px] text-error" style={{ fontFamily: FONTS.sansMedium }}>
+                Delete account
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

@@ -13,10 +13,10 @@ export function useCreateGroup() {
     mutationFn: (data: CreateGroupBody) => post<{ data: IGroup }>(endpoint.groups, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.groups });
-      toast('Group created successfully', 'success');
+      toast('Group created.', 'success');
     },
     onError: () => {
-      toast('Failed to create group', 'error');
+      toast('Couldn’t create the group. Try again.', 'error');
     },
   });
 }
@@ -29,10 +29,10 @@ export function useUpdateGroup(id: string) {
     mutationFn: (data: UpdateGroupBody) => put<{ data: IGroup }>(endpoint.group.replace(':id', id), data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.groups });
-      toast('Group updated successfully', 'success');
+      toast('Group updated.', 'success');
     },
     onError: () => {
-      toast('Failed to update group', 'error');
+      toast('Couldn’t update the group. Try again.', 'error');
     },
   });
 }
@@ -45,10 +45,10 @@ export function useDeleteGroup() {
     mutationFn: (id: string) => del(endpoint.group.replace(':id', id)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.groups });
-      toast('Group deleted successfully', 'success');
+      toast('Group deleted.', 'success');
     },
     onError: () => {
-      toast('Failed to delete group', 'error');
+      toast('Couldn’t delete the group. Try again.', 'error');
     },
   });
 }
@@ -64,7 +64,7 @@ export function useAddGroupMembers(groupId: string) {
       toast('Members updated', 'success');
     },
     onError: () => {
-      toast('Failed to update members', 'error');
+      toast('Couldn’t update the group members. Try again.', 'error');
     },
   });
 }

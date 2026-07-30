@@ -144,7 +144,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
                 }}
                 numberOfLines={10}
               >
-                {initialCapsule.body || 'Your message preview...'}
+                {initialCapsule.body || 'Your message preview'}
               </Text>
             </View>
           </View>
