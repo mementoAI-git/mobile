@@ -103,9 +103,9 @@
     "typescript": "~6.0.3"
   },
   "overrides": {
-    "react-dom": "19.2.3",
-    "expo-constants": "56.0.22",
-    "expo-linking": "56.0.16"
-  },
+  "react-dom": "19.2.3",
+  "expo-constants": "~56.0.22",
+  "expo-linking": "~56.0.16"
+},
   "private": true
 }
