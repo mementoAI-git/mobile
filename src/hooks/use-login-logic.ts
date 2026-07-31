@@ -1,17 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLogin } from '@/hooks/mutations/use-auth-mutations';
 import { useToast } from '@/components/ui/Toast';
-import { useAuthStore, useUiStore } from '@/store';
+import { useAuthStore, useUiStore, useUserStore } from '@/store';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
+import { Passkey } from 'react-native-passkey';
 import { storageKeys } from '@/constants/storage-keys';
 import { AUTH_SESSION_RETURN_URL, getPostAuthRedirectHref, normalizeAppHref, oauthCallbackUrl } from '@/lib/navigation';
+import {
+  classifyPasskeyError,
+  selectSecurityLoginMethod,
+} from '@/features/security/security-flow';
 
 const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
@@ -28,6 +33,7 @@ export function useLoginLogic() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [securityLoginLabel, setSecurityLoginLabel] = useState('Sign in securely');
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(schema),
@@ -36,6 +42,30 @@ export function useLoginLogic() {
       password: '',
     },
   });
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      SecureStore.getItemAsync(storageKeys.passkeyCredentialId),
+      SecureStore.getItemAsync(storageKeys.biometricsEnabled),
+    ]).then(([passkeyCredentialId, biometricsEnabled]) => {
+      if (!mounted) return;
+      const method = selectSecurityLoginMethod({
+        hasNativePasskey: Boolean(passkeyCredentialId),
+        hasBiometricFallback: biometricsEnabled === 'true',
+      });
+      setSecurityLoginLabel(
+        method === 'passkey'
+          ? 'Sign in with a passkey'
+          : method === 'biometric-fallback'
+            ? 'Sign in with Face ID / Touch ID'
+            : 'Sign in securely',
+      );
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const getPreferredPostAuthHref = () => {
     const redirectValue = Array.isArray(redirect) ? redirect[0] : redirect;
@@ -117,19 +147,56 @@ export function useLoginLogic() {
 
   const handlePasskeyLogin = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    const enabled = await SecureStore.getItemAsync(storageKeys.biometricsEnabled);
-
-    if (enabled !== 'true') {
-      // Not enrolled — show guidance via toast (no Alert)
-      toast('Biometric login is not set up. Sign in with your password first, then enable it in Settings → Security.', 'error');
-      return;
-    }
-
     setPasskeyLoading(true);
     try {
-      // Retrieve the refresh_token — OS biometric prompt fires here.
-      // v2: replace with native WebAuthn passkey once app-link associations are live.
+      const [passkeyCredentialId, biometricsEnabled] = await Promise.all([
+        SecureStore.getItemAsync(storageKeys.passkeyCredentialId),
+        SecureStore.getItemAsync(storageKeys.biometricsEnabled),
+      ]);
+      const method = selectSecurityLoginMethod({
+        hasNativePasskey: Boolean(passkeyCredentialId),
+        hasBiometricFallback: biometricsEnabled === 'true',
+      });
+
+      if (method === 'unenrolled') {
+        toast('Secure sign-in is not set up. Sign in with your password, then add it in Settings → Security.', 'error');
+        return;
+      }
+
+      if (method === 'passkey') {
+        const email = await SecureStore.getItemAsync(storageKeys.passkeyEmail);
+        if (!email) {
+          toast('Your passkey account could not be identified. Sign in with your password and add the passkey again.', 'error');
+          return;
+        }
+
+        try {
+          const begin = await client.post(endpoint.passkeyLoginBegin, { email });
+          const { challenge_id: challengeId, ...request } = begin.data?.data ?? {};
+          const assertion = await Passkey.get(request);
+          const complete = await client.post(endpoint.passkeyLoginComplete, {
+            challenge_id: challengeId,
+            response: assertion,
+          });
+          const authData = complete.data?.data as any;
+          if (!authData?.access_token) throw new Error('Missing passkey session');
+
+          const { user, ...auth } = authData;
+          await useAuthStore.getState().setAuth(auth);
+          if (user) useUserStore.getState().setUser(user);
+
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          const preferredHref = getPreferredPostAuthHref();
+          clearPendingDeepLink();
+          router.replace(getPostAuthRedirectHref(authData.onboarding_status, preferredHref));
+        } catch (error) {
+          if (classifyPasskeyError(error) !== 'cancelled') {
+            toast('Passkey sign-in could not be completed. Try again or use your password.', 'error');
+          }
+        }
+        return;
+      }
+
       const refreshToken = await SecureStore.getItemAsync(
         storageKeys.biometricsRefreshToken,
         { requireAuthentication: true, authenticationPrompt: 'Sign in to Memento securely' },
@@ -176,6 +243,7 @@ export function useLoginLogic() {
     googleLoading,
     appleLoading,
     passkeyLoading,
+    securityLoginLabel,
     onSubmit: form.handleSubmit(onSubmit),
     handleGoogleLogin,
     handleAppleLogin,

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import type { FlashListRef } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useQueryClient } from '@tanstack/react-query';
 import { useConversationMessages } from '@/hooks/queries/use-memories';
@@ -15,12 +15,13 @@ import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import type { ChatReplyQuote } from '@/lib/utils';
 import type { IMessageAttachment } from '@/types';
 import { resolveChatConversationId } from '@/features/chat/navigation';
+import type { ChatListMessage } from '@/features/chat/message-list';
 
 export function useChatLogic() {
   const { id, type, promptTitle } = useLocalSearchParams<{ id?: string; type?: string; promptTitle?: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlashListRef<ChatListMessage>>(null);
   const openSheet = useUiStore((s) => s.openSheet);
   const userPrimaryConversationId = useUserStore((s) => s.user?.primary_conversation_id);
   const { data: profile, isLoading: isLoadingProfile } = useProfile();
@@ -56,12 +57,12 @@ export function useChatLogic() {
   // ── Enrichment stats (refetched after each AI response) ─────────────────
   const enrichmentStats = useEnrichmentStats();
 
-  // Merge and reverse for inverted FlatList (index 0 = bottom)
+  // FlashList v2 renders chronological data from the bottom without inversion.
   const allMessages = useMemo(
     () => [
       ...(serverMessages?.messages ?? []),
       ...messages,
-    ].reverse(),
+    ],
     [serverMessages?.messages, messages],
   );
 

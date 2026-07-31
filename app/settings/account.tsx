@@ -1,248 +1,308 @@
-import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground, Text } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  Platform,
+  NativeModules,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft } from 'lucide-react-native';
-import { UiFingerprint01, UiAlertTriangle, UiShieldTick } from '@/components/ui/icons/SettingsIcons';
-import { Button, TextInput } from '@/components/ui';
-import { useToast } from '@/components/ui/Toast';
-import { Switch } from '@/components/ui/Switch';
-import { Controller } from 'react-hook-form';
-import { useAccountSettingsLogic } from '@/hooks/use-account-settings-logic';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { ArrowLeft, Fingerprint, ShieldCheck } from 'lucide-react-native';
+import { Passkey } from 'react-native-passkey';
 import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
-import { useAuthStore, useUserStore } from '@/store';
+import { useRouter } from 'expo-router';
+import { Button } from '@/components/ui';
+import { SecurityCredentialRow } from '@/components/security/SecurityCredentialRow';
+import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { COLORS, FONTS } from '@/constants/tokens';
 import { storageKeys } from '@/constants/storage-keys';
+import { classifyPasskeyError } from '@/features/security/security-flow';
+import {
+  useDeletePasskey,
+  useRegisterPasskey,
+} from '@/hooks/mutations/use-passkey-mutations';
+import { usePasskeys } from '@/hooks/queries/use-passkeys';
+import { useTwoFactorSettingsLogic } from '@/hooks/use-two-factor-settings-logic';
+import { useAuthStore, useUiStore, useUserStore } from '@/store';
 
-const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
-
-// ── Shared settings row component ────────────────────────────────────────────
-function SettingsRow({
-  icon,
-  iconBg,
-  label,
-  description,
-  right,
-}: {
-  icon: React.ReactNode;
-  iconBg: string;
-  label: string;
-  description?: string;
-  right?: React.ReactNode;
-}) {
-  return (
-    <View className="flex-row items-center gap-4 px-5 py-4 bg-white rounded-[20px]">
-      <View className="size-11 rounded-2xl items-center justify-center" style={{ backgroundColor: iconBg }}>
-        {icon}
-      </View>
-      <View className="flex-1">
-        <Text className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>
-          {label}
-        </Text>
-        {description && (
-          <Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
-            {description}
-          </Text>
-        )}
-      </View>
-      {right}
-    </View>
-  );
-}
-
-export default function AccountSettingsScreen() {
-  const {
-    form: { control, formState: { errors } },
-    isPending,
-    error,
-    isSuccess,
-    deleting,
-    onSubmit,
-    handleDelete,
-    router,
-  } = useAccountSettingsLogic();
-
-  const { toast } = useToast();
-  const [biometricsEnabled, setBiometricsEnabled] = useState(false);
-  const [enrolling, setEnrolling] = useState(false);
-  const user = useUserStore((s) => s.user);
-  const authToken = useAuthStore((s) => s.token);
+export default function SecuritySettingsScreen() {
+  const router = useRouter();
+  const openSheet = useUiStore((state) => state.openSheet);
+  const auth = useAuthStore((state) => state.token);
+  const user = useUserStore((state) => state.user);
+  const { data: passkeys = [] } = usePasskeys();
+  const registerPasskey = useRegisterPasskey();
+  const deletePasskey = useDeletePasskey();
+  const twoFactor = useTwoFactorSettingsLogic();
+  const [fallbackOffered, setFallbackOffered] = useState(false);
+  const [fallbackEnabled, setFallbackEnabled] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    SecureStore.getItemAsync(storageKeys.biometricsEnabled).then((v) => {
-      setBiometricsEnabled(v === 'true');
+    SecureStore.getItemAsync(storageKeys.biometricsEnabled).then((value) => {
+      setFallbackEnabled(value === 'true');
     });
   }, []);
 
-  const handleToggleBiometrics = async (value: boolean) => {
-    if (!value) {
-      try {
-        await SecureStore.deleteItemAsync(storageKeys.biometricsRefreshToken);
-        await SecureStore.deleteItemAsync(storageKeys.biometricsEmail);
-        await SecureStore.setItemAsync(storageKeys.biometricsEnabled, 'false');
-        setBiometricsEnabled(false);
-        toast('Biometric login disabled.', 'success');
-      } catch {
-        toast('Could not disable biometrics. Please try again.', 'error');
-      }
-    } else {
-      await enrollBiometrics();
+  useEffect(() => {
+    if (twoFactor.setupData) {
+      openSheet('setup-two-factor', { setupData: twoFactor.setupData });
     }
-  };
+  }, [openSheet, twoFactor.setupData]);
 
-  const enrollBiometrics = async () => {
-    const email = user?.email;
-    const refreshToken = authToken?.refresh_token;
+  const handleBack = useCallback(() => {
+    Haptics.selectionAsync();
+    if (router.canGoBack()) router.back();
+    else router.replace('/settings');
+  }, [router]);
 
-    if (!email || !refreshToken) {
-      toast('Session not found. Please log out and back in.', 'error');
+  const handleAddPasskey = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setMessage(null);
+    if (!Passkey.isSupported() || !NativeModules.Passkey) {
+      setFallbackOffered(true);
       return;
     }
+    try {
+      await registerPasskey.mutateAsync();
+      setFallbackEnabled(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      const kind = classifyPasskeyError(error);
+      if (kind === 'cancelled') return;
+      if (kind === 'unsupported' || kind === 'unavailable') {
+        setFallbackOffered(true);
+      } else {
+        setMessage('Passkey setup could not be completed. Check your credential provider and try again.');
+      }
+    }
+  }, [registerPasskey]);
 
-    setEnrolling(true);
+  const enableFallback = useCallback(async () => {
+    const refreshToken = auth?.refresh_token;
+    if (!refreshToken || !user?.email) {
+      setMessage('Sign in again before enabling biometric fallback.');
+      return;
+    }
     try {
       await SecureStore.setItemAsync(
         storageKeys.biometricsRefreshToken,
         refreshToken,
-        { requireAuthentication: true, authenticationPrompt: 'Authenticate to enable biometric login' },
+        {
+          requireAuthentication: true,
+          authenticationPrompt: 'Enable biometric sign-in',
+        },
       );
-      await SecureStore.setItemAsync(storageKeys.biometricsEmail, email);
+      await SecureStore.setItemAsync(storageKeys.biometricsEmail, user.email);
       await SecureStore.setItemAsync(storageKeys.biometricsEnabled, 'true');
-      setBiometricsEnabled(true);
-      toast('Face ID / Touch ID successfully enrolled!', 'success');
+      setFallbackEnabled(true);
+      setFallbackOffered(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      toast('Biometric enrollment cancelled or unavailable on this device.', 'error');
-    } finally {
-      setEnrolling(false);
+      setMessage('Biometric fallback could not be enabled on this device.');
     }
-  };
+  }, [auth?.refresh_token, user?.email]);
+
+  const requestDeletePasskey = useCallback((credentialId: string) => {
+    openSheet('security-confirmation', {
+      kind: 'delete-passkey',
+      onConfirm: () => deletePasskey.mutateAsync(credentialId),
+    });
+  }, [deletePasskey, openSheet]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-      {/* Header */}
-      <View className="flex-row items-center gap-3 px-6 py-4">
-        <TouchableOpacity
-          onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
-          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
-        >
-          <ChevronLeft size={22} color={COLORS.textBase} />
+    <SafeAreaView style={styles.screen} edges={['top']}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton} activeOpacity={0.78}>
+          <ArrowLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
-            Security
-          </Text>
-          <Text className="text-[13px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
-            Keep your account safe and secure
-          </Text>
-        </View>
+        <Text style={SETTINGS_TYPE.screenTitle}>Security</Text>
+        <View style={{ width: 44 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pb-16 gap-6">
-        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <Text style={SETTINGS_TYPE.sectionTitle}>Password</Text>
+        <View style={styles.passwordRow}>
+          <Text style={styles.passwordDots}>********</Text>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-9 px-3"
+            onPress={() => openSheet('change-password')}
+          >
+            Change
+          </Button>
+        </View>
 
-        {/* ── Change Password ─────────────────────────────────────────── */}
-        <Animated.View entering={FadeInDown.duration(500)} className="gap-3">
-          <View style={{ gap: 2, paddingLeft: 4 }}>
-            <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
-              Update Password
-            </Text>
-            <Text className="text-[13px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
-              Choose a strong, unique password
-            </Text>
-          </View>
-
-          <View className="bg-white rounded-[32px] p-6 gap-4">
-            <Controller control={control} name="current_password" render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput label="Current Password" value={value} onChangeText={onChange} onBlur={onBlur} secureTextEntry error={errors.current_password?.message} />
-            )} />
-            <Controller control={control} name="new_password" render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput label="New Password" value={value} onChangeText={onChange} onBlur={onBlur} secureTextEntry error={errors.new_password?.message} />
-            )} />
-            <Controller control={control} name="confirm" render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput label="Confirm New Password" value={value} onChangeText={onChange} onBlur={onBlur} secureTextEntry error={errors.confirm?.message} />
-            )} />
-
-            {error && (
-              <View className="bg-fill-weaker rounded-2xl px-4 py-3">
-                <Text className="text-sm text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
-                  {(error as any).message}
-                </Text>
-              </View>
-            )}
-            {isSuccess && (
-              <View className="rounded-2xl px-4 py-3" style={{ backgroundColor: `${COLORS.success}08` }}>
-                <Text className="text-sm" style={{ fontFamily: FONTS.sans, color: COLORS.success }}>
-                  Password updated successfully.
-                </Text>
-              </View>
-            )}
-
-            <Button onPress={onSubmit} loading={isPending} fullWidth size="lg">
-              Save Password
+        <View style={styles.twoFactorCard}>
+          <Text style={SETTINGS_TYPE.cardTitle}>Two-factor authentication</Text>
+          <Text style={[SETTINGS_TYPE.body, { marginTop: 8 }]}>
+            Add a verification step each time you try to sign in on a new device.
+          </Text>
+          {!twoFactor.is2FAEnabled && (
+            <Button
+              variant="secondary"
+              size="lg"
+              className="self-end mt-3 h-10"
+              loading={twoFactor.loading}
+              onPress={twoFactor.handleSetup}
+            >
+              Set up authenticator
             </Button>
-          </View>
-        </Animated.View>
-
-        {/* ── Device Access ────────────────────────────────────────────── */}
-        <Animated.View entering={FadeInDown.delay(100).duration(500)} className="gap-3">
-          <View style={{ gap: 2, paddingLeft: 4 }}>
-            <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
-              Device Access
-            </Text>
-            <Text className="text-[13px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
-              Sign in faster with your device biometrics
-            </Text>
-          </View>
-
-          <View className="bg-white rounded-[32px]">
-            <SettingsRow
-              icon={<UiFingerprint01 size={20} color={COLORS.brand} strokeWidth={1.5} />}
-              iconBg={COLORS.brandSubtle}
-              label="Face ID / Touch ID"
-              description={enrolling ? 'Awaiting biometric confirmation…' : 'Use biometrics to sign in instantly'}
-              right={
-                <Switch
-                  value={biometricsEnabled}
-                  onValueChange={handleToggleBiometrics}
-                  disabled={enrolling}
-                />
-              }
-            />
-          </View>
-        </Animated.View>
-
-        {/* ── Danger Zone ──────────────────────────────────────────────── */}
-        <Animated.View entering={FadeInDown.delay(200).duration(500)} className="gap-3">
-          <View style={{ gap: 2, paddingLeft: 4 }}>
-            <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
-              Danger Zone
-            </Text>
-            <Text className="text-[13px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
-              Permanent actions that cannot be undone
-            </Text>
-          </View>
-
-          <View className="bg-white rounded-[20px] border p-5 gap-4" style={{ borderColor: `${COLORS.error}20` }}>
-            <View className="flex-row items-center gap-3">
-              <View className="size-11 rounded-2xl items-center justify-center" style={{ backgroundColor: `${COLORS.error}10` }}>
-                <UiAlertTriangle size={20} color={COLORS.error} strokeWidth={1.5} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-[16px]" style={{ fontFamily: FONTS.sansSemi, color: COLORS.error }}>
-                  Delete Account
-                </Text>
-                <Text className="text-xs text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
-                  All your memories, capsules and data will be permanently removed.
-                </Text>
-              </View>
+          )}
+          {twoFactor.is2FAEnabled && (
+            <View style={{ marginTop: 10 }}>
+              <SecurityCredentialRow
+                icon={<ShieldCheck size={22} color={COLORS.success} />}
+                title="2FA Setup"
+                subtitle="Authenticator enabled"
+                onDelete={() => openSheet('security-confirmation', {
+                  kind: 'disable-two-factor',
+                  onConfirm: twoFactor.disableNow,
+                })}
+              />
             </View>
-            <Button onPress={handleDelete} loading={deleting} variant="destructive" fullWidth size="lg">
-              Delete My Account
-            </Button>
+          )}
+        </View>
+
+        <View style={{ marginTop: 26 }}>
+          <Text style={SETTINGS_TYPE.sectionTitle}>Passkeys</Text>
+          <Text style={[SETTINGS_TYPE.body, { marginTop: 8 }]}>
+            Sign in without a password using Fingerprint, Face ID, or your device lock.
+          </Text>
+          <Button
+            variant="secondary"
+            size="lg"
+            className="self-end mt-3 h-10"
+            loading={registerPasskey.isPending}
+            onPress={handleAddPasskey}
+          >
+            Add a Passkey
+          </Button>
+
+          <View style={{ gap: 12, marginTop: 12 }}>
+            {passkeys.map((passkey, index) => {
+              const credentialId = passkey.credential_id || passkey.id || '';
+              const createdAt = passkey.created_at
+                ? new Date(passkey.created_at).toLocaleDateString('en-GB')
+                : null;
+              return (
+                <SecurityCredentialRow
+                  key={credentialId || `passkey-${index}`}
+                  icon={<Fingerprint size={22} color={COLORS.brand} />}
+                  title={passkey.device_name || passkey.name || `${Platform.OS} passkey`}
+                  subtitle={createdAt ? `Added ${createdAt}` : 'Native passkey'}
+                  onDelete={credentialId ? () => requestDeletePasskey(credentialId) : undefined}
+                />
+              );
+            })}
+
+            {fallbackEnabled && (
+              <SecurityCredentialRow
+                icon={<Fingerprint size={22} color={COLORS.warning} />}
+                title="Biometric sign-in"
+                subtitle="This isn’t a passkey"
+                onDelete={() => openSheet('security-confirmation', {
+                  kind: 'disable-biometric-fallback',
+                  onConfirm: async () => {
+                    await Promise.all([
+                      SecureStore.deleteItemAsync(storageKeys.biometricsRefreshToken),
+                      SecureStore.deleteItemAsync(storageKeys.biometricsEmail),
+                      SecureStore.deleteItemAsync(storageKeys.biometricsEnabled),
+                    ]);
+                    setFallbackEnabled(false);
+                  },
+                })}
+              />
+            )}
           </View>
-        </Animated.View>
+
+          {fallbackOffered && (
+            <View style={styles.fallbackCard}>
+              <Text style={SETTINGS_TYPE.cardTitle}>Passkeys aren&apos;t available here</Text>
+              <Text style={[SETTINGS_TYPE.supporting, { marginTop: 5 }]}>
+                You can still protect quick sign-in with Face ID or Touch ID on this device.
+              </Text>
+              <Button variant="secondary" size="lg" className="mt-3 h-10" onPress={enableFallback}>
+                Enable biometric fallback
+              </Button>
+            </View>
+          )}
+          {message && <Text style={[SETTINGS_TYPE.supporting, { color: COLORS.error, marginTop: 10 }]}>{message}</Text>}
+        </View>
+
+        <View style={styles.logoutAllRow}>
+          <Text style={SETTINGS_TYPE.cardTitle}>Log out of all devices</Text>
+          <Button
+            variant="outline"
+            size="lg"
+            className="h-10"
+            onPress={() => openSheet('security-confirmation', { kind: 'logout-all-devices' })}
+          >
+            Log out
+          </Button>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: COLORS.background },
+  header: {
+    minHeight: 62,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.fillWeak,
+  },
+  content: { paddingHorizontal: 16, paddingTop: 28, paddingBottom: 40 },
+  passwordRow: {
+    height: 40,
+    marginTop: 9,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeak,
+    borderRadius: 9,
+    paddingLeft: 14,
+    paddingRight: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passwordDots: {
+    flex: 1,
+    color: COLORS.textBase,
+    fontFamily: FONTS.sans,
+    fontSize: 24,
+    letterSpacing: 3,
+  },
+  twoFactorCard: {
+    borderRadius: 16,
+    padding: 12,
+    marginTop: 24,
+    backgroundColor: COLORS.fillWeak,
+  },
+  fallbackCard: {
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 12,
+    backgroundColor: COLORS.brandSubtle,
+  },
+  logoutAllRow: {
+    minHeight: 64,
+    marginTop: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+});

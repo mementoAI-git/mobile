@@ -7,6 +7,7 @@ import { UiShieldTick, UiShieldOff, UiPhone01, UiCopy01 } from '@/components/ui/
 import { Button, TextInput } from '@/components/ui';
 import { useTwoFactorSettingsLogic } from '@/hooks/use-two-factor-settings-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 
@@ -37,10 +38,10 @@ export default function TwoFactorScreen() {
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
+          <Text style={SETTINGS_TYPE.screenTitle}>
             Two-Factor Auth
           </Text>
-          <Text className="text-[13px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
+          <Text style={SETTINGS_TYPE.supporting}>
             Add a second layer of protection
           </Text>
         </View>
@@ -61,10 +62,10 @@ export default function TwoFactorScreen() {
             }
           </View>
           <View className="flex-1">
-            <Text className="text-[17px] text-text-strong" style={{ fontFamily: is2FAEnabled ? FONTS.sansSemi : FONTS.sansSemi }}>
+            <Text style={SETTINGS_TYPE.cardTitle}>
               {is2FAEnabled ? 'Enabled' : 'Not enabled'}
             </Text>
-            <Text className="text-[13px] text-text-weak leading-relaxed mt-0.5" style={{ fontFamily: FONTS.sans }}>
+            <Text className="mt-0.5" style={SETTINGS_TYPE.supporting}>
               {is2FAEnabled
                 ? 'Your account is protected with a second factor'
                 : 'Protect your account with an authenticator app'}
@@ -122,7 +123,7 @@ export default function TwoFactorScreen() {
               >
                 <View className="flex-1">
                   <Text className="text-[10px] text-text-muted uppercase tracking-[2px] mb-1.5" style={{ fontFamily: FONTS.sansBold }}>
-                    Secret key — tap to copy
+                    Tap to copy the secret key
                   </Text>
                   <Text className="text-[15px] text-text-strong tracking-[2px]" style={{ fontFamily: FONTS.mono }}>
                     {setupData.secret}
@@ -133,7 +134,7 @@ export default function TwoFactorScreen() {
             )}
 
             <TextInput
-              label="Verification Code"
+              label="Verification code"
               value={token}
               onChangeText={setToken}
               keyboardType="number-pad"

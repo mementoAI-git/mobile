@@ -1,4 +1,3 @@
-import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useUserStats } from '@/hooks/queries/use-overview';
@@ -14,18 +13,8 @@ export function useProfileSettingsLogic() {
   const openSheet = useUiStore((s) => s.openSheet);
 
   const handleLogout = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: () => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          logout();
-        },
-      },
-    ]);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    logout();
   };
 
   const enrichmentScore = Number(stats?.enrichment_score) || 0;

@@ -105,7 +105,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     deleteMemory(memory._id, {
       onSuccess: () => {
-        toast('Item deleted successfully', 'success');
+        toast('Story deleted.', 'success');
         onClose?.();
       },
       onError: () => {
@@ -147,7 +147,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
           fontFamily: FONTS.sansBold, fontSize: 22, color: COLORS.textStrong,
           textAlign: 'center', lineHeight: 30, marginBottom: 10, paddingHorizontal: 16,
         }}>
-          Are you sure you want to{'\n'}delete this story?
+          Delete this story?
         </Text>
 
         {/* Subtext */}
@@ -155,7 +155,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
           fontFamily: FONTS.sans, fontSize: 15, color: COLORS.textWeak,
           textAlign: 'center', marginBottom: 40,
         }}>
-          This action cannot be reversed.
+          This action can’t be undone.
         </Text>
 
         {/* Buttons */}

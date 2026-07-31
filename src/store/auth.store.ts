@@ -21,8 +21,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   clearAuth: async () => {
-    await secureStorage.deleteItem(storageKeys.auth);
-    set({ token: null });
+    try {
+      await Promise.all([
+        secureStorage.deleteItem(storageKeys.auth),
+        secureStorage.deleteItem(storageKeys.syncedPushToken),
+      ]);
+    } finally {
+      set({ token: null });
+    }
   },
 
   hydrate: async () => {

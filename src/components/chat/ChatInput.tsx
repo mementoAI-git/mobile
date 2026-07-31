@@ -107,7 +107,7 @@ export function ChatInput({
   onVoice,
   onStop,
   disabled,
-  placeholder = 'Share a thought...',
+  placeholder = 'Share a thought',
   loading,
   maxComposerHeight,
 }: ChatInputProps) {

@@ -36,3 +36,4 @@ jobs:
 
       - name: Expo Doctor
         run: bun run doctor
+        

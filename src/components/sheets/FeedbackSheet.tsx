@@ -92,13 +92,13 @@ export function FeedbackSheet() {
       });
       
       if (isMountedRef.current) {
-        toast('Feedback sent successfully!', 'success');
+        toast('Feedback sent.', 'success');
         closeSheet();
       }
     } catch (error) {
       if (isMountedRef.current) {
         logger.error('Failed to send feedback:', error);
-        toast('Failed to send feedback. Please try again.', 'error');
+        toast('Couldn’t send feedback. Try again.', 'error');
       }
     } finally {
       if (isMountedRef.current) setIsSubmitting(false);
@@ -111,7 +111,7 @@ export function FeedbackSheet() {
         className="text-2xl text-text-strong mb-2"
         style={{ fontFamily: FONTS.serif }}
       >
-        Send Feedback
+        Send feedback
       </Text>
 
       <View className="mb-2">
@@ -195,7 +195,7 @@ export function FeedbackSheet() {
           disabled={!message.trim() || isUploading || isSubmitting}
           className="flex-1"
         >
-          Send Feedback
+          Send feedback
         </Button>
       </View>
     </BottomSheetScrollView>

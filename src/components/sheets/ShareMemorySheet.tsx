@@ -47,7 +47,7 @@ export function ShareMemorySheet() {
     <View className="flex-1 px-5 pb-8 pt-2">
       <View className="flex-row items-center justify-between mb-4">
         <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
-          Story added successfully
+          Story added
         </Text>
         <TouchableOpacity onPress={closeSheet} className="p-2 rounded-full bg-fill-weaker">
           <X size={18} color={COLORS.textWeak} />

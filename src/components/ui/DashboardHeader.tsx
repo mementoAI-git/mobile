@@ -70,7 +70,7 @@ export function DashboardHeader({ title, showStreak = true, rightElement, onStre
           <TouchableOpacity
             onPress={() => {
               Haptics.selectionAsync();
-              router.push('/settings/profile');
+              router.push('/account');
             }}
             activeOpacity={0.8}
             className="border-2 border-transparent focus:border-brand/20 rounded-full ml-1"

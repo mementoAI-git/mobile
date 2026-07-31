@@ -103,7 +103,7 @@ export default function TwoFactorScreen() {
               className="text-sm text-text-base"
               style={{ fontFamily: FONTS.sansMedium }}
             >
-              Back to login
+              Back to sign in
             </Animated.Text>
           </TouchableOpacity>
         </ScrollView>

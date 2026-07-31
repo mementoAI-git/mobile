@@ -6,6 +6,7 @@ import { ChevronLeft, Sparkles, Play, Pause } from 'lucide-react-native';
 import { UiCreditCard01, UiReceipt, UiRefreshCw05, UiLinkExternal01, UiStars01 } from '@/components/ui/icons/SettingsIcons';
 import { Button, TextInput, Card, Badge, ConfirmDialog } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
+import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
@@ -127,7 +128,7 @@ export default function BillingSettingsScreen() {
       setPromoBusy(true);
       const res = (await post(endpoint.billingPromoRedeem, { code })) as any;
       if (res?.data?.success || res?.success) {
-        toast('Promo code successfully applied!', 'success');
+        toast('Promo code applied.', 'success');
         setPromo('');
         await refetchSub();
       } else {
@@ -166,7 +167,7 @@ export default function BillingSettingsScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setResumeBusy(true);
       await post(endpoint.billingResume, {});
-      toast('Your subscription has been successfully resumed!', 'success');
+      toast('Subscription resumed.', 'success');
       await refetchSub();
     } catch (err: any) {
       toast(err?.message || 'Could not resume subscription.', 'error');
@@ -190,13 +191,10 @@ export default function BillingSettingsScreen() {
             <ChevronLeft size={22} color={COLORS.textBase} />
           </TouchableOpacity>
           <View>
-            <Text
-              className="text-[28px] text-text-strong"
-              style={{ fontFamily: FONTS.serif }}
-            >
+            <Text style={SETTINGS_TYPE.screenTitle}>
               Billing
             </Text>
-            <Text className="text-[13px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
+            <Text style={SETTINGS_TYPE.supporting}>
               Manage your plan and payments
             </Text>
           </View>

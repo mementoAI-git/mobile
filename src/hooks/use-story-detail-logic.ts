@@ -16,8 +16,8 @@ export function useStoryDetailLogic() {
   const handleDelete = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     Alert.alert(
-      'Delete Memory',
-      'Are you sure you want to delete this memory? This action cannot be undone.',
+      'Delete this story?',
+      'This action can’t be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {

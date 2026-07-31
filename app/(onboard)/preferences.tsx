@@ -91,8 +91,8 @@ const DIMENSION_OPTIONS = [
 ];
 
 const EXPRESSION_OPTIONS = [
-  { value: 'voice', label: 'Talking — I prefer to speak', sublabel: 'Recording voice notes feels natural', icon: '🎙️' },
-  { value: 'writing', label: 'Writing — taking my time', sublabel: 'Composing thoughts in words', icon: '✍️' },
+  { value: 'voice', label: 'Talking: I prefer to speak', sublabel: 'Recording voice notes feels natural', icon: '🎙️' },
+  { value: 'writing', label: 'Writing: taking my time', sublabel: 'Composing thoughts in words', icon: '✍️' },
   { value: 'media', label: 'Photos & videos', sublabel: 'Showing is easier than telling', icon: '📷' },
   { value: 'guided', label: 'Guided questions', sublabel: 'I need prompts to get started', icon: '💬' },
 ];
@@ -141,7 +141,7 @@ export default function PreferencesScreen() {
           ))}
         </View>
         <Animated.Text className="text-[10px] text-text-weak tracking-widest uppercase mt-1" style={{ fontFamily: FONTS.sansBold }}>
-          Step {step} of {TOTAL_STEPS} — {STEP_LABELS[step]}
+          Step {step} of {TOTAL_STEPS} · {STEP_LABELS[step]}
         </Animated.Text>
       </View>
 
@@ -198,7 +198,7 @@ export default function PreferencesScreen() {
                       <RNTextInput
                         value={state.whereFrom}
                         onChangeText={(v) => updateState(() => ({ whereFrom: v }))}
-                        placeholder="City, country..."
+                        placeholder="City, country"
                         placeholderTextColor={COLORS.textMuted}
                         className="text-base text-text-strong p-0 m-0"
                         style={{ fontFamily: FONTS.sans }}

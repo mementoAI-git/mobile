@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { StyleSheet, Platform, LogBox, StatusBar as RNStatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 // Suppress Reanimated strict-mode "reading from value during render" warnings.
 // These come from useSharedValue + direct .value reads in card press handlers
@@ -41,24 +42,19 @@ import {
   EBGaramond_700Bold,
 } from '@expo-google-fonts/eb-garamond';
 import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono';
-import { Geist_400Regular, Geist_700Bold } from '@expo-google-fonts/geist';
 import { PatrickHandSC_400Regular } from '@expo-google-fonts/patrick-hand-sc';
 import { Handlee_400Regular } from '@expo-google-fonts/handlee';
 import { CutiveMono_400Regular } from '@expo-google-fonts/cutive-mono';
-import {
-  AveriaSerifLibre_400Regular,
-  AveriaSerifLibre_700Bold,
-} from '@expo-google-fonts/averia-serif-libre';
 import { useAuthStore, useUserStore, useUiStore } from '@/store';
 import { authService } from '@/api/auth-service';
 import { ToastProvider } from '@/components/ui/Toast';
 import { OfflineNotice } from '@/components/ui/OfflineNotice';
 import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
-import { useNotifications } from '@/hooks/use-notifications';
+import { AuthenticatedNotificationManager } from '@/components/system/AuthenticatedNotificationManager';
 import { COLORS } from '@/constants/tokens';
 import { SENTRY_DSN, SENTRY_TRACES_SAMPLE_RATE } from '@/lib/env';
 import { normalizeAppHref } from '@/lib/navigation';
-import { logger } from '@/lib/logger';
+import { shouldInitializeNotifications } from '@/features/notifications/work-policy';
 import { StatusBar } from 'expo-status-bar';
 import { useShareIntentContext, ShareIntentProvider } from 'expo-share-intent';
 
@@ -123,9 +119,6 @@ function RootLayout() {
   const segments = useSegments();
   const rootNavigationState = useRootNavigationState();
 
-  // Initialize notifications
-  const { expoPushToken } = useNotifications();
-
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -138,10 +131,6 @@ function RootLayout() {
     PatrickHandSC_400Regular,
     Handlee_400Regular,
     CutiveMono_400Regular,
-    AveriaSerifLibre_400Regular,
-    AveriaSerifLibre_700Bold,
-    Geist_400Regular,
-    Geist_700Bold,
 
     // Map web font family names directly to React Native loaded fonts
     'Patrick Hand SC': PatrickHandSC_400Regular,
@@ -150,12 +139,7 @@ function RootLayout() {
     'Portrait Script': require('../assets/fonts/Portrait-script-regular.ttf'),
     'Garamond': EBGaramond_400Regular,
     'Sans': Inter_400Regular,
-    // Fixed: was incorrectly mapped to AzeretMono — Geist is a distinct geometric sans
-    'Geist': Geist_400Regular,
-    'Geist Bold': Geist_700Bold,
     'Geist Mono': AzeretMono_400Regular, // kept for capsule theme backward-compat
-    'Averia Serif Libre': AveriaSerifLibre_400Regular,
-    'Averia Serif Libre Bold': AveriaSerifLibre_700Bold,
   });
 
   // Wire up the redirect fn for auth-service token refresh failures
@@ -219,19 +203,6 @@ function RootLayout() {
     }
   }, [token, segments, router]);
 
-  // Sync push token to backend
-  useEffect(() => {
-    if (token && expoPushToken) {
-      import('@/api/mutations').then(({ put }) => {
-        import('@/api/endpoint').then(({ default: endpoint }) => {
-          put(endpoint.profile, { push_token: expoPushToken }).catch((error) => {
-            logger.error('Failed to sync push token', error);
-          });
-        });
-      });
-    }
-  }, [token, expoPushToken]);
-
   // Set Android status bar background to match the app's cream surface.
   // expo-status-bar doesn't expose backgroundColor — use RN's imperative API.
   useEffect(() => {
@@ -256,17 +227,23 @@ function RootLayout() {
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <StatusBar style="dark" />
       <GestureHandlerRootView className="flex-1">
-        <AppErrorBoundary>
-          <QueryClientProvider client={queryClient}>
-            <BottomSheetModalProvider>
+        <KeyboardProvider preload={false}>
+          <AppErrorBoundary>
+            <QueryClientProvider client={queryClient}>
+              <BottomSheetModalProvider>
               <ShareIntentProvider>
                 <ToastProvider>
                   <OfflineNotice />
+                  {shouldInitializeNotifications(hydrated, Boolean(token)) ? (
+                    <AuthenticatedNotificationManager />
+                  ) : null}
                   <ShareIntentWatcher />
                   <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="(auth)" />
                     <Stack.Screen name="(onboard)" />
                     <Stack.Screen name="(tabs)" options={{ contentStyle: { backgroundColor: COLORS.background } }} />
+          <Stack.Screen name="account" options={{ presentation: 'fullScreenModal', animation: 'slide_from_right' }} />
+          <Stack.Screen name="insights" options={{ presentation: 'fullScreenModal', animation: 'slide_from_right' }} />
                     <Stack.Screen name="chat/[id]" />
                     <Stack.Screen name="share" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
                     <Stack.Screen name="editor" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
@@ -278,9 +255,10 @@ function RootLayout() {
                   </Stack>
                 </ToastProvider>
               </ShareIntentProvider>
-            </BottomSheetModalProvider>
-          </QueryClientProvider>
-        </AppErrorBoundary>
+              </BottomSheetModalProvider>
+            </QueryClientProvider>
+          </AppErrorBoundary>
+        </KeyboardProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );

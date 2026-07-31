@@ -4,9 +4,7 @@ import { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomShee
 import { X, Search, Check, Play, Music, FileText } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { Button, Spinner } from '@/components/ui';
-import { useQuery } from '@tanstack/react-query';
-import { get } from '@/api/mutations';
-import endpoint from '@/api/endpoint';
+import { useFiles } from '@/hooks/queries/use-files';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -34,10 +32,7 @@ export const SelectFromMediaModal = forwardRef<BottomSheetModal, SelectFromMedia
   const [localSelected, setLocalSelected] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   
-  const { data: mediaFiles = [], isLoading } = useQuery({
-    queryKey: ['all-files'],
-    queryFn: () => get<any>(`${endpoint.files}?limit=100`).then((r) => r.data?.docs || []),
-  });
+  const { data: mediaFiles = [], isLoading } = useFiles<MediaFileItem>({ limit: 100 });
   
   const selectedSet = useMemo(() => new Set(localSelected), [localSelected]);
 

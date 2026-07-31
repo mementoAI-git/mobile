@@ -149,7 +149,7 @@ export default function StoriesScreen() {
           <View className="gap-4">
             <View className="flex-row items-center gap-3">
               <TextInput
-                placeholder="Search memories..."
+                placeholder="Search memories"
                 value={search}
                 onChangeText={handleSearchChange}
                 onSubmitEditing={handleSearchSubmit}

@@ -3,6 +3,11 @@ import { get } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import type { IMemory, IPagination } from '@/types';
+import { shouldEnableStoriesQuery } from '@/features/memories/query-options';
+
+interface StoriesQueryOptions {
+  enabled?: boolean;
+}
 
 export function useMemories(params?: { limit?: number }) {
   return useInfiniteQuery({
@@ -18,7 +23,10 @@ export function useMemories(params?: { limit?: number }) {
   });
 }
 
-export function useStories(params?: { limit?: number; filter?: string; search?: string }) {
+export function useStories(
+  params?: { limit?: number; filter?: string; search?: string },
+  options?: StoriesQueryOptions,
+) {
   return useInfiniteQuery({
     queryKey: queryKeys.stories(params),
     queryFn: ({ pageParam = 1 }) => {
@@ -34,6 +42,7 @@ export function useStories(params?: { limit?: number; filter?: string; search?: 
     },
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,
+    enabled: shouldEnableStoriesQuery(options?.enabled),
     // 30s stale time — avoids refetch on every tab switch
     staleTime: 30_000,
   });

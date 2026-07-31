@@ -44,7 +44,10 @@ class AuthService {
   }
 
   async clearAuth(): Promise<void> {
-    await secureStorage.deleteItem(storageKeys.auth);
+    await Promise.all([
+      secureStorage.deleteItem(storageKeys.auth),
+      secureStorage.deleteItem(storageKeys.syncedPushToken),
+    ]);
   }
 
   async refreshAccessToken(): Promise<IAuth> {

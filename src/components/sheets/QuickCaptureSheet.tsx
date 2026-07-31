@@ -212,7 +212,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
           ref={inputRef}
           value={text}
           onChangeText={setText}
-          placeholder={dailyPrompt ? 'Your reflection...' : "What's on your mind? Type or speak..."}
+          placeholder={dailyPrompt ? 'Your reflection' : "What's on your mind? Type or speak"}
           placeholderTextColor={COLORS.textWeak}
           multiline
           autoFocus

@@ -33,7 +33,7 @@ export function useFileUpload() {
       throw new Error('Upload failed');
     } catch (error) {
       logger.error('File upload error:', error);
-      toast('Failed to upload file', 'error');
+      toast('Couldn’t upload the file. Try again.', 'error');
       return null;
     }
   }, [toast, uploadFileMutation]);
@@ -60,14 +60,14 @@ export function useFileUpload() {
       const uploadResult = await uploadFile(upload.uri, upload.mimeType, upload.name);
 
       if (uploadResult) {
-        toast('File uploaded successfully', 'success');
+        toast('File uploaded.', 'success');
         return uploadResult;
       }
       
       return null;
     } catch (error) {
       logger.error('Error picking document:', error);
-      toast('Failed to select file', 'error');
+      toast('Couldn’t select the file. Try again.', 'error');
       return null;
     }
   }, [toast, uploadFile]);

@@ -444,7 +444,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
             <BottomSheetTextInput
               value={body}
               onChangeText={setBody}
-              placeholder="Write about your cherished moment..."
+              placeholder="Write about your cherished moment"
               placeholderTextColor={COLORS.textMuted}
               multiline
               numberOfLines={6}
@@ -472,7 +472,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
                 onChangeText={handleTagInputChange}
                 onSubmitEditing={handleTagSubmit}
                 blurOnSubmit={false}
-                placeholder={tags.length === 0 ? "Add tags (press enter or space)" : "Add more..."}
+                placeholder={tags.length === 0 ? "Add tags (press enter or space)" : "Add more"}
                 placeholderTextColor={COLORS.textMuted}
                 className="flex-1 min-w-[100px] text-sm text-text-strong h-8 px-2"
                 style={{ fontFamily: FONTS.sans }}

@@ -11,7 +11,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.mementoai.app",
       "associatedDomains": [
-        "applinks:app.mymemento.io"
+        "applinks:app.mymemento.io",
+        "webcredentials:app.mymemento.io"
       ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false

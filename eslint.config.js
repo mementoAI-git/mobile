@@ -31,6 +31,7 @@ module.exports = defineConfig([
   {
     ignores: [
       '.expo/**',
+      '.worktrees/**',
       '.husky/**',
       'android/**',
       'ios/**',

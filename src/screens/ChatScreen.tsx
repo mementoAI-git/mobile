@@ -2,16 +2,19 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   ImageBackground,
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MoreVertical, ChevronLeft } from 'lucide-react-native';
-import { MessageBubble } from '@/components/chat/MessageBubble';
+import {
+  MessageBubble,
+  type ChatAttachmentPreviewRequest,
+} from '@/components/chat/MessageBubble';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { ChatInput, type ChatSendPayload } from '@/components/chat/ChatInput';
 import { MilestoneCard } from '@/components/chat/MilestoneCard';
@@ -42,12 +45,21 @@ import {
   getComposerOverlayBottomPadding,
   getComposerOverlayMaxHeight,
 } from '@/features/chat/composer-layout';
+import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
+import {
+  getChatMessageItemType,
+  getChatMessageKey,
+} from '@/features/chat/message-list';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 const COLLAPSED_COMPOSER_HEIGHT = verticalScale(86);
 const COMPOSER_OVERLAY_GAP = verticalScale(10);
 const COMPOSER_OVERLAY_MIN_HEIGHT = verticalScale(180);
 const DEFAULT_HEADER_HEIGHT = verticalScale(72);
+const CHAT_VISIBLE_CONTENT_POSITION = Object.freeze({
+  autoscrollToBottomThreshold: 0.2,
+  startRenderingFromBottom: true,
+});
 
 export default function ChatScreen() {
   // promptLabel is only set by BrowseTopicsSection topic cards — daily prompts don't set it
@@ -84,6 +96,7 @@ export default function ChatScreen() {
   const [headerHeight, setHeaderHeight] = useState(DEFAULT_HEADER_HEIGHT);
   const [chatSurfaceHeight, setChatSurfaceHeight] = useState(0);
   const [nudgeHidden, setNudgeHidden] = useState(false);
+  const [attachmentPreview, setAttachmentPreview] = useState<ChatAttachmentPreviewRequest | null>(null);
 
   // Pulsing live indicator
   const pulse = useSharedValue(0.7);
@@ -177,6 +190,14 @@ export default function ChatScreen() {
     }
   }, [allMessages]);
 
+  const handlePreviewAttachments = useCallback((request: ChatAttachmentPreviewRequest) => {
+    setAttachmentPreview(request);
+  }, []);
+
+  const handleCloseAttachmentPreview = useCallback(() => {
+    setAttachmentPreview(null);
+  }, []);
+
   const renderMessage = useCallback(
     ({ item }: { item: any }) => (
       <MessageBubble
@@ -190,12 +211,13 @@ export default function ChatScreen() {
             ? () => handleScrollToOriginal((item as any).replyTo.text)
             : undefined
         }
+        onPreviewAttachments={handlePreviewAttachments}
       />
     ),
-    [handleScrollToOriginal],
+    [handlePreviewAttachments, handleScrollToOriginal],
   );
 
-  const listHeaderComponent = React.useMemo(() => {
+  const streamingFooterComponent = React.useMemo(() => {
     if (!isActuallyStreaming) return null;
 
     return streamingText ? (
@@ -205,7 +227,7 @@ export default function ChatScreen() {
     );
   }, [isActuallyStreaming, streamingText]);
 
-  const listFooterComponent = React.useMemo(() => {
+  const promptHeaderComponent = React.useMemo(() => {
     if (!isPromptType || !promptMemory) return null;
 
     return (
@@ -220,16 +242,50 @@ export default function ChatScreen() {
     );
   }, [isPromptType, promptMemory]);
 
+  const messagesContentStyle = React.useMemo(
+    () => [styles.messagesContent, { paddingBottom: messageBottomPadding }],
+    [messageBottomPadding],
+  );
+
+  const listEmptyComponent = React.useMemo(() => {
+    if (isPromptType) return null;
+
+    return (
+      <View className="items-center justify-center py-24 gap-8">
+        <Animated.View
+          entering={FadeInUp.duration(600)}
+          className="size-24 rounded-full bg-fill-weaker items-center justify-center"
+        >
+          <Animated.Text className="text-4xl">🌱</Animated.Text>
+        </Animated.View>
+        <View className="items-center gap-3 px-10">
+          <Animated.Text
+            entering={FadeInDown.delay(200)}
+            className="text-[28px] text-text-strong text-center"
+            style={{ fontFamily: FONTS.serif }}
+          >
+            Your story grows here
+          </Animated.Text>
+          <Animated.Text
+            entering={FadeInDown.delay(300)}
+            className="text-[15px] text-text-weak text-center leading-relaxed"
+            style={{ fontFamily: FONTS.sans }}
+          >
+            Share a memory, an emotion, or just say hello. Your AI companion is here to listen and help you preserve your legacy.
+          </Animated.Text>
+        </View>
+      </View>
+    );
+  }, [isPromptType]);
+
   // Jump to message by month — scrolls to first message in that month
   const handleJumpToMonth = useCallback(
     (yyyyMm: string) => {
-      const idx = [...allMessages].reverse().findIndex(
+      const idx = allMessages.findIndex(
         (m) => (m as any).created_at?.slice(0, 7) === yyyyMm,
       );
       if (idx >= 0 && flatListRef.current) {
-        // allMessages is reversed (inverted FlatList), so re-calculate index
-        const invertedIdx = allMessages.length - 1 - idx;
-        flatListRef.current.scrollToIndex({ index: invertedIdx, animated: true, viewPosition: 0 });
+        flatListRef.current.scrollToIndex({ index: idx, animated: true, viewPosition: 0 });
       }
     },
     [allMessages, flatListRef],
@@ -370,46 +426,18 @@ export default function ChatScreen() {
             {isLoading && !allMessages.length ? (
               <ChatSkeleton />
             ) : (
-              <FlatList
+              <FlashList
                 ref={flatListRef}
                 data={allMessages}
-                inverted
-                keyExtractor={(item, i) => (item as any)._id ?? String(i)}
+                keyExtractor={getChatMessageKey}
+                getItemType={getChatMessageItemType}
                 renderItem={renderMessage}
-                contentContainerStyle={[styles.messagesContent, { paddingTop: messageBottomPadding }]}
+                contentContainerStyle={messagesContentStyle}
+                maintainVisibleContentPosition={CHAT_VISIBLE_CONTENT_POSITION}
                 showsVerticalScrollIndicator={false}
-                onScrollToIndexFailed={() => {}}
-                ListHeaderComponent={listHeaderComponent}
-                ListFooterComponent={listFooterComponent}
-                ListEmptyComponent={
-                  /* Prompt type: pinned card above handles the question display — nothing extra needed here */
-                  isPromptType ? null : (
-                    <View className="items-center justify-center py-24 gap-8">
-                      <Animated.View
-                        entering={FadeInUp.duration(600)}
-                        className="size-24 rounded-full bg-fill-weaker items-center justify-center"
-                      >
-                        <Animated.Text className="text-4xl">🌱</Animated.Text>
-                      </Animated.View>
-                      <View className="items-center gap-3 px-10">
-                        <Animated.Text
-                          entering={FadeInDown.delay(200)}
-                          className="text-[28px] text-text-strong text-center"
-                          style={{ fontFamily: FONTS.serif }}
-                        >
-                          Your story grows here
-                        </Animated.Text>
-                        <Animated.Text
-                          entering={FadeInDown.delay(300)}
-                          className="text-[15px] text-text-weak text-center leading-relaxed"
-                          style={{ fontFamily: FONTS.sans }}
-                        >
-                          Share a memory, an emotion, or just say hello. Your AI companion is here to listen and help you preserve your legacy.
-                        </Animated.Text>
-                      </View>
-                    </View>
-                  )
-                }
+                ListHeaderComponent={promptHeaderComponent}
+                ListFooterComponent={streamingFooterComponent}
+                ListEmptyComponent={listEmptyComponent}
               />
             )}
           </View>
@@ -480,6 +508,15 @@ export default function ChatScreen() {
                 : (serverMessages?.title ?? 'Conversation')
             }
           />
+
+          {attachmentPreview && (
+            <MediaPreviewModal
+              visible
+              attachments={attachmentPreview.attachments}
+              initialIndex={attachmentPreview.initialIndex}
+              onClose={handleCloseAttachmentPreview}
+            />
+          )}
         </View>
       </ImageBackground>
       </KeyboardAvoidingView>
@@ -490,7 +527,7 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   messagesContent: {
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingTop: 16,
   },
   composerOverlay: {
     position: 'absolute',

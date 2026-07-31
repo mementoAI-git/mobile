@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
-import { Check } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import Animated, {
   useSharedValue,
@@ -13,6 +12,8 @@ import { useUserStore } from '@/store';
 import { useUserStats } from '@/hooks/queries/use-overview';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { ZapIconWarm } from '@/components/ui';
+import { toMondayFirstIndex } from '@/features/account/account-overview';
+import { CompletedCheckmarkIcon } from '../ui/icons/CompletedCheckmarkIcon';
 
 const STREAK_FLAME = require('../../../assets/images/illustrations/streak_flame.webp');
 
@@ -36,11 +37,6 @@ function getStreakSubtitle(days: number, nickname?: string): string {
 // Week starts Monday: M T W T F S S
 // Index 0 = Monday, 6 = Sunday
 const WEEK_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-// Maps JS getDay() (0=Sun … 6=Sat) → our Mon-first index (0=Mon … 6=Sun)
-function toMonFirstIndex(jsDow: number): number {
-  return (jsDow + 6) % 7;
-}
 
 // ── Animated arc ring ───────────────────────────────────────────────────────
 // Draws the horseshoe ring that surrounds the flame on mount.
@@ -87,7 +83,7 @@ export function StreakSheet() {
 
   const streakCount = Number(user?.streak) || Number(stats.streak_count) || 0;
   const today = new Date();
-  const todayMonFirst = toMonFirstIndex(today.getDay()); // 0 = Mon … 6 = Sun
+  const todayMonFirst = toMondayFirstIndex(today.getDay()); // 0 = Mon … 6 = Sun
   const nickname = user?.nickname || user?.first_name || '';
 
   // Streak days go backwards from today in Mon-first space.
@@ -162,7 +158,7 @@ export function StreakSheet() {
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}>
-                  <Check size={16} color="#ffffff" strokeWidth={3} />
+                  <CompletedCheckmarkIcon containerSize={22}/>
                 </View>
               ) : isToday ? (
                 // TODAY: ZapIconWarm on top, bold orange date below — no border ring

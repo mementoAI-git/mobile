@@ -143,7 +143,7 @@ function PublishSuccessView({
 
       {/* Content */}
       <Animated.View entering={FadeInDown.duration(400).delay(100)} style={sStyles.content}>
-        <Text style={sStyles.title}>Story published{'\n'}successfully</Text>
+        <Text style={sStyles.title}>Story published</Text>
 
         {/* Share card */}
         <View style={sStyles.shareCard}>

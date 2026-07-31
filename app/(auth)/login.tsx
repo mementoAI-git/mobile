@@ -69,6 +69,7 @@ export default function LoginScreen() {
     googleLoading,
     appleLoading,
     passkeyLoading,
+    securityLoginLabel,
     onSubmit,
     handleGoogleLogin,
     handleAppleLogin,
@@ -162,7 +163,7 @@ export default function LoginScreen() {
               className="text-lg text-text-base leading-relaxed"
               style={{ fontFamily: FONTS.sans }}
             >
-              Please login to continue
+              Sign in to continue
             </Animated.Text>
           </Animated.View>
 
@@ -177,7 +178,7 @@ export default function LoginScreen() {
                   className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
                 >
                    {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />}
-                   <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansBold }}>Sign in with a passkey</Animated.Text>
+                   <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansBold }}>{securityLoginLabel}</Animated.Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleGoogleLogin}
@@ -291,7 +292,7 @@ export default function LoginScreen() {
               size="lg"
               className="mt-2"
             >
-              Login
+              Sign in
             </Button>
           </View>
 

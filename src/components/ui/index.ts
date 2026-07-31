@@ -2,6 +2,7 @@ export { Button } from './Button';
 export { TextInput } from './TextInput';
 export { PasswordInput } from './PasswordInput';
 export { Avatar } from './Avatar';
+export { AccountSkeleton } from './AccountSkeleton';
 export { Spinner } from './Spinner';
 export { Card } from './Card';
 export { Badge } from './Badge';

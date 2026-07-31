@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, ScrollView, TouchableOpacity, ImageBackground, Text, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -6,10 +6,11 @@ import { ChevronLeft } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import dayjs from 'dayjs';
-import { useActivities, type Activity } from '@/hooks/queries/use-activities';
+import { useInfiniteActivities, type Activity } from '@/hooks/queries/use-activities';
 import { ActivityListItem } from '@/components/overview/ActivityListItem';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 const PAGE_SIZE = 20;
@@ -93,42 +94,25 @@ function StatsBanner({ totalDocs, docs }: { totalDocs: number; docs: Activity[] 
 
 export default function ActivitiesScreen() {
   const router = useRouter();
-  const [page, setPage] = useState(1);
-  const [allDocs, setAllDocs] = useState<Activity[]>([]);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteActivities({ limit: PAGE_SIZE });
 
-  const { data: page1, isLoading } = useActivities({ page: 1, limit: PAGE_SIZE });
+  const displayDocs = useMemo(
+    () => data?.pages.flatMap((activityPage) => activityPage.docs) ?? [],
+    [data?.pages],
+  );
+  const totalDocs = data?.pages[0]?.totalDocs ?? 0;
 
-  React.useEffect(() => {
-    if (page1?.docs && allDocs.length === 0) {
-      setAllDocs(page1.docs);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page1?.docs]);
-
-  const handleLoadMore = useCallback(async () => {
+  const handleLoadMore = useCallback(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
     Haptics.selectionAsync();
-    const nextPage = page + 1;
-    setLoadingMore(true);
-    try {
-      const { get } = await import('@/api/mutations');
-      const endpoint = (await import('@/api/endpoint')).default;
-      const qs = new URLSearchParams({ page: String(nextPage), limit: String(PAGE_SIZE) });
-      const res = await get<any>(`${endpoint.activities}?${qs.toString()}`);
-      if (res?.data?.docs) {
-        setAllDocs((prev) => [...prev, ...res.data.docs]);
-        setPage(nextPage);
-      }
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [page]);
-
-  const hasMore = page1 ? (page < page1.totalPages) : false;
-  const totalDocs = page1?.totalDocs ?? 0;
-  const displayDocs = allDocs.length > 0 ? allDocs : (page1?.docs ?? []);
-
-  const renderItems = useMemo(() => displayDocs, [displayDocs]);
+    void fetchNextPage();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
@@ -141,10 +125,10 @@ export default function ActivitiesScreen() {
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontFamily: FONTS.serif, fontSize: 28, color: COLORS.textStrong, lineHeight: 34 }}>
+          <Text style={SETTINGS_TYPE.screenTitle}>
             Activity
           </Text>
-          <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textWeak, marginTop: 1 }}>
+          <Text style={[SETTINGS_TYPE.supporting, { marginTop: 1 }]}>
             {totalDocs > 0 ? `${totalDocs} actions across your account` : 'Your recent actions'}
           </Text>
         </View>
@@ -162,10 +146,10 @@ export default function ActivitiesScreen() {
           </View>
         ) : displayDocs.length === 0 ? (
           <Animated.View entering={FadeInDown.duration(400)} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 }}>
-            <Text style={{ fontFamily: FONTS.serif, fontSize: 22, color: COLORS.textStrong, textAlign: 'center' }}>
+            <Text style={[SETTINGS_TYPE.sectionTitle, { textAlign: 'center' }]}>
               No activity yet
             </Text>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, textAlign: 'center', lineHeight: 20 }}>
+            <Text style={[SETTINGS_TYPE.body, { textAlign: 'center' }]}>
               Creating memories, editing stories, sending capsules. It all shows up here.
             </Text>
           </Animated.View>
@@ -179,7 +163,7 @@ export default function ActivitiesScreen() {
             <StatsBanner totalDocs={totalDocs} docs={displayDocs} />
 
             {/* Activity items — standalone cards */}
-            {renderItems.map((item) => (
+            {displayDocs.map((item) => (
               <View
                 key={item._id}
                 style={{
@@ -194,11 +178,11 @@ export default function ActivitiesScreen() {
             ))}
 
             {/* Load more */}
-            {hasMore && (
+            {hasNextPage && (
               <View style={{ marginHorizontal: 20, marginTop: 16, gap: 8 }}>
                 <TouchableOpacity
                   onPress={handleLoadMore}
-                  disabled={loadingMore}
+                  disabled={isFetchingNextPage}
                   activeOpacity={0.8}
                   style={{
                     height: 48,
@@ -212,7 +196,7 @@ export default function ActivitiesScreen() {
                     gap: 8,
                   }}
                 >
-                  {loadingMore
+                  {isFetchingNextPage
                     ? <ActivityIndicator size="small" color={COLORS.brand} />
                     : <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textStrong }}>Load more</Text>
                   }
