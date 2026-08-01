@@ -2,14 +2,17 @@ const DEV_API_BASE_URL = 'http://localhost:3000';
 const DEV_WEB_BASE_URL = 'https://dev.mymemento.io';
 const PROD_WEB_BASE_URL = 'https://app.mymemento.io';
 
-function readPublicEnv(key: string, devFallback?: string): string {
-  const value = process.env[key];
+function readPublicEnv(value: string | undefined, key: string, devFallback?: string): string {
   if (value && value.trim()) return value.trim();
   if (__DEV__ && devFallback) return devFallback;
   throw new Error(`Missing required environment variable: ${key}`);
 }
 
-export const API_BASE_URL = readPublicEnv('EXPO_PUBLIC_API_BASE_URL', DEV_API_BASE_URL);
+export const API_BASE_URL = readPublicEnv(
+  process.env.EXPO_PUBLIC_API_BASE_URL,
+  'EXPO_PUBLIC_API_BASE_URL',
+  DEV_API_BASE_URL,
+);
 
 function webBaseUrlFromApiBaseUrl(apiBaseUrl: string): string {
   try {
