@@ -2,7 +2,6 @@ import React from 'react';
 import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { TabBar } from '@/components/TabBar';
-import { SheetManager } from '@/components/sheets/SheetManager';
 import { COLORS } from '@/constants/tokens';
 
 export default function TabsLayout() {
@@ -36,14 +35,6 @@ export default function TabsLayout() {
         <Tabs.Screen name="capsule" />
       </Tabs>
 
-      {/*
-        SheetManager is placed here (inside the (tabs) layout) rather than in the root
-        _layout.tsx to guarantee it mounts inside a fully initialised navigation context.
-        Sheets like MemoryInsightsSheet use hooks that call useRouter() internally — those
-        crash with "NavigationContainer not found" when rendered as a sibling of <Stack>
-        at the root level.
-      */}
-      <SheetManager />
     </View>
   );
 }
