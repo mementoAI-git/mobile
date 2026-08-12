@@ -157,7 +157,6 @@ export const StoryRichEditor = forwardRef<StoryRichEditorRef, Props>(
 
     const editor = useEditorBridge({
       autofocus: false,
-      avoidIosKeyboard: true,
       initialContent,
       bridgeExtensions: [...TenTapStartKit, mementoTheme],
       onChange: () => {

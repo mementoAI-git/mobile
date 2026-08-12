@@ -10,4 +10,19 @@ describe('production environment bundling', () => {
     expect(source).toContain('process.env.EXPO_PUBLIC_API_BASE_URL');
     expect(source).not.toMatch(/process\.env\s*\[/);
   });
+
+  test('disables Sentry replay sampling to reduce app overhead and battery drain', async () => {
+    const layout = await Bun.file(
+      new URL('../../../app/_layout.tsx', import.meta.url),
+    ).text();
+    const app = await Bun.file(
+      new URL('../../../App.tsx', import.meta.url),
+    ).text();
+
+    expect(layout).toContain('replaysSessionSampleRate: 0');
+    expect(layout).toContain('replaysOnErrorSampleRate: 0');
+    expect(layout).not.toContain('mobileReplayIntegration()');
+    expect(app).toContain('replaysSessionSampleRate: 0');
+    expect(app).toContain('replaysOnErrorSampleRate: 0');
+  });
 });

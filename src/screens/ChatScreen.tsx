@@ -98,21 +98,28 @@ export default function ChatScreen() {
   const [nudgeHidden, setNudgeHidden] = useState(false);
   const [attachmentPreview, setAttachmentPreview] = useState<ChatAttachmentPreviewRequest | null>(null);
 
-  // Pulsing live indicator
+  // Pulsing live indicator — only while active. Idle chat should not keep the
+  // UI thread and GPU animating continuously in the background.
   const pulse = useSharedValue(0.7);
+  const isActuallyStreaming = streaming || isStartingConversation;
+
   React.useEffect(() => {
+    if (!isActuallyStreaming) {
+      pulse.value = withTiming(0.7, { duration: 200 });
+      return;
+    }
+
     pulse.value = withRepeat(
       withSequence(withTiming(1, { duration: 800 }), withTiming(0.4, { duration: 800 })),
       -1,
       true,
     );
-  }, []);
+  }, [isActuallyStreaming, pulse]);
+
   const pulseStyle = useAnimatedStyle(() => ({
     opacity: pulse.value,
     transform: [{ scale: pulse.value }],
   }));
-
-  const isActuallyStreaming = streaming || isStartingConversation;
 
   React.useEffect(() => {
     if (!replyQuote) setReplyQuoteHeight(0);
