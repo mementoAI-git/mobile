@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useProfile } from '@/hooks/queries/use-profile';
@@ -7,10 +6,12 @@ import { post, del } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import * as Haptics from 'expo-haptics';
+import { useUiStore } from '@/store';
 
 export function useTwoFactorSettingsLogic() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const openSheet = useUiStore((s) => s.openSheet);
   const { data: profile } = useProfile();
   const is2FAEnabled = profile?.two_factor?.enabled ?? false;
 
@@ -75,18 +76,10 @@ export function useTwoFactorSettingsLogic() {
 
   const handleDisable = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    Alert.alert('Turn off two-factor authentication?', 'New sign-ins will no longer require an authenticator code.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Turn off',
-        style: 'destructive',
-        onPress: async () => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-          setLoading(true);
-          await disableNow();
-        },
-      },
-    ]);
+    openSheet('security-confirmation', {
+      kind: 'disable-two-factor',
+      onConfirm: disableNow,
+    });
   };
 
   return {

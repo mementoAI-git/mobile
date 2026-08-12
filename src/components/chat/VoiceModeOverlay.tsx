@@ -59,8 +59,8 @@ export function VoiceModeOverlay({ visible, onClose, conversationTitle = 'AI Com
   // Visualizer loop that scales rings up and down to match speech
   useEffect(() => {
     if (isConnected && !isMuted) {
-      const baseDuration = isAiSpeaking ? 400 : 700;
-      const ringMaxScale = isAiSpeaking ? 1.75 : 1.35;
+      const baseDuration = isAiSpeaking ? 1200 : 1800;
+      const ringMaxScale = isAiSpeaking ? 1.4 : 1.2;
 
       ring1.value = withRepeat(
         withSequence(
@@ -73,8 +73,8 @@ export function VoiceModeOverlay({ visible, onClose, conversationTitle = 'AI Com
 
       ring2.value = withRepeat(
         withSequence(
-          withTiming(ringMaxScale - 0.25, { duration: baseDuration + 150 }),
-          withTiming(1, { duration: baseDuration + 150 })
+          withTiming(ringMaxScale - 0.15, { duration: baseDuration + 220 }),
+          withTiming(1, { duration: baseDuration + 220 })
         ),
         -1,
         true
@@ -82,8 +82,8 @@ export function VoiceModeOverlay({ visible, onClose, conversationTitle = 'AI Com
 
       ring3.value = withRepeat(
         withSequence(
-          withTiming(ringMaxScale - 0.45, { duration: baseDuration + 250 }),
-          withTiming(1, { duration: baseDuration + 250 })
+          withTiming(ringMaxScale - 0.25, { duration: baseDuration + 440 }),
+          withTiming(1, { duration: baseDuration + 440 })
         ),
         -1,
         true

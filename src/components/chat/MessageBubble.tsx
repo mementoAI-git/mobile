@@ -69,6 +69,7 @@ function toPreviewAttachment(a: { url: string; name: string; type?: string; _id?
     uri: a.url,
     name: a.name,
     mimeType: a.type ?? 'application/octet-stream',
+    thumbnailUrl: (a as any).thumbnail ?? null,
   };
 }
 

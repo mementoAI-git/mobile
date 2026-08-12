@@ -8,6 +8,7 @@ import { COLORS, FONTS } from '@/constants/tokens';
 
 type ConfirmationKind =
   | 'delete-passkey'
+  | 'delete-memory'
   | 'disable-two-factor'
   | 'disable-biometric-fallback'
   | 'logout-all-devices'
@@ -30,8 +31,14 @@ const COPY: Record<ConfirmationKind, {
 }> = {
   'delete-passkey': {
     title: 'Delete this passkey?',
-    description: 'This action can’t be undone.',
+    description: 'This action can\'t be undone.',
     confirm: 'Delete passkey',
+    destructive: true,
+  },
+  'delete-memory': {
+    title: 'Delete this story?',
+    description: 'This action can\'t be undone.',
+    confirm: 'Delete story',
     destructive: true,
   },
   'disable-two-factor': {
@@ -94,6 +101,9 @@ export function SecurityConfirmationSheet({
     try {
       await onConfirm?.();
       onClose?.();
+    } catch {
+      // Keep the sheet open when an async confirmation fails so upstream screen
+      // error state can remain visible and the user can try again intentionally.
     } finally {
       setLoading(false);
     }

@@ -14,11 +14,11 @@ import React, { useRef, useCallback, useState, useEffect, useMemo } from 'react'
 import {
   View, Text, Modal, FlatList,
   TouchableOpacity, Dimensions, Animated as RNAnimated,
-  StyleSheet, Share, ActivityIndicator, Image, ImageBackground, Platform, Alert,
+  StyleSheet, Share, ActivityIndicator, Image, ImageBackground, Platform,
 } from 'react-native';
 // Type-only import: erased at compile time, never triggers the native module
 // lookup — safe to keep even when the real package isn't usable (Expo Go).
-import type * as MediaLibraryType from 'expo-media-library';
+import type * as MediaLibraryType from 'expo-media-library/legacy';
 import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Clipboard from 'expo-clipboard';
@@ -34,6 +34,8 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
+import { toast } from '@/components/ui/Toast';
+import { useResolvedAudioArtworkThumbnail } from '@/features/media/audio-artwork';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -52,7 +54,7 @@ const isExpoGo = Constants.appOwnership === 'expo';
 function getMediaLibrary(): typeof MediaLibraryType | null {
   if (isExpoGo) return null;
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('expo-media-library') as typeof MediaLibraryType;
+  return require('expo-media-library/legacy') as typeof MediaLibraryType;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -64,6 +66,7 @@ export interface PreviewAttachment {
   mimeType: string;
   duration?: number;
   isVoice?: boolean;
+  thumbnailUrl?: string | null;
 }
 
 interface Props {
@@ -172,7 +175,7 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
     syncPlayerState();
     const id = setInterval(() => {
       syncPlayerState();
-    }, 250);
+    }, 1000);
     return () => clearInterval(id);
   }, [isActive, player]);
 
@@ -311,6 +314,13 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(item.duration ?? 0);
+  const artworkUri = useResolvedAudioArtworkThumbnail({
+    uri: item.uri,
+    mimeType: item.mimeType,
+    name: item.name,
+    backendThumbnail: item.thumbnailUrl,
+    enabled: !item.isVoice,
+  });
 
   // Auto-pause when slide scrolls out of view
   useEffect(() => {
@@ -335,7 +345,7 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
     syncPlayerState();
     const id = setInterval(() => {
       syncPlayerState();
-    }, 250);
+    }, 1000);
     return () => clearInterval(id);
   }, [isActive, player]);
 
@@ -373,7 +383,7 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
 
   // Static bar heights (seeded so they're consistent per file)
   const staticBarHeights = useMemo(() => {
-    const BAR_COUNT = 16;
+    const BAR_COUNT = 10;
     let seed = 0;
     const str = item.uri + (item.name ?? '');
     for (let i = 0; i < str.length; i++) seed = (seed * 31 + str.charCodeAt(i)) | 0;
@@ -392,7 +402,7 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
       barAnims.forEach((anim, i) => {
         const min = 0.2;
         const max = 1;
-        const duration = 300 + (i * 47) % 400; // 300–700ms, staggered
+        const duration = 420 + (i * 55) % 260;
         anim.value = withRepeat(
           withSequence(
             withTiming(min + Math.random() * (max - min), { duration }),
@@ -465,6 +475,15 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
           <ImageBackground source={RECORD_BANNER_BG} style={{ flex: 1, justifyContent: 'center' }} resizeMode="cover" imageStyle={{ opacity: 0.7 }}>
             {innerContent}
           </ImageBackground>
+        ) : artworkUri ? (
+          <View style={{ flex: 1, backgroundColor: COLORS.background, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 24, gap: 20 }}>
+            <Image
+              source={{ uri: artworkUri }}
+              style={{ width: 220, height: 220, borderRadius: 24, alignSelf: 'center', backgroundColor: COLORS.fillWeak }}
+              resizeMode="cover"
+            />
+            {innerContent}
+          </View>
         ) : (
           <View style={{ flex: 1, backgroundColor: COLORS.background, justifyContent: 'center' }}>
             {innerContent}
@@ -553,6 +572,19 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
   }, []);
 
   const [shareMenuVisible, setShareMenuVisible] = useState(false);
+  const currentItem = attachments[currentIndex];
+  const currentItemIsVisual = !!currentItem && (
+    currentItem.mimeType.startsWith('image/') || currentItem.mimeType.startsWith('video/')
+  );
+  const saveActionTitle = currentItemIsVisual
+    ? Platform.OS === 'ios' ? 'Save to Photos' : 'Save to Gallery'
+    : Platform.OS === 'ios' ? 'Save to Files' : 'Download file';
+  const saveActionDescription = currentItemIsVisual
+    ? Platform.OS === 'ios' ? 'Save this to your photo library' : 'Save this to your gallery'
+    : Platform.OS === 'ios' ? 'Open the share sheet to save a copy to Files' : 'Export a copy using apps on your device';
+  const saveSuccessMessage = currentItemIsVisual
+    ? Platform.OS === 'ios' ? 'Saved to Photos' : 'Saved to Gallery'
+    : Platform.OS === 'ios' ? 'Saved to Files' : 'File downloaded';
 
   const handleShareButtonPress = useCallback(() => {
     Haptics.selectionAsync();
@@ -578,9 +610,9 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
     if (!MediaLibrary) {
       // expo-media-library's native module isn't available in Expo Go.
       // Keep the action visible (not hidden) but explain why it can't run yet.
-      Alert.alert(
-        'Not available in Expo Go',
+      toast(
         'Saving to your gallery needs a development build. This will work once we move to EAS builds.',
+        'info',
       );
       return;
     }
@@ -611,10 +643,11 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
 
       await MediaLibrary.saveToLibraryAsync(localUri);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      toast(saveSuccessMessage, 'success');
     } catch {
-      Alert.alert('Could not save media', 'Please try again in a moment.');
+      toast('Could not save media. Please try again in a moment.', 'error');
     }
-  }, [attachments, currentIndex]);
+  }, [attachments, currentIndex, saveSuccessMessage]);
 
   const handleShareFile = useCallback(async () => {
     Haptics.selectionAsync();
@@ -622,9 +655,29 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
     const item = attachments[currentIndex];
     if (!item) return;
     try {
-      await Share.share({ url: item.uri, message: item.name });
+      let localUri = item.uri;
+      if (item.uri.startsWith('http')) {
+        const filename = item.name || `memento_${Date.now()}`;
+        const downloadDest = `${FileSystem.cacheDirectory}${filename}`;
+        const { uri } = await FileSystem.downloadAsync(item.uri, downloadDest);
+        localUri = uri;
+      }
+
+      await Share.share({ url: localUri, message: item.name });
+      if (!currentItemIsVisual) {
+        toast(saveSuccessMessage, 'success');
+      }
     } catch {}
-  }, [attachments, currentIndex]);
+  }, [attachments, currentIndex, currentItemIsVisual, saveSuccessMessage]);
+
+  const handleSaveOrExport = useCallback(async () => {
+    if (currentItemIsVisual) {
+      await handleSaveToGallery();
+      return;
+    }
+
+    await handleShareFile();
+  }, [currentItemIsVisual, handleSaveToGallery, handleShareFile]);
 
   const renderSlide = useCallback(
     makeRenderSlide(onClose, currentIndex, attachments),
@@ -732,38 +785,77 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
             </TouchableOpacity>
           )}
 
-          {/* Save to gallery */}
-          <TouchableOpacity
-            onPress={handleSaveToGallery}
-            activeOpacity={0.8}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, paddingHorizontal: 4 }}
-          >
-            <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
-              <Download size={20} color={COLORS.textBase} strokeWidth={1.8} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>Save to gallery</Text>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>Download this file to your device</Text>
-            </View>
-          </TouchableOpacity>
+          {Platform.OS === 'ios' ? (
+            <>
+              {/* Share file via OS sheet */}
+              <TouchableOpacity
+                onPress={handleShareFile}
+                activeOpacity={0.8}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, paddingHorizontal: 4 }}
+              >
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
+                  <Share2 size={20} color={COLORS.textBase} strokeWidth={1.8} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>Share file</Text>
+                  <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>Send via message, email or another app</Text>
+                </View>
+              </TouchableOpacity>
 
-          {/* Divider */}
-          <View style={{ height: 1, backgroundColor: COLORS.strokeWeaker, marginHorizontal: 4, marginVertical: 4 }} />
+              {/* Divider */}
+              <View style={{ height: 1, backgroundColor: COLORS.strokeWeaker, marginHorizontal: 4, marginVertical: 4 }} />
 
-          {/* Share file via OS sheet */}
-          <TouchableOpacity
-            onPress={handleShareFile}
-            activeOpacity={0.8}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, paddingHorizontal: 4 }}
-          >
-            <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
-              <Share2 size={20} color={COLORS.textBase} strokeWidth={1.8} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>Share file</Text>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>Send via message, email or another app</Text>
-            </View>
-          </TouchableOpacity>
+              {/* Save / export */}
+              <TouchableOpacity
+                onPress={handleSaveOrExport}
+                activeOpacity={0.8}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, paddingHorizontal: 4 }}
+              >
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
+                  <Download size={20} color={COLORS.textBase} strokeWidth={1.8} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>{saveActionTitle}</Text>
+                  <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>{saveActionDescription}</Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              {/* Save / export */}
+              <TouchableOpacity
+                onPress={handleSaveOrExport}
+                activeOpacity={0.8}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, paddingHorizontal: 4 }}
+              >
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
+                  <Download size={20} color={COLORS.textBase} strokeWidth={1.8} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>{saveActionTitle}</Text>
+                  <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>{saveActionDescription}</Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Divider */}
+              <View style={{ height: 1, backgroundColor: COLORS.strokeWeaker, marginHorizontal: 4, marginVertical: 4 }} />
+
+              {/* Share file via OS sheet */}
+              <TouchableOpacity
+                onPress={handleShareFile}
+                activeOpacity={0.8}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, paddingHorizontal: 4 }}
+              >
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
+                  <Share2 size={20} color={COLORS.textBase} strokeWidth={1.8} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>Share file</Text>
+                  <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>Send via message, email or another app</Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </Modal>
     </View>

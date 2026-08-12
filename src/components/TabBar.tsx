@@ -12,7 +12,7 @@
  * • Tab bar hidden on chat/[id] and stories/[id] detail screens
  */
 
-import React, { useCallback, memo } from 'react';
+import React, { useCallback, memo, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import {
   Image,
   StyleSheet,
   Platform,
+  PanResponder,
 } from 'react-native';
 import { Timer, Search, Home, MessageCircle, BookOpen, Compass } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -27,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname } from 'expo-router';
 import { useUiStore } from '@/store';
 import * as Haptics from 'expo-haptics';
+import { resolveTabSwipeTarget } from '@/lib/tab-swipe';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -70,7 +72,8 @@ const GLASS_BG = Platform.select({
 const SPRING = { damping: 22, stiffness: 280, mass: 0.8 };
 
 // Widths
-// Android Material minimum touch target is 48dp; iOS HIG is 44pt.
+// Keep the tab dock within its original visual width and let the touch target
+// stretch via minHeight/padding instead of inflating the entire tab width.
 const INACTIVE_W = Platform.OS === 'android' ? 64 : 60;
 const ACTIVE_W   = 96;  // expanded pill with label
 const PILL_H     = Platform.OS === 'android' ? 60 : 58;
@@ -187,6 +190,32 @@ export function TabBar({ state, navigation }: TabBarProps) {
   const pathname = usePathname();
   const openSheet = useUiStore(s => s.openSheet);
 
+  // Host Chat owns the full bottom interaction area; detail screens do as well.
+  const isHidden =
+    pathname === '/chat' ||
+    !!pathname.match(/^\/chat\/[^/]+$/) ||
+    !!pathname.match(/^\/(tabs\/)?stories\/[^/]+$/);
+
+  const swipeResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        if (isHidden) return false;
+        const horizontalDrag = Math.abs(gestureState.dx);
+        const verticalDrag = Math.abs(gestureState.dy);
+        return horizontalDrag > 28 && horizontalDrag > verticalDrag * 1.2;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (isHidden) return;
+        const targetIndex = resolveTabSwipeTarget(state.index, state.routes.length, gestureState.dx);
+        if (targetIndex == null) return;
+        const targetRoute = state.routes[targetIndex];
+        if (!targetRoute) return;
+        Haptics.selectionAsync();
+        navigation.navigate(targetRoute.name);
+      },
+    }),
+  ).current;
+
   const handleTabPress = useCallback((routeName: string, routeKey: string, isFocused: boolean) => {
     const event = navigation.emit({
       type: 'tabPress',
@@ -202,12 +231,6 @@ export function TabBar({ state, navigation }: TabBarProps) {
     Haptics.selectionAsync();
     openSheet('search-memory');
   }, [openSheet]);
-
-  // Host Chat owns the full bottom interaction area; detail screens do as well.
-  const isHidden =
-    pathname === '/chat' ||
-    !!pathname.match(/^\/chat\/[^/]+$/) ||
-    !!pathname.match(/^\/(tabs\/)?stories\/[^/]+$/);
 
   const bottomPad = insets.bottom ? insets.bottom + 24 : 36;
 
@@ -230,6 +253,7 @@ export function TabBar({ state, navigation }: TabBarProps) {
     <Animated.View
       style={[styles.root, { bottom: bottomPad }, visibilityStyle]}
       pointerEvents={isHidden ? 'none' : 'box-none'}
+      {...swipeResponder.panHandlers}
     >
       {/* ── Main pill ── */}
       <View style={styles.pill}>
@@ -323,6 +347,7 @@ const styles = StyleSheet.create({
     height: PILL_H - 8,
     overflow: 'hidden',
     borderRadius: 999,
+    minHeight: 52,
   },
 
   // Pressable inside wrapper
@@ -331,14 +356,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 999,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     gap: 3,
+    minHeight: 52,
   },
 
   // Active tab gets opaque nested pill bg
   tabPressableActive: {
     backgroundColor: 'rgba(23,11,0,0.07)',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
 
   // Tab icon

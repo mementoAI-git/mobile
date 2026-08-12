@@ -1,4 +1,3 @@
-import { Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useMemory } from '@/hooks/queries/use-memories';
@@ -15,30 +14,26 @@ export function useStoryDetailLogic() {
 
   const handleDelete = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    Alert.alert(
-      'Delete this story?',
-      'This action can’t be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            deleteMemory(memory!._id, {
-              onSuccess: () => {
-                // After delete, back stack may be empty if opened via deep link
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(tabs)/stories');
-                }
-              },
-            });
-          },
-        },
-      ],
-    );
+    openSheet('security-confirmation', {
+      kind: 'delete-memory',
+      onConfirm: async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        await new Promise<void>((resolve, reject) => {
+          deleteMemory(memory!._id, {
+            onSuccess: () => {
+              // After delete, back stack may be empty if opened via deep link
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/(tabs)/stories');
+              }
+              resolve();
+            },
+            onError: reject,
+          });
+        });
+      },
+    });
   };
 
   const handleBookmark = () => {

@@ -24,6 +24,7 @@ import Animated from 'react-native-reanimated';
 import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
 import { MemTag, Skeleton } from '@/components/ui';
+import { StoryHtmlBody } from '@/components/memory/StoryHtmlBody';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -368,13 +369,11 @@ export default function StoryDetailScreen() {
         )}
 
         {/* ── Body ── */}
-        {(memory.body?.replace(/<[^>]+>/g, '').trim() ?? '').length > 0 && (
+        {memory.body ? (
           <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
-            <Text style={styles.body}>
-              {memory.body?.replace(/<[^>]+>/g, '') ?? ''}
-            </Text>
+            <StoryHtmlBody html={memory.body} />
           </View>
-        )}
+        ) : null}
 
         {/* ── Other attachments (documents only) ── */}
         {otherAttachments.length > 0 && (
@@ -427,6 +426,7 @@ export default function StoryDetailScreen() {
             mimeType: a.type ?? 'application/octet-stream',
             duration: (a as any).duration,
             isVoice: a.name?.startsWith('voice_') && a.type === 'audio/m4a',
+            thumbnailUrl: (a as any).thumbnail ?? null,
           };
         })}
         initialIndex={previewIndex}

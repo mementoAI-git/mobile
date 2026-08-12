@@ -119,7 +119,6 @@ export function ChatInput({
   const [compactMeasuredPadding, setCompactMeasuredPadding] = useState(0);
   const [expandedMeasuredHeight, setExpandedMeasuredHeight] = useState(EXPANDED_TEXT_MIN_HEIGHT);
   const [isTextComposerExpanded, setIsTextComposerExpanded] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -218,16 +217,14 @@ export function ChatInput({
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (event) => {
+      () => {
         setKeyboardVisible(true);
-        setKeyboardHeight(event.endCoordinates?.height ?? 0);
       },
     );
     const hideSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => {
         setKeyboardVisible(false);
-        setKeyboardHeight(0);
       },
     );
     return () => { showSub.remove(); hideSub.remove(); };
@@ -387,6 +384,7 @@ export function ChatInput({
           uri: attachment.uri,
           name: attachment.name,
           mimeType: attachment.mimeType,
+          thumbnailUrl: attachment.file?.thumbnail,
         });
       }
     }
@@ -406,12 +404,11 @@ export function ChatInput({
   const previewable = attachmentState.previewable;
 
   const bottomPadding = keyboardVisible ? verticalScale(8) : insets.bottom;
-  const visibleHeight = Math.max(
-    verticalScale(280),
-    windowHeight - (keyboardVisible ? keyboardHeight : 0) - insets.top - bottomPadding,
+  const fallbackComposerMaxHeight = Math.max(
+    verticalScale(180),
+    windowHeight - insets.top - Math.max(insets.bottom, verticalScale(8)) - CHAT_HEADER_RESERVE,
   );
-  const keyboardAwareComposerMaxHeight = Math.max(verticalScale(180), visibleHeight - CHAT_HEADER_RESERVE);
-  const composerMaxHeight = maxComposerHeight ?? keyboardAwareComposerMaxHeight;
+  const composerMaxHeight = maxComposerHeight ?? fallbackComposerMaxHeight;
   const textOnlyTextMaxHeight = Math.max(
     COMPACT_TEXT_MIN_HEIGHT,
     composerMaxHeight - EXPANDED_ACTION_SIZE - EXPANDED_COMPOSER_CHROME_HEIGHT,
@@ -491,6 +488,17 @@ export function ChatInput({
   // one render cycle of stale height data.
 
   const handleContentSizeChange = useCallback((event: any) => {
+    if (!hasText && !hasAttachments) {
+      setMultiline(false);
+      setCompactTextHeight(COMPACT_TEXT_MIN_HEIGHT);
+      setExpandedTextHeight(EXPANDED_TEXT_MIN_HEIGHT);
+      setCompactMeasuredHeight(COMPACT_TEXT_MIN_HEIGHT);
+      setCompactMeasuredPadding(0);
+      setExpandedMeasuredHeight(EXPANDED_TEXT_MIN_HEIGHT);
+      if (isTextComposerExpanded) setIsTextComposerExpanded(false);
+      return;
+    }
+
     const measuredHeight = Math.ceil(event.nativeEvent.contentSize.height);
 
     if (useExpandedComposer) {
@@ -518,7 +526,14 @@ export function ChatInput({
       setMultiline(shouldExpand);
       setCompactTextHeight((prev) => (Math.abs(prev - nextHeight) > 1 ? nextHeight : prev));
     }
-  }, [useExpandedComposer, activeExpandedTextMaxHeight, compactTextMaxHeight]);
+  }, [
+    activeExpandedTextMaxHeight,
+    compactTextMaxHeight,
+    hasAttachments,
+    hasText,
+    isTextComposerExpanded,
+    useExpandedComposer,
+  ]);
 
   const compactTextScrollable = getComposerTextScrollEnabled({
     measuredHeight: compactMeasuredHeight,
