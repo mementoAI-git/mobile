@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
@@ -7,6 +6,7 @@ import * as Linking from 'expo-linking';
 import { post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { logger } from '@/lib/logger';
+import { useToast } from '@/components/ui/Toast';
 
 export type BillingInterval = 'monthly' | 'annual';
 export type Currency = 'USD' | 'NGN';
@@ -29,6 +29,7 @@ export const DEFERRED_FEATURES = [
 
 export function usePricingLogic() {
   const router = useRouter();
+  const { toast } = useToast();
   const [interval, setInterval] = useState<BillingInterval>('annual');
   const [loading, setLoading] = useState(false);
   const currency: Currency = 'USD';
@@ -58,11 +59,11 @@ export function usePricingLogic() {
         // Success haptics
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
-        Alert.alert('Error', 'Could not start checkout. Please try again.');
+        toast('Could not start checkout. Please try again.', 'error');
       }
     } catch (err: any) {
       logger.error('Checkout error:', err);
-      Alert.alert('Billing Error', err?.message || 'A billing error occurred. Please try again.');
+      toast(err?.message || 'A billing error occurred. Please try again.', 'error');
     } finally {
       setLoading(false);
     }

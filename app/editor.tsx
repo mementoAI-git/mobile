@@ -1,7 +1,7 @@
 /**
  * app/editor.tsx — Unified compose screen
  *
- * mode=story        → long-form article editor (title + body, publish flow)
+ * mode=story         → long-form article editor (title + body, publish flow)
  * mode=quick-capture → quick note + attachments (body only, quick-capture API)
  *
  * Mode is a URL param — switching uses router.setParams() which mutates the
@@ -35,7 +35,7 @@ import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useToast } from '@/components/ui/Toast';
-import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetModalProvider, BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { upsertDraft, loadDrafts, deleteDraft, DraftsSheet, type StoryDraft, type StoryDraftAttachment } from '@/components/sheets/DraftsSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useUiStore } from '@/store';
@@ -100,6 +100,19 @@ function toStoryDraftAttachments(attachments: AttachmentItem[]): StoryDraftAttac
       duration: attachment.duration,
     }];
   });
+}
+
+function hasMeaningfulStoryBodyContent(html?: string | null) {
+  if (!html) return false;
+
+  const normalized = html
+    .replace(/<br\s*\/?>/gi, '')
+    .replace(/<\/p>\s*<p>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .trim();
+
+  return normalized.length > 0;
 }
 
 // ─── Publish success screen ───────────────────────────────────────────────────
@@ -188,9 +201,9 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
 
 // ─── Publish modal (story mode) ───────────────────────────────────────────────
 
-function PublishModalInner({ title, body, attachmentIds, onClose, memoryId, onAddAnother, draftId, userEmail }: {
+function PublishModalInner({ title, body, attachmentIds, onClose, onComplete, onPublished, memoryId, draftId, userEmail }: {
   title: string; body: string; attachmentIds: string[];
-  onClose: () => void; memoryId?: string; onAddAnother?: () => void;
+  onClose: () => void; onComplete: () => void; onPublished: (url: string) => void; memoryId?: string;
   draftId?: string; userEmail?: string | null;
 }) {
   const insets = useSafeAreaInsets();
@@ -198,7 +211,6 @@ function PublishModalInner({ title, body, attachmentIds, onClose, memoryId, onAd
   const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>([]);
   const [beneficiaryMenuOpen, setBeneficiaryMenuOpen] = useState(false);
   const [isAutotagging, setIsAutotagging] = useState(false);
-  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
 
   const isEditMode = !!memoryId;
   const { mutate: createMemory, isPending: createPending } = useCreateMemory();
@@ -252,12 +264,12 @@ function PublishModalInner({ title, body, attachmentIds, onClose, memoryId, onAd
       if (isEditMode) {
         // Edit: show a success toast and close — no share screen
         toast('Story updated.', 'success');
-        onClose();
+        onComplete();
       } else {
         const id = res?.data?._id ?? res?.data?.data?._id ?? '';
         // Delete the draft slot now that the story has been published
         if (draftId) deleteDraft(userEmail, draftId).catch(() => {});
-        setPublishedUrl(publishedPostUrl(id));
+        onPublished(publishedPostUrl(id));
       }
     };
     const onError = (err: any) => toast(err?.message ?? 'Could not publish. Try again.', 'error');
@@ -269,26 +281,19 @@ function PublishModalInner({ title, body, attachmentIds, onClose, memoryId, onAd
     }
   // attachmentIds must be in deps — without it the closure captures the initial
   // empty array and voice notes / images added before publishing are silently dropped.
-  }, [title, body, tags, attachmentIds, selectedBeneficiaryIds, isEditMode, createMemory, updateMemory, toast, onClose]);
+  }, [title, body, tags, attachmentIds, selectedBeneficiaryIds, isEditMode, createMemory, updateMemory, toast, onComplete, onPublished, draftId, userEmail]);
 
   const handleClose = useCallback(() => {
-    setPublishedUrl(null); setTags(''); setSelectedBeneficiaryIds([]); setBeneficiaryMenuOpen(false); onClose();
+    setTags(''); setSelectedBeneficiaryIds([]); setBeneficiaryMenuOpen(false); onClose();
   }, [onClose]);
 
   return (
-    <SafeAreaProvider>
-      <View style={[
-        { flex: 1, backgroundColor: COLORS.background, paddingTop: insets.top },
-        publishedUrl ? { backgroundColor: 'transparent', paddingTop: 0 } : null,
-      ]}>
-        {publishedUrl ? (
-            <PublishSuccessView
-              publishedUrl={publishedUrl}
-              onAddAnother={onAddAnother ?? handleClose}
-              onDismiss={handleClose}
-            />
-          ) : (
-            <View style={{ flex: 1, paddingHorizontal: 20, paddingBottom: insets.bottom + 24, justifyContent: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+        <BottomSheetScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: Math.max(insets.bottom + 24, 32) }}
+        >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                 <Text style={{ fontFamily: FONTS.serif, fontSize: 22, color: COLORS.textStrong }}>Publish post</Text>
                 <TouchableOpacity onPress={handleClose} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
@@ -309,16 +314,18 @@ function PublishModalInner({ title, body, attachmentIds, onClose, memoryId, onAd
                   {beneficiaryMenuOpen && (
                     <View style={{ position: 'absolute', top: 54, left: 0, right: 0, zIndex: 20, backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingVertical: 4, shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 }}>
                       <TouchableOpacity onPress={() => { setSelectedBeneficiaryIds([]); setBeneficiaryMenuOpen(false); Haptics.selectionAsync(); }}
-                        style={[{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 }, !selectedBeneficiaryIds.length && { backgroundColor: `${COLORS.brand}12` }]}>
-                        <Text style={[{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong }, !selectedBeneficiaryIds.length && { color: COLORS.brand, fontFamily: FONTS.sansMedium }]}>Everyone</Text>
+                        style={[{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4, flexDirection: 'row', alignItems: 'center' }, !selectedBeneficiaryIds.length && { backgroundColor: `${COLORS.brand}12` }]}>
+                        <Text style={[{ flex: 1, fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong }, !selectedBeneficiaryIds.length && { color: COLORS.brand, fontFamily: FONTS.sansMedium }]}>Everyone</Text>
+                        {!selectedBeneficiaryIds.length && <Check size={16} color={COLORS.brand} strokeWidth={2.4} />}
                       </TouchableOpacity>
                       {beneficiaries.map(b => {
                         if (!b._id) return null;
                         const on = selectedBeneficiaryIds.includes(b._id);
                         return (
                           <TouchableOpacity key={b._id} onPress={() => { Haptics.selectionAsync(); setSelectedBeneficiaryIds(prev => on ? prev.filter(x => x !== b._id) : [...prev, b._id!]); }}
-                            style={[{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 }, on && { backgroundColor: `${COLORS.brand}12` }]}>
-                            <Text style={[{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong }, on && { color: COLORS.brand, fontFamily: FONTS.sansMedium }]}>{b.name}</Text>
+                            style={[{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4, flexDirection: 'row', alignItems: 'center' }, on && { backgroundColor: `${COLORS.brand}12` }]}>
+                            <Text style={[{ flex: 1, fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong }, on && { color: COLORS.brand, fontFamily: FONTS.sansMedium }]}>{b.name}</Text>
+                            {on && <Check size={16} color={COLORS.brand} strokeWidth={2.4} />}
                           </TouchableOpacity>
                         );
                       })}
@@ -335,26 +342,15 @@ function PublishModalInner({ title, body, attachmentIds, onClose, memoryId, onAd
                     <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 12, color: COLORS.info }}>Autotag</Text>
                   </TouchableOpacity>
                 </View>
-                <TextInput value={tags} onChangeText={setTags} placeholder="Manually enter tags or use the autotag button" placeholderTextColor={COLORS.textMuted} returnKeyType="done"
+                <BottomSheetTextInput value={tags} onChangeText={setTags} placeholder="Manually enter tags or use the autotag button" placeholderTextColor={COLORS.textMuted} returnKeyType="done"
                   style={{ backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 14, paddingVertical: 14, fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong, minHeight: 50 }} />
               </View>
               <TouchableOpacity onPress={handlePost} activeOpacity={0.85} disabled={(!title.trim() && !body.trim()) || isPending}
                 style={[{ height: 56, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }, ((!title.trim() && !body.trim()) || isPending) && { opacity: 0.45 }]}>
                 {isPending ? <ActivityIndicator color={COLORS.textInverse} /> : <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 16, color: COLORS.textInverse }}>Post now</Text>}
               </TouchableOpacity>
-            </View>
-          )}
+        </BottomSheetScrollView>
       </View>
-    </SafeAreaProvider>
-  );
-}
-
-/** Public wrapper — Modal + statusBarTranslucent for correct Android edge-to-edge insets */
-function PublishModal({ visible, ...props }: { visible: boolean } & React.ComponentProps<typeof PublishModalInner>) {
-  return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" statusBarTranslucent onRequestClose={props.onClose}>
-      <PublishModalInner {...props} />
-    </Modal>
   );
 }
 
@@ -396,6 +392,7 @@ export default function EditorScreen() {
   const [storyBody, setStoryBody] = useState('');
   const [savedStatus, setSavedStatus] = useState<'saved'|'saving'|'unsaved'>('saved');
   const [showPublish, setShowPublish] = useState(false);
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   const [editorBridge, setEditorBridge] = useState<EditorBridge | null>(null);
   const handleBridgeReady = useCallback((bridge: EditorBridge) => setEditorBridge(bridge), []);
@@ -420,6 +417,8 @@ export default function EditorScreen() {
   // Props are injected into the global sheetProps store so DraftsSheet can read them,
   // but we present via a local BottomSheetModal ref rather than the global SheetManager.
   const draftsSheetRef = useRef<BottomSheetModal>(null);
+  const publishSheetRef = useRef<BottomSheetModal>(null);
+  const pendingPublishedUrlRef = useRef<string | null>(null);
 
   const { mutate: createMemory } = useCreateMemory();
   const { mutateAsync: quickCapture, isPending: qcPending } = useQuickCapture();
@@ -633,7 +632,7 @@ export default function EditorScreen() {
     latestBodyRef.current = v;
   }, []);
 
-  const storyHasContent = title.trim().length > 0 || storyBody.trim().length > 0;
+  const storyHasContent = hasMeaningfulStoryBodyContent(storyBody);
   const qcHasContent = qcBody.trim().length > 0 || uploadedIds.length > 0;
   const canSave = qcHasContent && !anyUploading && !qcPending && !isRecording;
 
@@ -651,8 +650,84 @@ export default function EditorScreen() {
   const savedDotColor = savedStatus === 'saved' ? COLORS.success : savedStatus === 'saving' ? COLORS.warning : COLORS.error;
   const savedLabel = savedStatus === 'saved' ? 'Saved' : savedStatus === 'saving' ? 'Saving…' : 'Unsaved';
 
+  const handleOpenPublishSheet = useCallback(() => {
+    editorBridge?.blur();
+    Keyboard.dismiss();
+    setShowPublish(true);
+    publishSheetRef.current?.present();
+  }, [editorBridge]);
+
+  const handleClosePublishSheet = useCallback(() => {
+    pendingPublishedUrlRef.current = null;
+    setShowPublish(false);
+    publishSheetRef.current?.dismiss();
+  }, []);
+
+  const handlePublishFlowComplete = useCallback(() => {
+    pendingPublishedUrlRef.current = null;
+    setShowPublish(false);
+    publishSheetRef.current?.dismiss();
+    if (isEditing) {
+      router.back();
+    } else {
+      setTitle('');
+      setStoryBody('');
+      setAttachments([]);
+      setSavedStatus('saved');
+      const newId = `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      draftIdRef.current = newId;
+      setCurrentDraftId(newId);
+      setEditorInstanceKey(k => k + 1);
+      if (lockMode === 'true') {
+        router.replace('/(tabs)/stories');
+      } else {
+        router.back();
+      }
+    }
+  }, [isEditing, lockMode, router, setAttachments]);
+
+  const handlePublishCreated = useCallback((url: string) => {
+    pendingPublishedUrlRef.current = url;
+    setShowPublish(false);
+    publishSheetRef.current?.dismiss();
+  }, []);
+
+  const handleDismissPublishedSuccess = useCallback(() => {
+    setPublishedUrl(null);
+    if (isEditing) {
+      router.back();
+      return;
+    }
+    setTitle('');
+    setStoryBody('');
+    setAttachments([]);
+    setSavedStatus('saved');
+    const newId = `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    draftIdRef.current = newId;
+    setCurrentDraftId(newId);
+    setEditorInstanceKey(k => k + 1);
+    if (lockMode === 'true') {
+      router.replace('/(tabs)/stories');
+    } else {
+      router.back();
+    }
+  }, [isEditing, lockMode, router, setAttachments]);
+
+  const handlePublishAddAnother = useCallback(() => {
+    setPublishedUrl(null);
+    setTitle('');
+    setStoryBody('');
+    setAttachments([]);
+    setSavedStatus('saved');
+    draftIdRef.current = `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    setCurrentDraftId(draftIdRef.current);
+    setEditorInstanceKey(k => k + 1);
+    setTimeout(() => titleRef.current?.focus(), 200);
+  }, [setAttachments]);
+
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <BottomSheetModalProvider>
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
 
@@ -751,7 +826,15 @@ export default function EditorScreen() {
                       </View>
                     )}
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => { if (!title.trim() && !storyBody.trim()) return; if (anyUploading) return; Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowPublish(true); }}
+                  <TouchableOpacity onPress={() => {
+                    if (!storyHasContent) return;
+                    if (anyUploading) return;
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    editorBridge?.blur();
+                    Keyboard.dismiss();
+                    setShowPublish(true);
+                    publishSheetRef.current?.present();
+                  }}
                     disabled={!storyHasContent || anyUploading} activeOpacity={0.8}
                     style={[{ height: 34, paddingHorizontal: 18, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }, (!storyHasContent || anyUploading) && { opacity: 0.4 }]}>
                     {anyUploading && <ActivityIndicator size="small" color={COLORS.textInverse} />}
@@ -1028,57 +1111,6 @@ export default function EditorScreen() {
         </KeyboardAvoidingView>
       </SafeAreaView>
 
-      {isStory && (
-        <PublishModal
-          visible={showPublish}
-          title={title}
-          body={storyBody}
-          attachmentIds={uploadedIds}
-          memoryId={memoryId}
-          draftId={currentDraftId}
-          userEmail={user?.email}
-          onClose={() => {
-            setShowPublish(false);
-            if (isEditing) {
-              // Editing mode — go back to story detail
-              router.back();
-            } else {
-              // After a successful publish (any flow), clear the editor so pressing
-              // back from the success screen doesn't leave stale content.
-              setTitle('');
-              setStoryBody('');
-              setAttachments([]);
-              setSavedStatus('saved');
-              const newId = `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-              draftIdRef.current = newId;
-              setCurrentDraftId(newId);
-              setEditorInstanceKey(k => k + 1);
-              if (lockMode === 'true') {
-                router.replace('/(tabs)/stories');
-              } else {
-                // Normal flow — close the editor modal entirely
-                router.back();
-              }
-            }
-          }}
-          onAddAnother={lockMode === 'true' ? () => {
-            // Reset the editor to a guaranteed blank slate:
-            // 1. Clear React state
-            setShowPublish(false);
-            setTitle('');
-            setStoryBody('');
-            setAttachments([]);
-            setSavedStatus('saved');
-            // 2. Assign a fresh draft id for the next session
-            draftIdRef.current = `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-            // 3. Increment key → forces StoryRichEditor WebView to fully remount
-            //    (guarantees the Tiptap bridge starts empty, no stale HTML)
-            setEditorInstanceKey(k => k + 1);
-            setTimeout(() => titleRef.current?.focus(), 200);
-          } : undefined}
-        />
-      )}
-
       {/* Media previewer */}
       <MediaPreviewModal
         visible={previewVisible}
@@ -1099,6 +1131,16 @@ export default function EditorScreen() {
         onCapture={handleCameraCapture}
       />
 
+      <Modal visible={!!publishedUrl} animationType="slide" presentationStyle="fullScreen" statusBarTranslucent onRequestClose={handleDismissPublishedSuccess}>
+        {publishedUrl ? (
+          <PublishSuccessView
+            publishedUrl={publishedUrl}
+            onAddAnother={lockMode === 'true' ? handlePublishAddAnother : handleDismissPublishedSuccess}
+            onDismiss={handleDismissPublishedSuccess}
+          />
+        ) : null}
+      </Modal>
+
       {/* Cancel / discard confirmation — on-brand replacement for Alert.alert */}
       <ConfirmDialog
         visible={cancelConfirmVisible}
@@ -1111,9 +1153,43 @@ export default function EditorScreen() {
           { label: 'Keep editing', variant: 'ghost', onPress: () => setCancelConfirmVisible(false) },
         ]}
       />
-      {/* Local DraftsSheet — must be inside a BottomSheetModalProvider scoped to
-          this editor window so it displays correctly on iOS fullScreenModal */}
-      <BottomSheetModalProvider>
+      {/* Local sheets — must live inside a BottomSheetModalProvider scoped to
+          this editor window so they display correctly on iOS fullScreenModal */}
+        <BottomSheetModal
+          ref={publishSheetRef}
+          snapPoints={['92%']}
+          enablePanDownToClose
+          onDismiss={() => {
+            setShowPublish(false);
+            if (pendingPublishedUrlRef.current) {
+              const url = pendingPublishedUrlRef.current;
+              pendingPublishedUrlRef.current = null;
+              setPublishedUrl(url);
+            }
+          }}
+          keyboardBehavior="fillParent"
+          keyboardBlurBehavior="restore"
+          android_keyboardInputMode="adjustResize"
+          backdropComponent={(props: any) => (
+            <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.4} pressBehavior="close" />
+          )}
+          handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
+          backgroundStyle={{ backgroundColor: COLORS.background }}
+        >
+          <BottomSheetView style={{ flex: 1 }}>
+            <PublishModalInner
+              title={title}
+              body={storyBody}
+              attachmentIds={uploadedIds}
+              memoryId={memoryId}
+              draftId={currentDraftId}
+              userEmail={user?.email}
+              onClose={handleClosePublishSheet}
+              onComplete={handlePublishFlowComplete}
+              onPublished={handlePublishCreated}
+            />
+          </BottomSheetView>
+        </BottomSheetModal>
         <BottomSheetModal
           ref={draftsSheetRef}
           snapPoints={['75%']}

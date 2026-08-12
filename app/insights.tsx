@@ -54,6 +54,7 @@ export default function InsightsScreen() {
     || insightSource?.self_description?.trim()
     || null;
 
+
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();
     if (router.canGoBack()) router.back();
@@ -104,7 +105,7 @@ export default function InsightsScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 32 }}
         >
-          {biography && <Text style={styles.biography}>{biography}</Text>}
+          {/* {biography && <Text style={styles.biography}>{biography}</Text>} */}
 
           <ScrollView
             horizontal
