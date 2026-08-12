@@ -105,7 +105,7 @@
   },
   "overrides": {
     "react-dom": "19.2.3",
-    "expo-constants": "~56.0.22",
+    "expo-constants": "~56.0.23",
     "expo-linking": "~56.0.16"
   },
   "private": true
