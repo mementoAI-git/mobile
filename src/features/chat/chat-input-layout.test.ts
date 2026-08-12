@@ -17,4 +17,10 @@ describe('chat input layout safeguards', () => {
     expect(input).toContain('setExpandedTextHeight(EXPANDED_TEXT_MIN_HEIGHT);');
     expect(input).toContain('if (isTextComposerExpanded) setIsTextComposerExpanded(false);');
   });
+
+  test('ignores repeated content-size updates once the target height has already been applied', () => {
+    expect(input).toContain('if (useExpandedComposer) {');
+    expect(input).toContain('if (Math.abs(expandedTextHeight - nextHeight) <= 1) {');
+    expect(input).toContain('if (Math.abs(compactTextHeight - nextHeight) <= 1) {');
+  });
 });

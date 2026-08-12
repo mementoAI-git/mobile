@@ -66,9 +66,13 @@ const SHEET_HORIZONTAL = 16;
 const TILE_SIZE = Math.floor((SCREEN_WIDTH - SHEET_HORIZONTAL * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS);
 const PAGE_SIZE = 80;
 
-// ─── Asset cache — persists per-mode between opens within the same session ────
+// ─── Asset cache — bounded and short-lived to avoid retaining large media lists ────
 const assetCache = new Map<PickerMode, { assets: MediaLibrary.Asset[]; cursor: string | null; hasNextPage: boolean; ts: number }>();
-const CACHE_TTL_MS = 60_000; // 60 seconds
+const CACHE_TTL_MS = 20_000; // 20 seconds
+
+export function clearAssetCache() {
+  assetCache.clear();
+}
 
 function getCachedAssets(mode: PickerMode) {
   const entry = assetCache.get(mode);
@@ -146,6 +150,7 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
     }, [ref]);
 
     const handleDismiss = useCallback(() => {
+      clearAssetCache();
       setSelected({});
       setIsOpen(false);
     }, []);

@@ -133,6 +133,7 @@ export function ChatInput({
   const textInputRef = useRef<TextInput>(null);
   const textBeforeDictationRef = useRef('');
   const attachmentPickerRef = useRef<BottomSheetModal>(null);
+  const lastAppliedContentSizeRef = useRef<{ mode: 'compact' | 'expanded'; measured: number; target: number } | null>(null);
 
   const { mutateAsync: uploadFile } = useFileUpload();
   const {
@@ -489,6 +490,7 @@ export function ChatInput({
 
   const handleContentSizeChange = useCallback((event: any) => {
     if (!hasText && !hasAttachments) {
+      lastAppliedContentSizeRef.current = null;
       setMultiline(false);
       setCompactTextHeight(COMPACT_TEXT_MIN_HEIGHT);
       setExpandedTextHeight(EXPANDED_TEXT_MIN_HEIGHT);
@@ -500,9 +502,30 @@ export function ChatInput({
     }
 
     const measuredHeight = Math.ceil(event.nativeEvent.contentSize.height);
+    const currentMode = useExpandedComposer ? 'expanded' : 'compact';
+    const currentTarget = useExpandedComposer ? expandedTextHeight : compactTextHeight;
+
+    const sameRenderedHeight = Math.abs(measuredHeight - currentTarget) <= 2;
+    if (sameRenderedHeight) {
+      if (useExpandedComposer) {
+        setExpandedMeasuredHeight(measuredHeight);
+      } else {
+        setCompactMeasuredHeight(measuredHeight);
+        setMultiline(measuredHeight > COMPACT_TEXT_MIN_HEIGHT + 1);
+      }
+      return;
+    }
+
+    if (
+      lastAppliedContentSizeRef.current &&
+      lastAppliedContentSizeRef.current.mode === currentMode &&
+      Math.abs(lastAppliedContentSizeRef.current.measured - measuredHeight) <= 1 &&
+      Math.abs(lastAppliedContentSizeRef.current.target - currentTarget) <= 1
+    ) {
+      return;
+    }
 
     if (useExpandedComposer) {
-      setExpandedMeasuredHeight(measuredHeight);
       const nextHeight = getComposerTextHeight({
         measuredHeight,
         minHeight: EXPANDED_TEXT_MIN_HEIGHT,
@@ -510,28 +533,51 @@ export function ChatInput({
         verticalPadding: EXPANDED_TEXT_VERTICAL_PADDING,
         buffer: TEXT_HEIGHT_BUFFER,
       });
-      setExpandedTextHeight((prev) => (Math.abs(prev - nextHeight) > 1 ? nextHeight : prev));
-    } else {
-      const shouldExpand = measuredHeight > COMPACT_TEXT_MIN_HEIGHT + 1;
-      const verticalPadding = shouldExpand ? COMPACT_MULTILINE_VERTICAL_PADDING : 0;
+
+      lastAppliedContentSizeRef.current = { mode: 'expanded', measured: measuredHeight, target: nextHeight };
+
+      if (Math.abs(expandedTextHeight - nextHeight) <= 1) {
+        setExpandedMeasuredHeight(measuredHeight);
+        return;
+      }
+
+      setExpandedMeasuredHeight(measuredHeight);
+      setExpandedTextHeight(nextHeight);
+      return;
+    }
+
+    const shouldExpand = measuredHeight > COMPACT_TEXT_MIN_HEIGHT + 1;
+    const verticalPadding = shouldExpand ? COMPACT_MULTILINE_VERTICAL_PADDING : 0;
+    const nextHeight = getComposerTextHeight({
+      measuredHeight,
+      minHeight: COMPACT_TEXT_MIN_HEIGHT,
+      maxHeight: compactTextMaxHeight,
+      verticalPadding,
+      buffer: TEXT_HEIGHT_BUFFER,
+    });
+
+    lastAppliedContentSizeRef.current = { mode: 'compact', measured: measuredHeight, target: nextHeight };
+
+    if (Math.abs(compactTextHeight - nextHeight) <= 1) {
       setCompactMeasuredHeight(measuredHeight);
       setCompactMeasuredPadding(verticalPadding);
-      const nextHeight = getComposerTextHeight({
-        measuredHeight,
-        minHeight: COMPACT_TEXT_MIN_HEIGHT,
-        maxHeight: compactTextMaxHeight,
-        verticalPadding,
-        buffer: TEXT_HEIGHT_BUFFER,
-      });
       setMultiline(shouldExpand);
-      setCompactTextHeight((prev) => (Math.abs(prev - nextHeight) > 1 ? nextHeight : prev));
+      return;
     }
+
+    setCompactMeasuredHeight(measuredHeight);
+    setCompactMeasuredPadding(verticalPadding);
+    setMultiline(shouldExpand);
+    setCompactTextHeight(nextHeight);
   }, [
     activeExpandedTextMaxHeight,
+    compactTextHeight,
     compactTextMaxHeight,
+    expandedTextHeight,
     hasAttachments,
     hasText,
     isTextComposerExpanded,
+    text,
     useExpandedComposer,
   ]);
 
