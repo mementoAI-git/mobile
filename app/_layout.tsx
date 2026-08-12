@@ -65,7 +65,9 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
-      gcTime: 300_000,
+      // Keep query payloads short-lived so large media and screen caches do not
+      // accumulate in memory while the app sits idle in the background.
+      gcTime: 120_000,
       retry: 2,
       networkMode: 'offlineFirst',
     },

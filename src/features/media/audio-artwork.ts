@@ -1,8 +1,17 @@
 import { useEffect, useState } from 'react';
 import * as FileSystem from 'expo-file-system/legacy';
 
+export const ARTWORK_CACHE_LIMIT = 32;
 const artworkCache = new Map<string, string | null>();
 const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+export function pruneArtworkCache(limit = ARTWORK_CACHE_LIMIT) {
+  while (artworkCache.size > limit) {
+    const oldestKey = artworkCache.keys().next().value;
+    if (oldestKey === undefined) break;
+    artworkCache.delete(oldestKey);
+  }
+}
 
 function syncSafeToInt(bytes: Uint8Array, offset: number) {
   return ((bytes[offset] & 0x7f) << 21)
@@ -189,9 +198,11 @@ export async function resolveAudioArtworkThumbnail({
     } as any);
     const artwork = extractMp3ArtworkDataUriFromBytes(base64ToBytes(base64));
     artworkCache.set(uri, artwork);
+    pruneArtworkCache();
     return artwork;
   } catch {
     artworkCache.set(uri, null);
+    pruneArtworkCache();
     return null;
   }
 }
