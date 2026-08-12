@@ -24,10 +24,14 @@ import * as Haptics from 'expo-haptics';
 import { Play } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 
-// ─── LRU cache (max 100 entries) ─────────────────────────────────────────────
+// ─── LRU cache (bounded to avoid retaining large generated thumbnails) ─────
 
-const CACHE_MAX = 100;
+const CACHE_MAX = 32;
 const thumbnailCache = new Map<string, string>();
+
+export function clearVideoThumbnailCache() {
+  thumbnailCache.clear();
+}
 
 function cachePut(uri: string, thumbnailUri: string) {
   if (thumbnailCache.size >= CACHE_MAX) {
