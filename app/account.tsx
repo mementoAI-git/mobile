@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
 import { ArrowLeft, Settings } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import dayjs from 'dayjs';
@@ -124,22 +124,23 @@ export default function AccountOverviewScreen() {
   }, [refetchProfile, refetchStats, refetchSubscription]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-      <ImageBackground
-        source={PATTERN}
-        style={{ flex: 1 }}
-        imageStyle={{ opacity: 0.03 }}
-        resizeMode="repeat"
-      >
-        <View
-          style={{
-            minHeight: 62,
-            paddingHorizontal: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
+        <ImageBackground
+          source={PATTERN}
+          style={{ flex: 1 }}
+          imageStyle={{ opacity: 0.03 }}
+          resizeMode="repeat"
         >
+          <View
+            style={{
+              minHeight: 62,
+              paddingHorizontal: 16,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
           <TouchableOpacity
             onPress={handleBack}
             activeOpacity={0.78}
@@ -188,9 +189,9 @@ export default function AccountOverviewScreen() {
           >
             <Settings size={22} color={COLORS.textBase} strokeWidth={2.2} />
           </TouchableOpacity>
-        </View>
+          </View>
 
-        <ScrollView
+          <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingTop: 8, paddingBottom: 32 }}
           refreshControl={(
@@ -327,6 +328,7 @@ export default function AccountOverviewScreen() {
           )}
         </ScrollView>
       </ImageBackground>
-    </SafeAreaView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }

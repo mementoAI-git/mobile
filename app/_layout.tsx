@@ -51,6 +51,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { OfflineNotice } from '@/components/ui/OfflineNotice';
 import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
 import { AuthenticatedNotificationManager } from '@/components/system/AuthenticatedNotificationManager';
+import { SheetManager } from '@/components/sheets/SheetManager';
 import { COLORS } from '@/constants/tokens';
 import { SENTRY_DSN, SENTRY_TRACES_SAMPLE_RATE } from '@/lib/env';
 import { normalizeAppHref } from '@/lib/navigation';
@@ -77,6 +78,9 @@ if (SENTRY_DSN) {
     debug: __DEV__,
     tracesSampleRate: Number.isFinite(SENTRY_TRACES_SAMPLE_RATE) ? SENTRY_TRACES_SAMPLE_RATE : 0.2,
     sendDefaultPii: false,
+    // Disable session replay to avoid continuous capture overhead while preserving crash/error reporting.
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: 0,
   });
 }
 
@@ -242,17 +246,18 @@ function RootLayout() {
                     <Stack.Screen name="(auth)" />
                     <Stack.Screen name="(onboard)" />
                     <Stack.Screen name="(tabs)" options={{ contentStyle: { backgroundColor: COLORS.background } }} />
-          <Stack.Screen name="account" options={{ presentation: 'fullScreenModal', animation: 'slide_from_right' }} />
-          <Stack.Screen name="insights" options={{ presentation: 'fullScreenModal', animation: 'slide_from_right' }} />
+          <Stack.Screen name="account" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="insights" options={{ animation: 'slide_from_right' }} />
                     <Stack.Screen name="chat/[id]" />
                     <Stack.Screen name="share" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
                     <Stack.Screen name="editor" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
                     <Stack.Screen name="create" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
                     <Stack.Screen name="article" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
-                    <Stack.Screen name="settings" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+                    <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
                     <Stack.Screen name="accept-invite/[id]" />
                     <Stack.Screen name="+not-found" />
                   </Stack>
+                  <SheetManager />
                 </ToastProvider>
               </ShareIntentProvider>
               </BottomSheetModalProvider>

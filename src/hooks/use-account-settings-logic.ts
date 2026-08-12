@@ -1,10 +1,10 @@
-import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useChangePassword, useDeleteAccount } from '@/hooks/mutations/use-auth-mutations';
 import * as Haptics from 'expo-haptics';
+import { useUiStore } from '@/store';
 
 const schema = z.object({
   current_password: z.string().min(1, 'Required'),
@@ -19,6 +19,7 @@ export type AccountFormData = z.infer<typeof schema>;
 
 export function useAccountSettingsLogic() {
   const router = useRouter();
+  const openSheet = useUiStore((s) => s.openSheet);
   const { mutate: changePassword, isPending, error, isSuccess } = useChangePassword();
   const { mutate: deleteAccount, isPending: deleting } = useDeleteAccount();
 
@@ -49,21 +50,10 @@ export function useAccountSettingsLogic() {
 
   const handleDelete = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    Alert.alert(
-      'Delete Account',
-      'This action is permanent and cannot be undone. All your memories and capsules will be lost.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            deleteAccount();
-          },
-        },
-      ],
-    );
+    openSheet('security-confirmation', {
+      kind: 'delete-account',
+      onConfirm: () => deleteAccount(),
+    });
   };
 
   return {
