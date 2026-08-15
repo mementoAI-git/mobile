@@ -3,12 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'rea
 import { Sparkles, Crown, CheckCircle2, Zap } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import * as Haptics from 'expo-haptics';
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
 import { useQueryClient } from '@tanstack/react-query';
-import { post } from '@/api/mutations';
-import endpoint from '@/api/endpoint';
-import { logger } from '@/lib/logger';
+import { launchBillingCheckout } from '@/features/settings/billing-flow';
 
 interface UpgradePromptSheetProps {
   onClose?: () => void;
@@ -23,30 +19,16 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setLoading(true);
 
-      const redirectUrl = Linking.createURL('/(tabs)/capsule');
-      
-      const res = await post(endpoint.billingCheckout, {
-        success_url: redirectUrl,
-        cancel_url: redirectUrl,
+      const opened = await launchBillingCheckout({
         tier: 'pro',
-        interval: 'monthly'
+        interval: 'monthly',
+        returnPath: '/(tabs)/capsule',
+        queryClient,
       });
 
-      if (res?.data?.checkout_url) {
-        // Open the secure Paystack checkout flow in-app system browser
-        await WebBrowser.openBrowserAsync(res.data.checkout_url);
-        
-        // Success haptics
+      if (opened) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        
-        // Invalidate active subscription queries to update limits instantly!
-        queryClient.invalidateQueries({ queryKey: ['subscription'] });
-      } else {
-        alert('Could not start checkout. Please try again.');
       }
-    } catch (err: any) {
-      logger.error('Checkout error:', err);
-      alert(err?.message || 'A billing error occurred. Please try again.');
     } finally {
       setLoading(false);
       onClose?.();

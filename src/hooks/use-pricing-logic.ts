@@ -1,12 +1,8 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
-import { post } from '@/api/mutations';
-import endpoint from '@/api/endpoint';
-import { logger } from '@/lib/logger';
-import { useToast } from '@/components/ui/Toast';
+import { useQueryClient } from '@tanstack/react-query';
+import { launchBillingCheckout } from '@/features/settings/billing-flow';
 
 export type BillingInterval = 'monthly' | 'annual';
 export type Currency = 'USD' | 'NGN';
@@ -29,7 +25,7 @@ export const DEFERRED_FEATURES = [
 
 export function usePricingLogic() {
   const router = useRouter();
-  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [interval, setInterval] = useState<BillingInterval>('annual');
   const [loading, setLoading] = useState(false);
   const currency: Currency = 'USD';
@@ -43,27 +39,18 @@ export function usePricingLogic() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setLoading(true);
 
-      const redirectUrl = Linking.createURL('/settings/billing');
-
-      const res = await post(endpoint.billingCheckout, {
-        success_url: redirectUrl,
-        cancel_url: redirectUrl,
-        tier: tier.toLowerCase(),
-        interval: interval
+      const normalizedTier = tier === 'lifetime' ? 'legacy' : tier.toLowerCase();
+      const normalizedInterval = tier === 'lifetime' ? 'lifetime' : interval;
+      const opened = await launchBillingCheckout({
+        tier: normalizedTier as 'pro' | 'legacy',
+        interval: normalizedInterval,
+        returnPath: '/settings/billing',
+        queryClient,
       });
 
-      if (res?.data?.checkout_url) {
-        // Open the secure Polar checkout flow in-app system browser
-        await WebBrowser.openBrowserAsync(res.data.checkout_url);
-        
-        // Success haptics
+      if (opened) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else {
-        toast('Could not start checkout. Please try again.', 'error');
       }
-    } catch (err: any) {
-      logger.error('Checkout error:', err);
-      toast(err?.message || 'A billing error occurred. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
