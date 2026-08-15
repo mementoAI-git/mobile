@@ -25,6 +25,12 @@ import * as Clipboard from 'expo-clipboard';
 import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView } from 'expo-video';
+import { runtimeDiagnostics, sanitizeMediaUri } from '@/lib/runtime-diagnostics';
+import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-type';
+import {
+  canRenderAttachmentUri,
+  shouldMountPreviewVideo,
+} from '@/features/media/media-runtime-policy';
 import { useAudioPlayer } from 'expo-audio';
 import { useVideoPlayer } from '@/hooks/use-video-player';
 import * as Haptics from 'expo-haptics';
@@ -91,6 +97,7 @@ function formatDuration(secs: number) {
 // ─── Per-item renderers ───────────────────────────────────────────────────────
 
 function ImageSlide({ uri, onClose }: { uri: string; onClose: () => void }) {
+  const location = sanitizeMediaUri(uri);
   return (
     // Tapping the image (or the cream area around it) closes the modal
     // ExpoImage is used instead of RN Image to correctly apply EXIF orientation
@@ -102,8 +109,63 @@ function ImageSlide({ uri, onClose }: { uri: string; onClose: () => void }) {
           source={{ uri }}
           style={styles.slideImage}
           contentFit="contain"
+          onLoad={() => runtimeDiagnostics.record('media', 'preview-image-load', {
+            outcome: 'success',
+            source: location.source,
+            host: location.host,
+          })}
+          onError={() => runtimeDiagnostics.record('media', 'preview-image-load', {
+            outcome: 'failure',
+            source: location.source,
+            host: location.host,
+          })}
         />
     </TouchableOpacity>
+  );
+}
+
+function UnavailableMediaSlide({ uri }: { uri: string }) {
+  useEffect(() => {
+    const location = sanitizeMediaUri(uri);
+    runtimeDiagnostics.record('media', 'preview-media-unavailable', {
+      source: location.source,
+      host: location.host,
+    });
+  }, [uri]);
+
+  return (
+    <View style={styles.slide}>
+      <View style={[styles.roundedImage, styles.mediaCard]}>
+        <View style={[styles.iconCircle, { backgroundColor: `${COLORS.brand}18` }]}>
+          <FileText size={32} color={COLORS.brand} strokeWidth={1.8} />
+        </View>
+        <Text style={styles.mediaName}>Preview unavailable</Text>
+        <Text style={styles.mediaHint}>This attachment is no longer stored on this device.</Text>
+      </View>
+    </View>
+  );
+}
+
+function InactiveVideoSlide({ item }: { item: PreviewAttachment }) {
+  const canRenderThumbnail = Boolean(
+    item.thumbnailUrl && canRenderAttachmentUri(item.thumbnailUrl),
+  );
+
+  return (
+    <View style={styles.slide}>
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.textStrong }]}>
+        {canRenderThumbnail ? (
+          <ExpoImage
+            source={{ uri: item.thumbnailUrl! }}
+            style={StyleSheet.absoluteFill}
+            contentFit="contain"
+          />
+        ) : null}
+        <View style={styles.videoPlayBtn}>
+          <Play size={32} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -136,12 +198,28 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
   const controlsOpacity = useRef(new RNAnimated.Value(1)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    const location = sanitizeMediaUri(uri);
+    runtimeDiagnostics.record('media', 'preview-video-mount', {
+      source: location.source,
+      host: location.host,
+    });
+    return () => {
+      runtimeDiagnostics.record('media', 'preview-video-unmount', {
+        source: location.source,
+        host: location.host,
+      });
+    };
+  }, [uri]);
+
   // Start playback after <VideoView> has mounted and attached to the view hierarchy.
   // A short delay gives the modal window and native video view time to settle.
   useEffect(() => {
     if (!isActive) return;
+    runtimeDiagnostics.record('media', 'preview-video-active', { active: true });
     const t = setTimeout(() => {
       play();
+      runtimeDiagnostics.record('media', 'preview-video-play-request');
     }, 50);
     return () => clearTimeout(t);
   // Only run when isActive changes from false→true (slide scrolled into view)
@@ -155,6 +233,7 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
         pause();
       }
       setPlaying(false);
+      runtimeDiagnostics.record('media', 'preview-video-active', { active: false });
     }
   }, [isActive, player, pause]);
 
@@ -520,10 +599,24 @@ const MemoAudioSlide = React.memo(AudioSlide);
 function makeRenderSlide(onClose: () => void, currentIndex: number, attachments: PreviewAttachment[]) {
   return function renderSlide({ item, index }: { item: PreviewAttachment; index: number }) {
     const isActive = index === currentIndex;
-    if (item.mimeType.startsWith('image/')) return <ImageSlide uri={item.uri} onClose={onClose} />;
-    if (item.mimeType.startsWith('video/')) return <MemoVideoSlide uri={item.uri} isActive={isActive} />;
-    if (item.mimeType.startsWith('audio/') || item.isVoice) return <MemoAudioSlide item={item} isActive={isActive} />;
-    return <DocSlide item={item} />;
+    const mimeType = inferMediaMimeType({ mimeType: item.mimeType, name: item.name, uri: item.uri });
+    const normalizedItem = mimeType === item.mimeType ? item : { ...item, mimeType };
+    const category = item.isVoice ? 'audio' : getMediaCategory({ mimeType, name: item.name, uri: item.uri });
+    if (category === 'image') {
+      return canRenderAttachmentUri(item.uri)
+        ? <ImageSlide uri={item.uri} onClose={onClose} />
+        : <UnavailableMediaSlide uri={item.uri} />;
+    }
+    if (category === 'video') {
+      if (!canRenderAttachmentUri(item.uri)) {
+        return <UnavailableMediaSlide uri={item.uri} />;
+      }
+      return shouldMountPreviewVideo({ category, isActive, uri: item.uri })
+        ? <MemoVideoSlide uri={item.uri} isActive />
+        : <InactiveVideoSlide item={normalizedItem} />;
+    }
+    if (category === 'audio') return <MemoAudioSlide item={normalizedItem} isActive={isActive} />;
+    return <DocSlide item={normalizedItem} />;
   };
 }
 

@@ -23,6 +23,8 @@ import { getThumbnailAsync } from 'expo-video-thumbnails';
 import * as Haptics from 'expo-haptics';
 import { Play } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
+import { runtimeDiagnostics, sanitizeMediaUri } from '@/lib/runtime-diagnostics';
+import { getVideoThumbnailStrategy } from '@/features/media/media-runtime-policy';
 
 // ─── LRU cache (bounded to avoid retaining large generated thumbnails) ─────
 
@@ -67,23 +69,50 @@ export function VideoThumbnail({ uri, thumbnailUrl, width, height, borderRadius 
   // If the server already provides a thumbnail URL, use it directly.
   // Otherwise fall back to client-side extraction via expo-video-thumbnails.
   const hasServerThumb = Boolean(thumbnailUrl);
+  const strategy = getVideoThumbnailStrategy({
+    uri,
+    thumbnailUrl,
+    hasCachedThumbnail: thumbnailCache.has(uri),
+  });
 
   const [thumbUri, setThumbUri] = useState<string | null>(() => {
     if (thumbnailUrl) return thumbnailUrl;
     return thumbnailCache.get(uri) ?? null;
   });
-  const [loading, setLoading] = useState(!hasServerThumb && !thumbnailCache.has(uri));
+  const [loading, setLoading] = useState(strategy === 'extract');
 
   useEffect(() => {
-    if (thumbnailUrl) {
+    const location = sanitizeMediaUri(uri);
+    if (strategy === 'server' && thumbnailUrl) {
+      runtimeDiagnostics.record('media', 'thumbnail-source', {
+        source: 'server',
+        mediaSource: location.source,
+        host: location.host,
+      });
       setThumbUri(thumbnailUrl);
       setLoading(false);
       return;
     }
 
     const cached = thumbnailCache.get(uri);
-    if (cached) {
+    if (strategy === 'cache' && cached) {
+      runtimeDiagnostics.record('media', 'thumbnail-source', {
+        source: 'memory-cache',
+        mediaSource: location.source,
+        host: location.host,
+      });
       setThumbUri(cached);
+      setLoading(false);
+      return;
+    }
+
+    if (strategy === 'placeholder') {
+      runtimeDiagnostics.record('media', 'thumbnail-source', {
+        source: 'placeholder',
+        mediaSource: location.source,
+        host: location.host,
+      });
+      setThumbUri(null);
       setLoading(false);
       return;
     }
@@ -96,6 +125,10 @@ export function VideoThumbnail({ uri, thumbnailUrl, width, height, borderRadius 
     }
 
     let cancelled = false;
+    const finishExtraction = runtimeDiagnostics.start('media', 'thumbnail-extraction', {
+      mediaSource: location.source,
+      host: location.host,
+    });
     setThumbUri(null);
     setLoading(true);
 
@@ -104,16 +137,23 @@ export function VideoThumbnail({ uri, thumbnailUrl, width, height, borderRadius 
         if (cancelled) return;
         cachePut(uri, t);
         setThumbUri(t);
+        finishExtraction({ outcome: 'success' });
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         // Extraction failed (e.g. network video not yet reachable) — show dark placeholder
+        if (!cancelled) {
+          finishExtraction({
+            outcome: 'failure',
+            errorClass: error instanceof Error ? error.name : 'UnknownError',
+          });
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
 
     return () => { cancelled = true; };
-  }, [uri, thumbnailUrl]);
+  }, [strategy, uri, thumbnailUrl]);
 
   const handlePress = useCallback(() => {
     Haptics.selectionAsync();
@@ -135,6 +175,14 @@ export function VideoThumbnail({ uri, thumbnailUrl, width, height, borderRadius 
           source={{ uri: thumbUri }}
           style={StyleSheet.absoluteFill}
           resizeMode="cover"
+          onLoad={() => runtimeDiagnostics.record('media', 'thumbnail-image-load', {
+            outcome: 'success',
+            source: hasServerThumb ? 'server' : 'generated',
+          })}
+          onError={() => runtimeDiagnostics.record('media', 'thumbnail-image-load', {
+            outcome: 'failure',
+            source: hasServerThumb ? 'server' : 'generated',
+          })}
         />
       ) : (
         // Dark placeholder while loading or on error
