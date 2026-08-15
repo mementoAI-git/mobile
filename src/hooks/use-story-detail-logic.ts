@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { useMemory } from '@/hooks/queries/use-memories';
 import { useBookmarkMemory, useDeleteMemory } from '@/hooks/mutations/use-memory-mutations';
 import { useUiStore } from '@/store';
+import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-type';
 
 export function useStoryDetailLogic() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -74,23 +75,42 @@ export function useStoryDetailLogic() {
     openSheet('memory-actions', { memory });
   };
 
-  const imageAttachments = (memory?.attachments ?? []).filter(
-    (a) => a.type?.startsWith('image/') || a.type?.startsWith('video/'),
-  );
+  const normalizedAttachments = (memory?.attachments ?? []).map((attachment) => ({
+    ...attachment,
+    type: inferMediaMimeType({
+      mimeType: attachment.type,
+      name: attachment.name,
+      uri: attachment.url,
+    }),
+  }));
+
+  const imageAttachments = normalizedAttachments.filter((attachment) => {
+    const category = getMediaCategory({
+      mimeType: attachment.type,
+      name: attachment.name,
+      uri: attachment.url,
+    });
+    return category === 'image' || category === 'video';
+  });
 
   // All audio attachments (voice recordings + uploaded MP3/WAV/AAC etc)
   // shown as tappable thumbnails that open MediaPreviewModal
-  const audioAttachments = (memory?.attachments ?? []).filter(
-    (a) => a.type?.startsWith('audio/'),
-  );
+  const audioAttachments = normalizedAttachments.filter((attachment) => (
+    getMediaCategory({
+      mimeType: attachment.type,
+      name: attachment.name,
+      uri: attachment.url,
+    }) === 'audio'
+  ));
 
   // Documents only — image, video, and audio all have dedicated sections
-  const otherAttachments = (memory?.attachments ?? []).filter(
-    (a) =>
-      !a.type?.startsWith('image/') &&
-      !a.type?.startsWith('video/') &&
-      !a.type?.startsWith('audio/'),
-  );
+  const otherAttachments = normalizedAttachments.filter((attachment) => (
+    getMediaCategory({
+      mimeType: attachment.type,
+      name: attachment.name,
+      uri: attachment.url,
+    }) === 'file'
+  ));
 
   return {
     id,

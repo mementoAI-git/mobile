@@ -6,6 +6,7 @@ import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import { buildPromptWithReplyQuote, type ChatReplyQuote } from '@/lib/utils';
 import type { IMessageAttachment } from '@/types';
 import { createChatMessageIdFactory } from '@/features/chat/message-list';
+import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 
 type ChatAttachmentPreview = IMessageAttachment;
 
@@ -76,6 +77,13 @@ export function useStreamChat(memoryId?: string) {
       streamingRef.current = true;
       setStreaming(true);
       setStreamingText('');
+      const finishStream = runtimeDiagnostics.start('chat', 'stream-session', {
+        hasAttachments,
+        mode: chatMode ?? 'open',
+      });
+      let streamOutcome: 'success' | 'abort' | 'failure' = 'failure';
+      let streamChunkCount = 0;
+      let streamErrorClass: string | undefined;
 
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -123,6 +131,8 @@ export function useStreamChat(memoryId?: string) {
           const { done, value } = await reader.read();
           if (done || !isMountedRef.current || controller.signal.aborted) break;
           const chunk = decoder.decode(value, { stream: true });
+          streamChunkCount += 1;
+          runtimeDiagnostics.rate('chat', 'stream-chunks');
           // Handle full-text replacement pattern (web uses this)
           if (accumulated && chunk.length > accumulated.length && chunk.startsWith(accumulated)) {
             accumulated = chunk;
@@ -133,6 +143,7 @@ export function useStreamChat(memoryId?: string) {
         }
 
         if (isMountedRef.current && !controller.signal.aborted) {
+          streamOutcome = 'success';
           setMessages((prev) => [...prev, {
             _id: createMessageId(),
             role: 'ai',
@@ -142,6 +153,8 @@ export function useStreamChat(memoryId?: string) {
           setStreamingText('');
         }
       } catch (err: any) {
+        streamOutcome = err?.name === 'AbortError' ? 'abort' : 'failure';
+        streamErrorClass = err instanceof Error ? err.name : 'UnknownError';
         if (isMountedRef.current && err?.name !== 'AbortError') {
           setMessages((prev) => [
             ...prev,
@@ -154,6 +167,11 @@ export function useStreamChat(memoryId?: string) {
           setStreamingText('');
         }
       } finally {
+        finishStream({
+          outcome: controller.signal.aborted ? 'abort' : streamOutcome,
+          chunkCount: streamChunkCount,
+          ...(streamErrorClass ? { errorClass: streamErrorClass } : {}),
+        });
         if (readerRef.current) {
           readerRef.current = null;
         }

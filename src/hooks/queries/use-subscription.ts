@@ -14,6 +14,8 @@ export interface SubscriptionSummary {
   tier: 'free' | 'pro' | 'legacy';
   status: 'trialing' | 'active' | 'past_due' | 'cancelled' | 'paused' | 'canceled';
   usage?: SubscriptionUsage;
+  trial_ends_at?: string | null;
+  current_period_end?: string | null;
 }
 
 export function useSubscription() {
