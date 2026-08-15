@@ -23,4 +23,11 @@ describe('chat input layout safeguards', () => {
     expect(input).toContain('if (Math.abs(expandedTextHeight - nextHeight) <= 1) {');
     expect(input).toContain('if (Math.abs(compactTextHeight - nextHeight) <= 1) {');
   });
+
+  test('does not pin the multiline input to its last measured height', () => {
+    expect(input).toContain('{ minHeight: expandedTextHeight, maxHeight: activeExpandedTextMaxHeight }');
+    expect(input).toContain('minHeight: Platform.OS === \'ios\' && !multiline ? undefined : compactTextHeight,');
+    expect(input).not.toContain('{ height: expandedTextHeight, maxHeight: activeExpandedTextMaxHeight }');
+    expect(input).not.toContain('{ height: compactTextHeight, maxHeight: compactTextMaxHeight }');
+  });
 });

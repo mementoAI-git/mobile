@@ -89,7 +89,13 @@ const PLUS_ICON_SURFACE_SIZE = scale(34);
 const PLUS_ICON_EMPTY_RADIUS = PLUS_ICON_SURFACE_SIZE / 2;
 const PLUS_ICON_ACTIVE_RADIUS = scale(12);
 const ACTION_SQUIRCLE_RADIUS = scale(15);
-const COMPACT_TEXT_MIN_HEIGHT = verticalScale(24);
+// const COMPACT_TEXT_MIN_HEIGHT = verticalScale(24);
+const COMPACT_TEXT_MIN_HEIGHT = Platform.select({
+  ios: verticalScale(34),
+  android: verticalScale(33),
+  default: verticalScale(24),
+});
+const MULTILINE_DETECTION_BUFFER = scale(10);
 const EXPANDED_TEXT_MIN_HEIGHT = verticalScale(34);
 const SELECTED_ASSET_OUTER_SIZE = scale(74);
 const SELECTED_ASSET_SIZE = scale(70);
@@ -134,6 +140,25 @@ export function ChatInput({
   const textBeforeDictationRef = useRef('');
   const attachmentPickerRef = useRef<BottomSheetModal>(null);
   const lastAppliedContentSizeRef = useRef<{ mode: 'compact' | 'expanded'; measured: number; target: number } | null>(null);
+
+  const suppressMeasurementRef = useRef(false);
+  const suppressMeasurementTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const suppressMeasurementsBriefly = useCallback(() => {
+    suppressMeasurementRef.current = true;
+    if (suppressMeasurementTimeoutRef.current) {
+      clearTimeout(suppressMeasurementTimeoutRef.current);
+    }
+    suppressMeasurementTimeoutRef.current = setTimeout(() => {
+      suppressMeasurementRef.current = false;
+    }, 120);
+  }, []);
+
+  useEffect(() => () => {
+    if (suppressMeasurementTimeoutRef.current) {
+      clearTimeout(suppressMeasurementTimeoutRef.current);
+    }
+  }, []);
 
   const { mutateAsync: uploadFile } = useFileUpload();
   const {
@@ -489,6 +514,11 @@ export function ChatInput({
   // one render cycle of stale height data.
 
   const handleContentSizeChange = useCallback((event: any) => {
+    if (suppressMeasurementRef.current) return;
+
+    const measuredHeight = Math.ceil(event.nativeEvent.contentSize.height);
+
+
     if (!hasText && !hasAttachments) {
       lastAppliedContentSizeRef.current = null;
       setMultiline(false);
@@ -501,17 +531,16 @@ export function ChatInput({
       return;
     }
 
-    const measuredHeight = Math.ceil(event.nativeEvent.contentSize.height);
     const currentMode = useExpandedComposer ? 'expanded' : 'compact';
     const currentTarget = useExpandedComposer ? expandedTextHeight : compactTextHeight;
 
-    const sameRenderedHeight = Math.abs(measuredHeight - currentTarget) <= 2;
+    const sameRenderedHeight = Math.abs(measuredHeight - currentTarget) <= 6;
     if (sameRenderedHeight) {
       if (useExpandedComposer) {
         setExpandedMeasuredHeight(measuredHeight);
       } else {
         setCompactMeasuredHeight(measuredHeight);
-        setMultiline(measuredHeight > COMPACT_TEXT_MIN_HEIGHT + 1);
+        setMultiline(measuredHeight > COMPACT_TEXT_MIN_HEIGHT + MULTILINE_DETECTION_BUFFER);
       }
       return;
     }
@@ -542,11 +571,13 @@ export function ChatInput({
       }
 
       setExpandedMeasuredHeight(measuredHeight);
+      suppressMeasurementsBriefly();
       setExpandedTextHeight(nextHeight);
       return;
     }
 
-    const shouldExpand = measuredHeight > COMPACT_TEXT_MIN_HEIGHT + 1;
+    const shouldExpand = measuredHeight > COMPACT_TEXT_MIN_HEIGHT + MULTILINE_DETECTION_BUFFER;
+
     const verticalPadding = shouldExpand ? COMPACT_MULTILINE_VERTICAL_PADDING : 0;
     const nextHeight = getComposerTextHeight({
       measuredHeight,
@@ -568,6 +599,7 @@ export function ChatInput({
     setCompactMeasuredHeight(measuredHeight);
     setCompactMeasuredPadding(verticalPadding);
     setMultiline(shouldExpand);
+    suppressMeasurementsBriefly();
     setCompactTextHeight(nextHeight);
   }, [
     activeExpandedTextMaxHeight,
@@ -579,6 +611,7 @@ export function ChatInput({
     isTextComposerExpanded,
     text,
     useExpandedComposer,
+    suppressMeasurementsBriefly,
   ]);
 
   const compactTextScrollable = getComposerTextScrollEnabled({
@@ -605,7 +638,7 @@ export function ChatInput({
       return [
         styles.sharedTextInput,
         styles.expandedTextInput,
-        { height: expandedTextHeight, maxHeight: activeExpandedTextMaxHeight },
+        { minHeight: expandedTextHeight, maxHeight: activeExpandedTextMaxHeight },
         isRecording && styles.recordingTextInput,
       ];
     }
@@ -613,7 +646,10 @@ export function ChatInput({
       styles.sharedTextInput,
       styles.compactTextInput,
       multiline && styles.compactTextInputMultiline,
-      { height: compactTextHeight, maxHeight: compactTextMaxHeight },
+      { 
+        minHeight: Platform.OS === 'ios' && !multiline ? undefined : compactTextHeight, 
+        maxHeight: compactTextMaxHeight 
+      },
       isRecording && styles.recordingTextInput,
     ];
   }, [
@@ -989,7 +1025,7 @@ const styles = StyleSheet.create({
 
   // Compact variant
   compactTextInput: {
-    paddingVertical: 0,
+    paddingVertical: scale(4),
     minHeight: COMPACT_TEXT_MIN_HEIGHT,
     textAlignVertical: 'center',
   },

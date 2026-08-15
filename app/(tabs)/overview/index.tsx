@@ -23,6 +23,7 @@ import { useOverviewPrompts, useDailyPrompts } from '@/hooks/queries/use-prompts
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useActivities } from '@/hooks/queries/use-activities';
+import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 import { DailyPromptSection } from '@/components/overview/DailyPromptSection';
 import { RecentActivitiesSection } from '@/components/overview/RecentActivitiesSection';
 import { BrowseTopicsSection } from '@/components/overview/BrowseTopicsSection';
@@ -151,6 +152,10 @@ function getGreeting(): string {
 }
 
 export default function OverviewScreen() {
+  React.useEffect(() => {
+    runtimeDiagnostics.record('screen', 'mount', { screen: 'overview' });
+    return () => runtimeDiagnostics.record('screen', 'unmount', { screen: 'overview' });
+  }, []);
   const router = useRouter();
   const openSheet = useUiStore((s) => s.openSheet);
   const user = useUserStore((s) => s.user);

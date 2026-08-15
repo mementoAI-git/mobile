@@ -124,6 +124,7 @@ function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const rootNavigationState = useRootNavigationState();
+  const navigationReady = Boolean(rootNavigationState?.key);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -161,6 +162,10 @@ function RootLayout() {
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    useUiStore.getState().setAppReady(Boolean(rootNavigationState?.key) && hydrated && Boolean(fontsLoaded));
+  }, [rootNavigationState, hydrated, fontsLoaded]);
 
   // Guard navigation based on auth state
   useEffect(() => {

@@ -18,6 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useStoriesLogic } from '@/hooks/use-stories-logic';
 import { useRouter } from 'expo-router';
+import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const MEMORIES_BG = require('../../../assets/images/backgrounds/memories_card_bg.png');
@@ -26,6 +27,10 @@ const STREAK_BG = require('../../../assets/images/backgrounds/streak_card_bg.png
 const FILTERS = ['All', 'Bookmarked', 'Deleted', 'Pending'];
 
 export default function StoriesScreen() {
+  React.useEffect(() => {
+    runtimeDiagnostics.record('screen', 'mount', { screen: 'stories' });
+    return () => runtimeDiagnostics.record('screen', 'unmount', { screen: 'stories' });
+  }, []);
   const router = useRouter();
   const {
     search,
