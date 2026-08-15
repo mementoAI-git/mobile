@@ -5,32 +5,15 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft, Sparkles, Play, Pause } from 'lucide-react-native';
 import { UiCreditCard01, UiReceipt, UiRefreshCw05, UiLinkExternal01, UiStars01 } from '@/components/ui/icons/SettingsIcons';
 import { Button, TextInput, Card, Badge, ConfirmDialog } from '@/components/ui';
-import { useToast } from '@/components/ui/Toast';
 import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
-import { useSubscription } from '@/hooks/queries/use-subscription';
+import { useBillingSettingsLogic } from '@/hooks/use-billing-settings-logic';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
-import { get, post } from '@/api/mutations';
-import endpoint from '@/api/endpoint';
-import dayjs from 'dayjs';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
-
-interface Invoice {
-  url?: string;
-  label?: string;
-}
-
-interface UsageLimit {
-  storage_used_bytes: number;
-  storage_limit_bytes: number;
-  beneficiary_count: number;
-  timed_message_count: number;
-}
 
 function formatBytes(bytes?: number, decimals = 1) {
   if (bytes === undefined || bytes === null || isNaN(bytes)) return '0 B';
@@ -42,142 +25,34 @@ function formatBytes(bytes?: number, decimals = 1) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-interface ExtendedSubscriptionSummary {
-  tier: 'free' | 'pro' | 'legacy';
-  status: 'trialing' | 'active' | 'past_due' | 'cancelled' | 'paused' | 'canceled';
-  usage?: any;
-  trial_ends_at?: string | null;
-  current_period_end?: string | null;
-}
-
 export default function BillingSettingsScreen() {
-  const { summary: originalSummary, isLoading: subLoading, isProOrAbove, refetch: refetchSub } = useSubscription();
-  const summary = originalSummary as ExtendedSubscriptionSummary | undefined;
-  const [promo, setPromo] = useState('');
-  const [promoBusy, setPromoBusy] = useState(false);
-  const [portalBusy, setPortalBusy] = useState(false);
-  const [cancelBusy, setCancelBusy] = useState(false);
-  const [resumeBusy, setResumeBusy] = useState(false);
-  const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
-  const { toast } = useToast();
-
-  // 1. Invoices Query
-  const { data: invoices = [], isLoading: invoicesLoading } = useQuery<Invoice[]>({
-    queryKey: ['invoices'],
-    queryFn: () => get<{ data: Invoice[] }>(endpoint.billingInvoices).then((r) => r.data?.data || []),
-    enabled: isProOrAbove,
-    staleTime: 30_000,
-  });
-
-  // 2. Usage Query
-  const { data: usage, isLoading: usageLoading } = useQuery<UsageLimit | null>({
-    queryKey: ['billing-usage'],
-    queryFn: () => get<{ data: UsageLimit }>(endpoint.billingUsage).then((r) => r.data?.data ?? null),
-    staleTime: 30_000,
-  });
-
-  // Refetch everything
-  const handleRefresh = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await refetchSub();
-  };
-
-  const renewLabel = () => {
-    if (!summary) return '—';
-    if (summary.trial_ends_at && summary.status === 'trialing') {
-      const d = dayjs(summary.trial_ends_at);
-      return d.isValid() ? `Trial ends ${d.format('MMM D, YYYY')}` : 'Trial active';
-    }
-    if (summary.current_period_end) {
-      const d = dayjs(summary.current_period_end);
-      return d.isValid() ? `Renews ${d.format('MMM D, YYYY')}` : '—';
-    }
-    return '—';
-  };
-
-  // 3. Manage Billing (Open Customer Portal)
-  const handlePortal = async () => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      setPortalBusy(true);
-      const redirectUrl = Linking.createURL('/settings/billing');
-      const res = (await post(endpoint.billingPortal, {
-        return_url: redirectUrl,
-      })) as any;
-      if (res?.data?.portal_url) {
-        await WebBrowser.openBrowserAsync(res.data.portal_url);
-      } else {
-        toast('Could not open billing portal. Please try again.', 'error');
-      }
-    } catch (err: any) {
-      toast(err?.message || 'Could not load billing portal.', 'error');
-    } finally {
-      setPortalBusy(false);
-    }
-  };
-
-  // 4. Redeem Promo Code
-  const handlePromo = async () => {
-    const code = promo.trim();
-    if (!code) {
-      toast('Please enter a promo code first.', 'error');
-      return;
-    }
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      setPromoBusy(true);
-      const res = (await post(endpoint.billingPromoRedeem, { code })) as any;
-      if (res?.data?.success || res?.success) {
-        toast('Promo code applied.', 'success');
-        setPromo('');
-        await refetchSub();
-      } else {
-        toast(typeof res?.data?.message === 'string' ? res.data.message : 'Could not redeem promo code.', 'error');
-      }
-    } catch (err: any) {
-      toast(err?.message || 'Could not redeem promo code.', 'error');
-    } finally {
-      setPromoBusy(false);
-    }
-  };
-
-  // 5. Cancel Subscription — shows custom ConfirmDialog
-  const handleCancel = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    setCancelConfirmVisible(true);
-  };
-
-  const confirmCancel = async () => {
-    setCancelConfirmVisible(false);
-    try {
-      setCancelBusy(true);
-      await post(endpoint.billingCancel, {});
-      toast('Your subscription cancellation has been scheduled.', 'success');
-      await refetchSub();
-    } catch (err: any) {
-      toast(err?.message || 'Could not cancel subscription.', 'error');
-    } finally {
-      setCancelBusy(false);
-    }
-  };
-
-  // 6. Resume Subscription
-  const handleResume = async () => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      setResumeBusy(true);
-      await post(endpoint.billingResume, {});
-      toast('Subscription resumed.', 'success');
-      await refetchSub();
-    } catch (err: any) {
-      toast(err?.message || 'Could not resume subscription.', 'error');
-    } finally {
-      setResumeBusy(false);
-    }
-  };
+  const {
+    summary,
+    subLoading,
+    isProOrAbove,
+    invoices,
+    invoicesLoading,
+    usage,
+    usageLoading,
+    promo,
+    setPromo,
+    promoBusy,
+    portalBusy,
+    cancelBusy,
+    resumeBusy,
+    cancelConfirmVisible,
+    setCancelConfirmVisible,
+    handleRefresh,
+    renewLabel,
+    handlePortal,
+    handlePromo,
+    handleCancel,
+    confirmCancel,
+    handleResume,
+    isCancelled,
+  } = useBillingSettingsLogic();
 
   const router = useRouter();
-  const isCancelled = summary?.status === 'cancelled' || summary?.status === 'canceled';
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>

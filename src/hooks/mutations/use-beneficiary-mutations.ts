@@ -2,12 +2,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { post, del } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
-import type { IBeneficiary } from '@/types';
+import type { CreateBeneficiaryBody, IBeneficiary } from '@/types';
 
 export function useAddBeneficiary() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { name: string; email: string; relationship: string }) =>
+    mutationFn: (payload: CreateBeneficiaryBody) =>
       post<IBeneficiary>(endpoint.beneficiaries, payload),
     onSuccess: (res) => {
       const newBeneficiary = (res as any)?.data ?? res;

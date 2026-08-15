@@ -5,6 +5,7 @@ import {
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import { useUiStore } from '@/store';
+import { useRootNavigationState } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CreateMemorySheet } from './CreateMemorySheet';
 import { CreateCapsuleSheet } from './CreateCapsuleSheet';
@@ -40,12 +41,12 @@ const SHEET_CONFIGS: Record<string, {
 }> = {
   'create-memory': { component: CreateMemorySheet, snapPoints: ['90%'], keyboardBehavior: 'extend' },
   'create-capsule': { component: CreateCapsuleSheet, snapPoints: ['92%'], keyboardBehavior: 'fillParent' },
-  'add-beneficiary': { component: AddBeneficiarySheet, dynamic: true },
+  'add-beneficiary': { component: AddBeneficiarySheet, snapPoints: ['92%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
   'beneficiary-actions': { component: BeneficiaryActionsSheet, dynamic: true },
   'memory-actions': { component: MemoryActionsSheet, dynamic: true },
   'capsule-actions': { component: CapsuleActionsSheet, dynamic: true },
   'share-memory': { component: ShareMemorySheet, dynamic: true },
-  'create-group': { component: CreateGroupSheet, snapPoints: ['90%'], keyboardBehavior: 'extend' },
+  'create-group': { component: CreateGroupSheet, snapPoints: ['78%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
   'quick-capture': { component: QuickCaptureSheet, dynamic: true, keyboardBlurBehavior: 'none' },
   'memory-insights': { component: MemoryInsightsSheet, snapPoints: ['88%'] },
   'search-memory': { component: SearchMemorySheet, snapPoints: ['90%'], keyboardBehavior: 'extend', keyboardBlurBehavior: 'none' },
@@ -65,7 +66,7 @@ const SHEET_CONFIGS: Record<string, {
 // Sheets that manage their own BottomSheetView / layout
 const SELF_MANAGED = new Set([
   'create-capsule', 'capsule-detail', 'memory-insights',
-  'create-memory', 'create-group', 'streak',
+  'create-memory', 'create-group', 'add-beneficiary', 'streak',
   'edit-profile',
   'change-password', 'setup-two-factor',
 ]);
@@ -79,11 +80,20 @@ export function SheetManager() {
   const activeSheet = useUiStore((s) => s.activeSheet);
   const sheetProps = useUiStore((s) => s.sheetProps);
   const closeSheet = useUiStore((s) => s.closeSheet);
+  const rootNavigationState = useRootNavigationState();
   const modalRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
+  const navigationReady = Boolean(rootNavigationState?.key);
 
-  // Open/close the modal in response to activeSheet state changes
+  // Prevent global sheets from mounting before Expo Router has created the
+  // navigation container. This avoids the classic ``Couldn't find a navigation context``
+  // render crash when a sheet opens during app boot or redirect timing.
   useEffect(() => {
+    if (!navigationReady) {
+      if (activeSheet) closeSheet();
+      return;
+    }
+
     if (activeSheet) {
       const t = setTimeout(() => {
         modalRef.current?.present();
@@ -92,7 +102,7 @@ export function SheetManager() {
     } else {
       modalRef.current?.dismiss();
     }
-  }, [activeSheet]);
+  }, [activeSheet, closeSheet, navigationReady]);
 
   const handleDismiss = useCallback(() => {
     // Called by the sheet when the user swipes it down or taps the backdrop
@@ -126,6 +136,8 @@ export function SheetManager() {
 
   const config = activeSheet ? SHEET_CONFIGS[activeSheet] : null;
   const SheetContent = config?.component ?? null;
+
+  if (!navigationReady) return null;
 
   return (
     <BottomSheetModal

@@ -6,11 +6,15 @@ const logic = readFileSync('src/hooks/use-pricing-logic.ts', 'utf8');
 const screen = readFileSync('app/pricing.tsx', 'utf8');
 
 describe('Pricing logic', () => {
-  test('uses toast-based billing errors instead of native alerts', () => {
-    expect(logic).toContain('useToast');
-    expect(logic).toContain("toast('Could not start checkout. Please try again.', 'error')");
-    expect(logic).toContain("toast(err?.message || 'A billing error occurred. Please try again.', 'error')");
+  test('uses the shared billing checkout helper instead of duplicating checkout requests', () => {
+    expect(logic).toContain('launchBillingCheckout');
+    expect(logic).not.toContain('endpoint.billingCheckout');
     expect(logic).not.toContain('Alert.alert(');
+  });
+
+  test('normalizes lifetime purchases to legacy tier with lifetime interval', () => {
+    expect(logic).toContain("const normalizedTier = tier === 'lifetime' ? 'legacy' : tier.toLowerCase();");
+    expect(logic).toContain("const normalizedInterval = tier === 'lifetime' ? 'lifetime' : interval;");
   });
 
   test('keeps pricing screen wired to the centralized logic hook', () => {

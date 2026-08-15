@@ -10,5 +10,7 @@ export const logger = {
   error: (...args: LogArgs) => {
     if (__DEV__) console.error(...args);
   },
+  runtime: (...args: LogArgs) => {
+    console.log(...args);
+  },
 };
-

@@ -46,6 +46,7 @@ import {
   getComposerOverlayMaxHeight,
 } from '@/features/chat/composer-layout';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
+import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 import {
   getChatMessageItemType,
   getChatMessageKey,
@@ -62,6 +63,10 @@ const CHAT_VISIBLE_CONTENT_POSITION = Object.freeze({
 });
 
 export default function ChatScreen() {
+  React.useEffect(() => {
+    runtimeDiagnostics.record('screen', 'mount', { screen: 'chat' });
+    return () => runtimeDiagnostics.record('screen', 'unmount', { screen: 'chat' });
+  }, []);
   // promptLabel is only set by BrowseTopicsSection topic cards — daily prompts don't set it
   const { promptLabel } = useLocalSearchParams<{ promptLabel?: string }>();
 
@@ -298,17 +303,11 @@ export default function ChatScreen() {
     [allMessages, flatListRef],
   );
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-      <ImageBackground source={PATTERN} className="flex-1" imageStyle={{ opacity: 0.03 }}>
-        <View
-          className="flex-1"
-          onLayout={(event) => setChatSurfaceHeight(event.nativeEvent.layout.height)}
-        >
+  const content = (
+    <View
+      className="flex-1"
+      onLayout={(event) => setChatSurfaceHeight(event.nativeEvent.layout.height)}
+    >
 
           {/* ── Header ───────────────────────────────────────────────────── */}
           <View
@@ -525,8 +524,21 @@ export default function ChatScreen() {
             />
           )}
         </View>
-      </ImageBackground>
-      </KeyboardAvoidingView>
+  );
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top', 'bottom']}>
+      {Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+          <ImageBackground source={PATTERN} className="flex-1" imageStyle={{ opacity: 0.03 }}>
+            {content}
+          </ImageBackground>
+        </KeyboardAvoidingView>
+      ) : (
+        <ImageBackground source={PATTERN} className="flex-1" imageStyle={{ opacity: 0.03 }}>
+          {content}
+        </ImageBackground>
+      )}
     </SafeAreaView>
   );
 }

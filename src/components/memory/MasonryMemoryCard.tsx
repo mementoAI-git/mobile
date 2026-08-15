@@ -9,6 +9,9 @@ import { useUiStore } from '@/store';
 import { COLORS, FONTS, CARD_PASTEL_SURFACES } from '@/constants/tokens';
 import type { IMemory } from '@/types';
 import dayjs from 'dayjs';
+import { getMediaCategory } from '@/features/media/media-type';
+import { runtimeDiagnostics, sanitizeMediaUri } from '@/lib/runtime-diagnostics';
+import { canRenderAttachmentUri } from '@/features/media/media-runtime-policy';
 
 const RECORD_BANNER = require('../../../assets/images/backgrounds/record-banner.png');
 
@@ -85,9 +88,9 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
   // Prefer an image attachment for the thumbnail — videos render as blank when
   // used as <Image> source. Fall back to the first video if no images exist.
   const bannerMedia =
-    memory.attachments?.find((a) => a.type?.startsWith('image/')) ??
-    memory.attachments?.find((a) => a.type?.startsWith('video/'));
-  const audioMedia = memory.attachments?.find((a) => a.type?.startsWith('audio/'));
+    memory.attachments?.find((a) => canRenderAttachmentUri(a.url) && getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url }) === 'image') ??
+    memory.attachments?.find((a) => canRenderAttachmentUri(a.url) && getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url }) === 'video');
+  const audioMedia = memory.attachments?.find((a) => getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url }) === 'audio');
 
   const cardScale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: cardScale.value }] }));
@@ -109,7 +112,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
 
   const renderVisual = () => {
     if (bannerMedia) {
-      const isVideo = bannerMedia.type?.startsWith('video/');
+      const isVideo = getMediaCategory({ mimeType: bannerMedia.type, name: bannerMedia.name, uri: bannerMedia.url }) === 'video';
       if (isVideo && bannerMedia.url) {
         return (
           <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
@@ -117,6 +120,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
                 onPress navigates to the story detail page. */}
             <VideoThumbnail
               uri={bannerMedia.url}
+              thumbnailUrl={bannerMedia.thumbnail}
               borderRadius={20}
               onPress={() => { Haptics.selectionAsync(); handlePress(); }}
             />
@@ -141,6 +145,18 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
             source={{ uri: bannerMedia.url }}
             className="w-full h-full"
             resizeMode="cover"
+            onLoad={() => {
+              const location = sanitizeMediaUri(bannerMedia.url);
+              runtimeDiagnostics.record('media', 'story-card-image-load', {
+                outcome: 'success', source: location.source, host: location.host,
+              });
+            }}
+            onError={() => {
+              const location = sanitizeMediaUri(bannerMedia.url);
+              runtimeDiagnostics.record('media', 'story-card-image-load', {
+                outcome: 'failure', source: location.source, host: location.host,
+              });
+            }}
           />
           {/* In progress badge / attachment count — overlay top-left */}
           <InProgressBadge memory={memory} overlay />

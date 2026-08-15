@@ -32,5 +32,7 @@ export const queryKeys = {
   files: ['files'] as const,
 
   subscription: ['subscription'] as const,
+  billingUsage: ['billing-usage'] as const,
+  billingInvoices: ['billing-invoices'] as const,
   passkeys: ['passkeys'] as const,
 };

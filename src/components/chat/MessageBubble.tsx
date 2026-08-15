@@ -11,6 +11,8 @@ import * as Haptics from 'expo-haptics';
 import type { PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { useLinkPreview, type LinkPreviewData } from '@/hooks/use-link-preview';
+import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-type';
+import { getAttachmentPreviewKind } from '@/features/media/media-runtime-policy';
 
 // ─── Backward-compat helpers for old messages ────────────────────────────────
 
@@ -51,24 +53,12 @@ interface MessageBubbleProps {
 
 // ─── Attachment helpers ────────────────────────────────────────────────────────
 
-function getMimeCategory(name?: string, type?: string): 'image' | 'video' | 'audio' | 'file' {
-  const t = type?.toLowerCase() ?? '';
-  if (t.startsWith('image/')) return 'image';
-  if (t.startsWith('video/')) return 'video';
-  if (t.startsWith('audio/')) return 'audio';
-  const ext = name?.split('.').pop()?.toLowerCase() ?? '';
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'].includes(ext)) return 'image';
-  if (['mp4', 'mov', 'avi', 'webm'].includes(ext)) return 'video';
-  if (['mp3', 'wav', 'm4a', 'aac', 'ogg'].includes(ext)) return 'audio';
-  return 'file';
-}
-
 function toPreviewAttachment(a: { url: string; name: string; type?: string; _id?: string }, idx: number): PreviewAttachment {
   return {
     clientId: a._id ?? `att_${idx}`,
     uri: a.url,
     name: a.name,
-    mimeType: a.type ?? 'application/octet-stream',
+    mimeType: inferMediaMimeType({ mimeType: a.type, name: a.name, uri: a.url }),
     thumbnailUrl: (a as any).thumbnail ?? null,
   };
 }
@@ -79,9 +69,10 @@ function AttachmentTile({ attachment, onPress }: {
   attachment: { url: string; name: string; type?: string; _id?: string };
   onPress: () => void;
 }) {
-  const cat = getMimeCategory(attachment.name, attachment.type);
+  const cat = getMediaCategory({ mimeType: attachment.type, name: attachment.name, uri: attachment.url });
+  const previewKind = getAttachmentPreviewKind({ category: cat, uri: attachment.url });
 
-  if (cat === 'image') {
+  if (previewKind === 'image') {
     return (
       <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
         <Image source={{ uri: attachment.url }} style={{ width: 120, height: 120, borderRadius: 12 }} resizeMode="cover" />
@@ -89,13 +80,21 @@ function AttachmentTile({ attachment, onPress }: {
     );
   }
 
-  if (cat === 'video') {
+  if (previewKind === 'video') {
     return (
       <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
         <View style={{ width: 120, height: 120, borderRadius: 12, backgroundColor: COLORS.textStrong, alignItems: 'center', justifyContent: 'center' }}>
           <Play size={28} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 4 }} />
           <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 4 }} numberOfLines={1}>{attachment.name}</Text>
         </View>
+      </TouchableOpacity>
+    );
+  }
+
+  if (previewKind === 'placeholder') {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
+        <AttachmentPlaceholder name={attachment.name} width={120} height={120} borderRadius={12} />
       </TouchableOpacity>
     );
   }
@@ -195,14 +194,46 @@ function LinkPreviews({ text }: { text: string }) {
 const BUBBLE_MAX_W = 260;
 const GRID_GAP = 3;
 
+function AttachmentPlaceholder({
+  name,
+  width,
+  height,
+  borderRadius,
+}: {
+  name: string;
+  width: number;
+  height: number;
+  borderRadius: number;
+}) {
+  return (
+    <View style={{
+      width,
+      height,
+      borderRadius,
+      backgroundColor: COLORS.fillWeak,
+      borderWidth: 1,
+      borderColor: COLORS.strokeWeaker,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 12,
+      gap: 6,
+    }}>
+      <FileText size={22} color={COLORS.textWeak} strokeWidth={1.8} />
+      <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 10, color: COLORS.textWeak, textAlign: 'center' }} numberOfLines={2}>
+        {name || 'Preview unavailable'}
+      </Text>
+    </View>
+  );
+}
+
 function AttachmentGrid({ attachments, onTap }: {
   attachments: { url: string; name: string; type?: string; _id?: string }[];
   onTap: (index: number) => void;
 }) {
   if (attachments.length === 0) return null;
 
-  const mediaItems = attachments.filter(a => ['image', 'video'].includes(getMimeCategory(a.name, a.type)));
-  const fileItems = attachments.filter(a => !['image', 'video'].includes(getMimeCategory(a.name, a.type)));
+  const mediaItems = attachments.filter(a => ['image', 'video'].includes(getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url })));
+  const fileItems = attachments.filter(a => !['image', 'video'].includes(getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url })));
   const count = mediaItems.length;
   const fullW = BUBBLE_MAX_W;
 
@@ -215,7 +246,21 @@ function AttachmentGrid({ attachments, onTap }: {
     borderRadius: number,
     onPress: () => void,
   ) => {
-    if (getMimeCategory(a.name, a.type) === 'video') {
+    const category = getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url });
+    const previewKind = getAttachmentPreviewKind({ category, uri: a.url });
+
+    if (previewKind === 'placeholder') {
+      return (
+        <AttachmentPlaceholder
+          name={a.name}
+          width={width}
+          height={height}
+          borderRadius={borderRadius}
+        />
+      );
+    }
+
+    if (previewKind === 'video') {
       return (
         <VideoThumbnail
           uri={a.url}

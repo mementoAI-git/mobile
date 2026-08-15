@@ -267,6 +267,7 @@ export default function StoryDetailScreen() {
               <VideoThumbnail
                 key={item.url ?? idx}
                 uri={item.url ?? ''}
+                thumbnailUrl={item.thumbnail}
                 width={SCREEN_W - 40}
                 height={(SCREEN_W - 40) * (9 / 16)}
                 onPress={() => openPreview(item)}

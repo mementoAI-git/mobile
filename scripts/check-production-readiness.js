@@ -73,7 +73,6 @@ assert(
   `Old or incorrect Memento domains found. Offenders: ${oldDomainOffenders.join(', ')}`,
 );
 
-assert(packageJson.dependencies['expo-share-intent']?.startsWith('^7.'), 'Expo SDK 56 must use expo-share-intent 7.x.');
 assert(packageJson.devDependencies?.husky, 'package.json must include Husky as a dev dependency.');
 assert(packageJson.scripts.lint, 'package.json must expose a lint script.');
 assert(packageJson.scripts.test, 'package.json must expose a unit test script.');

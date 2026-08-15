@@ -39,6 +39,14 @@ export const COLORS = {
   warning: '#8F6C1A',
   info: '#1A80F7',
 
+  // Beneficiary group palette — stable indices 0...5 shared with the API.
+  beneficiaryGroupGreen: '#7BDD9F',
+  beneficiaryGroupBlue: '#70BEF3',
+  beneficiaryGroupPurple: '#C6ACF5',
+  beneficiaryGroupPink: '#F9AAAA',
+  beneficiaryGroupYellow: '#F5C800',
+  beneficiaryGroupMagenta: '#F0A7EE',
+
   // Strokes
   strokeStrong: 'rgba(23,11,0,0.45)',
   strokeWeak: 'rgba(23,11,0,0.1)',

@@ -154,7 +154,20 @@ export interface IBeneficiary {
   benefactor: IBeneficiaryUser;
   accepted_at?: string;
   status?: string;
+  about?: string;
+  avatar_url?: string;
+  avatar_file?: IFile;
+  groups?: Array<Pick<IGroup, '_id' | 'name' | 'color'>>;
 }
+
+export type CreateBeneficiaryBody = {
+  name: string;
+  email: string;
+  relationship: string;
+  about?: string;
+  avatar_file_id?: string;
+  group_ids?: string[];
+};
 
 export interface IGroupMember {
   _id?: string;
