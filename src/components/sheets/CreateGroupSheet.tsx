@@ -1,14 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { X, Check, Users } from 'lucide-react-native';
-import { COLORS, FONTS } from '@/constants/tokens';
-import { Button, Spinner } from '@/components/ui';
-import { useToast } from '@/components/ui/Toast';
-import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
-import { useCreateGroup, useUpdateGroup, useAddGroupMembers } from '@/hooks/mutations/use-group-mutations';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useCallback, useState } from 'react';
+import { KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { Check, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button } from '@/components/ui/Button';
+import { toast } from '@/components/ui/Toast';
+import { COLORS, FONTS } from '@/constants/tokens';
+import { buildGroupPayload, GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
+import { useCreateGroup, useUpdateGroup } from '@/hooks/mutations/use-group-mutations';
 import type { IGroup } from '@/types';
 
 interface Props {
@@ -16,183 +16,149 @@ interface Props {
   editData?: IGroup;
 }
 
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>
+      {children}
+    </Text>
+  );
+}
+
 export function CreateGroupSheet({ onClose, editData }: Props) {
-  const isEdit = !!editData?._id;
   const insets = useSafeAreaInsets();
-  const { toast } = useToast();
-  const [name, setName] = useState(editData?.name || '');
-  const [description, setDescription] = useState(editData?.description || '');
-  
-  // Extract existing member IDs
-  const initialMembers = editData?.members?.map((m: any) => typeof m === 'string' ? m : m.user?._id || m._id).filter(Boolean) || [];
-  const [selectedIds, setSelectedIds] = useState<string[]>(initialMembers);
-  
-  const { data: beneficiariesData, isLoading: loadingBeneficiaries } = useBeneficiaries();
-  
-  const { mutateAsync: createGroup, isPending: isCreating } = useCreateGroup();
-  const { mutateAsync: updateGroup, isPending: isUpdating } = useUpdateGroup(editData?._id || '');
-  const { mutateAsync: updateMembers, isPending: isUpdatingMembers } = useAddGroupMembers(editData?._id || '');
+  const isEdit = Boolean(editData?._id);
+  const [name, setName] = useState(editData?.name ?? '');
+  const [description, setDescription] = useState(editData?.description ?? '');
+  const [color, setColor] = useState(editData?.color ?? 1);
+  const createGroup = useCreateGroup();
+  const updateGroup = useUpdateGroup(editData?._id ?? '');
+  const isPending = createGroup.isPending || updateGroup.isPending;
+  const payload = buildGroupPayload({ name, description, color });
 
-  const beneficiariesList = useMemo(() => {
-    if (Array.isArray(beneficiariesData)) return beneficiariesData;
-    if ((beneficiariesData as any)?.docs) return (beneficiariesData as any).docs;
-    return [];
-  }, [beneficiariesData]);
+  const close = useCallback(() => {
+    onClose();
+  }, [onClose]);
 
-  const toggleSelection = (id: string) => {
+  const selectColor = useCallback((nextColor: number) => {
     Haptics.selectionAsync();
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
+    setColor(nextColor);
+  }, []);
 
-  const handleSave = async () => {
-    if (!name.trim()) return;
+  const submit = useCallback(async () => {
+    const nextPayload = buildGroupPayload({ name, description, color });
+    if (!nextPayload) {
+      toast('Add a group name and choose a colour.', 'error');
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
     try {
       if (isEdit) {
-        // 1. Update Group Details
-        await updateGroup({ name: name.trim(), description: description.trim() });
-        // 2. Update Members
-        await updateMembers({ beneficiaryIds: selectedIds });
-        onClose();
+        await updateGroup.mutateAsync(nextPayload);
       } else {
-        // 1. Create Group
-        const res = await createGroup({ name: name.trim(), description: description.trim() });
-        const groupId = (res as any)?.data?._id || (res as any)?._id;
-        if (groupId && selectedIds.length > 0) {
-          // Wait briefly, then update members using the generic mutation (but we need the ID)
-          // Since our hook uses the editData._id which is null on creation, we shouldn't use the hook directly for the new ID if it's strictly bound.
-          // Let's import the endpoint and 'post' directly for the new group members, or rely on a different approach.
-          const { post } = require('@/api/mutations');
-          const endpoint = require('@/api/endpoint').default;
-          await post(endpoint.groupMembers.replace(':id', groupId), { beneficiaryIds: selectedIds });
-        }
-        onClose();
+        await createGroup.mutateAsync(nextPayload);
       }
-    } catch (err: any) {
-      toast(err?.message || 'Failed to save group.', 'error');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onClose();
+    } catch {
+      // Mutation hooks own the warm error toast. Keep the form intact for retry.
     }
-  };
+  }, [color, createGroup, description, isEdit, name, onClose, updateGroup]);
 
-  const isPending = isCreating || isUpdating || isUpdatingMembers;
+  const footer = (
+    <View style={{
+      flexDirection: 'row',
+      gap: 12,
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: Math.max(insets.bottom, 12) + 8,
+      borderTopWidth: 1,
+      borderTopColor: COLORS.strokeWeaker,
+      backgroundColor: COLORS.background,
+    }}>
+      <Button variant="secondary" size="lg" className="h-14 flex-1" textClassName="text-base font-bold" onPress={close}>
+        Dismiss
+      </Button>
+      <Button
+        size="lg"
+        className="h-14 flex-1 bg-fill-strong"
+        textClassName="text-base font-bold text-white"
+        loading={isPending}
+        disabled={!payload || isPending}
+        onPress={() => void submit()}
+      >
+        {isEdit ? 'Save changes' : 'Create group'}
+      </Button>
+    </View>
+  );
 
   return (
-    <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom ? insets.bottom + 24 : 60 }}>
-      {/* Header */}
-      <View className="px-6 pt-2 pb-4 flex-row items-center justify-between border-b border-stroke-weaker">
-        <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
-          {isEdit ? 'Edit Circle' : 'Create Circle'}
-        </Text>
-        <TouchableOpacity onPress={onClose} className="p-2 rounded-full bg-fill-weaker">
-          <X size={18} color={COLORS.textWeak} />
-        </TouchableOpacity>
-      </View>
-
-      <View className="px-6 pt-6 gap-6">
-        {/* Name Input */}
-        <View className="gap-2">
-          <Text className="text-xs text-text-weak uppercase tracking-widest font-bold" style={{ fontFamily: FONTS.sansBold }}>
-            Circle Name
-          </Text>
-          <BottomSheetTextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="e.g. Family, Close Friends"
-            placeholderTextColor={COLORS.textMuted}
-            className="h-14 bg-fill-weaker border border-stroke-weaker rounded-2xl px-4 text-base text-text-strong"
-            style={{ fontFamily: FONTS.sansMedium }}
-          />
-        </View>
-
-        {/* Description Input */}
-        <View className="gap-2">
-          <Text className="text-xs text-text-weak uppercase tracking-widest font-bold" style={{ fontFamily: FONTS.sansBold }}>
-            Description (Optional)
-          </Text>
-          <BottomSheetTextInput
-            value={description}
-            onChangeText={setDescription}
-            placeholder="What is this circle for?"
-            placeholderTextColor={COLORS.textMuted}
-            multiline
-            className="min-h-[100px] bg-fill-weaker border border-stroke-weaker rounded-2xl px-4 py-4 text-base text-text-strong"
-            style={{ fontFamily: FONTS.sans, textAlignVertical: 'top' }}
-          />
-        </View>
-
-        {/* Members Selection */}
-        <View className="gap-2">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xs text-text-weak uppercase tracking-widest font-bold" style={{ fontFamily: FONTS.sansBold }}>
-              Select Members
+    <View style={{ flex: 1 }}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={{ flex: 1 }}>
+          <View style={{ minHeight: 68, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>
+              {isEdit ? 'Edit Group' : 'Create Group'}
             </Text>
-            <Text className="text-xs text-brand font-bold" style={{ fontFamily: FONTS.sansBold }}>
-              {selectedIds.length} Selected
-            </Text>
+            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); close(); }} accessibilityRole="button" accessibilityLabel="Close create group" style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak }}>
+              <X size={22} color={COLORS.textStrong} />
+            </TouchableOpacity>
           </View>
-          
-          <View className="bg-fill-weaker border border-stroke-weaker rounded-[24px] p-2">
-            {loadingBeneficiaries ? (
-              <View className="py-8 items-center justify-center">
-                <Spinner />
-              </View>
-            ) : beneficiariesList.length > 0 ? (
-              beneficiariesList.map((b: any, i: number) => {
-                const bId = b._id;
-                if (!bId) return null;
-                const isSelected = selectedIds.includes(bId);
-                return (
-                  <TouchableOpacity
-                    key={bId}
-                    onPress={() => toggleSelection(bId)}
-                    className={`flex-row items-center justify-between p-3 rounded-2xl ${isSelected ? 'bg-white shadow-sm' : ''}`}
-                  >
-                    <View className="flex-row items-center gap-3 flex-1">
-                      <View className="size-10 rounded-full bg-brand/10 items-center justify-center border border-brand/20">
-                        <Users size={18} color={COLORS.brand} />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-base text-text-strong" numberOfLines={1} style={{ fontFamily: FONTS.sansMedium }}>
-                          {b.name || b.first_name || b.email}
-                        </Text>
-                        <Text className="text-xs text-text-weak" style={{ fontFamily: FONTS.sans }}>
-                          {b.relationship || 'Trustee'}
-                        </Text>
-                      </View>
-                    </View>
-                    {isSelected && (
-                      <View className="size-6 bg-brand rounded-full items-center justify-center">
-                        <Check size={14} color="white" strokeWidth={3} />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })
-            ) : (
-              <View className="py-8 items-center justify-center gap-2">
-                <Text className="text-sm text-text-weak text-center" style={{ fontFamily: FONTS.sans }}>
-                  You don't have any trustees yet.
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
 
-        {/* Action Button */}
-        <Button
-          onPress={handleSave}
-          loading={isPending}
-          disabled={!name.trim() || isPending}
-          size="lg"
-          className="h-14 bg-brand rounded-full mt-2"
-        >
-          <Text className="text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>
-            {isEdit ? 'Save Changes' : 'Create Circle'}
-          </Text>
-        </Button>
-      </View>
-    </BottomSheetScrollView>
+          <BottomSheetScrollView
+            style={{ flex: 1 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28, gap: 20 }}
+          >
+            <View style={{ gap: 8 }}>
+              <FieldLabel>Group name</FieldLabel>
+              <BottomSheetTextInput
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+                placeholderTextColor={COLORS.textMuted}
+                style={{ height: 56, borderWidth: 1, borderColor: COLORS.strokeWeak, borderRadius: 12, backgroundColor: COLORS.card, paddingHorizontal: 16, fontFamily: FONTS.sans, fontSize: 16, color: COLORS.textStrong }}
+              />
+            </View>
+
+            <View style={{ gap: 8 }}>
+              <FieldLabel>Description (Optional)</FieldLabel>
+              <BottomSheetTextInput
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Enter description here"
+                placeholderTextColor={COLORS.textMuted}
+                multiline
+                style={{ minHeight: 112, borderWidth: 1, borderColor: COLORS.strokeWeak, borderRadius: 16, backgroundColor: COLORS.card, paddingHorizontal: 16, paddingVertical: 14, fontFamily: FONTS.sans, fontSize: 16, color: COLORS.textStrong, textAlignVertical: 'top' }}
+              />
+            </View>
+
+            <View style={{ gap: 14 }}>
+              <FieldLabel>Group colour</FieldLabel>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {GROUP_COLOR_PALETTE.map((swatch) => {
+                  const selected = color === swatch.id;
+                  return (
+                    <TouchableOpacity
+                      key={swatch.id}
+                      onPress={() => selectColor(swatch.id)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select group colour ${swatch.id + 1}`}
+                      accessibilityState={{ selected }}
+                      style={{ width: 48, height: 48, borderRadius: 6, backgroundColor: swatch.color, alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      {selected ? <Check size={24} color={COLORS.textInverse} strokeWidth={2.5} /> : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </BottomSheetScrollView>
+
+          {footer}
+        </View>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
