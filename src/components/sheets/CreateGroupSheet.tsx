@@ -98,7 +98,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
         <View style={{ flex: 1 }}>
           <View style={{ minHeight: 68, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>
-              {isEdit ? 'Edit Group' : 'Create Group'}
+              {isEdit ? 'Group Settings' : 'Create Group'}
             </Text>
             <TouchableOpacity onPress={() => { Haptics.selectionAsync(); close(); }} accessibilityRole="button" accessibilityLabel="Close create group" style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak }}>
               <X size={22} color={COLORS.textStrong} />

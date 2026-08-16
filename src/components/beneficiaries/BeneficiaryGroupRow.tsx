@@ -4,9 +4,8 @@ import { ChevronRight } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
 import { getGroupMemberCount } from '@/features/beneficiaries/collections';
+import { GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
 import type { IGroup } from '@/types';
-
-const ACCENTS = [COLORS.info, COLORS.success, COLORS.warning, COLORS.brand] as const;
 
 export const BeneficiaryGroupRow = memo(function BeneficiaryGroupRow({
   group,
@@ -18,6 +17,7 @@ export const BeneficiaryGroupRow = memo(function BeneficiaryGroupRow({
   onPress: () => void;
 }) {
   const count = getGroupMemberCount(group);
+  const color = GROUP_COLOR_PALETTE[group.color ?? 1]?.color ?? COLORS.info;
   const created = group.created_at
     ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(group.created_at))
     : null;
@@ -29,7 +29,7 @@ export const BeneficiaryGroupRow = memo(function BeneficiaryGroupRow({
     >
       <View className="flex-1">
         <View className="flex-row items-center">
-          <View className="mr-2.5 size-3 rounded-[4px]" style={{ backgroundColor: ACCENTS[index % ACCENTS.length] }} />
+          <View className="mr-2.5 size-3 rounded-[4px]" style={{ backgroundColor: color }} />
           <Text style={SETTINGS_TYPE.identityTitle}>
             {group.name}
           </Text>

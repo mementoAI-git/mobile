@@ -14,10 +14,12 @@ import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-aler
 import { useAddBeneficiary } from '@/hooks/mutations/use-beneficiary-mutations';
 import { useFileUpload } from '@/hooks/use-file-upload';
 import { useGroups } from '@/hooks/queries/use-groups';
-import type { IGroup } from '@/types';
+import type { IBeneficiary, IGroup } from '@/types';
+import { useUpdateBeneficiary } from '@/hooks/mutations/use-beneficiary-mutations';
 
 interface Props {
   onClose: () => void;
+  editData?: IBeneficiary;
 }
 
 interface PickedAvatar {
@@ -64,16 +66,24 @@ function SheetInput({
   );
 }
 
-export function AddBeneficiarySheet({ onClose }: Props) {
+export function AddBeneficiarySheet({ onClose, editData }: Props) {
+  const isEdit = Boolean(editData?._id || editData?.email);
   const insets = useSafeAreaInsets();
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [relationship, setRelationship] = useState('');
-  const [about, setAbout] = useState('');
+  const [email, setEmail] = useState(editData?.email || '');
+  const [name, setName] = useState(editData?.name || '');
+  const [relationship, setRelationship] = useState(editData?.relationship || '');
+  const [about, setAbout] = useState(editData?.about || '');
   const [groupSearch, setGroupSearch] = useState('');
-  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+  
+  const initialGroups = useMemo(() => {
+    if (!editData?.groups) return [];
+    return editData.groups.map(g => typeof g === 'string' ? g : (g as any)._id).filter(Boolean);
+  }, [editData]);
+
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(initialGroups);
   const [avatar, setAvatar] = useState<PickedAvatar | null>(null);
   const addBeneficiary = useAddBeneficiary();
+  const { mutateAsync: updateBeneficiary } = useUpdateBeneficiary();
   const { uploadFile, isUploading } = useFileUpload();
   const { data: groupsData } = useGroups();
 
@@ -129,7 +139,8 @@ export function AddBeneficiarySheet({ onClose }: Props) {
     ));
   }, []);
 
-  const isPending = addBeneficiary.isPending || isUploading;
+  const [isUpdating, setIsUpdating] = useState(false);
+  const isPending = addBeneficiary.isPending || isUploading || isUpdating;
   const canSubmit = Boolean(buildBeneficiaryInvitePayload({
     email,
     name,
@@ -170,13 +181,23 @@ export function AddBeneficiarySheet({ onClose }: Props) {
     if (!payload) return;
 
     try {
-      await addBeneficiary.mutateAsync(payload);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onClose();
+      if (isEdit) {
+        setIsUpdating(true);
+        // Ensure email isn't accidentally modified in payload for edits
+        await updateBeneficiary({ ...payload, id: editData?._id ?? editData?.email ?? '' });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        onClose();
+      } else {
+        await addBeneficiary.mutateAsync(payload);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        onClose();
+      }
     } catch (error: any) {
-      toast(error?.message || 'Couldn’t send the invite. Try again.', 'error');
+      toast(error?.message || 'Couldn’t save beneficiary. Try again.', 'error');
+    } finally {
+      setIsUpdating(false);
     }
-  }, [about, addBeneficiary, avatar, email, name, onClose, relationship, selectedGroupIds, uploadFile]);
+  }, [about, addBeneficiary, updateBeneficiary, isEdit, editData, avatar, email, name, onClose, relationship, selectedGroupIds, uploadFile]);
 
   const footer = (
     <View style={{
@@ -200,7 +221,7 @@ export function AddBeneficiarySheet({ onClose }: Props) {
         disabled={!canSubmit || isPending}
         onPress={() => void submit()}
       >
-        Send invite
+        {isEdit ? 'Save changes' : 'Send invite'}
       </Button>
     </View>
   );
@@ -211,7 +232,7 @@ export function AddBeneficiarySheet({ onClose }: Props) {
         <View style={{ flex: 1 }}>
           <View style={{ minHeight: 68, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>
-              Invite Beneficiary
+              {isEdit ? 'Edit Beneficiary' : 'Invite Beneficiary'}
             </Text>
             <TouchableOpacity onPress={() => { Haptics.selectionAsync(); close(); }} accessibilityRole="button" accessibilityLabel="Close invite beneficiary" style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak }}>
               <X size={22} color={COLORS.textStrong} />
@@ -225,12 +246,26 @@ export function AddBeneficiarySheet({ onClose }: Props) {
             contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28, gap: 20 }}
           >
             <TouchableOpacity onPress={pickAvatar} activeOpacity={0.82} style={{ width: 74, height: 74, borderRadius: 14, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak }}>
-              {avatar ? <Image source={{ uri: avatar.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" /> : <Pencil size={24} color={COLORS.textStrong} strokeWidth={1.8} />}
+              {avatar ? (
+                <Image source={{ uri: avatar.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+              ) : isEdit && (editData as any)?.avatar ? (
+                <Image source={{ uri: (editData as any).avatar }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+              ) : (
+                <Pencil size={24} color={COLORS.textStrong} strokeWidth={1.8} />
+              )}
             </TouchableOpacity>
 
             <View style={{ gap: 8 }}>
               <FieldLabel>Email address</FieldLabel>
-              <SheetInput value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
+              <SheetInput 
+                value={email} 
+                onChangeText={setEmail} 
+                keyboardType="email-address" 
+                autoCapitalize="none" 
+                autoCorrect={false} 
+                editable={!isEdit}
+                style={isEdit ? { color: COLORS.textMuted } : undefined}
+              />
             </View>
             <View style={{ gap: 8 }}>
               <FieldLabel>Beneficiary name</FieldLabel>

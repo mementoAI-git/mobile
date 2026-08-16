@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Text, View } from 'react-native';
 import { AlertTriangle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { Button } from '@/components/ui';
+import { AlertTriangleIcon, Button, ZapIcon } from '@/components/ui';
 import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 
@@ -21,6 +21,9 @@ interface SecurityConfirmationSheetProps {
   onConfirm?: () => void | Promise<unknown>;
   onClose?: () => void;
   subjectName?: string;
+  title?: string;
+  description?: string;
+  confirmLabel?: string;
 }
 
 const COPY: Record<ConfirmationKind, {
@@ -84,6 +87,9 @@ export function SecurityConfirmationSheet({
   onConfirm,
   onClose,
   subjectName,
+  title,
+  description,
+  confirmLabel,
 }: SecurityConfirmationSheetProps) {
   const [loading, setLoading] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
@@ -112,7 +118,8 @@ export function SecurityConfirmationSheet({
   return (
     <View style={{ paddingHorizontal: 20, paddingTop: 28, paddingBottom: 20 }}>
       <View style={{ alignItems: 'center' }}>
-        <AlertTriangle size={76} color={COLORS.warning} fill={COLORS.warning} />
+        {/* <AlertTriangle size={76} color={COLORS.warning} fill={COLORS.warning} /> */}
+        <AlertTriangleIcon size={116} color={COLORS.warning} />
         <Text
           style={{
             maxWidth: 310,
@@ -121,9 +128,9 @@ export function SecurityConfirmationSheet({
             marginTop: 30,
           }}
         >
-          {kind === 'remove-beneficiary' && subjectName
+          {title || (kind === 'remove-beneficiary' && subjectName
             ? `Remove ${subjectName}?`
-            : copy.title}
+            : copy?.title)}
         </Text>
         <Text
           style={{
@@ -133,7 +140,7 @@ export function SecurityConfirmationSheet({
             marginTop: 12,
           }}
         >
-          {copy.description}
+          {description || copy?.description}
         </Text>
         {unavailable && (
           <Text
@@ -161,13 +168,13 @@ export function SecurityConfirmationSheet({
           Go back
         </Button>
         <Button
-          variant={copy.destructive ? 'destructive' : 'primary'}
+          variant={copy?.destructive ? 'destructive' : 'primary'}
           size="lg"
-          className={copy.destructive ? 'h-14 flex-1' : 'h-14 flex-1 bg-text-strong'}
+          className={copy?.destructive ? 'h-14 flex-1' : 'h-14 flex-1 bg-text-strong'}
           loading={loading}
           onPress={confirm}
         >
-          {copy.confirm}
+          {confirmLabel || copy?.confirm}
         </Button>
       </View>
     </View>
