@@ -167,3 +167,12 @@ export const PauseIcon = ({ size = 32 }: { size?: number }) => (
     />
   </Svg>
 );
+
+export const AlertTriangleIcon = ({ size = 116, color = '#FEC62E' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none">
+    <Path
+      fill={color}
+      d="M52.105 23.942a6.774 6.774 0 0 1 11.79 0l30.69 53.768c2.61 4.575-.668 10.29-5.903 10.29H27.324c-5.235 0-8.512-5.715-5.902-10.29l30.683-53.768ZM54.25 46.75v7.5a3.75 3.75 0 0 0 7.5 0v-7.5a3.75 3.75 0 1 0-7.5 0ZM58 63.625a5.625 5.625 0 1 0 0 11.25 5.625 5.625 0 0 0 0-11.25Z"
+    />
+  </Svg>
+);

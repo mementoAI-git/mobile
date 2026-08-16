@@ -183,7 +183,7 @@ export default function BeneficiariesSettingsScreen() {
                     <BeneficiaryPersonRow
                       key={beneficiary._id ?? beneficiary.email}
                       beneficiary={beneficiary}
-                      onPress={() => showPerson(beneficiary)}
+                      onPress={() => router.push(`/settings/beneficiary/${beneficiary._id ?? beneficiary.email}` as any)}
                     />
                   ))
                   : groups.map((group, index) => (
@@ -191,7 +191,7 @@ export default function BeneficiariesSettingsScreen() {
                       key={group._id}
                       group={group}
                       index={index}
-                      onPress={() => editGroup(group)}
+                      onPress={() => router.push(`/settings/group/${group._id}` as any)}
                     />
                   ))}
                 <Button

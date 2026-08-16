@@ -64,3 +64,21 @@ export function useAddGroupMembers(groupId: string) {
     },
   });
 }
+
+export function useRemoveGroupMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ groupId, beneficiaryId }: { groupId: string; beneficiaryId: string }) => 
+      del(endpoint.groupMember.replace(':id', groupId).replace(':beneficiaryId', beneficiaryId)),
+    onSuccess: () => {
+      // Refresh both to ensure our UI list state filters properly
+      queryClient.invalidateQueries({ queryKey: queryKeys.groups });
+      queryClient.invalidateQueries({ queryKey: queryKeys.beneficiaries });
+      toast('Member removed', 'success');
+    },
+    onError: () => {
+      toast('Couldn’t remove the member. Try again.', 'error');
+    },
+  });
+}

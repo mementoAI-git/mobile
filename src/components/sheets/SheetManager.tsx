@@ -29,6 +29,7 @@ import { EditProfileSheet } from './EditProfileSheet';
 import { ChangePasswordSheet } from './ChangePasswordSheet';
 import { SetupTwoFactorSheet } from './SetupTwoFactorSheet';
 import { SecurityConfirmationSheet } from './SecurityConfirmationSheet';
+import { AddMemberToGroupSheet } from './AddMemberToGroupSheet';
 import { COLORS } from '@/constants/tokens';
 
 const SHEET_CONFIGS: Record<string, {
@@ -46,6 +47,7 @@ const SHEET_CONFIGS: Record<string, {
   'memory-actions': { component: MemoryActionsSheet, dynamic: true },
   'capsule-actions': { component: CapsuleActionsSheet, dynamic: true },
   'share-memory': { component: ShareMemorySheet, dynamic: true },
+  'add-member-to-group': { component: AddMemberToGroupSheet, snapPoints: ['88%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
   'create-group': { component: CreateGroupSheet, snapPoints: ['78%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
   'quick-capture': { component: QuickCaptureSheet, dynamic: true, keyboardBlurBehavior: 'none' },
   'memory-insights': { component: MemoryInsightsSheet, snapPoints: ['88%'] },
@@ -67,7 +69,7 @@ const SHEET_CONFIGS: Record<string, {
 const SELF_MANAGED = new Set([
   'create-capsule', 'capsule-detail', 'memory-insights',
   'create-memory', 'create-group', 'add-beneficiary', 'streak',
-  'edit-profile',
+  'edit-profile', 'add-member-to-group',
   'change-password', 'setup-two-factor',
 ]);
 

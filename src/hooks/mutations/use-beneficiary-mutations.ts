@@ -1,8 +1,19 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { post, del } from '@/api/mutations';
+import { post, del, put } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import type { CreateBeneficiaryBody, IBeneficiary } from '@/types';
+
+export function useUpdateBeneficiary() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateBeneficiaryBody & { id: string }) =>
+      put<IBeneficiary>(endpoint.beneficiary.replace(':id', payload.id), payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.beneficiaries });
+    },
+  });
+}
 
 export function useAddBeneficiary() {
   const queryClient = useQueryClient();

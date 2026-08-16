@@ -4,9 +4,11 @@
   "main": "index.ts",
   "scripts": {
     "start": "npx expo start --clear",
-    "android": "npx expo start --android --port 3000",
+    "prebuild": "npx expo prebuild --clean",
+    "android:run": "npx expo start --android --port 3000",
+    "android": "npx expo run:android",
     "ios": "npx expo run:ios",
-    "ios:run": "npx expo run:ios",
+    "ios:run": "npx expo start --ios --port 3000",
     "web": "npx expo start --web",
     "lint": "eslint . --quiet",
     "test": "bun test",
