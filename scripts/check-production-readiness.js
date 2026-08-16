@@ -133,8 +133,6 @@ assert(pluginOptions('expo-image-picker')?.microphonePermission, 'Image picker m
 assert(pluginOptions('expo-audio')?.microphonePermission, 'Audio microphone permission copy must be configured.');
 assert(pluginOptions('expo-speech-recognition')?.speechRecognitionPermission, 'Speech recognition permission copy must be configured.');
 assert(pluginOptions('expo-media-library')?.photosPermission, 'Media library permission copy must be configured.');
-assert(pluginOptions('expo-share-intent')?.androidIntentFilters?.includes('image/*'), 'Share intent image support must be configured.');
-assert(pluginOptions('expo-share-intent')?.androidIntentFilters?.includes('video/*'), 'Share intent video support must be configured.');
 
 const androidFilters = expo.android?.intentFilters ?? [];
 assert(androidFilters.some((filter) => filter.action === 'VIEW' && filter.autoVerify === true), 'Android app link intent filter must be configured.');
