@@ -5,11 +5,39 @@ import {
   getComposerTextScrollEnabled,
   getComposerOverlayBottomPadding,
   getComposerOverlayMaxHeight,
+  getChatComposerBottomPadding,
+  getFloatingDockSafeAreaOverlap,
   getExpandedComposerTextMaxHeight,
   shouldUseExpandedTextComposer,
 } from './composer-layout';
 
 describe('chat composer layout', () => {
+  test('keeps mic and send visible while disabling an empty send action', async () => {
+    const composer = await import('./composer-layout');
+    expect(composer.getChatComposerControls).toBeFunction();
+
+    expect(composer.getChatComposerControls({
+      anyUploading: false,
+      disabled: false,
+      hasContent: false,
+      isRecording: false,
+      loading: false,
+    })).toEqual({
+      sendDisabled: true,
+      showMic: true,
+      showSend: true,
+      showStop: false,
+    });
+
+    expect(composer.getChatComposerControls({
+      anyUploading: false,
+      disabled: false,
+      hasContent: true,
+      isRecording: false,
+      loading: false,
+    }).sendDisabled).toBe(false);
+  });
+
   test('expands text height to include padding before enabling scrolling', () => {
     expect(getComposerTextHeight({
       measuredHeight: 72,
@@ -68,6 +96,27 @@ describe('chat composer layout', () => {
       replyQuoteHeight: 0,
       gap: 10,
     })).toBe(96);
+  });
+
+  test('keeps the composer flush with a bottom safe area owned by its screen', () => {
+    expect(getChatComposerBottomPadding({
+      keyboardVisible: false,
+      bottomInset: 34,
+      parentOwnsBottomSafeArea: true,
+      keyboardGap: 8,
+    })).toBe(0);
+
+    expect(getChatComposerBottomPadding({
+      keyboardVisible: false,
+      bottomInset: 34,
+      parentOwnsBottomSafeArea: false,
+      keyboardGap: 8,
+    })).toBe(34);
+  });
+
+  test('matches the tab dock overlap into the bottom safe area', () => {
+    expect(getFloatingDockSafeAreaOverlap({ dockHeight: 58, anchorOffset: 24 })).toBe(5);
+    expect(getFloatingDockSafeAreaOverlap({ dockHeight: 60, anchorOffset: 24 })).toBe(6);
   });
 
   test('keeps one-line text compact until the text needs expanded composer space', () => {

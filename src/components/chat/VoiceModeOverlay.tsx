@@ -15,16 +15,23 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useVoiceMode, VOICE_OPTIONS, VoiceOption } from '@/hooks/use-voice-mode';
+import { VoiceUpgradeScreen } from '@/components/chat/VoiceUpgradeScreen';
+import { Button } from '@/components/ui';
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+} from 'react-native-safe-area-context';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 
 interface VoiceModeOverlayProps {
   visible: boolean;
   onClose: () => void;
+  memoryId?: string | null;
   conversationTitle?: string;
 }
 
-export function VoiceModeOverlay({ visible, onClose, conversationTitle = 'AI Companion' }: VoiceModeOverlayProps) {
+export function VoiceModeOverlay({ visible, onClose, memoryId, conversationTitle = 'AI Companion' }: VoiceModeOverlayProps) {
   const {
     isConnected,
     isConnecting,
@@ -35,10 +42,11 @@ export function VoiceModeOverlay({ visible, onClose, conversationTitle = 'AI Com
     aiSpeechText,
     userSpeechText,
     isAiSpeaking,
+    connectionFailure,
     connect,
     disconnect,
     toggleMute,
-  } = useVoiceMode();
+  } = useVoiceMode({ memoryId });
 
   const [showSettings, setShowSettings] = useState(false);
 
@@ -134,7 +142,11 @@ export function VoiceModeOverlay({ visible, onClose, conversationTitle = 'AI Com
       transparent={true}
       onRequestClose={handleEndCall}
     >
-      <View className="flex-1 bg-background">
+      <SafeAreaProvider>
+        {connectionFailure?.kind === 'upgrade-required' ? (
+          <VoiceUpgradeScreen onClose={handleEndCall} />
+        ) : (
+      <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
         
         {/* Top Header */}
@@ -205,6 +217,8 @@ export function VoiceModeOverlay({ visible, onClose, conversationTitle = 'AI Com
               <Text className="text-xs text-text-weak font-medium" style={{ fontFamily: FONTS.sansMedium }}>
                 {isConnecting 
                   ? 'Connecting secure link...' 
+                  : connectionFailure?.kind === 'connection-error'
+                    ? 'Couldn’t connect'
                   : isMuted 
                     ? 'Microphone muted' 
                     : isConnected 
@@ -231,7 +245,11 @@ export function VoiceModeOverlay({ visible, onClose, conversationTitle = 'AI Com
               color: isAiSpeaking ? COLORS.textStrong : COLORS.textBase
             }}
           >
-            {isAiSpeaking ? aiSpeechText : (userSpeechText || 'Listening for your voice...')}
+            {connectionFailure?.kind === 'connection-error'
+              ? connectionFailure.message
+              : isAiSpeaking
+                ? aiSpeechText
+                : (userSpeechText || 'Listening for your voice...')}
           </Text>
         </Animated.View>
 
@@ -259,6 +277,27 @@ export function VoiceModeOverlay({ visible, onClose, conversationTitle = 'AI Com
               </Text>
             </View>
           )}
+          {connectionFailure?.kind === 'connection-error' && (
+            <View className="w-full px-6 gap-3">
+              <Button
+                fullWidth
+                onPress={() => { void connect(); }}
+                className="h-14"
+                textClassName="text-base font-semibold"
+              >
+                Try again
+              </Button>
+              <Button
+                fullWidth
+                onPress={handleEndCall}
+                variant="outline"
+                className="h-14 bg-card"
+                textClassName="text-base"
+              >
+                Close
+              </Button>
+            </View>
+          )}
         </View>
 
         {/* Voice settings drawer (Modal slide-in) */}
@@ -269,6 +308,7 @@ export function VoiceModeOverlay({ visible, onClose, conversationTitle = 'AI Com
             animationType="none"
             onRequestClose={() => setShowSettings(false)}
           >
+            <SafeAreaProvider>
             <View className="flex-1 bg-black/35 justify-end">
               {/* Tap backdrop to close */}
               <TouchableOpacity 
@@ -277,10 +317,11 @@ export function VoiceModeOverlay({ visible, onClose, conversationTitle = 'AI Com
                 onPress={() => setShowSettings(false)} 
               />
               
+              <SafeAreaView edges={['bottom']} style={styles.settingsSafeArea}>
               <Animated.View 
                 entering={SlideInDown.springify().damping(22)}
                 exiting={SlideOutDown}
-                className="bg-white rounded-t-[40px] px-6 pt-6 pb-12 gap-6 shadow-2xl border-t border-stroke-weaker z-10"
+                className="bg-white rounded-t-[40px] px-6 pt-6 pb-6 gap-6 shadow-2xl border-t border-stroke-weaker z-10"
               >
                 <View className="flex-row items-center justify-between">
                   <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
@@ -326,10 +367,14 @@ export function VoiceModeOverlay({ visible, onClose, conversationTitle = 'AI Com
                   })}
                 </ScrollView>
               </Animated.View>
+              </SafeAreaView>
             </View>
+            </SafeAreaProvider>
           </Modal>
         )}
-      </View>
+      </SafeAreaView>
+        )}
+      </SafeAreaProvider>
     </Modal>
   );
 }
@@ -339,5 +384,10 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
+  },
+  settingsSafeArea: {
+    backgroundColor: COLORS.card,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
   },
 });

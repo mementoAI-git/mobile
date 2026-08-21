@@ -16,6 +16,7 @@ import type { ChatReplyQuote } from '@/lib/utils';
 import type { IMessageAttachment } from '@/types';
 import { resolveChatConversationId } from '@/features/chat/navigation';
 import type { ChatListMessage } from '@/features/chat/message-list';
+import { mergeConversationMessagePages } from '@/features/chat/conversation-pagination';
 
 export function useChatLogic() {
   const { id, type, promptTitle } = useLocalSearchParams<{ id?: string; type?: string; promptTitle?: string }>();
@@ -29,6 +30,7 @@ export function useChatLogic() {
   // ── Chat mode (open vs deep_dive) ────────────────────────────────────────
   const [chatMode, setChatMode] = useState<ChatMode>('open');
   const [deepDiveDimension, setDeepDiveDimension] = useState<LifeDimension | null>(null);
+  const [voiceModeVisible, setVoiceModeVisible] = useState(false);
 
   const isPromptType = type === 'prompt';
   const { data: promptMemoryRes, isLoading: isLoadingPromptMemory } = useMemoryByPrompt(
@@ -46,9 +48,13 @@ export function useChatLogic() {
         profile?.primary_conversation_id ?? userPrimaryConversationId,
       );
 
-  const { data: serverMessages, isLoading: isLoadingMessages } = useConversationMessages(
-    activeChatId ?? '',
-  );
+  const {
+    data: serverMessagePages,
+    fetchNextPage: fetchOlderMessages,
+    hasNextPage: hasOlderMessages,
+    isFetchingNextPage: isFetchingOlderMessages,
+    isLoading: isLoadingMessages,
+  } = useConversationMessages(activeChatId ?? '');
 
   const { messages, streaming, streamingText, send: streamSend, abort: stop } = useStreamChat(
     activeChatId ?? undefined,
@@ -58,12 +64,14 @@ export function useChatLogic() {
   const enrichmentStats = useEnrichmentStats();
 
   // FlashList v2 renders chronological data from the bottom without inversion.
+  const persistedMessages = useMemo(
+    () => mergeConversationMessagePages(serverMessagePages?.pages ?? []),
+    [serverMessagePages?.pages],
+  );
+  const serverMessages = serverMessagePages?.pages[0];
   const allMessages = useMemo(
-    () => [
-      ...(serverMessages?.messages ?? []),
-      ...messages,
-    ],
-    [serverMessages?.messages, messages],
+    () => [...persistedMessages, ...messages],
+    [persistedMessages, messages],
   );
 
   const handleBack = useCallback(() => {
@@ -77,17 +85,14 @@ export function useChatLogic() {
 
   const handleActions = useCallback(() => {
     Haptics.selectionAsync();
-    openSheet('chat-actions', {
-      chatId: activeChatId || '',
-      chatMode,
-      deepDiveDimension,
-      enrichmentStats: enrichmentStats.stats,
-      onSetChatMode: (mode: ChatMode, dimension?: LifeDimension | null) => {
-        setChatMode(mode);
-        setDeepDiveDimension(dimension ?? null);
+    router.push({
+      pathname: '/chat/settings',
+      params: {
+        chatId: activeChatId || '',
+        enrichmentStats: JSON.stringify(enrichmentStats.stats || {}),
       },
     });
-  }, [activeChatId, chatMode, deepDiveDimension, enrichmentStats.stats, openSheet]);
+  }, [activeChatId, enrichmentStats.stats, router]);
 
   const send = useCallback(
     async (
@@ -147,6 +152,9 @@ export function useChatLogic() {
     serverMessages,
     isLoading,
     allMessages,
+    fetchOlderMessages,
+    hasOlderMessages,
+    isFetchingOlderMessages,
     streaming,
     streamingText,
     send,
@@ -160,5 +168,8 @@ export function useChatLogic() {
     handleExitDeepDive,
     // Enrichment
     enrichmentStats,
+    // Voice Mode
+    voiceModeVisible,
+    setVoiceModeVisible,
   };
 }

@@ -34,6 +34,21 @@ interface OverlayBottomPaddingInput {
   gap: number;
 }
 
+interface ChatComposerBottomPaddingInput {
+  keyboardVisible: boolean;
+  bottomInset: number;
+  parentOwnsBottomSafeArea: boolean;
+  keyboardGap: number;
+}
+
+interface ChatComposerControlsInput {
+  anyUploading: boolean;
+  disabled: boolean;
+  hasContent: boolean;
+  isRecording: boolean;
+  loading: boolean;
+}
+
 interface ExpandedTextComposerInput {
   hasAttachments: boolean;
   hasText: boolean;
@@ -89,6 +104,41 @@ export function getComposerOverlayBottomPadding({
   gap,
 }: OverlayBottomPaddingInput) {
   return collapsedComposerHeight + replyQuoteHeight + gap;
+}
+
+export function getChatComposerBottomPadding({
+  keyboardVisible,
+  bottomInset,
+  parentOwnsBottomSafeArea,
+  keyboardGap,
+}: ChatComposerBottomPaddingInput) {
+  if (keyboardVisible) return keyboardGap;
+  return parentOwnsBottomSafeArea ? 0 : bottomInset;
+}
+
+export function getChatComposerControls({
+  anyUploading,
+  disabled,
+  hasContent,
+  isRecording,
+  loading,
+}: ChatComposerControlsInput) {
+  return {
+    showStop: loading,
+    showMic: !loading,
+    showSend: !loading,
+    sendDisabled: disabled || !hasContent || anyUploading || isRecording,
+  };
+}
+
+export function getFloatingDockSafeAreaOverlap({
+  dockHeight,
+  anchorOffset,
+}: {
+  dockHeight: number;
+  anchorOffset: number;
+}) {
+  return Math.max(0, dockHeight / 2 - anchorOffset);
 }
 
 export function shouldUseExpandedTextComposer({

@@ -3,7 +3,7 @@ import {
   View, TextInput, TouchableOpacity, Platform, StyleSheet,
   Keyboard, ScrollView, Image, ActivityIndicator, AccessibilityInfo, useWindowDimensions, InteractionManager,
 } from 'react-native';
-import { ArrowUp, AudioLines, Mic, Square, Plus, X, FileText, PhoneCall, Play } from 'lucide-react-native';
+import { ArrowUp, AudioLines, Mic, Square, Plus, X, FileText, Play } from 'lucide-react-native';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -25,7 +25,7 @@ import Animated, {
   withTiming,
   FadeInDown,
 } from 'react-native-reanimated';
-import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { scale, verticalScale } from 'react-native-size-matters';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVoiceToText } from '@/hooks/use-voice-to-text';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
@@ -48,6 +48,8 @@ import { useAttachmentUploads } from '@/features/media/use-attachment-uploads';
 import {
   getComposerTextHeight,
   getComposerTextScrollEnabled,
+  getChatComposerControls,
+  getChatComposerBottomPadding,
   getExpandedComposerTextMaxHeight,
   shouldUseExpandedTextComposer,
 } from '@/features/chat/composer-layout';
@@ -66,29 +68,29 @@ export interface ChatSendPayload {
 
 interface ChatInputProps {
   onSend: (payload: ChatSendPayload) => void;
-  onVoice?: () => void;
   onStop?: () => void;
   disabled?: boolean;
   placeholder?: string;
   loading?: boolean;
   maxComposerHeight?: number;
+  parentOwnsBottomSafeArea?: boolean;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const INPUT_PILL_RADIUS = 999;
-const INPUT_PILL_INSET = scale(8);
-const INPUT_PILL_GAP = scale(6);
-const SECONDARY_ACTION_SIZE = scale(40);
-const PRIMARY_ACTION_SIZE = scale(50);
-const EXPANDED_ACTION_SIZE = scale(52);
-const INPUT_PILL_VERTICAL_INSET = scale(6);
+const INPUT_PILL_INSET = 4;
+const INPUT_PILL_GAP = 4;
+const SECONDARY_ACTION_SIZE = 36;
+const PRIMARY_ACTION_SIZE = 36;
+const EXPANDED_ACTION_SIZE = 44;
+const INPUT_PILL_VERTICAL_INSET = 6;
 const INPUT_PILL_HEIGHT = PRIMARY_ACTION_SIZE + INPUT_PILL_VERTICAL_INSET * 2;
 const COMPACT_COMPOSER_CONTENT_RADIUS = scale(24);
-const PLUS_ICON_SURFACE_SIZE = scale(34);
+const PLUS_ICON_SURFACE_SIZE = 36;
 const PLUS_ICON_EMPTY_RADIUS = PLUS_ICON_SURFACE_SIZE / 2;
 const PLUS_ICON_ACTIVE_RADIUS = scale(12);
-const ACTION_SQUIRCLE_RADIUS = scale(15);
+const ACTION_SQUIRCLE_RADIUS = 18;
 // const COMPACT_TEXT_MIN_HEIGHT = verticalScale(24);
 const COMPACT_TEXT_MIN_HEIGHT = Platform.select({
   ios: verticalScale(34),
@@ -110,12 +112,12 @@ const COMPACT_TEXT_EXPANSION_BUFFER = scale(8);
 
 export function ChatInput({
   onSend,
-  onVoice,
   onStop,
   disabled,
-  placeholder = 'Share a thought',
+  placeholder = 'Type here to start a conversation',
   loading,
   maxComposerHeight,
+  parentOwnsBottomSafeArea = false,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const [multiline, setMultiline] = useState(false);
@@ -425,11 +427,21 @@ export function ChatInput({
   const hasAttachments = attachments.length > 0;
   const hasContent = text.trim().length > 0 || attachmentState.readyCount > 0;
   const hasText = text.trim().length > 0;
-  const showStop = loading;
-  const showSend = !loading && hasContent && !isRecording && !anyUploading;
+  const controls = getChatComposerControls({
+    anyUploading,
+    disabled: Boolean(disabled),
+    hasContent,
+    isRecording,
+    loading: Boolean(loading),
+  });
   const previewable = attachmentState.previewable;
 
-  const bottomPadding = keyboardVisible ? verticalScale(8) : insets.bottom;
+  const bottomPadding = getChatComposerBottomPadding({
+    keyboardVisible,
+    bottomInset: insets.bottom,
+    parentOwnsBottomSafeArea,
+    keyboardGap: verticalScale(8),
+  });
   const fallbackComposerMaxHeight = Math.max(
     verticalScale(180),
     windowHeight - insets.top - Math.max(insets.bottom, verticalScale(8)) - CHAT_HEADER_RESERVE,
@@ -667,7 +679,7 @@ export function ChatInput({
   return (
     <Animated.View
       entering={FadeInDown.duration(400)}
-      style={{ paddingBottom: bottomPadding, paddingHorizontal: 12, paddingTop: 6 }}
+      style={{ paddingBottom: bottomPadding, paddingHorizontal: 16, paddingTop: 4 }}
     >
       {/* Preview modal for selected media assets */}
       <MediaPreviewModal
@@ -796,7 +808,7 @@ export function ChatInput({
           </View>
 
           {/* ── Action buttons ── */}
-          {showStop ? (
+          {controls.showStop ? (
             <Animated.View style={btnAnimStyle}>
               <TouchableOpacity
                 onPress={handleStop}
@@ -812,50 +824,52 @@ export function ChatInput({
                 />
               </TouchableOpacity>
             </Animated.View>
-          ) : showSend ? (
-            <Animated.View style={btnAnimStyle}>
-              <TouchableOpacity
-                onPress={handleSend}
-                onPressIn={() => { btnScale.value = withSpring(0.9); }}
-                onPressOut={() => { btnScale.value = withSpring(1); }}
-                disabled={disabled}
-                style={useExpandedComposer ? styles.expandedSendButton : styles.compactSendButton}
-              >
-                {anyUploading ? (
-                  <ActivityIndicator color={COLORS.textInverse} />
-                ) : (
-                  <ArrowUp
-                    size={useExpandedComposer ? scale(22) : scale(20)}
-                    color={COLORS.textInverse}
-                    strokeWidth={2.5}
-                  />
-                )}
-              </TouchableOpacity>
-            </Animated.View>
           ) : (
             <View style={styles.compactActionRow}>
-              <Animated.View style={micPulseStyle}>
-                <RecordingIconButton
-                  onPress={handleMicPress}
-                  active={isRecording}
-                  disabled={disabled}
-                  muted={micUnavailable}
-                >
-                  <Mic
-                    size={scale(18)}
-                    color={isRecording ? COLORS.textInverse : COLORS.textBase}
-                    strokeWidth={2}
-                  />
-                </RecordingIconButton>
-              </Animated.View>
-              {onVoice && !isRecording && (
+              {controls.showMic && (
+                <Animated.View style={micPulseStyle}>
+                  <RecordingIconButton
+                    onPress={handleMicPress}
+                    active={isRecording}
+                    disabled={disabled}
+                    muted={micUnavailable}
+                    style={styles.compactMicButton}
+                  >
+                    <Mic
+                      size={18}
+                      color={isRecording ? COLORS.textInverse : COLORS.textBase}
+                      strokeWidth={2}
+                    />
+                  </RecordingIconButton>
+                </Animated.View>
+              )}
+              {controls.showSend && (
+                <Animated.View style={btnAnimStyle}>
                 <TouchableOpacity
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onVoice(); }}
-                  disabled={disabled}
-                  style={[styles.callButton, disabled && styles.disabledButton]}
+                  accessibilityLabel="Send message"
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: controls.sendDisabled }}
+                  activeOpacity={0.76}
+                  disabled={controls.sendDisabled}
+                  onPress={handleSend}
+                  onPressIn={() => { btnScale.value = withSpring(0.9); }}
+                  onPressOut={() => { btnScale.value = withSpring(1); }}
+                  style={[
+                    useExpandedComposer ? styles.expandedSendButton : styles.compactSendButton,
+                    controls.sendDisabled && styles.sendButtonDisabled,
+                  ]}
                 >
-                  <PhoneCall size={scale(21)} color={COLORS.textInverse} strokeWidth={2} />
+                  {anyUploading ? (
+                    <ActivityIndicator color={COLORS.textWeak} size="small" />
+                  ) : (
+                    <ArrowUp
+                      size={useExpandedComposer ? 21 : 19}
+                      color={controls.sendDisabled ? COLORS.textDisabled : COLORS.textInverse}
+                      strokeWidth={2.5}
+                    />
+                  )}
                 </TouchableOpacity>
+                </Animated.View>
               )}
             </View>
           )}
@@ -876,9 +890,9 @@ export function ChatInput({
 
 const styles = StyleSheet.create({
   floatingContainer: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.fillWeaker,
     borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
+    borderColor: COLORS.strokeWeak,
   },
 
   // Composer shape variants
@@ -1018,8 +1032,8 @@ const styles = StyleSheet.create({
 
   // Shared text input base
   sharedTextInput: {
-    fontFamily: FONTS.sans,
-    fontSize: moderateScale(15),
+    fontFamily: FONTS.chatBody,
+    fontSize: 14,
     color: COLORS.textStrong,
   },
 
@@ -1057,18 +1071,10 @@ const styles = StyleSheet.create({
     gap: INPUT_PILL_GAP,
     alignItems: 'center',
   },
-  callButton: {
-    width: PRIMARY_ACTION_SIZE,
-    height: PRIMARY_ACTION_SIZE,
-    borderRadius: PRIMARY_ACTION_SIZE / 2,
-    backgroundColor: COLORS.brand,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: COLORS.brand,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.24,
-    shadowRadius: 8,
-    elevation: 3,
+  compactMicButton: {
+    backgroundColor: 'transparent',
+    height: SECONDARY_ACTION_SIZE,
+    width: SECONDARY_ACTION_SIZE,
   },
   compactSendButton: {
     width: PRIMARY_ACTION_SIZE,
@@ -1101,6 +1107,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  sendButtonDisabled: {
+    backgroundColor: COLORS.fillWeak,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
   expandedStopButton: {
     width: EXPANDED_ACTION_SIZE,
     height: EXPANDED_ACTION_SIZE,
@@ -1110,8 +1121,5 @@ const styles = StyleSheet.create({
     borderColor: COLORS.strokeWeak,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  disabledButton: {
-    opacity: 0.4,
   },
 });

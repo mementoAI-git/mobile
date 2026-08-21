@@ -4,13 +4,14 @@ import {
   Text,
   KeyboardAvoidingView,
   Platform,
-  ImageBackground,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MoreVertical, ChevronLeft } from 'lucide-react-native';
+import { BlurTargetView, BlurView } from 'expo-blur';
+import { ArrowLeft, MoreHorizontal, PhoneCall, Volume2, X } from 'lucide-react-native';
 import {
   MessageBubble,
   type ChatAttachmentPreviewRequest,
@@ -20,18 +21,12 @@ import { ChatInput, type ChatSendPayload } from '@/components/chat/ChatInput';
 import { MilestoneCard } from '@/components/chat/MilestoneCard';
 import { DeepDiveNudge } from '@/components/chat/DeepDiveNudge';
 import { DeepDiveBanner } from '@/components/chat/DeepDiveBanner';
-import { HostChatJumpPills, monthKeysFromMessages } from '@/components/chat/HostChatJumpPills';
 import { ChatSkeleton } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { dimensionLabel } from '@/constants/enrichment';
 import Animated, {
   FadeInDown,
   FadeInUp,
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
 } from 'react-native-reanimated';
 import { useChatLogic } from '@/hooks/use-chat-logic';
 import { useLocalSearchParams } from 'expo-router';
@@ -39,7 +34,6 @@ import { useBackHandler } from '@/hooks/use-back-handler';
 import * as Haptics from 'expo-haptics';
 import { VoiceModeOverlay } from '@/components/chat/VoiceModeOverlay';
 import type { ChatReplyQuote } from '@/lib/utils';
-import { X } from 'lucide-react-native';
 import { verticalScale } from 'react-native-size-matters';
 import {
   getComposerOverlayBottomPadding,
@@ -51,16 +45,29 @@ import {
   getChatMessageItemType,
   getChatMessageKey,
 } from '@/features/chat/message-list';
+import {
+  getChatDayLabel,
+  shouldShowChatDaySeparator,
+} from '@/features/chat/chat-timeline';
 
-const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
-const COLLAPSED_COMPOSER_HEIGHT = verticalScale(86);
-const COMPOSER_OVERLAY_GAP = verticalScale(10);
+const COLLAPSED_COMPOSER_HEIGHT = 58;
+const COMPOSER_OVERLAY_GAP = 8;
 const COMPOSER_OVERLAY_MIN_HEIGHT = verticalScale(180);
-const DEFAULT_HEADER_HEIGHT = verticalScale(72);
+const DEFAULT_HEADER_HEIGHT = 70;
 const CHAT_VISIBLE_CONTENT_POSITION = Object.freeze({
   autoscrollToBottomThreshold: 0.2,
   startRenderingFromBottom: true,
 });
+
+function ChatDateSeparator({ label }: { label: string }) {
+  return (
+    <View style={styles.dateSeparator}>
+      <View style={styles.dateSeparatorPill}>
+        <Text style={styles.dateSeparatorLabel}>{label}</Text>
+      </View>
+    </View>
+  );
+}
 
 export default function ChatScreen() {
   React.useEffect(() => {
@@ -79,6 +86,9 @@ export default function ChatScreen() {
     serverMessages,
     isLoading,
     allMessages,
+    fetchOlderMessages,
+    hasOlderMessages,
+    isFetchingOlderMessages,
     streaming,
     streamingText,
     send,
@@ -90,41 +100,24 @@ export default function ChatScreen() {
     handleEnterDeepDive,
     handleExitDeepDive,
     enrichmentStats,
+    activeChatId,
+    voiceModeVisible,
+    setVoiceModeVisible,
+    router,
   } = useChatLogic();
 
   // Intercept Android hardware back to prevent app exit when history is empty
   useBackHandler(handleBack);
 
-  const [voiceModeVisible, setVoiceModeVisible] = useState(false);
   const [replyQuote, setReplyQuote] = useState<ChatReplyQuote | null>(null);
   const [replyQuoteHeight, setReplyQuoteHeight] = useState(0);
   const [headerHeight, setHeaderHeight] = useState(DEFAULT_HEADER_HEIGHT);
   const [chatSurfaceHeight, setChatSurfaceHeight] = useState(0);
   const [nudgeHidden, setNudgeHidden] = useState(false);
   const [attachmentPreview, setAttachmentPreview] = useState<ChatAttachmentPreviewRequest | null>(null);
+  const blurTargetRef = useRef<View>(null);
 
-  // Pulsing live indicator — only while active. Idle chat should not keep the
-  // UI thread and GPU animating continuously in the background.
-  const pulse = useSharedValue(0.7);
   const isActuallyStreaming = streaming || isStartingConversation;
-
-  React.useEffect(() => {
-    if (!isActuallyStreaming) {
-      pulse.value = withTiming(0.7, { duration: 200 });
-      return;
-    }
-
-    pulse.value = withRepeat(
-      withSequence(withTiming(1, { duration: 800 }), withTiming(0.4, { duration: 800 })),
-      -1,
-      true,
-    );
-  }, [isActuallyStreaming, pulse]);
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    opacity: pulse.value,
-    transform: [{ scale: pulse.value }],
-  }));
 
   React.useEffect(() => {
     if (!replyQuote) setReplyQuoteHeight(0);
@@ -145,17 +138,6 @@ export default function ChatScreen() {
       gap: COMPOSER_OVERLAY_GAP,
     })
   ), [replyQuote, replyQuoteHeight]);
-
-  // Month keys for jump pills (from persisted server messages)
-  const allServerMessages = serverMessages?.messages;
-  const monthKeys = React.useMemo(
-    () => monthKeysFromMessages(allServerMessages ?? []),
-    [allServerMessages],
-  );
-  const categoryPills = React.useMemo(
-    () => enrichmentStats.stats?.jump_pills ?? [],
-    [enrichmentStats.stats?.jump_pills],
-  );
 
   // Deep dive nudge visibility — destructure stable references to avoid
   // capturing the whole enrichmentStats object in callbacks/deps.
@@ -184,9 +166,15 @@ export default function ChatScreen() {
     if (nudgeDimension) handleEnterDeepDive(nudgeDimension);
   }, [nudgeDimension, handleEnterDeepDive]);
 
-  const handleCategoryPill = useCallback((starter: string) => {
-    send(starter);
-  }, [send]);
+  const handleNarration = useCallback(() => {
+    Haptics.selectionAsync();
+    router.push({ pathname: '/coming-soon', params: { feature: 'narration' } });
+  }, [router]);
+
+  const handleVoiceCall = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setVoiceModeVisible(true);
+  }, [setVoiceModeVisible]);
 
   const handleScrollToOriginal = useCallback((quotedText: string) => {
     // Find the message whose content matches the quoted text snippet
@@ -210,23 +198,38 @@ export default function ChatScreen() {
     setAttachmentPreview(null);
   }, []);
 
+  const handleLoadOlderMessages = useCallback(() => {
+    if (!hasOlderMessages || isFetchingOlderMessages) return;
+    void fetchOlderMessages();
+  }, [fetchOlderMessages, hasOlderMessages, isFetchingOlderMessages]);
+
   const renderMessage = useCallback(
-    ({ item }: { item: any }) => (
-      <MessageBubble
-        message={item}
-        onReply={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          setReplyQuote({ role: item.role, text: item.text });
-        }}
-        onScrollToOriginal={
-          (item as any).replyTo?.text
-            ? () => handleScrollToOriginal((item as any).replyTo.text)
-            : undefined
-        }
-        onPreviewAttachments={handlePreviewAttachments}
-      />
-    ),
-    [handlePreviewAttachments, handleScrollToOriginal],
+    ({ item, index }: { item: any; index: number }) => {
+      const previousTimestamp = index > 0
+        ? (allMessages[index - 1] as any)?.created_at
+        : undefined;
+      const showDate = shouldShowChatDaySeparator(previousTimestamp, item.created_at);
+
+      return (
+        <View>
+          {showDate && <ChatDateSeparator label={getChatDayLabel(item.created_at)} />}
+          <MessageBubble
+            message={item}
+            onReply={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setReplyQuote({ role: item.role, text: item.text });
+            }}
+            onScrollToOriginal={
+              (item as any).replyTo?.text
+                ? () => handleScrollToOriginal((item as any).replyTo.text)
+                : undefined
+            }
+            onPreviewAttachments={handlePreviewAttachments}
+          />
+        </View>
+      );
+    },
+    [allMessages, handlePreviewAttachments, handleScrollToOriginal],
   );
 
   const streamingFooterComponent = React.useMemo(() => {
@@ -240,19 +243,30 @@ export default function ChatScreen() {
   }, [isActuallyStreaming, streamingText]);
 
   const promptHeaderComponent = React.useMemo(() => {
-    if (!isPromptType || !promptMemory) return null;
+    const showPrompt = isPromptType && Boolean(promptMemory);
+    if (!isFetchingOlderMessages && !showPrompt) return null;
 
     return (
-      <View className="mx-5 my-4 p-5 rounded-2xl bg-fill-weaker">
-        <Animated.Text
-          className="text-base text-text-strong leading-relaxed"
-          style={{ fontFamily: FONTS.serif }}
-        >
-          {promptMemory.title}
-        </Animated.Text>
-      </View>
+      <>
+        {isFetchingOlderMessages && (
+          <View style={styles.loadingOlderMessages}>
+            <ActivityIndicator color={COLORS.textWeak} size="small" />
+            <Text style={styles.loadingOlderLabel}>Loading earlier messages</Text>
+          </View>
+        )}
+        {showPrompt && promptMemory && (
+          <View className="mx-5 my-4 p-5 rounded-2xl bg-fill-weaker">
+            <Animated.Text
+              className="text-base text-text-strong leading-relaxed"
+              style={{ fontFamily: FONTS.serif }}
+            >
+              {promptMemory.title}
+            </Animated.Text>
+          </View>
+        )}
+      </>
     );
-  }, [isPromptType, promptMemory]);
+  }, [isFetchingOlderMessages, isPromptType, promptMemory]);
 
   const messagesContentStyle = React.useMemo(
     () => [styles.messagesContent, { paddingBottom: messageBottomPadding }],
@@ -290,19 +304,6 @@ export default function ChatScreen() {
     );
   }, [isPromptType]);
 
-  // Jump to message by month — scrolls to first message in that month
-  const handleJumpToMonth = useCallback(
-    (yyyyMm: string) => {
-      const idx = allMessages.findIndex(
-        (m) => (m as any).created_at?.slice(0, 7) === yyyyMm,
-      );
-      if (idx >= 0 && flatListRef.current) {
-        flatListRef.current.scrollToIndex({ index: idx, animated: true, viewPosition: 0 });
-      }
-    },
-    [allMessages, flatListRef],
-  );
-
   const content = (
     <View
       className="flex-1"
@@ -310,58 +311,56 @@ export default function ChatScreen() {
     >
 
           {/* ── Header ───────────────────────────────────────────────────── */}
-          <View
-            className="flex-row items-center gap-3 px-6 py-4"
-            onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
-          >
+          <View style={styles.header} onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}>
             <TouchableOpacity
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
               onPress={handleBack}
               activeOpacity={0.7}
-              className="size-10 rounded-full bg-fill-weaker items-center justify-center"
+              style={styles.headerButton}
             >
-              <ChevronLeft size={20} color={COLORS.textBase} />
+              <ArrowLeft size={21} color={COLORS.textStrong} strokeWidth={2.2} />
             </TouchableOpacity>
 
-            <View className="flex-1">
-              <Animated.Text
-                className="text-lg text-text-strong"
-                numberOfLines={1}
-                style={{ fontFamily: FONTS.serif }}
+            <Text numberOfLines={1} style={styles.headerTitle}>Chat</Text>
+
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                accessibilityLabel="Narration"
+                accessibilityRole="button"
+                activeOpacity={0.7}
+                onPress={handleNarration}
+                style={styles.headerButton}
               >
-                {isPromptType
-                  ? (promptMemory?.title ?? 'Prompt Reflection')
-                  : (serverMessages?.title ?? 'Your Memento')}
-              </Animated.Text>
-              <View className="flex-row items-center gap-1.5 mt-0.5">
-                <Animated.View className="size-1.5 rounded-full bg-success" style={pulseStyle} />
-              </View>
+                <Volume2 size={20} color={COLORS.textStrong} strokeWidth={2.2} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityLabel="Start voice call"
+                accessibilityRole="button"
+                activeOpacity={0.7}
+                onPress={handleVoiceCall}
+                style={styles.headerButton}
+              >
+                <PhoneCall size={20} color={COLORS.textStrong} strokeWidth={2.2} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityLabel="Open chat settings"
+                accessibilityRole="button"
+                activeOpacity={0.7}
+                onPress={handleActions}
+                style={styles.headerButton}
+              >
+                <MoreHorizontal size={21} color={COLORS.textStrong} strokeWidth={2.5} />
+              </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              onPress={handleActions}
-              activeOpacity={0.7}
-              className="size-10 rounded-full items-center justify-center bg-fill-weaker"
-            >
-              <MoreVertical size={20} color={COLORS.textWeak} />
-            </TouchableOpacity>
           </View>
 
-          {/* ── Host Chat toolbar: jump pills + deep dive + milestone ──── */}
+          {/* ── Contextual chat surfaces ───────────────────────────── */}
           {!isPromptType && (
-            <View className="pb-1">
-              {/* Jump pills row */}
-              <View className="px-4 py-1">
-                <HostChatJumpPills
-                  monthKeys={monthKeys}
-                  categoryPills={categoryPills}
-                  onJump={handleJumpToMonth}
-                  onCategoryPill={handleCategoryPill}
-                />
-              </View>
-
+            <View>
               {/* Deep dive banner (while in deep_dive mode) */}
               {chatMode === 'deep_dive' && deepDiveDimension && (
-                <View className="px-4 pb-1">
+                <View className="px-4 pt-2">
                   <DeepDiveBanner
                     dimensionLabel={dimensionLabel(deepDiveDimension)}
                     onExit={handleExitDeepDive}
@@ -371,7 +370,7 @@ export default function ChatScreen() {
 
               {/* Milestone card */}
               {(enrichmentStats.deltaToday > 0 || enrichmentStats.milestoneJustReached) && (
-                <View className="px-4 pb-1">
+                <View className="px-4 pt-2">
                   <MilestoneCard
                     enrichmentDelta={enrichmentStats.deltaToday}
                     milestoneLabel={
@@ -428,7 +427,7 @@ export default function ChatScreen() {
           )}
 
           {/* ── Messages ─────────────────────────────────────────────── */}
-          <View className="flex-1 relative bg-transparent">
+          <BlurTargetView ref={blurTargetRef} style={styles.messageList}>
             {isLoading && !allMessages.length ? (
               <ChatSkeleton />
             ) : (
@@ -438,6 +437,8 @@ export default function ChatScreen() {
                 keyExtractor={getChatMessageKey}
                 getItemType={getChatMessageItemType}
                 renderItem={renderMessage}
+                onStartReached={handleLoadOlderMessages}
+                onStartReachedThreshold={0.2}
                 contentContainerStyle={messagesContentStyle}
                 maintainVisibleContentPosition={CHAT_VISIBLE_CONTENT_POSITION}
                 showsVerticalScrollIndicator={false}
@@ -446,9 +447,20 @@ export default function ChatScreen() {
                 ListEmptyComponent={listEmptyComponent}
               />
             )}
-          </View>
+          </BlurTargetView>
 
-          <View pointerEvents="box-none" style={styles.composerOverlay}>
+          <View
+            pointerEvents="box-none"
+            style={styles.composerOverlay}
+          >
+            <BlurView
+              pointerEvents="none"
+              intensity={Platform.OS === 'android' ? 90 : 75}
+              tint="light"
+              blurTarget={blurTargetRef}
+              blurMethod={Platform.OS === 'android' ? 'dimezisBlurViewSdk31Plus' : undefined}
+              style={styles.composerBackdrop}
+            />
             {/* ── Reply Quote Preview Panel ────────────────────────────── */}
             {replyQuote && (
               <Animated.View
@@ -487,6 +499,7 @@ export default function ChatScreen() {
             {/* ── Chat Input ────────────────────────────────────────────── */}
             <ChatInput
               maxComposerHeight={composerOverlayMaxHeight}
+              parentOwnsBottomSafeArea
               onSend={(payload: ChatSendPayload) => {
                 send(
                   payload.text,
@@ -497,10 +510,6 @@ export default function ChatScreen() {
                 setReplyQuote(null);
               }}
               onStop={stop}
-              onVoice={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                setVoiceModeVisible(true);
-              }}
               loading={isActuallyStreaming || isLoading}
             />
           </View>
@@ -508,6 +517,7 @@ export default function ChatScreen() {
           <VoiceModeOverlay
             visible={voiceModeVisible}
             onClose={() => setVoiceModeVisible(false)}
+            memoryId={activeChatId}
             conversationTitle={
               isPromptType
                 ? (promptMemory?.title ?? 'Prompt Reflection')
@@ -530,23 +540,93 @@ export default function ChatScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top', 'bottom']}>
       {Platform.OS === 'ios' ? (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-          <ImageBackground source={PATTERN} className="flex-1" imageStyle={{ opacity: 0.03 }}>
+          <View style={styles.screenSurface}>
             {content}
-          </ImageBackground>
+          </View>
         </KeyboardAvoidingView>
       ) : (
-        <ImageBackground source={PATTERN} className="flex-1" imageStyle={{ opacity: 0.03 }}>
+        <View style={styles.screenSurface}>
           {content}
-        </ImageBackground>
+        </View>
       )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  screenSurface: {
+    backgroundColor: COLORS.background,
+    flex: 1,
+  },
+  header: {
+    alignItems: 'center',
+    borderBottomColor: COLORS.strokeWeak,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    height: 70,
+    paddingHorizontal: 16,
+  },
+  headerButton: {
+    alignItems: 'center',
+    backgroundColor: COLORS.fillWeak,
+    borderRadius: 20,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  headerTitle: {
+    color: COLORS.textStrong,
+    flex: 1,
+    fontFamily: FONTS.sansSemi,
+    fontSize: 17,
+    lineHeight: 22,
+    marginLeft: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  messageList: {
+    backgroundColor: COLORS.background,
+    flex: 1,
+    position: 'relative',
+  },
   messagesContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  dateSeparator: {
+    alignItems: 'center',
+    paddingBottom: 12,
+    paddingTop: 4,
+  },
+  dateSeparatorPill: {
+    backgroundColor: COLORS.fillWeak,
+    borderColor: COLORS.strokeWeaker,
+    borderRadius: 10,
+    borderWidth: 1,
+    minHeight: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  dateSeparatorLabel: {
+    color: COLORS.textBase,
+    fontFamily: FONTS.sansMedium,
+    fontSize: 11,
+    lineHeight: 14,
+  },
+  loadingOlderMessages: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7,
+    justifyContent: 'center',
+    minHeight: 40,
+  },
+  loadingOlderLabel: {
+    color: COLORS.textWeak,
+    fontFamily: FONTS.sans,
+    fontSize: 12,
+    lineHeight: 16,
   },
   composerOverlay: {
     position: 'absolute',
@@ -554,5 +634,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 20,
+  },
+  composerBackdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: COLORS.background,
+    top: -12,
   },
 });
