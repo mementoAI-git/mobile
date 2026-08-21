@@ -92,7 +92,7 @@ export default function StoriesScreen() {
     const translateX = interpolate(
       scrollY.value,
       [0, 100],
-      [-33, 0], // slide icon from left offset (when text is present) back to absolute center (0)
+      [-42, 0], // slide icon from left offset (when text is present) back to absolute center (0)
       Extrapolation.CLAMP
     );
     return {
@@ -111,7 +111,7 @@ export default function StoriesScreen() {
     const translateX = interpolate(
       scrollY.value,
       [0, 100],
-      [13, 33], // starts next to offset icon, slides away on scroll
+      [18, 42], // starts next to offset icon, slides away on scroll
       Extrapolation.CLAMP
     );
     return {

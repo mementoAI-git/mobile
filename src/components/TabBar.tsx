@@ -42,7 +42,7 @@ import Animated, {
 // ─── Assets ────────────────────────────────────────────────────────────────────
 
 const ICONS = {
-  overview: require('../../assets/images/icons/tab_overview.webp'),
+  overview: require('../../assets/images/icons/tab_overview.png'),
   chat:     require('../../assets/images/icons/tab_chat.webp'),
   stories:  require('../../assets/images/icons/tab_stories.webp'),
   explore:  require('../../assets/images/icons/tab_explore.webp'),

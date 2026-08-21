@@ -5,54 +5,12 @@ import { CategoryCard } from '@/components/explore/CategoryCard';
 import { ContinueReflectingCard } from '@/components/explore/ContinueReflectingCard';
 import { DashboardHeader, ExploreSkeleton, EmptyState, Spinner } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { CATEGORY_META } from '@/constants/categories';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useExploreLogic } from '@/hooks/use-explore-logic';
 import { useFocusEffect } from 'expo-router';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
-
-const CATEGORY_META: Record<string, { title: string; subtitle: string; image: any }> = {
-  career: {
-    title: 'Career & Ambition',
-    subtitle: "Aspirations and goals you've set to achieve professional success and personal fulfillment.",
-    image: require('../../../assets/images/categories/career.png'),
-  },
-  family: {
-    title: 'Family Life',
-    subtitle: "The bonds, traditions, and stories that define your home and heritage.",
-    image: require('../../../assets/images/categories/family.png'),
-  },
-  relationship: {
-    title: 'Love & Relationships',
-    subtitle: "The people who shape your heart and the lessons learned through connection.",
-    image: require('../../../assets/images/categories/relationship.png'),
-  },
-  belief: {
-    title: 'Worldviews & Beliefs',
-    subtitle: "The principles and convictions that guide your perspective on life.",
-    image: require('../../../assets/images/categories/belief.png'),
-  },
-  purpose: {
-    title: 'Finding Purpose',
-    subtitle: "Discovering what gives your life meaning and how you contribute to the world.",
-    image: require('../../../assets/images/categories/purpose.png'),
-  },
-  'life-transition': {
-    title: 'Life Transitions',
-    subtitle: "Moments of growth, uncertainty, and reinvention through major changes.",
-    image: require('../../../assets/images/categories/life-transition.png'),
-  },
-  wellbeing: {
-    title: 'Wellbeing & Daily Life',
-    subtitle: "Everyday rhythms — how you care for yourself and find your inner balance.",
-    image: require('../../../assets/images/categories/wellbeing.png'),
-  },
-  identity: {
-    title: 'Identity & Self-Discovery',
-    subtitle: "Reflections on who you are, what you believe, and how you've evolved.",
-    image: require('../../../assets/images/categories/identify.png'),
-  },
-};
 
 export default function ExploreScreen() {
   const {
@@ -74,13 +32,22 @@ export default function ExploreScreen() {
     }, [refetchIfStale])
   );
 
+  const getCategoryMeta = useCallback((item: any) => {
+    const rawKey = String(item.slug || item.name || '').trim().toLowerCase();
+    const key = rawKey
+      .replace(/&/g, 'and')
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+    return CATEGORY_META[key] || {
+      title: item.name || 'Category',
+      subtitle: 'Explore prompts in this category',
+      image: null,
+    };
+  }, []);
+
   const renderCategoryItem = useCallback(
     ({ item }: { item: any }) => {
-      const meta = CATEGORY_META[item.slug || item.name?.toLowerCase()] || {
-        title: item.name || 'Category',
-        subtitle: 'Explore prompts in this category',
-        image: null,
-      };
+      const meta = getCategoryMeta(item);
       return (
         <CategoryCard
           title={meta.title}
@@ -90,7 +57,7 @@ export default function ExploreScreen() {
         />
       );
     },
-    [handleOpenCategory],
+    [getCategoryMeta, handleOpenCategory],
   );
 
   return (
