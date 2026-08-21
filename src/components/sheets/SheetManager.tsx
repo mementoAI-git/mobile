@@ -28,6 +28,8 @@ import { EditProfileSheet } from './EditProfileSheet';
 import { ChangePasswordSheet } from './ChangePasswordSheet';
 import { SetupTwoFactorSheet } from './SetupTwoFactorSheet';
 import { SecurityConfirmationSheet } from './SecurityConfirmationSheet';
+import { VoiceCallSettingsSheet } from './VoiceCallSettingsSheet';
+import { EndVoiceSessionSheet } from './EndVoiceSessionSheet';
 import { AddMemberToGroupSheet } from './AddMemberToGroupSheet';
 import { COLORS } from '@/constants/tokens';
 
@@ -61,6 +63,8 @@ const SHEET_CONFIGS: Record<string, {
   'change-password': { component: ChangePasswordSheet, snapPoints: ['100%'], dynamic: true, keyboardBehavior: 'interactive', keyboardBlurBehavior: 'restore', androidKeyboardInputMode: 'adjustResize' },
   'setup-two-factor': { component: SetupTwoFactorSheet, snapPoints: ['88%'], dynamic: false, keyboardBehavior: 'fillParent' },
   'security-confirmation': { component: SecurityConfirmationSheet, dynamic: true },
+  'voice-call-settings': { component: VoiceCallSettingsSheet, snapPoints: ['82%'], dynamic: false },
+  'end-voice-session': { component: EndVoiceSessionSheet, dynamic: true },
 };
 
 // Sheets that manage their own BottomSheetView / layout

@@ -5,8 +5,9 @@ import { readFileSync } from 'node:fs';
 const modal = readFileSync('src/components/ui/MediaPreviewModal.tsx', 'utf8');
 
 describe('Media preview modal', () => {
-  test('uses toast messaging for Expo Go and save failures instead of native alerts', () => {
-    expect(modal).toContain('Saving to your gallery needs a development build. This will work once we move to EAS builds.');
+  test('uses a functional Expo Go export fallback and visible save failures instead of native alerts', () => {
+    expect(modal).toContain("setActionNotice('Use the share menu to save this file.')");
+    expect(modal).toContain('await Share.share({ url: localUri, message: item.name })');
     expect(modal).toContain("toast('Could not save media. Please try again in a moment.', 'error')");
     expect(modal).not.toContain('Alert.alert(');
   });
@@ -57,10 +58,7 @@ describe('Media preview modal', () => {
     expect(chatScreen).not.toContain('withRepeat(');
   });
 
-  test('uses a calmer waveform and voice-ring animation cadence to reduce battery drain', () => {
-    const voiceOverlay = readFileSync('src/components/chat/VoiceModeOverlay.tsx', 'utf8');
-    expect(voiceOverlay).toContain('const baseDuration = isAiSpeaking ? 1200 : 1800;');
-    expect(voiceOverlay).toContain('const ringMaxScale = isAiSpeaking ? 1.4 : 1.2;');
+  test('uses a calmer waveform animation cadence to reduce battery drain', () => {
     expect(modal).toContain('const BAR_COUNT = 10;');
     expect(modal).toContain('const duration = 420 + (i * 55) % 260;');
   });

@@ -30,7 +30,6 @@ export function useChatLogic() {
   // ── Chat mode (open vs deep_dive) ────────────────────────────────────────
   const [chatMode, setChatMode] = useState<ChatMode>('open');
   const [deepDiveDimension, setDeepDiveDimension] = useState<LifeDimension | null>(null);
-  const [voiceModeVisible, setVoiceModeVisible] = useState(false);
 
   const isPromptType = type === 'prompt';
   const { data: promptMemoryRes, isLoading: isLoadingPromptMemory } = useMemoryByPrompt(
@@ -168,8 +167,5 @@ export function useChatLogic() {
     handleExitDeepDive,
     // Enrichment
     enrichmentStats,
-    // Voice Mode
-    voiceModeVisible,
-    setVoiceModeVisible,
   };
 }

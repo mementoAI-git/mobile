@@ -60,6 +60,7 @@ export default {
   // memories
   memories: '/memories',
   memory: '/memories/:id',
+  conversationAttachments: '/memories/:id/attachments',
   bookmarkMemory: '/memories/:id/bookmark',
   conversations: '/memories/conversations',
   stories: '/memories/stories',

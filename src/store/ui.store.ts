@@ -27,6 +27,8 @@ export type SheetName =
   | 'change-password'
   | 'setup-two-factor'
   | 'security-confirmation'
+  | 'voice-call-settings'
+  | 'end-voice-session'
   | null;
 
 interface UiState {

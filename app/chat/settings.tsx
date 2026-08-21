@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   PanResponder,
   ScrollView,
@@ -23,8 +23,6 @@ import {
   Image as ImageIcon,
   Link2,
   Music2,
-  Route,
-  Users,
   VolumeX,
 } from 'lucide-react-native';
 import Animated, {
@@ -34,13 +32,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { getChatSettingsLayout } from '@/features/chat/chat-settings-layout';
-
-const VOICES = [
-  { id: 'denver', name: 'Denver', subtitle: 'Male v1', colors: [COLORS.blue2, COLORS.blue6, COLORS.info] },
-  { id: 'sue', name: 'Sue', subtitle: 'Female v2', colors: [COLORS.beneficiaryGroupBlue, COLORS.onboardingAmber, COLORS.beneficiaryGroupPink] },
-  { id: 'josef', name: 'Josef', subtitle: 'Male v3', colors: [COLORS.brand, COLORS.beneficiaryGroupMagenta, COLORS.info] },
-  { id: 'hannah', name: 'Hannah', subtitle: 'Female v4', colors: [COLORS.backgroundInverse, COLORS.beneficiaryGroupPurple, COLORS.backgroundInverse] },
-] as const;
+import { VoiceArtwork } from '@/components/chat/VoiceArtwork';
+import { VOICE_CATALOG } from '@/features/chat/voice-catalog';
+import { useAuthStore, useVoicePreferenceStore } from '@/store';
+import { MusicPlayerIcon } from '@/components/ui/icons/ChatIcons';
 
 const AMBIENCE = [
   { id: 'none', name: 'None', subtitle: 'Tune 3' },
@@ -92,15 +87,18 @@ function RoundButton({
 function MediaTile({
   icon: Icon,
   label,
+  onPress,
   width,
 }: {
   icon: IconComponent;
   label: string;
+  onPress: () => void;
   width: number;
 }) {
   const handlePress = useCallback(() => {
     Haptics.selectionAsync();
-  }, []);
+    onPress();
+  }, [onPress]);
 
   return (
     <TouchableOpacity
@@ -195,12 +193,7 @@ function SelectionCard({
 
 function RecordPlayerMark() {
   return (
-    <View style={styles.recordPlayer}>
-      <View style={styles.recordDisc}>
-        <View style={styles.recordLabel} />
-      </View>
-      <Music2 size={10} color={COLORS.brand} strokeWidth={2.5} style={styles.recordNote} />
-    </View>
+    <MusicPlayerIcon/>
   );
 }
 
@@ -258,12 +251,21 @@ function parseScore(value?: string) {
 
 export default function ChatSettingsScreen() {
   const { width: screenWidth } = useWindowDimensions();
-  const { enrichmentStats } = useLocalSearchParams<{ enrichmentStats?: string }>();
+  const { enrichmentStats, chatId } = useLocalSearchParams<{ enrichmentStats?: string; chatId?: string }>();
   const layout = useMemo(() => getChatSettingsLayout(screenWidth), [screenWidth]);
   const score = useMemo(() => parseScore(enrichmentStats), [enrichmentStats]);
-  const [selectedVoice, setSelectedVoice] = useState('denver');
+  const user = useAuthStore((state) => state.user);
+  const selectedVoice = useVoicePreferenceStore((state) => state.selectedVoiceId);
+  const hydratedForUser = useVoicePreferenceStore((state) => state.hydratedForUser);
+  const hydrateVoice = useVoicePreferenceStore((state) => state.hydrate);
+  const selectVoice = useVoicePreferenceStore((state) => state.selectVoice);
+  const userKey = user?._id ?? user?.email ?? 'anonymous';
   const [selectedAmbience, setSelectedAmbience] = useState('none');
   const [volume, setVolume] = useState(50);
+
+  useEffect(() => {
+    if (hydratedForUser !== userKey) void hydrateVoice(userKey);
+  }, [hydrateVoice, hydratedForUser, userKey]);
 
   const goBack = useCallback(() => {
     if (router.canGoBack()) router.back();
@@ -275,7 +277,16 @@ export default function ChatSettingsScreen() {
   }, []);
   const handleSharedPress = useCallback(() => {
     Haptics.selectionAsync();
-  }, []);
+    if (chatId) router.push({ pathname: '/chat/media', params: { chatId } });
+  }, [chatId]);
+  const openAssetCollection = useCallback((tab: 'media' | 'docs' | 'links', assetType: 'all' | 'image' | 'video' | 'audio') => {
+    if (chatId) router.push({ pathname: '/chat/media', params: { chatId, tab, assetType } });
+  }, [chatId]);
+  const openImages = useCallback(() => openAssetCollection('media', 'image'), [openAssetCollection]);
+  const openVideos = useCallback(() => openAssetCollection('media', 'video'), [openAssetCollection]);
+  const openAudio = useCallback(() => openAssetCollection('media', 'audio'), [openAssetCollection]);
+  const openDocs = useCallback(() => openAssetCollection('docs', 'all'), [openAssetCollection]);
+  const openLinks = useCallback(() => openAssetCollection('links', 'all'), [openAssetCollection]);
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
@@ -341,11 +352,11 @@ export default function ChatSettingsScreen() {
           </View>
 
           <View style={styles.mediaGrid}>
-            <MediaTile icon={ImageIcon} label="Images" width={layout.mediaTileWidth} />
-            <MediaTile icon={Film} label="Videos" width={layout.mediaTileWidth} />
-            <MediaTile icon={Music2} label="Audio" width={layout.mediaTileWidth} />
-            <MediaTile icon={FileText} label="Docs" width={layout.mediaTileWidth} />
-            <MediaTile icon={Link2} label="Links" width={layout.mediaTileWidth} />
+            <MediaTile icon={ImageIcon} label="Images" onPress={openImages} width={layout.mediaTileWidth} />
+            <MediaTile icon={Film} label="Videos" onPress={openVideos} width={layout.mediaTileWidth} />
+            <MediaTile icon={Music2} label="Audio" onPress={openAudio} width={layout.mediaTileWidth} />
+            <MediaTile icon={FileText} label="Docs" onPress={openDocs} width={layout.mediaTileWidth} />
+            <MediaTile icon={Link2} label="Links" onPress={openLinks} width={layout.mediaTileWidth} />
           </View>
 
           <TouchableOpacity
@@ -356,7 +367,7 @@ export default function ChatSettingsScreen() {
           >
             <ImageIcon size={22} color={COLORS.textStrong} strokeWidth={2} />
             <Text numberOfLines={1} style={styles.sharedLabel}>
-              Shared Media, Links and Docs (154)
+              Shared Media, Links and Docs
             </Text>
             <ChevronRight size={20} color={COLORS.textWeak} strokeWidth={2.2} />
           </TouchableOpacity>
@@ -398,18 +409,15 @@ export default function ChatSettingsScreen() {
           <View style={styles.voiceSection}>
             <Text style={styles.sectionTitle}>AI Voice (Voice Mode)</Text>
             <View style={styles.twoColumnGrid}>
-              {VOICES.map((voice) => (
+              {VOICE_CATALOG.map((voice) => (
                 <SelectionCard
                   key={voice.id}
                   label={`${voice.name}, ${voice.subtitle}`}
-                  onPress={() => setSelectedVoice(voice.id)}
+                  onPress={() => { void selectVoice(voice.id); }}
                   selected={selectedVoice === voice.id}
                   width={layout.selectionCardWidth}
                 >
-                  <LinearGradient
-                    colors={voice.colors as unknown as readonly [string, string, ...string[]]}
-                    style={styles.voiceAvatar}
-                  />
+                  <VoiceArtwork voice={voice} size={32} />
                   <View style={styles.cardText}>
                     <Text style={styles.cardTitle}>{voice.name}</Text>
                     <Text style={styles.cardSubtitle}>{voice.subtitle}</Text>
@@ -685,13 +693,6 @@ const styles = StyleSheet.create({
     top: 7,
     width: 16,
   },
-  voiceAvatar: {
-    borderColor: COLORS.strokeWeaker,
-    borderRadius: 16,
-    borderWidth: 1,
-    height: 32,
-    width: 32,
-  },
   cardText: {
     flex: 1,
   },
@@ -718,7 +719,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   sliderFill: {
-    backgroundColor: COLORS.textBase,
+    backgroundColor: COLORS.brandWeak,
+    // backgroundColor: "#E98246",
     borderRadius: 3,
     height: '100%',
   },

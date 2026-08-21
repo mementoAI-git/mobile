@@ -7,6 +7,7 @@ const ROUTE_FILES = {
   editor: '../../../app/editor.tsx',
   create: '../../../app/create.tsx',
   article: '../../../app/article.tsx',
+  'voice-call': '../../../app/voice-call.tsx',
 } as const;
 
 describe('native full-screen modal safe-area ownership', () => {
@@ -16,7 +17,7 @@ describe('native full-screen modal safe-area ownership', () => {
       /<Stack\.Screen name="([^"]+)" options=\{\{ presentation: 'fullScreenModal'/g,
     )].map((match) => match[1]);
 
-    expect(registeredRoutes).toEqual(['coming-soon', 'share', 'editor', 'create', 'article']);
+    expect(registeredRoutes).toEqual(['coming-soon', 'voice-call', 'share', 'editor', 'create', 'article']);
 
     for (const route of registeredRoutes) {
       const source = await Bun.file(new URL(ROUTE_FILES[route], import.meta.url)).text();

@@ -85,6 +85,15 @@ export function useMemoriesStats() {
   });
 }
 
+export function useConversationAttachments(id: string) {
+  return useQuery({
+    queryKey: queryKeys.conversationAttachments(id),
+    queryFn: () => get<any>(endpoint.conversationAttachments.replace(':id', id)).then((r) => r.data),
+    enabled: !!id,
+    staleTime: 30_000,
+  });
+}
+
 export function useConversationMessages(id: string) {
   return useInfiniteQuery({
     queryKey: queryKeys.promptMessages(id),

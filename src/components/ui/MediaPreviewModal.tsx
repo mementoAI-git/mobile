@@ -35,7 +35,7 @@ import { useAudioPlayer } from 'expo-audio';
 import { useVideoPlayer } from '@/hooks/use-video-player';
 import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, cancelAnimation, type SharedValue } from 'react-native-reanimated';
-import { ChevronLeft, Share2, X, Mic, FileText, Music, Play, Pause, RotateCcw, Link2, Download } from 'lucide-react-native';
+import { ChevronLeft, Share2, X, Mic, FileText, Music, Play, Pause, RotateCcw, Link2, Download, Trash2, MessageSquare } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted } from '@/lib/permission-recovery';
@@ -73,6 +73,8 @@ export interface PreviewAttachment {
   duration?: number;
   isVoice?: boolean;
   thumbnailUrl?: string | null;
+  persistedFileId?: string;
+  sourceMessageId?: string;
 }
 
 interface Props {
@@ -84,6 +86,9 @@ interface Props {
   /** Parent memory ID — used to construct the share link */
   memoryId?: string;
   headerMode?: 'default' | 'close-only';
+  presentation?: 'standard' | 'gallery';
+  onViewMessage?: (attachment: PreviewAttachment) => void;
+  onDeletePersisted?: (attachment: PreviewAttachment) => void | Promise<void>;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -641,9 +646,64 @@ function Dots({ count, active }: { count: number; active: number }) {
   );
 }
 
+function GalleryFilmstrip({
+  attachments,
+  active,
+  onSelect,
+}: {
+  attachments: PreviewAttachment[];
+  active: number;
+  onSelect: (index: number) => void;
+}) {
+  const stripRef = useRef<FlatList<PreviewAttachment>>(null);
+
+  useEffect(() => {
+    stripRef.current?.scrollToIndex({ index: active, animated: true, viewPosition: 0.5 });
+  }, [active]);
+
+  const renderThumbnail = useCallback(({ item, index }: { item: PreviewAttachment; index: number }) => {
+    const category = getMediaCategory({ mimeType: item.mimeType, name: item.name, uri: item.uri });
+    const ThumbnailIcon = category === 'audio' ? Music : FileText;
+    return (
+    <TouchableOpacity
+      accessibilityLabel={`View ${item.name}`}
+      accessibilityRole="button"
+      activeOpacity={0.82}
+      onPress={() => { Haptics.selectionAsync(); onSelect(index); }}
+      style={[styles.galleryThumbnail, index === active && styles.galleryThumbnailActive]}
+    >
+      {category === 'image' || category === 'video' ? (
+        <ExpoImage source={{ uri: item.thumbnailUrl || item.uri }} contentFit="cover" style={StyleSheet.absoluteFill} />
+      ) : (
+        <View style={styles.galleryThumbnailFallback}><ThumbnailIcon size={20} color={COLORS.textBase} /></View>
+      )}
+      {category === 'video' ? (
+        <View style={styles.galleryThumbnailPlay}><Play size={13} color={COLORS.textInverse} fill={COLORS.textInverse} /></View>
+      ) : null}
+    </TouchableOpacity>
+    );
+  }, [active, onSelect]);
+
+  return (
+    <FlatList
+      ref={stripRef}
+      style={styles.galleryFilmstripList}
+      horizontal
+      data={attachments}
+      keyExtractor={(item) => item.clientId}
+      renderItem={renderThumbnail}
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.galleryFilmstrip}
+      ItemSeparatorComponent={() => <View style={{ width: 6 }} />}
+      getItemLayout={(_, index) => ({ length: 62, offset: 62 * index, index })}
+      onScrollToIndexFailed={() => {}}
+    />
+  );
+}
+
 // ─── Modal inner — reads insets from the scoped SafeAreaProvider ──────────────
 
-function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, headerMode = 'default' }: Omit<Props, 'visible' | 'initialIndex'> & { initialIndex: number }) {
+function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, headerMode = 'default', presentation = 'standard', onViewMessage, onDeletePersisted }: Omit<Props, 'visible' | 'initialIndex'> & { initialIndex: number }) {
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -665,6 +725,9 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
   }, []);
 
   const [shareMenuVisible, setShareMenuVisible] = useState(false);
+  const [deleteCandidate, setDeleteCandidate] = useState<PreviewAttachment | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const currentItem = attachments[currentIndex];
   const currentItemIsVisual = !!currentItem && (
     currentItem.mimeType.startsWith('image/') || currentItem.mimeType.startsWith('video/')
@@ -678,6 +741,12 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
   const saveSuccessMessage = currentItemIsVisual
     ? Platform.OS === 'ios' ? 'Saved to Photos' : 'Saved to Gallery'
     : Platform.OS === 'ios' ? 'Saved to Files' : 'File downloaded';
+
+  useEffect(() => {
+    if (!actionNotice) return;
+    const timeout = setTimeout(() => setActionNotice(null), 2600);
+    return () => clearTimeout(timeout);
+  }, [actionNotice]);
 
   const handleShareButtonPress = useCallback(() => {
     Haptics.selectionAsync();
@@ -701,12 +770,20 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
 
     const MediaLibrary = getMediaLibrary();
     if (!MediaLibrary) {
-      // expo-media-library's native module isn't available in Expo Go.
-      // Keep the action visible (not hidden) but explain why it can't run yet.
-      toast(
-        'Saving to your gallery needs a development build. This will work once we move to EAS builds.',
-        'info',
-      );
+      const item = attachments[currentIndex];
+      if (!item) return;
+      try {
+        let localUri = item.uri;
+        if (item.uri.startsWith('http')) {
+          const filename = item.name || `memento_${Date.now()}`;
+          const result = await FileSystem.downloadAsync(item.uri, `${FileSystem.cacheDirectory}${filename}`);
+          localUri = result.uri;
+        }
+        await Share.share({ url: localUri, message: item.name });
+        setActionNotice('Use the share menu to save this file.');
+      } catch {
+        setActionNotice('Could not download this file.');
+      }
       return;
     }
 
@@ -737,8 +814,10 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
       await MediaLibrary.saveToLibraryAsync(localUri);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       toast(saveSuccessMessage, 'success');
+      setActionNotice(saveSuccessMessage);
     } catch {
       toast('Could not save media. Please try again in a moment.', 'error');
+      setActionNotice('Could not save media. Please try again.');
     }
   }, [attachments, currentIndex, saveSuccessMessage]);
 
@@ -772,21 +851,74 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
     await handleShareFile();
   }, [currentItemIsVisual, handleSaveToGallery, handleShareFile]);
 
+  const isGallery = presentation === 'gallery';
+  const pageWidth = isGallery ? SCREEN_W : CARD_W;
+  const pageGap = isGallery ? 0 : CARD_GAP;
+
   const renderSlide = useCallback(
     makeRenderSlide(onClose, currentIndex, attachments),
     [onClose, currentIndex, attachments],
   );
 
   const renderItem = useCallback(
-    ({ item, index }: { item: PreviewAttachment; index: number }) => renderSlide({ item, index }),
-    [renderSlide],
+    ({ item, index }: { item: PreviewAttachment; index: number }) => (
+      <View style={{ flex: 1, width: pageWidth }}>{renderSlide({ item, index })}</View>
+    ),
+    [pageWidth, renderSlide],
   );
+
+  const selectGalleryItem = useCallback((index: number) => {
+    listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 });
+    setCurrentIndex(index);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteCandidate || !onDeletePersisted || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await onDeletePersisted(deleteCandidate);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setDeleteCandidate(null);
+      onClose();
+    } catch {
+      setActionNotice('Could not delete this attachment.');
+      setIsDeleting(false);
+    }
+  }, [deleteCandidate, isDeleting, onClose, onDeletePersisted]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        {headerMode === 'close-only' ? (
+        {isGallery ? (
+          <>
+            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.galleryHeaderButton} activeOpacity={0.8}>
+              <ChevronLeft size={22} color={COLORS.textStrong} strokeWidth={2} />
+            </TouchableOpacity>
+            <View style={styles.galleryHeaderActions}>
+              <TouchableOpacity
+                disabled={!currentItem?.persistedFileId || !onDeletePersisted}
+                onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); if (currentItem) setDeleteCandidate(currentItem); }}
+                style={styles.galleryHeaderButton}
+                activeOpacity={0.8}
+              >
+                <Trash2 size={20} color={COLORS.textStrong} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => void handleSaveOrExport()} style={styles.galleryHeaderButton} activeOpacity={0.8}>
+                <Download size={21} color={COLORS.textStrong} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                disabled={!currentItem?.sourceMessageId || !onViewMessage}
+                onPress={() => currentItem && onViewMessage?.(currentItem)}
+                style={styles.galleryViewMessage}
+                activeOpacity={0.8}
+              >
+                <MessageSquare size={19} color={COLORS.textStrong} />
+                <Text style={styles.galleryViewMessageText}>View message</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : headerMode === 'close-only' ? (
           <>
             <View style={styles.headerSpacer} />
             <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
@@ -818,15 +950,15 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
           keyExtractor={(item) => item.clientId}
           horizontal
           pagingEnabled={false}
-          snapToInterval={CARD_W + CARD_GAP}
+          snapToInterval={pageWidth + pageGap}
           snapToAlignment="start"
           decelerationRate="fast"
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: SIDE_PAD }}
-          ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
+          contentContainerStyle={{ paddingHorizontal: isGallery ? 0 : SIDE_PAD }}
+          ItemSeparatorComponent={() => <View style={{ width: pageGap }} />}
           onViewableItemsChanged={handleViewableChange}
           viewabilityConfig={viewabilityConfig.current}
-          getItemLayout={(_, index) => ({ length: CARD_W + CARD_GAP, offset: (CARD_W + CARD_GAP) * index, index })}
+          getItemLayout={(_, index) => ({ length: pageWidth + pageGap, offset: (pageWidth + pageGap) * index, index })}
           renderItem={renderItem}
           extraData={currentIndex}
           initialScrollIndex={initialIndex}
@@ -835,7 +967,36 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
         />
       </View>
 
-      <Dots count={attachments.length} active={currentIndex} />
+      {isGallery ? (
+        <GalleryFilmstrip attachments={attachments} active={currentIndex} onSelect={selectGalleryItem} />
+      ) : (
+        <Dots count={attachments.length} active={currentIndex} />
+      )}
+
+      {actionNotice ? (
+        <View pointerEvents="none" style={styles.galleryActionNotice}>
+          <Text style={styles.galleryActionNoticeText}>{actionNotice}</Text>
+        </View>
+      ) : null}
+
+      {deleteCandidate ? (
+        <View style={styles.galleryConfirmationOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => !isDeleting && setDeleteCandidate(null)} />
+          <View style={styles.galleryConfirmationCard}>
+            <View style={styles.galleryConfirmationIcon}><Trash2 size={24} color={COLORS.error} /></View>
+            <Text style={styles.galleryConfirmationTitle}>Delete this attachment?</Text>
+            <Text style={styles.galleryConfirmationCopy}>This removes it from the conversation and cannot be undone.</Text>
+            <View style={styles.galleryConfirmationActions}>
+              <TouchableOpacity disabled={isDeleting} onPress={() => setDeleteCandidate(null)} style={styles.galleryConfirmationCancel}>
+                <Text style={styles.galleryConfirmationCancelText}>Keep it</Text>
+              </TouchableOpacity>
+              <TouchableOpacity disabled={isDeleting} onPress={() => void handleConfirmDelete()} style={styles.galleryConfirmationDelete}>
+                {isDeleting ? <ActivityIndicator color={COLORS.textInverse} /> : <Text style={styles.galleryConfirmationDeleteText}>Delete</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
 
       {/* ── Custom share action panel ── */}
       <Modal
@@ -961,7 +1122,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onClose, onRemove, memoryId, headerMode = 'default' }: Props) {
+export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onClose, onRemove, memoryId, headerMode = 'default', presentation = 'standard', onViewMessage, onDeletePersisted }: Props) {
   if (!attachments.length) return null;
   return (
     <Modal visible={visible} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
@@ -976,6 +1137,9 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
           onRemove={onRemove}
           memoryId={memoryId}
           headerMode={headerMode}
+          presentation={presentation}
+          onViewMessage={onViewMessage}
+          onDeletePersisted={onDeletePersisted}
         />
       </SafeAreaProvider>
     </Modal>
@@ -1022,10 +1186,26 @@ const styles = StyleSheet.create({
   shareLabel: {
     fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textBase,
   },
+  galleryHeaderActions: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+  },
+  galleryHeaderButton: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: COLORS.fillWeak,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  galleryViewMessage: {
+    height: 40, borderRadius: 20, paddingHorizontal: 14,
+    backgroundColor: COLORS.fillWeak,
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+  },
+  galleryViewMessageText: {
+    color: COLORS.textStrong, fontFamily: FONTS.sansMedium, fontSize: 14,
+  },
 
   // Slides
   slide: {
-    width: CARD_W,
+    width: '100%',
     flex: 1,
   },
   // Image slide — flex:1 + contain shows the full image at its natural ratio
@@ -1163,5 +1343,130 @@ const styles = StyleSheet.create({
   },
   dot: {
     borderRadius: 999,
+  },
+  galleryFilmstrip: {
+    paddingHorizontal: 4,
+    paddingBottom: 4,
+    paddingTop: 8,
+  },
+  galleryFilmstripList: {
+    flexGrow: 0,
+    height: 68,
+  },
+  galleryThumbnail: {
+    width: 56,
+    height: 56,
+    borderRadius: 4,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: COLORS.fillWeak,
+  },
+  galleryThumbnailActive: {
+    borderColor: COLORS.brand,
+  },
+  galleryThumbnailFallback: {
+    alignItems: 'center',
+    backgroundColor: COLORS.fillWeak,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  galleryThumbnailPlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(23,11,0,0.18)',
+  },
+  galleryActionNotice: {
+    alignSelf: 'center',
+    backgroundColor: COLORS.textStrong,
+    borderRadius: 999,
+    bottom: 86,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    position: 'absolute',
+  },
+  galleryActionNoticeText: {
+    color: COLORS.textInverse,
+    fontFamily: FONTS.sansSemi,
+    fontSize: 13,
+  },
+  galleryConfirmationOverlay: {
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    backgroundColor: 'rgba(23,11,0,0.35)',
+    justifyContent: 'flex-end',
+    zIndex: 20,
+  },
+  galleryConfirmationCard: {
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    gap: 10,
+    paddingBottom: 28,
+    paddingHorizontal: 24,
+    paddingTop: 28,
+  },
+  galleryConfirmationIcon: {
+    alignItems: 'center',
+    backgroundColor: `${COLORS.error}12`,
+    borderRadius: 24,
+    height: 48,
+    justifyContent: 'center',
+    marginBottom: 4,
+    width: 48,
+  },
+  galleryConfirmationTitle: {
+    color: COLORS.textStrong,
+    fontFamily: FONTS.serif,
+    fontSize: 24,
+    textAlign: 'center',
+  },
+  galleryConfirmationCopy: {
+    color: COLORS.textBase,
+    fontFamily: FONTS.sans,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  galleryConfirmationActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+    width: '100%',
+  },
+  galleryConfirmationCancel: {
+    alignItems: 'center',
+    backgroundColor: COLORS.fillWeak,
+    borderRadius: 999,
+    flex: 1,
+    height: 54,
+    justifyContent: 'center',
+  },
+  galleryConfirmationCancelText: {
+    color: COLORS.textStrong,
+    fontFamily: FONTS.sansBold,
+    fontSize: 15,
+  },
+  galleryConfirmationDelete: {
+    alignItems: 'center',
+    backgroundColor: COLORS.error,
+    borderRadius: 999,
+    flex: 1,
+    height: 54,
+    justifyContent: 'center',
+  },
+  galleryConfirmationDeleteText: {
+    color: COLORS.textInverse,
+    fontFamily: FONTS.sansBold,
+    fontSize: 15,
   },
 });
