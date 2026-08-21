@@ -32,7 +32,6 @@ import { useChatLogic } from '@/hooks/use-chat-logic';
 import { useLocalSearchParams } from 'expo-router';
 import { useBackHandler } from '@/hooks/use-back-handler';
 import * as Haptics from 'expo-haptics';
-import { VoiceModeOverlay } from '@/components/chat/VoiceModeOverlay';
 import type { ChatReplyQuote } from '@/lib/utils';
 import { verticalScale } from 'react-native-size-matters';
 import {
@@ -75,7 +74,7 @@ export default function ChatScreen() {
     return () => runtimeDiagnostics.record('screen', 'unmount', { screen: 'chat' });
   }, []);
   // promptLabel is only set by BrowseTopicsSection topic cards — daily prompts don't set it
-  const { promptLabel } = useLocalSearchParams<{ promptLabel?: string }>();
+  const { promptLabel, focusMessageId, focusAttachmentId } = useLocalSearchParams<{ promptLabel?: string; focusMessageId?: string; focusAttachmentId?: string }>();
 
   const {
     isPromptType,
@@ -101,8 +100,6 @@ export default function ChatScreen() {
     handleExitDeepDive,
     enrichmentStats,
     activeChatId,
-    voiceModeVisible,
-    setVoiceModeVisible,
     router,
   } = useChatLogic();
 
@@ -115,6 +112,8 @@ export default function ChatScreen() {
   const [chatSurfaceHeight, setChatSurfaceHeight] = useState(0);
   const [nudgeHidden, setNudgeHidden] = useState(false);
   const [attachmentPreview, setAttachmentPreview] = useState<ChatAttachmentPreviewRequest | null>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const completedFocusRef = useRef<string | null>(null);
   const blurTargetRef = useRef<View>(null);
 
   const isActuallyStreaming = streaming || isStartingConversation;
@@ -122,6 +121,36 @@ export default function ChatScreen() {
   React.useEffect(() => {
     if (!replyQuote) setReplyQuoteHeight(0);
   }, [replyQuote]);
+
+  React.useEffect(() => {
+    const focusIdentity = focusMessageId ?? focusAttachmentId;
+    if (!focusIdentity || completedFocusRef.current === focusIdentity) return;
+    if (isLoading) return;
+    const messageContainsAttachment = (message: any) => {
+      if (!focusAttachmentId) return false;
+      const attachments = message.attachments ?? message.attatchments ?? [];
+      return attachments.some((attachment: any) => String(attachment?._id ?? attachment?.id ?? '') === focusAttachmentId);
+    };
+    const index = allMessages.findIndex((message: any) => message._id === focusMessageId || messageContainsAttachment(message));
+    if (index >= 0) {
+      const matchedMessageId = allMessages[index]?._id ?? focusMessageId ?? null;
+      completedFocusRef.current = focusIdentity;
+      setHighlightedMessageId(matchedMessageId);
+      const frame = requestAnimationFrame(() => {
+        flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.35 });
+      });
+      const timeout = setTimeout(() => setHighlightedMessageId(null), 2200);
+      return () => {
+        cancelAnimationFrame(frame);
+        clearTimeout(timeout);
+      };
+    }
+    if (hasOlderMessages && !isFetchingOlderMessages) {
+      void fetchOlderMessages();
+    } else if (!hasOlderMessages) {
+      completedFocusRef.current = focusIdentity;
+    }
+  }, [allMessages, fetchOlderMessages, focusAttachmentId, focusMessageId, hasOlderMessages, isFetchingOlderMessages, isLoading]);
 
   const composerOverlayMaxHeight = React.useMemo(() => (
     getComposerOverlayMaxHeight({
@@ -173,8 +202,11 @@ export default function ChatScreen() {
 
   const handleVoiceCall = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setVoiceModeVisible(true);
-  }, [setVoiceModeVisible]);
+    router.push({
+      pathname: '/voice-call',
+      params: { memoryId: activeChatId ?? '' },
+    });
+  }, [activeChatId, router]);
 
   const handleScrollToOriginal = useCallback((quotedText: string) => {
     // Find the message whose content matches the quoted text snippet
@@ -215,6 +247,7 @@ export default function ChatScreen() {
           {showDate && <ChatDateSeparator label={getChatDayLabel(item.created_at)} />}
           <MessageBubble
             message={item}
+            highlighted={item._id === highlightedMessageId}
             onReply={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setReplyQuote({ role: item.role, text: item.text });
@@ -229,7 +262,7 @@ export default function ChatScreen() {
         </View>
       );
     },
-    [allMessages, handlePreviewAttachments, handleScrollToOriginal],
+    [allMessages, handlePreviewAttachments, handleScrollToOriginal, highlightedMessageId],
   );
 
   const streamingFooterComponent = React.useMemo(() => {
@@ -513,17 +546,6 @@ export default function ChatScreen() {
               loading={isActuallyStreaming || isLoading}
             />
           </View>
-
-          <VoiceModeOverlay
-            visible={voiceModeVisible}
-            onClose={() => setVoiceModeVisible(false)}
-            memoryId={activeChatId}
-            conversationTitle={
-              isPromptType
-                ? (promptMemory?.title ?? 'Prompt Reflection')
-                : (serverMessages?.title ?? 'Conversation')
-            }
-          />
 
           {attachmentPreview && (
             <MediaPreviewModal

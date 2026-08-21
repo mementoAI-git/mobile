@@ -49,6 +49,7 @@ interface MessageBubbleProps {
   onReply?: () => void;
   onScrollToOriginal?: () => void;
   onPreviewAttachments?: (request: ChatAttachmentPreviewRequest) => void;
+  highlighted?: boolean;
 }
 
 // ─── Attachment helpers ────────────────────────────────────────────────────────
@@ -358,10 +359,11 @@ export const MessageBubble = React.memo(function MessageBubble({
   onReply,
   onScrollToOriginal,
   onPreviewAttachments,
+  highlighted = false,
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const rawAttachments: { url: string; name: string; type?: string; _id?: string }[] =
-    (message as any).attatchments ?? [];
+    (message as any).attachments ?? (message as any).attatchments ?? [];
 
   const rawContent = message.text || (message as any).content || '';
   const replyQuote: { role: string; text: string } | null =
@@ -385,6 +387,7 @@ export const MessageBubble = React.memo(function MessageBubble({
       entering={FadeInDown.duration(450).springify()}
       style={[
         styles.messageContainer,
+        highlighted && styles.messageContainerHighlighted,
         isUser ? styles.userMessageContainer : styles.assistantMessageContainer,
         isUser && rawAttachments.length > 0 && styles.userAttachmentContainer,
       ]}
@@ -458,6 +461,13 @@ export const MessageBubble = React.memo(function MessageBubble({
 
 const styles = StyleSheet.create({
   messageContainer: { marginBottom: 14 },
+  messageContainerHighlighted: {
+    backgroundColor: COLORS.brandSubtle,
+    borderColor: COLORS.brandTint,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 6,
+  },
   userMessageContainer: { alignSelf: 'flex-end', maxWidth: '64%' },
   userAttachmentContainer: { maxWidth: '78%' },
   assistantMessageContainer: { alignSelf: 'stretch' },
