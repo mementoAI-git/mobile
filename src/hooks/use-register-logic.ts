@@ -3,8 +3,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRegister } from '@/hooks/mutations/use-auth-mutations';
-import { useAuthStore, useUserStore } from '@/store';
 import type { IAuth } from '@/types';
+import { establishSession } from '@/features/auth/session-coordinator';
 import * as Haptics from 'expo-haptics';
 
 const schema = z.object({
@@ -18,8 +18,6 @@ export type RegisterFormData = z.infer<typeof schema>;
 
 export function useRegisterLogic() {
   const router = useRouter();
-  const setAuth = useAuthStore((s) => s.setAuth);
-  const setUser = useUserStore((s) => s.setUser);
   const { mutate, isPending, error } = useRegister();
 
   const form = useForm<RegisterFormData>({
@@ -37,9 +35,7 @@ export function useRegisterLogic() {
     mutate(data, {
       onSuccess: async (res) => {
         const { user, ...auth } = res.data;
-        await setAuth(auth as IAuth);
-        setUser(user);
-        router.replace('/(onboard)');
+        await establishSession(auth as IAuth, user);
       },
       onError: () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

@@ -62,9 +62,8 @@ client.interceptors.response.use(
         originalRequest.headers.authorization = `Bearer ${newAuth.access_token}`;
         return client(originalRequest);
       } catch {
-        const { authService } = await import('./auth-service');
-        authService.clearAuth();
-        authService.redirectToLogin();
+        const { terminateSession } = await import('@/features/auth/session-coordinator');
+        await terminateSession('expired');
         return Promise.reject(error);
       }
     }

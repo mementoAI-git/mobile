@@ -3,7 +3,7 @@ import { post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import type { ProfileUpdatePayload } from '@/features/account/profile-form';
-import { useUserStore } from '@/store';
+import { useAuthStore, useUserStore } from '@/store';
 import type { IUser } from '@/types';
 
 export function useUpdateProfile() {
@@ -26,6 +26,8 @@ export function useUpdateProfile() {
       if (storedUser) {
         useUserStore.getState().setUser({ ...storedUser, ...updated });
       }
+      const sessionUser = useAuthStore.getState().user;
+      if (sessionUser) useAuthStore.getState().updateUser({ ...sessionUser, ...updated });
     },
   });
 }

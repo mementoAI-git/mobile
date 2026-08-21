@@ -7,6 +7,7 @@ interface UserState {
   clearUser: () => void;
 }
 
+/** Compatibility mirror. Auth and routing read useAuthStore.user instead. */
 export const useUserStore = create<UserState>((set) => ({
   user: null,
   setUser: (user) => set({ user }),

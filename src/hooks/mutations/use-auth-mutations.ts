@@ -1,9 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { post, del } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
-import { useAuthStore, useUserStore } from '@/store';
-import { queryKeys } from '@/constants/query-keys';
 import type { IAuth, IUser } from '@/types';
+import { establishSession, terminateSession } from '@/features/auth/session-coordinator';
 
 interface LoginPayload {
   email: string;
@@ -36,10 +35,6 @@ interface TwoFARequiredResponse {
 type LoginResponse = AuthResponse | TwoFARequiredResponse;
 
 export function useLogin() {
-  const setAuth = useAuthStore((s) => s.setAuth);
-  const setUser = useUserStore((s) => s.setUser);
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (payload: LoginPayload) =>
       post<LoginResponse>(endpoint.login, payload, { skipAuth: true }),
@@ -48,9 +43,7 @@ export function useLogin() {
       // 2FA required — caller handles redirect
       if (data.requires_2fa) return;
       const { user, ...auth } = data as AuthResponse;
-      await setAuth(auth as IAuth);
-      setUser(user);
-      queryClient.setQueryData(queryKeys.profile, user);
+      await establishSession(auth as IAuth, user);
     },
   });
 }
@@ -84,19 +77,13 @@ export function useSetPassword() {
 }
 
 export function useLogout() {
-  const clearAuth = useAuthStore((s) => s.clearAuth);
-  const clearUser = useUserStore((s) => s.clearUser);
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async () => {
       const { authService } = await import('@/api/auth-service');
       await authService.logout();
     },
     onSettled: async () => {
-      await clearAuth();
-      clearUser();
-      queryClient.removeQueries();
+      await terminateSession('logout');
     },
   });
 }
@@ -109,33 +96,21 @@ export function useChangePassword() {
 }
 
 export function useDeleteAccount() {
-  const clearAuth = useAuthStore((s) => s.clearAuth);
-  const clearUser = useUserStore((s) => s.clearUser);
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: () => del(endpoint.deleteAccount),
     onSuccess: async () => {
-      await clearAuth();
-      clearUser();
-      queryClient.removeQueries();
+      await terminateSession('deleted');
     },
   });
 }
 
 export function useVerify2FA() {
-  const setAuth = useAuthStore((s) => s.setAuth);
-  const setUser = useUserStore((s) => s.setUser);
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (payload: { two_fa_token: string; code: string }) =>
       post<AuthResponse>(endpoint.verify2FALogin, payload, { skipAuth: true }),
     onSuccess: async (res) => {
       const { user, ...auth } = res.data;
-      await setAuth(auth as IAuth);
-      setUser(user);
-      queryClient.setQueryData(queryKeys.profile, user);
+      await establishSession(auth as IAuth, user);
     },
   });
 }

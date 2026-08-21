@@ -5,14 +5,15 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLogin } from '@/hooks/mutations/use-auth-mutations';
 import { useToast } from '@/components/ui/Toast';
-import { useAuthStore, useUiStore, useUserStore } from '@/store';
+import { useUiStore } from '@/store';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
 import { Passkey } from 'react-native-passkey';
 import { storageKeys } from '@/constants/storage-keys';
-import { AUTH_SESSION_RETURN_URL, getPostAuthRedirectHref, normalizeAppHref, oauthCallbackUrl } from '@/lib/navigation';
+import { AUTH_SESSION_RETURN_URL, normalizeAppHref, oauthCallbackUrl } from '@/lib/navigation';
+import { establishSession, restoreSessionWithCredentials } from '@/features/auth/session-coordinator';
 import {
   classifyPasskeyError,
   selectSecurityLoginMethod,
@@ -72,10 +73,6 @@ export function useLoginLogic() {
     return normalizeAppHref(redirectValue) ?? useUiStore.getState().pendingDeepLink;
   };
 
-  const clearPendingDeepLink = () => {
-    useUiStore.getState().setPendingDeepLink(null);
-  };
-
   const onSubmit = (data: LoginFormData) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     mutate(data, {
@@ -91,9 +88,6 @@ export function useLoginLogic() {
           });
           return;
         }
-        const preferredHref = getPreferredPostAuthHref();
-        clearPendingDeepLink();
-        router.replace(getPostAuthRedirectHref(resData.onboarding_status, preferredHref));
       },
       onError: (err: any) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -182,13 +176,10 @@ export function useLoginLogic() {
           if (!authData?.access_token) throw new Error('Missing passkey session');
 
           const { user, ...auth } = authData;
-          await useAuthStore.getState().setAuth(auth);
-          if (user) useUserStore.getState().setUser(user);
+          if (!user) throw new Error('Missing passkey profile');
+          await establishSession(auth, user);
 
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          const preferredHref = getPreferredPostAuthHref();
-          clearPendingDeepLink();
-          router.replace(getPostAuthRedirectHref(authData.onboarding_status, preferredHref));
         } catch (error) {
           if (classifyPasskeyError(error) !== 'cancelled') {
             toast('Passkey sign-in could not be completed. Try again or use your password.', 'error');
@@ -219,7 +210,7 @@ export function useLoginLogic() {
       }
 
       // Persist the new token pair and update the stored refresh_token silently
-      await useAuthStore.getState().setAuth(newTokens);
+      await restoreSessionWithCredentials(newTokens);
       await SecureStore.setItemAsync(
         storageKeys.biometricsRefreshToken,
         newTokens.refresh_token,
@@ -227,9 +218,6 @@ export function useLoginLogic() {
       );
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      const preferredHref = getPreferredPostAuthHref();
-      clearPendingDeepLink();
-      router.replace(getPostAuthRedirectHref(newTokens.onboarding_status, preferredHref));
     } catch {
       // User cancelled the biometric prompt — no toast needed
     } finally {
