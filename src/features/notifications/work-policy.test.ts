@@ -16,10 +16,10 @@ describe('notification work policy', () => {
   });
 
   test('clears the synchronization marker through every auth clearing path', async () => {
-    const store = await Bun.file(new URL('../../store/auth.store.ts', import.meta.url)).text();
-    const service = await Bun.file(new URL('../../api/auth-service.ts', import.meta.url)).text();
+    const state = await Bun.file(new URL('../auth/auth-state.ts', import.meta.url)).text();
+    const coordinator = await Bun.file(new URL('../auth/session-coordinator.ts', import.meta.url)).text();
 
-    expect(store).toContain('secureStorage.deleteItem(storageKeys.syncedPushToken)');
-    expect(service).toContain('secureStorage.deleteItem(storageKeys.syncedPushToken)');
+    expect(state).toContain('storage.deleteItem(storageKeys.syncedPushToken)');
+    expect(coordinator).toContain('secureStorage.deleteItem(storageKeys.syncedPushToken)');
   });
 });

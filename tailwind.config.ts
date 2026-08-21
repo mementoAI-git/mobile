@@ -10,8 +10,8 @@ const config: Config = {
     extend: {
       colors: {
         // ── Page / Surface ─────────────────────────────────────────
-        // web: --color-background: #fefbf8 | --card: #ffffff
-        background: '#fefbf8',
+        // App page background: white | card: white
+        background: '#ffffff',
         card:       '#ffffff',
 
         // web: --fill-neutral-weak/weaker/strong (rgba(23,11,0,*))

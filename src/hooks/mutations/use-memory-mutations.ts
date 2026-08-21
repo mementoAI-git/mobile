@@ -99,6 +99,17 @@ export function useDeleteMemory() {
   });
 }
 
+export function useRemoveMemoryFile(memoryId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (fileId: string) => del(`${endpoint.removeFileFromMemory}/${fileId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.memory(memoryId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.promptMessages(memoryId) });
+    },
+  });
+}
+
 export function useRestoreMemory() {
   const queryClient = useQueryClient();
   return useMutation({

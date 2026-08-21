@@ -23,7 +23,7 @@ export default function TabsLayout() {
             right: 0,
           },
           // Give every tab screen enough bottom padding so content clears the floating bar.
-          // backgroundColor matches COLORS.background (#fefbf8) so the iOS default white
+          // backgroundColor matches COLORS.background (#ffffff) for native parity.
           // doesn't show through the paddingBottom zone underneath the floating dock.
           sceneStyle: { paddingBottom: 0, backgroundColor: 'transparent' },
         }}

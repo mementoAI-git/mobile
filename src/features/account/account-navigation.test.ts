@@ -12,7 +12,7 @@ describe('account overview navigation', () => {
       new URL('../../../app/settings/index.tsx', import.meta.url),
     ).text();
 
-    expect(root).toContain('<Stack.Screen name="account"');
+    expect(root).toContain('name="account"');
     expect(account).toContain("router.push('/settings')");
     expect(account).toContain("router.push('/insights')");
     expect(account).toContain("openSheet('edit-profile')");

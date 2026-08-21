@@ -23,7 +23,7 @@
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#fefbf8"
+        "backgroundColor": "#F97316"
       },
       "predictiveBackGestureEnabled": false,
       "intentFilters": [
@@ -119,14 +119,15 @@
         }
       ],
       "expo-dev-client",
+      "react-native-audio-api",
       "expo-image",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 100,
+          "image": "./assets/splash-icon.jpg",
+          "imageWidth": 120,
           "resizeMode": "contain",
-          "backgroundColor": "#fefbf8"
+          "backgroundColor": "#ffffff"
         }
       ],
       "expo-status-bar",

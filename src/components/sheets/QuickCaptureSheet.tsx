@@ -217,7 +217,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
           multiline
           autoFocus
           className="flex-1 text-base text-text-strong p-0 m-0"
-          style={{ fontFamily: FONTS.sans, textAlignVertical: 'top' }}
+          style={{ fontFamily: FONTS.chatBody, fontSize: 14, textAlignVertical: 'top' }}
         />
 
         <View className="flex-row items-center justify-between mt-4">

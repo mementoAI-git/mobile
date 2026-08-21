@@ -1,43 +1,7 @@
 import { create } from 'zustand';
-import type { IAuth } from '@/types';
-import { storageKeys } from '@/constants/storage-keys';
 import { secureStorage } from '@/lib/secure-storage';
+import { createAuthState, type AuthState } from '@/features/auth/auth-state';
 
-interface AuthState {
-  token: IAuth | null;
-  hydrated: boolean;
-  setAuth: (auth: IAuth) => Promise<void>;
-  clearAuth: () => Promise<void>;
-  hydrate: () => Promise<void>;
-}
+export { createAuthState } from '@/features/auth/auth-state';
 
-export const useAuthStore = create<AuthState>((set) => ({
-  token: null,
-  hydrated: false,
-
-  setAuth: async (auth) => {
-    await secureStorage.setItem(storageKeys.auth, JSON.stringify(auth));
-    set({ token: auth });
-  },
-
-  clearAuth: async () => {
-    try {
-      await Promise.all([
-        secureStorage.deleteItem(storageKeys.auth),
-        secureStorage.deleteItem(storageKeys.syncedPushToken),
-      ]);
-    } finally {
-      set({ token: null });
-    }
-  },
-
-  hydrate: async () => {
-    try {
-      const raw = await secureStorage.getItem(storageKeys.auth);
-      const token = raw ? (JSON.parse(raw) as IAuth) : null;
-      set({ token, hydrated: true });
-    } catch {
-      set({ token: null, hydrated: true });
-    }
-  },
-}));
+export const useAuthStore = create<AuthState>(createAuthState(secureStorage));

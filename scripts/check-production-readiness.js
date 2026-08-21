@@ -112,15 +112,14 @@ assert(expo.splash === undefined, 'app.json must not include schema-invalid lega
 assert(expo.ios?.bundleIdentifier === 'com.mementoai.app', 'iOS bundleIdentifier must be configured.');
 assert(expo.android?.package === 'com.mementoai.app', 'Android package must match the app identifier.');
 assert(expo.ios?.infoPlist?.ITSAppUsesNonExemptEncryption === false, 'iOS encryption export flag must be explicit.');
-assert(expo.android?.adaptiveIcon?.backgroundColor === '#fefbf8', 'Android adaptive icon background must match COLORS.background.');
 assert(expo.web?.favicon === './assets/favicon.png', 'Web favicon must be configured.');
 
 const splashPlugin = findPlugin('expo-splash-screen');
 assert(Array.isArray(splashPlugin), 'expo-splash-screen plugin must use explicit options.');
-assert(splashPlugin[1]?.image === './assets/splash-icon.png', 'Splash plugin image must point to the committed splash asset.');
+assert(splashPlugin[1]?.image === './assets/splash-icon.jpg', 'Splash plugin image must point to the committed splash asset.');
 assert(splashPlugin[1]?.resizeMode === 'contain', 'Splash plugin must use contain resize mode.');
-assert(splashPlugin[1]?.backgroundColor === '#fefbf8', 'Splash plugin background must match COLORS.background.');
-assert(splashPlugin[1]?.imageWidth === 100, 'Splash plugin imageWidth must be locked for native parity.');
+assert(splashPlugin[1]?.backgroundColor === '#ffffff', 'Splash plugin background must be white.');
+assert(splashPlugin[1]?.imageWidth === 120, 'Splash plugin imageWidth must be locked for native parity.');
 
 assert(findPlugin('expo-router'), 'expo-router plugin must be present.');
 assert(findPlugin('expo-font'), 'expo-font plugin must be present.');

@@ -3,20 +3,14 @@ import { Text, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui';
-import { useAuthStore } from '@/store/auth.store';
-import { useUiStore } from '@/store/ui.store';
-import { useUserStore } from '@/store/user.store';
 import endpoint from '@/api/endpoint';
 import { COLORS } from '@/constants/tokens';
 import { API_BASE_URL } from '@/lib/env';
-import { getPostAuthRedirectHref } from '@/lib/navigation';
+import { establishSession, restoreSessionWithCredentials } from '@/features/auth/session-coordinator';
 
 export default function OAuthCallbackScreen() {
   const router = useRouter();
   const { provider, code } = useLocalSearchParams<{ provider: string; code: string }>();
-  const setAuth = useAuthStore((s) => s.setAuth);
-  const setUser = useUserStore((s) => s.setUser);
-
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
 
@@ -56,21 +50,20 @@ export default function OAuthCallbackScreen() {
       const token = getSingleParam(access_token);
       const refresh = getSingleParam(refresh_token);
       
-      await setAuth({
+      const credentials = {
         access_token: token ?? '',
         refresh_token: refresh ?? '',
         expires_at: getSingleParam(expires_at) ?? '',
         refresh_expires_at: getSingleParam(refresh_expires_at) ?? '',
-      });
+      };
       
       if (parsedUser && typeof parsedUser !== 'string') {
-        setUser(parsedUser);
+        await establishSession(credentials, parsedUser);
+      } else {
+        await restoreSessionWithCredentials(credentials);
       }
       
       setDone(true);
-      const pendingHref = useUiStore.getState().pendingDeepLink;
-      useUiStore.getState().setPendingDeepLink(null);
-      router.replace(getPostAuthRedirectHref(getSingleParam(onboarding_status), pendingHref));
     } catch {
       setError('Authentication failed. Please try again.');
     }
@@ -92,13 +85,8 @@ export default function OAuthCallbackScreen() {
 
       const data = result.data;
       const { user, access_token, refresh_token, expires_at, refresh_expires_at } = data;
-      await setAuth({ access_token, refresh_token, expires_at, refresh_expires_at });
-      setUser(user);
+      await establishSession({ access_token, refresh_token, expires_at, refresh_expires_at }, user);
       setDone(true);
-
-      const pendingHref = useUiStore.getState().pendingDeepLink;
-      useUiStore.getState().setPendingDeepLink(null);
-      router.replace(getPostAuthRedirectHref(data.onboarding_status, pendingHref));
     } catch {
       setError('Something went wrong. Please try again.');
     }

@@ -5,20 +5,10 @@ import { API_BASE_URL } from '@/lib/env';
 import type { IAuth } from '@/types';
 import { storageKeys } from '@/constants/storage-keys';
 import endpoint from './endpoint';
-
-// Injected at startup by root _layout.tsx so the class stays testable
-let _redirectFn: (() => void) | null = null;
+import { commitRefreshedCredentials } from '@/features/auth/session-coordinator';
 
 class AuthService {
   private refreshPromise: Promise<IAuth> | null = null;
-
-  setRedirectFn(fn: () => void) {
-    _redirectFn = fn;
-  }
-
-  redirectToLogin(): void {
-    _redirectFn?.();
-  }
 
   isAccessTokenExpired(auth: IAuth): boolean {
     if (!auth?.expires_at) return true;
@@ -43,13 +33,6 @@ class AuthService {
     await secureStorage.setItem(storageKeys.auth, JSON.stringify(authData));
   }
 
-  async clearAuth(): Promise<void> {
-    await Promise.all([
-      secureStorage.deleteItem(storageKeys.auth),
-      secureStorage.deleteItem(storageKeys.syncedPushToken),
-    ]);
-  }
-
   async refreshAccessToken(): Promise<IAuth> {
     if (this.refreshPromise) {
       return this.refreshPromise;
@@ -68,7 +51,6 @@ class AuthService {
     if (!authData) throw new Error('No authentication data found');
 
     if (this.isRefreshTokenExpired(authData)) {
-      this.redirectToLogin();
       throw new Error('Refresh token expired');
     }
 
@@ -79,12 +61,11 @@ class AuthService {
 
       if (response.data?.success && response.data?.data) {
         const newAuth: IAuth = response.data.data;
-        await this.setAuthData(newAuth);
+        await commitRefreshedCredentials(newAuth);
         return newAuth;
       }
       throw new Error('Failed to refresh token');
     } catch (error) {
-      this.redirectToLogin();
       throw error;
     }
   }
@@ -99,8 +80,6 @@ class AuthService {
       }
     } catch {
       // silent
-    } finally {
-      await this.clearAuth();
     }
   }
 }

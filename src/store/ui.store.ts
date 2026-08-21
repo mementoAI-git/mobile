@@ -17,7 +17,6 @@ export type SheetName =
   | 'capsule-detail'
   | 'quick-capture'
   | 'memory-insights'
-  | 'chat-actions'
   | 'feedback'
   | 'upgrade-prompt'
   | 'select'
@@ -28,6 +27,8 @@ export type SheetName =
   | 'change-password'
   | 'setup-two-factor'
   | 'security-confirmation'
+  | 'voice-call-settings'
+  | 'end-voice-session'
   | null;
 
 interface UiState {
@@ -37,6 +38,7 @@ interface UiState {
   pendingDeepLink: Href | null;
   setAppReady: (ready: boolean) => void;
   setPendingDeepLink: (link: Href | null) => void;
+  takePendingDeepLink: () => Href | null;
   openSheet: (name: SheetName, props?: Record<string, any>) => void;
   closeSheet: () => void;
   /** Story drafts — single source of truth shared between editor + DraftsSheet */
@@ -51,6 +53,11 @@ export const useUiStore = create<UiState>((set, get) => ({
   pendingDeepLink: null,
   setAppReady: (ready) => set({ appReady: ready }),
   setPendingDeepLink: (link) => set({ pendingDeepLink: link }),
+  takePendingDeepLink: () => {
+    const link = get().pendingDeepLink;
+    set({ pendingDeepLink: null });
+    return link;
+  },
   openSheet: (name, props = {}) => {
     if (!get().appReady) return;
     set({ activeSheet: name, sheetProps: props });

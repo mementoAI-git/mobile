@@ -3,7 +3,7 @@ import { TextInput as RNTextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVerify2FA } from '@/hooks/mutations/use-auth-mutations';
 import * as Haptics from 'expo-haptics';
-import { getPostAuthRedirectHref, normalizeAppHref } from '@/lib/navigation';
+import { normalizeAppHref } from '@/lib/navigation';
 import { useUiStore } from '@/store';
 
 export function useTwoFactorLogic() {
@@ -47,12 +47,11 @@ export function useTwoFactorLogic() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     mutate({ two_fa_token: token!, code: fullCode }, {
-      onSuccess: (res) => {
+      onSuccess: () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         const redirectValue = Array.isArray(redirect) ? redirect[0] : redirect;
-        const preferredHref = normalizeAppHref(redirectValue) ?? useUiStore.getState().pendingDeepLink;
-        useUiStore.getState().setPendingDeepLink(null);
-        router.replace(getPostAuthRedirectHref(res.data.onboarding_status, preferredHref));
+        const preferredHref = normalizeAppHref(redirectValue);
+        if (preferredHref) useUiStore.getState().setPendingDeepLink(preferredHref);
       },
       onError: (err: any) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

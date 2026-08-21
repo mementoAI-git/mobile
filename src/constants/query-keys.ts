@@ -14,6 +14,8 @@ export const queryKeys = {
   capsule: (id: string) => ['capsule', id] as const,
   capsuleStats: ['capsule-stats'] as const,
 
+  conversationAttachments: (id: string) => ['conversation-attachments', id] as const,
+
   prompts: (params?: object) => (params ? (['prompts', params] as const) : (['prompts'] as const)),
   dailyPrompts: (dateKey?: string) => (dateKey ? (['daily-prompts', dateKey] as const) : (['daily-prompts'] as const)),
   promptCategories: ['prompt-categories'] as const,

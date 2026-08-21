@@ -10,7 +10,7 @@
  */
 
 export const COLORS = {
-  background: '#fefbf8',
+  background: '#ffffff',
   backgroundInverse: "#12131A",
   card: '#ffffff',
 
@@ -139,15 +139,16 @@ export const CARD_PASTEL_SURFACES = [
   { bg: '#EBF7F2', border: 'rgba(6,100,70,0.12)' },
 ] as const;
 
+import { Platform } from 'react-native';
+
 export const FONTS = {
-  sans: 'Inter_400Regular',
-  sansMedium: 'Inter_500Medium',
-  sansSemi: 'Inter_600SemiBold',
-  sansBold: 'Inter_700Bold',
-  serif: 'EBGaramond_400Regular',
-  serifMedium: 'EBGaramond_500Medium',
-  serifBold: 'EBGaramond_700Bold',
-  mono: 'AzeretMono_400Regular',
-  /** Georgia — system serif used on web for category card subtitles (18px body) */
-  georgia: 'Georgia',
+  sans: 'Geist_400Regular',
+  chatBody: 'Geist_400Regular',
+  sansMedium: 'Geist_500Medium',
+  sansSemi: 'Geist_600SemiBold',
+  sansBold: 'Geist_700Bold',
+  serif: 'Geist_400Regular',
+  serifMedium: 'Geist_500Medium',
+  serifBold: 'Geist_700Bold',
+  mono: Platform.OS === 'ios' ? 'Courier' : 'monospace',
 };

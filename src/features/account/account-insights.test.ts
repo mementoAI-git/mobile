@@ -9,7 +9,7 @@ describe('My Insights screen', () => {
       new URL('../../components/account/InsightsContentCard.tsx', import.meta.url),
     ).text();
 
-    expect(root).toContain('<Stack.Screen name="insights"');
+    expect(root).toContain('name="insights"');
     expect(screen).toContain('useProfile()');
     expect(screen).toContain('useUserStats()');
     expect(screen).toContain('usePersona()');

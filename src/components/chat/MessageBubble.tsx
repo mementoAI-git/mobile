@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, Image, Linking, StyleSheet } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
@@ -49,6 +49,7 @@ interface MessageBubbleProps {
   onReply?: () => void;
   onScrollToOriginal?: () => void;
   onPreviewAttachments?: (request: ChatAttachmentPreviewRequest) => void;
+  highlighted?: boolean;
 }
 
 // ─── Attachment helpers ────────────────────────────────────────────────────────
@@ -358,18 +359,18 @@ export const MessageBubble = React.memo(function MessageBubble({
   onReply,
   onScrollToOriginal,
   onPreviewAttachments,
+  highlighted = false,
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
-  const aiModel = (message as any).ai_model;
   const rawAttachments: { url: string; name: string; type?: string; _id?: string }[] =
-    (message as any).attatchments ?? [];
+    (message as any).attachments ?? (message as any).attatchments ?? [];
 
   const rawContent = message.text || (message as any).content || '';
   const replyQuote: { role: string; text: string } | null =
     (message as any).replyTo ?? (isUser ? extractReplyQuote(rawContent) : null);
   const content = isUser ? stripReplyWrapper(rawContent) : rawContent;
   const responseTime = 'created_at' in message && message.created_at
-    ? dayjs(message.created_at).format('h:mm A')
+    ? dayjs(message.created_at).format('h:mma')
     : null;
 
   const previewAttachments: PreviewAttachment[] = rawAttachments.map(toPreviewAttachment);
@@ -384,18 +385,23 @@ export const MessageBubble = React.memo(function MessageBubble({
   return (
     <Animated.View
       entering={FadeInDown.duration(450).springify()}
-      className={cn('mb-5 max-w-[85%]', isUser ? 'self-end' : 'self-start')}
+      style={[
+        styles.messageContainer,
+        highlighted && styles.messageContainerHighlighted,
+        isUser ? styles.userMessageContainer : styles.assistantMessageContainer,
+        isUser && rawAttachments.length > 0 && styles.userAttachmentContainer,
+      ]}
     >
-        <View className={cn('px-5 py-3.5 rounded-[20px]', isUser ? 'bg-fill-weaker' : 'bg-white')}>
+        <View style={[styles.messageSurface, isUser ? styles.userSurface : styles.assistantSurface]}>
 
           {/* Reply quote */}
           {replyQuote && replyQuote.text && (
             <TouchableOpacity
               onPress={onScrollToOriginal}
               activeOpacity={onScrollToOriginal ? 0.7 : 1}
-              className="mb-2.5 border-l-2 border-brand/50 pl-3 py-1 bg-brand/5 rounded-r-lg"
+              style={styles.replyQuote}
             >
-              <Text className="text-[12px] text-text-weak leading-relaxed" numberOfLines={2} style={{ fontFamily: FONTS.sans, fontStyle: 'italic' }}>
+              <Text numberOfLines={2} style={styles.replyQuoteText}>
                 {replyQuote.text}
               </Text>
             </TouchableOpacity>
@@ -409,8 +415,7 @@ export const MessageBubble = React.memo(function MessageBubble({
           {/* Message text */}
           {content.trim().length > 0 && (
             <Text
-              className="text-[15px] leading-[23px] text-text-strong"
-              style={{ fontFamily: FONTS.serif, letterSpacing: -0.03, marginTop: rawAttachments.length > 0 ? 4 : 0 }}
+              style={[styles.messageText, { marginTop: rawAttachments.length > 0 ? 4 : 0 }]}
             >
               {content}
             </Text>
@@ -421,43 +426,111 @@ export const MessageBubble = React.memo(function MessageBubble({
         </View>
 
         {/* Meta row */}
-        <View className={cn('flex-row items-center mt-1.5 px-2', isUser ? 'justify-end' : 'justify-start')}>
-          {!isUser && responseTime && (
-            <Text className="text-[9px] text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>
-              {responseTime}
-            </Text>
-          )}
-          {isUser && responseTime && (
-            <Text className="text-[9px] text-text-muted font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>
-              {responseTime}
-            </Text>
-          )}
-          {!isUser && aiModel && (
-            <View className="flex-row items-center ml-2 bg-brand/5 px-2 py-0.5 rounded-full border border-brand/10">
-              <Text className="text-[8px] text-brand font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>
-                {aiModel}
-              </Text>
-            </View>
-          )}
+        <View style={[styles.metaRow, isUser ? styles.metaRowUser : styles.metaRowAssistant]}>
+          {responseTime && <Text style={styles.timeLabel}>{responseTime}</Text>}
           {content.trim().length > 0 && (
             <TouchableOpacity
+              accessibilityLabel="Copy message"
+              accessibilityRole="button"
               onPress={() => {
                 Haptics.selectionAsync();
                 Clipboard.setStringAsync(content.trim()).catch(() => {});
               }}
               activeOpacity={0.7}
-              className="ml-2 bg-brand/5 p-1 rounded-full border border-brand/10"
+              style={styles.metaIconButton}
             >
-              <Copy size={10} color={COLORS.brand} strokeWidth={2} />
+              <Copy size={17} color={COLORS.textStrong} strokeWidth={2} />
             </TouchableOpacity>
           )}
           {onReply && (
-            <TouchableOpacity onPress={onReply} activeOpacity={0.7} className="flex-row items-center ml-2 bg-brand/5 px-2 py-0.5 rounded-full border border-brand/10">
-              <CornerDownRight size={10} color={COLORS.brand} style={{ marginRight: 3 }} />
-              <Text className="text-[8px] text-brand font-bold uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>Reply</Text>
+            <TouchableOpacity
+              accessibilityLabel="Reply to message"
+              accessibilityRole="button"
+              onPress={onReply}
+              activeOpacity={0.7}
+              style={styles.replyButton}
+            >
+              <CornerDownRight size={18} color={COLORS.textStrong} strokeWidth={2} />
+              <Text style={styles.replyLabel}>Reply</Text>
             </TouchableOpacity>
           )}
         </View>
     </Animated.View>
   );
+});
+
+const styles = StyleSheet.create({
+  messageContainer: { marginBottom: 14 },
+  messageContainerHighlighted: {
+    backgroundColor: COLORS.brandSubtle,
+    borderColor: COLORS.brandTint,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 6,
+  },
+  userMessageContainer: { alignSelf: 'flex-end', maxWidth: '64%' },
+  userAttachmentContainer: { maxWidth: '78%' },
+  assistantMessageContainer: { alignSelf: 'stretch' },
+  messageSurface: { overflow: 'hidden' },
+  userSurface: {
+    backgroundColor: COLORS.fillWeak,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+  },
+  assistantSurface: { backgroundColor: COLORS.background },
+  messageText: {
+    color: COLORS.textStrong,
+    fontFamily: FONTS.chatBody,
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  replyQuote: {
+    backgroundColor: COLORS.strokeWeaker,
+    borderLeftColor: COLORS.info,
+    borderLeftWidth: 2,
+    borderRadius: 4,
+    marginBottom: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+  },
+  replyQuoteText: {
+    color: COLORS.textStrong,
+    fontFamily: FONTS.serif,
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  metaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 9,
+    marginTop: 6,
+    minHeight: 24,
+  },
+  metaRowUser: { justifyContent: 'flex-end' },
+  metaRowAssistant: { justifyContent: 'flex-start' },
+  timeLabel: {
+    color: COLORS.textStrong,
+    fontFamily: FONTS.sans,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  metaIconButton: {
+    alignItems: 'center',
+    height: 24,
+    justifyContent: 'center',
+    width: 24,
+  },
+  replyButton: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5,
+    minHeight: 24,
+  },
+  replyLabel: {
+    color: COLORS.textStrong,
+    fontFamily: FONTS.sans,
+    fontSize: 13,
+    lineHeight: 18,
+  },
 });

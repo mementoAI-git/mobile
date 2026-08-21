@@ -2,21 +2,19 @@ import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   RefreshControl,
   StyleSheet,
-  Platform,
   TouchableOpacity,
   ImageBackground,
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Plus, Zap, MessageCircle, Trophy, ChevronRight, Folder, UserCheck, Hourglass, Activity, HelpCircle, Check, X, BarChart2 } from 'lucide-react-native';
+import { Plus, Zap, Trophy, ChevronRight,  BarChart2 } from 'lucide-react-native';
 import { useUiStore } from '@/store';
 import { useUserStats, useMemoriesStats, useCapsuleStats } from '@/hooks/queries/use-overview';
 import { useUserStore } from '@/store';
-import { StatCard, DashboardHeader, Spinner, OverviewSkeleton, GradientText, GreetingIcon, /* SplineChart, */ JourneyStatIcon } from '@/components/ui';
+import {  DashboardHeader, OverviewSkeleton, GradientText, GreetingIcon, /* SplineChart, */ JourneyStatIcon } from '@/components/ui';
 import { useStartConversation } from '@/hooks/mutations/use-memory-mutations';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useOverviewPrompts, useDailyPrompts } from '@/hooks/queries/use-prompts';
@@ -29,7 +27,7 @@ import { RecentActivitiesSection } from '@/components/overview/RecentActivitiesS
 import { BrowseTopicsSection } from '@/components/overview/BrowseTopicsSection';
 import * as Haptics from 'expo-haptics';
 import Animated, {
-  FadeInDown, FadeInUp,
+  FadeInDown,
   useSharedValue, useAnimatedStyle, withSpring,
   useAnimatedScrollHandler, interpolate, Extrapolation,
 } from 'react-native-reanimated';
@@ -390,7 +388,7 @@ export default function OverviewScreen() {
                   <TouchableOpacity
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      openSheet('memory-insights');
+                      router.push('/insights');
                     }}
                     activeOpacity={0.7}
                     style={{
