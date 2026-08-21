@@ -5,7 +5,7 @@ import {
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import { useUiStore } from '@/store';
-import { useRootNavigationState } from 'expo-router';
+import { useRootNavigationState, useSegments } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CreateMemorySheet } from './CreateMemorySheet';
 import { CreateCapsuleSheet } from './CreateCapsuleSheet';
@@ -75,19 +75,32 @@ const SELF_MANAGED = new Set([
   'change-password', 'setup-two-factor',
 ]);
 
+const MODAL_SEGMENTS = new Set([
+  'coming-soon',
+  'voice-call',
+  'share',
+  'editor',
+  'create',
+  'article',
+]);
+
 /**
  * SheetManager uses BottomSheetModal (not BottomSheet) so every sheet renders
  * through the BottomSheetModalProvider portal — always at the very root of the
  * component tree, above the tab bar and any other absolutely-positioned elements.
  */
-export function SheetManager() {
+export function SheetManager({ isModal = false }: { isModal?: boolean }) {
   const activeSheet = useUiStore((s) => s.activeSheet);
   const sheetProps = useUiStore((s) => s.sheetProps);
   const closeSheet = useUiStore((s) => s.closeSheet);
   const rootNavigationState = useRootNavigationState();
+  const segments = useSegments();
   const modalRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
   const navigationReady = Boolean(rootNavigationState?.key);
+
+  const currentSegment = segments[0] as string | undefined;
+  const isCurrentSegmentModal = currentSegment ? MODAL_SEGMENTS.has(currentSegment) : false;
 
   // Prevent global sheets from mounting before Expo Router has created the
   // navigation container. This avoids the classic ``Couldn't find a navigation context``
@@ -142,6 +155,10 @@ export function SheetManager() {
   const SheetContent = config?.component ?? null;
 
   if (!navigationReady) return null;
+
+  // Render logic to prevent duplicate sheets in root vs local native modals
+  if (!isModal && isCurrentSegmentModal) return null;
+  if (isModal && !isCurrentSegmentModal) return null;
 
   return (
     <BottomSheetModal

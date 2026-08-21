@@ -14,7 +14,7 @@ describe('native full-screen modal safe-area ownership', () => {
   test('every registered full-screen modal establishes a local safe-area provider', async () => {
     const layout = await Bun.file(new URL('../../../app/_layout.tsx', import.meta.url)).text();
     const registeredRoutes = [...layout.matchAll(
-      /<Stack\.Screen name="([^"]+)" options=\{\{ presentation: 'fullScreenModal'/g,
+      /<Stack\.Screen\s*name="([^"]+)"\s*options=\{\{\s*presentation:\s*'fullScreenModal'/g,
     )].map((match) => match[1]);
 
     expect(registeredRoutes).toEqual(['coming-soon', 'voice-call', 'share', 'editor', 'create', 'article']);
