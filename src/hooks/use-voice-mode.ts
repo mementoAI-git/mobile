@@ -14,20 +14,6 @@ import {
   type VoiceConnectionFailure,
 } from '@/features/chat/voice-entitlement';
 
-export interface VoiceOption {
-  id: string;
-  name: string;
-  description: string;
-  gender: 'male' | 'female';
-}
-
-export const VOICE_OPTIONS: VoiceOption[] = [
-  { id: 'companion-warm', name: 'Warm Companion', description: 'A gentle, caring voice for deep personal reflection', gender: 'female' },
-  { id: 'guide-analytical', name: 'Analytical Guide', description: 'Clear, structured and calm voice for organizing thoughts', gender: 'male' },
-  { id: 'friend-casual', name: 'Casual Friend', description: 'Upbeat, natural and relaxed voice for everyday chats', gender: 'female' },
-  { id: 'deep-masculine', name: 'Deep Sage', description: 'Resonant, slow and comforting deep voice', gender: 'male' },
-];
-
 const INPUT_SAMPLE_RATE = 16_000;
 const OUTPUT_SAMPLE_RATE = 24_000;
 
@@ -49,12 +35,14 @@ function base64ToBytes(value: string) {
   return bytes;
 }
 
-export function useVoiceMode({ memoryId }: { memoryId?: string | null } = {}) {
+export function useVoiceMode({
+  memoryId,
+  voiceName,
+}: { memoryId?: string | null; voiceName?: string } = {}) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [activeVoice, setActiveVoice] = useState<VoiceOption>(VOICE_OPTIONS[0]);
   const [aiSpeechText, setAiSpeechText] = useState('Ready to connect secure voice link...');
   const [userSpeechText, setUserSpeechText] = useState('');
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
@@ -225,7 +213,7 @@ export function useVoiceMode({ memoryId }: { memoryId?: string | null } = {}) {
             languageCode: 'en-US',
             voiceConfig: {
               prebuiltVoiceConfig: {
-                voiceName: activeVoice.id === 'deep-masculine' ? 'Fenrir' : 'Aoede',
+                voiceName: voiceName ?? 'Fenrir',
               },
             },
           },
@@ -251,7 +239,7 @@ export function useVoiceMode({ memoryId }: { memoryId?: string | null } = {}) {
       setIsConnecting(false);
       await disconnect();
     }
-  }, [activeVoice.id, disconnect, handleLiveMessage, isConnected, isConnecting, stream]);
+  }, [disconnect, handleLiveMessage, isConnected, isConnecting, stream, voiceName]);
 
   const toggleMute = useCallback(() => {
     Haptics.selectionAsync();
@@ -260,6 +248,7 @@ export function useVoiceMode({ memoryId }: { memoryId?: string | null } = {}) {
   }, []);
 
   useEffect(() => {
+    isMountedRef.current = true;
     audioContextRef.current = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE });
     return () => {
       isMountedRef.current = false;
@@ -273,8 +262,6 @@ export function useVoiceMode({ memoryId }: { memoryId?: string | null } = {}) {
     isConnecting,
     isMuted,
     recordingTime,
-    activeVoice,
-    setActiveVoice,
     aiSpeechText,
     userSpeechText,
     isAiSpeaking,
