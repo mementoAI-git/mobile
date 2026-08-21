@@ -62,6 +62,7 @@ import {
 } from '@/lib/env';
 import { normalizeAppHref } from '@/lib/navigation';
 import { queryClient } from '@/lib/query-client';
+import { logger } from '@/lib/logger';
 
 import {
   getSessionReconciliationKey,
@@ -300,7 +301,7 @@ function RootLayout() {
         // user behind the native splash. Bundled require() may
         // still resolve when AnimatedSplash mounts.
         if (__DEV__) {
-          console.warn(
+          logger.warn(
             'Splash asset preload failed:',
             error,
           );

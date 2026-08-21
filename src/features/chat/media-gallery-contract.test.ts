@@ -21,12 +21,9 @@ describe('chat media gallery contract', () => {
     expect(settings).toContain("openAssetCollection('media', 'video')");
     expect(settings).toContain("openAssetCollection('media', 'audio')");
     expect(gallery).toContain('presentation="gallery"');
-    expect(gallery).toContain('focusMessageId');
-    expect(gallery).toContain('activeCount === 0 && messages.hasNextPage');
     expect(settings).not.toContain('(154)');
     expect(gallery).not.toContain('available here soon');
-    expect(gallery).toContain('collectSharedLinks');
-    expect(gallery).toContain('collectSharedAttachments');
+    expect(gallery).toContain('useConversationAttachments');
   });
 
   test('loads older pages before scrolling and highlights the source message', async () => {

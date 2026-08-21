@@ -15,6 +15,7 @@ import Animated, {
   useSharedValue,
   withDelay,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -49,7 +50,7 @@ interface AnimatedLetterProps {
   character: string;
   index: number;
   total: number;
-  progress: Animated.SharedValue<number>;
+  progress: SharedValue<number>;
 }
 
 function AnimatedLetter({
