@@ -10,7 +10,7 @@
  */
 
 export const COLORS = {
-  background: '#fefbf8',
+  background: '#ffffff',
   backgroundInverse: "#12131A",
   card: '#ffffff',
 
@@ -141,6 +141,7 @@ export const CARD_PASTEL_SURFACES = [
 
 export const FONTS = {
   sans: 'Inter_400Regular',
+  chatBody: 'Geist_400Regular',
   sansMedium: 'Inter_500Medium',
   sansSemi: 'Inter_600SemiBold',
   sansBold: 'Inter_700Bold',

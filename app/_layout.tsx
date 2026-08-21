@@ -1,5 +1,5 @@
 import '../global.css';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Platform, LogBox, StatusBar as RNStatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
@@ -25,7 +25,7 @@ if (Platform.OS === 'web') {
 }
 
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
@@ -36,6 +36,7 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
+import { Geist_400Regular } from '@expo-google-fonts/geist';
 import {
   EBGaramond_400Regular,
   EBGaramond_500Medium,
@@ -45,8 +46,7 @@ import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono';
 import { PatrickHandSC_400Regular } from '@expo-google-fonts/patrick-hand-sc';
 import { Handlee_400Regular } from '@expo-google-fonts/handlee';
 import { CutiveMono_400Regular } from '@expo-google-fonts/cutive-mono';
-import { useAuthStore, useUserStore, useUiStore } from '@/store';
-import { authService } from '@/api/auth-service';
+import { useAuthStore, useUiStore } from '@/store';
 import { ToastProvider } from '@/components/ui/Toast';
 import { OfflineNotice } from '@/components/ui/OfflineNotice';
 import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
@@ -55,24 +55,19 @@ import { SheetManager } from '@/components/sheets/SheetManager';
 import { COLORS } from '@/constants/tokens';
 import { SENTRY_DSN, SENTRY_TRACES_SAMPLE_RATE } from '@/lib/env';
 import { normalizeAppHref } from '@/lib/navigation';
+import { queryClient } from '@/lib/query-client';
+import { getSessionReconciliationKey, getSessionRouteAction } from '@/features/auth/session-route-policy';
+import { establishSession, terminateSession } from '@/features/auth/session-coordinator';
+import { get } from '@/api/mutations';
+import endpoint from '@/api/endpoint';
+import { queryKeys } from '@/constants/query-keys';
+import type { IUser } from '@/types';
 import { shouldInitializeNotifications } from '@/features/notifications/work-policy';
 import { StatusBar } from 'expo-status-bar';
 import { useShareIntentContext, ShareIntentProvider } from 'expo-share-intent';
+import { AnimatedSplash } from '@/components/system/AnimatedSplash';
 
 SplashScreen.preventAutoHideAsync();
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 30_000,
-      // Keep query payloads short-lived so large media and screen caches do not
-      // accumulate in memory while the app sits idle in the background.
-      gcTime: 120_000,
-      retry: 2,
-      networkMode: 'offlineFirst',
-    },
-  },
-});
 
 if (SENTRY_DSN) {
   Sentry.init({
@@ -117,20 +112,49 @@ function ShareIntentWatcher() {
   return null;
 }
 
+function SessionBootstrap() {
+  const phase = useAuthStore((s) => s.phase);
+  const token = useAuthStore((s) => s.token);
+  const restoringRef = React.useRef(false);
+
+  useEffect(() => {
+    if (phase !== 'authenticating' || !token || restoringRef.current) return;
+    restoringRef.current = true;
+    queryClient.fetchQuery({
+      queryKey: queryKeys.profile,
+      queryFn: async () => (await get<IUser>(endpoint.profile)).data,
+      staleTime: 0,
+    }).then((user) => establishSession(token, user))
+      .catch(() => {
+        if (useAuthStore.getState().phase === 'authenticating') {
+          return terminateSession('restore-failed');
+        }
+      })
+      .finally(() => { restoringRef.current = false; });
+  }, [phase, token]);
+
+  return null;
+}
+
 function RootLayout() {
   const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
+  const phase = useAuthStore((s) => s.phase);
   const hydrated = useAuthStore((s) => s.hydrated);
   const hydrate = useAuthStore((s) => s.hydrate);
   const router = useRouter();
   const segments = useSegments();
   const rootNavigationState = useRootNavigationState();
   const navigationReady = Boolean(rootNavigationState?.key);
+  const reconciliationRef = React.useRef<string | null>(null);
+  const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    Geist_400Regular,
     EBGaramond_400Regular,
     EBGaramond_500Medium,
     EBGaramond_700Bold,
@@ -149,70 +173,42 @@ function RootLayout() {
     'Geist Mono': AzeretMono_400Regular, // kept for capsule theme backward-compat
   });
 
-  // Wire up the redirect fn for auth-service token refresh failures
-  useEffect(() => {
-    authService.setRedirectFn(() => {
-      if (rootNavigationState?.key) {
-        router.replace('/(auth)/login');
-      }
-    });
-  }, [router, rootNavigationState]);
-
   // Hydrate auth from SecureStore on mount
   useEffect(() => {
     hydrate();
   }, [hydrate]);
 
   useEffect(() => {
-    useUiStore.getState().setAppReady(Boolean(rootNavigationState?.key) && hydrated && Boolean(fontsLoaded));
-  }, [rootNavigationState, hydrated, fontsLoaded]);
+    const sessionStable = phase === 'anonymous' || phase === 'authenticated';
+    useUiStore.getState().setAppReady(Boolean(rootNavigationState?.key) && sessionStable && Boolean(fontsLoaded));
+  }, [rootNavigationState, phase, fontsLoaded]);
 
-  // Guard navigation based on auth state
+  // This is the sole auth-driven navigation owner. Services only transition
+  // session state; they never redirect independently.
   useEffect(() => {
-    if (!hydrated || !rootNavigationState?.key) return;
+    if (!navigationReady) return;
+    const ui = useUiStore.getState();
+    const snapshot = {
+      phase,
+      group: segments[0],
+      onboardingStatus: user?.onboarding_status ?? null,
+      pendingHref: ui.pendingDeepLink,
+    };
+    const key = getSessionReconciliationKey(snapshot);
+    if (reconciliationRef.current === key) return;
+    reconciliationRef.current = key;
+    const action = getSessionRouteAction(snapshot);
+    if (action.type === 'none') return;
 
-    const inAuth = segments[0] === '(auth)';
-    const inOnboard = segments[0] === '(onboard)';
-
-    const timer = setTimeout(() => {
-      if (!token) {
-        if (!inAuth) {
-          const currentPath = `/${segments.join('/')}`;
-          const pendingHref = normalizeAppHref(currentPath);
-          if (pendingHref) {
-            useUiStore.getState().setPendingDeepLink(pendingHref);
-          }
-          router.replace('/(auth)/login');
-        }
-      } else {
-        const user = useUserStore.getState().user;
-        if (user && user.onboarding_status === 'never' && !inOnboard) {
-          router.replace('/(onboard)');
-        } else if (inAuth || inOnboard) {
-          router.replace('/(tabs)/overview');
-        }
+    if (action.preserveCurrentHref) {
+      const pendingHref = normalizeAppHref(`/${segments.join('/')}`);
+      if (pendingHref && segments[0] !== '(auth)' && segments[0] !== '(onboard)') {
+        ui.setPendingDeepLink(pendingHref);
       }
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, [hydrated, token, segments, router, rootNavigationState]);
-
-  // Process pending deep links after successful auth and navigation to tabs
-  useEffect(() => {
-    const pendingDeepLink = useUiStore.getState().pendingDeepLink;
-    const setPendingDeepLink = useUiStore.getState().setPendingDeepLink;
-    const inTabs = segments[0] === '(tabs)';
-
-    if (token && pendingDeepLink && inTabs) {
-      // Wait a tiny bit for the initial tab navigation to settle
-      const timer = setTimeout(() => {
-        router.push(pendingDeepLink);
-        setPendingDeepLink(null);
-      }, 500);
-
-      return () => clearTimeout(timer);
     }
-  }, [token, segments, router]);
+    if (action.consumePendingHref) ui.takePendingDeepLink();
+    router.replace(action.href);
+  }, [navigationReady, phase, user?.onboarding_status, segments, router]);
 
   // Set Android status bar background to match the app's cream surface.
   // expo-status-bar doesn't expose backgroundColor — use RN's imperative API.
@@ -223,14 +219,13 @@ function RootLayout() {
     }
   }, []);
 
-  // Hide splash once both auth is hydrated AND fonts are loaded.
-  // .catch() silences the "No native splash screen registered" rejection that fires
-  // when hideAsync() is called from a fullScreenModal view controller (e.g. /create).
+  // Hide native splash once both auth is hydrated AND fonts are loaded.
+  // The animated splash will take over from here.
   useEffect(() => {
-    if (hydrated && fontsLoaded) {
+    if ((phase === 'anonymous' || phase === 'authenticated') && fontsLoaded) {
       SplashScreen.hideAsync().catch(() => { });
     }
-  }, [hydrated, fontsLoaded]);
+  }, [phase, fontsLoaded]);
 
   if (!hydrated || !fontsLoaded) return null;
 
@@ -241,11 +236,12 @@ function RootLayout() {
         <KeyboardProvider preload={false}>
           <AppErrorBoundary>
             <QueryClientProvider client={queryClient}>
+              <SessionBootstrap />
               <BottomSheetModalProvider>
               <ShareIntentProvider>
                 <ToastProvider>
                   <OfflineNotice />
-                  {shouldInitializeNotifications(hydrated, Boolean(token)) ? (
+                  {shouldInitializeNotifications(phase === 'authenticated', Boolean(token)) ? (
                     <AuthenticatedNotificationManager />
                   ) : null}
                   <ShareIntentWatcher />
@@ -253,9 +249,11 @@ function RootLayout() {
                     <Stack.Screen name="(auth)" />
                     <Stack.Screen name="(onboard)" />
                     <Stack.Screen name="(tabs)" options={{ contentStyle: { backgroundColor: COLORS.background } }} />
-          <Stack.Screen name="account" options={{ animation: 'slide_from_right' }} />
+                    <Stack.Screen name="account" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="insights" options={{ animation: 'slide_from_right' }} />
                     <Stack.Screen name="chat/[id]" />
+                    <Stack.Screen name="chat/settings" options={{ animation: 'slide_from_right' }} />
+                    <Stack.Screen name="coming-soon" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
                     <Stack.Screen name="share" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
                     <Stack.Screen name="editor" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
                     <Stack.Screen name="create" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
@@ -272,6 +270,9 @@ function RootLayout() {
           </AppErrorBoundary>
         </KeyboardProvider>
       </GestureHandlerRootView>
+      {showAnimatedSplash && (
+        <AnimatedSplash onDone={() => setShowAnimatedSplash(false)} />
+      )}
     </SafeAreaProvider>
   );
 }

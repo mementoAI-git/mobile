@@ -29,6 +29,7 @@ import { usePathname } from 'expo-router';
 import { useUiStore } from '@/store';
 import * as Haptics from 'expo-haptics';
 import { resolveTabSwipeTarget } from '@/lib/tab-swipe';
+import { getTabBarItemWidths } from '@/features/navigation/tab-bar-layout';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -56,7 +57,7 @@ const TAB_LABELS: Record<string, string> = {
   chat:     'Chat',
   stories:  'Memories',
   explore:  'Explore',
-  capsule:  'Capsule',
+  // capsule:  'Capsule', // Hidden in Dock UI
 };
 
 // ─── Glass surface style (shared between pill + search circle) ────────────────
@@ -74,8 +75,8 @@ const SPRING = { damping: 22, stiffness: 280, mass: 0.8 };
 // Widths
 // Keep the tab dock within its original visual width and let the touch target
 // stretch via minHeight/padding instead of inflating the entire tab width.
-const INACTIVE_W = Platform.OS === 'android' ? 64 : 60;
-const ACTIVE_W   = 96;  // expanded pill with label
+const BASE_INACTIVE_W = Platform.OS === 'android' ? 64 : 60;
+const BASE_ACTIVE_W   = 96;  // expanded pill with label
 const PILL_H     = Platform.OS === 'android' ? 60 : 58;
 const ICON_SIZE  = 26;
 
@@ -110,6 +111,8 @@ interface TabItemProps {
   isFocused: boolean;
   label: string;
   onPress: (routeName: string, routeKey: string, isFocused: boolean) => void;
+  activeWidth: number;
+  inactiveWidth: number;
 }
 
 const TabItem = memo(function TabItem({
@@ -119,14 +122,16 @@ const TabItem = memo(function TabItem({
   isFocused,
   label,
   onPress,
+  activeWidth,
+  inactiveWidth,
 }: TabItemProps) {
 
   // ── Width animation ───────────────────────────────────────────────────────
-  const width = useSharedValue(isFocused ? ACTIVE_W : INACTIVE_W);
+  const width = useSharedValue(isFocused ? activeWidth : inactiveWidth);
 
   React.useEffect(() => {
-    width.value = withSpring(isFocused ? ACTIVE_W : INACTIVE_W, SPRING);
-  }, [isFocused, width]);
+    width.value = withSpring(isFocused ? activeWidth : inactiveWidth, SPRING);
+  }, [isFocused, activeWidth, inactiveWidth, width]);
 
   const containerStyle = useAnimatedStyle(() => ({
     width: width.value,
@@ -185,10 +190,23 @@ const TabItem = memo(function TabItem({
 
 // ─── Main TabBar ──────────────────────────────────────────────────────────────
 
+import { useWindowDimensions } from 'react-native';
+
 export function TabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const pathname = usePathname();
   const openSheet = useUiStore(s => s.openSheet);
+
+  // Count how many tabs are currently mapped into the UI
+  const visibleTabsCount = state.routes.filter(r => !!TAB_LABELS[r.name.split('/')[0]]).length;
+  
+  const { activeWidth, inactiveWidth } = getTabBarItemWidths({
+    screenWidth,
+    visibleTabsCount,
+    maxActiveWidth: BASE_ACTIVE_W,
+    maxInactiveWidth: BASE_INACTIVE_W,
+  });
 
   // Host Chat owns the full bottom interaction area; detail screens do as well.
   const isHidden =
@@ -272,6 +290,8 @@ export function TabBar({ state, navigation }: TabBarProps) {
               isFocused={isFocused}
               label={label}
               onPress={handleTabPress}
+              activeWidth={activeWidth}
+              inactiveWidth={inactiveWidth}
             />
           );
         })}
@@ -329,6 +349,7 @@ const styles = StyleSheet.create({
 
   // Glass pill — flexShrink so it doesn't crowd out the search circle
   pill: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     height: PILL_H,
@@ -336,7 +357,6 @@ const styles = StyleSheet.create({
     backgroundColor: GLASS_BG,
     paddingHorizontal: 6,
     gap: 4,
-    flexShrink: 1,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(23,11,0,0.08)',
     ...PILL_SHADOW,
@@ -353,6 +373,7 @@ const styles = StyleSheet.create({
   // Pressable inside wrapper
   tabPressable: {
     flex: 1,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 999,
