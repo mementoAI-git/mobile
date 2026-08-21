@@ -6,7 +6,7 @@ describe('startup font loading', () => {
     const layout = await Bun.file(new URL('../../../app/_layout.tsx', import.meta.url)).text();
     const tokens = await Bun.file(new URL('../../constants/tokens.ts', import.meta.url)).text();
 
-    for (const unused of ['AveriaSerifLibre_', 'Geist_400Regular', 'Geist_700Bold']) {
+    for (const unused of ['AveriaSerifLibre_', 'Geist_700Bold']) {
       expect(layout).not.toContain(unused);
     }
     for (const unusedAlias of ['averia:', 'averiaBold:', 'geist:', 'geistBold:']) {
@@ -15,5 +15,7 @@ describe('startup font loading', () => {
     for (const core of ['Inter_400Regular', 'Inter_700Bold', 'EBGaramond_400Regular', 'EBGaramond_700Bold']) {
       expect(layout).toContain(core);
     }
+    expect(layout).toContain('Geist_400Regular');
+    expect(tokens).toContain("chatBody: 'Geist_400Regular'");
   });
 });

@@ -4,6 +4,11 @@ import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import type { IMemory, IPagination } from '@/types';
 import { shouldEnableStoriesQuery } from '@/features/memories/query-options';
+import {
+  getConversationMessagesUrl,
+  getNextConversationCursor,
+  type ConversationMessagePage,
+} from '@/features/chat/conversation-pagination';
 
 interface StoriesQueryOptions {
   enabled?: boolean;
@@ -81,10 +86,16 @@ export function useMemoriesStats() {
 }
 
 export function useConversationMessages(id: string) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: queryKeys.promptMessages(id),
-    queryFn: () =>
-      get<any>(`${endpoint.aiPromptMessage}/${id}`).then((r) => r.data),
+    queryFn: ({ pageParam }) => {
+      const cursor = typeof pageParam === 'string' ? pageParam : '';
+      return get<ConversationMessagePage>(
+        getConversationMessagesUrl(endpoint.aiPromptMessage, id, cursor),
+      ).then((r) => r.data);
+    },
+    getNextPageParam: getNextConversationCursor,
+    initialPageParam: '',
     enabled: !!id,
     staleTime: 0,
   });

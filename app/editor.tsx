@@ -1132,13 +1132,15 @@ export default function EditorScreen() {
       />
 
       <Modal visible={!!publishedUrl} animationType="slide" presentationStyle="fullScreen" statusBarTranslucent onRequestClose={handleDismissPublishedSuccess}>
-        {publishedUrl ? (
-          <PublishSuccessView
-            publishedUrl={publishedUrl}
-            onAddAnother={lockMode === 'true' ? handlePublishAddAnother : handleDismissPublishedSuccess}
-            onDismiss={handleDismissPublishedSuccess}
-          />
-        ) : null}
+        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+          {publishedUrl ? (
+            <PublishSuccessView
+              publishedUrl={publishedUrl}
+              onAddAnother={lockMode === 'true' ? handlePublishAddAnother : handleDismissPublishedSuccess}
+              onDismiss={handleDismissPublishedSuccess}
+            />
+          ) : null}
+        </SafeAreaProvider>
       </Modal>
 
       {/* Cancel / discard confirmation — on-brand replacement for Alert.alert */}

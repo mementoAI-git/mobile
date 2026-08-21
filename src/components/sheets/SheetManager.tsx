@@ -18,7 +18,6 @@ import { ShareMemorySheet } from './ShareMemorySheet';
 import { QuickCaptureSheet } from './QuickCaptureSheet';
 import { MemoryInsightsSheet } from './MemoryInsightsSheet';
 import { SearchMemorySheet } from './SearchMemorySheet';
-import { ChatActionsSheet } from './ChatActionsSheet';
 import { FeedbackSheet } from './FeedbackSheet';
 import { CapsuleDetailSheet } from './CapsuleDetailSheet';
 import { UpgradePromptSheet } from './UpgradePromptSheet';
@@ -52,7 +51,6 @@ const SHEET_CONFIGS: Record<string, {
   'quick-capture': { component: QuickCaptureSheet, dynamic: true, keyboardBlurBehavior: 'none' },
   'memory-insights': { component: MemoryInsightsSheet, snapPoints: ['88%'] },
   'search-memory': { component: SearchMemorySheet, snapPoints: ['90%'], keyboardBehavior: 'extend', keyboardBlurBehavior: 'none' },
-  'chat-actions': { component: ChatActionsSheet, dynamic: true },
   'feedback': { component: FeedbackSheet, snapPoints: ['90%'], dynamic: true, keyboardBehavior: 'fillParent' },
   'capsule-detail': { component: CapsuleDetailSheet, snapPoints: ['92%'] },
   'upgrade-prompt': { component: UpgradePromptSheet, dynamic: true },

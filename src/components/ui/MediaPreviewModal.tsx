@@ -2,7 +2,7 @@
  * MediaPreviewModal — full-screen attachment previewer
  *
  * Design:
- *  - Cream background (COLORS.background)
+ *  - White background (COLORS.background)
  *  - Header: default Share chrome or composer close-only chrome
  *  - Images: rounded corners, horizontal padding, peek of next image
  *  - Media vertically centered
@@ -23,7 +23,7 @@ import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Clipboard from 'expo-clipboard';
 import { Image as ExpoImage } from 'expo-image';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView } from 'expo-video';
 import { runtimeDiagnostics, sanitizeMediaUri } from '@/lib/runtime-diagnostics';
 import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-type';
@@ -844,17 +844,19 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
         animationType="slide"
         onRequestClose={() => setShareMenuVisible(false)}
       >
+        <SafeAreaProvider>
         <TouchableOpacity
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
           activeOpacity={1}
           onPress={() => { Haptics.selectionAsync(); setShareMenuVisible(false); }}
         />
+        <SafeAreaView edges={['bottom']} style={styles.shareMenuSafeArea}>
         <View style={{
           backgroundColor: COLORS.background,
           borderTopLeftRadius: 32,
           borderTopRightRadius: 32,
           paddingTop: 12,
-          paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+          paddingBottom: 24,
           paddingHorizontal: 24,
           gap: 8,
         }}>
@@ -950,6 +952,8 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
             </>
           )}
         </View>
+        </SafeAreaView>
+        </SafeAreaProvider>
       </Modal>
     </View>
   );
@@ -981,6 +985,11 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  shareMenuSafeArea: {
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

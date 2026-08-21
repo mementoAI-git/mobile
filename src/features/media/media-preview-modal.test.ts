@@ -51,10 +51,10 @@ describe('Media preview modal', () => {
     expect(modal).toContain('if (!isActive) return undefined;');
   });
 
-  test('avoids background animation work when chat is not actively streaming', () => {
+  test('does not keep a chat pulse animation alive outside active streaming', () => {
     const chatScreen = readFileSync('src/screens/ChatScreen.tsx', 'utf8');
-    expect(chatScreen).toContain('if (!isActuallyStreaming) {');
-    expect(chatScreen).toContain('pulse.value = withTiming(0.7, { duration: 200 });');
+    expect(chatScreen).toContain('if (!isActuallyStreaming) return null;');
+    expect(chatScreen).not.toContain('withRepeat(');
   });
 
   test('uses a calmer waveform and voice-ring animation cadence to reduce battery drain', () => {

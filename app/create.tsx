@@ -23,7 +23,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
-import { SafeAreaView, SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider, initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Globe,
@@ -46,6 +46,7 @@ import Animated, { FadeInDown, SlideInUp } from 'react-native-reanimated';
 // Module-level flag — SlideInUp only on the very first mount per session.
 let createHasSlid = false;
 import { COLORS, FONTS } from '@/constants/tokens';
+import { getModalBottomPadding } from '@/features/layout/modal-safe-area';
 import { useUserStore } from '@/store';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
@@ -268,8 +269,20 @@ function VideoCard({ item, onRemove }: { item: AttachmentItem; onRemove: (id: st
 function EmojiPicker({ onSelect, onClose }: { onSelect: (e: string) => void; onClose: () => void }) {
   return (
     <Modal transparent animationType="fade" onRequestClose={onClose}>
+      <SafeAreaProvider>
+        <EmojiPickerContent onSelect={onSelect} onClose={onClose} />
+      </SafeAreaProvider>
+    </Modal>
+  );
+}
+
+function EmojiPickerContent({ onSelect, onClose }: { onSelect: (e: string) => void; onClose: () => void }) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={StyleSheet.absoluteFill}>
       <TouchableOpacity style={styles.emojiBackdrop} activeOpacity={1} onPress={onClose} />
-      <View style={styles.emojiPicker}>
+      <View style={[styles.emojiPicker, { bottom: getModalBottomPadding(insets.bottom, 80) }]}>
         {EMOJI_ROWS.map((row, ri) => (
           <View key={ri} style={styles.emojiRow}>
             {row.map((e) => (
@@ -280,7 +293,7 @@ function EmojiPicker({ onSelect, onClose }: { onSelect: (e: string) => void; onC
           </View>
         ))}
       </View>
-    </Modal>
+    </View>
   );
 }
 

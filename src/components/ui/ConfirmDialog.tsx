@@ -28,9 +28,13 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { getModalBottomPadding } from '@/features/layout/modal-safe-area';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +66,32 @@ export function ConfirmDialog({
   buttons,
   onClose,
 }: ConfirmDialogProps) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <SafeAreaProvider>
+        <ConfirmDialogContent
+          title={title}
+          message={message}
+          buttons={buttons}
+          onClose={onClose}
+        />
+      </SafeAreaProvider>
+    </Modal>
+  );
+}
+
+function ConfirmDialogContent({
+  title,
+  message,
+  buttons,
+  onClose,
+}: Omit<ConfirmDialogProps, 'visible'>) {
   const insets = useSafeAreaInsets();
 
   const handleButton = useCallback((btn: ConfirmButton) => {
@@ -75,13 +105,7 @@ export function ConfirmDialog({
   }, []);
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
+    <View style={StyleSheet.absoluteFill}>
       {/* Backdrop */}
       <TouchableOpacity
         style={styles.backdrop}
@@ -90,7 +114,7 @@ export function ConfirmDialog({
       />
 
       {/* Card */}
-      <View style={[styles.container, { paddingBottom: Math.max(insets.bottom + 16, 32) }]}>
+      <View style={[styles.container, { paddingBottom: Math.max(getModalBottomPadding(insets.bottom, 16), 32) }]}>
         <View style={styles.card}>
           {/* Title */}
           <Text style={styles.title}>{title}</Text>
@@ -135,7 +159,7 @@ export function ConfirmDialog({
           </View>
         </View>
       </View>
-    </Modal>
+    </View>
   );
 }
 

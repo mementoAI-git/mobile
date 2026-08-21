@@ -17,6 +17,7 @@ export function useProfile() {
         // to useUserStore reactively — avoids triggering a re-render loop on
         // every background refetch.
         useUserStore.getState().setUser(res.data);
+        if (useAuthStore.getState().token) useAuthStore.getState().updateUser(res.data);
       }
       return res.data;
     },

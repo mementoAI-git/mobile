@@ -29,6 +29,7 @@ import { X, FileText, Music, Video } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { UiZapFast, UiDatabase01 } from '@/components/ui/icons/SettingsIcons';
+import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
 
 const PATTERN = require('../assets/images/backgrounds/welcome_bg.png');
 
@@ -86,6 +87,14 @@ function FilePreview({ uri, mimeType, name }: { uri: string; mimeType?: string; 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ShareScreen() {
+  return (
+    <NativeModalSafeAreaBoundary>
+      <ShareContent />
+    </NativeModalSafeAreaBoundary>
+  );
+}
+
+function ShareContent() {
   const router = useRouter();
   const { shareIntent, resetShareIntent, hasShareIntent } = useShareIntent();
   const [isProcessing, setIsProcessing] = useState(false);

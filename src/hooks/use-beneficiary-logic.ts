@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useAddBeneficiary } from '@/hooks/mutations/use-beneficiary-mutations';
 import { post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
+import { useAuthStore, useUserStore } from '@/store';
 
 export function useBeneficiaryLogic() {
-  const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [relationship, setRelationship] = useState('');
@@ -19,7 +18,12 @@ export function useBeneficiaryLogic() {
     } catch {
       // non-blocking
     }
-    router.replace('/(tabs)/overview');
+    const user = useUserStore.getState().user ?? useAuthStore.getState().user;
+    if (user) {
+      const completedUser = { ...user, onboarded: true, onboarding_status: 'completed' as const };
+      useUserStore.getState().setUser(completedUser);
+      useAuthStore.getState().updateUser(completedUser);
+    }
   };
 
   const handleAdd = () => {
