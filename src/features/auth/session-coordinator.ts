@@ -35,7 +35,7 @@ export function terminateSession(reason: TerminationReason): Promise<void> {
 
   // Remove runtime identity before any async storage work. The route guard can
   // now only observe a terminating/anonymous session, never stale credentials.
-  useAuthStore.getState().beginTermination();
+  useAuthStore.getState().beginTermination(reason);
   useUserStore.getState().clearUser();
   if (reason !== 'expired') useUiStore.getState().setPendingDeepLink(null);
 

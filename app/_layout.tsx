@@ -227,6 +227,7 @@ function RootLayout() {
   const phase = useAuthStore((state) => state.phase);
   const hydrated = useAuthStore((state) => state.hydrated);
   const hydrate = useAuthStore((state) => state.hydrate);
+  const terminationReason = useAuthStore((state) => state.terminationReason);
 
   const router = useRouter();
   const segments = useSegments();
@@ -371,7 +372,11 @@ function RootLayout() {
       return;
     }
 
-    if (action.preserveCurrentHref) {
+    if (
+      action.preserveCurrentHref &&
+      terminationReason !== 'logout' &&
+      terminationReason !== 'deleted'
+    ) {
       const pendingHref = normalizeAppHref(
         `/${segments.join('/')}`,
       );
@@ -396,6 +401,7 @@ function RootLayout() {
     user?.onboarding_status,
     segments,
     router,
+    terminationReason,
   ]);
 
   // ---------------------------------------------------------------------------
