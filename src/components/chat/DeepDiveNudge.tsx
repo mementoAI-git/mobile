@@ -88,6 +88,7 @@ export function DeepDiveNudge({ dimension, question, onDeepDive, onDismiss }: De
             onDismiss();
           }}
           activeOpacity={0.7}
+          hitSlop={10}
           className="size-6 rounded-full bg-fill-weaker items-center justify-center shrink-0"
         >
           <X size={12} color={COLORS.textWeak} />

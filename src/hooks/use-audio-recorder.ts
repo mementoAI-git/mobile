@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   useAudioRecorder as useExpoAudioRecorder,
   AudioModule,
@@ -81,14 +81,17 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     }
   }, [recorder]);
 
-  return {
-    isRecording: recorder.isRecording,
-    isPaused: false, // expo-audio doesn't expose pause on the recorder hook
-    // currentTime is in seconds (number)
-    duration: Math.floor(recorder.currentTime),
-    uri: recorder.uri ?? null,
-    start,
-    stop,
-    cancel,
-  };
+  return useMemo(
+    () => ({
+      isRecording: recorder.isRecording,
+      isPaused: false, // expo-audio doesn't expose pause on the recorder hook
+      // currentTime is in seconds (number)
+      duration: Math.floor(recorder.currentTime),
+      uri: recorder.uri ?? null,
+      start,
+      stop,
+      cancel,
+    }),
+    [recorder.isRecording, recorder.currentTime, recorder.uri, start, stop, cancel],
+  );
 }
