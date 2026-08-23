@@ -1,19 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { Mic, CheckCircle2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useDailyPrompts } from '@/hooks/queries/use-prompts';
 import type { IDashboardPromptSlot } from '@/types';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 
-interface Props {
-  prompts: IDashboardPromptSlot[];
-  isLoading: boolean;
-}
-
-export function DailyPromptSection({ prompts, isLoading }: Props) {
+export function DailyPromptSection() {
+  const { data: dailyPrompts, isLoading } = useDailyPrompts();
+  const prompts = dailyPrompts || [];
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -23,17 +21,11 @@ export function DailyPromptSection({ prompts, isLoading }: Props) {
     }
   }, [prompts.length, activeIndex]);
 
-  if (isLoading) {
-    return <Skeleton className="h-[200px] rounded-3xl" />;
-  }
-
-  if (prompts.length === 0) return null;
-
   const activeRow = prompts[activeIndex];
-  const promptText = activeRow.slot_kind === 'ai' ? activeRow.ai_prompt_text : activeRow.prompt?.title;
+  const promptText = activeRow?.slot_kind === 'ai' ? activeRow.ai_prompt_text : activeRow?.prompt?.title;
 
-  const handleCapture = () => {
-    if (activeRow.answered) return;
+  const handleCapture = useCallback(() => {
+    if (!activeRow || activeRow.answered) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     // Navigate to chat as a prompt reflection — same pattern as explore page
     // promptTitle is available immediately before the API resolves (shown pinned at top)
@@ -46,7 +38,18 @@ export function DailyPromptSection({ prompts, isLoading }: Props) {
         promptTitle: promptText || '',
       },
     });
-  };
+  }, [activeRow, promptText, router]);
+
+  const handleSelectPrompt = useCallback((index: number) => {
+    Haptics.selectionAsync();
+    setActiveIndex(index);
+  }, []);
+
+  if (isLoading) {
+    return <Skeleton className="h-[200px] rounded-3xl" />;
+  }
+
+  if (prompts.length === 0) return null;
 
   return (
     <Animated.View entering={FadeInDown.delay(200)} className="gap-4">
@@ -62,10 +65,7 @@ export function DailyPromptSection({ prompts, isLoading }: Props) {
             {prompts.map((p, i) => (
               <TouchableOpacity
                 key={i}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setActiveIndex(i);
-                }}
+                onPress={() => handleSelectPrompt(i)}
                 activeOpacity={0.7}
                 className={`px-4 py-2 rounded-full border ${activeIndex === i ? 'bg-brand border-brand' : 'bg-fill-weaker border-stroke-weaker'
                   }`}

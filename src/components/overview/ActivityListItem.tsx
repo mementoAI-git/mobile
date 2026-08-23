@@ -170,7 +170,7 @@ interface ActivityListItemProps {
   showDivider?: boolean;
 }
 
-export function ActivityListItem({ activity, showDivider = false }: ActivityListItemProps) {
+export const ActivityListItem = React.memo(function ActivityListItem({ activity, showDivider = false }: ActivityListItemProps) {
   const accentColor = getAccentColor(activity._id);
 
   return (
@@ -209,4 +209,5 @@ export function ActivityListItem({ activity, showDivider = false }: ActivityList
       </View>
     </>
   );
-}
+});
+

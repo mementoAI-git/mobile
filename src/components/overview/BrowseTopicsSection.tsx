@@ -1,15 +1,11 @@
-import React from 'react';
-import { View, ScrollView, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { FONTS } from '@/constants/tokens';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useOverviewPrompts } from '@/hooks/queries/use-prompts';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { TopicCard } from './TopicCard';
-
-interface Props {
-  prompts: any[];
-  isLoading: boolean;
-}
 
 const CATEGORY_META: Record<string, { image: any }> = {
   career: { image: require('../../../assets/images/categories/career.png') },
@@ -22,8 +18,44 @@ const CATEGORY_META: Record<string, { image: any }> = {
   identity: { image: require('../../../assets/images/categories/identify.png') },
 };
 
-export function BrowseTopicsSection({ prompts, isLoading }: Props) {
+// Isolated per-item component so each prompt's onPress is a stable useCallback
+// rather than an inline closure recreated on every parent render.
+function TopicCardItem({ prompt, router }: { prompt: any; router: ReturnType<typeof useRouter> }) {
+  const cat = prompt.category?.toLowerCase() || 'wellbeing';
+  const meta = CATEGORY_META[cat] || CATEGORY_META['wellbeing'];
+
+  const handlePress = useCallback(() => {
+    router.push({
+      pathname: '/chat/[id]',
+      params: {
+        id: prompt._id || '',
+        type: 'prompt',
+        promptTitle: prompt.title || '',
+        promptLabel: prompt.category || '',
+      },
+    });
+  }, [router, prompt._id, prompt.title, prompt.category]);
+
+  return (
+    <TopicCard
+      title={prompt.title}
+      image={meta.image}
+      category={prompt.category}
+      onPress={handlePress}
+    />
+  );
+}
+
+const MemoTopicCardItem = React.memo(TopicCardItem);
+
+export function BrowseTopicsSection() {
+  const { data: overviewTopics, isLoading } = useOverviewPrompts();
+  const prompts = overviewTopics || [];
   const router = useRouter();
+
+  const handleSeeAll = useCallback(() => {
+    router.push('/(tabs)/explore');
+  }, [router]);
 
   if (isLoading) {
     return (
@@ -46,7 +78,7 @@ export function BrowseTopicsSection({ prompts, isLoading }: Props) {
         <Animated.Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
           Browse conversations <Animated.Text className="text-text-weak italic">by topics</Animated.Text>
         </Animated.Text>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/explore')} activeOpacity={0.7}>
+        <TouchableOpacity onPress={handleSeeAll} activeOpacity={0.7}>
           <Animated.Text className="text-sm text-brand font-semibold" style={{ fontFamily: FONTS.sansSemi }}>See all</Animated.Text>
         </TouchableOpacity>
       </View>
@@ -58,26 +90,11 @@ export function BrowseTopicsSection({ prompts, isLoading }: Props) {
         snapToInterval={240}
         decelerationRate="fast"
       >
-        {prompts.map((t, i) => {
-          const cat = t.category?.toLowerCase() || 'wellbeing';
-          const meta = CATEGORY_META[cat] || CATEGORY_META['wellbeing'];
-
-          return (
-            <TopicCard
-              key={i}
-              title={t.title}
-              image={meta.image}
-              category={t.category}
-              onPress={() => {
-                router.push({
-                  pathname: '/chat/[id]',
-                  params: { id: t._id || '', type: 'prompt', promptTitle: t.title || '', promptLabel: t.category || '' },
-                });
-              }}
-            />
-          );
-        })}
+        {prompts.map((t, i) => (
+          <MemoTopicCardItem key={t._id || i} prompt={t} router={router} />
+        ))}
       </ScrollView>
     </Animated.View>
   );
 }
+

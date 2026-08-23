@@ -2,6 +2,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { get } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { getNextActivitiesPage } from '@/features/activities/pagination';
+import { queryKeys } from '@/constants/query-keys';
 
 export interface Activity {
   _id: string;
@@ -29,7 +30,7 @@ export interface ActivitiesResponse {
 
 export function useActivities(params?: { page?: number; limit?: number }) {
   return useQuery({
-    queryKey: ['activities', params],
+    queryKey: [...queryKeys.activities, params],
     queryFn: () => {
       const qs = new URLSearchParams();
       qs.set('page', String(params?.page || 1));
@@ -46,7 +47,7 @@ export function useInfiniteActivities(params?: { limit?: number }) {
   const limit = params?.limit ?? 20;
 
   return useInfiniteQuery({
-    queryKey: ['activities', 'infinite', { limit }],
+    queryKey: [...queryKeys.activities, 'infinite', { limit }],
     queryFn: ({ pageParam = 1 }) => {
       const qs = new URLSearchParams({
         page: String(pageParam),

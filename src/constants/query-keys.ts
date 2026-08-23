@@ -3,6 +3,7 @@ export const queryKeys = {
   userStats: ['user-stats'] as const,
   userContext: ['user-context'] as const,
   persona: ['persona'] as const,
+  personaMemoryInsightsSummary: ['persona', 'summary'] as const,
 
   memories: (params?: object) => ['memories', params] as const,
   memory: (id: string) => ['memory', id] as const,

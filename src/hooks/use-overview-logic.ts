@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useUiStore, useUserStore } from '@/store';
@@ -35,7 +35,7 @@ export function useOverviewLogic() {
   const { data: activitiesData, isLoading: activitiesLoading } = useActivities({ page: 1, limit: 4 });
   const { mutate: startConversation, isPending: startingConversation } = useStartConversation();
 
-  const handleStartConversation = () => {
+  const handleStartConversation = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     startConversation({ text: 'Hello' }, {
       onSuccess: (res) => {
@@ -44,7 +44,7 @@ export function useOverviewLogic() {
         router.push({ pathname: '/chat/[id]', params: { id: memoryId } });
       },
     });
-  };
+  }, [router, startConversation]);
 
   const stats = statsData?.data ?? {};
   const streakCount = Number(user?.streak) || Number(stats.streak_count) || 0;
@@ -61,26 +61,50 @@ export function useOverviewLogic() {
   const displayName = user?.nickname || user?.first_name || user?.last_name || '';
   const isLoading = statsLoading || memoriesLoading || capsuleLoading || promptsLoading || topicsLoading || activitiesLoading;
 
-  return {
-    router,
-    openSheet,
-    user,
-    greeting,
-    isDaytime,
-    isLoading,
-    isRefetching,
-    refetchStats,
-    startingConversation,
-    handleStartConversation,
-    streakCount,
-    enrichmentScore,
-    memoriesCount,
-    beneficiariesCount,
-    capsuleCount,
-    quickPending,
-    prompts,
-    topics,
-    activities,
-    displayName,
-  };
+  return useMemo(
+    () => ({
+      router,
+      openSheet,
+      user,
+      greeting,
+      isDaytime,
+      isLoading,
+      isRefetching,
+      refetchStats,
+      startingConversation,
+      handleStartConversation,
+      streakCount,
+      enrichmentScore,
+      memoriesCount,
+      beneficiariesCount,
+      capsuleCount,
+      quickPending,
+      prompts,
+      topics,
+      activities,
+      displayName,
+    }),
+    [
+      router,
+      openSheet,
+      user,
+      greeting,
+      isDaytime,
+      isLoading,
+      isRefetching,
+      refetchStats,
+      startingConversation,
+      handleStartConversation,
+      streakCount,
+      enrichmentScore,
+      memoriesCount,
+      beneficiariesCount,
+      capsuleCount,
+      quickPending,
+      prompts,
+      topics,
+      activities,
+      displayName,
+    ],
+  );
 }
