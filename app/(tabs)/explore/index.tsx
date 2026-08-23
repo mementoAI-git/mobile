@@ -11,6 +11,7 @@ import { useExploreLogic } from '@/hooks/use-explore-logic';
 import { useFocusEffect } from 'expo-router';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
+const EMPTY_EXPLORE_IMG = require('../../../assets/images/illustrations/empty_explore.png');
 
 // Stable module-level sub-component — avoid creating React component types inside render
 const MemoPromptItem = React.memo(function PromptItem({
@@ -143,6 +144,7 @@ export default function ExploreScreen() {
             }
             ListEmptyComponent={
               <EmptyState
+                image={EMPTY_EXPLORE_IMG}
                 title="Nothing here yet"
                 description="We're preparing new topics for you to explore."
                 actionLabel="Back to Overview"

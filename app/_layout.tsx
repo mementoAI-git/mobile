@@ -112,7 +112,7 @@ void SplashScreen.preventAutoHideAsync();
 // disappears.
 const SPLASH_ASSETS = [
   require('../assets/splash-icon.jpg'),
-  require('../assets/images/memento_flat.png'),
+  require('../assets/images/memento_flat.webp'),
 ];
 
 // -----------------------------------------------------------------------------
@@ -148,7 +148,7 @@ function ShareIntentWatcher() {
   const handledRef = React.useRef(false);
 
   useEffect(() => {
-    if (!shareIntent || handledRef.current) return;
+    if (!shareIntent || (!shareIntent.files?.length && !shareIntent.text) || handledRef.current) return;
 
     handledRef.current = true;
 
@@ -163,7 +163,7 @@ function ShareIntentWatcher() {
   }, [shareIntent]);
 
   useEffect(() => {
-    if (!shareIntent) {
+    if (!shareIntent || (!shareIntent.files?.length && !shareIntent.text)) {
       handledRef.current = false;
     }
   }, [shareIntent]);

@@ -58,7 +58,7 @@ import { publishedPostUrl } from '@/lib/env';
 // ─── Surfer illustration asset ────────────────────────────────────────────────
 
 const SURFER_WEBP = require('../assets/images/illustrations/surfer.webp');
-const SUCCESS_BG = require('../assets/images/backgrounds/published_success_bg.png');
+const SUCCESS_BG = require('../assets/images/backgrounds/published_success_bg.webp');
 
 const SUN = require("../assets/images/illustrations/fluent-emoji-flat_ringed-planet.png")
 const BIG_CLOUD = require("../assets/images/illustrations/noto-v1_cloud.png")

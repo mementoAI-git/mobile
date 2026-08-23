@@ -73,7 +73,7 @@ const NOTE_CHAR_MAX = 8000;
 const FILE_INPUT_MIME = DOCUMENT_PICKER_MIME_TYPES;
 
 const SURFER_WEBP = require('../assets/images/illustrations/surfer.webp');
-const SUCCESS_BG = require('../assets/images/backgrounds/published_success_bg.png');
+const SUCCESS_BG = require('../assets/images/backgrounds/published_success_bg.webp');
 const SUN = require('../assets/images/illustrations/fluent-emoji-flat_ringed-planet.png');
 const BIG_CLOUD = require('../assets/images/illustrations/noto-v1_cloud.png');
 const SMALL_CLOUD = require('../assets/images/illustrations/noto_cloud.png');

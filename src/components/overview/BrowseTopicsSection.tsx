@@ -8,14 +8,14 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { TopicCard } from './TopicCard';
 
 const CATEGORY_META: Record<string, { image: any }> = {
-  career: { image: require('../../../assets/images/categories/career.png') },
-  family: { image: require('../../../assets/images/categories/family.png') },
-  relationship: { image: require('../../../assets/images/categories/relationship.png') },
-  belief: { image: require('../../../assets/images/categories/belief.png') },
-  purpose: { image: require('../../../assets/images/categories/purpose.png') },
-  'life-transition': { image: require('../../../assets/images/categories/life-transition.png') },
-  wellbeing: { image: require('../../../assets/images/categories/wellbeing.png') },
-  identity: { image: require('../../../assets/images/categories/identify.png') },
+  career: { image: require('../../../assets/images/categories/career.webp') },
+  family: { image: require('../../../assets/images/categories/family.webp') },
+  relationship: { image: require('../../../assets/images/categories/relationship.webp') },
+  belief: { image: require('../../../assets/images/categories/belief.webp') },
+  purpose: { image: require('../../../assets/images/categories/purpose.webp') },
+  'life-transition': { image: require('../../../assets/images/categories/life-transition.webp') },
+  wellbeing: { image: require('../../../assets/images/categories/wellbeing.webp') },
+  identity: { image: require('../../../assets/images/categories/identify.webp') },
 };
 
 // Isolated per-item component so each prompt's onPress is a stable useCallback
