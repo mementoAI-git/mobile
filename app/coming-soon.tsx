@@ -92,12 +92,12 @@ function ComingSoonContent() {
         style={styles.scroll}
       >
         <View style={styles.hero}>
-          {/* <View style={styles.heroHaloLarge} /> */}
-          {/* <View style={styles.heroHaloSmall} /> */}
-          {/* <View style={styles.heroSpeaker}>
+          <View style={styles.heroHaloLarge} />
+          <View style={styles.heroHaloSmall} />
+          <View style={styles.heroSpeaker}>
             <Volume2 size={54} color={COLORS.onboardingBrown} strokeWidth={1.7} />
-          </View> */}
-          {/* <AudioWaveform size={88} color={COLORS.onboardingAmber} strokeWidth={1.4} /> */}
+          </View>
+          <AudioWaveform size={88} color={COLORS.onboardingAmber} strokeWidth={1.4} />
         </View>
 
         <Text style={styles.eyebrow}>{content.eyebrow}</Text>

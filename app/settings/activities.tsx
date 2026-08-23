@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, ScrollView, TouchableOpacity, ImageBackground, Text, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -102,17 +102,25 @@ export default function ActivitiesScreen() {
     isFetchingNextPage,
   } = useInfiniteActivities({ limit: PAGE_SIZE });
 
+  const [showCount, setShowCount] = useState(false);
+
   const displayDocs = useMemo(
     () => data?.pages.flatMap((activityPage) => activityPage.docs) ?? [],
     [data?.pages],
   );
   const totalDocs = data?.pages[0]?.totalDocs ?? 0;
 
-  const handleLoadMore = useCallback(() => {
-    if (!hasNextPage || isFetchingNextPage) return;
-    Haptics.selectionAsync();
-    void fetchNextPage();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+  const handleScroll = useCallback((event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const y = contentOffset.y;
+    setShowCount(y > 230);
+
+    const isCloseToBottom = layoutMeasurement.height + y >= contentSize.height - 150;
+    if (isCloseToBottom && hasNextPage && !isFetchingNextPage) {
+      Haptics.selectionAsync();
+      void fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
@@ -129,7 +137,9 @@ export default function ActivitiesScreen() {
             Activity
           </Text>
           <Text style={[SETTINGS_TYPE.supporting, { marginTop: 1 }]}>
-            {totalDocs > 0 ? `${totalDocs} actions across your account` : 'Your recent actions'}
+            {showCount && totalDocs > 0
+              ? `${totalDocs} actions across your account`
+              : ''}
           </Text>
         </View>
       </View>
@@ -154,7 +164,12 @@ export default function ActivitiesScreen() {
             </Text>
           </Animated.View>
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48, paddingTop: 4 }}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 48, paddingTop: 4 }}
+            scrollEventThrottle={16}
+            onScroll={handleScroll}
+          >
 
             {/* Editorial hero card */}
             <EditorialHeroCard totalDocs={totalDocs} />
@@ -162,49 +177,48 @@ export default function ActivitiesScreen() {
             {/* Stats banner */}
             <StatsBanner totalDocs={totalDocs} docs={displayDocs} />
 
-            {/* Activity items — standalone cards */}
-            {displayDocs.map((item) => (
-              <View
-                key={item._id}
+            {/* Activity items — unified card list */}
+            <View
+              style={{
+                marginHorizontal: 20,
+                backgroundColor: COLORS.card,
+                borderRadius: 24,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: COLORS.strokeWeaker,
+              }}
+            >
+              {displayDocs.map((item, index) => (
+                <ActivityListItem
+                  key={item._id}
+                  activity={item}
+                  showDivider={index > 0}
+                />
+              ))}
+            </View>
+
+            {/* Loading Indicator */}
+            {isFetchingNextPage && (
+              <ActivityIndicator
+                size="small"
+                color={COLORS.brand}
+                style={{ marginVertical: 24 }}
+              />
+            )}
+
+            {/* End of list metadata */}
+            {!hasNextPage && totalDocs > 0 && (
+              <Text
                 style={{
-                  marginHorizontal: 20,
-                  marginBottom: 2,
-                  backgroundColor: COLORS.card,
-                  borderRadius: 20,
+                  fontFamily: FONTS.sans,
+                  fontSize: 11,
+                  color: COLORS.textMuted,
+                  textAlign: 'center',
+                  marginTop: 24,
                 }}
               >
-                <ActivityListItem activity={item} showDivider={false} />
-              </View>
-            ))}
-
-            {/* Load more */}
-            {hasNextPage && (
-              <View style={{ marginHorizontal: 20, marginTop: 16, gap: 8 }}>
-                <TouchableOpacity
-                  onPress={handleLoadMore}
-                  disabled={isFetchingNextPage}
-                  activeOpacity={0.8}
-                  style={{
-                    height: 48,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: COLORS.strokeWeak,
-                    backgroundColor: COLORS.fillWeaker,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'row',
-                    gap: 8,
-                  }}
-                >
-                  {isFetchingNextPage
-                    ? <ActivityIndicator size="small" color={COLORS.brand} />
-                    : <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textStrong }}>Load more</Text>
-                  }
-                </TouchableOpacity>
-                <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textMuted, textAlign: 'center' }}>
-                  Showing {displayDocs.length} of {totalDocs}
-                </Text>
-              </View>
+                Showing all {totalDocs} activities
+              </Text>
             )}
           </ScrollView>
         )}
