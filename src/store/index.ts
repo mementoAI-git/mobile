@@ -2,4 +2,5 @@ export { useAuthStore } from './auth.store';
 export { useUserStore } from './user.store';
 export { useUiStore } from './ui.store';
 export { useVoicePreferenceStore } from './voice-preference.store';
+export { useOfflineQueueStore } from './offline-queue.store';
 export type { SheetName } from './ui.store';

@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.mementoai.app",
+      "bundleIdentifier": "io.mymemento.app",
       "associatedDomains": [
         "applinks:app.mymemento.io",
         "webcredentials:app.mymemento.io"
@@ -19,7 +19,7 @@
       }
     },
     "android": {
-      "package": "com.mementoai.app",
+      "package": "io.mymemento.app",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
