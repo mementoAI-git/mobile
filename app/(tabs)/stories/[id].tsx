@@ -9,7 +9,7 @@
  *  Clean body paragraphs
  *  Attachment cards (voice / audio / document)
  */
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, Image,
   TouchableOpacity, Dimensions,
@@ -57,6 +57,167 @@ function StoryDetailSkeleton() {
   );
 }
 
+// ─── Sub-Components ─────────────────────────────────────────────────────────
+
+const MemoMosaicTile = React.memo(function MemoMosaicTile({
+  item,
+  isWide,
+  isSquare,
+  showMoreCount,
+  onPress,
+}: {
+  item: any;
+  isWide?: boolean;
+  isSquare?: boolean;
+  showMoreCount?: number;
+  onPress: (item: any) => void;
+}) {
+  const handlePress = useCallback(() => onPress(item), [item, onPress]);
+  return (
+    <TouchableOpacity
+      activeOpacity={0.88}
+      onPress={handlePress}
+      style={{
+        flex: isWide ? 1.7 : 1,
+        aspectRatio: isSquare ? 1 : undefined,
+        borderRadius: 14,
+        overflow: 'hidden',
+        backgroundColor: COLORS.fillWeak,
+      }}
+    >
+      <Image source={{ uri: item.url }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+      {showMoreCount && showMoreCount > 0 ? (
+        <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.52)', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 18, color: '#fff' }}>+{showMoreCount} more</Text>
+        </View>
+      ) : null}
+    </TouchableOpacity>
+  );
+});
+
+const MemoAudioCard = React.memo(function MemoAudioCard({
+  item,
+  memoryTitle,
+  onPress,
+}: {
+  item: any;
+  memoryTitle?: string;
+  onPress: (item: any) => void;
+}) {
+  const handlePress = useCallback(() => onPress(item), [item, onPress]);
+  const isVoice = item.name?.startsWith('voice_') && item.type === 'audio/m4a';
+  const albumArt = item.thumbnail;
+  const dur = Number(item.duration ?? 0);
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const rawFileName = item.name
+    ? item.name.replace(/\.[^.]+$/, '').replace(/_\d{12,}$/, '').replace(/_/g, ' ')
+    : 'Audio';
+  const fileName = memoryTitle && memoryTitle !== 'Untitled Memory' ? memoryTitle : rawFileName;
+
+  if (albumArt) {
+    return (
+      <TouchableOpacity
+        onPress={handlePress}
+        activeOpacity={0.88}
+        style={{ borderRadius: 16, overflow: 'hidden', height: 120 }}
+      >
+        <Image source={{ uri: albumArt }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: 'rgba(0,0,0,0.45)' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 1.5, height: 14 }}>
+            {[5, 10, 14, 11, 7, 12, 8, 14].map((h, i) => <View key={i} style={{ width: 2.5, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />)}
+          </View>
+          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 12, color: '#fff', flex: 1 }} numberOfLines={1}>{fileName}</Text>
+          {dur > 0 && <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>{fmt(dur)}</Text>}
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  if (isVoice) {
+    let h = 0;
+    const seed = item._id || item.name || '';
+    for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+    const bars = Array.from({ length: 16 }, (_, i) =>
+      4 + Math.round((Math.sin((Math.abs(h) + i * 997) * 0.013) * 0.5 + 0.5) * 20)
+    );
+    return (
+      <TouchableOpacity
+        onPress={handlePress}
+        activeOpacity={0.88}
+        style={{ backgroundColor: COLORS.textStrong, borderRadius: 20, aspectRatio: 1, width: (SCREEN_W - 40) / 2, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 32 }}>
+          {bars.map((barH, i) => (
+            <View key={i} style={{ flex: 1, height: barH, borderRadius: 2, backgroundColor: `${COLORS.brand}cc`, maxHeight: 28 }} />
+          ))}
+        </View>
+        <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: 'rgba(255,255,255,0.9)', textAlign: 'center' }} numberOfLines={2}>
+          {fileName}
+        </Text>
+        {dur > 0 && (
+          <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+            <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>{fmt(dur)}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.88}
+      style={{ backgroundColor: COLORS.fillWeak, borderRadius: 20, aspectRatio: 1, width: (SCREEN_W - 40) / 2, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 32 }}>
+        {[8, 16, 24, 20, 12, 22, 14, 24, 18, 8, 16, 24].map((h, i) => (
+          <View key={i} style={{ width: 3, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />
+        ))}
+      </View>
+      <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>{fileName}</Text>
+      {dur > 0 && (
+        <View style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: COLORS.textBase }}>{fmt(dur)}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+});
+
+const MemoDocumentCard = React.memo(function MemoDocumentCard({
+  item,
+  onPress,
+}: {
+  item: any;
+  onPress: (url?: string) => void;
+}) {
+  const handlePress = useCallback(() => onPress(item.url), [item.url, onPress]);
+  const fileType = item.type?.split('/')[1]?.toUpperCase() ?? 'FILE';
+  const fileSize = (item.size && Number(item.size) > 0)
+    ? `${(Number(item.size) / 1024 / 1024).toFixed(1)} MB`
+    : null;
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.88}
+      style={{ backgroundColor: COLORS.fillWeak, borderRadius: 20, aspectRatio: 1, width: (SCREEN_W - 40) / 2, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 20 }}
+    >
+      <View style={{ width: 48, height: 48, backgroundColor: COLORS.card, borderRadius: 14, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}>
+        <FileText size={24} color={COLORS.brand} strokeWidth={1.5} />
+      </View>
+      <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>
+        {item.name || 'Document'}
+      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <View style={{ backgroundColor: `${COLORS.brand}15`, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.brand }}>{fileType}</Text>
+        </View>
+        {fileSize && <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: COLORS.textMuted }}>{fileSize}</Text>}
+      </View>
+    </TouchableOpacity>
+  );
+});
+
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function StoryDetailScreen() {
@@ -81,35 +242,73 @@ export default function StoryDetailScreen() {
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
 
-  const handleOpenFile = async (url?: string) => {
+  const handleOpenFile = useCallback(async (url?: string) => {
     if (url) await WebBrowser.openBrowserAsync(url);
-  };
+  }, []);
 
   // ── Split image attachments by type ──────────────────────────────────────
-  const imgOnly = imageAttachments.filter(a => !a.type?.startsWith('video/'));
-  const videos  = imageAttachments.filter(a =>  a.type?.startsWith('video/'));
+  const imgOnly = useMemo(() => imageAttachments.filter(a => !a.type?.startsWith('video/')), [imageAttachments]);
+  const videos  = useMemo(() => imageAttachments.filter(a =>  a.type?.startsWith('video/')), [imageAttachments]);
 
   // All previewable media: images + videos + audio
-  const allPreviewAttachments = [...imageAttachments, ...audioAttachments];
+  const allPreviewAttachments = useMemo(
+    () => [...imageAttachments, ...audioAttachments],
+    [imageAttachments, audioAttachments],
+  );
 
-  // Mosaic grid: row1 = [0, 1], row2 = [2, 3, 4], rest hidden with "+N"
-  const MAX_SHOWN = 5;
-  const shownImgs = imgOnly.slice(0, MAX_SHOWN);
-  const extraCount = Math.max(0, imgOnly.length - MAX_SHOWN);
-  const row1 = shownImgs.slice(0, 2);
-  const row2 = shownImgs.slice(2, 5);
-
-  const openPreview = (item: typeof allPreviewAttachments[0]) => {
+  const openPreview = useCallback((item: typeof allPreviewAttachments[0]) => {
     const idx = allPreviewAttachments.findIndex(a => a.url === item.url);
     setPreviewIndex(idx >= 0 ? idx : 0);
     setPreviewVisible(true);
     Haptics.selectionAsync();
-  };
+  }, [allPreviewAttachments]);
+
+  const closePreview = useCallback(() => setPreviewVisible(false), []);
+
+  const handleBack = useCallback(() => {
+    Haptics.selectionAsync();
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/stories');
+  }, [router]);
+
+  const handleEditPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    handleEdit();
+  }, [handleEdit]);
+
+  const handleActionsPress = useCallback(() => {
+    Haptics.selectionAsync();
+    handleOpenActions();
+  }, [handleOpenActions]);
+
+  const modalAttachments = useMemo(
+    () => allPreviewAttachments.map(a => {
+      const isAudio = a.type?.startsWith('audio/');
+      const audioTitle = memory?.title && memory.title !== 'Untitled Memory' ? memory.title : undefined;
+      return {
+        clientId: a._id ?? (a.url ?? ''),
+        uri: a.url ?? '',
+        name: (isAudio && audioTitle) ? audioTitle : (a.name ?? ''),
+        mimeType: a.type ?? 'application/octet-stream',
+        duration: (a as any).duration,
+        isVoice: a.name?.startsWith('voice_') && a.type === 'audio/m4a',
+        thumbnailUrl: (a as any).thumbnail ?? null,
+      };
+    }),
+    [allPreviewAttachments, memory?.title],
+  );
+
+  // Mosaic grid: row1 = [0, 1], row2 = [2, 3, 4], rest hidden with "+N"
+  const MAX_SHOWN = 5;
+  const shownImgs = useMemo(() => imgOnly.slice(0, MAX_SHOWN), [imgOnly]);
+  const extraCount = useMemo(() => Math.max(0, imgOnly.length - MAX_SHOWN), [imgOnly]);
+  const row1 = useMemo(() => shownImgs.slice(0, 2), [shownImgs]);
+  const row2 = useMemo(() => shownImgs.slice(2, 5), [shownImgs]);
 
   // ── Tag display ───────────────────────────────────────────────────────────
   const MAX_TAGS = 3;
-  const visibleTags = (memory?.tags ?? []).slice(0, MAX_TAGS);
-  const extraTags = Math.max(0, (memory?.tags?.length ?? 0) - MAX_TAGS);
+  const visibleTags = useMemo(() => (memory?.tags ?? []).slice(0, MAX_TAGS), [memory?.tags]);
+  const extraTags = useMemo(() => Math.max(0, (memory?.tags?.length ?? 0) - MAX_TAGS), [memory?.tags]);
 
   // ── Loading / not found ───────────────────────────────────────────────────
 
@@ -142,7 +341,7 @@ export default function StoryDetailScreen() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) router.back(); else router.replace('/(tabs)/stories'); }}
+          onPress={handleBack}
           style={styles.iconBtn}
           activeOpacity={0.7}
         >
@@ -153,7 +352,7 @@ export default function StoryDetailScreen() {
 
         {/* Edit pill */}
         <TouchableOpacity
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleEdit(); }}
+          onPress={handleEditPress}
           style={styles.editPill}
           activeOpacity={0.8}
         >
@@ -162,7 +361,7 @@ export default function StoryDetailScreen() {
         </TouchableOpacity>
 
         {/* Actions menu */}
-        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); handleOpenActions(); }} style={styles.iconBtn} activeOpacity={0.7}>
+        <TouchableOpacity onPress={handleActionsPress} style={styles.iconBtn} activeOpacity={0.7}>
           <MoreHorizontal size={20} color={COLORS.textBase} strokeWidth={2} />
         </TouchableOpacity>
       </View>
@@ -212,24 +411,14 @@ export default function StoryDetailScreen() {
             {/* Row 1: wide + narrow */}
             {row1.length > 0 && (
               <View style={{ flexDirection: 'row', gap: 6, height: 200 }}>
-                {row1.map((item, idx) => {
-                  const isWide = idx === 0;
-                  return (
-                    <TouchableOpacity
-                      key={item.url ?? idx}
-                      activeOpacity={0.88}
-                      onPress={() => openPreview(item)}
-                      style={{
-                        flex: isWide ? 1.7 : 1,
-                        borderRadius: 14,
-                        overflow: 'hidden',
-                        backgroundColor: COLORS.fillWeak,
-                      }}
-                    >
-                      <Image source={{ uri: item.url }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                    </TouchableOpacity>
-                  );
-                })}
+                {row1.map((item, idx) => (
+                  <MemoMosaicTile
+                    key={item.url ?? idx}
+                    item={item}
+                    isWide={idx === 0}
+                    onPress={openPreview}
+                  />
+                ))}
               </View>
             )}
 
@@ -240,19 +429,13 @@ export default function StoryDetailScreen() {
                   const isLast = idx === row2.length - 1 && idx === 2;
                   const showMore = isLast && extraCount > 0;
                   return (
-                    <TouchableOpacity
+                    <MemoMosaicTile
                       key={item.url ?? idx}
-                      activeOpacity={0.88}
-                      onPress={() => openPreview(item)}
-                      style={{ flex: 1, aspectRatio: 1, borderRadius: 14, overflow: 'hidden', backgroundColor: COLORS.fillWeak }}
-                    >
-                      <Image source={{ uri: item.url }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                      {showMore && (
-                        <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.52)', alignItems: 'center', justifyContent: 'center' }}>
-                          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 18, color: '#fff' }}>+{extraCount} more</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
+                      item={item}
+                      isSquare
+                      showMoreCount={showMore ? extraCount : undefined}
+                      onPress={openPreview}
+                    />
                   );
                 })}
               </View>
@@ -279,93 +462,14 @@ export default function StoryDetailScreen() {
         {/* Audio — tappable music/voice card thumbnails → opens MediaPreviewModal */}
         {audioAttachments.length > 0 && (
           <View style={{ paddingHorizontal: 20, gap: 8, marginBottom: 8 }}>
-            {audioAttachments.map((item) => {
-              const isVoice = item.name?.startsWith('voice_') && item.type === 'audio/m4a';
-              const albumArt = item.thumbnail;
-              const dur = Number((item as any).duration ?? 0);
-              const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-              const rawFileName = item.name
-                ? item.name.replace(/\.[^.]+$/, '').replace(/_\d{12,}$/, '').replace(/_/g, ' ')
-                : 'Audio';
-              // Prefer the AI-generated memory title over the raw filename
-              const fileName = memory.title && memory.title !== 'Untitled Memory' ? memory.title : rawFileName;
-
-              if (albumArt) {
-                // Album art card (future — when backend extracts ID3 art)
-                return (
-                  <TouchableOpacity
-                    key={item._id}
-                    onPress={() => openPreview(item)}
-                    activeOpacity={0.88}
-                    style={{ borderRadius: 16, overflow: 'hidden', height: 120 }}
-                  >
-                    <Image source={{ uri: albumArt }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                    <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: 'rgba(0,0,0,0.45)' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 1.5, height: 14 }}>
-                        {[5, 10, 14, 11, 7, 12, 8, 14].map((h, i) => <View key={i} style={{ width: 2.5, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />)}
-                      </View>
-                      <Text style={{ fontFamily: FONTS.sansBold, fontSize: 12, color: '#fff', flex: 1 }} numberOfLines={1}>{fileName}</Text>
-                      {dur > 0 && <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>{fmt(dur)}</Text>}
-                    </View>
-                  </TouchableOpacity>
-                );
-              }
-
-              if (isVoice) {
-                // Dark voice card — square, half-width, matching MP3 card style
-                let h = 0;
-                const seed = item._id || item.name || '';
-                for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
-                const bars = Array.from({ length: 16 }, (_, i) =>
-                  4 + Math.round((Math.sin((Math.abs(h) + i * 997) * 0.013) * 0.5 + 0.5) * 20)
-                );
-                return (
-                  <TouchableOpacity
-                    key={item._id}
-                    onPress={() => openPreview(item)}
-                    activeOpacity={0.88}
-                    style={{ backgroundColor: COLORS.textStrong, borderRadius: 20, aspectRatio: 1, width: (SCREEN_W - 40) / 2, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 32 }}>
-                      {bars.map((barH, i) => (
-                        <View key={i} style={{ flex: 1, height: barH, borderRadius: 2, backgroundColor: `${COLORS.brand}cc`, maxHeight: 28 }} />
-                      ))}
-                    </View>
-                    <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: 'rgba(255,255,255,0.9)', textAlign: 'center' }} numberOfLines={2}>
-                      {fileName}
-                    </Text>
-                    {dur > 0 && (
-                      <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
-                        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>{fmt(dur)}</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              }
-
-              // Clean music player card for uploaded MP3/WAV/AAC — square card matching masonry
-              return (
-                <TouchableOpacity
-                  key={item._id}
-                  onPress={() => openPreview(item)}
-                  activeOpacity={0.88}
-                  style={{ backgroundColor: COLORS.fillWeak, borderRadius: 20, aspectRatio: 1, width: (SCREEN_W - 40) / 2, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
-                >
-                  {/* Orange waveform bars */}
-                  <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 32 }}>
-                    {[8, 16, 24, 20, 12, 22, 14, 24, 18, 8, 16, 24].map((h, i) => (
-                      <View key={i} style={{ width: 3, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />
-                    ))}
-                  </View>
-                  <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>{fileName}</Text>
-                  {dur > 0 && (
-                    <View style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
-                      <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: COLORS.textBase }}>{fmt(dur)}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+            {audioAttachments.map((item) => (
+              <MemoAudioCard
+                key={item._id}
+                item={item}
+                memoryTitle={memory?.title}
+                onPress={openPreview}
+              />
+            ))}
           </View>
         )}
 
@@ -381,33 +485,13 @@ export default function StoryDetailScreen() {
           <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 8 }}>
             <Text style={styles.sectionLabel}>DOCUMENTS</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {otherAttachments.map(a => {
-                const fileType = a.type?.split('/')[1]?.toUpperCase() ?? 'FILE';
-                const fileSize = ((a as any).size && Number((a as any).size) > 0)
-                  ? `${(Number((a as any).size) / 1024 / 1024).toFixed(1)} MB`
-                  : null;
-                return (
-                  <TouchableOpacity
-                    key={a._id}
-                    onPress={() => handleOpenFile(a.url)}
-                    activeOpacity={0.88}
-                    style={{ backgroundColor: COLORS.fillWeak, borderRadius: 20, aspectRatio: 1, width: (SCREEN_W - 40) / 2, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 20 }}
-                  >
-                    <View style={{ width: 48, height: 48, backgroundColor: COLORS.card, borderRadius: 14, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}>
-                      <FileText size={24} color={COLORS.brand} strokeWidth={1.5} />
-                    </View>
-                    <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>
-                      {a.name || 'Document'}
-                    </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <View style={{ backgroundColor: `${COLORS.brand}15`, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-                        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.brand }}>{fileType}</Text>
-                      </View>
-                      {fileSize && <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: COLORS.textMuted }}>{fileSize}</Text>}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+              {otherAttachments.map(a => (
+                <MemoDocumentCard
+                  key={a._id}
+                  item={a}
+                  onPress={handleOpenFile}
+                />
+              ))}
             </View>
           </View>
         )}
@@ -416,22 +500,9 @@ export default function StoryDetailScreen() {
       {/* Full-screen media previewer — images, videos, and audio */}
       <MediaPreviewModal
         visible={previewVisible}
-        attachments={allPreviewAttachments.map(a => {
-          const isAudio = a.type?.startsWith('audio/');
-          const audioTitle = memory.title && memory.title !== 'Untitled Memory' ? memory.title : undefined;
-          return {
-            clientId: a._id ?? (a.url ?? ''),
-            uri: a.url ?? '',
-            // For audio attachments, use the AI-generated memory title as the display name
-            name: (isAudio && audioTitle) ? audioTitle : (a.name ?? ''),
-            mimeType: a.type ?? 'application/octet-stream',
-            duration: (a as any).duration,
-            isVoice: a.name?.startsWith('voice_') && a.type === 'audio/m4a',
-            thumbnailUrl: (a as any).thumbnail ?? null,
-          };
-        })}
+        attachments={modalAttachments}
         initialIndex={previewIndex}
-        onClose={() => setPreviewVisible(false)}
+        onClose={closePreview}
       />
     </SafeAreaView>
   );

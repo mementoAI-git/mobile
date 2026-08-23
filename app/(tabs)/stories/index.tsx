@@ -132,9 +132,15 @@ export default function StoriesScreen() {
     [handleMemoryPress],
   );
 
-  // Shared header — used by both list and masonry grid
   const listHeader = useMemo(
-    () => (
+    () => {
+      const countMap: Record<string, number | undefined> = {
+        All: stats?.stories_count,
+        Bookmarked: stats?.bookmark_count,
+        Deleted: stats?.stories_deleted_count,
+        Pending: stats?.quick_capture_pending_count,
+      };
+      return (
       <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-4 gap-6 px-5">
         <Animated.Text className="text-base text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
           A secure archive for your most cherished moments and personal reflections.
@@ -172,33 +178,11 @@ export default function StoriesScreen() {
                 }
                 placeholderTextColor={COLORS.textMuted}
               />
-              {/* Grid/List toggle — commented out; grid-only for now
-              <View className="flex-row items-center gap-1 border border-stroke-weaker rounded-2xl p-1 bg-white">
-                <TouchableOpacity
-                  onPress={() => handleToggleView('grid')}
-                  className={`size-10 rounded-xl items-center justify-center ${viewMode === 'grid' ? 'bg-brand' : ''}`}
-                >
-                  <LayoutGrid size={18} color={viewMode === 'grid' ? '#fff' : COLORS.textWeak} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleToggleView('list')}
-                  className={`size-10 rounded-xl items-center justify-center ${viewMode === 'list' ? 'bg-brand' : ''}`}
-                >
-                  <List size={18} color={viewMode === 'list' ? '#fff' : COLORS.textWeak} />
-                </TouchableOpacity>
-              </View>
-              */}
             </View>
 
           {/* Filter Pills */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2.5">
             {FILTERS.map((f) => {
-              const countMap: Record<string, number | undefined> = {
-                All: stats?.stories_count,
-                Bookmarked: stats?.bookmark_count,
-                Deleted: stats?.stories_deleted_count,
-                Pending: stats?.quick_capture_pending_count,
-              };
               const count = countMap[f];
               const label = (count && count > 0) ? `${f} (${count})` : f;
               return (
@@ -223,10 +207,9 @@ export default function StoriesScreen() {
           </ScrollView>
         </View>
       </Animated.View>
-    ),
-    // Re-render header only when these change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [stats, search, viewMode, activeFilter],
+    );
+    },
+    [stats, search, activeFilter, setActiveFilter, handleClearSearch, handleSearchChange, handleSearchSubmit],
   );
 
   const emptyState = (

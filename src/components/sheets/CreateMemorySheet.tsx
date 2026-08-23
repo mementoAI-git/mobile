@@ -52,6 +52,78 @@ const PRIVACY_OPTIONS: PrivacyOption[] = [
   },
 ];
 
+// ─── Stable list-item components ─────────────────────────────────────────────
+
+const MemoBeneficiarySelectItem = React.memo(function MemoBeneficiarySelectItem({
+  beneficiary,
+  isSelected,
+  onToggle,
+}: {
+  beneficiary: IBeneficiary;
+  isSelected: boolean;
+  onToggle: (id: string) => void;
+}) {
+  const handlePress = useCallback(() => {
+    Haptics.selectionAsync();
+    onToggle(beneficiary._id!);
+  }, [beneficiary._id, onToggle]);
+  return (
+    <TouchableOpacity onPress={handlePress} activeOpacity={0.75} style={styles.selectRow}>
+      <View style={styles.selectAvatar}><Text style={{ fontSize: 14 }}>👤</Text></View>
+      <Text style={styles.selectName} numberOfLines={1}>{beneficiary.name || beneficiary.email}</Text>
+      <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+        {isSelected && <Check size={11} color="white" strokeWidth={3} />}
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+const MemoGroupSelectItem = React.memo(function MemoGroupSelectItem({
+  group,
+  isSelected,
+  onToggle,
+}: {
+  group: IGroup;
+  isSelected: boolean;
+  onToggle: (id: string) => void;
+}) {
+  const handlePress = useCallback(() => {
+    Haptics.selectionAsync();
+    onToggle(group._id);
+  }, [group._id, onToggle]);
+  const memberCount = Array.isArray(group.members) ? group.members.length : 0;
+  return (
+    <TouchableOpacity onPress={handlePress} activeOpacity={0.75} style={styles.selectRow}>
+      <View style={styles.selectAvatar}><Users size={14} color={COLORS.brand} strokeWidth={1.8} /></View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.selectName} numberOfLines={1}>{group.name}</Text>
+        {memberCount > 0 && <Text style={styles.selectMeta}>{memberCount} member{memberCount !== 1 ? 's' : ''}</Text>}
+      </View>
+      <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+        {isSelected && <Check size={11} color="white" strokeWidth={3} />}
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+const MemoTagPillItem = React.memo(function MemoTagPillItem({
+  tag,
+  onRemove,
+}: {
+  tag: string;
+  onRemove: (t: string) => void;
+}) {
+  const handleRemove = useCallback(() => onRemove(tag), [tag, onRemove]);
+  return (
+    <View className="flex-row items-center bg-white border border-stroke-weaker rounded-full pl-3 pr-1 py-1 h-8 gap-1 shadow-sm">
+      <Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>#{tag}</Text>
+      <TouchableOpacity onPress={handleRemove} className="p-1">
+        <X size={14} color={COLORS.textWeak} />
+      </TouchableOpacity>
+    </View>
+  );
+});
+
 // ─── Privacy modal ────────────────────────────────────────────────────────────
 
 interface PrivacyModalProps {
@@ -85,6 +157,16 @@ const PrivacyModal = React.forwardRef<BottomSheetModal, PrivacyModalProps>(funct
     onPrivacyChange(mode);
   }, [onPrivacyChange]);
 
+  const handleClose = useCallback(() => {
+    Haptics.selectionAsync();
+    onClose();
+  }, [onClose]);
+
+  const handleDone = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onClose();
+  }, [onClose]);
+
   const renderBackdrop = useCallback(
     (backdropProps: any) => (
       <BottomSheetBackdrop
@@ -113,7 +195,7 @@ const PrivacyModal = React.forwardRef<BottomSheetModal, PrivacyModalProps>(funct
         <View style={styles.panelHeader}>
           <Text style={styles.panelTitle}>Who can see this?</Text>
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); onClose(); }}
+            onPress={handleClose}
             style={styles.closeBtn}
           >
             <X size={16} color={COLORS.textBase} strokeWidth={2} />
@@ -165,22 +247,12 @@ const PrivacyModal = React.forwardRef<BottomSheetModal, PrivacyModalProps>(funct
                     if (!b._id) return null;
                     const on = selectedBeneficiaries.includes(b._id);
                     return (
-                      <TouchableOpacity
+                      <MemoBeneficiarySelectItem
                         key={b._id}
-                        onPress={() => { Haptics.selectionAsync(); onToggleBeneficiary(b._id!); }}
-                        activeOpacity={0.75}
-                        style={styles.selectRow}
-                      >
-                        <View style={styles.selectAvatar}>
-                          <Text style={{ fontSize: 14 }}>👤</Text>
-                        </View>
-                        <Text style={styles.selectName} numberOfLines={1}>
-                          {b.name || b.email}
-                        </Text>
-                        <View style={[styles.checkbox, on && styles.checkboxSelected]}>
-                          {on && <Check size={11} color="white" strokeWidth={3} />}
-                        </View>
-                      </TouchableOpacity>
+                        beneficiary={b}
+                        isSelected={on}
+                        onToggle={onToggleBeneficiary}
+                      />
                     );
                   })}
                 </View>
@@ -192,27 +264,13 @@ const PrivacyModal = React.forwardRef<BottomSheetModal, PrivacyModalProps>(funct
                   <Text style={styles.sectionLabel}>GROUPS</Text>
                   {groupsList.map((g: IGroup) => {
                     const on = selectedGroups.includes(g._id);
-                    const memberCount = Array.isArray(g.members) ? g.members.length : 0;
                     return (
-                      <TouchableOpacity
+                      <MemoGroupSelectItem
                         key={g._id}
-                        onPress={() => { Haptics.selectionAsync(); onToggleGroup(g._id); }}
-                        activeOpacity={0.75}
-                        style={styles.selectRow}
-                      >
-                        <View style={styles.selectAvatar}>
-                          <Users size={14} color={COLORS.brand} strokeWidth={1.8} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.selectName} numberOfLines={1}>{g.name}</Text>
-                          {memberCount > 0 && (
-                            <Text style={styles.selectMeta}>{memberCount} member{memberCount !== 1 ? 's' : ''}</Text>
-                          )}
-                        </View>
-                        <View style={[styles.checkbox, on && styles.checkboxSelected]}>
-                          {on && <Check size={11} color="white" strokeWidth={3} />}
-                        </View>
-                      </TouchableOpacity>
+                        group={g}
+                        isSelected={on}
+                        onToggle={onToggleGroup}
+                      />
                     );
                   })}
                 </View>
@@ -231,7 +289,7 @@ const PrivacyModal = React.forwardRef<BottomSheetModal, PrivacyModalProps>(funct
 
         {/* Done button */}
         <TouchableOpacity
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onClose(); }}
+          onPress={handleDone}
           activeOpacity={0.85}
           style={styles.doneBtn}
         >
@@ -308,21 +366,21 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
 
-  const handlePickFile = async () => {
+  const handlePickFile = useCallback(async () => {
     Haptics.selectionAsync();
     const uploadedFile = await pickAndUpload();
     if (uploadedFile?._id) {
       setAttachments(prev => [...prev, uploadedFile._id]);
     }
-  };
+  }, [pickAndUpload]);
 
-  const handleTagSubmit = () => {
+  const handleTagSubmit = useCallback(() => {
     const t = tagInput.trim().toLowerCase();
     if (t && !tags.includes(t)) setTags(prev => [...prev, t]);
     setTagInput('');
-  };
+  }, [tagInput, tags]);
 
-  const handleTagInputChange = (text: string) => {
+  const handleTagInputChange = useCallback((text: string) => {
     if (text.endsWith(' ')) {
       const t = text.trim().toLowerCase();
       if (t && !tags.includes(t)) setTags(prev => [...prev, t]);
@@ -330,9 +388,9 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
     } else {
       setTagInput(text);
     }
-  };
+  }, [tags]);
 
-  const removeTag = (t: string) => setTags(prev => prev.filter(tag => tag !== t));
+  const removeTag = useCallback((t: string) => setTags(prev => prev.filter(tag => tag !== t)), []);
 
   const handleToggleBeneficiary = useCallback((id: string) => {
     setSelectedBeneficiaries(prev => prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]);
@@ -342,7 +400,17 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
     setSelectedGroups(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]);
   }, []);
 
-  const handleSave = () => {
+  const handleOpenMediaModal = useCallback(() => {
+    mediaModalRef.current?.present();
+  }, []);
+
+  const handleOpenPrivacyModal = useCallback(() => {
+    Haptics.selectionAsync();
+    privacyModalRef.current?.present();
+  }, []);
+
+
+  const handleSave = useCallback(() => {
     if (!title.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
@@ -353,15 +421,12 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
     let groupsPayload: string[] | undefined;
 
     if (privacyMode === 'private') {
-      // Explicitly empty — only the creator sees this
       beneficiariesPayload = [];
       groupsPayload = [];
     } else if (privacyMode === 'all') {
-      // Undefined = share with all beneficiaries (server default)
       beneficiariesPayload = undefined;
       groupsPayload = undefined;
     } else {
-      // Specific — send selected IDs (empty array if none chosen)
       beneficiariesPayload = selectedBeneficiaries;
       groupsPayload = selectedGroups;
     }
@@ -397,7 +462,8 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
     } else {
       createMemory(payload, mutationOptions);
     }
-  };
+  }, [title, status, privacyMode, selectedBeneficiaries, selectedGroups, body, attachments, tags, onClose, editData, updateMemory, createMemory, openSheet, toast]);
+
 
   return (
     <>
@@ -415,7 +481,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
           <Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
             {editData ? 'Edit Memory' : 'New Memory'}
           </Text>
-          <TouchableOpacity onPress={onClose} className="size-8 rounded-full bg-fill-weaker items-center justify-center">
+          <TouchableOpacity onPress={onClose} hitSlop={6} className="size-8 rounded-full bg-fill-weaker items-center justify-center">
             <X size={18} color={COLORS.textWeak} />
           </TouchableOpacity>
         </View>
@@ -460,12 +526,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
             </Text>
             <View className="bg-fill-weaker border border-stroke-weaker rounded-2xl px-2 py-2 min-h-14 flex-row flex-wrap items-center gap-2">
               {tags.map((tag) => (
-                <View key={tag} className="flex-row items-center bg-white border border-stroke-weaker rounded-full pl-3 pr-1 py-1 h-8 gap-1 shadow-sm">
-                  <Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>#{tag}</Text>
-                  <TouchableOpacity onPress={() => removeTag(tag)} className="p-1">
-                    <X size={14} color={COLORS.textWeak} />
-                  </TouchableOpacity>
-                </View>
+                <MemoTagPillItem key={tag} tag={tag} onRemove={removeTag} />
               ))}
               <BottomSheetTextInput
                 value={tagInput}
@@ -501,7 +562,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => mediaModalRef.current?.present()}
+              onPress={handleOpenMediaModal}
               activeOpacity={0.8}
               className="flex-1 flex-row items-center justify-center gap-2 h-12 rounded-full border bg-fill-weaker border-stroke-weaker"
             >
@@ -514,7 +575,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
 
           {/* Privacy / Sharing button */}
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); privacyModalRef.current?.present(); }}
+            onPress={handleOpenPrivacyModal}
             activeOpacity={0.8}
             className={`flex-row items-center justify-center gap-2 h-12 rounded-full border ${privacyIsActive ? 'bg-brand/5 border-brand' : 'bg-fill-weaker border-stroke-weaker'}`}
           >

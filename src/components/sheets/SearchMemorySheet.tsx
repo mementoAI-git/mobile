@@ -66,8 +66,7 @@ async function pushToHistory(email: string | null | undefined, query: string): P
   await saveHistory(email, next);
 }
 
-// ── Memory result row ──────────────────────────────────────────────────────
-function MemoryRow({
+const MemoryRow = React.memo(function MemoryRow({
   memory,
   onPress,
 }: {
@@ -96,10 +95,21 @@ function MemoryRow({
       <ChevronRight size={16} color={COLORS.textMuted} />
     </TouchableOpacity>
   );
-}
+});
 
-// ── Recent search pill ──────────────────────────────────────────────────────
-function RecentPill({
+// Stable item wrapper — eliminates inline arrow in results .map()
+const MemoMemoryRowItem = React.memo(function MemoMemoryRowItem({
+  memory,
+  onResultPress,
+}: {
+  memory: any;
+  onResultPress: (m: any) => void;
+}) {
+  const handlePress = useCallback(() => onResultPress(memory), [memory, onResultPress]);
+  return <MemoryRow memory={memory} onPress={handlePress} />;
+});
+
+const RecentPill = React.memo(function RecentPill({
   label,
   onPress,
   onRemove,
@@ -119,7 +129,42 @@ function RecentPill({
       </TouchableOpacity>
     </View>
   );
-}
+});
+
+// Stable item wrappers — eliminate inline arrows in history and suggestion maps
+const MemoRecentPillItem = React.memo(function MemoRecentPillItem({
+  term,
+  onHistoryPress,
+  onRemoveHistory,
+}: {
+  term: string;
+  onHistoryPress: (t: string) => void;
+  onRemoveHistory: (t: string) => void;
+}) {
+  const handlePress  = useCallback(() => onHistoryPress(term),  [term, onHistoryPress]);
+  const handleRemove = useCallback(() => onRemoveHistory(term), [term, onRemoveHistory]);
+  return <RecentPill label={term} onPress={handlePress} onRemove={handleRemove} />;
+});
+
+const MemoSuggestionRowItem = React.memo(function MemoSuggestionRowItem({
+  prompt,
+  onSuggestionPress,
+}: {
+  prompt: any;
+  onSuggestionPress: (p: any) => void;
+}) {
+  const handlePress = useCallback(() => onSuggestionPress(prompt), [prompt, onSuggestionPress]);
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.7}
+      style={styles.suggestionRow}
+    >
+      <Text style={styles.suggestionText} numberOfLines={2}>{prompt.title}</Text>
+      <ChevronRight size={14} color={COLORS.textMuted} />
+    </TouchableOpacity>
+  );
+});
 
 // ── Main component ─────────────────────────────────────────────────────────
 export function SearchMemorySheet() {
@@ -263,17 +308,11 @@ export function SearchMemorySheet() {
                 </View>
                 <View style={styles.suggestionList}>
                   {suggestions.map((s: any) => (
-                    <TouchableOpacity
+                    <MemoSuggestionRowItem
                       key={s._id}
-                      onPress={() => handleSuggestionPress(s)}
-                      activeOpacity={0.7}
-                      style={styles.suggestionRow}
-                    >
-                      <Text style={styles.suggestionText} numberOfLines={2}>
-                        {s.title}
-                      </Text>
-                      <ChevronRight size={14} color={COLORS.textMuted} />
-                    </TouchableOpacity>
+                      prompt={s}
+                      onSuggestionPress={handleSuggestionPress}
+                    />
                   ))}
                 </View>
               </View>
@@ -290,11 +329,11 @@ export function SearchMemorySheet() {
                 </View>
                 <View style={styles.pillRow}>
                   {history.map((term) => (
-                    <RecentPill
+                    <MemoRecentPillItem
                       key={term}
-                      label={term}
-                      onPress={() => handleHistoryPress(term)}
-                      onRemove={() => handleRemoveHistory(term)}
+                      term={term}
+                      onHistoryPress={handleHistoryPress}
+                      onRemoveHistory={handleRemoveHistory}
                     />
                   ))}
                 </View>
@@ -343,10 +382,10 @@ export function SearchMemorySheet() {
                   {results.length} {results.length === 1 ? 'result' : 'results'}
                 </Text>
                 {results.map((memory: any) => (
-                  <MemoryRow
+                  <MemoMemoryRowItem
                     key={memory._id}
                     memory={memory}
-                    onPress={() => handleResultPress(memory)}
+                    onResultPress={handleResultPress}
                   />
                 ))}
               </View>
