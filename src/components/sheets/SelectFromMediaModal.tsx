@@ -25,194 +25,173 @@ type MediaFileItem = {
   thumbnail?: string;
 };
 
-export const SelectFromMediaModal = forwardRef<BottomSheetModal, SelectFromMediaModalProps>((props, ref) => {
-  const { selectedIds, onConfirm } = props;
-  const insets = useSafeAreaInsets();
-  
-  const [localSelected, setLocalSelected] = useState<string[]>([]);
-  const [query, setQuery] = useState('');
-  
-  const { data: mediaFiles = [], isLoading } = useFiles<MediaFileItem>({ limit: 100 });
-  
-  const selectedSet = useMemo(() => new Set(localSelected), [localSelected]);
+export const SelectFromMediaModal = React.memo(
+  forwardRef<BottomSheetModal, SelectFromMediaModalProps>((props, ref) => {
+    const { selectedIds, onConfirm } = props;
+    const insets = useSafeAreaInsets();
+    
+    const [localSelected, setLocalSelected] = useState<string[]>([]);
+    const [query, setQuery] = useState('');
+    
+    const { data: mediaFiles = [], isLoading } = useFiles<MediaFileItem>({ limit: 100 });
+    
+    const selectedSet = useMemo(() => new Set(localSelected), [localSelected]);
 
-  const results = useMemo(() => {
-    if (!query.trim()) return mediaFiles;
-    const normalizedQuery = query.trim().toLowerCase();
-    return mediaFiles.filter((m: MediaFileItem) => (
-      m.name?.toLowerCase().includes(normalizedQuery) ||
-      m.title?.toLowerCase().includes(normalizedQuery)
-    ));
-  }, [query, mediaFiles]);
+    const results = useMemo(() => {
+      if (!query.trim()) return mediaFiles;
+      const normalizedQuery = query.trim().toLowerCase();
+      return mediaFiles.filter((m: MediaFileItem) => (
+        m.name?.toLowerCase().includes(normalizedQuery) ||
+        m.title?.toLowerCase().includes(normalizedQuery)
+      ));
+    }, [query, mediaFiles]);
 
-  const renderBackdrop = useCallback(
-    (backdropProps: any) => (
-      <BottomSheetBackdrop {...backdropProps} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.4} pressBehavior="close" />
-    ),
-    []
-  );
+    const renderBackdrop = useCallback(
+      (backdropProps: any) => (
+        <BottomSheetBackdrop {...backdropProps} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.4} pressBehavior="close" />
+      ),
+      []
+    );
 
-  const handleClose = useCallback(() => {
-    if (ref && 'current' in ref && ref.current) {
-      ref.current.dismiss();
-    }
-  }, [ref]);
+    const handleClose = useCallback(() => {
+      if (ref && 'current' in ref && ref.current) {
+        ref.current.dismiss();
+      }
+    }, [ref]);
 
-  const handlePresent = useCallback(() => {
-    setLocalSelected(selectedIds);
-  }, [selectedIds]);
+    const handlePresent = useCallback(() => {
+      setLocalSelected(selectedIds);
+    }, [selectedIds]);
 
-  const toggleSelection = useCallback((id: string) => {
-    setLocalSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  }, []);
+    const toggleSelection = useCallback((id: string) => {
+      setLocalSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    }, []);
 
-  const handleConfirm = useCallback(() => {
-    onConfirm(localSelected);
-    handleClose();
-  }, [handleClose, localSelected, onConfirm]);
+    const handleConfirm = useCallback(() => {
+      onConfirm(localSelected);
+      handleClose();
+    }, [handleClose, localSelected, onConfirm]);
 
-  const keyExtractor = useCallback((item: MediaFileItem, index: number) => (
-    item._id || item.id || item.url || item.name || `media-${index}`
-  ), []);
+    const renderItem = useCallback(({ item }: { item: MediaFileItem }) => {
+      const id = item._id || item.id || '';
+      const isSelected = selectedSet.has(id);
+      const isVideo = item.type?.startsWith('video/') || item.name?.endsWith('.mp4');
+      const isAudio = item.type?.startsWith('audio/') || item.name?.endsWith('.mp3') || item.name?.endsWith('.m4a');
+      
+      return (
+        <TouchableOpacity
+          onPress={() => toggleSelection(id)}
+          activeOpacity={0.8}
+          style={{ width: itemWidth, height: itemWidth, marginBottom: 16 }}
+          className="relative rounded-2xl overflow-hidden border border-stroke-weaker bg-fill-weak"
+        >
+          {item.url || item.thumbnail ? (
+            <Image 
+              source={{ uri: item.thumbnail || item.url }} 
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
+            />
+          ) : (
+            <View className="flex-1 items-center justify-center bg-fill-weak">
+              {isAudio ? (
+                <Music size={32} color={COLORS.textWeak} />
+              ) : (
+                <FileText size={32} color={COLORS.textWeak} />
+              )}
+            </View>
+          )}
 
-  const renderMediaItem = useCallback(({ item: m }: { item: MediaFileItem }) => {
-    const mediaId = m._id || m.id;
-    if (!mediaId) return null;
-
-    const isSelected = selectedSet.has(mediaId);
-
-    return (
-      <TouchableOpacity
-        onPress={() => toggleSelection(mediaId)}
-        activeOpacity={0.8}
-        style={{ width: itemWidth, height: itemWidth }}
-        className={`bg-fill-weaker rounded-xl border-2 ${isSelected ? 'border-brand' : 'border-transparent'} shadow-sm overflow-hidden items-center justify-center relative`}
-      >
-        {m.type?.includes('image') && (m.url || m.thumbnail) ? (
-          <Image source={{ uri: m.url || m.thumbnail }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-        ) : m.type?.includes('video') ? (
-          <View className="size-full items-center justify-center relative">
-            {m.thumbnail || m.url ? (
-              <Image source={{ uri: m.thumbnail || m.url }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-            ) : (
-              <View className="size-full bg-fill-weak" />
-            )}
-            <View className="absolute inset-0 items-center justify-center bg-black/10">
-              <View className="w-10 h-10 rounded-full bg-white/90 items-center justify-center shadow-md">
-                <Play size={16} color="#000000" fill="#000000" style={{ marginLeft: 2 }} />
+          {isVideo && (
+            <View className="absolute inset-0 items-center justify-center bg-black/25">
+              <View className="bg-white/90 rounded-full p-2">
+                <Play size={16} color={COLORS.textStrong} fill={COLORS.textStrong} />
               </View>
             </View>
-          </View>
-        ) : m.type?.includes('audio') ? (
-          <View className="size-full bg-fill-weaker items-center justify-center">
-            <Music size={28} color={COLORS.textWeak} />
-            <Text className="text-[9px] uppercase tracking-wider text-text-weak font-bold mt-2" style={{ fontFamily: FONTS.sansBold }}>Audio</Text>
-          </View>
-        ) : (
-          <View className="size-full bg-fill-weaker items-center justify-center">
-            <FileText size={28} color={COLORS.textWeak} />
-            <Text className="text-[9px] uppercase tracking-wider text-text-weak font-bold mt-2" style={{ fontFamily: FONTS.sansBold }}>
-              {m.type?.toUpperCase() || 'FILE'}
-            </Text>
-          </View>
-        )}
+          )}
 
-        {isSelected && (
-          <View className="absolute inset-0 bg-brand/10 items-start justify-end p-2.5">
-            <View className="size-5 rounded-full bg-brand items-center justify-center shadow-sm">
-              <Check size={12} color="white" strokeWidth={3} />
+          {isSelected && (
+            <View className="absolute inset-0 bg-brand/10 border-2 border-brand rounded-2xl items-center justify-center">
+              <View className="absolute top-2 right-2 bg-brand rounded-full p-1 shadow-sm">
+                <Check size={12} color="white" strokeWidth={3} />
+              </View>
             </View>
+          )}
+        </TouchableOpacity>
+      );
+    }, [selectedSet, toggleSelection]);
+
+    return (
+      <BottomSheetModal
+        ref={ref}
+        snapPoints={['90%']}
+        backdropComponent={renderBackdrop}
+        onAnimate={(fromIndex, toIndex) => {
+          if (fromIndex === -1 && toIndex === 0) {
+            handlePresent();
+          }
+        }}
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
+        handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
+        backgroundStyle={{ backgroundColor: COLORS.background }}
+      >
+        <View className="flex-1 px-5 pt-4 pb-8" style={{ paddingBottom: insets.bottom ? insets.bottom + 12 : 32 }}>
+          {/* Header */}
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serifMedium }}>Select Media</Text>
+            <TouchableOpacity onPress={handleClose}>
+              <X size={20} color={COLORS.textWeak} />
+            </TouchableOpacity>
           </View>
-        )}
-      </TouchableOpacity>
-    );
-  }, [selectedSet, toggleSelection]);
 
-  const renderEmptyState = useCallback(() => (
-    <View className="py-10 items-center justify-center">
-      {isLoading ? (
-        <Spinner />
-      ) : (
-        <Text className="text-center text-text-weak" style={{ fontFamily: FONTS.sans }}>
-          No media found.
-        </Text>
-      )}
-    </View>
-  ), [isLoading]);
-
-  return (
-    <BottomSheetModal
-      ref={ref}
-      index={0}
-      snapPoints={['90%']}
-      backdropComponent={renderBackdrop}
-      enablePanDownToClose
-      onChange={(index) => {
-        if (index === 0) handlePresent();
-      }}
-      handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
-      backgroundStyle={{ backgroundColor: COLORS.background }}
-    >
-      <View className="flex-1">
-        {/* Header */}
-        <View className="px-5 pt-4 pb-4 flex-row items-center justify-between">
-          <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
-            Select item from Media {mediaFiles.length > 0 ? `(${results.length})` : ''}
-          </Text>
-          <TouchableOpacity onPress={handleClose} className="p-1.5 bg-fill-weaker rounded-full">
-            <X size={16} color={COLORS.textWeak} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Search */}
-        <View className="px-5 mb-4">
-          <View className="flex-row items-center bg-fill-weaker border border-stroke-weaker rounded-xl px-3 h-11">
-            <Search size={18} color={COLORS.textWeak} />
+          {/* Search Input */}
+          <View className="flex-row items-center bg-fill-weak border border-stroke-weaker rounded-full px-4 h-12 mb-4">
+            <Search size={18} color={COLORS.textWeak} className="mr-2" />
             <BottomSheetTextInput
+              placeholder="Search media files..."
+              placeholderTextColor={COLORS.textMuted}
               value={query}
               onChangeText={setQuery}
-              placeholder="Search media files"
-              placeholderTextColor={COLORS.textWeak}
-              className="flex-1 ml-2 text-sm text-text-strong h-full"
+              className="flex-1 text-sm text-text-strong p-0"
               style={{ fontFamily: FONTS.sans }}
             />
           </View>
-        </View>
 
-        <BottomSheetFlatList
-          data={isLoading ? [] : results}
-          keyExtractor={keyExtractor}
-          renderItem={renderMediaItem}
-          numColumns={2}
-          initialNumToRender={8}
-          maxToRenderPerBatch={6}
-          windowSize={5}
-          removeClippedSubviews
-          columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 16 }}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
-          ListEmptyComponent={renderEmptyState}
-        />
+          {/* List */}
+          {isLoading ? (
+            <View className="flex-1 items-center justify-center">
+              <Spinner size="large" />
+            </View>
+          ) : (
+            <BottomSheetFlatList
+              data={results}
+              keyExtractor={(item) => item._id || item.id || ''}
+              renderItem={renderItem}
+              numColumns={2}
+              columnWrapperStyle={{ justifyContent: 'space-between' }}
+              contentContainerStyle={{ paddingBottom: 80 }}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
 
-        {/* Footer (Sticky) */}
-        <View 
-          className="flex-row gap-3 px-5 pt-4 border-t border-stroke-weaker bg-white/95"
-          style={{ paddingBottom: insets.bottom ? insets.bottom + 8 : 16 }}
-        >
-          <Button variant="outline" onPress={handleClose} className="flex-1 rounded-full border-stroke-weak bg-white">
-            <Text className="text-sm font-medium text-text-strong">Cancel</Text>
-          </Button>
-          <Button 
-            onPress={handleConfirm} 
-            className="flex-1 bg-brand rounded-full"
-          >
-            <Text className="text-sm font-medium text-white">
-              {localSelected.length > 0 ? `Select ${localSelected.length} items` : 'Select items'}
-            </Text>
-          </Button>
+          {/* Footer Actions */}
+          <View className="absolute bottom-5 left-5 right-5 flex-row gap-4 bg-background pt-4 border-t border-stroke-weaker">
+            <Button variant="outline" onPress={handleClose} className="flex-1 rounded-full border-stroke-weak bg-white">
+              <Text className="text-sm font-medium text-text-strong">Cancel</Text>
+            </Button>
+            <Button 
+              onPress={handleConfirm} 
+              className="flex-1 bg-brand rounded-full"
+            >
+              <Text className="text-sm font-medium text-white">
+                {localSelected.length > 0 ? `Select ${localSelected.length} items` : 'Select items'}
+              </Text>
+            </Button>
+          </View>
         </View>
-      </View>
-    </BottomSheetModal>
-  );
-});
+      </BottomSheetModal>
+    );
+  })
+);
 
 SelectFromMediaModal.displayName = 'SelectFromMediaModal';

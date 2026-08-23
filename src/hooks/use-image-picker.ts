@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 
 export interface PickedAsset {
@@ -55,5 +55,5 @@ export function useImagePicker() {
     };
   }, []);
 
-  return { pickFromLibrary, pickFromCamera };
+  return useMemo(() => ({ pickFromLibrary, pickFromCamera }), [pickFromLibrary, pickFromCamera]);
 }
