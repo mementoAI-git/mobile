@@ -3,13 +3,13 @@ import { createHash } from 'node:crypto';
 import { describe, expect, test } from 'bun:test';
 
 const assets = [
-  ['bead-1.png', 371571, '9cdbda25c257978a6847501991a460068e802e94124150321abd78e392969471'],
-  ['bead-2.png', 622937, 'bd457655b135c91910341cc1a8bebe16dc59e55b29303d369183f758dfb6f444'],
-  ['blush-1.png', 157825, 'd1341e4b3a831ff3a0efb06b5abc4b9df5c380e57baa30b769ec08f52263b978'],
-  ['modern-1.png', 1117705, '491f2a5d078afbda38b7c026eef48055adeba75b9828419449e18dd823a57fa5'],
-  ['modern-2.png', 344402, '3106c69cdaf67cb82f91b9968b6eb8cfc67109d0a12828c405216541a4e58b45'],
-  ['paper-1.png', 160797, 'f0d37d2933ccd1178e647825321766ddbd5fcaefc9eab339d47ebb7592a02263'],
-  ['sage-1.png', 308759, '14c15802d1e007fa916e1315a67f378b45a3e86ded7ef4cfac8eef5c3bf0bb1d'],
+  ['bead-1.png', 119105, 'd1fe6aa8b5f0c2a0474cec770b65ed15bb89b2b39532a3207a7c4fef8e68e062'],
+  ['bead-2.png', 178254, 'a37b9a5dca793a93f708ce3faf2ecda587d94c1c18dc9966f28ce96e699c1e10'],
+  ['blush-1.png', 48772, '0a54bc2b4dad2743d27c66f8b1062848443e09f101c2d88c41c060a3381ca32b'],
+  ['modern-1.png', 301037, '52c6ecea9337a15eaaabc8d26a0717eec2fff0d61c22967c01a5c20e4ddb3369'],
+  ['modern-2.png', 107390, '2107c223a75e6c7936b8b093c1991ce6e80c94932a902ea1e299a2dbe3913608'],
+  ['paper-1.png', 58591, '198075b96572edca91d832112c2b22aa1dfd641784e64984cb01da5b88b80de3'],
+  ['sage-1.png', 89915, '8f425f7b1e213c38729168b6cf088131f1749b5f5285bd6a5b6d947c8e69a75f'],
 ] as const;
 
 const lettersUrl = new URL('../../components/capsule/letters/', import.meta.url);
