@@ -2,7 +2,7 @@
  * Enrichment stats hook — ported from web/src/features/enrichment/use-enrichment-stats.ts
  * Uses AsyncStorage instead of localStorage for persistence on mobile.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { get } from '@/api/mutations';
@@ -115,15 +115,28 @@ export function useEnrichmentStats(): UseEnrichmentStatsResult {
   const nudgeDimension = (stats?.nudge?.category_key as LifeDimension | undefined) ?? null;
   const nudgeQuestion = stats?.nudge?.question ?? null;
 
-  return {
-    stats,
-    isLoading,
-    deltaToday,
-    milestoneJustReached,
-    nudgeDimension,
-    nudgeQuestion,
-    dismissNudge,
-    getDismissedNudges,
-    refetch,
-  };
+  return useMemo(
+    () => ({
+      stats,
+      isLoading,
+      deltaToday,
+      milestoneJustReached,
+      nudgeDimension,
+      nudgeQuestion,
+      dismissNudge,
+      getDismissedNudges,
+      refetch,
+    }),
+    [
+      stats,
+      isLoading,
+      deltaToday,
+      milestoneJustReached,
+      nudgeDimension,
+      nudgeQuestion,
+      dismissNudge,
+      getDismissedNudges,
+      refetch,
+    ],
+  );
 }
