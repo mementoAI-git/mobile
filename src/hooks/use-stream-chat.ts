@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import endpoint from '@/api/endpoint';
 import { useAuthStore } from '@/store';
 import { API_BASE_URL } from '@/lib/env';
@@ -17,6 +17,7 @@ interface StreamMessage {
   created_at?: string;
   replyTo?: ChatReplyQuote;
   attatchments?: ChatAttachmentPreview[];
+  isLive?: boolean;
 }
 
 interface SendOptions {
@@ -70,6 +71,7 @@ export function useStreamChat(memoryId?: string) {
         _id: createMessageId(),
         role: 'user',
         text: hasText ? text : '',
+        isLive: true,
         ...(replyTo ? { replyTo } : {}),
         ...(attachmentPreviews?.length ? { attatchments: attachmentPreviews } : {}),
       };
@@ -149,6 +151,7 @@ export function useStreamChat(memoryId?: string) {
             role: 'ai',
             text: accumulated,
             created_at: new Date().toISOString(),
+            isLive: true,
           }]);
           setStreamingText('');
         }
@@ -201,5 +204,8 @@ export function useStreamChat(memoryId?: string) {
     setStreamingText('');
   }, []);
 
-  return { messages, streaming, streamingText, send, abort, clear };
+  return useMemo(
+    () => ({ messages, streaming, streamingText, send, abort, clear }),
+    [messages, streaming, streamingText, send, abort, clear],
+  );
 }

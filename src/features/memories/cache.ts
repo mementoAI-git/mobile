@@ -19,8 +19,8 @@ export function getMemoryInvalidationQueryKeys({
   reflectionDayKey,
 }: MemoryInvalidationOptions = {}): QueryKey[] {
   const keys: QueryKey[] = [
-    ['memories'],
-    ['stories'],
+    [queryKeys.memories()[0]],
+    [queryKeys.stories()[0]],
   ];
 
   if (includeStats) {

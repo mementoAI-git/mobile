@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, FlatList, RefreshControl, ImageBackground, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoryCard } from '@/components/explore/CategoryCard';
@@ -11,6 +11,21 @@ import { useExploreLogic } from '@/hooks/use-explore-logic';
 import { useFocusEffect } from 'expo-router';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
+const EMPTY_EXPLORE_IMG = require('../../../assets/images/illustrations/empty_explore.png');
+
+// Stable module-level sub-component — avoid creating React component types inside render
+const MemoPromptItem = React.memo(function PromptItem({
+  prompt,
+  onPress,
+}: {
+  prompt: any;
+  onPress: (p: any) => void;
+}) {
+  const handlePress = useCallback(() => {
+    onPress(prompt);
+  }, [prompt, onPress]);
+  return <ContinueReflectingCard title={prompt.title || ''} onPress={handlePress} />;
+});
 
 export default function ExploreScreen() {
   const {
@@ -44,6 +59,40 @@ export default function ExploreScreen() {
       image: null,
     };
   }, []);
+
+
+  const listHeader = useMemo(
+    () => (
+      <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-6">
+        <Animated.Text className="text-base text-text-weak leading-relaxed mb-6" style={{ fontFamily: FONTS.sans }}>
+          Discover prompts that help you explore the depths of your story and find new ways to connect.
+        </Animated.Text>
+
+        {staticPrompts.length > 0 && (
+          <View className="mb-6">
+            <Animated.Text className="text-[22px] text-text-strong font-normal mb-4" style={{ fontFamily: FONTS.serif }}>
+              Continue reflecting
+            </Animated.Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingLeft: 24, paddingRight: 8, paddingBottom: 8 }}
+              className="-mx-6"
+            >
+              {staticPrompts.map((prompt) => (
+                <MemoPromptItem key={prompt._id} prompt={prompt} onPress={handlePromptPress} />
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        <Animated.Text className="text-[22px] text-text-strong font-normal mb-4" style={{ fontFamily: FONTS.serif }}>
+          Explore categories
+        </Animated.Text>
+      </Animated.View>
+    ),
+    [staticPrompts, handlePromptPress],
+  );
 
   const renderCategoryItem = useCallback(
     ({ item }: { item: any }) => {
@@ -86,39 +135,7 @@ export default function ExploreScreen() {
             maxToRenderPerBatch={5}
             windowSize={5}
             removeClippedSubviews
-            ListHeaderComponent={
-              <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-6">
-                <Animated.Text className="text-base text-text-weak leading-relaxed mb-6" style={{ fontFamily: FONTS.sans }}>
-                  Discover prompts that help you explore the depths of your story and find new ways to connect.
-                </Animated.Text>
-
-                {staticPrompts.length > 0 && (
-                  <View className="mb-6">
-                    <Animated.Text className="text-[22px] text-text-strong font-normal mb-4" style={{ fontFamily: FONTS.serif }}>
-                      Continue reflecting
-                    </Animated.Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{ paddingLeft: 24, paddingRight: 8, paddingBottom: 8 }}
-                      className="-mx-6"
-                    >
-                      {staticPrompts.map((prompt) => (
-                        <ContinueReflectingCard
-                          key={prompt._id}
-                          title={prompt.title || ''}
-                          onPress={() => handlePromptPress(prompt)}
-                        />
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-
-                <Animated.Text className="text-[22px] text-text-strong font-normal mb-4" style={{ fontFamily: FONTS.serif }}>
-                  Explore categories
-                </Animated.Text>
-              </Animated.View>
-            }
+            ListHeaderComponent={listHeader}
             contentContainerClassName="px-6 pb-24 flex-grow"
             showsVerticalScrollIndicator={false}
             renderItem={renderCategoryItem}
@@ -127,6 +144,7 @@ export default function ExploreScreen() {
             }
             ListEmptyComponent={
               <EmptyState
+                image={EMPTY_EXPLORE_IMG}
                 title="Nothing here yet"
                 description="We're preparing new topics for you to explore."
                 actionLabel="Back to Overview"

@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import {
+  ImageBackground,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +17,8 @@ import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useUiStore } from '@/store';
+
+const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 const DETAILS = [
   { key: 'email', label: 'Email address' },
@@ -54,49 +57,78 @@ export default function PersonalInfoScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBack}
-          activeOpacity={0.78}
-          accessibilityRole="button"
-          style={styles.backButton}
-        >
-          <ArrowLeft size={22} color={COLORS.textBase} />
-        </TouchableOpacity>
-        <Text style={SETTINGS_TYPE.screenTitle}>Personal information</Text>
-        <View style={{ width: 44 }} />
-      </View>
+      <View style={{ flex: 1 }}>
+        <ImageBackground
+          source={PATTERN}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+          imageStyle={{ opacity: 0.03 }}
+          resizeMode="repeat"
+        />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <View style={styles.aboutCard}>
-          <Text style={SETTINGS_TYPE.cardTitle}>About me</Text>
-          <Text style={[SETTINGS_TYPE.body, { color: COLORS.textStrong, marginTop: 6 }]}>
-            {profile?.context?.self_description?.trim() || 'Add a few words about yourself.'}
-          </Text>
-        </View>
-
-        <View style={styles.detailsHeader}>
-          <Text style={SETTINGS_TYPE.sectionTitle}>Profile details</Text>
-          <Button
-            variant="secondary"
-            size="lg"
-            className="h-10 px-4"
-            textClassName="text-sm font-bold"
-            onPress={handleEdit}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={handleBack}
+            activeOpacity={0.78}
+            accessibilityRole="button"
+            style={styles.backButton}
           >
-            Edit Profile
-          </Button>
+            <ArrowLeft size={22} color={COLORS.textBase} />
+          </TouchableOpacity>
+          <Text style={SETTINGS_TYPE.screenTitle}>Personal information</Text>
+          <View style={{ width: 44 }} />
         </View>
 
-        <View style={{ gap: 22, marginTop: 18 }}>
-          {DETAILS.map((detail) => (
-            <View key={detail.key}>
-              <Text style={SETTINGS_TYPE.supporting}>{detail.label}</Text>
-              <Text style={[SETTINGS_TYPE.rowLabel, { marginTop: 7 }]}>{getValue(detail.key)}</Text>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+          <View style={styles.aboutCard}>
+            <Text style={SETTINGS_TYPE.cardTitle}>About me</Text>
+            <Text style={[SETTINGS_TYPE.body, { color: COLORS.textStrong, marginTop: 6 }]}>
+              {profile?.context?.self_description?.trim() || 'Add a few words about yourself.'}
+            </Text>
+          </View>
+
+          <View style={styles.detailsHeader}>
+            <Text style={SETTINGS_TYPE.sectionTitle}>Profile details</Text>
+            <Button
+              variant="secondary"
+              size="lg"
+              className="h-10 px-4"
+              textClassName="text-sm font-bold"
+              onPress={handleEdit}
+            >
+              Edit Profile
+            </Button>
+          </View>
+
+          <View
+            style={{
+              backgroundColor: COLORS.card,
+              borderRadius: 24,
+              borderWidth: 1,
+              borderColor: COLORS.strokeWeaker,
+              overflow: 'hidden',
+              marginTop: 18,
+            }}
+          >
+            {DETAILS.map((detail, index) => (
+              <View key={detail.key}>
+                {index > 0 && (
+                  <View
+                    style={{
+                      height: 1,
+                      backgroundColor: COLORS.strokeWeaker,
+                      marginHorizontal: 20,
+                    }}
+                  />
+                )}
+                <View style={{ paddingHorizontal: 20, paddingVertical: 18, gap: 4 }}>
+                  <Text style={SETTINGS_TYPE.supporting}>{detail.label}</Text>
+                  <Text style={SETTINGS_TYPE.rowLabel}>{getValue(detail.key)}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -120,9 +152,11 @@ const styles = StyleSheet.create({
   },
   content: { paddingHorizontal: 16, paddingTop: 28, paddingBottom: 40 },
   aboutCard: {
-    borderRadius: 16,
-    padding: 12,
-    backgroundColor: COLORS.fillWeak,
+    borderRadius: 24,
+    padding: 20,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
   },
   detailsHeader: {
     minHeight: 56,

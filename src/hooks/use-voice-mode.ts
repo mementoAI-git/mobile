@@ -3,7 +3,7 @@ import type { AudioStreamBuffer } from 'expo-audio';
 import { GoogleGenAI, Modality } from '@google/genai';
 import type { LiveServerMessage, Session } from '@google/genai';
 import { AudioContext } from 'react-native-audio-api';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import * as Haptics from 'expo-haptics';
 import { get, post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
@@ -257,17 +257,32 @@ export function useVoiceMode({
     };
   }, [disconnect]);
 
-  return {
-    isConnected,
-    isConnecting,
-    isMuted,
-    recordingTime,
-    aiSpeechText,
-    userSpeechText,
-    isAiSpeaking,
-    connectionFailure,
-    connect,
-    disconnect,
-    toggleMute,
-  };
+  return useMemo(
+    () => ({
+      isConnected,
+      isConnecting,
+      isMuted,
+      recordingTime,
+      aiSpeechText,
+      userSpeechText,
+      isAiSpeaking,
+      connectionFailure,
+      connect,
+      disconnect,
+      toggleMute,
+    }),
+    [
+      isConnected,
+      isConnecting,
+      isMuted,
+      recordingTime,
+      aiSpeechText,
+      userSpeechText,
+      isAiSpeaking,
+      connectionFailure,
+      connect,
+      disconnect,
+      toggleMute,
+    ],
+  );
 }

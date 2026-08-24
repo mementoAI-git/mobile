@@ -23,7 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '@/constants/tokens';
 
 const LOGO_3D = require('../../../assets/splash-icon.jpg');
-const LOGO_FLAT = require('../../../assets/images/memento_flat.png');
+const LOGO_FLAT = require('../../../assets/images/memento_flat.webp');
 
 const WORD = 'Memento.';
 

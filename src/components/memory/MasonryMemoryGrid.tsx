@@ -61,6 +61,14 @@ export function MasonryMemoryGrid({
 
   // Map from memory._id → measured height in pixels
   const [measuredHeights, setMeasuredHeights] = useState<Record<string, number>>({});
+  const layoutUpdatesRef = useRef<Record<string, number>>({});
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [scrollMetrics, setScrollMetrics] = useState({
     offsetY: 0,
@@ -90,6 +98,11 @@ export function MasonryMemoryGrid({
 
   useEffect(() => {
     const memoryIds = new Set(memories.map((memory) => memory._id));
+    Object.keys(layoutUpdatesRef.current).forEach((id) => {
+      if (!memoryIds.has(id)) {
+        delete layoutUpdatesRef.current[id];
+      }
+    });
     setMeasuredHeights((prev) => {
       let changed = false;
       const next: Record<string, number> = {};
@@ -105,10 +118,23 @@ export function MasonryMemoryGrid({
   }, [memories]);
 
   const handleLayout = useCallback((id: string, height: number) => {
-    setMeasuredHeights((prev) => {
-      if (prev[id] === height) return prev;
-      return { ...prev, [id]: height };
-    });
+    if (layoutUpdatesRef.current[id] === height) return;
+    layoutUpdatesRef.current[id] = height;
+
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      setMeasuredHeights((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        Object.entries(layoutUpdatesRef.current).forEach(([k, v]) => {
+          if (prev[k] !== v) {
+            next[k] = v;
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }, 16);
   }, []);
 
   const handleHeaderLayout = useCallback((event: any) => {

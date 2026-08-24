@@ -68,6 +68,46 @@ function ChatDateSeparator({ label }: { label: string }) {
   );
 }
 
+const MemoMessageRow = React.memo(function MemoMessageRow({
+  item,
+  showDate,
+  isHighlighted,
+  onReply,
+  onScrollToOriginal,
+  onPreviewAttachments,
+}: {
+  item: any;
+  showDate: boolean;
+  isHighlighted: boolean;
+  onReply: (item: any) => void;
+  onScrollToOriginal: (text: string) => void;
+  onPreviewAttachments: (request: ChatAttachmentPreviewRequest) => void;
+}) {
+  const handleReply = useCallback(() => {
+    onReply(item);
+  }, [item, onReply]);
+
+  const handleScroll = useCallback(() => {
+    if (item.replyTo?.text) {
+      onScrollToOriginal(item.replyTo.text);
+    }
+  }, [item.replyTo?.text, onScrollToOriginal]);
+
+  return (
+    <View>
+      {showDate && <ChatDateSeparator label={getChatDayLabel(item.created_at)} />}
+      <MessageBubble
+        message={item}
+        highlighted={isHighlighted}
+        animated={Boolean(item.isLive)}
+        onReply={handleReply}
+        onScrollToOriginal={item.replyTo?.text ? handleScroll : undefined}
+        onPreviewAttachments={onPreviewAttachments}
+      />
+    </View>
+  );
+});
+
 export default function ChatScreen() {
   React.useEffect(() => {
     runtimeDiagnostics.record('screen', 'mount', { screen: 'chat' });
@@ -235,6 +275,26 @@ export default function ChatScreen() {
     void fetchOlderMessages();
   }, [fetchOlderMessages, hasOlderMessages, isFetchingOlderMessages]);
 
+  const handleReplyMessage = useCallback((item: any) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setReplyQuote({ role: item.role, text: item.text });
+  }, []);
+
+  const handleDismissReplyQuote = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setReplyQuote(null);
+  }, []);
+
+  const handleSendPayload = useCallback((payload: ChatSendPayload) => {
+    send(
+      payload.text,
+      replyQuote,
+      payload.attachmentIds.length ? payload.attachmentIds : undefined,
+      payload.attachmentPreviews.length ? payload.attachmentPreviews : undefined,
+    );
+    setReplyQuote(null);
+  }, [send, replyQuote]);
+
   const renderMessage = useCallback(
     ({ item, index }: { item: any; index: number }) => {
       const previousTimestamp = index > 0
@@ -243,33 +303,24 @@ export default function ChatScreen() {
       const showDate = shouldShowChatDaySeparator(previousTimestamp, item.created_at);
 
       return (
-        <View>
-          {showDate && <ChatDateSeparator label={getChatDayLabel(item.created_at)} />}
-          <MessageBubble
-            message={item}
-            highlighted={item._id === highlightedMessageId}
-            onReply={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setReplyQuote({ role: item.role, text: item.text });
-            }}
-            onScrollToOriginal={
-              (item as any).replyTo?.text
-                ? () => handleScrollToOriginal((item as any).replyTo.text)
-                : undefined
-            }
-            onPreviewAttachments={handlePreviewAttachments}
-          />
-        </View>
+        <MemoMessageRow
+          item={item}
+          showDate={showDate}
+          isHighlighted={item._id === highlightedMessageId}
+          onReply={handleReplyMessage}
+          onScrollToOriginal={handleScrollToOriginal}
+          onPreviewAttachments={handlePreviewAttachments}
+        />
       );
     },
-    [allMessages, handlePreviewAttachments, handleScrollToOriginal, highlightedMessageId],
+    [allMessages, handleReplyMessage, handleScrollToOriginal, handlePreviewAttachments, highlightedMessageId],
   );
 
   const streamingFooterComponent = React.useMemo(() => {
     if (!isActuallyStreaming) return null;
 
     return streamingText ? (
-      <MessageBubble message={{ role: 'assistant', text: streamingText } as any} />
+      <MessageBubble message={{ role: 'assistant', text: streamingText } as any} animated />
     ) : (
       <TypingIndicator />
     );
@@ -517,11 +568,9 @@ export default function ChatScreen() {
                   </Text>
                 </View>
                 <TouchableOpacity
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setReplyQuote(null);
-                  }}
+                  onPress={handleDismissReplyQuote}
                   activeOpacity={0.7}
+                  hitSlop={10}
                   className="size-6 rounded-full bg-fill-weaker items-center justify-center"
                 >
                   <X size={12} color={COLORS.textWeak} />
@@ -533,15 +582,7 @@ export default function ChatScreen() {
             <ChatInput
               maxComposerHeight={composerOverlayMaxHeight}
               parentOwnsBottomSafeArea
-              onSend={(payload: ChatSendPayload) => {
-                send(
-                  payload.text,
-                  replyQuote,
-                  payload.attachmentIds.length ? payload.attachmentIds : undefined,
-                  payload.attachmentPreviews.length ? payload.attachmentPreviews : undefined,
-                );
-                setReplyQuote(null);
-              }}
+              onSend={handleSendPayload}
               onStop={stop}
               loading={isActuallyStreaming || isLoading}
             />

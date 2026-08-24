@@ -4,6 +4,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { WifiOff } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useOfflineQueueStore } from '@/store/offline-queue.store';
 
 const OFFLINE_DEBOUNCE_MS = 1500; // wait 1.5s before showing banner (avoids false positives)
 
@@ -48,12 +49,16 @@ export function OfflineNotice() {
         showBanner();
       }, OFFLINE_DEBOUNCE_MS);
     } else {
-      // Back online — hide immediately
+      // Back online — hide immediately and trigger sync
       hideBanner();
+      useOfflineQueueStore.getState().syncQueue();
     }
   }, [showBanner, hideBanner]);
 
   useEffect(() => {
+    // Load local offline mutation queue from storage
+    useOfflineQueueStore.getState().loadQueue();
+
     // Use fetch() for the real initial state instead of relying on
     // the first listener event (which can fire with false/null before OS settles)
     NetInfo.fetch().then((state) => {
@@ -61,6 +66,8 @@ export function OfflineNotice() {
       isReadyRef.current = true;
       if (!connected) {
         showBanner();
+      } else {
+        useOfflineQueueStore.getState().syncQueue();
       }
     });
 

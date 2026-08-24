@@ -60,6 +60,82 @@ import type { IFile, IMessageAttachment } from '@/types';
 type AttachmentItem = UploadAttachment<IFile>;
 type ChatAttachmentPreview = IMessageAttachment;
 
+// ─── Stable attachment strip tile ────────────────────────────────────────────
+// Extracted from the ScrollView map so press handlers don't recreate per render.
+
+const MemoAttachmentTile = React.memo(function MemoAttachmentTile({
+  attachment,
+  previewIdx,
+  onPreview,
+  onRemove,
+}: {
+  attachment: AttachmentItem;
+  previewIdx: number;
+  onPreview: (idx: number) => void;
+  onRemove: (clientId: string) => void;
+}) {
+  const isMedia = attachment.mimeType.startsWith('image/') || attachment.mimeType.startsWith('video/');
+  const isVideo = attachment.mimeType.startsWith('video/');
+  const isAudio = attachment.mimeType.startsWith('audio/');
+
+  const handlePreviewPress = useCallback(() => {
+    if (!attachment.isUploading && previewIdx >= 0) {
+      Haptics.selectionAsync();
+      onPreview(previewIdx);
+    }
+  }, [attachment.isUploading, previewIdx, onPreview]);
+
+  const handleRemovePress = useCallback(() => {
+    onRemove(attachment.clientId);
+  }, [attachment.clientId, onRemove]);
+
+  return (
+    <View style={chatInputStyles.selectedAsset}>
+      <TouchableOpacity
+        onPress={handlePreviewPress}
+        activeOpacity={previewIdx >= 0 ? 0.84 : 1}
+        style={chatInputStyles.assetPressable}
+      >
+        {isMedia ? (
+          <>
+            <Image source={{ uri: attachment.uri }} style={chatInputStyles.assetThumb} resizeMode="cover" />
+            {isVideo && (
+              <View style={chatInputStyles.videoAssetOverlay}>
+                <Play size={scale(18)} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+              </View>
+            )}
+          </>
+        ) : isAudio ? (
+          <View style={chatInputStyles.assetAudioTile}>
+            <AudioLines size={scale(23)} color={COLORS.brand} strokeWidth={2.3} />
+          </View>
+        ) : (
+          <View style={chatInputStyles.assetFileTile}>
+            <FileText size={scale(22)} color={COLORS.brand} strokeWidth={2} />
+          </View>
+        )}
+        {attachment.isUploading && (
+          <View style={chatInputStyles.assetUploadingOverlay}>
+            <ActivityIndicator color={COLORS.textInverse} />
+          </View>
+        )}
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={handleRemovePress}
+        activeOpacity={0.82}
+        hitSlop={11}
+        style={chatInputStyles.assetRemoveButton}
+      >
+        <X size={scale(13)} color={COLORS.textInverse} strokeWidth={2.6} />
+      </TouchableOpacity>
+    </View>
+  );
+});
+
+// Forward-declare style reference used by MemoAttachmentTile (populated below in StyleSheet.create)
+let chatInputStyles: ReturnType<typeof StyleSheet.create<any>>;
+
+
 export interface ChatSendPayload {
   text: string;
   attachmentIds: string[];
@@ -400,6 +476,9 @@ export function ChatInput({
     transform: [{ scale: btnScale.value }],
   }));
 
+  const handleBtnPressIn  = useCallback(() => { btnScale.value = withSpring(0.9); }, [btnScale]);
+  const handleBtnPressOut = useCallback(() => { btnScale.value = withSpring(1);   }, [btnScale]);
+
   // ─── Derived layout values ────────────────────────────────────────────────
 
   const attachmentState = useMemo(() => {
@@ -488,6 +567,11 @@ export function ChatInput({
       setIsTextComposerExpanded(true);
     }
   }, [hasText, isTextComposerExpanded, useExpandedComposer]);
+
+  const handlePreviewAttachment = useCallback((idx: number) => {
+    setPreviewIndex(idx);
+    setPreviewVisible(true);
+  }, []);
 
   // ─── Attachment picker opener ─────────────────────────────────────────────
 
@@ -707,57 +791,15 @@ export function ChatInput({
             contentContainerStyle={styles.assetStripContent}
           >
             {attachments.map(a => {
-              const isMedia = a.mimeType.startsWith('image/') || a.mimeType.startsWith('video/');
-              const isVideo = a.mimeType.startsWith('video/');
-              const isAudio = a.mimeType.startsWith('audio/');
               const previewIdx = previewable.findIndex(p => p.clientId === a.clientId);
-
               return (
-                <View key={a.clientId} style={styles.selectedAsset}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (!a.isUploading && previewIdx >= 0) {
-                        Haptics.selectionAsync();
-                        setPreviewIndex(previewIdx);
-                        setPreviewVisible(true);
-                      }
-                    }}
-                    activeOpacity={previewIdx >= 0 ? 0.84 : 1}
-                    style={styles.assetPressable}
-                  >
-                    {isMedia ? (
-                      <>
-                        <Image source={{ uri: a.uri }} style={styles.assetThumb} resizeMode="cover" />
-                        {isVideo && (
-                          <View style={styles.videoAssetOverlay}>
-                            <Play size={scale(18)} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
-                          </View>
-                        )}
-                      </>
-                    ) : isAudio ? (
-                      <View style={styles.assetAudioTile}>
-                        <AudioLines size={scale(23)} color={COLORS.brand} strokeWidth={2.3} />
-                      </View>
-                    ) : (
-                      <View style={styles.assetFileTile}>
-                        <FileText size={scale(22)} color={COLORS.brand} strokeWidth={2} />
-                      </View>
-                    )}
-                    {a.isUploading && (
-                      <View style={styles.assetUploadingOverlay}>
-                        <ActivityIndicator color={COLORS.textInverse} />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => removeAttachment(a.clientId)}
-                    activeOpacity={0.82}
-                    hitSlop={6}
-                    style={styles.assetRemoveButton}
-                  >
-                    <X size={scale(13)} color={COLORS.textInverse} strokeWidth={2.6} />
-                  </TouchableOpacity>
-                </View>
+                <MemoAttachmentTile
+                  key={a.clientId}
+                  attachment={a}
+                  previewIdx={previewIdx}
+                  onPreview={handlePreviewAttachment}
+                  onRemove={removeAttachment}
+                />
               );
             })}
           </ScrollView>
@@ -812,8 +854,8 @@ export function ChatInput({
             <Animated.View style={btnAnimStyle}>
               <TouchableOpacity
                 onPress={handleStop}
-                onPressIn={() => { btnScale.value = withSpring(0.9); }}
-                onPressOut={() => { btnScale.value = withSpring(1); }}
+                onPressIn={handleBtnPressIn}
+                onPressOut={handleBtnPressOut}
                 style={useExpandedComposer ? styles.expandedStopButton : styles.compactStopButton}
               >
                 <Square
@@ -852,8 +894,8 @@ export function ChatInput({
                   activeOpacity={0.76}
                   disabled={controls.sendDisabled}
                   onPress={handleSend}
-                  onPressIn={() => { btnScale.value = withSpring(0.9); }}
-                  onPressOut={() => { btnScale.value = withSpring(1); }}
+                  onPressIn={handleBtnPressIn}
+                  onPressOut={handleBtnPressOut}
                   style={[
                     useExpandedComposer ? styles.expandedSendButton : styles.compactSendButton,
                     controls.sendDisabled && styles.sendButtonDisabled,
@@ -1123,3 +1165,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+// Link the forward-declared reference so MemoAttachmentTile can use the same StyleSheet
+chatInputStyles = styles;

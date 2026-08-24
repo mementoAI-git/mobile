@@ -1,5 +1,7 @@
+import { queryKeys } from '@/constants/query-keys';
+
 export function filesQueryKey(limit: number) {
-  return ['files', { limit }] as const;
+  return [...queryKeys.files, { limit }] as const;
 }
 
 export function filesRequestUrl(baseUrl: string, limit: number) {

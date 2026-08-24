@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { logger } from '@/lib/logger';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 
@@ -231,13 +231,16 @@ export function useVoiceToText({
     }
   }, [clearTimer]);
 
-  return {
-    status,
-    isRecording: status === 'recording',
-    isUnavailable: !_moduleAvailable,
-    duration,
-    start,
-    stop,
-    cancel,
-  };
+  return useMemo(
+    () => ({
+      status,
+      isRecording: status === 'recording',
+      isUnavailable: !_moduleAvailable,
+      duration,
+      start,
+      stop,
+      cancel,
+    }),
+    [status, duration, start, stop, cancel],
+  );
 }

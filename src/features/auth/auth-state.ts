@@ -3,6 +3,8 @@ import type { IAuth, IUser } from '@/types';
 import { storageKeys } from '@/constants/storage-keys';
 import type { SessionPhase } from './session-types';
 
+import type { TerminationReason } from './session-coordinator';
+
 export interface AuthStorage {
   getItem: (key: string) => Promise<string | null>;
   setItem: (key: string, value: string) => Promise<void>;
@@ -14,11 +16,12 @@ export interface AuthState {
   user: IUser | null;
   phase: SessionPhase;
   hydrated: boolean;
+  terminationReason: TerminationReason | null;
   beginAuthentication: () => void;
   commitSession: (auth: IAuth, user: IUser) => void;
   updateCredentials: (auth: IAuth) => void;
   updateUser: (user: IUser) => void;
-  beginTermination: () => void;
+  beginTermination: (reason?: TerminationReason) => void;
   finishAnonymous: () => void;
   hydrateCredentials: () => Promise<void>;
   setAuth: (auth: IAuth) => Promise<void>;
@@ -32,6 +35,7 @@ export function createAuthState(storage: AuthStorage): StateCreator<AuthState> {
     user: null,
     phase: 'hydrating',
     hydrated: false,
+    terminationReason: null,
 
     beginAuthentication: () => set({ phase: 'authenticating', hydrated: true }),
     commitSession: (token, user) => set({
@@ -39,6 +43,7 @@ export function createAuthState(storage: AuthStorage): StateCreator<AuthState> {
       user,
       phase: 'authenticated',
       hydrated: true,
+      terminationReason: null,
     }),
     updateCredentials: (token) => set({ token }),
     updateUser: (user) => set((state) => ({
@@ -46,18 +51,20 @@ export function createAuthState(storage: AuthStorage): StateCreator<AuthState> {
       phase: state.token ? 'authenticated' : state.phase,
       hydrated: true,
     })),
-    beginTermination: () => set({
+    beginTermination: (reason) => set({
       token: null,
       user: null,
       phase: 'terminating',
       hydrated: true,
+      terminationReason: reason || null,
     }),
-    finishAnonymous: () => set({
+    finishAnonymous: () => set((state) => ({
       token: null,
       user: null,
       phase: 'anonymous',
       hydrated: true,
-    }),
+      terminationReason: state.terminationReason,
+    })),
 
     hydrateCredentials: async () => {
       try {

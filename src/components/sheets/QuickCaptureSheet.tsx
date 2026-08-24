@@ -175,6 +175,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
         </Text>
         <TouchableOpacity
           onPress={() => { Haptics.selectionAsync(); onClose ? onClose() : closeSheet(); }}
+          hitSlop={6}
           className="size-8 rounded-full bg-fill-weaker items-center justify-center"
         >
           <X size={18} color={COLORS.textWeak} />

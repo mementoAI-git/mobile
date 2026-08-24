@@ -7,6 +7,7 @@ export default {
   verifyEmail: '/auth/verify-email',
   refreshToken: '/auth/refresh-token',
   logout: '/auth/logout',
+  logoutOther: '/auth/logout/other',
   oauth: '/auth/oauth/',
   setPassword: '/auth/set-password',
   verify2FALogin: '/auth/2fa/verify',

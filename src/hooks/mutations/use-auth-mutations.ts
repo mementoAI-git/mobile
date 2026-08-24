@@ -114,3 +114,9 @@ export function useVerify2FA() {
     },
   });
 }
+
+export function useLogoutOtherDevices() {
+  return useMutation({
+    mutationFn: () => del(endpoint.logoutOther),
+  });
+}

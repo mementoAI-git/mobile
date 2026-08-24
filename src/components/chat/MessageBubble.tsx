@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Image, Linking, StyleSheet } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import type { IMessage } from '@/types';
 import dayjs from 'dayjs';
@@ -50,6 +50,7 @@ interface MessageBubbleProps {
   onScrollToOriginal?: () => void;
   onPreviewAttachments?: (request: ChatAttachmentPreviewRequest) => void;
   highlighted?: boolean;
+  animated?: boolean;
 }
 
 // ─── Attachment helpers ────────────────────────────────────────────────────────
@@ -143,7 +144,9 @@ function FaviconBadge({ url, hostname }: { url: string; hostname: string }) {
 }
 
 function LinkPreviewChip({ preview }: { preview: LinkPreviewData }) {
-  const handlePress = () => { Linking.openURL(preview.url).catch(() => {}); };
+  const handlePress = useCallback(() => {
+    Linking.openURL(preview.url).catch(() => {});
+  }, [preview.url]);
 
   if (!preview.loaded) {
     return (
@@ -227,6 +230,37 @@ function AttachmentPlaceholder({
   );
 }
 
+// Pure helper — module-level so it is never recreated on each AttachmentGrid render
+function renderMediaPreview(
+  a: { url: string; name: string; type?: string; _id?: string },
+  width: number,
+  height: number,
+  borderRadius: number,
+  onPress: () => void,
+) {
+  const category = getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url });
+  const previewKind = getAttachmentPreviewKind({ category, uri: a.url });
+
+  if (previewKind === 'placeholder') {
+    return <AttachmentPlaceholder name={a.name} width={width} height={height} borderRadius={borderRadius} />;
+  }
+
+  if (previewKind === 'video') {
+    return (
+      <VideoThumbnail
+        uri={a.url}
+        thumbnailUrl={(a as any).thumbnail}
+        width={width}
+        height={height}
+        borderRadius={borderRadius}
+        onPress={onPress}
+      />
+    );
+  }
+
+  return <Image source={{ uri: a.url }} style={{ width, height, borderRadius }} resizeMode="cover" />;
+}
+
 function AttachmentGrid({ attachments, onTap }: {
   attachments: { url: string; name: string; type?: string; _id?: string }[];
   onTap: (index: number) => void;
@@ -239,49 +273,6 @@ function AttachmentGrid({ attachments, onTap }: {
   const fullW = BUBBLE_MAX_W;
 
   let imageSection: React.ReactNode = null;
-
-  const renderMediaPreview = (
-    a: { url: string; name: string; type?: string; _id?: string },
-    width: number,
-    height: number,
-    borderRadius: number,
-    onPress: () => void,
-  ) => {
-    const category = getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url });
-    const previewKind = getAttachmentPreviewKind({ category, uri: a.url });
-
-    if (previewKind === 'placeholder') {
-      return (
-        <AttachmentPlaceholder
-          name={a.name}
-          width={width}
-          height={height}
-          borderRadius={borderRadius}
-        />
-      );
-    }
-
-    if (previewKind === 'video') {
-      return (
-        <VideoThumbnail
-          uri={a.url}
-          thumbnailUrl={(a as any).thumbnail}
-          width={width}
-          height={height}
-          borderRadius={borderRadius}
-          onPress={onPress}
-        />
-      );
-    }
-
-    return (
-      <Image
-        source={{ uri: a.url }}
-        style={{ width, height, borderRadius }}
-        resizeMode="cover"
-      />
-    );
-  };
 
   if (count === 1) {
     // Single image/video — full width, 4:3
@@ -360,6 +351,7 @@ export const MessageBubble = React.memo(function MessageBubble({
   onScrollToOriginal,
   onPreviewAttachments,
   highlighted = false,
+  animated = false,
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const rawAttachments: { url: string; name: string; type?: string; _id?: string }[] =
@@ -373,18 +365,30 @@ export const MessageBubble = React.memo(function MessageBubble({
     ? dayjs(message.created_at).format('h:mma')
     : null;
 
-  const previewAttachments: PreviewAttachment[] = rawAttachments.map(toPreviewAttachment);
+  const previewAttachments: PreviewAttachment[] = useMemo(
+    () => rawAttachments.map(toPreviewAttachment),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rawAttachments.length, (message as any)._id],
+  );
 
   const hasContent = content.trim().length > 0 || rawAttachments.length > 0;
+
+  // Must be declared before any early return (Rules of Hooks)
+  const handleAttachmentTap = useCallback((index: number) => {
+    onPreviewAttachments?.({ attachments: previewAttachments, initialIndex: index });
+  }, [onPreviewAttachments, previewAttachments]);
+
   if (!hasContent) return null;
 
-  const handleAttachmentTap = (index: number) => {
-    onPreviewAttachments?.({ attachments: previewAttachments, initialIndex: index });
-  };
+
+  const Container = animated ? Animated.View : View;
+  const containerProps = animated
+    ? { entering: FadeInDown.duration(300).springify() }
+    : {};
 
   return (
-    <Animated.View
-      entering={FadeInDown.duration(450).springify()}
+    <Container
+      {...containerProps}
       style={[
         styles.messageContainer,
         highlighted && styles.messageContainerHighlighted,
@@ -455,7 +459,7 @@ export const MessageBubble = React.memo(function MessageBubble({
             </TouchableOpacity>
           )}
         </View>
-    </Animated.View>
+    </Container>
   );
 });
 

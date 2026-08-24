@@ -15,12 +15,11 @@ import { useUiStore } from '@/store';
 import { useUserStats, useMemoriesStats, useCapsuleStats } from '@/hooks/queries/use-overview';
 import { useUserStore } from '@/store';
 import {  DashboardHeader, OverviewSkeleton, GradientText, GreetingIcon, /* SplineChart, */ JourneyStatIcon } from '@/components/ui';
-import { useStartConversation } from '@/hooks/mutations/use-memory-mutations';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { useOverviewPrompts, useDailyPrompts } from '@/hooks/queries/use-prompts';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
-import { useActivities } from '@/hooks/queries/use-activities';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/constants/query-keys';
 import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 import { DailyPromptSection } from '@/components/overview/DailyPromptSection';
 import { RecentActivitiesSection } from '@/components/overview/RecentActivitiesSection';
@@ -41,7 +40,7 @@ const STREAK_BG = require('../../../assets/images/backgrounds/side_cards_for_str
 
 
 
-import type { IMemory } from '@/types';
+
 
 interface OverviewJourneyCardProps {
   label: string;
@@ -53,7 +52,7 @@ interface OverviewJourneyCardProps {
   bgImage?: any;
 }
 
-function OverviewJourneyCard({
+const OverviewJourneyCard = React.memo(function OverviewJourneyCard({
   label,
   valueElement,
   icon,
@@ -135,7 +134,7 @@ function OverviewJourneyCard({
       </TouchableOpacity>
     </Animated.View>
   );
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -169,6 +168,21 @@ export default function OverviewScreen() {
     openSheet('streak');
   }, [openSheet]);
 
+  const handleGoToStories     = useCallback(() => router.push('/(tabs)/stories'),   [router]);
+  const handleGoToSettings    = useCallback(() => router.push('/settings'),           [router]);
+  const handleAddStory        = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push({ pathname: '/editor', params: { mode: 'story' } });
+  }, [router]);
+  const handleQuickCapture    = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({ pathname: '/editor', params: { mode: 'quick-capture' } });
+  }, [router]);
+  const handleViewInsights    = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/insights');
+  }, [router]);
+
   // ── Scroll tracking ───────────────────────────────────────────────────────
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
@@ -190,42 +204,34 @@ export default function OverviewScreen() {
   const [manualRefreshing, setManualRefreshing] = useState(false);
 
   // Data fetching
+  const queryClient = useQueryClient();
+
+  // Data fetching
   const { data: profile } = useProfile();
   const { data: statsData, refetch: refetchStats, isLoading: statsLoading } = useUserStats();
   const { data: memoriesStats, refetch: refetchMemories, isLoading: memoriesLoading } = useMemoriesStats();
   const { data: capsuleStats, refetch: refetchCapsule, isLoading: capsuleLoading } = useCapsuleStats();
-  const { data: dailyPrompts, refetch: refetchPrompts, isLoading: promptsLoading } = useDailyPrompts();
-  const { data: overviewTopics, refetch: refetchTopics, isLoading: topicsLoading } = useOverviewPrompts();
-  const { data: activitiesData, refetch: refetchActivities, isLoading: activitiesLoading } = useActivities({ page: 1, limit: 4 });
   const { data: beneficiariesRaw } = useBeneficiaries();
-  const { mutate: startConversation, isPending: startingConversation } = useStartConversation();
 
-  // Manual pull-to-refresh: refetch everything and clear the spinner when done
+  // Manual pull-to-refresh: invalidate all caches to trigger global background updates
   const handleManualRefresh = useCallback(async () => {
     setManualRefreshing(true);
     try {
       await Promise.all([
-        refetchStats(),
-        refetchMemories(),
-        refetchCapsule(),
-        refetchPrompts(),
-        refetchTopics(),
-        refetchActivities(),
+        queryClient.invalidateQueries({ queryKey: queryKeys.userStats }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.memoriesStats }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.capsuleStats }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.dailyPrompts() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.overviewPrompts }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.activities }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.beneficiaries }),
       ]);
     } finally {
       setManualRefreshing(false);
     }
-  }, [refetchStats, refetchMemories, refetchCapsule, refetchPrompts, refetchTopics, refetchActivities]);
+  }, [queryClient]);
 
-  const handleStartConversation = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    startConversation(undefined, {
-      onSuccess: (res) => {
-        const memory = res.data as IMemory;
-        router.push({ pathname: '/chat/[id]', params: { id: memory._id } });
-      },
-    });
-  }, [router, startConversation]);
+
 
   const stats = statsData ?? {};
   const streakCount = Number(user?.streak) || Number(stats.streak_count) || 0;
@@ -243,12 +249,8 @@ export default function OverviewScreen() {
   const capsuleCount = capsuleStats?.scheduled_count || 0;
   const quickPending = Number(stats.quick_capture_pending_count) || 0;
 
-  const prompts = dailyPrompts || [];
-  const topics = overviewTopics || [];
-  const activities = activitiesData?.docs || [];
-
   const displayName = user?.nickname || user?.first_name || user?.last_name || '';
-  const isLoading = statsLoading || memoriesLoading || capsuleLoading || promptsLoading || topicsLoading || activitiesLoading;
+  const isLoading = statsLoading || memoriesLoading || capsuleLoading;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
@@ -333,10 +335,7 @@ export default function OverviewScreen() {
 
                   <View className="flex-row items-center gap-3">
                     <TouchableOpacity
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        router.push({ pathname: '/editor', params: { mode: 'story' } });
-                      }}
+                      onPress={handleAddStory}
                       activeOpacity={0.8}
                       style={{ flex: 1.5 }}
                       className="flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full"
@@ -346,10 +345,7 @@ export default function OverviewScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        router.push({ pathname: '/editor', params: { mode: 'quick-capture' } });
-                      }}
+                      onPress={handleQuickCapture}
                       activeOpacity={0.7}
                       className="flex-1 flex-row items-center justify-center gap-2 h-14 bg-white rounded-full"
                     >
@@ -386,10 +382,7 @@ export default function OverviewScreen() {
                     Share stories & files to build context. Link apps to enrich your Memento.
                   </Text>
                   <TouchableOpacity
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      router.push('/insights');
-                    }}
+                    onPress={handleViewInsights}
                     activeOpacity={0.7}
                     style={{
                       flexDirection: 'row',
@@ -439,7 +432,7 @@ export default function OverviewScreen() {
               }
               icon={<JourneyStatIcon type="memories" />}
               bgImage={MEMORIES_BG}
-              onPress={() => router.push('/(tabs)/stories')}
+              onPress={handleGoToStories}
             />
 
             <OverviewJourneyCard
@@ -452,7 +445,7 @@ export default function OverviewScreen() {
               }
               icon={<JourneyStatIcon type="beneficiaries" />}
               bgImage={BENEFI_BG}
-              onPress={() => router.push('/settings')}
+              onPress={handleGoToSettings}
             />
 
             <OverviewJourneyCard
@@ -479,13 +472,13 @@ export default function OverviewScreen() {
           </View>
 
           {/* ── Daily Prompts ─────────────────────────────────────── */}
-          <DailyPromptSection prompts={prompts} isLoading={promptsLoading} />
+          <DailyPromptSection />
 
           {/* ── Recent Activities ─────────────────────────────────── */}
-          <RecentActivitiesSection activities={activities} isLoading={activitiesLoading} />
+          <RecentActivitiesSection />
 
           {/* ── Browse Topics (Horizontal Scroll) ─────────────────── */}
-          <BrowseTopicsSection prompts={topics} isLoading={topicsLoading} />
+          <BrowseTopicsSection />
 
         </Animated.ScrollView>
 
@@ -499,10 +492,7 @@ export default function OverviewScreen() {
           }]}
         >
           <TouchableOpacity
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push({ pathname: '/editor', params: { mode: 'story' } });
-            }}
+            onPress={handleAddStory}
             activeOpacity={0.85}
             style={{
               width: 56,

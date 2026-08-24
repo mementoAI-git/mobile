@@ -3,19 +3,14 @@ import axios, {
   type AxiosInstance,
   type InternalAxiosRequestConfig,
 } from 'axios';
-import { storageKeys } from '@/constants/storage-keys';
-import { secureStorage } from '@/lib/secure-storage';
 import { API_BASE_URL } from '@/lib/env';
 import type { ApiError, RequestOptions } from './interface';
 import type { IAuth } from '@/types';
 
-const getAuthToken = async (): Promise<string | null> => {
-  try {
-    const raw = await secureStorage.getItem(storageKeys.auth);
-    return raw ? (JSON.parse(raw) as IAuth).access_token : null;
-  } catch {
-    return null;
-  }
+import { useAuthStore } from '@/store';
+
+const getAuthToken = (): string | null => {
+  return useAuthStore.getState().token?.access_token ?? null;
 };
 
 const client: AxiosInstance = axios.create({
@@ -28,10 +23,10 @@ const client: AxiosInstance = axios.create({
 });
 
 client.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
+  (config: InternalAxiosRequestConfig) => {
     const requestConfig = config as InternalAxiosRequestConfig & { skipAuth?: boolean };
     if (!requestConfig.skipAuth) {
-      const token = await getAuthToken();
+      const token = getAuthToken();
       if (token) {
         config.headers.authorization = `Bearer ${token}`;
       }

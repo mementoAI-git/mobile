@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
 import { useToast } from '@/components/ui/Toast';
 import {
@@ -72,9 +72,12 @@ export function useFileUpload() {
     }
   }, [toast, uploadFile]);
 
-  return {
-    pickAndUpload,
-    isUploading,
-    uploadFile,
-  };
+  return useMemo(
+    () => ({
+      pickAndUpload,
+      isUploading,
+      uploadFile,
+    }),
+    [pickAndUpload, isUploading, uploadFile],
+  );
 }

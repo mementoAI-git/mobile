@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useVideoPlayer as useExpoVideoPlayer, VideoPlayer } from 'expo-video';
 
 interface UseVideoPlayerOptions {
@@ -43,12 +43,12 @@ export function useVideoPlayer(uri: string, options: UseVideoPlayerOptions = {})
     player.play();
   }, [autoPlay, player]);
 
-  const play = () => player.play();
-  const pause = () => player.pause();
-  const replay = () => {
+  const play = useCallback(() => player.play(), [player]);
+  const pause = useCallback(() => player.pause(), [player]);
+  const replay = useCallback(() => {
     player.seekBy(-player.currentTime);
     player.play();
-  };
+  }, [player]);
 
-  return { player, play, pause, replay };
+  return useMemo(() => ({ player, play, pause, replay }), [player, play, pause, replay]);
 }
