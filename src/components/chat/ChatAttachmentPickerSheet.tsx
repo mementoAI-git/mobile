@@ -3,13 +3,13 @@ import {
   ActivityIndicator,
   AppState,
   Dimensions,
-  Image,
   Linking,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import {
   BottomSheetBackdrop,
   BottomSheetFlatList,
@@ -521,7 +521,7 @@ const AssetTile = React.memo(function AssetTile({
           <Text style={styles.audioLabel} numberOfLines={1}>{asset.filename?.replace(/\.[^.]+$/, '') || 'Audio'}</Text>
         </View>
       ) : (
-        <Image source={{ uri: asset.uri }} style={styles.assetImage} resizeMode="cover" />
+        <Image source={{ uri: asset.uri }} style={styles.assetImage} contentFit="cover" />
       )}
       {isVideo && (
         <View style={styles.playOverlay}>

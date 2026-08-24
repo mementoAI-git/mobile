@@ -54,6 +54,27 @@ export default function InsightsScreen() {
     || insightSource?.self_description?.trim()
     || null;
 
+  const userName = profile?.nickname || profile?.first_name || 'You';
+
+  const sanitizeText = useCallback((text: string) => {
+    if (!text) return '';
+    return text
+      .replace(/\bThe user\b/g, userName)
+      .replace(/\bthe user\b/g, userName);
+  }, [userName]);
+
+  const sanitizedInsights = useMemo(() => {
+    return insights.map(sanitizeText);
+  }, [insights, sanitizeText]);
+
+  const sanitizedNotes = useMemo(() => {
+    return notes.map(sanitizeText);
+  }, [notes, sanitizeText]);
+
+  const sanitizedPreferences = useMemo(() => {
+    return preferences.map(sanitizeText);
+  }, [preferences, sanitizeText]);
+
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();
@@ -134,9 +155,9 @@ export default function InsightsScreen() {
               activeTab={activeTab}
               score={Number(stats?.enrichment_score) || 0}
               categoryScores={stats?.category_scores}
-              insights={insights}
-              notes={notes}
-              preferences={preferences}
+              insights={sanitizedInsights}
+              notes={sanitizedNotes}
+              preferences={sanitizedPreferences}
             />
           </View>
         </ScrollView>
