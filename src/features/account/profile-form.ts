@@ -13,6 +13,7 @@ export interface ProfileFormValues {
   phone: string;
   country: string;
   location: string;
+  bio: string;
 }
 
 export interface ProfileUpdatePayload {
@@ -23,6 +24,7 @@ export interface ProfileUpdatePayload {
   phone_number: string;
   country: string;
   location: string;
+  context?: any;
 }
 
 export function formatProfileBirthday(value: unknown): string {
@@ -43,11 +45,13 @@ export function normalizeProfileForm(
     phone: profile?.phone_number ?? '',
     country: profile?.country ?? '',
     location: profile?.location ?? '',
+    bio: profile?.context?.self_description ?? '',
   };
 }
 
 export function toProfileUpdatePayload(
   values: ProfileFormValues,
+  currentContext?: any,
 ): ProfileUpdatePayload {
   const birthday = dayjs(values.birthday.trim(), 'DD/MM/YYYY', true);
 
@@ -59,5 +63,9 @@ export function toProfileUpdatePayload(
     phone_number: values.phone.trim(),
     country: values.country.trim(),
     location: values.location.trim(),
+    context: {
+      ...(currentContext && typeof currentContext === 'object' ? currentContext : {}),
+      self_description: (values.bio ?? '').trim(),
+    },
   };
 }

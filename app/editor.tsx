@@ -201,14 +201,34 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
 
 // ─── Publish modal (story mode) ───────────────────────────────────────────────
 
-function PublishModalInner({ title, body, attachmentIds, onClose, onComplete, onPublished, memoryId, draftId, userEmail }: {
-  title: string; body: string; attachmentIds: string[];
-  onClose: () => void; onComplete: () => void; onPublished: (url: string) => void; memoryId?: string;
-  draftId?: string; userEmail?: string | null;
+function PublishModalInner({
+  title,
+  body,
+  attachmentIds,
+  onClose,
+  onComplete,
+  onPublished,
+  memoryId,
+  draftId,
+  userEmail,
+  initialTags,
+  initialBeneficiaryIds,
+}: {
+  title: string;
+  body: string;
+  attachmentIds: string[];
+  onClose: () => void;
+  onComplete: () => void;
+  onPublished: (url: string) => void;
+  memoryId?: string;
+  draftId?: string;
+  userEmail?: string | null;
+  initialTags?: string;
+  initialBeneficiaryIds?: string[];
 }) {
   const insets = useSafeAreaInsets();
-  const [tags, setTags] = useState('');
-  const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>([]);
+  const [tags, setTags] = useState(initialTags ?? '');
+  const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>(initialBeneficiaryIds ?? []);
   const [beneficiaryMenuOpen, setBeneficiaryMenuOpen] = useState(false);
   const [isAutotagging, setIsAutotagging] = useState(false);
 
@@ -368,6 +388,30 @@ export default function EditorScreen() {
   const isModeSwithDisabled = lockMode === 'true' || isEditing;
 
   const user = useUserStore(s => s.user);
+
+  const initialParsedData = useMemo(() => {
+    if (isEditing && initialData) {
+      try {
+        return JSON.parse(decodeURIComponent(initialData));
+      } catch {}
+    }
+    return null;
+  }, [isEditing, initialData]);
+
+  const initialTags = useMemo(() => {
+    if (initialParsedData?.tags && Array.isArray(initialParsedData.tags)) {
+      return initialParsedData.tags.join(', ');
+    }
+    return '';
+  }, [initialParsedData]);
+
+  const initialBeneficiaryIds = useMemo(() => {
+    if (initialParsedData?.beneficiaries && Array.isArray(initialParsedData.beneficiaries)) {
+      return initialParsedData.beneficiaries.map((b: any) => b._id || b.id).filter(Boolean);
+    }
+    return [];
+  }, [initialParsedData]);
+
   const titleRef = useRef<TextInput>(null);
   const bodyRef = useRef<TextInput>(null);
   const richEditorRef = useRef<StoryRichEditorRef>(null);
@@ -521,7 +565,7 @@ export default function EditorScreen() {
         // Snapshot already-uploaded attachments so they can be restored on load
         const savedAttachments = toStoryDraftAttachments(attachments);
 
-        await upsertDraft(user?.email, {
+        const savedId = await upsertDraft(user?.email, {
           id: draftIdRef.current,
           title: t,
           body: b,
@@ -529,6 +573,10 @@ export default function EditorScreen() {
           attachments: savedAttachments.length ? savedAttachments : undefined,
         });
         if (isMountedRef.current) {
+          if (savedId) {
+            draftIdRef.current = savedId;
+            setCurrentDraftId(savedId);
+          }
           setSavedStatus('saved');
           // Refresh the badge count via unified store
           loadDrafts(user?.email).then(d => {
@@ -723,9 +771,11 @@ export default function EditorScreen() {
   }, []);
 
   const handleDismissPublishedSuccess = useCallback(() => {
-    setPublishedUrl(null);
     if (isEditing) {
       router.back();
+      setTimeout(() => {
+        setPublishedUrl(null);
+      }, 400);
       return;
     }
     setTitle('');
@@ -745,6 +795,9 @@ export default function EditorScreen() {
     } else {
       router.back();
     }
+    setTimeout(() => {
+      setPublishedUrl(null);
+    }, 400);
   }, [isEditing, lockMode, router, setAttachments]);
 
   const handlePublishAddAnother = useCallback(() => {
@@ -908,11 +961,8 @@ export default function EditorScreen() {
 
           {/* ── Story mode: unified ScrollView — title + attachments + body scroll together ── */}
           {isStory && (
-            <ScrollView
+            <View
               style={{ flex: 1 }}
-              contentContainerStyle={{ paddingBottom: 16 }}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
             >
               {/* Title */}
               <TextInput
@@ -1014,14 +1064,14 @@ export default function EditorScreen() {
                   initialContent={storyBody}
                   onChange={handleStoryBodyChange}
                   onBridgeReady={handleBridgeReady}
-                  scrollEnabled={false}
+                  scrollEnabled={true}
                 />
               ) : (
                 <View style={{ minHeight: 200, alignItems: 'center', justifyContent: 'center' }}>
                   <ActivityIndicator color={COLORS.brand} />
                 </View>
               )}
-            </ScrollView>
+            </View>
           )}
 
           {/* ── Quick-capture content: ScrollView ── */}
@@ -1232,6 +1282,8 @@ export default function EditorScreen() {
               memoryId={memoryId}
               draftId={currentDraftId}
               userEmail={user?.email}
+              initialTags={initialTags}
+              initialBeneficiaryIds={initialBeneficiaryIds}
               onClose={handleClosePublishSheet}
               onComplete={handlePublishFlowComplete}
               onPublished={handlePublishCreated}

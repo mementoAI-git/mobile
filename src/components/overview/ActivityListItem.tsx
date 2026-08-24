@@ -196,7 +196,7 @@ export const ActivityListItem = React.memo(function ActivityListItem({ activity,
         <View style={{ flex: 1, gap: 2 }}>
           <Animated.Text
             style={{ fontFamily: FONTS.sansMedium, fontSize: 15, color: COLORS.textStrong, lineHeight: 20 }}
-            numberOfLines={2}
+            numberOfLines={1}
           >
             {sanitiseDescription(activity.description, activity.title)}
           </Animated.Text>
