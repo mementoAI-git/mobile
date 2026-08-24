@@ -375,20 +375,36 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
   }, [pickAndUpload]);
 
   const handleTagSubmit = useCallback(() => {
-    const t = tagInput.trim().toLowerCase();
-    if (t && !tags.includes(t)) setTags(prev => [...prev, t]);
+    const parts = tagInput.split(/[\s,]+/).map(p => p.trim().toLowerCase()).filter(Boolean);
+    if (parts.length > 0) {
+      setTags(prev => {
+        const next = [...prev];
+        for (const p of parts) {
+          if (!next.includes(p)) next.push(p);
+        }
+        return next;
+      });
+    }
     setTagInput('');
-  }, [tagInput, tags]);
+  }, [tagInput]);
 
   const handleTagInputChange = useCallback((text: string) => {
-    if (text.endsWith(' ')) {
-      const t = text.trim().toLowerCase();
-      if (t && !tags.includes(t)) setTags(prev => [...prev, t]);
+    if (text.includes(' ') || text.includes(',')) {
+      const parts = text.split(/[\s,]+/).map(p => p.trim().toLowerCase()).filter(Boolean);
+      if (parts.length > 0) {
+        setTags(prev => {
+          const next = [...prev];
+          for (const p of parts) {
+            if (!next.includes(p)) next.push(p);
+          }
+          return next;
+        });
+      }
       setTagInput('');
     } else {
       setTagInput(text);
     }
-  }, [tags]);
+  }, []);
 
   const removeTag = useCallback((t: string) => setTags(prev => prev.filter(tag => tag !== t)), []);
 

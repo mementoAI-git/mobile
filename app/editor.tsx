@@ -273,7 +273,7 @@ function PublishModalInner({
   const handlePost = useCallback(() => {
     if (!title.trim() && !body.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const tagList = tags.split(',').map(t => t.trim()).filter(Boolean);
+    const tagList = tags.split(/[,\s]+/).map(t => t.trim()).filter(Boolean);
     const payload = {
       title: title || 'Untitled', body, tags: tagList, status: 'save' as const,
       attachments: attachmentIds.length ? attachmentIds : undefined,
