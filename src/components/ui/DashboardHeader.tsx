@@ -73,6 +73,7 @@ export function DashboardHeader({ title, showStreak = true, rightElement, onStre
               router.push('/account');
             }}
             activeOpacity={0.8}
+            hitSlop={4}
             className="border-2 border-transparent focus:border-brand/20 rounded-full ml-1"
           >
             <Avatar uri={user?.picture_url} name={user?.first_name || user?.email} size="md" />

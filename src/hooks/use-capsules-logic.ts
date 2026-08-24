@@ -40,19 +40,36 @@ export function useCapsulesLogic() {
     setFilter('');
   }, []);
 
-  return {
-    openSheet,
-    filter,
-    setFilter,
-    stats,
-    capsules,
-    isLoading,
-    isRefetching,
-    refetch,
-    isFetchingNextPage,
-    fetchNextPage,
-    hasNextPage,
-    handleCreateNew,
-    handleClearFilter,
-  };
+  return useMemo(
+    () => ({
+      openSheet,
+      filter,
+      setFilter,
+      stats,
+      capsules,
+      isLoading,
+      isRefetching,
+      refetch,
+      isFetchingNextPage,
+      fetchNextPage,
+      hasNextPage,
+      handleCreateNew,
+      handleClearFilter,
+    }),
+    [
+      openSheet,
+      filter,
+      setFilter,
+      stats,
+      capsules,
+      isLoading,
+      isRefetching,
+      refetch,
+      isFetchingNextPage,
+      fetchNextPage,
+      hasNextPage,
+      handleCreateNew,
+      handleClearFilter,
+    ],
+  );
 }

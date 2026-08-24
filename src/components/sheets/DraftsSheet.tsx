@@ -15,9 +15,14 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { X, FileText } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useUiStore } from '@/store';
+import { useUiStore, useOfflineQueueStore } from '@/store';
 import { COLORS, FONTS } from '@/constants/tokens';
 import dayjs from 'dayjs';
+import NetInfo from '@react-native-community/netinfo';
+import { get, post, put, del } from '@/api/mutations';
+import endpoint from '@/api/endpoint';
+import type { IPagination, IMemory } from '@/types';
+import { logger } from '@/lib/logger';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,15 +52,53 @@ export const MAX_DRAFTS = 10;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export async function loadDrafts(email?: string | null): Promise<StoryDraft[]> {
+  let localDrafts: StoryDraft[] = [];
   try {
     const raw = await AsyncStorage.getItem(STORY_DRAFTS_KEY(email));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as StoryDraft[];
-  } catch {
-    return [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) localDrafts = parsed as StoryDraft[];
+    }
+  } catch {}
+
+  const netState = await NetInfo.fetch();
+  if (netState.isConnected && email) {
+    try {
+      const res = await get<IPagination<IMemory>>(`${endpoint.stories}?status=draft&limit=20`);
+      const cloudMemories = res.data?.docs || [];
+      const cloudDrafts: StoryDraft[] = cloudMemories.map((m) => ({
+        id: m._id,
+        title: m.title || '',
+        body: m.body || '',
+        updatedAt: m.updated_at ? new Date(m.updated_at).getTime() : Date.now(),
+        attachments: (m.attachments || []).map((att: any) => ({
+          fileId: att._id || att.id,
+          uri: att.url,
+          name: att.name || 'Attachment',
+          mimeType: att.type || 'image/jpeg',
+        })),
+      }));
+
+      const mergedMap = new Map<string, StoryDraft>();
+      cloudDrafts.forEach((d) => mergedMap.set(d.id, d));
+      localDrafts.forEach((d) => {
+        const existing = mergedMap.get(d.id);
+        if (!existing || d.updatedAt > existing.updatedAt) {
+          mergedMap.set(d.id, d);
+        }
+      });
+
+      const merged = Array.from(mergedMap.values());
+      merged.sort((a, b) => b.updatedAt - a.updatedAt);
+      const sliced = merged.slice(0, MAX_DRAFTS);
+      await AsyncStorage.setItem(STORY_DRAFTS_KEY(email), JSON.stringify(sliced));
+      return sliced;
+    } catch (err) {
+      logger.error('Failed to sync cloud drafts:', err);
+    }
   }
+
+  return localDrafts;
 }
 
 export async function saveDrafts(
@@ -73,12 +116,49 @@ export async function upsertDraft(
   draft: StoryDraft,
 ): Promise<void> {
   const drafts = await loadDrafts(email);
+  
+  const netState = await NetInfo.fetch();
+  if (netState.isConnected && email) {
+    try {
+      const payload = {
+        title: draft.title,
+        body: draft.body,
+        status: 'draft',
+        attachments: draft.attachments?.map((a) => a.fileId) || [],
+      };
+
+      if (draft.id.startsWith('draft_')) {
+        const res = await post<IMemory>(endpoint.memories, payload);
+        const created = res.data;
+        if (created?._id) {
+          draft.id = created._id;
+        }
+      } else {
+        await put<IMemory>(endpoint.memory.replace(':id', draft.id), payload);
+      }
+    } catch (err) {
+      logger.error('Failed to save cloud draft:', err);
+    }
+  } else if (!netState.isConnected) {
+    const queueStore = useOfflineQueueStore.getState();
+    const payload = {
+      title: draft.title,
+      body: draft.body,
+      status: 'draft',
+      attachments: draft.attachments?.map((a) => a.fileId) || [],
+    };
+    if (draft.id.startsWith('draft_')) {
+      await queueStore.enqueueMutation('create_memory', payload);
+    } else {
+      await queueStore.enqueueMutation('update_memory', { id: draft.id, ...payload });
+    }
+  }
+
   const idx = drafts.findIndex((d) => d.id === draft.id);
   if (idx >= 0) {
     drafts[idx] = draft;
   } else {
     if (drafts.length >= MAX_DRAFTS) {
-      // Evict the oldest draft to make room
       drafts.sort((a, b) => a.updatedAt - b.updatedAt);
       drafts.shift();
     }
@@ -95,6 +175,17 @@ export async function deleteDraft(
   const drafts = await loadDrafts(email);
   const updated = drafts.filter((d) => d.id !== id);
   await saveDrafts(email, updated);
+
+  if (!id.startsWith('draft_')) {
+    const netState = await NetInfo.fetch();
+    if (netState.isConnected && email) {
+      try {
+        await del(endpoint.memory.replace(':id', id));
+      } catch (err) {
+        logger.error('Failed to delete cloud draft:', err);
+      }
+    }
+  }
   return updated;
 }
 

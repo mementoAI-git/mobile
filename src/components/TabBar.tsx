@@ -214,22 +214,27 @@ export function TabBar({ state, navigation }: TabBarProps) {
     !!pathname.match(/^\/chat\/[^/]+$/) ||
     !!pathname.match(/^\/(tabs\/)?stories\/[^/]+$/);
 
+  const swipeStateRef = useRef({ isHidden, index: state.index, routes: state.routes, navigation });
+  swipeStateRef.current = { isHidden, index: state.index, routes: state.routes, navigation };
+
   const swipeResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        if (isHidden) return false;
+        const current = swipeStateRef.current;
+        if (current.isHidden) return false;
         const horizontalDrag = Math.abs(gestureState.dx);
         const verticalDrag = Math.abs(gestureState.dy);
         return horizontalDrag > 28 && horizontalDrag > verticalDrag * 1.2;
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (isHidden) return;
-        const targetIndex = resolveTabSwipeTarget(state.index, state.routes.length, gestureState.dx);
+        const current = swipeStateRef.current;
+        if (current.isHidden) return;
+        const targetIndex = resolveTabSwipeTarget(current.index, current.routes.length, gestureState.dx);
         if (targetIndex == null) return;
-        const targetRoute = state.routes[targetIndex];
+        const targetRoute = current.routes[targetIndex];
         if (!targetRoute) return;
         Haptics.selectionAsync();
-        navigation.navigate(targetRoute.name);
+        current.navigation.navigate(targetRoute.name);
       },
     }),
   ).current;

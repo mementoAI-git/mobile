@@ -4,6 +4,8 @@ import endpoint from '@/api/endpoint';
 import { invalidateMemoryQueries } from '@/features/memories/cache';
 import { queryKeys } from '@/constants/query-keys';
 import type { IMemory, IDailyPromptCapture } from '@/types';
+import NetInfo from '@react-native-community/netinfo';
+import { useOfflineQueueStore } from '@/store/offline-queue.store';
 
 interface CreateMemoryPayload {
   title: string;
@@ -19,9 +21,27 @@ interface CreateMemoryPayload {
 
 export function useCreateMemory() {
   const queryClient = useQueryClient();
+  const enqueueMutation = useOfflineQueueStore((s) => s.enqueueMutation);
+
   return useMutation({
-    mutationFn: (payload: CreateMemoryPayload) =>
-      post<IMemory>(endpoint.memories, payload),
+    mutationFn: async (payload: CreateMemoryPayload) => {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        await enqueueMutation('create_memory', payload);
+        return {
+          data: {
+            _id: `offline-${Date.now()}`,
+            title: payload.title,
+            body: payload.body,
+            tags: payload.tags || [],
+            status: payload.status || 'save',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as any,
+        };
+      }
+      return post<IMemory>(endpoint.memories, payload);
+    },
     onSuccess: (_res, variables) => {
       invalidateMemoryQueries(queryClient, {
         promptId: variables.daily_prompt?.prompt_id,
@@ -34,9 +54,23 @@ export function useCreateMemory() {
 
 export function useUpdateMemory(id: string) {
   const queryClient = useQueryClient();
+  const enqueueMutation = useOfflineQueueStore((s) => s.enqueueMutation);
+
   return useMutation({
-    mutationFn: (payload: Partial<CreateMemoryPayload>) =>
-      put<IMemory>(endpoint.memory.replace(':id', id), payload),
+    mutationFn: async (payload: Partial<CreateMemoryPayload>) => {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        await enqueueMutation('update_memory', { id, ...payload });
+        return {
+          data: {
+            _id: id,
+            ...payload,
+            updated_at: new Date().toISOString(),
+          } as any,
+        };
+      }
+      return put<IMemory>(endpoint.memory.replace(':id', id), payload);
+    },
     onSuccess: (_response, variables) => {
       // Server PUT returns the PRE-update document (MongoDB { new: false } default).
       // Patch text fields instantly from variables — no network call needed.
@@ -58,8 +92,8 @@ export function useUpdateMemory(id: string) {
           })),
         };
       };
-      queryClient.setQueriesData({ queryKey: ['stories'] }, textPatcher);
-      queryClient.setQueriesData({ queryKey: ['memories'] }, textPatcher);
+      queryClient.setQueriesData({ queryKey: [queryKeys.stories()[0]] }, textPatcher);
+      queryClient.setQueriesData({ queryKey: [queryKeys.memories()[0]] }, textPatcher);
 
       // Silently invalidate the individual memory for the detail screen.
       // The MasonryMemoryGrid key change handles thumbnail updates on the card.
@@ -91,8 +125,8 @@ export function useDeleteMemory() {
           })),
         };
       };
-      queryClient.setQueriesData({ queryKey: ['stories'] }, remover);
-      queryClient.setQueriesData({ queryKey: ['memories'] }, remover);
+      queryClient.setQueriesData({ queryKey: [queryKeys.stories()[0]] }, remover);
+      queryClient.setQueriesData({ queryKey: [queryKeys.memories()[0]] }, remover);
       // Stats counter needs a server refetch since we can't decrement it locally
       invalidateMemoryQueries(queryClient, { memoryId: id });
     },
@@ -144,8 +178,8 @@ export function useBookmarkMemory() {
           })),
         };
       };
-      queryClient.setQueriesData({ queryKey: ['stories'] }, flipper);
-      queryClient.setQueriesData({ queryKey: ['memories'] }, flipper);
+      queryClient.setQueriesData({ queryKey: [queryKeys.stories()[0]] }, flipper);
+      queryClient.setQueriesData({ queryKey: [queryKeys.memories()[0]] }, flipper);
       // Also patch the individual memory detail cache
       queryClient.setQueryData(queryKeys.memory(vars.id), (old: any) =>
         old ? { ...old, bookmarked: newBookmarked } : old
@@ -170,7 +204,7 @@ export function useStartConversation() {
     mutationFn: (payload?: { prompt_id?: string; text?: string }) =>
       post<any>(endpoint.startConversation, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: [queryKeys.conversations()[0]] });
     },
   });
 }

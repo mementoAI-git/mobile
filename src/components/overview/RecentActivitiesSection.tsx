@@ -1,19 +1,20 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { FONTS } from '@/constants/tokens';
 import { Skeleton } from '@/components/ui/Skeleton';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import type { Activity } from '@/hooks/queries/use-activities';
+import { useActivities, type Activity } from '@/hooks/queries/use-activities';
 import { ActivityListItem } from './ActivityListItem';
 
-interface Props {
-  activities: Activity[];
-  isLoading: boolean;
-}
-
-export function RecentActivitiesSection({ activities, isLoading }: Props) {
+export function RecentActivitiesSection() {
+  const { data: activitiesData, isLoading } = useActivities({ page: 1, limit: 4 });
+  const activities = activitiesData?.docs || [];
   const router = useRouter();
+
+  const handleSeeAll = useCallback(() => {
+    router.push('/settings/activities' as any);
+  }, [router]);
 
   if (isLoading) {
     return (
@@ -42,7 +43,7 @@ export function RecentActivitiesSection({ activities, isLoading }: Props) {
         <Animated.Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
           Recent <Animated.Text className="text-text-weak italic">Activities</Animated.Text>
         </Animated.Text>
-        <TouchableOpacity onPress={() => router.push('/settings/activities' as any)} activeOpacity={0.7}>
+        <TouchableOpacity onPress={handleSeeAll} activeOpacity={0.7}>
           <Animated.Text className="text-sm text-brand font-semibold" style={{ fontFamily: FONTS.sansSemi }}>See all</Animated.Text>
         </TouchableOpacity>
       </View>

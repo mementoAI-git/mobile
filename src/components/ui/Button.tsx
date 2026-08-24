@@ -54,8 +54,8 @@ const variantStyles: Record<Variant, { container: string; text: string }> = {
 const sizeStyles: Record<Size, { container: string; text: string }> = {
   xs: { container: 'h-6 px-2.5 gap-1 rounded-full',  text: 'text-xs font-medium' },
   sm: { container: 'h-8 px-3 gap-1 rounded-full',    text: 'text-sm font-medium' },
-  md: { container: 'h-9 px-4 gap-1.5 rounded-full',  text: 'text-sm font-medium' },
-  lg: { container: 'h-10 px-5 gap-1.5 rounded-full', text: 'text-sm font-medium' },
+  md: { container: 'h-10 px-4 gap-1.5 rounded-full', text: 'text-sm font-medium' }, // compact button (40px)
+  lg: { container: 'h-14 px-6 gap-2 rounded-full',   text: 'text-base font-bold' }, // standard button (56px)
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);

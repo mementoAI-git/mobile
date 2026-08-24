@@ -73,17 +73,35 @@ export function useExploreLogic() {
     if (dailyPromptsStale) void refetchDailyPrompts();
   }, [categoriesStale, dailyPromptsStale, refetchCategories, refetchDailyPrompts]);
 
-  return {
-    router,
-    categories: displayCategories,
-    staticPrompts,
-    isLoading: (categoriesLoading && (!categories || (categories as any[]).length === 0)) || promptsLoading,
-    isStartingConversation,
-    refetch,
-    refetchIfStale,
-    isRefetching: isRefetchingCategories || isRefetchingDailyPrompts,
-    handleOpenCategory,
-    handlePromptPress,
-    handleBackToOverview,
-  };
+  return useMemo(
+    () => ({
+      router,
+      categories: displayCategories,
+      staticPrompts,
+      isLoading: (categoriesLoading && (!categories || (categories as any[]).length === 0)) || promptsLoading,
+      isStartingConversation,
+      refetch,
+      refetchIfStale,
+      isRefetching: isRefetchingCategories || isRefetchingDailyPrompts,
+      handleOpenCategory,
+      handlePromptPress,
+      handleBackToOverview,
+    }),
+    [
+      router,
+      displayCategories,
+      staticPrompts,
+      categoriesLoading,
+      categories,
+      promptsLoading,
+      isStartingConversation,
+      refetch,
+      refetchIfStale,
+      isRefetchingCategories,
+      isRefetchingDailyPrompts,
+      handleOpenCategory,
+      handlePromptPress,
+      handleBackToOverview,
+    ],
+  );
 }

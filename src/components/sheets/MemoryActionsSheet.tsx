@@ -30,7 +30,49 @@ interface Props {
   onClose?: () => void;
 }
 
+// ── Stable list item components ─────────────────────────────────────────────
+
+const MemoBeneficiaryOption = React.memo(function MemoBeneficiaryOption({
+  beneficiary,
+  isActive,
+  onToggle,
+}: {
+  beneficiary: IBeneficiary;
+  isActive: boolean;
+  onToggle: (id: string) => void;
+}) {
+  const handlePress = useCallback(() => onToggle(beneficiary._id!), [beneficiary._id, onToggle]);
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      style={[s.dropdownOption, isActive && s.dropdownOptionActive]}
+      activeOpacity={0.8}
+    >
+      <Text style={[s.dropdownOptionText, isActive && s.dropdownOptionTextActive]}>{beneficiary.name}</Text>
+    </TouchableOpacity>
+  );
+});
+
+const MemoTagPill = React.memo(function MemoTagPill({
+  tag,
+  onRemove,
+}: {
+  tag: string;
+  onRemove: (tag: string) => void;
+}) {
+  const handleRemove = useCallback(() => onRemove(tag), [tag, onRemove]);
+  return (
+    <View style={s.tagPill}>
+      <Text style={s.tagPillText}>{tag}</Text>
+      <TouchableOpacity onPress={handleRemove} hitSlop={8} style={{ marginLeft: 4 }}>
+        <X size={11} color={COLORS.textBase} strokeWidth={2.5} />
+      </TouchableOpacity>
+    </View>
+  );
+});
+
 export function MemoryActionsSheet({ memory, onClose }: Props) {
+
   const { mutate: deleteMemory, isPending: isDeleting } = useDeleteMemory();
   const { mutate: toggleBookmark, isPending: isBookmarking } = useBookmarkMemory();
   const { mutate: updateMemory } = useUpdateMemory(memory._id);
@@ -132,6 +174,21 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
     setTags(prev => prev.filter(t => t !== tag));
   }, []);
 
+  const handleGoBack = useCallback(() => {
+    Haptics.selectionAsync();
+    setShowDeleteConfirm(false);
+  }, []);
+
+  const handleToggleVisibility = useCallback(() => {
+    Haptics.selectionAsync();
+    setVisibilityOpen(o => !o);
+  }, []);
+
+  const handleSelectEveryone = useCallback(() => {
+    setSelectedBeneficiaryIds([]);
+    Haptics.selectionAsync();
+  }, []);
+
   // ── Delete confirmation view ────────────────────────────────────────────────
 
   if (showDeleteConfirm) {
@@ -161,7 +218,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
         {/* Buttons */}
         <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
           <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); setShowDeleteConfirm(false); }}
+            onPress={handleGoBack}
             activeOpacity={0.8}
             style={{
               flex: 1, height: 56, borderRadius: 999,
@@ -230,7 +287,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
         <Text style={s.visibilityTitle}>Who can see this story?</Text>
         <Text style={s.visibilitySubtitle}>Stories are visible to all beneficiaries by default.</Text>
         <TouchableOpacity
-          onPress={() => { Haptics.selectionAsync(); setVisibilityOpen(o => !o); }}
+          onPress={handleToggleVisibility}
           style={s.visibilityTrigger} activeOpacity={0.8}
         >
           <Users size={16} color={COLORS.textBase} strokeWidth={1.8} />
@@ -243,7 +300,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
         {visibilityOpen && (
           <View style={s.dropdownList}>
             <TouchableOpacity
-              onPress={() => { setSelectedBeneficiaryIds([]); Haptics.selectionAsync(); }}
+              onPress={handleSelectEveryone}
               style={[s.dropdownOption, !selectedBeneficiaryIds.length && s.dropdownOptionActive]}
               activeOpacity={0.8}
             >
@@ -253,10 +310,12 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
               if (!b._id) return null;
               const on = selectedBeneficiaryIds.includes(b._id);
               return (
-                <TouchableOpacity key={b._id} onPress={() => toggleBeneficiary(b._id!)}
-                  style={[s.dropdownOption, on && s.dropdownOptionActive]} activeOpacity={0.8}>
-                  <Text style={[s.dropdownOptionText, on && s.dropdownOptionTextActive]}>{b.name}</Text>
-                </TouchableOpacity>
+                <MemoBeneficiaryOption
+                  key={b._id}
+                  beneficiary={b}
+                  isActive={on}
+                  onToggle={toggleBeneficiary}
+                />
               );
             })}
           </View>
@@ -269,12 +328,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
         <View style={s.tagsArea}>
           <View style={s.tagPillsRow}>
             {tags.map(tag => (
-              <View key={tag} style={s.tagPill}>
-                <Text style={s.tagPillText}>{tag}</Text>
-                <TouchableOpacity onPress={() => removeTag(tag)} hitSlop={8} style={{ marginLeft: 4 }}>
-                  <X size={11} color={COLORS.textBase} strokeWidth={2.5} />
-                </TouchableOpacity>
-              </View>
+              <MemoTagPill key={tag} tag={tag} onRemove={removeTag} />
             ))}
           </View>
           <TextInput

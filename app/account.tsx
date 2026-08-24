@@ -63,9 +63,12 @@ export default function AccountOverviewScreen() {
     [profile],
   );
   const biography = profile?.context?.self_description?.trim() || null;
-  const memberSince = profile?.created_at
-    ? `Member since ${dayjs(profile.created_at).format('MMM YYYY')}`
-    : null;
+  const memberSince = useMemo(
+    () => (profile?.created_at
+      ? `Member since ${dayjs(profile.created_at).format('MMM YYYY')}`
+      : null),
+    [profile?.created_at],
+  );
   const score = clampEnrichmentScore(stats?.enrichment_score);
   const streakCount = Number(profile?.streak) || Number(stats?.streak_count) || 0;
   const weekDays = useMemo(() => deriveAccountWeek(new Date(), streakCount), [streakCount]);

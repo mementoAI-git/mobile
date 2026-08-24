@@ -109,8 +109,8 @@ assert(supportedPlatforms.includes('web'), 'Expo config must support web.');
 
 assert(expo.newArchEnabled === undefined, 'app.json must not include schema-invalid newArchEnabled.');
 assert(expo.splash === undefined, 'app.json must not include schema-invalid legacy splash config.');
-assert(expo.ios?.bundleIdentifier === 'com.mementoai.app', 'iOS bundleIdentifier must be configured.');
-assert(expo.android?.package === 'com.mementoai.app', 'Android package must match the app identifier.');
+assert(expo.ios?.bundleIdentifier === 'io.mymemento.app', 'iOS bundleIdentifier must be configured.');
+assert(expo.android?.package === 'io.mymemento.app', 'Android package must match the app identifier.');
 assert(expo.ios?.infoPlist?.ITSAppUsesNonExemptEncryption === false, 'iOS encryption export flag must be explicit.');
 assert(expo.web?.favicon === './assets/favicon.png', 'Web favicon must be configured.');
 

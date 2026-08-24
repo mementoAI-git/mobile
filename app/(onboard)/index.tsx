@@ -9,7 +9,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const AnimatedText = Animated.createAnimatedComponent(Text);
 
-const WELCOME_IMG = require('../../assets/images/onboarding/welcome-image.png');
+const WELCOME_IMG = require('../../assets/images/onboarding/welcome-image.webp');
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 export default function OnboardWelcomeScreen() {

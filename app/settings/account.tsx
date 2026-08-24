@@ -24,6 +24,7 @@ import {
   useDeletePasskey,
   useRegisterPasskey,
 } from '@/hooks/mutations/use-passkey-mutations';
+import { useLogoutOtherDevices } from '@/hooks/mutations/use-auth-mutations';
 import { usePasskeys } from '@/hooks/queries/use-passkeys';
 import { useTwoFactorSettingsLogic } from '@/hooks/use-two-factor-settings-logic';
 import { useAuthStore, useUiStore, useUserStore } from '@/store';
@@ -36,6 +37,7 @@ export default function SecuritySettingsScreen() {
   const { data: passkeys = [] } = usePasskeys();
   const registerPasskey = useRegisterPasskey();
   const deletePasskey = useDeletePasskey();
+  const logoutOtherDevices = useLogoutOtherDevices();
   const twoFactor = useTwoFactorSettingsLogic();
   const [fallbackOffered, setFallbackOffered] = useState(false);
   const [fallbackEnabled, setFallbackEnabled] = useState(false);
@@ -240,7 +242,16 @@ export default function SecuritySettingsScreen() {
             variant="outline"
             size="lg"
             className="h-10"
-            onPress={() => openSheet('security-confirmation', { kind: 'logout-all-devices' })}
+            onPress={() =>
+              openSheet('security-confirmation', {
+                kind: 'logout-all-devices',
+                onConfirm: async () => {
+                  await logoutOtherDevices.mutateAsync();
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                },
+              })
+            }
+            disabled={logoutOtherDevices.isPending}
           >
             Log out
           </Button>

@@ -343,8 +343,8 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
           activeOpacity={1}
           style={styles.videoProgressTrack}
         >
-          <View style={[styles.videoProgressFilled, { width: `${Math.round(progress * 100)}%` as any }]} />
-          <View style={[styles.videoProgressDot, { left: `${Math.round(progress * 100)}%` as any }]} />
+          <View pointerEvents="none" style={[styles.videoProgressFilled, { width: `${Math.round(progress * 100)}%` as any }]} />
+          <View pointerEvents="none" style={[styles.videoProgressDot, { left: `${Math.round(progress * 100)}%` as any }]} />
         </TouchableOpacity>
 
         <Text style={styles.videoTimeText}>{fmt(duration)}</Text>
@@ -542,7 +542,7 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
           activeOpacity={1}
           style={{ height: 4, borderRadius: 2, backgroundColor: COLORS.strokeWeak }}
         >
-          <View style={{ height: '100%', width: `${Math.round(progress * 100)}%`, borderRadius: 2, backgroundColor: COLORS.brand }} />
+          <View pointerEvents="none" style={{ height: '100%', width: `${Math.round(progress * 100)}%`, borderRadius: 2, backgroundColor: COLORS.brand }} />
         </TouchableOpacity>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak }}>{formatDuration(currentTime)}</Text>

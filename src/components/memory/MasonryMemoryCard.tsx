@@ -1,4 +1,5 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
+
 import { View, Text, TouchableOpacity, Image, ImageBackground, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -78,23 +79,47 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
   onPress,
   variant = 'grid',
 }: MasonryMemoryCardProps) {
-  const handlePress = onPress ?? (() => router.push(`/(tabs)/stories/${memory._id}`));
+  // Default press: navigate to detail. Stable regardless of whether onPress is provided.
+  const handlePress = useCallback(() => {
+    if (onPress) {
+      onPress();
+    } else {
+      router.push(`/(tabs)/stories/${memory._id}`);
+    }
+  }, [onPress, memory._id]);
 
+  const handleVideoPress = useCallback(() => {
+    Haptics.selectionAsync();
+    handlePress();
+  }, [handlePress]);
+
+  // Seeded display properties — deterministic per memory._id
   const seed = stableHash(memory._id || memory.title || '');
-  // List mode uses 3:2; grid mode uses seeded ratio
   const aspectRatio = variant === 'list' ? 3 / 2 : MEDIA_ASPECT_RATIOS[seed % MEDIA_ASPECT_RATIOS.length];
   const surface = CARD_PASTEL_SURFACES[seed % CARD_PASTEL_SURFACES.length];
+  const storyTitle = memory.title || 'Untitled Memory';
+  const textCardMinHeight = TEXT_CARD_MIN_HEIGHTS[seed % TEXT_CARD_MIN_HEIGHTS.length];
+  const textBodyLines = TEXT_BODY_CLAMPS[seed % TEXT_BODY_CLAMPS.length];
 
-  // Prefer an image attachment for the thumbnail — videos render as blank when
-  // used as <Image> source. Fall back to the first video if no images exist.
-  const bannerMedia =
+  // Memoized attachment lookups
+  const bannerMedia = useMemo(() =>
     memory.attachments?.find((a) => canRenderAttachmentUri(a.url) && getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url }) === 'image') ??
-    memory.attachments?.find((a) => canRenderAttachmentUri(a.url) && getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url }) === 'video');
-  const audioMedia = memory.attachments?.find((a) => getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url }) === 'audio');
+    memory.attachments?.find((a) => canRenderAttachmentUri(a.url) && getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url }) === 'video'),
+    [memory.attachments],
+  );
+  const audioMedia = useMemo(() =>
+    memory.attachments?.find((a) => getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url }) === 'audio'),
+    [memory.attachments],
+  );
+
+  // Strip HTML once — reused across all render branches
+  const bodyText = useMemo(
+    () => memory.body?.replace(/<[^>]+>/g, '').trim() ?? '',
+    [memory.body],
+  );
 
   const cardScale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: cardScale.value }] }));
-
   const handlePressIn = useCallback(() => { cardScale.value = withSpring(0.97); }, [cardScale]);
   const handlePressOut = useCallback(() => { cardScale.value = withSpring(1); }, [cardScale]);
 
@@ -103,31 +128,22 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
     useUiStore.getState().openSheet('memory-actions', { memory });
   }, [memory]);
 
-  const storyTitle = memory.title || 'Untitled Memory';
-  const hasTopics = Array.isArray(memory.topics) && memory.topics.length > 0;
-  const textCardMinHeight = TEXT_CARD_MIN_HEIGHTS[seed % TEXT_CARD_MIN_HEIGHTS.length];
-  const textBodyLines = TEXT_BODY_CLAMPS[seed % TEXT_BODY_CLAMPS.length];
+  // Memoized visual block — only recomputes when media/text/style inputs change
+  const visual = useMemo(() => {
 
-  // ── Render the visual block ───────────────────────────────────────────────
-
-  const renderVisual = () => {
     if (bannerMedia) {
       const isVideo = getMediaCategory({ mimeType: bannerMedia.type, name: bannerMedia.name, uri: bannerMedia.url }) === 'video';
       if (isVideo && bannerMedia.url) {
         return (
           <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
-            {/* VideoThumbnail extracts first frame via expo-video-thumbnails.
-                onPress navigates to the story detail page. */}
             <VideoThumbnail
               uri={bannerMedia.url}
               thumbnailUrl={bannerMedia.thumbnail}
               borderRadius={20}
-              onPress={() => { Haptics.selectionAsync(); handlePress(); }}
+              onPress={handleVideoPress}
             />
-            {/* In progress badge / attachment count — overlay top-left */}
             <InProgressBadge memory={memory} overlay />
             <AttachmentCount memory={memory} />
-            {/* Actions button */}
             <TouchableOpacity
               onPress={handleActions}
               hitSlop={8}
@@ -158,10 +174,8 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
               });
             }}
           />
-          {/* In progress badge / attachment count — overlay top-left */}
           <InProgressBadge memory={memory} overlay />
           <AttachmentCount memory={memory} />
-          {/* Actions button */}
           <TouchableOpacity
             onPress={handleActions}
             hitSlop={8}
@@ -174,33 +188,23 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
     }
 
     // ── Audio card — only show when body has no actual text content ───────────
-    // Strip HTML tags first (story editor wraps content in <p> tags even when empty)
-    const bodyText = memory.body?.replace(/<[^>]+>/g, '').trim() ?? '';
     if (audioMedia && !bodyText) {
       const isVoiceRecording =
         audioMedia.name?.startsWith('voice_') && audioMedia.type === 'audio/m4a';
-
-      // Album art: populated by backend when MP3 has embedded ID3 cover art.
-      // The mobile client already consumes this field when the backend provides it.
       const albumArt = audioMedia.thumbnail;
-
       const duration = audioMedia.duration
         ? dayjs().startOf('day').add(audioMedia.duration, 'second').format('HH:mm:ss')
         : '00:00:00';
-
       const rawFileName = audioMedia.name
         ? audioMedia.name.replace(/\.[^.]+$/, '').replace(/_\d{12,}$/, '').replace(/_/g, ' ')
         : 'Audio';
-      // Prefer the AI-generated memory title (transcription-based) over the raw filename
       const fileName = memory.title && memory.title !== 'Untitled Memory' ? memory.title : rawFileName;
 
-      // ── Case 1: MP3 with embedded album art ────────────────────────────────
       if (albumArt) {
         return (
           <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
             <Image source={{ uri: albumArt }} className="w-full h-full" resizeMode="cover" />
             <InProgressBadge memory={memory} overlay />
-            {/* Glass overlay with waveform + duration at bottom */}
             <View
               className="absolute bottom-0 left-0 right-0 px-4 py-3 flex-row items-center gap-3"
               style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
@@ -224,7 +228,6 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
         );
       }
 
-      // ── Case 2: Voice recording (voice_*.m4a) — dark record-banner ─────────
       if (isVoiceRecording) {
         return (
           <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
@@ -252,7 +255,6 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
         );
       }
 
-      // ── Case 3: Uploaded audio file (MP3, WAV, AAC etc) — clean music card ─
       return (
         <View
           style={{ aspectRatio, backgroundColor: COLORS.fillWeak }}
@@ -260,20 +262,17 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
         >
           <InProgressBadge memory={memory} overlay />
           <View className="flex-1 items-center justify-center gap-3">
-            {/* Orange waveform bars */}
             <View className="flex-row items-end gap-1" style={{ height: 32 }}>
               {[8, 16, 24, 20, 12, 22, 14, 24, 18, 8, 16, 24].map((h, i) => (
                 <View key={i} style={{ width: 3, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />
               ))}
             </View>
-            {/* Filename */}
             <Text
               style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.textStrong, textAlign: 'center' }}
               numberOfLines={2}
             >
               {fileName}
             </Text>
-            {/* Duration pill */}
             <View className="bg-white/80 rounded-full px-3 py-1">
               <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: COLORS.textBase }}>
                 {duration}
@@ -286,7 +285,6 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
         </View>
       );
     }
-    // Audio + text body → falls through to text card below
 
     // Text-only card
     return (
@@ -299,30 +297,18 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
         }}
         className="w-full rounded-[20px] p-4 gap-3 relative overflow-hidden"
       >
-        {/* In progress badge — inline for text cards */}
         <View className='flex-row'>
-          {/* <Text
-            className="text-[15px] text-text-strong leading-snug font-semibold"
-            style={{ fontFamily: FONTS.sansSemi }}
-            numberOfLines={3}
-          >
-            {storyTitle}
-          </Text> */}
           <InProgressBadge memory={memory} />
         </View>
-
-        {/* User's own body text only — seeded line clamp */}
-        {memory.body ? (
+        {bodyText ? (
           <Text
             className="text-xs text-text-weak leading-relaxed"
             style={{ fontFamily: FONTS.sans }}
             numberOfLines={textBodyLines}
           >
-            {memory.body.replace(/<[^>]+>/g, '').trim()}
+            {bodyText}
           </Text>
         ) : null}
-
-        {/* User-defined tags — shown on text cards (matches web) */}
         {(memory.tags?.length ?? 0) > 0 && (
           <View className="flex-row flex-wrap gap-1 mt-0.5">
             {memory.tags!.slice(0, 4).map((tag) => (
@@ -331,15 +317,11 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
                 className="rounded-full px-2 py-0.5"
                 style={{ backgroundColor: `${surface.border}99`, borderWidth: 1, borderColor: surface.border }}
               >
-                <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: COLORS.textWeak }}>
-                  #{tag}
-                </Text>
+                <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: COLORS.textWeak }}>#{tag}</Text>
               </View>
             ))}
           </View>
         )}
-
-        {/* Actions button */}
         <TouchableOpacity
           onPress={handleActions}
           hitSlop={8}
@@ -350,36 +332,30 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
         </TouchableOpacity>
       </View>
     );
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bannerMedia, audioMedia, bodyText, aspectRatio, surface, textCardMinHeight, textBodyLines, memory, handleActions, handleVideoPress]);
+
 
   if (variant === 'list') {
     const hasMedia = !!(bannerMedia || audioMedia);
     return (
       <Animated.View
         style={[animStyle]}
-        // border-stroke-weak (not weaker) gives a crisper card edge against the cream background
         className="w-full mb-2 bg-white rounded-[24px] overflow-hidden border border-stroke-weak"
       >
         <TouchableOpacity
-          onPress={() => { Haptics.selectionAsync(); handlePress(); }}
+          onPress={handlePress}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           activeOpacity={0.95}
         >
-          {/* Hero media block — only rendered when the memory actually has media.
-              Text-only memories skip this entirely so there's no empty space. */}
           {hasMedia && (
             <View className="overflow-hidden rounded-t-[24px]">
-              {renderVisual()}
+              {visual}
             </View>
           )}
-
-          {/* Body */}
           <View className="px-5 pt-4 pb-5 gap-3">
-            {/* InProgress badge for text-only cards (media cards show it as overlay) */}
             {!hasMedia && <InProgressBadge memory={memory} />}
-
-            {/* Title */}
             <Text
               className="text-[22px] text-text-strong leading-tight"
               style={{ fontFamily: FONTS.serif }}
@@ -387,19 +363,15 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
             >
               {storyTitle}
             </Text>
-
-            {/* Body preview — max 2 lines */}
-            {memory.body ? (
+            {bodyText ? (
               <Text
                 className="text-sm leading-relaxed"
                 style={{ fontFamily: FONTS.sans, color: '#555555' }}
                 numberOfLines={2}
               >
-                {memory.body.replace(/<[^>]+>/g, '').trim()}
+                {bodyText}
               </Text>
             ) : null}
-
-            {/* Tags */}
             {(memory.tags?.length ?? 0) > 0 && (
               <View className="flex-row flex-wrap gap-1.5">
                 {memory.tags!.slice(0, 4).map((tag) => (
@@ -408,17 +380,13 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
                     className="rounded-full px-2.5 py-0.5"
                     style={{ backgroundColor: `${surface.border}99`, borderWidth: 1, borderColor: surface.border }}
                   >
-                    <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textWeak }}>
-                      #{tag}
-                    </Text>
+                    <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textWeak }}>#{tag}</Text>
                   </View>
                 ))}
               </View>
             )}
           </View>
         </TouchableOpacity>
-
-        {/* Actions button — absolute, so it floats above content for text-only cards too */}
         <TouchableOpacity
           onPress={handleActions}
           hitSlop={8}
@@ -434,15 +402,12 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
   return (
     <Animated.View style={animStyle} className="w-full">
       <TouchableOpacity
-        onPress={() => {
-          Haptics.selectionAsync();
-          handlePress();
-        }}
+        onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={0.95}
       >
-        {renderVisual()}
+        {visual}
 
         {/* Title below the card (Pinterest-style) */}
         <Text

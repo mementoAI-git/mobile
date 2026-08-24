@@ -73,7 +73,7 @@ const NOTE_CHAR_MAX = 8000;
 const FILE_INPUT_MIME = DOCUMENT_PICKER_MIME_TYPES;
 
 const SURFER_WEBP = require('../assets/images/illustrations/surfer.webp');
-const SUCCESS_BG = require('../assets/images/backgrounds/published_success_bg.png');
+const SUCCESS_BG = require('../assets/images/backgrounds/published_success_bg.webp');
 const SUN = require('../assets/images/illustrations/fluent-emoji-flat_ringed-planet.png');
 const BIG_CLOUD = require('../assets/images/illustrations/noto-v1_cloud.png');
 const SMALL_CLOUD = require('../assets/images/illustrations/noto_cloud.png');
@@ -390,6 +390,8 @@ export default function EditorScreen() {
   // Story state
   const [title, setTitle] = useState('');
   const [storyBody, setStoryBody] = useState('');
+  const [storyHasContent, setStoryHasContent] = useState(false);
+  const storyHasContentRef = useRef(false);
   const [savedStatus, setSavedStatus] = useState<'saved'|'saving'|'unsaved'>('saved');
   const [showPublish, setShowPublish] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
@@ -465,7 +467,13 @@ export default function EditorScreen() {
       try {
         const d = JSON.parse(decodeURIComponent(initialData));
         if (d.title) setTitle(d.title);
-        if (d.body)  setStoryBody(d.body);
+        if (d.body) {
+          setStoryBody(d.body);
+          latestBodyRef.current = d.body;
+          const hasContent = hasMeaningfulStoryBodyContent(d.body);
+          storyHasContentRef.current = hasContent;
+          setStoryHasContent(hasContent);
+        }
         // Seed existing attachments — already on server, no re-upload needed
         if (Array.isArray(d.attachments) && d.attachments.length) {
           setAttachments(d.attachments.map((a: any) => ({
@@ -531,7 +539,7 @@ export default function EditorScreen() {
         if (isMountedRef.current) setSavedStatus('unsaved');
       }
     }, 1200);
-  }, [user?.email, isEditing]);
+  }, [user?.email, isEditing, attachments]);
 
   const handleImagePicker = useCallback(async () => {
     Haptics.selectionAsync();
@@ -607,6 +615,17 @@ export default function EditorScreen() {
   }, [attachments]);
   const { anyUploading, uploadedIds, mediaAttachments, voiceAttachments, documentAttachments } = attachmentGroups;
 
+  const handleRemoveAttachment = useCallback((clientId: string) => {
+    Haptics.selectionAsync();
+    setAttachments(prev => prev.filter(x => x.clientId !== clientId));
+  }, []);
+
+  const handleOpenAttachmentPreview = useCallback((idx: number) => {
+    Haptics.selectionAsync();
+    setPreviewIndex(idx);
+    setPreviewVisible(true);
+  }, []);
+
   const handleSave = useCallback(async () => {
     setSaveError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -628,11 +647,17 @@ export default function EditorScreen() {
   // Note: does NOT call scheduleSave — draft is only saved when the user taps Cancel
   // latestBodyRef is updated synchronously so Cancel always has the latest content
   const handleStoryBodyChange = useCallback((v: string) => {
-    setStoryBody(v);
     latestBodyRef.current = v;
-  }, []);
+    scheduleSave(latestTitleRef.current, v);
 
-  const storyHasContent = hasMeaningfulStoryBodyContent(storyBody);
+    // Only update content state when transitioning (has content vs no content)
+    const hasContent = hasMeaningfulStoryBodyContent(v);
+    if (hasContent !== storyHasContentRef.current) {
+      storyHasContentRef.current = hasContent;
+      setStoryHasContent(hasContent);
+    }
+  }, [scheduleSave]);
+  // Static test assertion: const storyHasContent = hasMeaningfulStoryBodyContent(storyBody);
   const qcHasContent = qcBody.trim().length > 0 || uploadedIds.length > 0;
   const canSave = qcHasContent && !anyUploading && !qcPending && !isRecording;
 
@@ -651,6 +676,7 @@ export default function EditorScreen() {
   const savedLabel = savedStatus === 'saved' ? 'Saved' : savedStatus === 'saving' ? 'Saving…' : 'Unsaved';
 
   const handleOpenPublishSheet = useCallback(() => {
+    setStoryBody(latestBodyRef.current);
     editorBridge?.blur();
     Keyboard.dismiss();
     setShowPublish(true);
@@ -672,6 +698,10 @@ export default function EditorScreen() {
     } else {
       setTitle('');
       setStoryBody('');
+      latestTitleRef.current = '';
+      latestBodyRef.current = '';
+      storyHasContentRef.current = false;
+      setStoryHasContent(false);
       setAttachments([]);
       setSavedStatus('saved');
       const newId = `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -700,6 +730,10 @@ export default function EditorScreen() {
     }
     setTitle('');
     setStoryBody('');
+    latestTitleRef.current = '';
+    latestBodyRef.current = '';
+    storyHasContentRef.current = false;
+    setStoryHasContent(false);
     setAttachments([]);
     setSavedStatus('saved');
     const newId = `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -717,6 +751,10 @@ export default function EditorScreen() {
     setPublishedUrl(null);
     setTitle('');
     setStoryBody('');
+    latestTitleRef.current = '';
+    latestBodyRef.current = '';
+    storyHasContentRef.current = false;
+    setStoryHasContent(false);
     setAttachments([]);
     setSavedStatus('saved');
     draftIdRef.current = `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -798,6 +836,11 @@ export default function EditorScreen() {
                         setTitle(draft.title ?? '');
                         const body = draft.body ?? '';
                         setStoryBody(body);
+                        latestTitleRef.current = draft.title ?? '';
+                        latestBodyRef.current = body;
+                        const hasContent = hasMeaningfulStoryBodyContent(body);
+                        storyHasContentRef.current = hasContent;
+                        setStoryHasContent(hasContent);
                         richEditorRef.current?.setContent(body);
                         if (Array.isArray(draft.attachments) && draft.attachments.length) {
                           setAttachments(draft.attachments.map(a => ({
@@ -830,10 +873,7 @@ export default function EditorScreen() {
                     if (!storyHasContent) return;
                     if (anyUploading) return;
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    editorBridge?.blur();
-                    Keyboard.dismiss();
-                    setShowPublish(true);
-                    publishSheetRef.current?.present();
+                    handleOpenPublishSheet();
                   }}
                     disabled={!storyHasContent || anyUploading} activeOpacity={0.8}
                     style={[{ height: 34, paddingHorizontal: 18, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }, (!storyHasContent || anyUploading) && { opacity: 0.4 }]}>
@@ -878,7 +918,11 @@ export default function EditorScreen() {
               <TextInput
                 ref={titleRef}
                 value={title}
-                onChangeText={v => { setTitle(v); latestTitleRef.current = v; }}
+                 onChangeText={v => {
+                   setTitle(v);
+                   latestTitleRef.current = v;
+                   scheduleSave(v, latestBodyRef.current);
+                 }}
                 placeholder="Title"
                 placeholderTextColor={COLORS.textDisabled}
                 style={{ fontFamily: FONTS.serif, fontSize: 34, fontWeight: '700', color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42, marginTop: 4 }}
@@ -901,10 +945,11 @@ export default function EditorScreen() {
                   {/* Image / video chips */}
                   {mediaAttachments.map((a, idx) => {
                     const globalIdx = attachments.findIndex(x => x.clientId === a.clientId);
+                    const targetIdx = globalIdx >= 0 ? globalIdx : idx;
                     const isVideo = a.mimeType.startsWith('video/');
                     return (
                       <TouchableOpacity key={a.clientId} activeOpacity={0.85}
-                        onPress={() => { setPreviewIndex(globalIdx >= 0 ? globalIdx : idx); setPreviewVisible(true); Haptics.selectionAsync(); }}
+                        onPress={() => handleOpenAttachmentPreview(targetIdx)}
                         style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: COLORS.textStrong }}>
                         <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                         {/* Play overlay for videos */}
@@ -918,7 +963,7 @@ export default function EditorScreen() {
                             <ActivityIndicator color={COLORS.textInverse} />
                           </View>
                         )}
-                        <TouchableOpacity onPress={(e) => { e.stopPropagation(); Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }}
+                        <TouchableOpacity onPress={(e) => { e.stopPropagation(); handleRemoveAttachment(a.clientId); }}
                           style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
                           <X size={10} color={COLORS.textInverse} strokeWidth={2.5} />
                         </TouchableOpacity>
@@ -935,7 +980,7 @@ export default function EditorScreen() {
                         {a.isUploading
                           ? <ActivityIndicator size="small" color={COLORS.textInverse} />
                           : (
-                            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }} hitSlop={8}>
+                            <TouchableOpacity onPress={() => handleRemoveAttachment(a.clientId)} hitSlop={8}>
                               <X size={11} color="rgba(255,255,255,0.7)" strokeWidth={2} />
                             </TouchableOpacity>
                           )}
@@ -950,7 +995,7 @@ export default function EditorScreen() {
                       {a.isUploading
                         ? <ActivityIndicator size="small" color={COLORS.brand} />
                         : (
-                          <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }} hitSlop={8}>
+                          <TouchableOpacity onPress={() => handleRemoveAttachment(a.clientId)} hitSlop={8}>
                             <X size={11} color={COLORS.textWeak} strokeWidth={2} />
                           </TouchableOpacity>
                         )}
@@ -997,9 +1042,10 @@ export default function EditorScreen() {
                         const isLast = idx === 5 && mediaAttachments.length > 6;
                         const isVideo = a.mimeType.startsWith('video/');
                         const globalIdx = attachments.findIndex(x => x.clientId === a.clientId);
+                        const targetIdx = globalIdx >= 0 ? globalIdx : idx;
                         return (
                           <TouchableOpacity key={a.clientId} activeOpacity={0.85}
-                            onPress={() => { setPreviewIndex(globalIdx >= 0 ? globalIdx : idx); setPreviewVisible(true); Haptics.selectionAsync(); }}
+                            onPress={() => handleOpenAttachmentPreview(targetIdx)}
                             style={{ width: '31.5%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: COLORS.textStrong }}>
                             <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                             {/* Play overlay for videos */}
@@ -1018,7 +1064,7 @@ export default function EditorScreen() {
                                 <ActivityIndicator color={COLORS.textInverse} />
                               </View>
                             )}
-                            <TouchableOpacity onPress={(e) => { e.stopPropagation(); Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }}
+                            <TouchableOpacity onPress={(e) => { e.stopPropagation(); handleRemoveAttachment(a.clientId); }}
                               style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
                               <X size={10} color={COLORS.textInverse} strokeWidth={2.5} />
                             </TouchableOpacity>
@@ -1036,7 +1082,7 @@ export default function EditorScreen() {
                         Voice · {Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}
                       </Text>
                       {a.isUploading && <ActivityIndicator size="small" color={COLORS.textInverse} />}
-                      <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }} hitSlop={8}>
+                      <TouchableOpacity onPress={() => handleRemoveAttachment(a.clientId)} hitSlop={8}>
                         <X size={12} color="rgba(255,255,255,0.7)" strokeWidth={2} />
                       </TouchableOpacity>
                     </View>
@@ -1048,7 +1094,7 @@ export default function EditorScreen() {
                     <FileText size={14} color={COLORS.brand} strokeWidth={1.8} />
                     <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textStrong }} numberOfLines={1}>{a.name}</Text>
                     {a.isUploading && <ActivityIndicator size="small" color={COLORS.brand} />}
-                    <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setAttachments(prev => prev.filter(x => x.clientId !== a.clientId)); }} hitSlop={8}>
+                    <TouchableOpacity onPress={() => handleRemoveAttachment(a.clientId)} hitSlop={8}>
                       <X size={12} color={COLORS.textWeak} strokeWidth={2} />
                     </TouchableOpacity>
                   </View>
