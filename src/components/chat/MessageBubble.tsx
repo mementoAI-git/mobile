@@ -11,6 +11,7 @@ import * as Haptics from 'expo-haptics';
 import type { PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { useLinkPreview, type LinkPreviewData } from '@/hooks/use-link-preview';
+import { Image as ExpoImage } from 'expo-image';
 import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-type';
 import { getAttachmentPreviewKind } from '@/features/media/media-runtime-policy';
 
@@ -143,6 +144,72 @@ function FaviconBadge({ url, hostname }: { url: string; hostname: string }) {
   );
 }
 
+function shortenUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, '');
+    const path = parsed.pathname;
+    if (path.length > 20) {
+      return `${host}${path.slice(0, 15)}…`;
+    }
+    return `${host}${path}`;
+  } catch {
+    return url.length > 35 ? `${url.slice(0, 32)}…` : url;
+  }
+}
+
+function isMessageOnlyUrl(text: string): boolean {
+  const trimmed = text.trim();
+  const regex = /^https?:\/\/[^\s]+$/i;
+  return regex.test(trimmed);
+}
+
+function parseTextWithLinks(text: string, isUser: boolean) {
+  const regex = /https?:\/\/[^\s]+/gi;
+  const matches = text.match(regex);
+  if (!matches) {
+    return text;
+  }
+
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  
+  regex.lastIndex = 0;
+  while ((match = regex.exec(text)) !== null) {
+    let url = match[0];
+    // Strip trailing sentence punctuation
+    url = url.replace(/[.,!?;:)]+$/, '');
+    const index = match.index;
+    
+    if (index > lastIndex) {
+      parts.push(text.slice(lastIndex, index));
+    }
+    
+    const shortened = shortenUrl(url);
+    parts.push(
+      <Text
+        key={index}
+        style={{
+          color: COLORS.linkPreview,
+          textDecorationLine: 'underline',
+        }}
+        onPress={() => Linking.openURL(url).catch(() => {})}
+      >
+        {shortened}
+      </Text>
+    );
+    
+    lastIndex = index + match[0].length; // Move index past the full matched URL including stripped punctuation
+  }
+  
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  
+  return parts;
+}
+
 function LinkPreviewChip({ preview }: { preview: LinkPreviewData }) {
   const handlePress = useCallback(() => {
     Linking.openURL(preview.url).catch(() => {});
@@ -151,34 +218,58 @@ function LinkPreviewChip({ preview }: { preview: LinkPreviewData }) {
   if (!preview.loaded) {
     return (
       <TouchableOpacity onPress={handlePress} activeOpacity={0.7} style={{ marginTop: 4 }}>
-        <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.brand, textDecorationLine: 'underline' }} numberOfLines={1}>
-          {preview.url}
+        <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.linkPreview, textDecorationLine: 'underline' }} numberOfLines={1}>
+          {shortenUrl(preview.url)}
         </Text>
       </TouchableOpacity>
     );
   }
 
+  const hasImage = Boolean(preview.imageUrl);
+
   return (
-    <Animated.View entering={FadeIn.duration(300)}>
+    <View style={{ marginTop: 4 }}>
       <TouchableOpacity
         onPress={handlePress}
-        activeOpacity={0.8}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, backgroundColor: CHIP_BG }}
+        activeOpacity={0.85}
+        style={{
+          borderRadius: 14,
+          backgroundColor: COLORS.linkPreview,
+          overflow: 'hidden',
+          flexDirection: hasImage ? 'row' : 'column',
+          padding: 8,
+          gap: 6,
+        }}
       >
-        <FaviconBadge url={preview.faviconUrl} hostname={preview.hostname} />
-
-        <Text style={{ flex: 1, fontFamily: FONTS.sansMedium, fontSize: 13, color: 'white' }} numberOfLines={1}>
-          <Text style={{ fontFamily: FONTS.sansBold, color: 'white' }}>{preview.hostname}</Text>
-          {preview.title ? <Text style={{ color: 'rgba(255,255,255,0.8)' }}> · {preview.title}</Text> : null}
-        </Text>
-
-        <ExternalLink size={14} color="rgba(255,255,255,0.85)" strokeWidth={2} style={{ flexShrink: 0 }} />
+        {hasImage && (
+          <ExpoImage
+            source={{ uri: preview.imageUrl! }}
+            style={{ width: 64, height: 64, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.1)' }}
+            contentFit="cover"
+          />
+        )}
+        <View style={{ flexShrink: 1, justifyContent: 'center', gap: 2 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <FaviconBadge url={preview.faviconUrl} hostname={preview.hostname} />
+            <Text style={{ fontFamily: FONTS.sansBold, fontSize: 10, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: 0.5 }} numberOfLines={1}>
+              {preview.hostname}
+            </Text>
+          </View>
+          <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: '#ffffff' }} numberOfLines={1}>
+            {preview.title || 'Link'}
+          </Text>
+          {preview.description && (
+            <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: 'rgba(255,255,255,0.9)' }} numberOfLines={2}>
+              {preview.description}
+            </Text>
+          )}
+        </View>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 }
 
-// Wrapper component that calls the hook (hooks can't be called inside render callbacks)
+// Wrapper component that calls the hook
 function LinkPreviews({ text }: { text: string }) {
   const previews = useLinkPreview(text);
   if (previews.length === 0) return null;
@@ -372,6 +463,7 @@ export const MessageBubble = React.memo(function MessageBubble({
   );
 
   const hasContent = content.trim().length > 0 || rawAttachments.length > 0;
+  const isOnlyUrl = content.trim().length > 0 && isMessageOnlyUrl(content);
 
   // Must be declared before any early return (Rules of Hooks)
   const handleAttachmentTap = useCallback((index: number) => {
@@ -396,7 +488,13 @@ export const MessageBubble = React.memo(function MessageBubble({
         isUser && rawAttachments.length > 0 && styles.userAttachmentContainer,
       ]}
     >
-        <View style={[styles.messageSurface, isUser ? styles.userSurface : styles.assistantSurface]}>
+        <View
+          style={[
+            styles.messageSurface,
+            isUser ? styles.userSurface : styles.assistantSurface,
+            isOnlyUrl && { backgroundColor: 'transparent', paddingHorizontal: 0, paddingVertical: 0 }
+          ]}
+        >
 
           {/* Reply quote */}
           {replyQuote && replyQuote.text && (
@@ -417,11 +515,12 @@ export const MessageBubble = React.memo(function MessageBubble({
           )}
 
           {/* Message text */}
-          {content.trim().length > 0 && (
+          {content.trim().length > 0 && !isOnlyUrl && (
             <Text
               style={[styles.messageText, { marginTop: rawAttachments.length > 0 ? 4 : 0 }]}
+              numberOfLines={isMessageOnlyUrl(content) ? 1 : undefined}
             >
-              {content}
+              {parseTextWithLinks(content, isUser)}
             </Text>
           )}
 

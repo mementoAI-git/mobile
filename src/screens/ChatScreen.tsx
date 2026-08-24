@@ -452,19 +452,7 @@ export default function ChatScreen() {
                 </View>
               )}
 
-              {/* Milestone card */}
-              {(enrichmentStats.deltaToday > 0 || enrichmentStats.milestoneJustReached) && (
-                <View className="px-4 pt-2">
-                  <MilestoneCard
-                    enrichmentDelta={enrichmentStats.deltaToday}
-                    milestoneLabel={
-                      enrichmentStats.milestoneJustReached
-                        ? enrichmentStats.stats?.milestone?.reached_label
-                        : null
-                    }
-                  />
-                </View>
-              )}
+
             </View>
           )}
 
@@ -512,6 +500,16 @@ export default function ChatScreen() {
 
           {/* ── Messages ─────────────────────────────────────────────── */}
           <BlurTargetView ref={blurTargetRef} style={styles.messageList}>
+            {(enrichmentStats.deltaToday > 0 || enrichmentStats.milestoneJustReached) && (
+              <MilestoneCard
+                enrichmentDelta={enrichmentStats.deltaToday}
+                milestoneLabel={
+                  enrichmentStats.milestoneJustReached
+                    ? enrichmentStats.stats?.milestone?.reached_label
+                    : null
+                }
+              />
+            )}
             {isLoading && !allMessages.length ? (
               <ChatSkeleton />
             ) : (

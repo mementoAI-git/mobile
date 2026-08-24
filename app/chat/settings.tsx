@@ -193,7 +193,7 @@ function SelectionCard({
 
 function RecordPlayerMark() {
   return (
-    <MusicPlayerIcon/>
+    <MusicPlayerIcon />
   );
 }
 
@@ -359,7 +359,7 @@ export default function ChatSettingsScreen() {
             <MediaTile icon={Link2} label="Links" onPress={openLinks} width={layout.mediaTileWidth} />
           </View>
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             accessibilityRole="button"
             activeOpacity={0.74}
             onPress={handleSharedPress}
@@ -370,7 +370,7 @@ export default function ChatSettingsScreen() {
               Shared Media, Links and Docs
             </Text>
             <ChevronRight size={20} color={COLORS.textWeak} strokeWidth={2.2} />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* <View style={styles.deepDiveSection}>
             <Text style={styles.sectionTitle}>Deep dive insights</Text>
@@ -478,8 +478,8 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    borderBottomColor: COLORS.strokeWeaker,
-    borderBottomWidth: 1,
+    // borderBottomColor: COLORS.strokeWeaker,
+    // borderBottomWidth: 1,
     flexDirection: 'row',
     height: 70,
     justifyContent: 'space-between',

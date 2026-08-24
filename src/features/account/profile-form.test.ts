@@ -25,6 +25,7 @@ describe('edit profile form', () => {
       phone: '+234 894 284 0001',
       country: 'Nigeria',
       location: 'Lagos',
+      bio: '',
     });
   });
 
@@ -38,6 +39,7 @@ describe('edit profile form', () => {
       phone: ' +234 894 284 0001 ',
       country: ' Nigeria ',
       location: ' Lagos ',
+      bio: ' A lifelong learner ',
     })).toEqual({
       nickname: 'Groot',
       first_name: 'Wisdom',
@@ -46,6 +48,9 @@ describe('edit profile form', () => {
       phone_number: '+234 894 284 0001',
       country: 'Nigeria',
       location: 'Lagos',
+      context: {
+        self_description: 'A lifelong learner',
+      },
     });
   });
 

@@ -51,7 +51,7 @@ export function EditProfileSheet({
 
   const submit = handleSubmit(async (values) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await updateProfile.mutateAsync(toProfileUpdatePayload(values));
+    await updateProfile.mutateAsync(toProfileUpdatePayload(values, profile?.context));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onClose?.();
   });
@@ -106,6 +106,8 @@ export function EditProfileSheet({
       rightElement?: React.ReactNode;
       leftElement?: React.ReactNode;
       rules?: Record<string, unknown>;
+      multiline?: boolean;
+      numberOfLines?: number;
     },
   ) => (
     <Controller
@@ -126,6 +128,9 @@ export function EditProfileSheet({
           leftElement={options?.leftElement}
           error={errors[name]?.message}
           inputClassName={options?.disabled ? 'text-text-weak' : undefined}
+          multiline={options?.multiline}
+          numberOfLines={options?.numberOfLines}
+          textAlignVertical={options?.multiline ? 'top' : undefined}
         />
       )}
     />
@@ -212,6 +217,7 @@ export function EditProfileSheet({
           })}
           {field('country', 'Country')}
           {field('location', 'City/Location')}
+          {field('bio', 'About me', { multiline: true, numberOfLines: 3 })}
 
           {updateProfile.isError && (
             <Text style={[SETTINGS_TYPE.supporting, { color: COLORS.error }]}>

@@ -114,16 +114,16 @@ export async function saveDrafts(
 export async function upsertDraft(
   email: string | null | undefined,
   draft: StoryDraft,
-): Promise<void> {
+): Promise<string> {
   const drafts = await loadDrafts(email);
+  const originalId = draft.id;
   
   const netState = await NetInfo.fetch();
   if (netState.isConnected && email) {
     try {
       const payload = {
-        title: draft.title,
+        title: draft.title?.trim() || 'Untitled',
         body: draft.body,
-        status: 'draft',
         attachments: draft.attachments?.map((a) => a.fileId) || [],
       };
 
@@ -142,9 +142,8 @@ export async function upsertDraft(
   } else if (!netState.isConnected) {
     const queueStore = useOfflineQueueStore.getState();
     const payload = {
-      title: draft.title,
+      title: draft.title?.trim() || 'Untitled',
       body: draft.body,
-      status: 'draft',
       attachments: draft.attachments?.map((a) => a.fileId) || [],
     };
     if (draft.id.startsWith('draft_')) {
@@ -154,7 +153,7 @@ export async function upsertDraft(
     }
   }
 
-  const idx = drafts.findIndex((d) => d.id === draft.id);
+  const idx = drafts.findIndex((d) => d.id === originalId);
   if (idx >= 0) {
     drafts[idx] = draft;
   } else {
@@ -165,6 +164,7 @@ export async function upsertDraft(
     drafts.push(draft);
   }
   await saveDrafts(email, drafts);
+  return draft.id;
 }
 
 /** Remove a draft by id from the stored array. */
