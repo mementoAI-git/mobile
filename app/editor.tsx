@@ -25,7 +25,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ExpoCamera from 'expo-camera';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Clipboard from 'expo-clipboard';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useUserStore } from '@/store';
@@ -44,6 +44,7 @@ import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
 import { CameraCaptureModal } from '@/components/ui/CameraCaptureModal';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
 import { StoryRichEditor, FormattingToolbar, type StoryRichEditorRef } from '@/components/ui/StoryRichEditor';
+import { LinkPreviews } from '@/components/ui/LinkPreview';
 import type { EditorBridge } from '@10play/tentap-editor';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
@@ -273,7 +274,7 @@ function PublishModalInner({
   const handlePost = useCallback(() => {
     if (!title.trim() && !body.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const tagList = tags.split(',').map(t => t.trim()).filter(Boolean);
+    const tagList = tags.split(/[,\s]+/).map(t => t.trim()).filter(Boolean);
     const payload = {
       title: title || 'Untitled', body, tags: tagList, status: 'save' as const,
       attachments: attachmentIds.length ? attachmentIds : undefined,
@@ -681,7 +682,11 @@ export default function EditorScreen() {
       await quickCapture({ body: qcBody.trim(), attachments: uploadedIds.length ? uploadedIds : undefined, beneficiaries: selectedBeneficiaryIds.length ? selectedBeneficiaryIds : undefined });
       AsyncStorage.removeItem(QC_DRAFT_KEY(user?.email)).catch(() => {});
       toast('Got it. Processing in the background…', 'success');
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)/overview');
+      }
     } catch (err: any) { setSaveError(err?.message ?? 'Could not save. Try again.'); }
   }, [quickCapture, qcBody, selectedBeneficiaryIds, router, uploadedIds, user?.email, toast]);
 
@@ -742,7 +747,11 @@ export default function EditorScreen() {
     setShowPublish(false);
     publishSheetRef.current?.dismiss();
     if (isEditing) {
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)/stories');
+      }
     } else {
       setTitle('');
       setStoryBody('');
@@ -756,7 +765,7 @@ export default function EditorScreen() {
       draftIdRef.current = newId;
       setCurrentDraftId(newId);
       setEditorInstanceKey(k => k + 1);
-      if (lockMode === 'true') {
+      if (lockMode === 'true' || !router.canGoBack()) {
         router.replace('/(tabs)/stories');
       } else {
         router.back();
@@ -764,7 +773,10 @@ export default function EditorScreen() {
     }
   }, [isEditing, lockMode, router, setAttachments]);
 
+  const lastPublishedUrlRef = useRef<string | null>(null);
+
   const handlePublishCreated = useCallback((url: string) => {
+    lastPublishedUrlRef.current = url;
     pendingPublishedUrlRef.current = url;
     setShowPublish(false);
     publishSheetRef.current?.dismiss();
@@ -772,33 +784,24 @@ export default function EditorScreen() {
 
   const handleDismissPublishedSuccess = useCallback(() => {
     if (isEditing) {
-      router.back();
-      setTimeout(() => {
-        setPublishedUrl(null);
-      }, 400);
-      return;
-    }
-    setTitle('');
-    setStoryBody('');
-    latestTitleRef.current = '';
-    latestBodyRef.current = '';
-    storyHasContentRef.current = false;
-    setStoryHasContent(false);
-    setAttachments([]);
-    setSavedStatus('saved');
-    const newId = `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    draftIdRef.current = newId;
-    setCurrentDraftId(newId);
-    setEditorInstanceKey(k => k + 1);
-    if (lockMode === 'true') {
-      router.replace('/(tabs)/stories');
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)/stories');
+      }
     } else {
-      router.back();
+      if (lockMode === 'true' || !router.canGoBack()) {
+        router.replace('/(tabs)/stories');
+      } else {
+        router.back();
+      }
     }
+    // Clean up modal state in the background after the screen transition begins
     setTimeout(() => {
       setPublishedUrl(null);
-    }, 400);
-  }, [isEditing, lockMode, router, setAttachments]);
+      lastPublishedUrlRef.current = null;
+    }, 500);
+  }, [isEditing, lockMode, router]);
 
   const handlePublishAddAnother = useCallback(() => {
     setPublishedUrl(null);
@@ -834,7 +837,11 @@ export default function EditorScreen() {
 
               if (!hasContent) {
                 // Nothing typed — exit immediately
-                router.back();
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace(lockMode === 'true' || isStory ? '/(tabs)/stories' : '/(tabs)/overview');
+                }
                 return;
               }
 
@@ -854,7 +861,11 @@ export default function EditorScreen() {
                 } else {
                   AsyncStorage.setItem(QC_DRAFT_KEY(user?.email), JSON.stringify({ body: qcBody.trim() })).catch(() => {});
                 }
-                router.back();
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace(lockMode === 'true' || isStory ? '/(tabs)/stories' : '/(tabs)/overview');
+                }
               };
 
               setCancelConfirmTitle('Save to drafts?');
@@ -1058,14 +1069,18 @@ export default function EditorScreen() {
                   editorInstanceKey forces a full remount (blank WebView) when
                   "Add another story" is tapped after publishing. */}
               {isDraftLoaded ? (
-                <StoryRichEditor
-                  key={editorInstanceKey}
-                  ref={richEditorRef}
-                  initialContent={storyBody}
-                  onChange={handleStoryBodyChange}
-                  onBridgeReady={handleBridgeReady}
-                  scrollEnabled={true}
-                />
+                <>
+                  <StoryRichEditor
+                    key={editorInstanceKey}
+                    ref={richEditorRef}
+                    initialContent={storyBody}
+                    onChange={handleStoryBodyChange}
+                    onBridgeReady={handleBridgeReady}
+                    scrollEnabled={true}
+                  />
+                  {/* OpenGraph link preview cards */}
+                  <LinkPreviews text={storyBody} style={{ marginHorizontal: 20, marginBottom: 8 }} />
+                </>
               ) : (
                 <View style={{ minHeight: 200, alignItems: 'center', justifyContent: 'center' }}>
                   <ActivityIndicator color={COLORS.brand} />
@@ -1085,6 +1100,8 @@ export default function EditorScreen() {
                 {isRecording && (
                   <RecordingStatus seconds={recDuration} style={{ marginTop: 8 }} />
                 )}
+                {/* OpenGraph link preview cards */}
+                <LinkPreviews text={qcBody} style={{ marginTop: 8 }} />
                 {/* Attachment previews — images AND videos shown as tappable thumbnails */}
                 {mediaAttachments.length > 0 && (
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
@@ -1229,9 +1246,9 @@ export default function EditorScreen() {
 
       <Modal visible={!!publishedUrl} animationType="slide" presentationStyle="fullScreen" statusBarTranslucent onRequestClose={handleDismissPublishedSuccess}>
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-          {publishedUrl ? (
+          {(publishedUrl || lastPublishedUrlRef.current) ? (
             <PublishSuccessView
-              publishedUrl={publishedUrl}
+              publishedUrl={publishedUrl || lastPublishedUrlRef.current || ''}
               onAddAnother={lockMode === 'true' ? handlePublishAddAnother : handleDismissPublishedSuccess}
               onDismiss={handleDismissPublishedSuccess}
             />
@@ -1247,7 +1264,14 @@ export default function EditorScreen() {
         onClose={() => setCancelConfirmVisible(false)}
         buttons={[
           { label: 'Save draft', variant: 'primary', onPress: () => { cancelConfirmOnSave?.(); } },
-          { label: 'Discard', variant: 'destructive', onPress: () => { setCancelConfirmVisible(false); router.back(); } },
+          { label: 'Discard', variant: 'destructive', onPress: () => {
+            setCancelConfirmVisible(false);
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace(lockMode === 'true' || isStory ? '/(tabs)/stories' : '/(tabs)/overview');
+            }
+          } },
           { label: 'Keep editing', variant: 'ghost', onPress: () => setCancelConfirmVisible(false) },
         ]}
       />

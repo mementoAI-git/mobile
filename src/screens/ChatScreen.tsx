@@ -297,10 +297,16 @@ export default function ChatScreen() {
 
   const renderMessage = useCallback(
     ({ item, index }: { item: any; index: number }) => {
-      const previousTimestamp = index > 0
-        ? (allMessages[index - 1] as any)?.created_at
-        : undefined;
-      const showDate = shouldShowChatDaySeparator(previousTimestamp, item.created_at);
+      let previousTimestamp: string | undefined;
+      for (let i = index - 1; i >= 0; i -= 1) {
+        const ts = (allMessages[i] as any)?.created_at || (allMessages[i] as any)?.createdAt;
+        if (ts) {
+          previousTimestamp = ts;
+          break;
+        }
+      }
+      const currentTimestamp = item.created_at || item.createdAt;
+      const showDate = shouldShowChatDaySeparator(previousTimestamp, currentTimestamp);
 
       return (
         <MemoMessageRow

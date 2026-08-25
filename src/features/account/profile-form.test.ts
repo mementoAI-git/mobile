@@ -66,4 +66,18 @@ describe('edit profile form', () => {
     expect(manager).toContain("import { EditProfileSheet }");
     expect(manager).toContain("'edit-profile':");
   });
+
+  test('supports avatar picking and upload in the edit profile sheet', async () => {
+    const editSheet = await Bun.file(
+      new URL('../../components/sheets/EditProfileSheet.tsx', import.meta.url),
+    ).text();
+    const mutation = await Bun.file(
+      new URL('../../hooks/mutations/use-profile-mutation.ts', import.meta.url),
+    ).text();
+
+    expect(editSheet).toContain('useUploadProfilePicture');
+    expect(editSheet).toContain('ImagePicker.launchImageLibraryAsync');
+    expect(mutation).toContain('export function useUploadProfilePicture');
+    expect(mutation).toContain('endpoint.uploadPicture');
+  });
 });

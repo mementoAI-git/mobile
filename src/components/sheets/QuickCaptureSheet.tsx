@@ -11,6 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { RecordingIconButton } from '@/components/ui/RecordingIconButton';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
+import { LinkPreviews } from '@/components/ui/LinkPreview';
 import type { IDailyPromptCapture } from '@/types';
 import { logger } from '@/lib/logger';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
@@ -220,6 +221,8 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
           className="flex-1 text-base text-text-strong p-0 m-0"
           style={{ fontFamily: FONTS.chatBody, fontSize: 14, textAlignVertical: 'top' }}
         />
+
+        <LinkPreviews text={text} style={{ marginTop: 8 }} />
 
         <View className="flex-row items-center justify-between mt-4">
           <View className="flex-row items-center gap-4">

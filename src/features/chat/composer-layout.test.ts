@@ -12,19 +12,38 @@ import {
 } from './composer-layout';
 
 describe('chat composer layout', () => {
-  test('keeps mic and send visible while disabling an empty send action', async () => {
+  test('keeps mic and emoji visible in idle state, morphing send when active', async () => {
     const composer = await import('./composer-layout');
     expect(composer.getChatComposerControls).toBeFunction();
 
+    // Idle state: unfocused, empty -> send button hidden, emoji visible
     expect(composer.getChatComposerControls({
       anyUploading: false,
       disabled: false,
       hasContent: false,
       isRecording: false,
       loading: false,
+      isFocused: false,
     })).toEqual({
       sendDisabled: true,
       showMic: true,
+      showEmoji: true,
+      showSend: false,
+      showStop: false,
+    });
+
+    // Active state: focused or has content -> send button visible
+    expect(composer.getChatComposerControls({
+      anyUploading: false,
+      disabled: false,
+      hasContent: true,
+      isRecording: false,
+      loading: false,
+      isFocused: false,
+    })).toEqual({
+      sendDisabled: false,
+      showMic: true,
+      showEmoji: true,
       showSend: true,
       showStop: false,
     });
@@ -32,10 +51,17 @@ describe('chat composer layout', () => {
     expect(composer.getChatComposerControls({
       anyUploading: false,
       disabled: false,
-      hasContent: true,
+      hasContent: false,
       isRecording: false,
       loading: false,
-    }).sendDisabled).toBe(false);
+      isFocused: true,
+    })).toEqual({
+      sendDisabled: true,
+      showMic: true,
+      showEmoji: true,
+      showSend: true,
+      showStop: false,
+    });
   });
 
   test('expands text height to include padding before enabling scrolling', () => {

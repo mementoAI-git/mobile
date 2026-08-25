@@ -4,7 +4,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { VoiceDefinition, VoiceId } from '@/features/chat/voice-catalog';
 
 // Add the final static require() entries here when the six image files arrive.
-const VOICE_ARTWORK_SOURCES: Partial<Record<VoiceId, ImageSourcePropType>> = {};
+const VOICE_ARTWORK_SOURCES: Partial<Record<VoiceId, ImageSourcePropType>> = {
+  denver: require("../../../assets/images/voices/voice-denver.png"),
+  sue: require("../../../assets/images/voices/voice-sue.png"),
+  josef: require("../../../assets/images/voices/voice-josef.png"),
+  hannah: require("../../../assets/images/voices/voice-hannah.png"),
+};
 
 interface VoiceArtworkProps {
   voice: VoiceDefinition;

@@ -283,7 +283,7 @@ function PublishModal({
   const handlePost = useCallback(() => {
     if (!title.trim() && !body.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const tagList = tags.split(',').map((t) => t.trim()).filter(Boolean);
+    const tagList = tags.split(/[,\s]+/).map((t) => t.trim()).filter(Boolean);
     createMemory(
       {
         title: title || 'Untitled',

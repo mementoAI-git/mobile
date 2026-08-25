@@ -47,11 +47,13 @@ interface ChatComposerControlsInput {
   hasContent: boolean;
   isRecording: boolean;
   loading: boolean;
+  isFocused?: boolean;
 }
 
 interface ExpandedTextComposerInput {
   hasAttachments: boolean;
   hasText: boolean;
+  isFocused?: boolean;
   textHeight: number;
   collapsedActionSize: number;
   expansionBuffer: number;
@@ -122,11 +124,14 @@ export function getChatComposerControls({
   hasContent,
   isRecording,
   loading,
+  isFocused = false,
 }: ChatComposerControlsInput) {
+  const showSend = !loading && (isFocused || hasContent);
   return {
     showStop: loading,
     showMic: !loading,
-    showSend: !loading,
+    showEmoji: !loading,
+    showSend,
     sendDisabled: disabled || !hasContent || anyUploading || isRecording,
   };
 }
@@ -144,14 +149,16 @@ export function getFloatingDockSafeAreaOverlap({
 export function shouldUseExpandedTextComposer({
   hasAttachments,
   hasText,
+  isFocused = false,
   textHeight,
   collapsedActionSize,
   expansionBuffer,
   isExpanded = false,
 }: ExpandedTextComposerInput) {
   if (hasAttachments) return true;
-  if (!hasText) return false;
+  if (isFocused) return true;
   if (isExpanded) return true;
+  if (!hasText) return false;
 
   return textHeight > collapsedActionSize + expansionBuffer;
 }

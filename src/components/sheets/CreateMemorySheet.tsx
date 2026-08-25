@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
 } from 'react-native';
-import { Button, TextInput, Spinner } from '@/components/ui';
+import { Button, TextInput, Spinner, LinkPreviews } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
 import {
   Image as ImageIcon, FolderOpen, Check, X, Lock, Globe, Users,
@@ -375,20 +375,36 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
   }, [pickAndUpload]);
 
   const handleTagSubmit = useCallback(() => {
-    const t = tagInput.trim().toLowerCase();
-    if (t && !tags.includes(t)) setTags(prev => [...prev, t]);
+    const parts = tagInput.split(/[\s,]+/).map(p => p.trim().toLowerCase()).filter(Boolean);
+    if (parts.length > 0) {
+      setTags(prev => {
+        const next = [...prev];
+        for (const p of parts) {
+          if (!next.includes(p)) next.push(p);
+        }
+        return next;
+      });
+    }
     setTagInput('');
-  }, [tagInput, tags]);
+  }, [tagInput]);
 
   const handleTagInputChange = useCallback((text: string) => {
-    if (text.endsWith(' ')) {
-      const t = text.trim().toLowerCase();
-      if (t && !tags.includes(t)) setTags(prev => [...prev, t]);
+    if (text.includes(' ') || text.includes(',')) {
+      const parts = text.split(/[\s,]+/).map(p => p.trim().toLowerCase()).filter(Boolean);
+      if (parts.length > 0) {
+        setTags(prev => {
+          const next = [...prev];
+          for (const p of parts) {
+            if (!next.includes(p)) next.push(p);
+          }
+          return next;
+        });
+      }
       setTagInput('');
     } else {
       setTagInput(text);
     }
-  }, [tags]);
+  }, []);
 
   const removeTag = useCallback((t: string) => setTags(prev => prev.filter(tag => tag !== t)), []);
 
@@ -517,6 +533,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
               className="min-h-[160px] bg-fill-weaker border border-stroke-weaker rounded-2xl px-4 py-4 text-base text-text-strong"
               style={{ fontFamily: FONTS.sans, textAlignVertical: 'top' }}
             />
+            <LinkPreviews text={body} />
           </View>
 
           {/* Tags */}
