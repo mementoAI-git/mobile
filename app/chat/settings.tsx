@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
   selectedMark: {
     alignItems: 'center',
     // backgroundColor: COLORS.onboardingAmber,
-    backgroundColor: COLORS.brand,
+    backgroundColor: COLORS.brandWeak,
     borderRadius: 8,
     height: 16,
     justifyContent: 'center',

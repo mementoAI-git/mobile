@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   View, TextInput, TouchableOpacity, Platform, StyleSheet,
   Keyboard, ScrollView, Image, ActivityIndicator, AccessibilityInfo, useWindowDimensions, InteractionManager,
+  UIManager, LayoutAnimation,
 } from 'react-native';
 import { ArrowUp, AudioLines, Mic, Square, Plus, X, FileText, Play, Smile } from 'lucide-react-native';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
@@ -25,7 +26,11 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
+  FadeIn,
+  FadeOut,
   FadeInDown,
+  LinearTransition,
+  Easing,
 } from 'react-native-reanimated';
 import { scale, verticalScale } from 'react-native-size-matters';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -156,7 +161,6 @@ interface ChatInputProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const INPUT_PILL_RADIUS = 999;
 const INPUT_PILL_INSET = 4;
 const INPUT_PILL_GAP = 4;
 const SECONDARY_ACTION_SIZE = 36;
@@ -164,6 +168,7 @@ const PRIMARY_ACTION_SIZE = 36;
 const EXPANDED_ACTION_SIZE = 44;
 const INPUT_PILL_VERTICAL_INSET = 6;
 const INPUT_PILL_HEIGHT = PRIMARY_ACTION_SIZE + INPUT_PILL_VERTICAL_INSET * 2;
+const INPUT_PILL_RADIUS = INPUT_PILL_HEIGHT / 2;
 const COMPACT_COMPOSER_CONTENT_RADIUS = scale(24);
 const PLUS_ICON_SURFACE_SIZE = 36;
 const PLUS_ICON_EMPTY_RADIUS = PLUS_ICON_SURFACE_SIZE / 2;
@@ -175,16 +180,16 @@ const COMPACT_TEXT_MIN_HEIGHT = Platform.select({
   android: verticalScale(33),
   default: verticalScale(24),
 });
-const MULTILINE_DETECTION_BUFFER = scale(10);
-const EXPANDED_TEXT_MIN_HEIGHT = verticalScale(34);
+const MULTILINE_DETECTION_BUFFER = scale(2);
+const EXPANDED_TEXT_MIN_HEIGHT = verticalScale(22);
 const SELECTED_ASSET_OUTER_SIZE = scale(74);
 const SELECTED_ASSET_SIZE = scale(70);
 const CHAT_HEADER_RESERVE = verticalScale(72);
-const TEXT_HEIGHT_BUFFER = verticalScale(6);
-const COMPACT_MULTILINE_VERTICAL_PADDING = scale(12);
-const EXPANDED_TEXT_VERTICAL_PADDING = scale(6);
-const EXPANDED_COMPOSER_CHROME_HEIGHT = scale(30);
-const COMPACT_TEXT_EXPANSION_BUFFER = scale(8);
+const TEXT_HEIGHT_BUFFER = 0;
+const COMPACT_MULTILINE_VERTICAL_PADDING = 0;
+const EXPANDED_TEXT_VERTICAL_PADDING = 0;
+const EXPANDED_COMPOSER_CHROME_HEIGHT = scale(20);
+const COMPACT_TEXT_EXPANSION_BUFFER = 0;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -457,6 +462,9 @@ export function ChatInput({
     setCompactMeasuredPadding(0);
     setExpandedMeasuredHeight(EXPANDED_TEXT_MIN_HEIGHT);
     setIsTextComposerExpanded(false);
+    setIsFocused(false);
+    textInputRef.current?.blur();
+    Keyboard.dismiss();
     setAttachments([]);
     textBeforeDictationRef.current = '';
   }, [text, attachments, disabled, onSend, setAttachments]);
@@ -588,17 +596,33 @@ export function ChatInput({
     collapsedActionSize: SECONDARY_ACTION_SIZE,
     expansionBuffer: COMPACT_TEXT_EXPANSION_BUFFER,
     isExpanded: isTextComposerExpanded,
+    multiline,
+    text,
   });
 
   useEffect(() => {
-    if (!hasText && !isFocused && !hasAttachments) {
+    if (!hasText && !hasAttachments) {
       if (isTextComposerExpanded) setIsTextComposerExpanded(false);
       return;
     }
     if (useExpandedComposer && !isTextComposerExpanded) {
       setIsTextComposerExpanded(true);
     }
-  }, [hasAttachments, hasText, isFocused, isTextComposerExpanded, useExpandedComposer]);
+  }, [hasAttachments, hasText, isTextComposerExpanded, useExpandedComposer]);
+
+  const prevExpandedRef = useRef(useExpandedComposer);
+  useEffect(() => {
+    if (prevExpandedRef.current !== useExpandedComposer) {
+      prevExpandedRef.current = useExpandedComposer;
+      LayoutAnimation.configureNext(
+        LayoutAnimation.create(
+          200,
+          LayoutAnimation.Types.easeInEaseOut,
+          LayoutAnimation.Properties.opacity
+        )
+      );
+    }
+  }, [useExpandedComposer]);
 
   const handlePreviewAttachment = useCallback((idx: number) => {
     setPreviewIndex(idx);
@@ -649,7 +673,7 @@ export function ChatInput({
   const handleTextChange = useCallback((nextText: string) => {
     if (isRecording) textBeforeDictationRef.current = nextText;
     setText(nextText);
-    if (!nextText) {
+    if (!nextText.trim()) {
       setMultiline(false);
       setCompactTextHeight(COMPACT_TEXT_MIN_HEIGHT);
       setExpandedTextHeight(EXPANDED_TEXT_MIN_HEIGHT);
@@ -657,8 +681,11 @@ export function ChatInput({
       setCompactMeasuredPadding(0);
       setExpandedMeasuredHeight(EXPANDED_TEXT_MIN_HEIGHT);
       setIsTextComposerExpanded(false);
+    } else if (nextText.includes('\n')) {
+      setMultiline(true);
+      if (!isTextComposerExpanded) setIsTextComposerExpanded(true);
     }
-  }, [isRecording]);
+  }, [isRecording, isTextComposerExpanded]);
 
   // ─── Content size change handlers ────────────────────────────────────────
   // A single onContentSizeChange handler is used regardless of expansion state.
@@ -728,7 +755,10 @@ export function ChatInput({
       return;
     }
 
-    const shouldExpand = measuredHeight > COMPACT_TEXT_MIN_HEIGHT + MULTILINE_DETECTION_BUFFER;
+    const shouldExpand = measuredHeight > COMPACT_TEXT_MIN_HEIGHT + MULTILINE_DETECTION_BUFFER || (text && text.includes('\n'));
+    if (shouldExpand && !isTextComposerExpanded) {
+      setIsTextComposerExpanded(true);
+    }
 
     const verticalPadding = shouldExpand ? COMPACT_MULTILINE_VERTICAL_PADDING : 0;
     const nextHeight = getComposerTextHeight({
@@ -831,7 +861,8 @@ export function ChatInput({
       />
 
       {/* ── Outer composer container — shape changes but TextInput stays mounted ── */}
-      <View
+      <Animated.View
+        layout={LinearTransition.duration(200).easing(Easing.bezier(0.25, 0.1, 0.25, 1))}
         style={[
           styles.floatingContainer,
           useExpandedComposer ? styles.expandedComposer : styles.compactComposer,
@@ -903,7 +934,7 @@ export function ChatInput({
               placeholder={isRecording ? 'Listening…' : placeholder}
               placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
               selectionColor={isRecording ? COLORS.brand : COLORS.textStrong}
-              multiline
+              multiline={useExpandedComposer || hasText}
               style={textInputStyle}
               blurOnSubmit={false}
               editable={!disabled}
@@ -915,7 +946,11 @@ export function ChatInput({
 
           {/* Action buttons (expanded: bottom toolbar row; compact: inline on right) */}
           {useExpandedComposer ? (
-            <View style={styles.expandedBottomToolbar}>
+            <Animated.View
+              entering={FadeIn.duration(180)}
+              exiting={FadeOut.duration(120)}
+              style={styles.expandedBottomToolbar}
+            >
               <TouchableOpacity
                 onPress={handleOpenAttachmentPicker}
                 disabled={disabled || anyUploading}
@@ -1010,7 +1045,7 @@ export function ChatInput({
                   )}
                 </View>
               )}
-            </View>
+            </Animated.View>
           ) : (
             controls.showStop ? (
               <Animated.View style={btnAnimStyle}>
@@ -1093,7 +1128,7 @@ export function ChatInput({
             )
           )}
         </View>
-      </View>
+      </Animated.View>
 
       <ChatAttachmentPickerSheet
         ref={attachmentPickerRef}
@@ -1123,6 +1158,7 @@ const styles = StyleSheet.create({
   // Composer shape variants
   compactComposer: {
     flexDirection: 'column',
+    justifyContent: 'center',
     borderRadius: INPUT_PILL_RADIUS,
     paddingHorizontal: INPUT_PILL_INSET,
     minHeight: INPUT_PILL_HEIGHT,
@@ -1131,11 +1167,11 @@ const styles = StyleSheet.create({
     borderRadius: COMPACT_COMPOSER_CONTENT_RADIUS,
   },
   expandedComposer: {
-    borderRadius: 26,
+    borderRadius: 24,
     paddingTop: scale(8),
     paddingHorizontal: scale(10),
-    paddingBottom: scale(10),
-    gap: scale(6),
+    paddingBottom: scale(6),
+    gap: scale(4),
   },
 
   // Asset strip
@@ -1276,9 +1312,10 @@ const styles = StyleSheet.create({
 
   // Compact variant
   compactTextInput: {
-    paddingVertical: scale(4),
+    paddingVertical: Platform.OS === 'ios' ? 0 : scale(4),
     minHeight: COMPACT_TEXT_MIN_HEIGHT,
     textAlignVertical: 'center',
+    justifyContent: 'center',
   },
   compactTextInputMultiline: {
     paddingTop: scale(6),
@@ -1288,8 +1325,8 @@ const styles = StyleSheet.create({
 
   // Expanded variant
   expandedTextInput: {
-    paddingTop: scale(2),
-    paddingBottom: scale(2),
+    paddingTop: 0,
+    paddingBottom: 0,
     paddingHorizontal: scale(2),
     minHeight: EXPANDED_TEXT_MIN_HEIGHT,
     textAlignVertical: 'top',

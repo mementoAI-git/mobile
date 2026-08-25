@@ -126,7 +126,7 @@ export function getChatComposerControls({
   loading,
   isFocused = false,
 }: ChatComposerControlsInput) {
-  const showSend = !loading && (isFocused || hasContent);
+  const showSend = !loading && hasContent;
   return {
     showStop: loading,
     showMic: !loading,
@@ -146,19 +146,33 @@ export function getFloatingDockSafeAreaOverlap({
   return Math.max(0, dockHeight / 2 - anchorOffset);
 }
 
+interface ExpandedTextComposerInput {
+  hasAttachments: boolean;
+  hasText: boolean;
+  isFocused?: boolean;
+  textHeight: number;
+  collapsedActionSize: number;
+  expansionBuffer?: number;
+  isExpanded?: boolean;
+  multiline?: boolean;
+  text?: string;
+}
+
 export function shouldUseExpandedTextComposer({
   hasAttachments,
   hasText,
-  isFocused = false,
   textHeight,
   collapsedActionSize,
-  expansionBuffer,
+  expansionBuffer = 0,
   isExpanded = false,
+  multiline = false,
+  text,
 }: ExpandedTextComposerInput) {
   if (hasAttachments) return true;
-  if (isFocused) return true;
-  if (isExpanded) return true;
   if (!hasText) return false;
+  if (isExpanded) return true;
+  if (multiline) return true;
+  if (text && text.includes('\n')) return true;
 
   return textHeight > collapsedActionSize + expansionBuffer;
 }
