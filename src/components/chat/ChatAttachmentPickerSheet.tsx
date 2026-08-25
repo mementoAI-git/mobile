@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
@@ -56,6 +57,7 @@ export type ChatPickerAsset = {
 interface ChatAttachmentPickerSheetProps {
   onCamera: () => void;
   onDocs: () => void;
+  onAudio?: () => void;
   onConfirm: (assets: ChatPickerAsset[]) => void;
 }
 
@@ -128,7 +130,7 @@ function getGranularPermissions(mode: PickerMode): MediaLibrary.GranularPermissi
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttachmentPickerSheetProps>(
-  function ChatAttachmentPickerSheet({ onCamera, onDocs, onConfirm }, ref) {
+  function ChatAttachmentPickerSheet({ onCamera, onDocs, onAudio, onConfirm }, ref) {
     const insets = useSafeAreaInsets();
     const [mode, setMode] = useState<PickerMode>('gallery');
     const [assets, setAssets] = useState<MediaLibrary.Asset[]>([]);
@@ -185,8 +187,8 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
           nextMode === 'videos'
             ? MediaLibrary.MediaType.video
             : nextMode === 'audio'
-            ? MediaLibrary.MediaType.audio
-            : MediaLibrary.MediaType.photo;
+              ? MediaLibrary.MediaType.audio
+              : MediaLibrary.MediaType.photo;
 
         const page = await MediaLibrary.getAssetsAsync({
           first: PAGE_SIZE,
@@ -197,7 +199,13 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
 
         if (requestId !== loadRequestIdRef.current) return;
 
-        const nextAssets = after ? [...assets, ...page.assets] : page.assets;
+        const filteredNewAssets = page.assets.filter((a) => {
+          if (nextMode === 'videos') return a.mediaType === MediaLibrary.MediaType.video;
+          if (nextMode === 'audio') return a.mediaType === MediaLibrary.MediaType.audio;
+          return a.mediaType === MediaLibrary.MediaType.photo;
+        });
+
+        const nextAssets = after ? [...assets, ...filteredNewAssets] : filteredNewAssets;
         setAssets(nextAssets);
         setNextCursor(page.endCursor);
         setHasNextPage(page.hasNextPage);
@@ -289,6 +297,16 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
       dismiss();
       onDocs();
     }, [dismiss, onDocs]);
+
+    const handleAudio = useCallback(() => {
+      Haptics.selectionAsync();
+      if (Platform.OS === 'ios' && onAudio) {
+        dismiss();
+        onAudio();
+      } else {
+        selectMode('audio');
+      }
+    }, [dismiss, onAudio, selectMode]);
 
     const toggleAsset = useCallback((asset: MediaLibrary.Asset) => {
       Haptics.selectionAsync();
@@ -431,7 +449,7 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
               label="Audio"
               active={mode === 'audio'}
               icon={<Music size={20} color={mode === 'audio' ? COLORS.brand : COLORS.textBase} strokeWidth={1.8} />}
-              onPress={() => selectMode('audio')}
+              onPress={handleAudio}
             />
             <PickerAction
               label="Docs"
@@ -475,7 +493,23 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
                 windowSize={5}
                 removeClippedSubviews
                 ListEmptyComponent={
-                  loading ? null : (
+                  loading ? null : mode === 'audio' && Platform.OS === 'ios' ? (
+                    <View style={styles.emptyState}>
+                      <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: `${COLORS.brand}12`, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                        <Music size={26} color={COLORS.brand} strokeWidth={1.8} />
+                      </View>
+                      <Text style={[styles.emptyText, { marginBottom: 14 }]}>Audio is stored in device Files</Text>
+                      {onAudio && (
+                        <TouchableOpacity
+                          onPress={handleAudio}
+                          activeOpacity={0.8}
+                          style={{ paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999, backgroundColor: COLORS.brand }}
+                        >
+                          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 13, color: COLORS.textInverse }}>Browse Audio Files</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ) : (
                     <View style={styles.emptyState}>
                       <Text style={styles.emptyText}>No {mode === 'gallery' ? 'photos' : mode} found</Text>
                     </View>

@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   selectionCardSelected: {
-    borderColor: COLORS.onboardingAmber,
+    // borderColor: COLORS.onboardingAmber,
     borderWidth: 2,
   },
   selectedMark: {

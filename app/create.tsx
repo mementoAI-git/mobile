@@ -55,6 +55,7 @@ import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useToast } from '@/components/ui/Toast';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
+import { LinkPreviews } from '@/components/ui/LinkPreview';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import {
@@ -424,7 +425,13 @@ export default function CreateScreen() {
   // ── Handlers ───────────────────────────────────────────────────────────────
 
   const handleCancel = useCallback(() => {
-    saveDraft(); Haptics.selectionAsync(); router.back();
+    saveDraft();
+    Haptics.selectionAsync();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/overview');
+    }
   }, [router, saveDraft]);
 
   const handleSave = useCallback(async () => {
@@ -439,7 +446,11 @@ export default function CreateScreen() {
       });
       AsyncStorage.removeItem(DRAFT_STORAGE_KEY(user?.email)).catch(() => {});
       toast('Got it. Processing in the background…', 'success');
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)/overview');
+      }
     } catch (err: any) {
       setSaveError(err?.message ?? 'Could not save. Try again.');
     }
@@ -585,6 +596,9 @@ export default function CreateScreen() {
             scrollEnabled={false}
             maxLength={NOTE_CHAR_MAX}
           />
+
+          {/* OpenGraph link preview cards */}
+          <LinkPreviews text={body} style={{ marginTop: 8 }} />
 
           {/* Recording badge */}
           {isRecording && <RecordingStatus seconds={recDuration} style={styles.recBadge} />}

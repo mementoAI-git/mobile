@@ -3,13 +3,17 @@ import React, {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from 'react';
-import { KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { CalendarDays, X } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { CalendarDays, Camera, X } from 'lucide-react-native';
 import { Controller, useForm } from 'react-hook-form';
 import * as Haptics from 'expo-haptics';
-import { Button, TextInput } from '@/components/ui';
+import { Avatar, Button, TextInput } from '@/components/ui';
+import { toast } from '@/components/ui/Toast';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import {
@@ -17,7 +21,7 @@ import {
   toProfileUpdatePayload,
   type ProfileFormValues,
 } from '@/features/account/profile-form';
-import { useUpdateProfile } from '@/hooks/mutations/use-profile-mutation';
+import { useUpdateProfile, useUploadProfilePicture } from '@/hooks/mutations/use-profile-mutation';
 import { useProfile } from '@/hooks/queries/use-profile';
 
 interface EditProfileSheetProps {
@@ -31,6 +35,8 @@ export function EditProfileSheet({
 }: EditProfileSheetProps) {
   const { data: profile } = useProfile();
   const updateProfile = useUpdateProfile();
+  const uploadProfilePicture = useUploadProfilePicture();
+  const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
   const {
     control,
     handleSubmit,
@@ -43,6 +49,43 @@ export function EditProfileSheet({
   useEffect(() => {
     reset(normalizeProfileForm(profile));
   }, [profile, reset]);
+
+  const handlePickAvatar = useCallback(async () => {
+    Haptics.selectionAsync();
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.status !== 'granted') {
+      showPermissionRecoveryAlert({
+        permission,
+        title: 'Your photos are tucked away',
+        description: 'Allow photo access to choose a profile picture.',
+        settingsDescription: 'Photo access is turned off in Settings. Turn it back on to choose a profile picture.',
+      });
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+
+    if (result.canceled || !result.assets.length) return;
+    const asset = result.assets[0];
+    setLocalAvatarUri(asset.uri);
+
+    try {
+      await uploadProfilePicture.mutateAsync({
+        uri: asset.uri,
+        name: asset.fileName ?? `avatar_${Date.now()}.jpg`,
+        type: asset.mimeType ?? 'image/jpeg',
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      toast('Profile photo updated.', 'success');
+    } catch (error: any) {
+      toast(error?.message || 'Could not upload profile photo. Try again.', 'error');
+    }
+  }, [uploadProfilePicture]);
 
   const close = useCallback(() => {
     Haptics.selectionAsync();
@@ -180,11 +223,97 @@ export function EditProfileSheet({
           onScrollBeginDrag={expandSheet}
           contentContainerStyle={{
             paddingHorizontal: 20,
-            paddingTop: 12,
+            paddingTop: 8,
             paddingBottom: 20,
             gap: 16,
           }}
         >
+          {/* Avatar / Profile Photo Section */}
+          <View style={{ alignItems: 'center', marginVertical: 8 }}>
+            <TouchableOpacity
+              onPress={handlePickAvatar}
+              activeOpacity={0.82}
+              style={{ position: 'relative' }}
+              disabled={uploadProfilePicture.isPending}
+            >
+              <View
+                style={{
+                  width: 96,
+                  height: 96,
+                  borderRadius: 48,
+                  overflow: 'hidden',
+                  backgroundColor: COLORS.fillWeak,
+                  borderWidth: 2,
+                  borderColor: COLORS.strokeWeaker,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {localAvatarUri || profile?.picture_url || profile?.picture ? (
+                  <Image
+                    source={{ uri: localAvatarUri || profile?.picture_url || profile?.picture }}
+                    style={{ width: '100%', height: '100%' }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Avatar
+                    name={profile?.first_name || profile?.nickname || profile?.email || 'User'}
+                    size="xl"
+                    className="w-full h-full border-0"
+                  />
+                )}
+                {uploadProfilePicture.isPending && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(0,0,0,0.4)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <ActivityIndicator color={COLORS.textInverse} size="small" />
+                  </View>
+                )}
+              </View>
+              <View
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: COLORS.brand,
+                  borderWidth: 2,
+                  borderColor: COLORS.card,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: COLORS.shadow,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
+              >
+                <Camera size={16} color={COLORS.textInverse} strokeWidth={2} />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handlePickAvatar}
+              activeOpacity={0.7}
+              disabled={uploadProfilePicture.isPending}
+              style={{ marginTop: 8 }}
+            >
+              <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.brand }}>
+                {uploadProfilePicture.isPending ? 'Uploading photo...' : 'Change profile photo'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {field('email', 'Email address', {
             disabled: true,
             keyboardType: 'email-address',
