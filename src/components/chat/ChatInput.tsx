@@ -230,6 +230,8 @@ export function ChatInput({
   const textBeforeDictationRef = useRef('');
   const lastAppliedContentSizeRef = useRef<{ mode: 'compact' | 'expanded'; measured: number; target: number } | null>(null);
 
+  const isSendingRef = useRef(false);
+  const sendingResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressMeasurementRef = useRef(false);
   const suppressMeasurementTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -246,6 +248,9 @@ export function ChatInput({
   useEffect(() => () => {
     if (suppressMeasurementTimeoutRef.current) {
       clearTimeout(suppressMeasurementTimeoutRef.current);
+    }
+    if (sendingResetTimeoutRef.current) {
+      clearTimeout(sendingResetTimeoutRef.current);
     }
   }, []);
 
@@ -452,9 +457,16 @@ export function ChatInput({
     if ((!trimmed && readyIds.length === 0) || disabled) return;
     if (hasUploadingAttachments(attachments)) return;
 
+    isSendingRef.current = true;
+    if (sendingResetTimeoutRef.current) clearTimeout(sendingResetTimeoutRef.current);
+    sendingResetTimeoutRef.current = setTimeout(() => {
+      isSendingRef.current = false;
+    }, 300);
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onSend({ text: trimmed, attachmentIds: readyIds, attachmentPreviews: readyAttachmentPreviews });
     setText('');
+    textInputRef.current?.clear();
     setMultiline(false);
     setCompactTextHeight(COMPACT_TEXT_MIN_HEIGHT);
     setExpandedTextHeight(EXPANDED_TEXT_MIN_HEIGHT);
@@ -671,6 +683,7 @@ export function ChatInput({
   // ─── Text change handler ──────────────────────────────────────────────────
 
   const handleTextChange = useCallback((nextText: string) => {
+    if (isSendingRef.current) return;
     if (isRecording) textBeforeDictationRef.current = nextText;
     setText(nextText);
     if (!nextText.trim()) {
@@ -934,7 +947,7 @@ export function ChatInput({
               placeholder={isRecording ? 'Listening…' : placeholder}
               placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
               selectionColor={isRecording ? COLORS.brand : COLORS.textStrong}
-              multiline={useExpandedComposer || hasText}
+              multiline
               style={textInputStyle}
               blurOnSubmit={false}
               editable={!disabled}
