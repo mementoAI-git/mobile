@@ -396,6 +396,30 @@ export function ChatInput({
     } catch { /* user cancelled */ }
   }, [uploadAndAdd, toast]);
 
+  const handlePickAudio = useCallback(async () => {
+    Haptics.selectionAsync();
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['audio/*', 'audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/wav', 'audio/x-m4a', 'audio/aac'],
+        copyToCacheDirectory: true,
+        multiple: true,
+      });
+      if (!result.canceled && result.assets.length > 0) {
+        const validAssets = result.assets.filter(asset => {
+          if (isFileTooLarge(asset.size)) {
+            toast(`"${asset.name}" exceeds the ${MAX_ATTACHMENT_FILE_MB}MB limit.`, 'error');
+            return false;
+          }
+          return true;
+        });
+        await Promise.all(validAssets.map((asset) => {
+          const upload = getDocumentUploadInput(asset);
+          return uploadAndAdd(upload.uri, upload.mimeType || 'audio/mpeg', upload.name, { fileSize: upload.fileSize });
+        }));
+      }
+    } catch { /* user cancelled */ }
+  }, [uploadAndAdd, toast]);
+
   const removeAttachment = useCallback((clientId: string) => {
     Haptics.selectionAsync();
     removeUploadedAttachment(clientId);
@@ -922,6 +946,7 @@ export function ChatInput({
         ref={attachmentPickerRef}
         onCamera={handleLaunchCamera}
         onDocs={handlePickDocument}
+        onAudio={handlePickAudio}
         onConfirm={handleAddPickerAssets}
       />
     </Animated.View>
