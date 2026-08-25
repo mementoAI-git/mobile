@@ -3,7 +3,7 @@ import {
   View, TextInput, TouchableOpacity, Platform, StyleSheet,
   Keyboard, ScrollView, Image, ActivityIndicator, AccessibilityInfo, useWindowDimensions, InteractionManager,
 } from 'react-native';
-import { ArrowUp, AudioLines, Mic, Square, Plus, X, FileText, Play } from 'lucide-react-native';
+import { ArrowUp, AudioLines, Mic, Square, Plus, X, FileText, Play, Smile } from 'lucide-react-native';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -13,6 +13,8 @@ import {
   ChatAttachmentPickerSheet,
   type ChatPickerAsset,
 } from '@/components/chat/ChatAttachmentPickerSheet';
+import { EmojiPickerSheet } from '@/components/chat/EmojiPickerSheet';
+import { insertEmojiAtPosition } from '@/features/chat/emoji-data';
 import { RecordingIconButton } from '@/components/ui/RecordingIconButton';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -204,8 +206,14 @@ export function ChatInput({
   const [expandedMeasuredHeight, setExpandedMeasuredHeight] = useState(EXPANDED_TEXT_MIN_HEIGHT);
   const [isTextComposerExpanded, setIsTextComposerExpanded] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [isFocused, setIsFocused] = useState(false);
+  const selectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
+
+  const attachmentPickerRef = useRef<BottomSheetModal>(null);
+  const emojiPickerRef = useRef<BottomSheetModal>(null);
+  const textInputRef = useRef<TextInput>(null);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
 
   const btnScale = useSharedValue(1);
@@ -214,9 +222,7 @@ export function ChatInput({
   const { height: windowHeight } = useWindowDimensions();
   const { toast } = useToast();
 
-  const textInputRef = useRef<TextInput>(null);
   const textBeforeDictationRef = useRef('');
-  const attachmentPickerRef = useRef<BottomSheetModal>(null);
   const lastAppliedContentSizeRef = useRef<{ mode: 'compact' | 'expanded'; measured: number; target: number } | null>(null);
 
   const suppressMeasurementRef = useRef(false);
@@ -536,6 +542,7 @@ export function ChatInput({
     hasContent,
     isRecording,
     loading: Boolean(loading),
+    isFocused,
   });
   const previewable = attachmentState.previewable;
 
@@ -576,6 +583,7 @@ export function ChatInput({
   const useExpandedComposer = shouldUseExpandedTextComposer({
     hasAttachments,
     hasText,
+    isFocused,
     textHeight: compactTextHeight,
     collapsedActionSize: SECONDARY_ACTION_SIZE,
     expansionBuffer: COMPACT_TEXT_EXPANSION_BUFFER,
@@ -583,18 +591,42 @@ export function ChatInput({
   });
 
   useEffect(() => {
-    if (!hasText) {
+    if (!hasText && !isFocused && !hasAttachments) {
       if (isTextComposerExpanded) setIsTextComposerExpanded(false);
       return;
     }
     if (useExpandedComposer && !isTextComposerExpanded) {
       setIsTextComposerExpanded(true);
     }
-  }, [hasText, isTextComposerExpanded, useExpandedComposer]);
+  }, [hasAttachments, hasText, isFocused, isTextComposerExpanded, useExpandedComposer]);
 
   const handlePreviewAttachment = useCallback((idx: number) => {
     setPreviewIndex(idx);
     setPreviewVisible(true);
+  }, []);
+
+  // ─── Emoji picker opener ──────────────────────────────────────────────────
+
+  const handleOpenEmojiPicker = useCallback(() => {
+    if (disabled) return;
+    Haptics.selectionAsync();
+    Keyboard.dismiss();
+    if (Platform.OS === 'android') {
+      const task = InteractionManager.runAfterInteractions(() => {
+        emojiPickerRef.current?.present();
+      });
+      return () => task.cancel();
+    }
+    emojiPickerRef.current?.present();
+  }, [disabled]);
+
+  const handleSelectEmoji = useCallback((emoji: string) => {
+    setText((prevText) => {
+      const { newText, newCursor } = insertEmojiAtPosition(prevText, emoji, selectionRef.current);
+      selectionRef.current = { start: newCursor, end: newCursor };
+      return newText;
+    });
+    setIsTextComposerExpanded(true);
   }, []);
 
   // ─── Attachment picker opener ─────────────────────────────────────────────
@@ -835,23 +867,26 @@ export function ChatInput({
           useExpandedComposer ? styles.inputRowExpanded : styles.inputRowCompact,
         ]}>
 
-          {/* Plus / attach button */}
-          <TouchableOpacity
-            onPress={handleOpenAttachmentPicker}
-            disabled={disabled || anyUploading}
-            style={styles.plusButton}
-          >
-            <View style={[
-              styles.plusIconSurface,
-              (hasText || hasAttachments) ? styles.plusIconSurfaceActive : styles.plusIconSurfaceEmpty,
-            ]}>
-              <Plus size={scale(18)} color={COLORS.textBase} strokeWidth={1.8} />
-            </View>
-          </TouchableOpacity>
+          {/* Plus / attach button (compact mode: inline on left) */}
+          {!useExpandedComposer && (
+            <TouchableOpacity
+              onPress={handleOpenAttachmentPicker}
+              disabled={disabled || anyUploading}
+              style={styles.plusButton}
+            >
+              <View style={[
+                styles.plusIconSurface,
+                (hasText || hasAttachments) ? styles.plusIconSurfaceActive : styles.plusIconSurfaceEmpty,
+              ]}>
+                <Plus size={scale(18)} color={COLORS.textBase} strokeWidth={1.8} />
+              </View>
+            </TouchableOpacity>
+          )}
 
           {/* ── THE SINGLE STABLE TEXT INPUT ── */}
           <View style={[
             styles.textWrap,
+            useExpandedComposer ? styles.textWrapExpanded : styles.textWrapCompact,
             isRecording && styles.recordingInputWrap,
           ]}>
             <TextInput
@@ -859,6 +894,11 @@ export function ChatInput({
               value={text}
               onChangeText={handleTextChange}
               onContentSizeChange={handleContentSizeChange}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              onSelectionChange={(e) => {
+                selectionRef.current = e.nativeEvent.selection;
+              }}
               scrollEnabled={useExpandedComposer ? expandedTextScrollable : compactTextScrollable}
               placeholder={isRecording ? 'Listening…' : placeholder}
               placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
@@ -873,71 +913,184 @@ export function ChatInput({
             )}
           </View>
 
-          {/* ── Action buttons ── */}
-          {controls.showStop ? (
-            <Animated.View style={btnAnimStyle}>
+          {/* Action buttons (expanded: bottom toolbar row; compact: inline on right) */}
+          {useExpandedComposer ? (
+            <View style={styles.expandedBottomToolbar}>
               <TouchableOpacity
-                onPress={handleStop}
-                onPressIn={handleBtnPressIn}
-                onPressOut={handleBtnPressOut}
-                style={useExpandedComposer ? styles.expandedStopButton : styles.compactStopButton}
+                onPress={handleOpenAttachmentPicker}
+                disabled={disabled || anyUploading}
+                style={styles.plusButton}
               >
-                <Square
-                  size={scale(14)}
-                  color={COLORS.textBase}
-                  fill={COLORS.textBase}
-                  strokeWidth={0}
-                />
+                <View style={[
+                  styles.plusIconSurface,
+                  (hasText || hasAttachments) ? styles.plusIconSurfaceActive : styles.plusIconSurfaceEmpty,
+                ]}>
+                  <Plus size={scale(18)} color={COLORS.textBase} strokeWidth={1.8} />
+                </View>
               </TouchableOpacity>
-            </Animated.View>
-          ) : (
-            <View style={styles.compactActionRow}>
-              {controls.showMic && (
-                <Animated.View style={micPulseStyle}>
-                  <RecordingIconButton
-                    onPress={handleMicPress}
-                    active={isRecording}
-                    disabled={disabled}
-                    muted={micUnavailable}
-                    style={styles.compactMicButton}
-                  >
-                    <Mic
-                      size={18}
-                      color={isRecording ? COLORS.textInverse : COLORS.textBase}
-                      strokeWidth={2}
-                    />
-                  </RecordingIconButton>
-                </Animated.View>
-              )}
-              {controls.showSend && (
+
+              <View style={{ flex: 1 }} />
+
+              {controls.showStop ? (
                 <Animated.View style={btnAnimStyle}>
-                <TouchableOpacity
-                  accessibilityLabel="Send message"
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: controls.sendDisabled }}
-                  activeOpacity={0.76}
-                  disabled={controls.sendDisabled}
-                  onPress={handleSend}
-                  onPressIn={handleBtnPressIn}
-                  onPressOut={handleBtnPressOut}
-                  style={[
-                    useExpandedComposer ? styles.expandedSendButton : styles.compactSendButton,
-                    controls.sendDisabled && styles.sendButtonDisabled,
-                  ]}
-                >
-                  {anyUploading ? (
-                    <ActivityIndicator color={COLORS.textWeak} size="small" />
-                  ) : (
-                    <ArrowUp
-                      size={useExpandedComposer ? 21 : 19}
-                      color={controls.sendDisabled ? COLORS.textDisabled : COLORS.textInverse}
-                      strokeWidth={2.5}
+                  <TouchableOpacity
+                    onPress={handleStop}
+                    onPressIn={handleBtnPressIn}
+                    onPressOut={handleBtnPressOut}
+                    style={styles.expandedStopButton}
+                  >
+                    <Square
+                      size={scale(14)}
+                      color={COLORS.textBase}
+                      fill={COLORS.textBase}
+                      strokeWidth={0}
                     />
-                  )}
-                </TouchableOpacity>
+                  </TouchableOpacity>
                 </Animated.View>
+              ) : (
+                <View style={styles.compactActionRow}>
+                  {controls.showMic && (
+                    <Animated.View style={micPulseStyle}>
+                      <RecordingIconButton
+                        onPress={handleMicPress}
+                        active={isRecording}
+                        disabled={disabled}
+                        muted={micUnavailable}
+                        style={styles.compactMicButton}
+                      >
+                        <Mic
+                          size={18}
+                          color={isRecording ? COLORS.textInverse : COLORS.textBase}
+                          strokeWidth={2}
+                        />
+                      </RecordingIconButton>
+                    </Animated.View>
+                  )}
+                  {controls.showEmoji && (
+                    <TouchableOpacity
+                      onPress={handleOpenEmojiPicker}
+                      disabled={disabled}
+                      style={styles.compactEmojiButton}
+                      activeOpacity={0.7}
+                    >
+                      <Smile
+                        size={20}
+                        color={COLORS.textBase}
+                        strokeWidth={1.8}
+                      />
+                    </TouchableOpacity>
+                  )}
+                  {controls.showSend && (
+                    <Animated.View style={btnAnimStyle}>
+                      <TouchableOpacity
+                        accessibilityLabel="Send message"
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: controls.sendDisabled }}
+                        activeOpacity={0.76}
+                        disabled={controls.sendDisabled}
+                        onPress={handleSend}
+                        onPressIn={handleBtnPressIn}
+                        onPressOut={handleBtnPressOut}
+                        style={[
+                          styles.expandedSendButton,
+                          controls.sendDisabled && styles.sendButtonDisabled,
+                        ]}
+                      >
+                        {anyUploading ? (
+                          <ActivityIndicator color={COLORS.textWeak} size="small" />
+                        ) : (
+                          <ArrowUp
+                            size={21}
+                            color={controls.sendDisabled ? COLORS.textDisabled : COLORS.textInverse}
+                            strokeWidth={2.5}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    </Animated.View>
+                  )}
+                </View>
               )}
             </View>
+          ) : (
+            controls.showStop ? (
+              <Animated.View style={btnAnimStyle}>
+                <TouchableOpacity
+                  onPress={handleStop}
+                  onPressIn={handleBtnPressIn}
+                  onPressOut={handleBtnPressOut}
+                  style={styles.compactStopButton}
+                >
+                  <Square
+                    size={scale(14)}
+                    color={COLORS.textBase}
+                    fill={COLORS.textBase}
+                    strokeWidth={0}
+                  />
+                </TouchableOpacity>
+              </Animated.View>
+            ) : (
+              <View style={styles.compactActionRow}>
+                {controls.showMic && (
+                  <Animated.View style={micPulseStyle}>
+                    <RecordingIconButton
+                      onPress={handleMicPress}
+                      active={isRecording}
+                      disabled={disabled}
+                      muted={micUnavailable}
+                      style={styles.compactMicButton}
+                    >
+                      <Mic
+                        size={18}
+                        color={isRecording ? COLORS.textInverse : COLORS.textBase}
+                        strokeWidth={2}
+                      />
+                    </RecordingIconButton>
+                  </Animated.View>
+                )}
+                {controls.showEmoji && (
+                  <TouchableOpacity
+                    onPress={handleOpenEmojiPicker}
+                    disabled={disabled}
+                    style={styles.compactEmojiButton}
+                    activeOpacity={0.7}
+                  >
+                    <Smile
+                      size={20}
+                      color={COLORS.textBase}
+                      strokeWidth={1.8}
+                    />
+                  </TouchableOpacity>
+                )}
+                {controls.showSend && (
+                  <Animated.View style={btnAnimStyle}>
+                    <TouchableOpacity
+                      accessibilityLabel="Send message"
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: controls.sendDisabled }}
+                      activeOpacity={0.76}
+                      disabled={controls.sendDisabled}
+                      onPress={handleSend}
+                      onPressIn={handleBtnPressIn}
+                      onPressOut={handleBtnPressOut}
+                      style={[
+                        styles.compactSendButton,
+                        controls.sendDisabled && styles.sendButtonDisabled,
+                      ]}
+                    >
+                      {anyUploading ? (
+                        <ActivityIndicator color={COLORS.textWeak} size="small" />
+                      ) : (
+                        <ArrowUp
+                          size={19}
+                          color={controls.sendDisabled ? COLORS.textDisabled : COLORS.textInverse}
+                          strokeWidth={2.5}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  </Animated.View>
+                )}
+              </View>
+            )
           )}
         </View>
       </View>
@@ -948,6 +1101,11 @@ export function ChatInput({
         onDocs={handlePickDocument}
         onAudio={handlePickAudio}
         onConfirm={handleAddPickerAssets}
+      />
+
+      <EmojiPickerSheet
+        ref={emojiPickerRef}
+        onSelectEmoji={handleSelectEmoji}
       />
     </Animated.View>
   );
@@ -1050,17 +1208,17 @@ const styles = StyleSheet.create({
 
   // Input row
   inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: INPUT_PILL_GAP,
   },
   inputRowCompact: {
+    flexDirection: 'row',
     minHeight: INPUT_PILL_HEIGHT,
     alignItems: 'center',
   },
   inputRowExpanded: {
-    minHeight: EXPANDED_ACTION_SIZE,
-    alignItems: 'flex-end',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: scale(4),
   },
 
   // Plus button
@@ -1087,8 +1245,20 @@ const styles = StyleSheet.create({
 
   // Text wrap
   textWrap: {
-    flex: 1,
     justifyContent: 'center',
+  },
+  textWrapCompact: {
+    flex: 1,
+  },
+  textWrapExpanded: {
+    width: '100%',
+  },
+  expandedBottomToolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingTop: scale(2),
   },
   recordingInputWrap: {
     borderRadius: 18,
@@ -1118,9 +1288,9 @@ const styles = StyleSheet.create({
 
   // Expanded variant
   expandedTextInput: {
-    paddingTop: scale(3),
-    paddingBottom: scale(3),
-    paddingHorizontal: scale(4),
+    paddingTop: scale(2),
+    paddingBottom: scale(2),
+    paddingHorizontal: scale(2),
     minHeight: EXPANDED_TEXT_MIN_HEIGHT,
     textAlignVertical: 'top',
   },
@@ -1142,6 +1312,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     height: SECONDARY_ACTION_SIZE,
     width: SECONDARY_ACTION_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compactEmojiButton: {
+    backgroundColor: 'transparent',
+    height: SECONDARY_ACTION_SIZE,
+    width: SECONDARY_ACTION_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   compactSendButton: {
     width: PRIMARY_ACTION_SIZE,

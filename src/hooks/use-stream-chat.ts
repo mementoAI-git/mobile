@@ -71,6 +71,7 @@ export function useStreamChat(memoryId?: string) {
         _id: createMessageId(),
         role: 'user',
         text: hasText ? text : '',
+        created_at: new Date().toISOString(),
         isLive: true,
         ...(replyTo ? { replyTo } : {}),
         ...(attachmentPreviews?.length ? { attatchments: attachmentPreviews } : {}),
@@ -165,6 +166,7 @@ export function useStreamChat(memoryId?: string) {
               _id: createMessageId(),
               role: 'ai',
               text: 'Sorry, something went wrong. Please try again.',
+              created_at: new Date().toISOString(),
             },
           ]);
           setStreamingText('');

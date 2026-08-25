@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
@@ -186,8 +187,8 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
           nextMode === 'videos'
             ? MediaLibrary.MediaType.video
             : nextMode === 'audio'
-            ? MediaLibrary.MediaType.audio
-            : MediaLibrary.MediaType.photo;
+              ? MediaLibrary.MediaType.audio
+              : MediaLibrary.MediaType.photo;
 
         const page = await MediaLibrary.getAssetsAsync({
           first: PAGE_SIZE,

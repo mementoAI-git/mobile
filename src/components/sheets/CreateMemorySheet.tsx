@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
 } from 'react-native';
-import { Button, TextInput, Spinner } from '@/components/ui';
+import { Button, TextInput, Spinner, LinkPreviews } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
 import {
   Image as ImageIcon, FolderOpen, Check, X, Lock, Globe, Users,
@@ -533,6 +533,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
               className="min-h-[160px] bg-fill-weaker border border-stroke-weaker rounded-2xl px-4 py-4 text-base text-text-strong"
               style={{ fontFamily: FONTS.sans, textAlignVertical: 'top' }}
             />
+            <LinkPreviews text={body} />
           </View>
 
           {/* Tags */}
