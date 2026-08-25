@@ -7,7 +7,7 @@ import { API_BASE_URL } from '@/lib/env';
 import type { ApiError, RequestOptions } from './interface';
 import type { IAuth } from '@/types';
 
-import { useAuthStore } from '@/store';
+import { useAuthStore } from '@/store/auth.store';
 
 const getAuthToken = (): string | null => {
   return useAuthStore.getState().token?.access_token ?? null;
