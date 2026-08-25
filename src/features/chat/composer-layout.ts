@@ -50,16 +50,6 @@ interface ChatComposerControlsInput {
   isFocused?: boolean;
 }
 
-interface ExpandedTextComposerInput {
-  hasAttachments: boolean;
-  hasText: boolean;
-  isFocused?: boolean;
-  textHeight: number;
-  collapsedActionSize: number;
-  expansionBuffer: number;
-  isExpanded?: boolean;
-}
-
 export function getComposerTextHeight({
   measuredHeight,
   minHeight,

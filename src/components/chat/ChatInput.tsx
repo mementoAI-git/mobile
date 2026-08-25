@@ -755,7 +755,7 @@ export function ChatInput({
       return;
     }
 
-    const shouldExpand = measuredHeight > COMPACT_TEXT_MIN_HEIGHT + MULTILINE_DETECTION_BUFFER || (text && text.includes('\n'));
+    const shouldExpand = Boolean(measuredHeight > COMPACT_TEXT_MIN_HEIGHT + MULTILINE_DETECTION_BUFFER || (text && text.includes('\n')));
     if (shouldExpand && !isTextComposerExpanded) {
       setIsTextComposerExpanded(true);
     }
