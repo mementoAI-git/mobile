@@ -16,7 +16,7 @@ describe('chat composer layout', () => {
     const composer = await import('./composer-layout');
     expect(composer.getChatComposerControls).toBeFunction();
 
-    // Idle state: unfocused, empty -> send button hidden, emoji visible
+    // Idle state: empty -> send button hidden, emoji visible
     expect(composer.getChatComposerControls({
       anyUploading: false,
       disabled: false,
@@ -32,14 +32,14 @@ describe('chat composer layout', () => {
       showStop: false,
     });
 
-    // Active state: focused or has content -> send button visible
+    // Active state with content -> send button visible
     expect(composer.getChatComposerControls({
       anyUploading: false,
       disabled: false,
       hasContent: true,
       isRecording: false,
       loading: false,
-      isFocused: false,
+      isFocused: true,
     })).toEqual({
       sendDisabled: false,
       showMic: true,
@@ -59,7 +59,7 @@ describe('chat composer layout', () => {
       sendDisabled: true,
       showMic: true,
       showEmoji: true,
-      showSend: true,
+      showSend: false,
       showStop: false,
     });
   });
