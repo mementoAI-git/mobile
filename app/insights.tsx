@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Settings } from 'lucide-react-native';
+import { ArrowLeft, Settings, Award, CheckCircle2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import {
@@ -15,6 +15,7 @@ import {
   type InsightsTab,
 } from '@/components/account/InsightsContentCard';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { calculateMilestones } from '@/features/insights/milestone-celebrations';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useUserStats } from '@/hooks/queries/use-overview';
 import {
@@ -74,6 +75,16 @@ export default function InsightsScreen() {
   const sanitizedPreferences = useMemo(() => {
     return preferences.map(sanitizeText);
   }, [preferences, sanitizeText]);
+
+  const milestones = useMemo(() => {
+    return calculateMilestones({
+      memoryCount: stats?.memories_count,
+      streakDays: stats?.streak_days,
+      capsuleCount: stats?.capsules_count,
+      enrichmentScore: Number(stats?.enrichment_score) || 0,
+      beneficiaryCount: stats?.beneficiaries_count,
+    });
+  }, [stats]);
 
 
   const handleBack = useCallback(() => {
@@ -150,7 +161,7 @@ export default function InsightsScreen() {
             })}
           </ScrollView>
 
-          <View style={{ paddingHorizontal: 16, marginTop: 28 }}>
+          <View style={{ paddingHorizontal: 16, marginTop: 28, gap: 20 }}>
             <InsightsContentCard
               activeTab={activeTab}
               score={Number(stats?.enrichment_score) || 0}
@@ -159,6 +170,95 @@ export default function InsightsScreen() {
               notes={sanitizedNotes}
               preferences={sanitizedPreferences}
             />
+
+            {/* Milestones & Achievements */}
+            <View
+              style={{
+                backgroundColor: COLORS.card,
+                borderRadius: 24,
+                borderWidth: 1,
+                borderColor: COLORS.strokeWeak,
+                padding: 20,
+                gap: 16,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Award size={18} color={COLORS.brand} />
+                  <Text style={{ fontFamily: FONTS.serif, fontSize: 18, color: COLORS.textStrong }}>
+                    Milestones & Streaks
+                  </Text>
+                </View>
+                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 12, color: COLORS.brand }}>
+                  {milestones.filter((m) => m.achieved).length} of {milestones.length}
+                </Text>
+              </View>
+
+              <View style={{ gap: 12 }}>
+                {milestones.map((milestone) => (
+                  <View
+                    key={milestone.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: 14,
+                      borderRadius: 16,
+                      borderWidth: 1,
+                      borderColor: milestone.achieved ? COLORS.strokeWeak : COLORS.strokeWeaker,
+                      backgroundColor: milestone.achieved ? 'rgba(6, 122, 87, 0.04)' : COLORS.fillWeaker,
+                    }}
+                  >
+                    <View style={{ flex: 1, paddingRight: 12 }}>
+                      <Text
+                        style={{
+                          fontFamily: FONTS.sansBold,
+                          fontSize: 14,
+                          color: milestone.achieved ? COLORS.textStrong : COLORS.textWeak,
+                        }}
+                      >
+                        {milestone.title}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 12,
+                          color: COLORS.textWeak,
+                          marginTop: 2,
+                        }}
+                      >
+                        {milestone.description}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: 12,
+                        backgroundColor: milestone.achieved ? 'rgba(6, 122, 87, 0.1)' : COLORS.fillWeak,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      {milestone.achieved ? (
+                        <CheckCircle2 size={12} color={COLORS.success} />
+                      ) : null}
+                      <Text
+                        style={{
+                          fontFamily: FONTS.sansSemi,
+                          fontSize: 11,
+                          color: milestone.achieved ? COLORS.success : COLORS.textWeak,
+                        }}
+                      >
+                        {milestone.progressLabel}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
           </View>
         </ScrollView>
       </ImageBackground>
