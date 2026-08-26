@@ -2,9 +2,11 @@ const DEV_API_BASE_URL = 'http://localhost:3000';
 const DEV_WEB_BASE_URL = 'https://dev.mymemento.io';
 const PROD_WEB_BASE_URL = 'https://app.mymemento.io';
 
+const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production';
+
 function readPublicEnv(value: string | undefined, key: string, devFallback?: string): string {
   if (value && value.trim()) return value.trim();
-  if (__DEV__ && devFallback) return devFallback;
+  if (isDev && devFallback) return devFallback;
   throw new Error(`Missing required environment variable: ${key}`);
 }
 
@@ -23,7 +25,7 @@ function webBaseUrlFromApiBaseUrl(apiBaseUrl: string): string {
     // Fall through to the build-mode default.
   }
 
-  return __DEV__ ? DEV_WEB_BASE_URL : PROD_WEB_BASE_URL;
+  return isDev ? DEV_WEB_BASE_URL : PROD_WEB_BASE_URL;
 }
 
 export const WEB_BASE_URL = webBaseUrlFromApiBaseUrl(API_BASE_URL);
@@ -38,5 +40,5 @@ export function publishedPostUrl(memoryId?: string | null): string {
 export const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() ?? '';
 
 export const SENTRY_TRACES_SAMPLE_RATE = Number(
-  process.env.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? (__DEV__ ? '1' : '0.2'),
+  process.env.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? (isDev ? '1' : '0.2'),
 );

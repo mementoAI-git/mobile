@@ -19,6 +19,7 @@ export interface BeneficiaryInviteFormValues {
   about: string;
   avatarFileId?: string;
   groupIds: string[];
+  accessScope?: string;
 }
 
 export function buildBeneficiaryInvitePayload(
@@ -40,6 +41,7 @@ export function buildBeneficiaryInvitePayload(
     ...(about ? { about } : {}),
     ...(avatarFileId ? { avatar_file_id: avatarFileId } : {}),
     ...(groupIds.length ? { group_ids: groupIds } : {}),
+    ...(values.accessScope ? { access_scope: values.accessScope } : {}),
   };
 }
 

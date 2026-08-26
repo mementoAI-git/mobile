@@ -475,7 +475,7 @@ export const MessageBubble = React.memo(function MessageBubble({
 
   const Container = animated ? Animated.View : View;
   const containerProps = animated
-    ? { entering: FadeInDown.duration(300).springify() }
+    ? { entering: FadeIn.duration(150) }
     : {};
 
   return (

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image } from 'react-native';
 import { cn, getInitials } from '@/lib/utils';
 import { FONTS } from '@/constants/tokens';
+import { resolveFileUrl } from '@/features/account/profile-form';
 
 interface AvatarProps {
   uri?: string | null;
@@ -26,6 +27,7 @@ const sizeMap = {
 export function Avatar({ uri, name, size = 'md', className }: AvatarProps) {
   const s = sizeMap[size];
   const initials = name ? getInitials(name) : '?';
+  const resolvedUri = resolveFileUrl(uri);
 
   return (
     <View
@@ -36,8 +38,8 @@ export function Avatar({ uri, name, size = 'md', className }: AvatarProps) {
         className,
       )}
     >
-      {uri ? (
-        <Image source={{ uri }} className="w-full h-full" resizeMode="cover" />
+      {resolvedUri ? (
+        <Image source={{ uri: resolvedUri }} className="w-full h-full" resizeMode="cover" />
       ) : (
         <Text
           className={cn('font-medium text-text-base', s.text)}

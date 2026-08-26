@@ -4,6 +4,10 @@ import { ChevronRight } from 'lucide-react-native';
 import { Avatar } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import {
+  getBeneficiaryStatusBadge,
+  getVaultAccessScopeLabel,
+} from '@/features/beneficiaries/vault-permissions';
 import type { IBeneficiary } from '@/types';
 
 export const BeneficiaryPersonRow = memo(function BeneficiaryPersonRow({
@@ -14,6 +18,9 @@ export const BeneficiaryPersonRow = memo(function BeneficiaryPersonRow({
   onPress: () => void;
 }) {
   const picture = beneficiary.user?.picture_url;
+  const badge = getBeneficiaryStatusBadge(beneficiary);
+  const accessLabel = getVaultAccessScopeLabel((beneficiary as any).access_scope);
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -22,15 +29,52 @@ export const BeneficiaryPersonRow = memo(function BeneficiaryPersonRow({
     >
       <Avatar uri={picture} name={beneficiary.name} size="lg" />
       <View className="ml-4 flex-1">
-        <Text style={SETTINGS_TYPE.identityTitle}>
-          {beneficiary.name || 'Pending invitation'}
-        </Text>
+        <View className="flex-row items-center justify-between">
+          <Text style={SETTINGS_TYPE.identityTitle}>
+            {beneficiary.name || 'Pending invitation'}
+          </Text>
+          <View
+            style={{
+              backgroundColor: badge.bgColor,
+              borderColor: badge.borderColor,
+              borderWidth: 1,
+              borderRadius: 999,
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: FONTS.sansBold,
+                fontSize: 10,
+                color: badge.textColor,
+                letterSpacing: 0.3,
+              }}
+            >
+              {badge.label.toUpperCase()}
+            </Text>
+          </View>
+        </View>
+
         <Text numberOfLines={1} className="mt-0.5" style={SETTINGS_TYPE.body}>
           {beneficiary.email}
         </Text>
-        <Text className="mt-0.5" style={SETTINGS_TYPE.supporting}>
-          {beneficiary.relationship || (beneficiary.status === 'pending' ? 'Invitation pending' : 'Beneficiary')}
-        </Text>
+
+        <View className="mt-1 flex-row items-center gap-2">
+          <Text style={SETTINGS_TYPE.supporting}>
+            {beneficiary.relationship || 'Beneficiary'}
+          </Text>
+          <Text style={{ color: COLORS.textMuted }}>•</Text>
+          <Text
+            style={{
+              fontFamily: FONTS.sansMedium,
+              fontSize: 12,
+              color: COLORS.textWeak,
+            }}
+          >
+            {accessLabel}
+          </Text>
+        </View>
       </View>
       <ChevronRight size={24} color={COLORS.textBase} strokeWidth={2.2} />
     </TouchableOpacity>

@@ -37,3 +37,32 @@ export function mergeConversationMessagePages(pages: ConversationMessagePage[]) 
 
   return messages;
 }
+
+export function mergeAllConversationMessages(
+  persistedMessages: ChatListMessage[],
+  liveMessages: ChatListMessage[],
+): ChatListMessage[] {
+  if (liveMessages.length === 0) return persistedMessages;
+  if (persistedMessages.length === 0) return liveMessages;
+
+  const result = [...persistedMessages];
+
+  for (const live of liveMessages) {
+    const alreadyPersisted = persistedMessages.some((p) => {
+      if (p._id && live._id && p._id === live._id) return true;
+      const pText = (p.text ?? p.content ?? '').trim();
+      const liveText = (live.text ?? live.content ?? '').trim();
+      if (p.role === live.role && pText && liveText && pText === liveText) {
+        return true;
+      }
+      return false;
+    });
+
+    if (!alreadyPersisted) {
+      result.push(live);
+    }
+  }
+
+  return result;
+}
+

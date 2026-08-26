@@ -80,4 +80,17 @@ describe('edit profile form', () => {
     expect(mutation).toContain('export function useUploadProfilePicture');
     expect(mutation).toContain('endpoint.uploadPicture');
   });
+
+  test('resolves relative picture keys to full backend file URLs', async () => {
+    const { resolveFileUrl, getProfileAvatarUrl } = await import('./profile-form');
+
+    expect(resolveFileUrl(null)).toBeNull();
+    expect(resolveFileUrl(undefined)).toBeNull();
+    expect(resolveFileUrl('https://example.com/avatar.jpg')).toBe('https://example.com/avatar.jpg');
+    expect(resolveFileUrl('file:///var/tmp/avatar.jpg')).toBe('file:///var/tmp/avatar.jpg');
+    expect(resolveFileUrl('avatar_123.jpg')).toContain('/files/avatar_123.jpg');
+
+    expect(getProfileAvatarUrl({ picture: 'profile_pic.jpg' })).toContain('/files/profile_pic.jpg');
+    expect(getProfileAvatarUrl({ picture_url: 'https://cdn.example.com/p.jpg' })).toBe('https://cdn.example.com/p.jpg');
+  });
 });

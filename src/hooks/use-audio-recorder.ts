@@ -3,6 +3,7 @@ import {
   useAudioRecorder as useExpoAudioRecorder,
   AudioModule,
   RecordingPresets,
+  setAudioModeAsync,
 } from 'expo-audio';
 import { logger } from '@/lib/logger';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
@@ -28,6 +29,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       try {
         if (recorder.isRecording) {
           recorder.stop().catch(() => undefined);
+          setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => undefined);
         }
       } catch {
         // Native object already gone — nothing to clean up
@@ -45,7 +47,11 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
         return false;
       }
       if (!isMountedRef.current) return false;
-      // expo-audio manages audio mode internally — no setAudioModeAsync needed
+      // On iOS, AVAudioSession requires explicit allowsRecording permission
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+      });
       await recorder.record();
       return true;
     } catch (err) {
@@ -59,6 +65,14 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     try {
       if (!recorder.isRecording) return null;
       await recorder.stop();
+      try {
+        await setAudioModeAsync({
+          allowsRecording: false,
+          playsInSilentMode: true,
+        });
+      } catch {
+        // Ignore audio mode restoration error
+      }
       // expo-audio's AudioRecorder is a native SharedObject — the `uri` property
       // is populated asynchronously via a native→JS event that fires after the
       // `stop()` promise resolves. Yielding one macrotask tick gives the native
@@ -75,6 +89,10 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     try {
       if (recorder.isRecording) {
         await recorder.stop().catch(() => undefined);
+        await setAudioModeAsync({
+          allowsRecording: false,
+          playsInSilentMode: true,
+        }).catch(() => undefined);
       }
     } catch {
       // Native object already gone
