@@ -69,3 +69,28 @@ export function toProfileUpdatePayload(
     },
   };
 }
+
+export function resolveFileUrl(uriOrName?: string | null): string | null {
+  if (!uriOrName || typeof uriOrName !== 'string') return null;
+  const trimmed = uriOrName.trim();
+  if (!trimmed) return null;
+
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('file://') ||
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('blob:')
+  ) {
+    return trimmed;
+  }
+
+  const { API_BASE_URL } = require('@/lib/env');
+  return `${API_BASE_URL}/files/${encodeURIComponent(trimmed)}`;
+}
+
+export function getProfileAvatarUrl(profile?: Partial<IUser> | null): string | null {
+  if (!profile) return null;
+  return resolveFileUrl(profile.picture_url || profile.picture);
+}
+

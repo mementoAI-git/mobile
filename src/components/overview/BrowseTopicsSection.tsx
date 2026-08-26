@@ -1,9 +1,11 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { FONTS } from '@/constants/tokens';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useOverviewPrompts } from '@/hooks/queries/use-prompts';
+import { useEnrichmentStats } from '@/hooks/use-enrichment-stats';
+import { prioritizePromptsByEnrichment } from '@/features/prompts/prompt-prioritization';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { TopicCard } from './TopicCard';
 
@@ -20,7 +22,15 @@ const CATEGORY_META: Record<string, { image: any }> = {
 
 // Isolated per-item component so each prompt's onPress is a stable useCallback
 // rather than an inline closure recreated on every parent render.
-function TopicCardItem({ prompt, router }: { prompt: any; router: ReturnType<typeof useRouter> }) {
+function TopicCardItem({
+  prompt,
+  badge,
+  router,
+}: {
+  prompt: any;
+  badge?: string;
+  router: ReturnType<typeof useRouter>;
+}) {
   const cat = prompt.category?.toLowerCase() || 'wellbeing';
   const meta = CATEGORY_META[cat] || CATEGORY_META['wellbeing'];
 
@@ -41,6 +51,7 @@ function TopicCardItem({ prompt, router }: { prompt: any; router: ReturnType<typ
       title={prompt.title}
       image={meta.image}
       category={prompt.category}
+      badge={badge}
       onPress={handlePress}
     />
   );
@@ -49,15 +60,20 @@ function TopicCardItem({ prompt, router }: { prompt: any; router: ReturnType<typ
 const MemoTopicCardItem = React.memo(TopicCardItem);
 
 export function BrowseTopicsSection() {
-  const { data: overviewTopics, isLoading } = useOverviewPrompts();
-  const prompts = overviewTopics || [];
+  const { data: overviewTopics, isLoading: promptsLoading } = useOverviewPrompts();
+  const { stats, isLoading: statsLoading } = useEnrichmentStats();
+  const rawPrompts = overviewTopics || [];
   const router = useRouter();
+
+  const prioritizedPrompts = useMemo(() => {
+    return prioritizePromptsByEnrichment(rawPrompts, stats);
+  }, [rawPrompts, stats]);
 
   const handleSeeAll = useCallback(() => {
     router.push('/(tabs)/explore');
   }, [router]);
 
-  if (isLoading) {
+  if (promptsLoading || (statsLoading && !overviewTopics)) {
     return (
       <View className="gap-5">
         <Skeleton className="h-8 w-48 ml-1 rounded-full" />
@@ -70,7 +86,7 @@ export function BrowseTopicsSection() {
     );
   }
 
-  if (!prompts || prompts.length === 0) return null;
+  if (prioritizedPrompts.length === 0) return null;
 
   return (
     <Animated.View entering={FadeInDown.delay(250)} className="gap-5">
@@ -90,11 +106,15 @@ export function BrowseTopicsSection() {
         snapToInterval={240}
         decelerationRate="fast"
       >
-        {prompts.map((t, i) => (
-          <MemoTopicCardItem key={t._id || i} prompt={t} router={router} />
+        {prioritizedPrompts.map((item, index) => (
+          <MemoTopicCardItem
+            key={item.prompt._id || item.prompt.title || index}
+            prompt={item.prompt}
+            badge={item.isLowestDimension ? 'Grow this chapter' : undefined}
+            router={router}
+          />
         ))}
       </ScrollView>
     </Animated.View>
   );
 }
-

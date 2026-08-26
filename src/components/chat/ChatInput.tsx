@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import * as Device from 'expo-device';
 import {
   View, TextInput, TouchableOpacity, Platform, StyleSheet,
   Keyboard, ScrollView, Image, ActivityIndicator, AccessibilityInfo, useWindowDimensions, InteractionManager,
@@ -157,6 +158,7 @@ interface ChatInputProps {
   loading?: boolean;
   maxComposerHeight?: number;
   parentOwnsBottomSafeArea?: boolean;
+  initialAudioUri?: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -178,15 +180,14 @@ const ACTION_SQUIRCLE_RADIUS = 18;
 const COMPACT_TEXT_MIN_HEIGHT = Platform.select({
   ios: verticalScale(34),
   android: verticalScale(33),
-  default: verticalScale(24),
-});
-const MULTILINE_DETECTION_BUFFER = scale(2);
+}) as number;
+const COMPACT_MULTILINE_VERTICAL_PADDING = scale(4);
 const EXPANDED_TEXT_MIN_HEIGHT = verticalScale(22);
 const SELECTED_ASSET_OUTER_SIZE = scale(74);
 const SELECTED_ASSET_SIZE = scale(70);
 const CHAT_HEADER_RESERVE = verticalScale(72);
+const MULTILINE_DETECTION_BUFFER = 4;
 const TEXT_HEIGHT_BUFFER = 0;
-const COMPACT_MULTILINE_VERTICAL_PADDING = 0;
 const EXPANDED_TEXT_VERTICAL_PADDING = 0;
 const EXPANDED_COMPOSER_CHROME_HEIGHT = scale(20);
 const COMPACT_TEXT_EXPANSION_BUFFER = 0;
@@ -201,6 +202,7 @@ export function ChatInput({
   loading,
   maxComposerHeight,
   parentOwnsBottomSafeArea = false,
+  initialAudioUri,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const [multiline, setMultiline] = useState(false);
@@ -268,14 +270,24 @@ export function ChatInput({
     },
   });
 
+  useEffect(() => {
+    if (initialAudioUri) {
+      void uploadAndAdd(initialAudioUri, 'audio/m4a', 'voice-reflection.m4a');
+      setIsTextComposerExpanded(true);
+    }
+  }, [initialAudioUri, uploadAndAdd]);
+
   // ─── Voice-to-text ────────────────────────────────────────────────────────
 
   const handleVoiceError = useCallback((err: Error) => {
     const lower = err.message.toLowerCase();
-    const message = lower.includes('permission')
-      ? 'Allow microphone access to dictate in Memento.'
-      : 'Voice dictation stopped. Try again.';
-    toast(message, 'info');
+    if (lower.includes('permission')) {
+      toast('Allow microphone and speech recognition access to dictate.', 'info');
+    } else if (!Device.isDevice || lower.includes('speech') || lower.includes('recognition') || lower.includes('1700')) {
+      toast('Live speech dictation requires a physical device with Siri/Dictation enabled.', 'info');
+    } else {
+      toast('Voice dictation stopped. Try again.', 'info');
+    }
   }, [toast]);
 
   const handleDictationPermissionDenied = useCallback((permission: PermissionLike) => {
@@ -1276,6 +1288,7 @@ const styles = StyleSheet.create({
     height: SECONDARY_ACTION_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'transparent',
     flexShrink: 0,
   },
   plusIconSurface: {
@@ -1283,13 +1296,13 @@ const styles = StyleSheet.create({
     height: PLUS_ICON_SURFACE_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.fillWeak,
+    backgroundColor: 'transparent',
   },
   plusIconSurfaceEmpty: {
     borderRadius: PLUS_ICON_EMPTY_RADIUS,
   },
   plusIconSurfaceActive: {
-    borderRadius: PLUS_ICON_ACTIVE_RADIUS,
+    borderRadius: PLUS_ICON_EMPTY_RADIUS,
   },
 
   // Text wrap

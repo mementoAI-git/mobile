@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, TouchableOpacity } from 'react-native';
-import { Mic, CheckCircle2 } from 'lucide-react-native';
+import { View, TouchableOpacity, Text } from 'react-native';
+import { Mic, CheckCircle2, Square, MessageSquareText } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDailyPrompts } from '@/hooks/queries/use-prompts';
+import { useAudioRecorder } from '@/hooks/use-audio-recorder';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
+import { type PermissionLike } from '@/lib/permission-recovery';
+import { toast } from '@/components/ui/Toast';
+import {
+  formatRecordingDuration,
+  buildPromptAudioReflectionTarget,
+} from '@/features/prompts/prompt-audio-capture';
 import type { IDashboardPromptSlot } from '@/types';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 
@@ -14,6 +22,25 @@ export function DailyPromptSection() {
   const prompts = dailyPrompts || [];
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isFinishingAudio, setIsFinishingAudio] = useState(false);
+
+  const handleMicrophonePermissionDenied = useCallback((permission: PermissionLike) => {
+    showPermissionRecoveryAlert({
+      permission,
+      title: 'Microphone is off',
+      description: 'Allow microphone access to record your voice reflection.',
+      settingsDescription: 'Microphone access is turned off in Settings. Turn it back on to record your voice reflection.',
+    });
+  }, []);
+
+  const handleRecordingError = useCallback((err: unknown) => {
+    toast('Could not start recording. Opening reflection chat…', 'info');
+  }, []);
+
+  const { start: startRecording, stop: stopRecording, isRecording, duration } = useAudioRecorder({
+    onPermissionDenied: handleMicrophonePermissionDenied,
+    onError: handleRecordingError,
+  });
 
   useEffect(() => {
     if (prompts.length > 0 && activeIndex >= prompts.length) {
@@ -27,18 +54,39 @@ export function DailyPromptSection() {
   const handleCapture = useCallback(() => {
     if (!activeRow || activeRow.answered) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // Navigate to chat as a prompt reflection — same pattern as explore page
-    // promptTitle is available immediately before the API resolves (shown pinned at top)
-    // AI-generated daily prompts have no stored _id so we use 'new'
-    router.push({
-      pathname: '/chat/[id]',
-      params: {
-        id: activeRow.prompt?._id || 'new',
-        type: 'prompt',
-        promptTitle: promptText || '',
-      },
-    });
+    const target = buildPromptAudioReflectionTarget(
+      activeRow.prompt?._id || 'new',
+      promptText || ''
+    );
+    router.push(target as any);
   }, [activeRow, promptText, router]);
+
+  const handleToggleVoice = useCallback(async () => {
+    if (!activeRow || activeRow.answered || isFinishingAudio) return;
+
+    if (isRecording) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      setIsFinishingAudio(true);
+      try {
+        const audioUri = await stopRecording();
+        const target = buildPromptAudioReflectionTarget(
+          activeRow.prompt?._id || 'new',
+          promptText || '',
+          audioUri || undefined
+        );
+        router.push(target as any);
+      } finally {
+        setIsFinishingAudio(false);
+      }
+    } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const started = await startRecording();
+      if (!started) {
+        // If recording couldn't start (e.g. simulator without audio input), smoothly navigate to chat
+        handleCapture();
+      }
+    }
+  }, [activeRow, handleCapture, isFinishingAudio, isRecording, promptText, router, startRecording, stopRecording]);
 
   const handleSelectPrompt = useCallback((index: number) => {
     Haptics.selectionAsync();
@@ -95,17 +143,42 @@ export function DailyPromptSection() {
               You've already shared a reflection today.
             </Animated.Text>
           </View>
-        ) : (
+        ) : isRecording ? (
           <TouchableOpacity
-            onPress={handleCapture}
+            onPress={handleToggleVoice}
             activeOpacity={0.8}
-            className="flex-row items-center justify-center gap-2 bg-brand rounded-full h-12 px-6 self-start"
+            className="flex-row items-center justify-center gap-3 bg-brand rounded-full h-12 px-6 self-start"
           >
-            <Mic size={18} color="white" strokeWidth={2.5} />
+            <View className="size-3 rounded-full bg-white animate-pulse" />
             <Animated.Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>
-              Write or speak it
+              Recording ({formatRecordingDuration(duration || 0)}) • Tap to send
             </Animated.Text>
+            <Square size={14} color="white" fill="white" />
           </TouchableOpacity>
+        ) : (
+          <View className="flex-row items-center gap-3">
+            <TouchableOpacity
+              onPress={handleToggleVoice}
+              activeOpacity={0.8}
+              className="flex-row items-center justify-center gap-2 bg-brand rounded-full h-12 px-5"
+            >
+              <Mic size={18} color="white" strokeWidth={2.5} />
+              <Animated.Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>
+                Speak reflection
+              </Animated.Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleCapture}
+              activeOpacity={0.7}
+              className="flex-row items-center justify-center gap-2 bg-fill-weaker border border-stroke-weaker rounded-full h-12 px-5"
+            >
+              <MessageSquareText size={16} color={COLORS.textStrong} strokeWidth={2} />
+              <Animated.Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>
+                Write
+              </Animated.Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </Animated.View>

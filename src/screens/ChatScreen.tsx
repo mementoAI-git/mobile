@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import { ChatInput, type ChatSendPayload } from '@/components/chat/ChatInput';
 import { MilestoneCard } from '@/components/chat/MilestoneCard';
 import { DeepDiveNudge } from '@/components/chat/DeepDiveNudge';
 import { DeepDiveBanner } from '@/components/chat/DeepDiveBanner';
+import { PromptReflectionHeader } from '@/components/chat/PromptReflectionHeader';
 import { ChatSkeleton } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { dimensionLabel } from '@/constants/enrichment';
@@ -56,6 +57,10 @@ const DEFAULT_HEADER_HEIGHT = 70;
 const CHAT_VISIBLE_CONTENT_POSITION = Object.freeze({
   autoscrollToBottomThreshold: 0.2,
   startRenderingFromBottom: true,
+});
+const PROMPT_VISIBLE_CONTENT_POSITION = Object.freeze({
+  autoscrollToBottomThreshold: 0.2,
+  startRenderingFromBottom: false,
 });
 
 function ChatDateSeparator({ label }: { label: string }) {
@@ -114,7 +119,12 @@ export default function ChatScreen() {
     return () => runtimeDiagnostics.record('screen', 'unmount', { screen: 'chat' });
   }, []);
   // promptLabel is only set by BrowseTopicsSection topic cards — daily prompts don't set it
-  const { promptLabel, focusMessageId, focusAttachmentId } = useLocalSearchParams<{ promptLabel?: string; focusMessageId?: string; focusAttachmentId?: string }>();
+  const { promptLabel, focusMessageId, focusAttachmentId, initialAudioUri } = useLocalSearchParams<{
+    promptLabel?: string;
+    focusMessageId?: string;
+    focusAttachmentId?: string;
+    initialAudioUri?: string;
+  }>();
 
   const {
     isPromptType,
@@ -248,9 +258,12 @@ export default function ChatScreen() {
     });
   }, [activeChatId, router]);
 
+  const allMessagesRef = useRef(allMessages);
+  allMessagesRef.current = allMessages;
+
   const handleScrollToOriginal = useCallback((quotedText: string) => {
     // Find the message whose content matches the quoted text snippet
-    const idx = allMessages.findIndex((m: any) => {
+    const idx = allMessagesRef.current.findIndex((m: any) => {
       const body = m.text || m.content || '';
       return body.includes(quotedText.slice(0, 60));
     });
@@ -260,7 +273,7 @@ export default function ChatScreen() {
         Haptics.selectionAsync();
       } catch { /* scrollToIndex can throw if item not yet rendered */ }
     }
-  }, [allMessages]);
+  }, [flatListRef]);
 
   const handlePreviewAttachments = useCallback((request: ChatAttachmentPreviewRequest) => {
     setAttachmentPreview(request);
@@ -298,8 +311,9 @@ export default function ChatScreen() {
   const renderMessage = useCallback(
     ({ item, index }: { item: any; index: number }) => {
       let previousTimestamp: string | undefined;
+      const msgs = allMessagesRef.current;
       for (let i = index - 1; i >= 0; i -= 1) {
-        const ts = (allMessages[i] as any)?.created_at || (allMessages[i] as any)?.createdAt;
+        const ts = (msgs[i] as any)?.created_at || (msgs[i] as any)?.createdAt;
         if (ts) {
           previousTimestamp = ts;
           break;
@@ -319,7 +333,7 @@ export default function ChatScreen() {
         />
       );
     },
-    [allMessages, handleReplyMessage, handleScrollToOriginal, handlePreviewAttachments, highlightedMessageId],
+    [handleReplyMessage, handleScrollToOriginal, handlePreviewAttachments, highlightedMessageId],
   );
 
   const streamingFooterComponent = React.useMemo(() => {
@@ -333,7 +347,8 @@ export default function ChatScreen() {
   }, [isActuallyStreaming, streamingText]);
 
   const promptHeaderComponent = React.useMemo(() => {
-    const showPrompt = isPromptType && Boolean(promptMemory);
+    const displayTitle = promptTitle || promptMemory?.title || '';
+    const showPrompt = isPromptType && Boolean(displayTitle);
     if (!isFetchingOlderMessages && !showPrompt) return null;
 
     return (
@@ -344,19 +359,15 @@ export default function ChatScreen() {
             <Text style={styles.loadingOlderLabel}>Loading earlier messages</Text>
           </View>
         )}
-        {showPrompt && promptMemory && (
-          <View className="mx-5 my-4 p-5 rounded-2xl bg-fill-weaker">
-            <Animated.Text
-              className="text-base text-text-strong leading-relaxed"
-              style={{ fontFamily: FONTS.serif }}
-            >
-              {promptMemory.title}
-            </Animated.Text>
-          </View>
-        )}
+        {showPrompt && displayTitle ? (
+          <PromptReflectionHeader
+            title={displayTitle}
+            category={promptLabel}
+          />
+        ) : null}
       </>
     );
-  }, [isFetchingOlderMessages, isPromptType, promptMemory]);
+  }, [isFetchingOlderMessages, isPromptType, promptTitle, promptMemory?.title, promptLabel]);
 
   const messagesContentStyle = React.useMemo(
     () => [styles.messagesContent, { paddingBottom: messageBottomPadding }],
@@ -400,207 +411,176 @@ export default function ChatScreen() {
       onLayout={(event) => setChatSurfaceHeight(event.nativeEvent.layout.height)}
     >
 
-          {/* ── Header ───────────────────────────────────────────────────── */}
-          <View style={styles.header} onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}>
-            <TouchableOpacity
-              accessibilityLabel="Go back"
-              accessibilityRole="button"
-              onPress={handleBack}
-              activeOpacity={0.7}
-              style={styles.headerButton}
-            >
-              <ArrowLeft size={21} color={COLORS.textStrong} strokeWidth={2.2} />
-            </TouchableOpacity>
+      {/* ── Header ───────────────────────────────────────────────────── */}
+      <View style={styles.header} onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}>
+        <TouchableOpacity
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+          onPress={handleBack}
+          activeOpacity={0.7}
+          style={styles.headerButton}
+        >
+          <ArrowLeft size={21} color={COLORS.textStrong} strokeWidth={2.2} />
+        </TouchableOpacity>
 
-            <Text numberOfLines={1} style={styles.headerTitle}>Chat</Text>
+        <Text numberOfLines={1} style={styles.headerTitle}>Chat</Text>
 
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                accessibilityLabel="Narration"
-                accessibilityRole="button"
-                activeOpacity={0.7}
-                onPress={handleNarration}
-                style={styles.headerButton}
-              >
-                <Volume2 size={20} color={COLORS.textStrong} strokeWidth={2.2} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                accessibilityLabel="Start voice call"
-                accessibilityRole="button"
-                activeOpacity={0.7}
-                onPress={handleVoiceCall}
-                style={styles.headerButton}
-              >
-                <PhoneCall size={20} color={COLORS.textStrong} strokeWidth={2.2} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                accessibilityLabel="Open chat settings"
-                accessibilityRole="button"
-                activeOpacity={0.7}
-                onPress={handleActions}
-                style={styles.headerButton}
-              >
-                <MoreHorizontal size={21} color={COLORS.textStrong} strokeWidth={2.5} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* ── Contextual chat surfaces ───────────────────────────── */}
-          {!isPromptType && (
-            <View>
-              {/* Deep dive banner (while in deep_dive mode) */}
-              {chatMode === 'deep_dive' && deepDiveDimension && (
-                <View className="px-4 pt-2">
-                  <DeepDiveBanner
-                    dimensionLabel={dimensionLabel(deepDiveDimension)}
-                    onExit={handleExitDeepDive}
-                  />
-                </View>
-              )}
-
-
-            </View>
-          )}
-
-          {/* ── Deep Dive Nudge (floating above messages) ─────────────── */}
-          {!isPromptType && showDeepDiveNudge && nudgeDimension && (
-            <DeepDiveNudge
-              dimension={nudgeDimension}
-              question={nudgeQuestion}
-              onDeepDive={handleStartDeepDiveFromNudge}
-              onDismiss={handleDismissNudge}
-            />
-          )}
-
-          {/* ── Prompt question card — pinned as permanent anchor for the reflection session ── */}
-          {isPromptType && promptTitle && (
-            <Animated.View
-              entering={FadeInDown.duration(400)}
-              className="mx-5 mb-3"
-            >
-              <View
-                className="bg-white rounded-[20px] px-5 py-4 gap-3"
-              >
-                <View
-                  className="self-start rounded-full px-2.5 py-0.5"
-                  style={{ backgroundColor: COLORS.brandSubtle }}
-                >
-                  <Animated.Text
-                    className="text-[10px] font-bold uppercase tracking-widest"
-                    style={{ fontFamily: FONTS.sansBold, color: COLORS.brand }}
-                  >
-                    {promptLabel
-                      ? promptLabel.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-                      : "Today's reflection"}
-                  </Animated.Text>
-                </View>
-                <Animated.Text
-                  className="text-[18px] text-text-strong leading-snug"
-                  style={{ fontFamily: FONTS.serif }}
-                >
-                  {promptTitle}
-                </Animated.Text>
-              </View>
-            </Animated.View>
-          )}
-
-          {/* ── Messages ─────────────────────────────────────────────── */}
-          <BlurTargetView ref={blurTargetRef} style={styles.messageList}>
-            {(enrichmentStats.deltaToday > 0 || enrichmentStats.milestoneJustReached) && (
-              <MilestoneCard
-                enrichmentDelta={enrichmentStats.deltaToday}
-                milestoneLabel={
-                  enrichmentStats.milestoneJustReached
-                    ? enrichmentStats.stats?.milestone?.reached_label
-                    : null
-                }
-              />
-            )}
-            {isLoading && !allMessages.length ? (
-              <ChatSkeleton />
-            ) : (
-              <FlashList
-                ref={flatListRef}
-                data={allMessages}
-                keyExtractor={getChatMessageKey}
-                getItemType={getChatMessageItemType}
-                renderItem={renderMessage}
-                onStartReached={handleLoadOlderMessages}
-                onStartReachedThreshold={0.2}
-                contentContainerStyle={messagesContentStyle}
-                maintainVisibleContentPosition={CHAT_VISIBLE_CONTENT_POSITION}
-                showsVerticalScrollIndicator={false}
-                ListHeaderComponent={promptHeaderComponent}
-                ListFooterComponent={streamingFooterComponent}
-                ListEmptyComponent={listEmptyComponent}
-              />
-            )}
-          </BlurTargetView>
-
-          <View
-            pointerEvents="box-none"
-            style={styles.composerOverlay}
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            accessibilityLabel="Narration"
+            accessibilityRole="button"
+            activeOpacity={0.7}
+            onPress={handleNarration}
+            style={styles.headerButton}
           >
-            <BlurView
-              pointerEvents="none"
-              intensity={Platform.OS === 'android' ? 90 : 75}
-              tint="light"
-              blurTarget={blurTargetRef}
-              blurMethod={Platform.OS === 'android' ? 'dimezisBlurViewSdk31Plus' : undefined}
-              style={styles.composerBackdrop}
-            />
-            {/* ── Reply Quote Preview Panel ────────────────────────────── */}
-            {replyQuote && (
-              <Animated.View
-                entering={FadeInDown.duration(200)}
-                className="mx-5 mb-2.5 p-3 bg-fill-weaker rounded-2xl flex-row items-center justify-between"
-                onLayout={(event) => setReplyQuoteHeight(event.nativeEvent.layout.height)}
-              >
-                <View className="flex-1 pr-3 pl-3" style={{ borderLeftWidth: 3, borderLeftColor: COLORS.brand }}>
-                  <Text
-                    className="text-[10px] text-brand font-bold uppercase tracking-wider mb-0.5"
-                    style={{ fontFamily: FONTS.sansBold }}
-                  >
-                    Replying to {replyQuote.role === 'user' ? 'your message' : 'Memento'}
-                  </Text>
-                  <Text
-                    className="text-[12px] text-text-weak leading-relaxed"
-                    numberOfLines={1}
-                    style={{ fontFamily: FONTS.sans }}
-                  >
-                    {replyQuote.text}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={handleDismissReplyQuote}
-                  activeOpacity={0.7}
-                  hitSlop={10}
-                  className="size-6 rounded-full bg-fill-weaker items-center justify-center"
-                >
-                  <X size={12} color={COLORS.textWeak} />
-                </TouchableOpacity>
-              </Animated.View>
-            )}
-
-            {/* ── Chat Input ────────────────────────────────────────────── */}
-            <ChatInput
-              maxComposerHeight={composerOverlayMaxHeight}
-              parentOwnsBottomSafeArea
-              onSend={handleSendPayload}
-              onStop={stop}
-              loading={isActuallyStreaming || isLoading}
-            />
-          </View>
-
-          {attachmentPreview && (
-            <MediaPreviewModal
-              visible
-              attachments={attachmentPreview.attachments}
-              initialIndex={attachmentPreview.initialIndex}
-              onClose={handleCloseAttachmentPreview}
-            />
-          )}
+            <Volume2 size={20} color={COLORS.textStrong} strokeWidth={2.2} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityLabel="Start voice call"
+            accessibilityRole="button"
+            activeOpacity={0.7}
+            onPress={handleVoiceCall}
+            style={styles.headerButton}
+          >
+            <PhoneCall size={20} color={COLORS.textStrong} strokeWidth={2.2} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityLabel="Open chat settings"
+            accessibilityRole="button"
+            activeOpacity={0.7}
+            onPress={handleActions}
+            style={styles.headerButton}
+          >
+            <MoreHorizontal size={21} color={COLORS.textStrong} strokeWidth={2.5} />
+          </TouchableOpacity>
         </View>
+      </View>
+
+      {/* ── Contextual chat surfaces ───────────────────────────── */}
+      {!isPromptType && (
+        <View>
+          {/* Deep dive banner (while in deep_dive mode) */}
+          {chatMode === 'deep_dive' && deepDiveDimension && (
+            <View className="px-4 pt-2">
+              <DeepDiveBanner
+                dimensionLabel={dimensionLabel(deepDiveDimension)}
+                onExit={handleExitDeepDive}
+              />
+            </View>
+          )}
+
+
+        </View>
+      )}
+
+      {/* ── Deep Dive Nudge (floating above messages) ─────────────── */}
+      {!isPromptType && showDeepDiveNudge && nudgeDimension && (
+        <DeepDiveNudge
+          dimension={nudgeDimension}
+          question={nudgeQuestion}
+          onDeepDive={handleStartDeepDiveFromNudge}
+          onDismiss={handleDismissNudge}
+        />
+      )}
+
+      {/* ── Messages ─────────────────────────────────────────────── */}
+      <BlurTargetView ref={blurTargetRef} style={styles.messageList}>
+        {(enrichmentStats.deltaToday > 0 || enrichmentStats.milestoneJustReached) && (
+          <MilestoneCard
+            enrichmentDelta={enrichmentStats.deltaToday}
+            milestoneLabel={
+              enrichmentStats.milestoneJustReached
+                ? enrichmentStats.stats?.milestone?.reached_label
+                : null
+            }
+          />
+        )}
+        {isLoading && !allMessages.length ? (
+          <ChatSkeleton />
+        ) : (
+          <FlashList
+            ref={flatListRef}
+            data={allMessages}
+            keyExtractor={getChatMessageKey}
+            getItemType={getChatMessageItemType}
+            renderItem={renderMessage}
+            onStartReached={handleLoadOlderMessages}
+            onStartReachedThreshold={0.2}
+            contentContainerStyle={messagesContentStyle}
+            maintainVisibleContentPosition={isPromptType ? PROMPT_VISIBLE_CONTENT_POSITION : CHAT_VISIBLE_CONTENT_POSITION}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={promptHeaderComponent}
+            ListFooterComponent={streamingFooterComponent}
+            ListEmptyComponent={listEmptyComponent}
+          />
+        )}
+      </BlurTargetView>
+
+      <View
+        pointerEvents="box-none"
+        style={styles.composerOverlay}
+      >
+        <BlurView
+          pointerEvents="none"
+          intensity={Platform.OS === 'android' ? 90 : 75}
+          tint="light"
+          blurTarget={blurTargetRef}
+          blurMethod={Platform.OS === 'android' ? 'dimezisBlurViewSdk31Plus' : undefined}
+          style={styles.composerBackdrop}
+        />
+        {/* ── Reply Quote Preview Panel ────────────────────────────── */}
+        {replyQuote && (
+          <Animated.View
+            entering={FadeInDown.duration(200)}
+            className="mx-5 mb-2.5 p-3 bg-fill-weaker rounded-2xl flex-row items-center justify-between"
+            onLayout={(event) => setReplyQuoteHeight(event.nativeEvent.layout.height)}
+          >
+            <View className="flex-1 pr-3 pl-3" style={{ borderLeftWidth: 3, borderLeftColor: COLORS.brand }}>
+              <Text
+                className="text-[10px] text-brand font-bold uppercase tracking-wider mb-0.5"
+                style={{ fontFamily: FONTS.sansBold }}
+              >
+                Replying to {replyQuote.role === 'user' ? 'your message' : 'Memento'}
+              </Text>
+              <Text
+                className="text-[12px] text-text-weak leading-relaxed"
+                numberOfLines={1}
+                style={{ fontFamily: FONTS.sans }}
+              >
+                {replyQuote.text}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={handleDismissReplyQuote}
+              activeOpacity={0.7}
+              hitSlop={10}
+              className="size-6 rounded-full bg-fill-weaker items-center justify-center"
+            >
+              <X size={12} color={COLORS.textWeak} />
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        {/* ── Chat Input ────────────────────────────────────────────── */}
+        <ChatInput
+          maxComposerHeight={composerOverlayMaxHeight}
+          parentOwnsBottomSafeArea
+          initialAudioUri={initialAudioUri}
+          onSend={handleSendPayload}
+          onStop={stop}
+          loading={isActuallyStreaming || isLoading}
+        />
+      </View>
+
+      {attachmentPreview && (
+        <MediaPreviewModal
+          visible
+          attachments={attachmentPreview.attachments}
+          initialIndex={attachmentPreview.initialIndex}
+          onClose={handleCloseAttachmentPreview}
+        />
+      )}
+    </View>
   );
 
   return (
@@ -705,6 +685,6 @@ const styles = StyleSheet.create({
   composerBackdrop: {
     ...StyleSheet.absoluteFill,
     backgroundColor: COLORS.background,
-    top: -12,
+    // top: -12,
   },
 });

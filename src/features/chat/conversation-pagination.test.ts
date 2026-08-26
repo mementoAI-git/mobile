@@ -44,4 +44,22 @@ describe('conversation cursor pagination', () => {
       'm4',
     ]);
   });
+
+  test('deduplicates live optimistic messages with newly fetched server messages', async () => {
+    const pagination = await import('./conversation-pagination');
+
+    const persisted = [
+      { _id: 'srv-1', role: 'user', text: "What's the moral?" },
+      { _id: 'srv-2', role: 'ai', text: "That's a sharp question, Saviour." },
+    ];
+    const live = [
+      { _id: 'chat-opt-1', role: 'user', text: "What's the moral?" },
+      { _id: 'chat-opt-2', role: 'ai', text: "That's a sharp question, Saviour." },
+    ];
+
+    const merged = pagination.mergeAllConversationMessages(persisted, live);
+    expect(merged).toHaveLength(2);
+    expect(merged[0]._id).toBe('srv-1');
+    expect(merged[1]._id).toBe('srv-2');
+  });
 });

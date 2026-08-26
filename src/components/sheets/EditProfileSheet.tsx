@@ -19,6 +19,7 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import {
   normalizeProfileForm,
   toProfileUpdatePayload,
+  resolveFileUrl,
   type ProfileFormValues,
 } from '@/features/account/profile-form';
 import { useUpdateProfile, useUploadProfilePicture } from '@/hooks/mutations/use-profile-mutation';
@@ -249,9 +250,9 @@ export function EditProfileSheet({
                   justifyContent: 'center',
                 }}
               >
-                {localAvatarUri || profile?.picture_url || profile?.picture ? (
+                {localAvatarUri || resolveFileUrl(profile?.picture_url || profile?.picture) ? (
                   <Image
-                    source={{ uri: localAvatarUri || profile?.picture_url || profile?.picture }}
+                    source={{ uri: localAvatarUri || resolveFileUrl(profile?.picture_url || profile?.picture)! }}
                     style={{ width: '100%', height: '100%' }}
                     resizeMode="cover"
                   />

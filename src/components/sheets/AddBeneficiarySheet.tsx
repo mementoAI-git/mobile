@@ -9,6 +9,10 @@ import { Button } from '@/components/ui/Button';
 import { toast } from '@/components/ui/Toast';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { buildBeneficiaryInvitePayload, GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
+import {
+  VAULT_ACCESS_OPTIONS,
+  type VaultAccessScope,
+} from '@/features/beneficiaries/vault-permissions';
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { useAddBeneficiary } from '@/hooks/mutations/use-beneficiary-mutations';
@@ -80,6 +84,9 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
     return editData.groups.map(g => typeof g === 'string' ? g : (g as any)._id).filter(Boolean);
   }, [editData]);
 
+  const [accessScope, setAccessScope] = useState<VaultAccessScope>(
+    (editData as any)?.access_scope || 'full_vault'
+  );
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(initialGroups);
   const [avatar, setAvatar] = useState<PickedAvatar | null>(null);
   const addBeneficiary = useAddBeneficiary();
@@ -177,6 +184,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
       about,
       avatarFileId,
       groupIds: selectedGroupIds,
+      accessScope,
     });
     if (!payload) return;
 
@@ -197,7 +205,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
     } finally {
       setIsUpdating(false);
     }
-  }, [about, addBeneficiary, updateBeneficiary, isEdit, editData, avatar, email, name, onClose, relationship, selectedGroupIds, uploadFile]);
+  }, [about, accessScope, addBeneficiary, updateBeneficiary, isEdit, editData, avatar, email, name, onClose, relationship, selectedGroupIds, uploadFile]);
 
   const footer = (
     <View style={{
@@ -279,6 +287,78 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
               <FieldLabel>About</FieldLabel>
               <SheetInput value={about} onChangeText={setAbout} multiline placeholder="Enter a short description of this person here" />
             </View>
+
+            <View style={{ gap: 10 }}>
+              <FieldLabel>Vault access level</FieldLabel>
+              <View style={{ gap: 8 }}>
+                {VAULT_ACCESS_OPTIONS.map((option) => {
+                  const selected = accessScope === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setAccessScope(option.value);
+                      }}
+                      activeOpacity={0.76}
+                      style={{
+                        padding: 14,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: selected ? COLORS.brand : COLORS.strokeWeak,
+                        backgroundColor: selected ? 'rgba(255, 94, 0, 0.04)' : COLORS.card,
+                        gap: 3,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Text
+                          style={{
+                            fontFamily: FONTS.sansBold,
+                            fontSize: 15,
+                            color: selected ? COLORS.brand : COLORS.textStrong,
+                          }}
+                        >
+                          {option.title}
+                        </Text>
+                        <View
+                          style={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: 9,
+                            borderWidth: 2,
+                            borderColor: selected ? COLORS.brand : COLORS.strokeWeak,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {selected ? (
+                            <View
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: 4,
+                                backgroundColor: COLORS.brand,
+                              }}
+                            />
+                          ) : null}
+                        </View>
+                      </View>
+                      <Text
+                        style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 13,
+                          color: COLORS.textWeak,
+                          lineHeight: 18,
+                        }}
+                      >
+                        {option.description}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
             <View style={{ gap: 8 }}>
               <FieldLabel>Add to group(s)</FieldLabel>
               <View style={{ minHeight: 132, borderWidth: 1, borderColor: COLORS.strokeWeak, borderRadius: 16, backgroundColor: COLORS.card, padding: 12, gap: 10 }}>

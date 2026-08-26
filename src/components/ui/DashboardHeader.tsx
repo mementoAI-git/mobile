@@ -4,6 +4,7 @@ import Animated from 'react-native-reanimated';
 import { Zap } from 'lucide-react-native';
 import { Avatar } from './Avatar';
 import { useUserStore, useUiStore } from '@/store';
+import { useProfile } from '@/hooks/queries/use-profile';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
 import * as Haptics from 'expo-haptics';
@@ -21,8 +22,10 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ title, showStreak = true, rightElement, onStreakPress }: DashboardHeaderProps) {
   const router = useRouter();
   const user = useUserStore((s) => s.user);
+  const { data: profile } = useProfile();
+  const activeUser = profile || user;
   const openSheet = useUiStore((s) => s.openSheet);
-  const streakCount = Number(user?.streak) || 0;
+  const streakCount = Number(activeUser?.streak) || 0;
 
   const handleStreakPress = useCallback(() => {
     Haptics.selectionAsync();
@@ -76,7 +79,11 @@ export function DashboardHeader({ title, showStreak = true, rightElement, onStre
             hitSlop={4}
             className="border-2 border-transparent focus:border-brand/20 rounded-full ml-1"
           >
-            <Avatar uri={user?.picture_url} name={user?.first_name || user?.email} size="md" />
+            <Avatar
+              uri={activeUser?.picture_url || activeUser?.picture}
+              name={activeUser?.fullname || activeUser?.first_name || activeUser?.email}
+              size="md"
+            />
           </TouchableOpacity>
         </View>
       </View>

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { post } from '@/api/mutations';
+import { put } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import type { ProfileUpdatePayload } from '@/features/account/profile-form';
@@ -12,8 +12,17 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: ProfileUpdatePayload) =>
-      post<IUser, ProfileUpdatePayload>(endpoint.profile, payload),
+    mutationFn: async (payload: ProfileUpdatePayload) => {
+      const { context, ...profileData } = payload;
+      const promises: Promise<any>[] = [
+        put<IUser>(endpoint.profile, profileData),
+      ];
+      if (context?.self_description !== undefined) {
+        promises.push(put(endpoint.persona, { self_description: context.self_description }));
+      }
+      const [profileRes] = await Promise.all(promises);
+      return profileRes;
+    },
     onSuccess: (response, payload) => {
       const current = queryClient.getQueryData<IUser>(queryKeys.profile);
       const returnedProfile = response?.data;
@@ -58,11 +67,14 @@ export function useUploadProfilePicture() {
     onSuccess: (response) => {
       const current = queryClient.getQueryData<IUser>(queryKeys.profile);
       const data = response?.data;
+      const filename = (data as any)?.name ?? (data as any)?.picture;
+      const { resolveFileUrl } = require('@/features/account/profile-form');
       const pictureUrl =
         (data as any)?.picture_url ??
         (data as any)?.url ??
-        (typeof data === 'string' ? data : undefined);
-      const picture = (data as any)?.picture ?? pictureUrl;
+        (filename ? resolveFileUrl(filename) : undefined) ??
+        (typeof data === 'string' ? resolveFileUrl(data) : undefined);
+      const picture = filename ?? pictureUrl;
 
       const updated = {
         ...current,

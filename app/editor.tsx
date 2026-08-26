@@ -28,6 +28,10 @@ import * as Clipboard from 'expo-clipboard';
 import Animated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
+import {
+  getAutosaveStatusBadge,
+  type AutosaveStatus,
+} from '@/features/editor/autosave';
 import { useUserStore } from '@/store';
 import { useCreateMemory, useUpdateMemory } from '@/hooks/mutations/use-memory-mutations';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
@@ -724,9 +728,7 @@ export default function EditorScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const hasQcDraft = savedQcBody.trim().length > 0 && savedQcBody !== qcBody;
-
-  const savedDotColor = savedStatus === 'saved' ? COLORS.success : savedStatus === 'saving' ? COLORS.warning : COLORS.error;
-  const savedLabel = savedStatus === 'saved' ? 'Saved' : savedStatus === 'saving' ? 'Saving…' : 'Unsaved';
+  const autosaveBadge = getAutosaveStatusBadge(savedStatus);
 
   const handleOpenPublishSheet = useCallback(() => {
     setStoryBody(latestBodyRef.current);
@@ -881,8 +883,8 @@ export default function EditorScreen() {
               {isStory && (
                 <>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: COLORS.fillWeaker }}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: savedDotColor }} />
-                    <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted }}>{savedLabel}</Text>
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: autosaveBadge.dotColor }} />
+                    <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: autosaveBadge.textColor }}>{autosaveBadge.label}</Text>
                   </View>
                   {/* My Drafts button — badge shows count, opens DraftsSheet */}
                   <TouchableOpacity onPress={() => {

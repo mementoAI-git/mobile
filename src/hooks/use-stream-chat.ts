@@ -28,9 +28,11 @@ interface SendOptions {
   attachments?: string[];
   /** Uploaded file metadata used for the optimistic chat bubble preview */
   attachmentPreviews?: ChatAttachmentPreview[];
+  /** Dynamic memory ID override */
+  memoryId?: string;
 }
 
-export function useStreamChat(memoryId?: string) {
+export function useStreamChat(memoryId?: string, promptId?: string) {
   const [messages, setMessages] = useState<StreamMessage[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
@@ -42,6 +44,8 @@ export function useStreamChat(memoryId?: string) {
   const streamingRef = useRef(false);
   const memoryIdRef = useRef(memoryId);
   memoryIdRef.current = memoryId;
+  const promptIdRef = useRef(promptId);
+  promptIdRef.current = promptId;
   const createMessageIdRef = useRef<ReturnType<typeof createChatMessageIdFactory> | null>(null);
   if (!createMessageIdRef.current) {
     createMessageIdRef.current = createChatMessageIdFactory();
@@ -59,7 +63,11 @@ export function useStreamChat(memoryId?: string) {
 
   const send = useCallback(
     async (text: string, options?: SendOptions) => {
-      const { replyTo, chatMode, deepDiveDimension, attachments, attachmentPreviews } = options ?? {};
+      const { replyTo, chatMode, deepDiveDimension, attachments, attachmentPreviews, memoryId: explicitMemoryId } = options ?? {};
+      const targetMemoryId = explicitMemoryId || memoryIdRef.current;
+      if (explicitMemoryId) {
+        memoryIdRef.current = explicitMemoryId;
+      }
       // Block if both text and attachments are empty, or if already streaming
       const hasText = text.trim().length > 0;
       const hasAttachments = (attachments ?? []).length > 0;
@@ -109,7 +117,11 @@ export function useStreamChat(memoryId?: string) {
             // Send text only if non-empty — media-only messages omit the text field entirely
             ...(text.trim() ? { text: text.trim() } : {}),
             // Use ref so this always reads the latest memoryId without being a dep
-            ...(memoryIdRef.current ? { memory: memoryIdRef.current } : {}),
+            ...(targetMemoryId ? { memory: targetMemoryId } : {}),
+            // If no memoryId yet, send prompt_id to associate this conversation with the prompt
+            ...(!targetMemoryId && promptIdRef.current && promptIdRef.current !== 'new'
+              ? { prompt_id: promptIdRef.current, prompt: promptIdRef.current }
+              : {}),
             // Reply quote — stored as a separate field on the message document
             ...(replyTo ? { replyTo } : {}),
             // Host Chat: send mode + dimension to the API (mirrors web)
