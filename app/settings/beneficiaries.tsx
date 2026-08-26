@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ImageBackground,
   RefreshControl,
@@ -17,6 +17,10 @@ import { BeneficiaryPersonRow } from '@/components/beneficiaries/BeneficiaryPers
 import { useBeneficiariesSettingsLogic } from '@/hooks/use-beneficiaries-settings-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import {
+  filterBeneficiaries,
+  type BeneficiaryFilterTab,
+} from '@/features/beneficiaries/vault-permissions';
 import type { IBeneficiary, IGroup } from '@/types';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
@@ -80,7 +84,13 @@ export default function BeneficiariesSettingsScreen() {
     router,
   } = useBeneficiariesSettingsLogic();
   const [tab, setTab] = useState<BeneficiaryTab>('people');
+  const [filterTab, setFilterTab] = useState<BeneficiaryFilterTab>('all');
   const [refreshing, setRefreshing] = useState(false);
+
+  const filteredBeneficiaries = useMemo(
+    () => filterBeneficiaries(beneficiaries, filterTab),
+    [beneficiaries, filterTab]
+  );
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();
@@ -178,8 +188,39 @@ export default function BeneficiariesSettingsScreen() {
               <BeneficiaryEmptyState mode={tab} onAction={tab === 'people' ? invite : createGroup} />
             ) : (
               <View className="gap-3">
+                {tab === 'people' && beneficiaries.length > 0 && (
+                  <View className="mb-2 flex-row gap-2">
+                    {(['all', 'active', 'pending'] as const).map((subTab) => (
+                      <TouchableOpacity
+                        key={subTab}
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          setFilterTab(subTab);
+                        }}
+                        activeOpacity={0.7}
+                        className={`rounded-full border px-4 py-2 ${
+                          filterTab === subTab
+                            ? 'border-brand bg-brand/10'
+                            : 'border-stroke-weaker bg-fill-weaker'
+                        }`}
+                      >
+                        <Text
+                          style={{
+                            fontFamily: FONTS.sansSemi,
+                            fontSize: 12,
+                            color: filterTab === subTab ? COLORS.brand : COLORS.textWeak,
+                            textTransform: 'capitalize',
+                          }}
+                        >
+                          {subTab}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
                 {tab === 'people'
-                  ? beneficiaries.map((beneficiary) => (
+                  ? filteredBeneficiaries.map((beneficiary: IBeneficiary) => (
                     <BeneficiaryPersonRow
                       key={beneficiary._id ?? beneficiary.email}
                       beneficiary={beneficiary}
