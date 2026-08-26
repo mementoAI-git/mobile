@@ -74,9 +74,10 @@ describe('chat FlashList migration', () => {
     expect(screen).toContain('<FlashList');
     expect(screen).toContain('keyExtractor={getChatMessageKey}');
     expect(screen).toContain('getItemType={getChatMessageItemType}');
-    expect(screen).toContain('maintainVisibleContentPosition={CHAT_VISIBLE_CONTENT_POSITION}');
+    expect(screen).toContain('maintainVisibleContentPosition={isPromptType ? PROMPT_VISIBLE_CONTENT_POSITION : CHAT_VISIBLE_CONTENT_POSITION}');
     expect(screen).toContain('autoscrollToBottomThreshold');
     expect(screen).toContain('startRenderingFromBottom: true');
+    expect(screen).toContain('startRenderingFromBottom: false');
     expect(screen).not.toMatch(/\n\s+inverted(?:\s|=)/);
     expect(screen).toContain('paddingBottom: messageBottomPadding');
     expect(screen).toContain('ListHeaderComponent={promptHeaderComponent}');
