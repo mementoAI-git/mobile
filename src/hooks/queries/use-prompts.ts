@@ -81,9 +81,22 @@ export function useCategoryDetailsPrompts(slug: string, answered?: boolean) {
 export function useMemoryByPrompt(promptId: string) {
   return useQuery({
     queryKey: queryKeys.memoryByPrompt(promptId),
-    queryFn: () =>
-      get<any>(`${endpoint.memoryPrompt}/${promptId}`).then((r) => r.data),
+    queryFn: async () => {
+      try {
+        const res = await get<any>(`${endpoint.replyPrompt}/${promptId}`);
+        return res?.data ?? null;
+      } catch (err: any) {
+        if (err?.response?.status === 404 || err?.status === 404) {
+          return null;
+        }
+        throw err;
+      }
+    },
     enabled: !!promptId,
     staleTime: 0,
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status === 404 || error?.status === 404) return false;
+      return failureCount < 2;
+    },
   });
 }

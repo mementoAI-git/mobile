@@ -10,11 +10,21 @@ interface CategoryCardProps {
   title: string;
   subtitle?: string;
   image?: any;
+  progressLabel?: string;
+  isComplete?: boolean;
   onPress?: () => void;
   className?: string;
 }
 
-export const CategoryCard = React.memo(function CategoryCard({ title, subtitle, image, onPress, className }: CategoryCardProps) {
+export const CategoryCard = React.memo(function CategoryCard({
+  title,
+  subtitle,
+  image,
+  progressLabel,
+  isComplete,
+  onPress,
+  className,
+}: CategoryCardProps) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -65,6 +75,31 @@ export const CategoryCard = React.memo(function CategoryCard({ title, subtitle, 
               {subtitle}
             </Animated.Text>
           )}
+          {progressLabel ? (
+            <View
+              style={{
+                alignSelf: 'flex-start',
+                backgroundColor: isComplete ? 'rgba(6, 122, 87, 0.08)' : COLORS.fillWeaker,
+                borderColor: isComplete ? 'rgba(6, 122, 87, 0.2)' : COLORS.strokeWeak,
+                borderWidth: 1,
+                borderRadius: 999,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                marginTop: 2,
+              }}
+            >
+              <Animated.Text
+                style={{
+                  fontFamily: FONTS.sansBold,
+                  fontSize: 11,
+                  color: isComplete ? COLORS.success : COLORS.textWeak,
+                  letterSpacing: 0.5,
+                }}
+              >
+                {progressLabel.toUpperCase()}
+              </Animated.Text>
+            </View>
+          ) : null}
         </View>
       </TouchableOpacity>
     </Animated.View>

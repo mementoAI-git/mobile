@@ -9,6 +9,7 @@ interface TopicCardProps {
   title: string;
   image: any;
   category?: string;
+  badge?: string;
   onPress?: () => void;
   className?: string;
 }
@@ -23,7 +24,7 @@ function formatCategory(slug: string): string {
   return formatted;
 }
 
-export function TopicCard({ title, image, category, onPress, className }: TopicCardProps) {
+export function TopicCard({ title, image, category, badge, onPress, className }: TopicCardProps) {
   return (
     <TouchableOpacity
       onPress={() => {
@@ -59,6 +60,28 @@ export function TopicCard({ title, image, category, onPress, className }: TopicC
               lineHeight: 14,
             }}>
               {formatCategory(category)}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Highlight badge — e.g. Grow this chapter */}
+        {badge ? (
+          <View style={{
+            position: 'absolute',
+            bottom: 10,
+            left: 10,
+            backgroundColor: COLORS.brand,
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+            borderRadius: 999,
+          }}>
+            <Text style={{
+              fontFamily: FONTS.sansBold,
+              fontSize: 10,
+              color: COLORS.textInverse,
+              lineHeight: 13,
+            }}>
+              {badge}
             </Text>
           </View>
         ) : null}

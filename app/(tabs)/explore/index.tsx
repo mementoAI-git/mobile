@@ -6,6 +6,7 @@ import { ContinueReflectingCard } from '@/components/explore/ContinueReflectingC
 import { DashboardHeader, ExploreSkeleton, EmptyState, Spinner } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { CATEGORY_META } from '@/constants/categories';
+import { formatCategoryProgress } from '@/features/explore/category-progress';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useExploreLogic } from '@/hooks/use-explore-logic';
 import { useFocusEffect } from 'expo-router';
@@ -97,11 +98,18 @@ export default function ExploreScreen() {
   const renderCategoryItem = useCallback(
     ({ item }: { item: any }) => {
       const meta = getCategoryMeta(item);
+      const progress = formatCategoryProgress(
+        item.answered_prompts ?? item.answeredCount,
+        item.total_prompts ?? item.prompts_count ?? item.totalCount
+      );
+
       return (
         <CategoryCard
           title={meta.title}
           subtitle={meta.subtitle}
           image={meta.image}
+          progressLabel={progress?.label}
+          isComplete={progress?.isComplete}
           onPress={() => handleOpenCategory(item._id ?? item.name)}
         />
       );
