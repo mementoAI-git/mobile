@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { MoreHorizontal } from 'lucide-react-native';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
+import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { useUiStore } from '@/store';
 import { COLORS, FONTS, CARD_PASTEL_SURFACES } from '@/constants/tokens';
 import type { IMemory } from '@/types';
@@ -138,6 +139,8 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
           <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
             <VideoThumbnail
               uri={bannerMedia.url}
+              attachment={bannerMedia}
+              context={{ memory_id: memory._id }}
               thumbnailUrl={bannerMedia.thumbnail}
               borderRadius={20}
               onPress={handleVideoPress}
@@ -156,9 +159,10 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
       }
       return (
         <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden bg-fill-weaker relative">
-          <Image
+          <SignedAttachmentImage
             key={bannerMedia.url}
-            source={{ uri: bannerMedia.url }}
+            attachment={bannerMedia}
+            context={{ memory_id: memory._id }}
             className="w-full h-full"
             resizeMode="cover"
             onLoad={() => {

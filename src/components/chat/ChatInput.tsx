@@ -554,6 +554,8 @@ export function ChatInput({
           name: attachment.name,
           mimeType: attachment.mimeType,
           thumbnailUrl: attachment.file?.thumbnail,
+          persistedFileId: attachment.file?._id,
+          access: attachment.file?.access,
         });
       }
     }

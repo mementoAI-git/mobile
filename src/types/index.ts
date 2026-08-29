@@ -7,7 +7,12 @@ export interface IFile {
   duration?: number;
   type?: string;
   _id: string;
-  thumbnail?: string;
+  thumbnail?: string | null;
+  status?: 'processing' | 'ready' | 'failed';
+  access?: {
+    expires_at: string;
+    refresh_endpoint: string;
+  };
 }
 
 export interface IAuth {

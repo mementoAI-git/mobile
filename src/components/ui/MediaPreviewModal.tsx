@@ -42,6 +42,15 @@ import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { toast } from '@/components/ui/Toast';
 import { useResolvedAudioArtworkThumbnail } from '@/features/media/audio-artwork';
+import {
+  refreshSignedMediaAccess,
+  shouldRefreshSignedMedia,
+  type SignedMediaAccessMetadata,
+  type SignedMediaAttachment,
+} from '@/features/media/signed-media-access';
+import { useSignedMediaAccess } from '@/features/media/use-signed-media-access';
+import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
+import { post } from '@/api/mutations';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -75,6 +84,7 @@ export interface PreviewAttachment {
   thumbnailUrl?: string | null;
   persistedFileId?: string;
   sourceMessageId?: string;
+  access?: SignedMediaAccessMetadata;
 }
 
 interface Props {
@@ -99,9 +109,33 @@ function formatDuration(secs: number) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+async function resolvePreviewAttachmentAccess(
+  item: PreviewAttachment,
+  memoryId?: string,
+): Promise<PreviewAttachment> {
+  const attachment: SignedMediaAttachment = {
+    _id: item.persistedFileId ?? item.clientId,
+    url: item.uri,
+    thumbnail: item.thumbnailUrl,
+    access: item.access,
+  };
+  if (!shouldRefreshSignedMedia(attachment)) return item;
+  const refreshed = await refreshSignedMediaAccess(
+    attachment,
+    memoryId ? { memory_id: memoryId } : {},
+    (endpoint, body) => post<SignedMediaAttachment>(endpoint, body),
+  );
+  return {
+    ...item,
+    uri: refreshed.url,
+    thumbnailUrl: refreshed.thumbnail ?? item.thumbnailUrl,
+    access: refreshed.access,
+  };
+}
+
 // ─── Per-item renderers ───────────────────────────────────────────────────────
 
-function ImageSlide({ uri, onClose }: { uri: string; onClose: () => void }) {
+function ImageSlide({ uri, onClose, onError }: { uri: string; onClose: () => void; onError?: () => void }) {
   const location = sanitizeMediaUri(uri);
   return (
     // Tapping the image (or the cream area around it) closes the modal
@@ -119,11 +153,14 @@ function ImageSlide({ uri, onClose }: { uri: string; onClose: () => void }) {
             source: location.source,
             host: location.host,
           })}
-          onError={() => runtimeDiagnostics.record('media', 'preview-image-load', {
-            outcome: 'failure',
-            source: location.source,
-            host: location.host,
-          })}
+          onError={() => {
+            onError?.();
+            runtimeDiagnostics.record('media', 'preview-image-load', {
+              outcome: 'failure',
+              source: location.source,
+              host: location.host,
+            });
+          }}
         />
     </TouchableOpacity>
   );
@@ -601,27 +638,77 @@ function DocSlide({ item }: { item: PreviewAttachment }) {
 const MemoVideoSlide = React.memo(VideoSlide);
 const MemoAudioSlide = React.memo(AudioSlide);
 
-function makeRenderSlide(onClose: () => void, currentIndex: number, attachments: PreviewAttachment[]) {
+function SignedMediaSlide({
+  item,
+  isActive,
+  onClose,
+  memoryId,
+}: {
+  item: PreviewAttachment;
+  isActive: boolean;
+  onClose: () => void;
+  memoryId?: string;
+}) {
+  const attachment = useMemo(() => ({
+    _id: item.persistedFileId ?? item.clientId,
+    url: item.uri,
+    thumbnail: item.thumbnailUrl,
+    access: item.access,
+  }), [item.access, item.clientId, item.persistedFileId, item.thumbnailUrl, item.uri]);
+  const context = useMemo(
+    () => memoryId ? { memory_id: memoryId } : {},
+    [memoryId],
+  );
+  const media = useSignedMediaAccess(attachment, context);
+  const normalizedItem = useMemo(() => {
+    const mimeType = inferMediaMimeType({
+      mimeType: item.mimeType,
+      name: item.name,
+      uri: media.uri,
+    });
+    return {
+      ...item,
+      uri: media.uri,
+      mimeType,
+      thumbnailUrl: media.attachment.thumbnail ?? item.thumbnailUrl,
+      access: media.attachment.access,
+    };
+  }, [item, media.attachment.access, media.attachment.thumbnail, media.uri]);
+  const category = normalizedItem.isVoice
+    ? 'audio'
+    : getMediaCategory({
+      mimeType: normalizedItem.mimeType,
+      name: normalizedItem.name,
+      uri: normalizedItem.uri,
+    });
+
+  if (category === 'image') {
+    return canRenderAttachmentUri(normalizedItem.uri)
+      ? <ImageSlide uri={normalizedItem.uri} onClose={onClose} onError={media.onLoadError} />
+      : <UnavailableMediaSlide uri={normalizedItem.uri} />;
+  }
+  if (category === 'video') {
+    if (!canRenderAttachmentUri(normalizedItem.uri)) {
+      return <UnavailableMediaSlide uri={normalizedItem.uri} />;
+    }
+    return shouldMountPreviewVideo({ category, isActive, uri: normalizedItem.uri })
+      ? <MemoVideoSlide uri={normalizedItem.uri} isActive />
+      : <InactiveVideoSlide item={normalizedItem} />;
+  }
+  if (category === 'audio') return <MemoAudioSlide item={normalizedItem} isActive={isActive} />;
+  return <DocSlide item={normalizedItem} />;
+}
+
+function makeRenderSlide(onClose: () => void, currentIndex: number, memoryId?: string) {
   return function renderSlide({ item, index }: { item: PreviewAttachment; index: number }) {
-    const isActive = index === currentIndex;
-    const mimeType = inferMediaMimeType({ mimeType: item.mimeType, name: item.name, uri: item.uri });
-    const normalizedItem = mimeType === item.mimeType ? item : { ...item, mimeType };
-    const category = item.isVoice ? 'audio' : getMediaCategory({ mimeType, name: item.name, uri: item.uri });
-    if (category === 'image') {
-      return canRenderAttachmentUri(item.uri)
-        ? <ImageSlide uri={item.uri} onClose={onClose} />
-        : <UnavailableMediaSlide uri={item.uri} />;
-    }
-    if (category === 'video') {
-      if (!canRenderAttachmentUri(item.uri)) {
-        return <UnavailableMediaSlide uri={item.uri} />;
-      }
-      return shouldMountPreviewVideo({ category, isActive, uri: item.uri })
-        ? <MemoVideoSlide uri={item.uri} isActive />
-        : <InactiveVideoSlide item={normalizedItem} />;
-    }
-    if (category === 'audio') return <MemoAudioSlide item={normalizedItem} isActive={isActive} />;
-    return <DocSlide item={normalizedItem} />;
+    return (
+      <SignedMediaSlide
+        item={item}
+        isActive={index === currentIndex}
+        onClose={onClose}
+        memoryId={memoryId}
+      />
+    );
   };
 }
 
@@ -650,10 +737,12 @@ function GalleryFilmstrip({
   attachments,
   active,
   onSelect,
+  memoryId,
 }: {
   attachments: PreviewAttachment[];
   active: number;
   onSelect: (index: number) => void;
+  memoryId?: string;
 }) {
   const stripRef = useRef<FlatList<PreviewAttachment>>(null);
 
@@ -673,7 +762,18 @@ function GalleryFilmstrip({
       style={[styles.galleryThumbnail, index === active && styles.galleryThumbnailActive]}
     >
       {category === 'image' || category === 'video' ? (
-        <ExpoImage source={{ uri: item.thumbnailUrl || item.uri }} contentFit="cover" style={StyleSheet.absoluteFill} />
+        <SignedAttachmentImage
+          attachment={{
+            _id: item.persistedFileId ?? item.clientId,
+            url: item.uri,
+            thumbnail: item.thumbnailUrl,
+            access: item.access,
+          }}
+          context={memoryId ? { memory_id: memoryId } : undefined}
+          preferThumbnail
+          resizeMode="cover"
+          style={StyleSheet.absoluteFill}
+        />
       ) : (
         <View style={styles.galleryThumbnailFallback}><ThumbnailIcon size={20} color={COLORS.textBase} /></View>
       )}
@@ -682,7 +782,7 @@ function GalleryFilmstrip({
       ) : null}
     </TouchableOpacity>
     );
-  }, [active, onSelect]);
+  }, [active, memoryId, onSelect]);
 
   return (
     <FlatList
@@ -767,12 +867,13 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
   const handleSaveToGallery = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShareMenuVisible(false);
+    const current = attachments[currentIndex];
+    if (!current) return;
 
-    const MediaLibrary = getMediaLibrary();
-    if (!MediaLibrary) {
-      const item = attachments[currentIndex];
-      if (!item) return;
-      try {
+    try {
+      const item = await resolvePreviewAttachmentAccess(current, memoryId);
+      const MediaLibrary = getMediaLibrary();
+      if (!MediaLibrary) {
         let localUri = item.uri;
         if (item.uri.startsWith('http')) {
           const filename = item.name || `memento_${Date.now()}`;
@@ -781,16 +882,9 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
         }
         await Share.share({ url: localUri, message: item.name });
         setActionNotice('Use the share menu to save this file.');
-      } catch {
-        setActionNotice('Could not download this file.');
+        return;
       }
-      return;
-    }
 
-    const item = attachments[currentIndex];
-    if (!item) return;
-
-    try {
       const permission = await MediaLibrary.requestPermissionsAsync();
       if (!isPermissionGranted(permission)) {
         showPermissionRecoveryAlert({
@@ -819,14 +913,15 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
       toast('Could not save media. Please try again in a moment.', 'error');
       setActionNotice('Could not save media. Please try again.');
     }
-  }, [attachments, currentIndex, saveSuccessMessage]);
+  }, [attachments, currentIndex, memoryId, saveSuccessMessage]);
 
   const handleShareFile = useCallback(async () => {
     Haptics.selectionAsync();
     setShareMenuVisible(false);
-    const item = attachments[currentIndex];
-    if (!item) return;
+    const current = attachments[currentIndex];
+    if (!current) return;
     try {
+      const item = await resolvePreviewAttachmentAccess(current, memoryId);
       let localUri = item.uri;
       if (item.uri.startsWith('http')) {
         const filename = item.name || `memento_${Date.now()}`;
@@ -840,7 +935,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
         toast(saveSuccessMessage, 'success');
       }
     } catch {}
-  }, [attachments, currentIndex, currentItemIsVisual, saveSuccessMessage]);
+  }, [attachments, currentIndex, currentItemIsVisual, memoryId, saveSuccessMessage]);
 
   const handleSaveOrExport = useCallback(async () => {
     if (currentItemIsVisual) {
@@ -856,8 +951,8 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
   const pageGap = isGallery ? 0 : CARD_GAP;
 
   const renderSlide = useCallback(
-    makeRenderSlide(onClose, currentIndex, attachments),
-    [onClose, currentIndex, attachments],
+    makeRenderSlide(onClose, currentIndex, memoryId),
+    [onClose, currentIndex, memoryId],
   );
 
   const renderItem = useCallback(
@@ -968,7 +1063,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
       </View>
 
       {isGallery ? (
-        <GalleryFilmstrip attachments={attachments} active={currentIndex} onSelect={selectGalleryItem} />
+        <GalleryFilmstrip attachments={attachments} active={currentIndex} onSelect={selectGalleryItem} memoryId={memoryId} />
       ) : (
         <Dots count={attachments.length} active={currentIndex} />
       )}
