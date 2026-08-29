@@ -18,7 +18,14 @@ function text(value: unknown): string | undefined {
 }
 
 export function normalizeApiResponse<T>(payload: unknown): ApiResponse<T> {
-  const source = record(payload) || {};
+  const source = record(payload);
+  if (!source) {
+    return {
+      data: payload as T,
+      message: '',
+      success: true,
+    };
+  }
   return {
     ...source,
     message: text(source.message) || '',

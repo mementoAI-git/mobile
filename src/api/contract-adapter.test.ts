@@ -1,9 +1,14 @@
 // @ts-nocheck
 import { describe, expect, test } from 'bun:test';
 import {
+  normalizeApiResponse,
   normalizeApiError,
   normalizeAuthCompletion,
 } from './contract-adapter';
+
+test('retains raw legacy collections for domain normalization', () => {
+  expect(normalizeApiResponse(['one', 'two']).data).toEqual(['one', 'two']);
+});
 
 const user = {
   id: 'user-1',

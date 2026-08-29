@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, Image } from 'react-native';
+import { View, TouchableOpacity, Text } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import dayjs from 'dayjs';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
@@ -11,6 +11,7 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { getThemeById, getThemeByColor } from '@/constants/themes';
 import { cn } from '@/lib/utils';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 
 interface CapsuleCardProps {
   capsule: ICapsule;
@@ -140,8 +141,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
  
                   if (firstImg) {
                     return (
-                      <Image
-                        source={{ uri: firstImg.thumbnail || firstImg.url }}
+                      <SignedAttachmentImage
+                        attachment={firstImg}
+                        preferThumbnail
                         className="size-full"
                         resizeMode="cover"
                       />
@@ -318,8 +320,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                       style={{ width: scale(40), height: scale(40) }}
                     >
                       {showImage ? (
-                        <Image
-                          source={{ uri: (attr as any).thumbnail || attr.url }}
+                        <SignedAttachmentImage
+                          attachment={attr}
+                          preferThumbnail
                           className="size-full"
                           resizeMode="cover"
                         />

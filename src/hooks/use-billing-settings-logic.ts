@@ -104,7 +104,7 @@ export function useBillingSettingsLogic() {
     }
   };
 
-  const isCancelled = summary?.status === 'cancelled' || summary?.status === 'canceled';
+  const isCancelled = summary?.status === 'cancelled';
 
   return {
     summary,

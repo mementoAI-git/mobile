@@ -1,8 +1,9 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { get } from '@/api/mutations';
+import { fetchEntity, fetchPaginated } from '@/api/domain-fetchers';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
-import type { IMemory, IPagination } from '@/types';
+import type { IMemory } from '@/types';
 import { shouldEnableStoriesQuery } from '@/features/memories/query-options';
 import {
   getConversationMessagesUrl,
@@ -18,9 +19,9 @@ export function useMemories(params?: { limit?: number }) {
   return useInfiniteQuery({
     queryKey: queryKeys.memories(params),
     queryFn: ({ pageParam = 1 }) =>
-      get<IPagination<IMemory>>(
+      fetchPaginated<IMemory>(
         `${endpoint.memories}?page=${pageParam}&limit=${params?.limit ?? 20}`,
-      ).then((r) => r.data),
+      ),
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,
     // 30s stale time — avoids refetch on every tab switch
@@ -43,7 +44,7 @@ export function useStories(
       if (params?.filter === 'deleted') qs.set('status', 'deleted');
       if (params?.filter === 'pending') { qs.set('enrichment_status', 'pending'); qs.set('capture_source', 'quick'); }
       if (params?.search?.trim()) qs.set('search', params.search.trim());
-      return get<IPagination<IMemory>>(`${endpoint.stories}?${qs.toString()}`).then((r) => r.data);
+      return fetchPaginated<IMemory>(`${endpoint.stories}?${qs.toString()}`);
     },
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,
@@ -57,9 +58,9 @@ export function useConversations(params?: { limit?: number }) {
   return useInfiniteQuery({
     queryKey: queryKeys.conversations(params),
     queryFn: ({ pageParam = 1 }) =>
-      get<IPagination<IMemory>>(
+      fetchPaginated<IMemory>(
         `${endpoint.conversations}?page=${pageParam}&limit=${params?.limit ?? 20}`,
-      ).then((r) => r.data),
+      ),
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,
     staleTime: 30_000,
@@ -70,7 +71,7 @@ export function useMemory(id: string) {
   return useQuery({
     queryKey: queryKeys.memory(id),
     queryFn: () =>
-      get<IMemory>(endpoint.memory.replace(':id', id)).then((r) => r.data),
+      fetchEntity<IMemory>(endpoint.memory.replace(':id', id)),
     enabled: !!id,
     // Individual memory detail — 30s so navigating back doesn't re-fetch
     staleTime: 30_000,
@@ -80,7 +81,7 @@ export function useMemory(id: string) {
 export function useMemoriesStats() {
   return useQuery({
     queryKey: queryKeys.memoriesStats,
-    queryFn: () => get<any>(endpoint.memoriesStats).then((r) => r.data),
+    queryFn: () => fetchEntity<any>(endpoint.memoriesStats),
     staleTime: 60_000,
   });
 }
@@ -88,7 +89,7 @@ export function useMemoriesStats() {
 export function useConversationAttachments(id: string) {
   return useQuery({
     queryKey: queryKeys.conversationAttachments(id),
-    queryFn: () => get<any>(endpoint.conversationAttachments.replace(':id', id)).then((r) => r.data),
+    queryFn: () => fetchEntity<any>(endpoint.conversationAttachments.replace(':id', id)),
     enabled: !!id,
     staleTime: 30_000,
   });

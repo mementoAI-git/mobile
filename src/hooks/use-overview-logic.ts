@@ -46,12 +46,12 @@ export function useOverviewLogic() {
     });
   }, [router, startConversation]);
 
-  const stats = statsData?.data ?? {};
+  const stats = statsData ?? {};
   const streakCount = Number(user?.streak) || Number(stats.streak_count) || 0;
   const enrichmentScore = Number(stats.enrichment_score) || 0;
-  const memoriesCount = memoriesStats?.data?.stories_count ?? 0;
+  const memoriesCount = memoriesStats?.stories_count ?? 0;
   const beneficiariesCount = Number(stats.beneficiaries_count) || 0;
-  const capsuleCount = capsuleStats?.data?.scheduled_count || 0;
+  const capsuleCount = capsuleStats?.scheduled_count || 0;
   const quickPending = Number(stats.quick_capture_pending_count) || 0;
 
   const prompts = dailyPrompts || [];

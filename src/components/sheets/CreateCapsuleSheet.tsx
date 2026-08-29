@@ -6,7 +6,6 @@ import {
   ScrollView,
   Platform,
   Keyboard,
-  Image
 } from 'react-native';
 import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,6 +34,8 @@ import { SelectFromMemoryModal } from './SelectFromMemoryModal';
 import { SelectFromMediaModal } from './SelectFromMediaModal';
 import { useUserStore } from '@/store';
 import { useToast } from '../ui/Toast';
+import { resolveCapsuleRecipientInputs } from '@/features/capsules/capsule-contract';
+import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 
 interface Props {
   onClose: () => void;
@@ -50,7 +51,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
   const [body, setBody] = useState(editData?.body ?? '');
 
   const [recipientIds, setRecipientIds] = useState<string[]>(
-    (editData?.recipients ?? []).map((r) => (r as any)._id ?? (r as any)),
+    (editData?.recipients ?? []).map((r) => (r as any).email ?? (r as any)._id ?? (r as any)),
   );
   const [recipientInput, setRecipientInput] = useState('');
 
@@ -107,7 +108,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
   const recipientNames = useMemo(() => {
     return recipientIds
       .map(id => {
-        const b = beneficiaries.find((b: any) => b._id === id);
+        const b = beneficiaries.find((b: any) => b._id === id || b.email === id);
         return b ? b.name : id;
       })
       .filter(Boolean)
@@ -129,9 +130,11 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
     []
   );
 
-  const toggleRecipient = useCallback((id: string) => {
+  const toggleRecipient = useCallback((id: string, email?: string) => {
     setRecipientIds((prev) =>
-      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id],
+      prev.includes(id) || (email ? prev.includes(email) : false)
+        ? prev.filter((recipient) => recipient !== id && recipient !== email)
+        : [...prev, id],
     );
   }, []);
 
@@ -173,7 +176,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
     const payload = {
       title: title.trim(),
       body: body.trim(),
-      recipients: recipientIds,
+      recipients: resolveCapsuleRecipientInputs(recipientIds, beneficiaries),
       status: submitStatus,
       schedule_date: scheduleDate ? scheduleDate.toISOString() : undefined,
       attachments,
@@ -260,11 +263,12 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
                 {beneficiaries.map((b: any) => {
-                  const selected = recipientIds.includes(b._id ?? '');
+                  const selected = recipientIds.includes(b._id ?? '')
+                    || recipientIds.includes(b.email ?? '');
                   return (
                     <TouchableOpacity
                       key={b._id}
-                      onPress={() => toggleRecipient(b._id)}
+                      onPress={() => toggleRecipient(b._id, b.email)}
                       className="items-center w-16 gap-2"
                     >
                       <View className={`size-12 rounded-full items-center justify-center border-2 ${selected ? 'border-brand bg-brand' : 'border-transparent bg-white shadow-sm'}`}>
@@ -340,7 +344,12 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
                       className={`size-16 bg-fill-weaker rounded-xl border-2 ${isSelected ? 'border-brand' : 'border-transparent'} shadow-sm overflow-hidden items-center justify-center relative`}
                     >
                       {(media.type === 'image' || media.type === 'video') && (media.url || media.thumbnail) ? (
-                        <Image source={{ uri: media.thumbnail || media.url }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                        <SignedAttachmentImage
+                          attachment={media}
+                          preferThumbnail
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="cover"
+                        />
                       ) : (
                         <Text className={`text-[10px] font-bold uppercase ${isSelected ? 'text-brand' : 'text-text-weak'}`}>{media.type}</Text>
                       )}
