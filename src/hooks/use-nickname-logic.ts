@@ -3,9 +3,9 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Haptics from 'expo-haptics';
-import { post } from '@/api/mutations';
+import { put } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
-import { useUserStore } from '@/store';
+import { useAuthStore, useUserStore } from '@/store';
 
 const schema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters').max(80),
@@ -16,7 +16,8 @@ type FormData = z.infer<typeof schema>;
 
 export function useNicknameLogic() {
   const router = useRouter();
-  const user = useUserStore((s) => s.user);
+  const user = useAuthStore((s) => s.user);
+  const updateSessionUser = useAuthStore((s) => s.updateUser);
   const setUser = useUserStore((s) => s.setUser);
 
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
@@ -30,12 +31,18 @@ export function useNicknameLogic() {
   const onSubmit = async (data: FormData) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      await post(endpoint.profile, {
+      await put(endpoint.profile, {
         fullname: data.fullName.trim(),
         nickname: data.nickname.trim(),
       });
       if (user && setUser) {
-        setUser({ ...user, nickname: data.nickname.trim(), fullname: data.fullName.trim() });
+        const updatedUser = {
+          ...user,
+          nickname: data.nickname.trim(),
+          fullname: data.fullName.trim(),
+        };
+        updateSessionUser(updatedUser);
+        setUser(updatedUser);
       }
     } catch {
       // non-blocking

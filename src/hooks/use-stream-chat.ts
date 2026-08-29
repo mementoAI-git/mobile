@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import endpoint from '@/api/endpoint';
 import { useAuthStore } from '@/store';
 import { API_BASE_URL } from '@/lib/env';
+import { getMementoClientHeaders } from '@/api/client-runtime-metadata';
 import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import { buildPromptWithReplyQuote, type ChatReplyQuote } from '@/lib/utils';
 import type { IMessageAttachment } from '@/types';
@@ -111,6 +112,7 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...getMementoClientHeaders(),
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
