@@ -76,7 +76,7 @@ const COPY: Record<ConfirmationKind, {
   },
   'delete-account': {
     title: 'Delete your account permanently?',
-    description: 'All of your memories, capsules, profile details, and account data will be permanently deleted. This cannot be undone.',
+    description: 'Your access ends immediately and deletion cannot be undone. Secure cleanup may finish in the background. Capsules already delivered can remain with their recipients, without a link to your profile.',
     confirm: 'Delete account',
     destructive: true,
   },
