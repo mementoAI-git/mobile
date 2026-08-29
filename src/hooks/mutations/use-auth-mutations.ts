@@ -65,6 +65,14 @@ export function useSetPassword() {
 export function useLogout() {
   return useMutation({
     mutationFn: async () => {
+      try {
+        const { disableCurrentPushDevice } = await import(
+          '@/features/notifications/push-device-runtime'
+        );
+        await disableCurrentPushDevice();
+      } catch {
+        // Device cleanup is best-effort; server logout still revokes the session.
+      }
       const { authService } = await import('@/api/auth-service');
       await authService.logout();
     },
