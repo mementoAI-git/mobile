@@ -203,6 +203,17 @@ export interface ICapsule {
   _id?: string;
   user: string;
   recipients: IUser[];
+  recipient_snapshots?: Array<{
+    recipient_id: string;
+    beneficiary_id?: string;
+    linked_user_id?: string;
+    email: string;
+    display_name?: string;
+    delivery_status: 'pending' | 'queued' | 'sent' | 'delivered' | 'failed';
+    failure_code?: string;
+    delivered_at?: string;
+  }>;
+  recipients_snapshot_version?: number;
   schedule_date?: string;
   title: string;
   body: string;
