@@ -24,8 +24,23 @@ describe('mobile Polar billing adapters', () => {
     expect(normalizeSubscriptionSummary({ data: {
       tier: 'pro',
       status: 'active',
-      usage: { storage_used_bytes: 200, storage_limit_bytes: 10_000, ignored: 'x' },
-    } }).usage).toEqual({ storage_used_bytes: 200, storage_limit_bytes: 10_000 });
+      usage: {
+        storage_used_bytes: 200,
+        storage_reserved_bytes: 50,
+        storage_limit_bytes: 10_000,
+        remaining_bytes: 9_750,
+        percent_used: 2,
+        over_limit: false,
+        ignored: 'x',
+      },
+    } }).usage).toEqual({
+      storage_used_bytes: 200,
+      storage_reserved_bytes: 50,
+      storage_limit_bytes: 10_000,
+      remaining_bytes: 9_750,
+      percent_used: 2,
+      over_limit: false,
+    });
   });
 
   test('normalizes canonical and legacy usage and invoice collections', () => {

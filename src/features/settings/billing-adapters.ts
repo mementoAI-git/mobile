@@ -5,7 +5,11 @@ import {
 
 export interface SubscriptionUsage {
   storage_used_bytes?: number;
+  storage_reserved_bytes?: number;
   storage_limit_bytes?: number;
+  remaining_bytes?: number;
+  percent_used?: number;
+  over_limit?: boolean;
   beneficiary_count?: number;
   timed_message_count?: number;
   time_capsule_count?: number;
@@ -37,6 +41,10 @@ export interface BillingInvoice {
 export interface BillingUsage {
   storage_used_bytes: number;
   storage_limit_bytes: number;
+  storage_reserved_bytes?: number;
+  remaining_bytes?: number;
+  percent_used?: number;
+  over_limit?: boolean;
   beneficiary_count: number;
   timed_message_count: number;
   time_capsule_count?: number;
@@ -45,7 +53,10 @@ export interface BillingUsage {
 
 const USAGE_KEYS = [
   'storage_used_bytes',
+  'storage_reserved_bytes',
   'storage_limit_bytes',
+  'remaining_bytes',
+  'percent_used',
   'beneficiary_count',
   'timed_message_count',
   'time_capsule_count',
@@ -61,6 +72,7 @@ function parseUsage(raw: unknown): SubscriptionUsage | undefined {
       usage[key] = source[key];
     }
   }
+  if (typeof source.over_limit === 'boolean') usage.over_limit = source.over_limit;
   return Object.keys(usage).length > 0 ? usage : undefined;
 }
 
@@ -99,6 +111,10 @@ export function normalizeBillingUsage(payload: unknown): BillingUsage | null {
   return {
     storage_used_bytes: usage.storage_used_bytes ?? 0,
     storage_limit_bytes: usage.storage_limit_bytes ?? 0,
+    storage_reserved_bytes: usage.storage_reserved_bytes,
+    remaining_bytes: usage.remaining_bytes,
+    percent_used: usage.percent_used,
+    over_limit: usage.over_limit,
     beneficiary_count: usage.beneficiary_count ?? 0,
     timed_message_count: usage.timed_message_count ?? 0,
     time_capsule_count: usage.time_capsule_count,
