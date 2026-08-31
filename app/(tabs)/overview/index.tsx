@@ -420,7 +420,7 @@ export default function OverviewScreen() {
               valueElement={
                 <View className="gap-0.5">
                   <View className="flex-row items-baseline">
-                    <Text className="text-xl font-bold text-[#0C71FF]" style={{ fontFamily: FONTS.sansBold }}>{memoriesCount}</Text>
+                    <Text className="text-xl font-bold text-info-strong" style={{ fontFamily: FONTS.sansBold }}>{memoriesCount}</Text>
                     <Text className="text-base font-bold text-text-strong ml-1" style={{ fontFamily: FONTS.sansBold }}>items</Text>
                   </View>
                   {weeklyMemories > 0 && (
@@ -439,7 +439,7 @@ export default function OverviewScreen() {
               label="BENEFICIARIES"
               valueElement={
                 <>
-                  <Text className="text-xl font-bold text-[#FF7D0C]" style={{ fontFamily: FONTS.sansBold }}>{beneficiariesCount}</Text>
+                  <Text className="text-xl font-bold text-brand" style={{ fontFamily: FONTS.sansBold }}>{beneficiariesCount}</Text>
                   <Text className="text-base font-bold text-text-strong ml-1" style={{ fontFamily: FONTS.sansBold }}>people</Text>
                 </>
               }
@@ -462,7 +462,7 @@ export default function OverviewScreen() {
               valueElement={
                 <>
                   <Text className="text-base font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>You're on a </Text>
-                  <Text className="text-base font-bold text-[#FF7D0C]" style={{ fontFamily: FONTS.sansBold }}>{streakCount}-day</Text>
+                  <Text className="text-base font-bold text-brand" style={{ fontFamily: FONTS.sansBold }}>{streakCount}-day</Text>
                   <Text className="text-base font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}> streak</Text>
                 </>
               }

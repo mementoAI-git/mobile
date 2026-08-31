@@ -21,9 +21,12 @@
   },
   "dependencies": {
     "@10play/tentap-editor": "^1.0.1",
+    "@expo-google-fonts/azeret-mono": "^0.4.1",
     "@expo-google-fonts/cutive-mono": "^0.4.1",
+    "@expo-google-fonts/eb-garamond": "^0.4.3",
     "@expo-google-fonts/geist": "^0.4.2",
     "@expo-google-fonts/handlee": "^0.4.1",
+    "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/patrick-hand-sc": "^0.4.1",
     "@expo/metro-runtime": "~57.0.14",
     "@google/genai": "^2.17.1",

@@ -32,11 +32,17 @@ import {
 
 import {
   useFonts,
-  Geist_400Regular,
-  Geist_500Medium,
-  Geist_600SemiBold,
-  Geist_700Bold,
-} from '@expo-google-fonts/geist';
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
+import {
+  EBGaramond_400Regular,
+  EBGaramond_500Medium,
+  EBGaramond_700Bold,
+} from '@expo-google-fonts/eb-garamond';
+import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono';
 import { PatrickHandSC_400Regular } from '@expo-google-fonts/patrick-hand-sc';
 import { Handlee_400Regular } from '@expo-google-fonts/handlee';
 import { CutiveMono_400Regular } from '@expo-google-fonts/cutive-mono';
@@ -256,10 +262,14 @@ function RootLayout() {
   // ---------------------------------------------------------------------------
 
   const [fontsLoaded] = useFonts({
-    Geist_400Regular,
-    Geist_500Medium,
-    Geist_600SemiBold,
-    Geist_700Bold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    EBGaramond_400Regular,
+    EBGaramond_500Medium,
+    EBGaramond_700Bold,
+    AzeretMono_400Regular,
 
     PatrickHandSC_400Regular,
     Handlee_400Regular,
@@ -274,11 +284,11 @@ function RootLayout() {
       '../assets/fonts/Portrait-script-regular.ttf',
     ),
 
-    Garamond: Geist_400Regular,
-    Sans: Geist_400Regular,
+    Garamond: EBGaramond_400Regular,
+    Sans: Inter_400Regular,
 
     // Kept for capsule-theme backward compatibility.
-    'Geist Mono': Geist_400Regular,
+    'Geist Mono': AzeretMono_400Regular,
   });
 
   // ---------------------------------------------------------------------------

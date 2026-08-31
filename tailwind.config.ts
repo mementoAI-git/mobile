@@ -10,8 +10,8 @@ const config: Config = {
     extend: {
       colors: {
         // ── Page / Surface ─────────────────────────────────────────
-        // App page background: white | card: white
-        background: '#ffffff',
+        // App page background: warm journal cream | card: white
+        background: '#fefbf8',
         card:       '#ffffff',
 
         // web: --fill-neutral-weak/weaker/strong (rgba(23,11,0,*))
@@ -60,6 +60,11 @@ const config: Config = {
         error:   { weak: 'rgba(199,58,58,0.05)',   strong: '#C73A3A' },
         warning: { weak: 'rgba(255,192,46,0.05)',  strong: '#8F6C1A' },
         info:    { weak: 'rgba(26,128,247,0.06)',  strong: '#1A80F7' },
+        stat: {
+          pink:   '#D91DAA',
+          purple: '#6621F0',
+          yellow: '#FF8C00',
+        },
 
         // ── Sand palette ───────────────────────────────────────────
         // web: --color-sand-1 through sand-12 (step 9 intentionally absent)

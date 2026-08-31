@@ -10,8 +10,8 @@
  */
 
 export const COLORS = {
-  background: '#ffffff',
-  backgroundInverse: "#12131A",
+  background: '#fefbf8',
+  backgroundInverse: '#12131A',
   card: '#ffffff',
 
   // Link preview chip
@@ -38,6 +38,11 @@ export const COLORS = {
   error: '#C73A3A',
   warning: '#8F6C1A',
   info: '#1A80F7',
+
+  // Editorial stat accents. Centralized for seeded journey/card variants.
+  statPink: '#D91DAA',
+  statPurple: '#6621F0',
+  statYellow: '#FF8C00',
 
   // Beneficiary group palette — stable indices 0...5 shared with the API.
   beneficiaryGroupGreen: '#7BDD9F',
@@ -139,16 +144,14 @@ export const CARD_PASTEL_SURFACES = [
   { bg: '#EBF7F2', border: 'rgba(6,100,70,0.12)' },
 ] as const;
 
-import { Platform } from 'react-native';
-
 export const FONTS = {
-  sans: 'Geist_400Regular',
-  chatBody: 'Geist_400Regular',
-  sansMedium: 'Geist_500Medium',
-  sansSemi: 'Geist_600SemiBold',
-  sansBold: 'Geist_700Bold',
-  serif: 'Geist_400Regular',
-  serifMedium: 'Geist_500Medium',
-  serifBold: 'Geist_700Bold',
-  mono: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  sans: 'Inter_400Regular',
+  chatBody: 'Inter_400Regular',
+  sansMedium: 'Inter_500Medium',
+  sansSemi: 'Inter_600SemiBold',
+  sansBold: 'Inter_700Bold',
+  serif: 'EBGaramond_400Regular',
+  serifMedium: 'EBGaramond_500Medium',
+  serifBold: 'EBGaramond_700Bold',
+  mono: 'AzeretMono_400Regular',
 };
