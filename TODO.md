@@ -1,5 +1,7 @@
 # Memento Mobile — Technical TODO
 
+> **Audit note (2026-08-31):** This is a historical backlog, not a release-status document. The current API contract, authenticated attachment flow, storage quota integration, and design-system alignment are covered by the release plan and automated verification. Revalidate each item below against the current code and deployed infrastructure before scheduling it; unchecked text here does not mean a completed release feature is absent.
+
 ## 🔐 Native WebAuthn Passkeys (v2 Upgrade)
 
 **Current state:** Biometric login uses `expo-secure-store` with `requireAuthentication: true`
