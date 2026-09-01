@@ -7,6 +7,7 @@ import { DashboardHeader, ExploreSkeleton, EmptyState, Spinner } from '@/compone
 import { COLORS, FONTS } from '@/constants/tokens';
 import { CATEGORY_META } from '@/constants/categories';
 import { formatCategoryProgress } from '@/features/explore/category-progress';
+import { getPromptCategorySlug } from '@/features/explore/category-identity';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useExploreLogic } from '@/hooks/use-explore-logic';
 import { useFocusEffect } from 'expo-router';
@@ -49,13 +50,17 @@ export default function ExploreScreen() {
   );
 
   const getCategoryMeta = useCallback((item: any) => {
-    const rawKey = String(item.slug || item.name || '').trim().toLowerCase();
+    const categorySlug = getPromptCategorySlug(item);
+    const rawKey = categorySlug.toLowerCase();
     const key = rawKey
       .replace(/&/g, 'and')
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
     return CATEGORY_META[key] || {
-      title: item.name || 'Category',
+      title:
+        (typeof item === 'object' && item?.name) ||
+        categorySlug.replace(/-/g, ' ') ||
+        'Category',
       subtitle: 'Explore prompts in this category',
       image: null,
     };
@@ -98,6 +103,7 @@ export default function ExploreScreen() {
   const renderCategoryItem = useCallback(
     ({ item }: { item: any }) => {
       const meta = getCategoryMeta(item);
+      const categorySlug = getPromptCategorySlug(item);
       const progress = formatCategoryProgress(
         item.answered_prompts ?? item.answeredCount,
         item.total_prompts ?? item.prompts_count ?? item.totalCount
@@ -110,7 +116,9 @@ export default function ExploreScreen() {
           image={meta.image}
           progressLabel={progress?.label}
           isComplete={progress?.isComplete}
-          onPress={() => handleOpenCategory(item._id ?? item.name)}
+          onPress={
+            categorySlug ? () => handleOpenCategory(categorySlug) : undefined
+          }
         />
       );
     },
@@ -138,7 +146,7 @@ export default function ExploreScreen() {
         ) : (
           <FlatList
             data={categories}
-            keyExtractor={(item, i) => item._id ?? String(i)}
+            keyExtractor={(item, i) => getPromptCategorySlug(item) || String(i)}
             initialNumToRender={8}
             maxToRenderPerBatch={5}
             windowSize={5}

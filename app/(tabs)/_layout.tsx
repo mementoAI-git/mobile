@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { TabBar } from '@/components/TabBar';
 import { COLORS } from '@/constants/tokens';
+import { shouldPopTabToTopOnBlur } from '@/features/navigation/tab-reset-policy';
 
 export default function TabsLayout() {
   return (
@@ -31,7 +32,10 @@ export default function TabsLayout() {
         <Tabs.Screen name="overview" />
         <Tabs.Screen name="chat" />
         <Tabs.Screen name="stories" />
-        <Tabs.Screen name="explore" />
+        <Tabs.Screen
+          name="explore"
+          options={{ popToTopOnBlur: shouldPopTabToTopOnBlur('explore') }}
+        />
         <Tabs.Screen name="capsule" />
       </Tabs>
 
