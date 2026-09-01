@@ -8,7 +8,7 @@ describe('prompt category identity', () => {
     expect(getPromptCategorySlug('life-transition')).toBe('life-transition');
   });
 
-  test('retains compatibility with object category responses', () => {
+  test('prefers an object slug while retaining compatibility with older shapes', () => {
     expect(
       getPromptCategorySlug({
         _id: 'database-id',
