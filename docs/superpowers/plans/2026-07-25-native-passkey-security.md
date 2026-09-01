@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Native passkeys require iOS 16+, Android API 28+, verified RP associations, and a native development build.
-- Use `com.mementoai.app` consistently.
+- Use `io.mymemento.app` consistently.
 - User cancellation never triggers biometric fallback.
 - Never represent SecureStore biometric login as a passkey.
 - Never claim all-device logout succeeded without a supported backend endpoint.
