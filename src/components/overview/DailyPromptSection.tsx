@@ -102,8 +102,16 @@ export function DailyPromptSection() {
   return (
     <Animated.View entering={FadeInDown.delay(200)} className="gap-4">
       <View className="flex-row items-center justify-between px-1">
-        <Animated.Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
-          Continue <Animated.Text className="text-text-weak italic">reflecting</Animated.Text>
+        <Animated.Text
+          className="text-text-strong"
+          style={{ fontFamily: FONTS.sans, fontSize: 20, lineHeight: 28 }}
+        >
+          Continue <Animated.Text
+            className="text-text-weak"
+            style={{ fontFamily: FONTS.serif, fontSize: 24, lineHeight: 24, fontStyle: 'italic' }}
+          >
+            reflecting
+          </Animated.Text>
         </Animated.Text>
       </View>
 
@@ -147,7 +155,7 @@ export function DailyPromptSection() {
           <TouchableOpacity
             onPress={handleToggleVoice}
             activeOpacity={0.8}
-            className="flex-row items-center justify-center gap-3 bg-brand rounded-full h-12 px-6 self-start"
+            className="flex-row items-center justify-center gap-3 bg-text-strong rounded-full h-12 px-6 self-start"
           >
             <View className="size-3 rounded-full bg-white animate-pulse" />
             <Animated.Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>
@@ -160,7 +168,7 @@ export function DailyPromptSection() {
             <TouchableOpacity
               onPress={handleToggleVoice}
               activeOpacity={0.8}
-              className="flex-row items-center justify-center gap-2 bg-brand rounded-full h-12 px-5"
+              className="flex-row items-center justify-center gap-2 bg-text-strong rounded-full h-12 px-5"
             >
               <Mic size={18} color="white" strokeWidth={2.5} />
               <Animated.Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>

@@ -54,6 +54,7 @@ export function RecentActivitiesSection() {
             key={activity._id || index}
             activity={activity}
             showDivider={index > 0}
+            fromOverview
           />
         ))}
       </View>
