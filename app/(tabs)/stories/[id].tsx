@@ -231,6 +231,7 @@ const MemoDocumentCard = React.memo(function MemoDocumentCard({
 export default function StoryDetailScreen() {
   const {
     router,
+    returnToOverview,
     memory,
     isLoading,
     handleDelete,
@@ -242,10 +243,13 @@ export default function StoryDetailScreen() {
     otherAttachments,
   } = useStoryDetailLogic();
 
-  useBackHandler(() => {
-    if (router.canGoBack()) router.back();
+  const handleBack = useCallback(() => {
+    Haptics.selectionAsync();
+    if (returnToOverview) router.replace('/(tabs)/overview');
+    else if (router.canGoBack()) router.back();
     else router.replace('/(tabs)/stories');
-  });
+  }, [returnToOverview, router]);
+  useBackHandler(handleBack);
 
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -272,12 +276,6 @@ export default function StoryDetailScreen() {
   }, [allPreviewAttachments]);
 
   const closePreview = useCallback(() => setPreviewVisible(false), []);
-
-  const handleBack = useCallback(() => {
-    Haptics.selectionAsync();
-    if (router.canGoBack()) router.back();
-    else router.replace('/(tabs)/stories');
-  }, [router]);
 
   const handleEditPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
