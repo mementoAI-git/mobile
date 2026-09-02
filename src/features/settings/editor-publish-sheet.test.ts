@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const editor = readFileSync('app/editor.tsx', 'utf8');
 const storyRichEditor = readFileSync('src/components/ui/StoryRichEditor.tsx', 'utf8');
+const publishPrivacySheet = readFileSync('src/components/sheets/PublishPrivacySheet.tsx', 'utf8');
 
 describe('editor publish sheet', () => {
   test('uses a local bottom sheet for the publish flow instead of a full-screen modal', () => {
@@ -46,9 +47,14 @@ describe('editor publish sheet', () => {
     expect(editor).toContain('<BottomSheetTextInput value={tags} onChangeText={setTags}');
   });
 
-  test('shows explicit right-side checkmarks for selected publish visibility rows', () => {
-    expect(editor).toContain('!selectedBeneficiaryIds.length && <Check size={16} color={COLORS.brand} strokeWidth={2.4} />}');
-    expect(editor).toContain('{on && <Check size={16} color={COLORS.brand} strokeWidth={2.4} />}');
+  test('uses a nested privacy sheet with beneficiaries, groups, and global visibility modes', () => {
+    expect(editor).toContain('const privacySheetRef = useRef<BottomSheetModal>(null);');
+    expect(editor).toContain('<PublishPrivacySheet');
+    expect(editor).toContain("privacyMode === 'private' ? { beneficiaries: [], groups: [] }");
+    expect(editor).toContain("privacyMode === 'specific'");
+    expect(publishPrivacySheet).toContain('useGroups');
+    expect(publishPrivacySheet).toContain('Specific people & groups');
+    expect(publishPrivacySheet).toContain("pointerEvents={isSpecific ? 'auto' : 'none'}");
   });
 
   test('does not force avoidIosKeyboard during native-to-webview focus handoff', () => {
