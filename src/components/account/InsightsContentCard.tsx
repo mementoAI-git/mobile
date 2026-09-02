@@ -10,6 +10,15 @@ import {
 
 export type InsightsTab = 'enrichment' | 'insights' | 'notes' | 'preferences';
 
+const MAX_SCANNABLE_ITEM_LENGTH = 220;
+
+function toScannableInsight(text: string): string {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (normalized.length <= MAX_SCANNABLE_ITEM_LENGTH) return normalized;
+  const boundary = normalized.slice(0, MAX_SCANNABLE_ITEM_LENGTH).lastIndexOf('.');
+  return `${normalized.slice(0, boundary > 80 ? boundary + 1 : MAX_SCANNABLE_ITEM_LENGTH).trim()}…`;
+}
+
 interface InsightsContentCardProps {
   activeTab: InsightsTab;
   score: number;
@@ -66,7 +75,7 @@ export const InsightsContentCard = React.memo(function InsightsContentCard({
             {items.map((item, index) => (
               <View key={`${activeTab}-${index}`} style={styles.listItem}>
                 <View style={styles.bullet} />
-                <Text style={styles.listText}>{item}</Text>
+                  <Text numberOfLines={4} style={styles.listText}>{toScannableInsight(item)}</Text>
               </View>
             ))}
           </View>

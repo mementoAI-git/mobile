@@ -37,6 +37,7 @@ import { useCreateMemory, useUpdateMemory } from '@/hooks/mutations/use-memory-m
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
+import { useGroups } from '@/hooks/queries/use-groups';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useToast } from '@/components/ui/Toast';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetModalProvider, BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
@@ -53,6 +54,7 @@ import type { EditorBridge } from '@10play/tentap-editor';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import type { IBeneficiary, IFile } from '@/types';
+import { PublishPrivacySheet, type PrivacyMode } from '@/components/sheets/PublishPrivacySheet';
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
@@ -218,6 +220,7 @@ function PublishModalInner({
   userEmail,
   initialTags,
   initialBeneficiaryIds,
+  initialGroupIds,
 }: {
   title: string;
   body: string;
@@ -230,32 +233,29 @@ function PublishModalInner({
   userEmail?: string | null;
   initialTags?: string;
   initialBeneficiaryIds?: string[];
+  initialGroupIds?: string[];
 }) {
   const insets = useSafeAreaInsets();
   const [tags, setTags] = useState(initialTags ?? '');
   const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>(initialBeneficiaryIds ?? []);
-  const [beneficiaryMenuOpen, setBeneficiaryMenuOpen] = useState(false);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(initialGroupIds ?? []);
+  const [privacyMode, setPrivacyMode] = useState<PrivacyMode>(initialBeneficiaryIds?.length || initialGroupIds?.length ? 'specific' : 'all');
+  const privacySheetRef = useRef<BottomSheetModal>(null);
   const [isAutotagging, setIsAutotagging] = useState(false);
 
   const isEditMode = !!memoryId;
   const { mutate: createMemory, isPending: createPending } = useCreateMemory();
   const { mutate: updateMemory, isPending: updatePending } = useUpdateMemory(memoryId ?? '');
   const isPending = isEditMode ? updatePending : createPending;
-  const { data: beneficiariesRaw } = useBeneficiaries();
   const { toast } = useToast();
 
-  const beneficiaries: IBeneficiary[] = useMemo(() => {
-    if (!beneficiariesRaw) return [];
-    if (Array.isArray(beneficiariesRaw)) return beneficiariesRaw;
-    if ((beneficiariesRaw as any)?.docs) return (beneficiariesRaw as any).docs;
-    return [];
-  }, [beneficiariesRaw]);
-
-  const visibilityLabel = useMemo(() => {
-    if (!selectedBeneficiaryIds.length) return 'Everyone';
-    const names = beneficiaries.filter(b => b._id && selectedBeneficiaryIds.includes(b._id!)).map(b => b.name).filter(Boolean);
-    return names.length === 1 ? names[0] : `${names.length} beneficiaries`;
-  }, [selectedBeneficiaryIds, beneficiaries]);
+  const privacyLabel = useMemo(() => {
+    if (privacyMode === 'private') return 'Private · Only me';
+    if (privacyMode === 'all') return 'Everyone';
+    const total = selectedBeneficiaryIds.length + selectedGroupIds.length;
+    if (!total) return 'Choose people or groups';
+    return `${selectedBeneficiaryIds.length ? `${selectedBeneficiaryIds.length} people` : ''}${selectedBeneficiaryIds.length && selectedGroupIds.length ? ', ' : ''}${selectedGroupIds.length ? `${selectedGroupIds.length} groups` : ''}`;
+  }, [privacyMode, selectedBeneficiaryIds.length, selectedGroupIds.length]);
 
   const handleAutotag = useCallback(async () => {
     const bodyText = [title, body].filter(Boolean).join(' ').trim();
@@ -275,6 +275,23 @@ function PublishModalInner({
     finally { setIsAutotagging(false); }
   }, [title, body, toast]);
 
+  const handlePrivacyModeChange = useCallback((mode: PrivacyMode) => {
+    setPrivacyMode(mode);
+  }, []);
+
+  const handleOpenPrivacySheet = useCallback(() => {
+    Haptics.selectionAsync();
+    requestAnimationFrame(() => privacySheetRef.current?.present());
+  }, []);
+
+  const handleToggleBeneficiary = useCallback((id: string) => {
+    setSelectedBeneficiaryIds(prev => prev.includes(id) ? prev.filter(value => value !== id) : [...prev, id]);
+  }, []);
+
+  const handleToggleGroup = useCallback((id: string) => {
+    setSelectedGroupIds(prev => prev.includes(id) ? prev.filter(value => value !== id) : [...prev, id]);
+  }, []);
+
   const handlePost = useCallback(() => {
     if (!title.trim() && !body.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -282,7 +299,11 @@ function PublishModalInner({
     const payload = {
       title: title || 'Untitled', body, tags: tagList, status: 'save' as const,
       attachments: attachmentIds.length ? attachmentIds : undefined,
-      beneficiaries: selectedBeneficiaryIds.length ? selectedBeneficiaryIds : undefined,
+      ...(privacyMode === 'private' ? { beneficiaries: [], groups: [] } : {}),
+      ...(privacyMode === 'specific' ? {
+        beneficiaries: selectedBeneficiaryIds,
+        groups: selectedGroupIds,
+      } : {}),
     };
     const onSuccess = (res: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -306,13 +327,14 @@ function PublishModalInner({
     }
   // attachmentIds must be in deps — without it the closure captures the initial
   // empty array and voice notes / images added before publishing are silently dropped.
-  }, [title, body, tags, attachmentIds, selectedBeneficiaryIds, isEditMode, createMemory, updateMemory, toast, onComplete, onPublished, draftId, userEmail]);
+  }, [title, body, tags, attachmentIds, selectedBeneficiaryIds, selectedGroupIds, privacyMode, isEditMode, createMemory, updateMemory, toast, onComplete, onPublished, draftId, userEmail]);
 
   const handleClose = useCallback(() => {
-    setTags(''); setSelectedBeneficiaryIds([]); setBeneficiaryMenuOpen(false); onClose();
+    setTags(''); setSelectedBeneficiaryIds([]); setSelectedGroupIds([]); setPrivacyMode('all'); onClose();
   }, [onClose]);
 
-  return (
+    return (
+      <>
       <View style={{ flex: 1, backgroundColor: COLORS.background }}>
         <BottomSheetScrollView
           keyboardShouldPersistTaps="handled"
@@ -328,35 +350,15 @@ function PublishModalInner({
               <View style={{ backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16, marginBottom: 24 }}>
                 <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong, marginBottom: 4 }}>Who can see this story?</Text>
                 <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textBase, marginBottom: 14 }}>Stories are visible to all beneficiaries by default.</Text>
-                {/* Relative container so the absolute dropdown is anchored here */}
-                <View style={{ position: 'relative' }}>
-                  <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setBeneficiaryMenuOpen(o => !o); }}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, borderWidth: 1, borderColor: beneficiaryMenuOpen ? COLORS.brand : COLORS.strokeWeaker }} activeOpacity={0.8}>
-                    <Users size={18} color={COLORS.textBase} strokeWidth={1.8} />
-                    <Text style={{ flex: 1, fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>{visibilityLabel}</Text>
-                    <ChevronDown size={16} color={COLORS.textMuted} strokeWidth={2} />
-                  </TouchableOpacity>
-                  {beneficiaryMenuOpen && (
-                    <View style={{ position: 'absolute', top: 54, left: 0, right: 0, zIndex: 20, backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingVertical: 4, shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 }}>
-                      <TouchableOpacity onPress={() => { setSelectedBeneficiaryIds([]); setBeneficiaryMenuOpen(false); Haptics.selectionAsync(); }}
-                        style={[{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4, flexDirection: 'row', alignItems: 'center' }, !selectedBeneficiaryIds.length && { backgroundColor: `${COLORS.brand}12` }]}>
-                        <Text style={[{ flex: 1, fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong }, !selectedBeneficiaryIds.length && { color: COLORS.brand, fontFamily: FONTS.sansMedium }]}>Everyone</Text>
-                        {!selectedBeneficiaryIds.length && <Check size={16} color={COLORS.brand} strokeWidth={2.4} />}
-                      </TouchableOpacity>
-                      {beneficiaries.map(b => {
-                        if (!b._id) return null;
-                        const on = selectedBeneficiaryIds.includes(b._id);
-                        return (
-                          <TouchableOpacity key={b._id} onPress={() => { Haptics.selectionAsync(); setSelectedBeneficiaryIds(prev => on ? prev.filter(x => x !== b._id) : [...prev, b._id!]); }}
-                            style={[{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4, flexDirection: 'row', alignItems: 'center' }, on && { backgroundColor: `${COLORS.brand}12` }]}>
-                            <Text style={[{ flex: 1, fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong }, on && { color: COLORS.brand, fontFamily: FONTS.sansMedium }]}>{b.name}</Text>
-                            {on && <Check size={16} color={COLORS.brand} strokeWidth={2.4} />}
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  )}
-                </View>
+                <TouchableOpacity
+                  onPress={handleOpenPrivacySheet}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, borderWidth: 1, borderColor: COLORS.strokeWeaker }}
+                  activeOpacity={0.8}
+                >
+                  <Users size={18} color={COLORS.textBase} strokeWidth={1.8} />
+                  <Text style={{ flex: 1, fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>{privacyLabel}</Text>
+                  <ChevronDown size={16} color={COLORS.textMuted} strokeWidth={2} />
+                </TouchableOpacity>
               </View>
               <View style={{ marginBottom: 32 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -376,6 +378,22 @@ function PublishModalInner({
               </TouchableOpacity>
         </BottomSheetScrollView>
       </View>
+      <PublishPrivacySheet
+        ref={privacySheetRef}
+        mode={privacyMode}
+        selectedBeneficiaryIds={selectedBeneficiaryIds}
+        selectedGroupIds={selectedGroupIds}
+        onModeChange={handlePrivacyModeChange}
+        onToggleBeneficiary={handleToggleBeneficiary}
+        onToggleGroup={handleToggleGroup}
+        onApply={(nextMode, nextBeneficiaryIds, nextGroupIds) => {
+          setPrivacyMode(nextMode);
+          setSelectedBeneficiaryIds(nextBeneficiaryIds);
+          setSelectedGroupIds(nextGroupIds);
+        }}
+        onClose={() => privacySheetRef.current?.dismiss()}
+      />
+      </>
   );
 }
 
@@ -413,6 +431,13 @@ export default function EditorScreen() {
   const initialBeneficiaryIds = useMemo(() => {
     if (initialParsedData?.beneficiaries && Array.isArray(initialParsedData.beneficiaries)) {
       return initialParsedData.beneficiaries.map((b: any) => b._id || b.id).filter(Boolean);
+    }
+    return [];
+  }, [initialParsedData]);
+
+  const initialGroupIds = useMemo(() => {
+    if (initialParsedData?.groups && Array.isArray(initialParsedData.groups)) {
+      return initialParsedData.groups.map((group: any) => group._id || group.id).filter(Boolean);
     }
     return [];
   }, [initialParsedData]);
@@ -1310,6 +1335,7 @@ export default function EditorScreen() {
               userEmail={user?.email}
               initialTags={initialTags}
               initialBeneficiaryIds={initialBeneficiaryIds}
+              initialGroupIds={initialGroupIds}
               onClose={handleClosePublishSheet}
               onComplete={handlePublishFlowComplete}
               onPublished={handlePublishCreated}

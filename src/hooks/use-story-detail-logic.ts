@@ -7,7 +7,7 @@ import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-typ
 import { useCallback, useMemo } from 'react';
 
 export function useStoryDetailLogic() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const router = useRouter();
   const { data: memory, isLoading } = useMemory(id);
   const { mutate: bookmark, isPending: bookmarking } = useBookmarkMemory();
@@ -25,7 +25,9 @@ export function useStoryDetailLogic() {
           deleteMemory(memory._id, {
             onSuccess: () => {
               // After delete, back stack may be empty if opened via deep link
-              if (router.canGoBack()) {
+              if (from === 'overview') {
+                router.replace('/(tabs)/overview');
+              } else if (router.canGoBack()) {
                 router.back();
               } else {
                 router.replace('/(tabs)/stories');
@@ -37,7 +39,7 @@ export function useStoryDetailLogic() {
         });
       },
     });
-  }, [memory, openSheet, deleteMemory, router]);
+  }, [memory, openSheet, deleteMemory, from, router]);
 
   const handleBookmark = useCallback(() => {
     if (!memory) return;
@@ -124,6 +126,7 @@ export function useStoryDetailLogic() {
   return useMemo(
     () => ({
       id,
+      returnToOverview: from === 'overview',
       router,
       memory,
       isLoading,
@@ -139,6 +142,7 @@ export function useStoryDetailLogic() {
     }),
     [
       id,
+      from,
       router,
       memory,
       isLoading,

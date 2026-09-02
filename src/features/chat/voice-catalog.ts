@@ -65,3 +65,16 @@ export const VOICE_CATALOG: readonly VoiceDefinition[] = [
 export function getVoiceById(id?: string | null): VoiceDefinition | null {
   return VOICE_CATALOG.find((voice) => voice.id === id) ?? null;
 }
+
+export function getVoiceByProviderName(name?: string | null): VoiceDefinition | null {
+  if (!name) return null;
+  const lower = name.toLowerCase();
+  return (
+    VOICE_CATALOG.find(
+      (v) =>
+        v.providerVoiceName.toLowerCase() === lower ||
+        v.id.toLowerCase() === lower ||
+        v.name.toLowerCase() === lower
+    ) ?? null
+  );
+}

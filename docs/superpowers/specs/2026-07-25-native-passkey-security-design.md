@@ -74,7 +74,7 @@ All-other-devices logout requires an API endpoint that revokes other sessions wh
 
 - iOS minimum: 16.
 - Android minimum: API 28.
-- Bundle/package identifier: `com.mementoai.app`.
+- Bundle/package identifier: `io.mymemento.app`.
 - Associated domain must include the WebAuthn RP ID using `webcredentials:`.
 - The RP domain must serve a valid AASA file with the current Apple Team ID and bundle identifier.
 - Android must serve `assetlinks.json` with `delegate_permission/common.get_login_creds` and the release signing certificate fingerprint.

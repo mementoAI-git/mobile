@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { get } from '@/api/mutations';
+import { fetchPaginated } from '@/api/domain-fetchers';
 import endpoint from '@/api/endpoint';
 import { getNextActivitiesPage } from '@/features/activities/pagination';
 import { queryKeys } from '@/constants/query-keys';
@@ -35,9 +35,7 @@ export function useActivities(params?: { page?: number; limit?: number }) {
       const qs = new URLSearchParams();
       qs.set('page', String(params?.page || 1));
       qs.set('limit', String(params?.limit || 4));
-      return get<ActivitiesResponse>(`${endpoint.activities}?${qs.toString()}`).then(
-        (r) => r.data
-      );
+      return fetchPaginated<Activity>(`${endpoint.activities}?${qs.toString()}`);
     },
     staleTime: 60_000,
   });
@@ -53,9 +51,7 @@ export function useInfiniteActivities(params?: { limit?: number }) {
         page: String(pageParam),
         limit: String(limit),
       });
-      return get<ActivitiesResponse>(`${endpoint.activities}?${qs.toString()}`).then(
-        (r) => r.data,
-      );
+      return fetchPaginated<Activity>(`${endpoint.activities}?${qs.toString()}`);
     },
     initialPageParam: 1,
     getNextPageParam: getNextActivitiesPage,

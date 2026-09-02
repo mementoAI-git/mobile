@@ -3,9 +3,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRegister } from '@/hooks/mutations/use-auth-mutations';
-import type { IAuth } from '@/types';
-import { establishSession } from '@/features/auth/session-coordinator';
 import * as Haptics from 'expo-haptics';
+import { normalizeAuthCompletion } from '@/api/contract-adapter';
 
 const schema = z.object({
   first_name: z.string().min(1, 'First name is required'),
@@ -34,8 +33,13 @@ export function useRegisterLogic() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     mutate(data, {
       onSuccess: async (res) => {
-        const { user, ...auth } = res.data;
-        await establishSession(auth as IAuth, user);
+        const completion = normalizeAuthCompletion(res);
+        if (completion.kind === 'verification-required') {
+          router.push({
+            pathname: '/(auth)/verify-email',
+            params: { email: completion.email },
+          });
+        }
       },
       onError: () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

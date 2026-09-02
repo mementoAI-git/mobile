@@ -1,12 +1,13 @@
 import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-type';
 import type { PreviewAttachment } from '@/components/ui/MediaPreviewModal';
+import type { SignedMediaAccessMetadata } from '@/features/media/signed-media-access';
 
 interface SharedMediaMessage {
   _id?: string;
   text?: string;
   content?: string;
-  attachments?: Array<{ _id?: string; url: string; name: string; type?: string; thumbnail?: string | null }>;
-  attatchments?: Array<{ _id?: string; url: string; name: string; type?: string; thumbnail?: string | null }>;
+  attachments?: Array<{ _id?: string; url: string; name: string; type?: string; thumbnail?: string | null; access?: SignedMediaAccessMetadata }>;
+  attatchments?: Array<{ _id?: string; url: string; name: string; type?: string; thumbnail?: string | null; access?: SignedMediaAccessMetadata }>;
 }
 
 export type SharedAttachment = PreviewAttachment & {
@@ -31,6 +32,7 @@ export function mapAttachmentsToShared(
     duration?: number;
     isVoice?: boolean;
     sourceMessageId?: string;
+    access?: SignedMediaAccessMetadata;
   }>
 ): SharedAttachment[] {
   return items.map((item) => {
@@ -51,6 +53,7 @@ export function mapAttachmentsToShared(
       thumbnailUrl: item.thumbnail || null,
       duration: item.duration,
       isVoice: item.isVoice,
+      access: item.access,
     };
   });
 }
@@ -88,6 +91,7 @@ export function collectSharedAttachments(
           name: attachment.name,
           mimeType,
           thumbnailUrl: attachment.thumbnail ?? null,
+          access: attachment.access,
         });
       }
     }

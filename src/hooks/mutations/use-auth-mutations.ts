@@ -3,6 +3,7 @@ import { post, del } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import type { IAuth, IUser } from '@/types';
 import { establishSession, terminateSession } from '@/features/auth/session-coordinator';
+import { completeAuthResponse } from '@/features/auth/auth-completion';
 
 interface LoginPayload {
   email: string;
@@ -17,33 +18,12 @@ interface RegisterPayload {
   last_name: string;
 }
 
-interface AuthResponse {
-  access_token: string;
-  refresh_token: string;
-  expires_at: string;
-  refresh_expires_at: string;
-  user: IUser;
-  onboarded?: boolean;
-  onboarding_status?: string;
-}
-
-interface TwoFARequiredResponse {
-  requires_2fa: true;
-  two_fa_token: string;
-}
-
-type LoginResponse = AuthResponse | TwoFARequiredResponse;
-
 export function useLogin() {
   return useMutation({
     mutationFn: (payload: LoginPayload) =>
-      post<LoginResponse>(endpoint.login, payload, { skipAuth: true }),
+      post<unknown>(endpoint.login, payload, { skipAuth: true }),
     onSuccess: async (res) => {
-      const data = res.data as any;
-      // 2FA required — caller handles redirect
-      if (data.requires_2fa) return;
-      const { user, ...auth } = data as AuthResponse;
-      await establishSession(auth as IAuth, user);
+      await completeAuthResponse(res, establishSession);
     },
   });
 }
@@ -51,7 +31,10 @@ export function useLogin() {
 export function useRegister() {
   return useMutation({
     mutationFn: (payload: RegisterPayload) =>
-      post<AuthResponse>(endpoint.register, payload, { skipAuth: true }),
+      post<unknown>(endpoint.register, payload, { skipAuth: true }),
+    onSuccess: async (res) => {
+      await completeAuthResponse(res, establishSession);
+    },
   });
 }
 
@@ -65,7 +48,10 @@ export function useForgotPassword() {
 export function useVerifyEmail() {
   return useMutation({
     mutationFn: (token: string) =>
-      post(endpoint.verifyEmail, { token }, { skipAuth: true }),
+      post<unknown>(endpoint.verifyEmail, { token }, { skipAuth: true }),
+    onSuccess: async (res) => {
+      await completeAuthResponse(res, establishSession);
+    },
   });
 }
 
@@ -79,6 +65,14 @@ export function useSetPassword() {
 export function useLogout() {
   return useMutation({
     mutationFn: async () => {
+      try {
+        const { disableCurrentPushDevice } = await import(
+          '@/features/notifications/push-device-runtime'
+        );
+        await disableCurrentPushDevice();
+      } catch {
+        // Device cleanup is best-effort; server logout still revokes the session.
+      }
       const { authService } = await import('@/api/auth-service');
       await authService.logout();
     },
@@ -107,10 +101,9 @@ export function useDeleteAccount() {
 export function useVerify2FA() {
   return useMutation({
     mutationFn: (payload: { two_fa_token: string; code: string }) =>
-      post<AuthResponse>(endpoint.verify2FALogin, payload, { skipAuth: true }),
+      post<unknown>(endpoint.verify2FALogin, payload, { skipAuth: true }),
     onSuccess: async (res) => {
-      const { user, ...auth } = res.data;
-      await establishSession(auth as IAuth, user);
+      await completeAuthResponse(res, establishSession);
     },
   });
 }

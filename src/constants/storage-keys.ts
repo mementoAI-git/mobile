@@ -6,6 +6,7 @@ export const storageKeys = {
   welcomeOnce: 'memento.welcome-once',
   onboardingState: 'memento.onboarding_state',
   syncedPushToken: 'memento.synced_push_token',
+  installationId: 'memento.installation_id',
 
   // ── Biometric login (interim — stores refresh_token, NOT password) ─────────
   // v2 upgrade path: replace with native WebAuthn passkeys once the app-link

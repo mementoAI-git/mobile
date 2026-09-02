@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { get } from '@/api/mutations';
+import { fetchCollection } from '@/api/domain-fetchers';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 
@@ -14,14 +14,7 @@ export interface UserPasskey {
 export function usePasskeys() {
   return useQuery({
     queryKey: queryKeys.passkeys,
-    queryFn: async () => {
-      const response = await get<UserPasskey[] | { docs?: UserPasskey[] }>(
-        endpoint.listPasskeys,
-      );
-      const data = response.data;
-      if (Array.isArray(data)) return data;
-      return data?.docs ?? [];
-    },
+    queryFn: () => fetchCollection<UserPasskey>(endpoint.listPasskeys),
     staleTime: 60_000,
   });
 }

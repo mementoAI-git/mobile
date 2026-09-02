@@ -50,6 +50,9 @@ export default {
   upload: '/files/upload',
   files: '/files',
 
+  // push devices
+  pushDevices: '/push-devices',
+
   // prompts
   prompts: '/prompts',
   suggestions: '/prompts/suggestions',

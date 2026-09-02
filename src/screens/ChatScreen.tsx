@@ -30,6 +30,7 @@ import Animated, {
   FadeInUp,
 } from 'react-native-reanimated';
 import { useChatLogic } from '@/hooks/use-chat-logic';
+import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useLocalSearchParams } from 'expo-router';
 import { useBackHandler } from '@/hooks/use-back-handler';
 import * as Haptics from 'expo-haptics';
@@ -40,6 +41,7 @@ import {
   getComposerOverlayMaxHeight,
 } from '@/features/chat/composer-layout';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
+import { toast } from '@/components/ui/Toast';
 import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 import {
   getChatMessageItemType,
@@ -164,13 +166,46 @@ export default function ChatScreen() {
   const [attachmentPreview, setAttachmentPreview] = useState<ChatAttachmentPreviewRequest | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const completedFocusRef = useRef<string | null>(null);
+  const uploadedInitialAudioRef = useRef<string | null>(null);
   const blurTargetRef = useRef<View>(null);
+  const { mutateAsync: uploadFile } = useFileUpload();
 
   const isActuallyStreaming = streaming || isStartingConversation;
 
   React.useEffect(() => {
     if (!replyQuote) setReplyQuoteHeight(0);
   }, [replyQuote]);
+
+  React.useEffect(() => {
+    if (!initialAudioUri || uploadedInitialAudioRef.current === initialAudioUri || isLoading) return;
+    uploadedInitialAudioRef.current = initialAudioUri;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const file = await uploadFile({
+          uri: initialAudioUri,
+          type: 'audio/m4a',
+          name: `voice_${Date.now()}.m4a`,
+        });
+        if (cancelled || !file?._id) return;
+        await send('', null, [file._id], [{
+          _id: file._id,
+          url: file.url,
+          name: file.name,
+          type: file.type ?? 'audio/m4a',
+          size: file.size,
+        }]);
+      } catch {
+        if (!cancelled) {
+          toast('Could not send your voice reflection. Try again.', 'error');
+          uploadedInitialAudioRef.current = null;
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [initialAudioUri, isLoading, send, uploadFile]);
 
   React.useEffect(() => {
     const focusIdentity = focusMessageId ?? focusAttachmentId;

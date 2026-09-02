@@ -7,6 +7,8 @@ import endpoint from '@/api/endpoint';
 import { COLORS } from '@/constants/tokens';
 import { API_BASE_URL } from '@/lib/env';
 import { establishSession, restoreSessionWithCredentials } from '@/features/auth/session-coordinator';
+import { completeAuthResponse } from '@/features/auth/auth-completion';
+import { getMementoClientHeaders } from '@/api/client-runtime-metadata';
 
 export default function OAuthCallbackScreen() {
   const router = useRouter();
@@ -58,7 +60,11 @@ export default function OAuthCallbackScreen() {
       };
       
       if (parsedUser && typeof parsedUser !== 'string') {
-        await establishSession(credentials, parsedUser);
+        const completion = await completeAuthResponse(
+          { data: { ...credentials, user: parsedUser } },
+          establishSession,
+        );
+        if (completion.kind !== 'session') throw new Error('Missing OAuth session');
       } else {
         await restoreSessionWithCredentials(credentials);
       }
@@ -73,7 +79,10 @@ export default function OAuthCallbackScreen() {
     try {
       const res = await fetch(`${API_BASE_URL}${endpoint.oauth}${resolvedProvider}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getMementoClientHeaders(),
+        },
         body: JSON.stringify({ code }),
       });
       const result = await res.json();
@@ -83,9 +92,11 @@ export default function OAuthCallbackScreen() {
         return;
       }
 
-      const data = result.data;
-      const { user, access_token, refresh_token, expires_at, refresh_expires_at } = data;
-      await establishSession({ access_token, refresh_token, expires_at, refresh_expires_at }, user);
+      const completion = await completeAuthResponse(result, establishSession);
+      if (completion.kind !== 'session') {
+        setError('Sign in failed. Please try again.');
+        return;
+      }
       setDone(true);
     } catch {
       setError('Something went wrong. Please try again.');

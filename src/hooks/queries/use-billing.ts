@@ -2,23 +2,19 @@ import { useQuery } from '@tanstack/react-query';
 import { get } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
+import {
+  normalizeBillingInvoices,
+  normalizeBillingUsage,
+  type BillingInvoice,
+  type BillingUsage,
+} from '@/features/settings/billing-adapters';
 
-export interface BillingInvoice {
-  url?: string;
-  label?: string;
-}
-
-export interface BillingUsage {
-  storage_used_bytes: number;
-  storage_limit_bytes: number;
-  beneficiary_count: number;
-  timed_message_count: number;
-}
+export type { BillingInvoice, BillingUsage } from '@/features/settings/billing-adapters';
 
 export function useBillingInvoices(enabled = true) {
   return useQuery<BillingInvoice[]>({
     queryKey: queryKeys.billingInvoices,
-    queryFn: () => get<{ data: BillingInvoice[] }>(endpoint.billingInvoices).then((r) => r.data?.data ?? []),
+    queryFn: () => get<unknown>(endpoint.billingInvoices).then(normalizeBillingInvoices),
     enabled,
     staleTime: 30_000,
   });
@@ -27,7 +23,7 @@ export function useBillingInvoices(enabled = true) {
 export function useBillingUsage() {
   return useQuery<BillingUsage | null>({
     queryKey: queryKeys.billingUsage,
-    queryFn: () => get<{ data: BillingUsage }>(endpoint.billingUsage).then((r) => r.data?.data ?? null),
+    queryFn: () => get<unknown>(endpoint.billingUsage).then(normalizeBillingUsage),
     staleTime: 30_000,
   });
 }

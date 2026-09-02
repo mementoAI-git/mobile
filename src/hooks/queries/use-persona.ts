@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { get } from '@/api/mutations';
+import { fetchEntity } from '@/api/domain-fetchers';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import type { IPersona } from '@/types';
@@ -7,7 +7,7 @@ import type { IPersona } from '@/types';
 export function usePersona() {
   return useQuery({
     queryKey: queryKeys.persona,
-    queryFn: () => get<IPersona>(endpoint.persona).then((r) => r.data),
+    queryFn: () => fetchEntity<IPersona>(endpoint.persona),
     staleTime: 300_000,
   });
 }
@@ -16,7 +16,7 @@ export function useMemoryInsightsSummary() {
   return useQuery({
     queryKey: queryKeys.personaMemoryInsightsSummary,
     queryFn: () => 
-      get<{ summary: string | null; generated_at: string | null }>(endpoint.personaMemoryInsightsSummary).then((r) => r.data),
+      fetchEntity<{ summary: string | null; generated_at: string | null }>(endpoint.personaMemoryInsightsSummary),
     staleTime: 60_000,
   });
 }
@@ -24,7 +24,7 @@ export function useMemoryInsightsSummary() {
 export function useUserContext() {
   return useQuery({
     queryKey: queryKeys.userContext,
-    queryFn: () => get<any>(endpoint.userContext).then((r) => r.data),
+    queryFn: () => fetchEntity<any>(endpoint.userContext),
     staleTime: 300_000,
   });
 }

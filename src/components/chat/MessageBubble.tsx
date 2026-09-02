@@ -10,10 +10,12 @@ import { CornerDownRight, FileText, Music, Play, ExternalLink, Copy } from 'luci
 import * as Haptics from 'expo-haptics';
 import type { PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
+import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { useLinkPreview, type LinkPreviewData } from '@/hooks/use-link-preview';
 import { Image as ExpoImage } from 'expo-image';
 import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-type';
 import { getAttachmentPreviewKind } from '@/features/media/media-runtime-policy';
+import type { SignedMediaAccessMetadata } from '@/features/media/signed-media-access';
 
 // ─── Backward-compat helpers for old messages ────────────────────────────────
 
@@ -37,6 +39,15 @@ export interface ChatAttachmentPreviewRequest {
   initialIndex: number;
 }
 
+type ChatAttachment = {
+  url: string;
+  name: string;
+  type?: string;
+  _id?: string;
+  thumbnail?: string | null;
+  access?: SignedMediaAccessMetadata;
+};
+
 interface MessageBubbleProps {
   message: IMessage | {
     role: string;
@@ -45,7 +56,7 @@ interface MessageBubbleProps {
     ai_model?: string;
     _id?: string;
     replyTo?: { role: string; text: string };
-    attatchments?: { url: string; name: string; type?: string; _id?: string }[];
+    attatchments?: ChatAttachment[];
   };
   onReply?: () => void;
   onScrollToOriginal?: () => void;
@@ -56,20 +67,22 @@ interface MessageBubbleProps {
 
 // ─── Attachment helpers ────────────────────────────────────────────────────────
 
-function toPreviewAttachment(a: { url: string; name: string; type?: string; _id?: string }, idx: number): PreviewAttachment {
+function toPreviewAttachment(a: ChatAttachment, idx: number): PreviewAttachment {
   return {
     clientId: a._id ?? `att_${idx}`,
     uri: a.url,
     name: a.name,
     mimeType: inferMediaMimeType({ mimeType: a.type, name: a.name, uri: a.url }),
-    thumbnailUrl: (a as any).thumbnail ?? null,
+    thumbnailUrl: a.thumbnail ?? null,
+    persistedFileId: a._id,
+    access: a.access,
   };
 }
 
 // ─── Single file chip ──────────────────────────────────────────────────────────
 
 function AttachmentTile({ attachment, onPress }: {
-  attachment: { url: string; name: string; type?: string; _id?: string };
+  attachment: ChatAttachment;
   onPress: () => void;
 }) {
   const cat = getMediaCategory({ mimeType: attachment.type, name: attachment.name, uri: attachment.url });
@@ -78,7 +91,16 @@ function AttachmentTile({ attachment, onPress }: {
   if (previewKind === 'image') {
     return (
       <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-        <Image source={{ uri: attachment.url }} style={{ width: 120, height: 120, borderRadius: 12 }} resizeMode="cover" />
+        <SignedAttachmentImage
+          attachment={{
+            _id: attachment._id ?? attachment.url,
+            url: attachment.url,
+            thumbnail: attachment.thumbnail,
+            access: attachment.access,
+          }}
+          style={{ width: 120, height: 120, borderRadius: 12 }}
+          resizeMode="cover"
+        />
       </TouchableOpacity>
     );
   }
@@ -321,14 +343,19 @@ function AttachmentPlaceholder({
   );
 }
 
-// Pure helper — module-level so it is never recreated on each AttachmentGrid render
-function renderMediaPreview(
-  a: { url: string; name: string; type?: string; _id?: string },
+const MediaPreviewTile = React.memo(function MediaPreviewTile({
+  attachment: a,
+  width,
+  height,
+  borderRadius,
+  onPress,
+}: {
+  attachment: ChatAttachment;
   width: number,
   height: number,
   borderRadius: number,
   onPress: () => void,
-) {
+}) {
   const category = getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url });
   const previewKind = getAttachmentPreviewKind({ category, uri: a.url });
 
@@ -340,7 +367,13 @@ function renderMediaPreview(
     return (
       <VideoThumbnail
         uri={a.url}
-        thumbnailUrl={(a as any).thumbnail}
+        attachment={{
+          _id: a._id ?? a.url,
+          url: a.url,
+          thumbnail: a.thumbnail,
+          access: a.access,
+        }}
+        thumbnailUrl={a.thumbnail}
         width={width}
         height={height}
         borderRadius={borderRadius}
@@ -349,11 +382,22 @@ function renderMediaPreview(
     );
   }
 
-  return <Image source={{ uri: a.url }} style={{ width, height, borderRadius }} resizeMode="cover" />;
-}
+  return (
+    <SignedAttachmentImage
+      attachment={{
+        _id: a._id ?? a.url,
+        url: a.url,
+        thumbnail: a.thumbnail,
+        access: a.access,
+      }}
+      style={{ width, height, borderRadius }}
+      resizeMode="cover"
+    />
+  );
+});
 
 function AttachmentGrid({ attachments, onTap }: {
-  attachments: { url: string; name: string; type?: string; _id?: string }[];
+  attachments: ChatAttachment[];
   onTap: (index: number) => void;
 }) {
   if (attachments.length === 0) return null;
@@ -371,7 +415,7 @@ function AttachmentGrid({ attachments, onTap }: {
     const origIdx = attachments.indexOf(a);
     imageSection = (
       <TouchableOpacity onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
-        {renderMediaPreview(a, fullW, Math.round(fullW * (3 / 4)), 12, () => onTap(origIdx))}
+        <MediaPreviewTile attachment={a} width={fullW} height={Math.round(fullW * (3 / 4))} borderRadius={12} onPress={() => onTap(origIdx)} />
       </TouchableOpacity>
     );
   } else if (count <= 3) {
@@ -384,7 +428,7 @@ function AttachmentGrid({ attachments, onTap }: {
           const origIdx = attachments.indexOf(a);
           return (
             <TouchableOpacity key={a._id ?? origIdx} onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
-              {renderMediaPreview(a, tileW, tileH, 10, () => onTap(origIdx))}
+              <MediaPreviewTile attachment={a} width={tileW} height={tileH} borderRadius={10} onPress={() => onTap(origIdx)} />
             </TouchableOpacity>
           );
         })}
@@ -408,7 +452,7 @@ function AttachmentGrid({ attachments, onTap }: {
               const showOverlay = isLast && overflow > 0;
               return (
                 <TouchableOpacity key={a._id ?? origIdx} onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
-                  {renderMediaPreview(a, tileW, tileH, 10, () => onTap(origIdx))}
+                  <MediaPreviewTile attachment={a} width={tileW} height={tileH} borderRadius={10} onPress={() => onTap(origIdx)} />
                   {showOverlay && (
                     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.62)', alignItems: 'center', justifyContent: 'center' }}>
                       <Text style={{ fontFamily: FONTS.sansBold, fontSize: 18, color: '#fff' }}>+{overflow}</Text>
@@ -445,7 +489,7 @@ export const MessageBubble = React.memo(function MessageBubble({
   animated = false,
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
-  const rawAttachments: { url: string; name: string; type?: string; _id?: string }[] =
+  const rawAttachments: ChatAttachment[] =
     (message as any).attachments ?? (message as any).attatchments ?? [];
 
   const rawContent = message.text || (message as any).content || '';
@@ -458,8 +502,7 @@ export const MessageBubble = React.memo(function MessageBubble({
 
   const previewAttachments: PreviewAttachment[] = useMemo(
     () => rawAttachments.map(toPreviewAttachment),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rawAttachments.length, (message as any)._id],
+    [rawAttachments],
   );
 
   const hasContent = content.trim().length > 0 || rawAttachments.length > 0;

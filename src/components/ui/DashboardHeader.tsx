@@ -41,8 +41,8 @@ export function DashboardHeader({ title, showStreak = true, rightElement, onStre
       <ImageBackground source={PATTERN} className="absolute inset-0 opacity-20" />
       <View className="flex-row items-center justify-between px-5 pt-4 pb-3 min-h-[64px]">
         <Animated.Text
-          className="text-[28px] text-text-strong"
-          style={{ fontFamily: FONTS.serif }}
+          className="text-[20px] leading-[28px] text-text-strong"
+          style={{ fontFamily: FONTS.sansBold }}
         >
           {title}
         </Animated.Text>

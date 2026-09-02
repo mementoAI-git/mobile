@@ -12,6 +12,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { useBillingSettingsLogic } from '@/hooks/use-billing-settings-logic';
 import { useRouter } from 'expo-router';
+import { getStoragePresentation } from '@/features/settings/billing-storage';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
@@ -53,6 +54,7 @@ export default function BillingSettingsScreen() {
   } = useBillingSettingsLogic();
 
   const router = useRouter();
+  const storage = usage ? getStoragePresentation(usage, isProOrAbove) : null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
@@ -172,7 +174,7 @@ export default function BillingSettingsScreen() {
                 </TouchableOpacity>
               )}
 
-              {summary?.status === 'paused' && (
+              {(summary?.cancel_at_period_end || summary?.status === 'paused') && (
                 <TouchableOpacity
                   onPress={handleResume}
                   disabled={resumeBusy}
@@ -194,7 +196,7 @@ export default function BillingSettingsScreen() {
           </Animated.View>
 
           {/* 2. Usage & Limits Card */}
-          {usage && (
+          {usage && storage && (
             <Animated.View entering={FadeInDown.delay(100).duration(600)}>
               <View className="bg-white rounded-[32px] p-6 gap-6">
                 <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
@@ -206,17 +208,38 @@ export default function BillingSettingsScreen() {
                   <View className="flex-row justify-between items-end">
                     <Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>Vault Storage</Text>
                     <Text className="text-xs text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
-                      {formatBytes(usage.storage_used_bytes)} of {formatBytes(usage.storage_limit_bytes || 5368709120)}
+                      {formatBytes(storage.used)} of {formatBytes(storage.limit)}
                     </Text>
                   </View>
                   <View className="h-2.5 w-full bg-fill-weaker rounded-full overflow-hidden">
                     <View 
-                      className="h-full bg-brand rounded-full" 
+                      className={`h-full rounded-full ${storage.warning ? 'bg-warning-strong' : 'bg-brand'}`}
                       style={{ 
-                        width: `${Math.min(100, ((usage.storage_used_bytes || 0) / (usage.storage_limit_bytes || 5368709120)) * 100)}%` 
+                        width: `${storage.percent}%`
                       }} 
                     />
                   </View>
+                  <View className="flex-row flex-wrap justify-between gap-2">
+                    {storage.reserved > 0 ? (
+                      <Text className="text-xs text-text-weak" style={{ fontFamily: FONTS.sans }}>
+                        {formatBytes(storage.reserved)} currently uploading
+                      </Text>
+                    ) : <View />}
+                    <Text className="text-xs text-text-weak" style={{ fontFamily: FONTS.sans }}>
+                      {formatBytes(storage.remaining)} available
+                    </Text>
+                  </View>
+                  {storage.warning ? (
+                    <View
+                      accessibilityRole="alert"
+                      className="rounded-xl border bg-warning-weak px-3 py-2"
+                      style={{ borderColor: `${COLORS.warning}33` }}
+                    >
+                      <Text className="text-xs text-warning-strong" style={{ fontFamily: FONTS.sansMedium }}>
+                        {storage.warning}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
 
                 {/* Grid stats */}

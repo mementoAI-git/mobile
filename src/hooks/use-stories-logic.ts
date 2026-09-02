@@ -39,7 +39,7 @@ export function useStoriesLogic() {
   });
 
   const stories = useMemo(() => data?.pages.flatMap((p) => p.docs) ?? [], [data?.pages]);
-  const stats = statsData?.data;
+  const stats = statsData;
 
   const handleCreateNew = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

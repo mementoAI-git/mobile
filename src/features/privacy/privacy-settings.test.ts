@@ -22,6 +22,9 @@ describe('Privacy settings screen', () => {
     expect(screen).toContain('useDeleteAccount');
     expect(screen).toContain("kind: 'delete-account'");
     expect(confirmation).toContain("| 'delete-account'");
+    expect(confirmation).toContain('Your access ends immediately');
+    expect(confirmation).toContain('finish in the background');
+    expect(confirmation).toContain('without a link to your profile');
     expect(screen).not.toContain('Alert.alert(');
   });
 });

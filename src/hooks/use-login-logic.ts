@@ -18,6 +18,8 @@ import {
   classifyPasskeyError,
   selectSecurityLoginMethod,
 } from '@/features/security/security-flow';
+import { normalizeAuthCompletion } from '@/api/contract-adapter';
+import { completeAuthResponse } from '@/features/auth/auth-completion';
 
 const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
@@ -77,12 +79,12 @@ export function useLoginLogic() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     mutate(data, {
       onSuccess: (res) => {
-        const resData = res.data as any;
-        if (resData.requires_2fa) {
+        const completion = normalizeAuthCompletion(res);
+        if (completion.kind === 'two-factor-required') {
           router.push({
             pathname: '/(auth)/two-factor',
             params: {
-              token: resData.two_fa_token,
+              token: completion.token,
               ...(getPreferredPostAuthHref() ? { redirect: getPreferredPostAuthHref() as string } : {}),
             },
           });
@@ -172,12 +174,8 @@ export function useLoginLogic() {
             challenge_id: challengeId,
             response: assertion,
           });
-          const authData = complete.data?.data as any;
-          if (!authData?.access_token) throw new Error('Missing passkey session');
-
-          const { user, ...auth } = authData;
-          if (!user) throw new Error('Missing passkey profile');
-          await establishSession(auth, user);
+          const completion = await completeAuthResponse(complete.data, establishSession);
+          if (completion.kind !== 'session') throw new Error('Missing passkey session');
 
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (error) {
@@ -201,19 +199,18 @@ export function useLoginLogic() {
 
       // Exchange refresh_token for a new access/refresh token pair
       const res = await client.post(endpoint.refreshToken, { refresh_token: refreshToken });
-      const newTokens = res.data?.data as any;
+      const completion = await completeAuthResponse(res.data, establishSession);
 
-      if (!newTokens?.access_token) {
+      if (completion.kind !== 'session') {
         toast('Session expired. Please sign in with your password.', 'error');
         setPasskeyLoading(false);
         return;
       }
 
       // Persist the new token pair and update the stored refresh_token silently
-      await restoreSessionWithCredentials(newTokens);
       await SecureStore.setItemAsync(
         storageKeys.biometricsRefreshToken,
-        newTokens.refresh_token,
+        completion.credentials.refresh_token,
         { requireAuthentication: true },
       );
 

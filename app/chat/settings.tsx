@@ -33,16 +33,22 @@ import Animated, {
 import { COLORS, FONTS } from '@/constants/tokens';
 import { getChatSettingsLayout } from '@/features/chat/chat-settings-layout';
 import { VoiceArtwork } from '@/components/chat/VoiceArtwork';
-import { VOICE_CATALOG } from '@/features/chat/voice-catalog';
+import {
+  VOICE_CATALOG,
+  getVoiceById,
+  getVoiceByProviderName,
+  type VoiceId,
+} from '@/features/chat/voice-catalog';
 import { useAuthStore, useVoicePreferenceStore } from '@/store';
 import { MusicPlayerIcon } from '@/components/ui/icons/ChatIcons';
-
-const AMBIENCE = [
-  { id: 'none', name: 'None', subtitle: 'Tune 3' },
-  { id: 'love', name: 'A love for life', subtitle: 'Tune 4' },
-  { id: 'arkansas', name: 'Arkansas', subtitle: 'Tune 3' },
-  { id: 'love-repeat', name: 'A love for life', subtitle: 'Tune 4' },
-] as const;
+import { useBackgroundMusic } from '@/hooks/use-background-music';
+import {
+  BACKGROUND_TRACKS,
+  getBackgroundTrack,
+  type BackgroundTrackKey,
+} from '@/features/audio/background-music';
+import { useUpdateProfile } from '@/hooks/mutations/use-profile-mutation';
+import { useToast } from '@/components/ui/Toast';
 
 const SCORE_COLORS = [
   COLORS.info,
@@ -214,10 +220,12 @@ function VolumeSlider({
   updateValueRef.current = updateValue;
 
   const panResponder = useRef(PanResponder.create({
-    onMoveShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_, gestureState) => (
+      Math.abs(gestureState.dx) > 4 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy)
+    ),
     onPanResponderGrant: (event) => updateValueRef.current(event.nativeEvent.locationX),
     onPanResponderMove: (event) => updateValueRef.current(event.nativeEvent.locationX),
-    onStartShouldSetPanResponder: () => true,
+    onPanResponderTerminationRequest: () => false,
   })).current;
 
   return (
@@ -225,6 +233,7 @@ function VolumeSlider({
       accessibilityLabel="Background ambience volume"
       accessibilityRole="adjustable"
       onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
+      hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
       style={styles.sliderHitArea}
       {...panResponder.panHandlers}
     >
@@ -254,18 +263,79 @@ export default function ChatSettingsScreen() {
   const { enrichmentStats, chatId } = useLocalSearchParams<{ enrichmentStats?: string; chatId?: string }>();
   const layout = useMemo(() => getChatSettingsLayout(screenWidth), [screenWidth]);
   const score = useMemo(() => parseScore(enrichmentStats), [enrichmentStats]);
+  const { toast } = useToast();
+  const { mutate: updateProfile } = useUpdateProfile();
+  const {
+    currentTrack,
+    volume,
+    setVolume,
+    playTrack,
+    stopTrack,
+    tracks: backgroundTracks,
+  } = useBackgroundMusic();
+
   const user = useAuthStore((state) => state.user);
   const selectedVoice = useVoicePreferenceStore((state) => state.selectedVoiceId);
   const hydratedForUser = useVoicePreferenceStore((state) => state.hydratedForUser);
   const hydrateVoice = useVoicePreferenceStore((state) => state.hydrate);
   const selectVoice = useVoicePreferenceStore((state) => state.selectVoice);
   const userKey = user?._id ?? user?.email ?? 'anonymous';
-  const [selectedAmbience, setSelectedAmbience] = useState('none');
-  const [volume, setVolume] = useState(50);
 
   useEffect(() => {
     if (hydratedForUser !== userKey) void hydrateVoice(userKey);
   }, [hydrateVoice, hydratedForUser, userKey]);
+
+  const activeVoiceId = useMemo(() => {
+    if (selectedVoice) return selectedVoice;
+    if (user?.chat_voice) {
+      const match = getVoiceByProviderName(user.chat_voice);
+      if (match) return match.id;
+    }
+    return 'denver';
+  }, [selectedVoice, user?.chat_voice]);
+
+  const handleVoicePress = useCallback(async (voiceId: VoiceId) => {
+    Haptics.selectionAsync();
+    const voice = getVoiceById(voiceId);
+    if (!voice) return;
+
+    await selectVoice(voiceId);
+    updateProfile(
+      { chat_voice: voice.providerVoiceName, chat_voice_provider: 'gemini' },
+      {
+        onSuccess: () => {
+          toast(`Voice set to ${voice.name}`, 'success');
+        },
+        onError: () => {
+          toast('Failed to save voice preference', 'error');
+        },
+      }
+    );
+  }, [selectVoice, updateProfile, toast]);
+
+  const handleAmbiencePress = useCallback(async (trackKey: BackgroundTrackKey) => {
+    Haptics.selectionAsync();
+    if (trackKey === 'none') {
+      await stopTrack();
+      updateProfile(
+        { bg_music: null },
+        {
+          onSuccess: () => toast('Background music turned off', 'success'),
+          onError: () => toast('Failed to update background music', 'error'),
+        }
+      );
+    } else {
+      await playTrack(trackKey);
+      const track = getBackgroundTrack(trackKey);
+      updateProfile(
+        { bg_music: trackKey },
+        {
+          onSuccess: () => toast(`Background music enabled: ${track.name}`, 'success'),
+          onError: () => toast('Failed to update background music', 'error'),
+        }
+      );
+    }
+  }, [playTrack, stopTrack, updateProfile, toast]);
 
   const goBack = useCallback(() => {
     if (router.canGoBack()) router.back();
@@ -413,8 +483,8 @@ export default function ChatSettingsScreen() {
                 <SelectionCard
                   key={voice.id}
                   label={`${voice.name}, ${voice.subtitle}`}
-                  onPress={() => { void selectVoice(voice.id); }}
-                  selected={selectedVoice === voice.id}
+                  onPress={() => { void handleVoicePress(voice.id); }}
+                  selected={activeVoiceId === voice.id}
                   width={layout.selectionCardWidth}
                 >
                   <VoiceArtwork voice={voice} size={32} />
@@ -431,15 +501,15 @@ export default function ChatSettingsScreen() {
             <Text style={styles.sectionTitle}>Background Ambience</Text>
             <VolumeSlider onChange={setVolume} value={volume} />
             <View style={styles.twoColumnGrid}>
-              {AMBIENCE.map((ambience) => (
+              {backgroundTracks.map((ambience) => (
                 <SelectionCard
                   key={ambience.id}
                   label={`${ambience.name}, ${ambience.subtitle}`}
-                  onPress={() => setSelectedAmbience(ambience.id)}
-                  selected={selectedAmbience === ambience.id}
+                  onPress={() => { void handleAmbiencePress(ambience.key); }}
+                  selected={currentTrack === ambience.key}
                   width={layout.selectionCardWidth}
                 >
-                  {ambience.id === 'none' ? (
+                  {ambience.key === 'none' ? (
                     <View style={styles.noneIcon}>
                       <VolumeX size={17} color={COLORS.textStrong} strokeWidth={2} />
                     </View>
@@ -710,7 +780,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   sliderHitArea: {
-    height: 24,
+    height: 44,
     justifyContent: 'center',
   },
   sliderTrack: {

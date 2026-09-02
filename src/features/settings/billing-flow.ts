@@ -6,6 +6,7 @@ import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import { logger } from '@/lib/logger';
 import { toast } from '@/components/ui/Toast';
+import { extractBillingUrl } from './billing-adapters';
 
 export type BillingCheckoutTier = 'pro' | 'legacy';
 export type BillingCheckoutInterval = 'monthly' | 'annual' | 'lifetime';
@@ -49,7 +50,7 @@ export async function launchBillingCheckout({
       interval,
     });
 
-    const checkoutUrl = res?.data?.checkout_url;
+    const checkoutUrl = extractBillingUrl(res, 'checkout_url');
     if (!checkoutUrl) {
       toast('Could not start checkout. Please try again.', 'error');
       return false;
@@ -72,7 +73,7 @@ export async function openBillingPortal({ returnPath }: OpenBillingPortalOptions
       return_url: redirectUrl,
     });
 
-    const portalUrl = res?.data?.portal_url;
+    const portalUrl = extractBillingUrl(res, 'portal_url');
     if (!portalUrl) {
       toast('Could not open billing portal. Please try again.', 'error');
       return false;

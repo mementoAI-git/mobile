@@ -27,6 +27,7 @@ import { MemTag, Skeleton } from '@/components/ui';
 import { StoryHtmlBody } from '@/components/memory/StoryHtmlBody';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
+import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useStoryDetailLogic } from '@/hooks/use-story-detail-logic';
 import { useBackHandler } from '@/hooks/use-back-handler';
@@ -64,12 +65,14 @@ const MemoMosaicTile = React.memo(function MemoMosaicTile({
   isWide,
   isSquare,
   showMoreCount,
+  memoryId,
   onPress,
 }: {
   item: any;
   isWide?: boolean;
   isSquare?: boolean;
   showMoreCount?: number;
+  memoryId?: string;
   onPress: (item: any) => void;
 }) {
   const handlePress = useCallback(() => onPress(item), [item, onPress]);
@@ -85,7 +88,12 @@ const MemoMosaicTile = React.memo(function MemoMosaicTile({
         backgroundColor: COLORS.fillWeak,
       }}
     >
-      <Image source={{ uri: item.url }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+      <SignedAttachmentImage
+        attachment={item}
+        context={memoryId ? { memory_id: memoryId } : undefined}
+        style={{ width: '100%', height: '100%' }}
+        resizeMode="cover"
+      />
       {showMoreCount && showMoreCount > 0 ? (
         <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.52)', alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontFamily: FONTS.sansBold, fontSize: 18, color: '#fff' }}>+{showMoreCount} more</Text>
@@ -223,6 +231,7 @@ const MemoDocumentCard = React.memo(function MemoDocumentCard({
 export default function StoryDetailScreen() {
   const {
     router,
+    returnToOverview,
     memory,
     isLoading,
     handleDelete,
@@ -234,10 +243,13 @@ export default function StoryDetailScreen() {
     otherAttachments,
   } = useStoryDetailLogic();
 
-  useBackHandler(() => {
-    if (router.canGoBack()) router.back();
+  const handleBack = useCallback(() => {
+    Haptics.selectionAsync();
+    if (returnToOverview) router.replace('/(tabs)/overview');
+    else if (router.canGoBack()) router.back();
     else router.replace('/(tabs)/stories');
-  });
+  }, [returnToOverview, router]);
+  useBackHandler(handleBack);
 
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -265,12 +277,6 @@ export default function StoryDetailScreen() {
 
   const closePreview = useCallback(() => setPreviewVisible(false), []);
 
-  const handleBack = useCallback(() => {
-    Haptics.selectionAsync();
-    if (router.canGoBack()) router.back();
-    else router.replace('/(tabs)/stories');
-  }, [router]);
-
   const handleEditPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     handleEdit();
@@ -293,6 +299,8 @@ export default function StoryDetailScreen() {
         duration: (a as any).duration,
         isVoice: a.name?.startsWith('voice_') && a.type === 'audio/m4a',
         thumbnailUrl: (a as any).thumbnail ?? null,
+        persistedFileId: a._id,
+        access: a.access,
       };
     }),
     [allPreviewAttachments, memory?.title],
@@ -415,6 +423,7 @@ export default function StoryDetailScreen() {
                   <MemoMosaicTile
                     key={item.url ?? idx}
                     item={item}
+                    memoryId={memory._id}
                     isWide={idx === 0}
                     onPress={openPreview}
                   />
@@ -432,6 +441,7 @@ export default function StoryDetailScreen() {
                     <MemoMosaicTile
                       key={item.url ?? idx}
                       item={item}
+                      memoryId={memory._id}
                       isSquare
                       showMoreCount={showMore ? extraCount : undefined}
                       onPress={openPreview}
@@ -450,6 +460,8 @@ export default function StoryDetailScreen() {
               <VideoThumbnail
                 key={item.url ?? idx}
                 uri={item.url ?? ''}
+                attachment={item}
+                context={{ memory_id: memory._id }}
                 thumbnailUrl={item.thumbnail}
                 width={SCREEN_W - 40}
                 height={(SCREEN_W - 40) * (9 / 16)}
