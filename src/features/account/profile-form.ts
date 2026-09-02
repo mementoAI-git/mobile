@@ -17,14 +17,17 @@ export interface ProfileFormValues {
 }
 
 export interface ProfileUpdatePayload {
-  nickname: string;
-  first_name: string;
-  last_name: string;
-  dob: string;
-  phone_number: string;
-  country: string;
-  location: string;
+  nickname?: string;
+  first_name?: string;
+  last_name?: string;
+  dob?: string;
+  phone_number?: string;
+  country?: string;
+  location?: string;
   context?: any;
+  bg_music?: string | null;
+  chat_voice?: string | null;
+  chat_voice_provider?: 'gemini' | 'elevenlabs' | null;
 }
 
 export function formatProfileBirthday(value: unknown): string {

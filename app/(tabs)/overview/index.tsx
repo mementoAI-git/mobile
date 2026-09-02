@@ -15,6 +15,7 @@ import { useUiStore } from '@/store';
 import { useUserStats, useMemoriesStats, useCapsuleStats } from '@/hooks/queries/use-overview';
 import { useUserStore } from '@/store';
 import {  DashboardHeader, OverviewSkeleton, GradientText, GreetingIcon, /* SplineChart, */ JourneyStatIcon } from '@/components/ui';
+import { UiLightning01 } from '@/components/ui/icons/SettingsIcons';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
@@ -273,13 +274,16 @@ export default function OverviewScreen() {
           }
         >
           {/* ── Editorial Greeting ────────────────────────────────── */}
-          <Animated.View entering={FadeInDown.duration(600)} className="flex-row items-center gap-4">
+          <Animated.View entering={FadeInDown.duration(600)} className="flex-row items-start gap-4">
             <GreetingIcon type={useBright ? 'sun' : 'moon'} size={40} />
             <View className="flex-1">
-              <Animated.Text className="text-[32px] text-text-strong leading-[1.2]" style={{ fontFamily: FONTS.serif }}>
+              <Animated.Text
+                className="text-text-strong"
+                style={{ fontFamily: FONTS.sans, fontSize: 24, lineHeight: 32 }}
+              >
                 {greeting}
                 {displayName && (
-                  <Animated.Text style={{ color: COLORS.success, fontStyle: 'italic' }}> {displayName}.</Animated.Text>
+                  <Animated.Text style={{ color: COLORS.success, fontFamily: FONTS.sansMedium }}> {displayName}.</Animated.Text>
                 )}
               </Animated.Text>
             </View>
@@ -313,7 +317,10 @@ export default function OverviewScreen() {
               >
                 <View className="p-7 gap-8" style={{ borderRadius: 16 }}>
                   <View className="flex-row items-start justify-between">
-                    <Text className="text-[24px] text-text-strong flex-1 leading-snug" style={{ fontFamily: FONTS.serif }}>
+                      <Text
+                        className="text-text-strong flex-1"
+                        style={{ fontFamily: FONTS.sans, fontSize: 16, lineHeight: 24 }}
+                      >
                       What's on your{"\n"}mind today?
                     </Text>
                     <TouchableOpacity
@@ -349,13 +356,16 @@ export default function OverviewScreen() {
                       activeOpacity={0.7}
                       className="flex-1 flex-row items-center justify-center gap-2 h-14 bg-white rounded-full"
                     >
-                      <Zap size={16} color={COLORS.textBase} strokeWidth={2} />
+                      <UiLightning01 size={20} color={COLORS.textBase} strokeWidth={2} />
                       <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>Quick capture</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               </ImageBackground>
             </Animated.View>
+
+            {/* ── Daily Prompts ─────────────────────────────────────── */}
+            <DailyPromptSection />
 
             {/* Card 2: Enrichment Hero */}
             <Animated.View entering={FadeInDown.delay(200)}>
@@ -420,7 +430,7 @@ export default function OverviewScreen() {
               valueElement={
                 <View className="gap-0.5">
                   <View className="flex-row items-baseline">
-                    <Text className="text-xl font-bold text-[#0C71FF]" style={{ fontFamily: FONTS.sansBold }}>{memoriesCount}</Text>
+                    <Text className="text-xl font-bold text-info-strong" style={{ fontFamily: FONTS.sansBold }}>{memoriesCount}</Text>
                     <Text className="text-base font-bold text-text-strong ml-1" style={{ fontFamily: FONTS.sansBold }}>items</Text>
                   </View>
                   {weeklyMemories > 0 && (
@@ -439,7 +449,7 @@ export default function OverviewScreen() {
               label="BENEFICIARIES"
               valueElement={
                 <>
-                  <Text className="text-xl font-bold text-[#FF7D0C]" style={{ fontFamily: FONTS.sansBold }}>{beneficiariesCount}</Text>
+                  <Text className="text-xl font-bold text-brand" style={{ fontFamily: FONTS.sansBold }}>{beneficiariesCount}</Text>
                   <Text className="text-base font-bold text-text-strong ml-1" style={{ fontFamily: FONTS.sansBold }}>people</Text>
                 </>
               }
@@ -462,7 +472,7 @@ export default function OverviewScreen() {
               valueElement={
                 <>
                   <Text className="text-base font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>You're on a </Text>
-                  <Text className="text-base font-bold text-[#FF7D0C]" style={{ fontFamily: FONTS.sansBold }}>{streakCount}-day</Text>
+                  <Text className="text-base font-bold text-brand" style={{ fontFamily: FONTS.sansBold }}>{streakCount}-day</Text>
                   <Text className="text-base font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}> streak</Text>
                 </>
               }
@@ -470,9 +480,6 @@ export default function OverviewScreen() {
               bgImage={STREAK_BG}
             />
           </View>
-
-          {/* ── Daily Prompts ─────────────────────────────────────── */}
-          <DailyPromptSection />
 
           {/* ── Recent Activities ─────────────────────────────────── */}
           <RecentActivitiesSection />

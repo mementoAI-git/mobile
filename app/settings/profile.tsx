@@ -16,6 +16,7 @@ import { Button } from '@/components/ui';
 import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useProfile } from '@/hooks/queries/use-profile';
+import { useUserContext } from '@/hooks/queries/use-persona';
 import { useUiStore } from '@/store';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
@@ -34,6 +35,7 @@ const DETAILS = [
 export default function PersonalInfoScreen() {
   const router = useRouter();
   const { data: profile } = useProfile();
+  const { data: userContext } = useUserContext();
   const openSheet = useUiStore((state) => state.openSheet);
 
   const handleBack = useCallback(() => {
@@ -82,7 +84,7 @@ export default function PersonalInfoScreen() {
           <View style={styles.aboutCard}>
             <Text style={SETTINGS_TYPE.cardTitle}>About me</Text>
             <Text style={[SETTINGS_TYPE.body, { color: COLORS.textStrong, marginTop: 6 }]}>
-              {profile?.context?.self_description?.trim() || 'Add a few words about yourself.'}
+              {profile?.context?.self_description?.trim() || userContext?.self_description?.trim() || 'Add a few words about yourself.'}
             </Text>
           </View>
 

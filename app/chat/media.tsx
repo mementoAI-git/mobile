@@ -3,7 +3,6 @@ import { ActivityIndicator, FlatList, Linking, Pressable, Text, View, useWindowD
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, FileText, Image as ImageIcon, Link2, Music2, Play } from 'lucide-react-native';
-import { Image as ExpoImage } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -11,6 +10,7 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { mapAttachmentsToShared, type SharedAttachment, type SharedLink } from '@/features/chat/shared-media';
 import { useConversationAttachments } from '@/hooks/queries/use-memories';
 import { useRemoveMemoryFile } from '@/hooks/mutations/use-memory-mutations';
+import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 
 type GalleryTab = 'media' | 'docs' | 'links';
 type AssetType = 'all' | 'image' | 'video' | 'audio';
@@ -55,7 +55,17 @@ export default function ChatMediaScreen() {
 
   const renderVisualItem = useCallback(({ item, index }: { item: SharedAttachment; index: number }) => (
     <Pressable onPress={() => { Haptics.selectionAsync(); setPreviewIndex(index); }} style={{ width: tileSize, height: tileSize }}>
-      <ExpoImage source={{ uri: item.thumbnailUrl || item.uri }} contentFit="cover" style={{ width: '100%', height: '100%' }} />
+      <SignedAttachmentImage
+        attachment={{
+          _id: item.persistedFileId ?? item.clientId,
+          url: item.uri,
+          thumbnail: item.thumbnailUrl,
+          access: item.access,
+        }}
+        preferThumbnail
+        resizeMode="cover"
+        style={{ width: '100%', height: '100%' }}
+      />
       {item.category === 'video' ? <View className="absolute inset-0 items-center justify-center bg-black/15"><Play size={20} color={COLORS.textInverse} fill={COLORS.textInverse} /></View> : null}
     </Pressable>
   ), [tileSize]);

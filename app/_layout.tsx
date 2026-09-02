@@ -32,11 +32,17 @@ import {
 
 import {
   useFonts,
-  Geist_400Regular,
-  Geist_500Medium,
-  Geist_600SemiBold,
-  Geist_700Bold,
-} from '@expo-google-fonts/geist';
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
+import {
+  EBGaramond_400Regular,
+  EBGaramond_500Medium,
+  EBGaramond_700Bold,
+} from '@expo-google-fonts/eb-garamond';
+import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono';
 import { PatrickHandSC_400Regular } from '@expo-google-fonts/patrick-hand-sc';
 import { Handlee_400Regular } from '@expo-google-fonts/handlee';
 import { CutiveMono_400Regular } from '@expo-google-fonts/cutive-mono';
@@ -54,6 +60,7 @@ import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
 import { AuthenticatedNotificationManager } from '@/components/system/AuthenticatedNotificationManager';
 import { AnimatedSplash } from '@/components/system/AnimatedSplash';
 import { SheetManager } from '@/components/sheets/SheetManager';
+import { BackgroundMusicProvider } from '@/hooks/use-background-music';
 
 import { COLORS } from '@/constants/tokens';
 import {
@@ -256,10 +263,14 @@ function RootLayout() {
   // ---------------------------------------------------------------------------
 
   const [fontsLoaded] = useFonts({
-    Geist_400Regular,
-    Geist_500Medium,
-    Geist_600SemiBold,
-    Geist_700Bold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    EBGaramond_400Regular,
+    EBGaramond_500Medium,
+    EBGaramond_700Bold,
+    AzeretMono_400Regular,
 
     PatrickHandSC_400Regular,
     Handlee_400Regular,
@@ -274,11 +285,11 @@ function RootLayout() {
       '../assets/fonts/Portrait-script-regular.ttf',
     ),
 
-    Garamond: Geist_400Regular,
-    Sans: Geist_400Regular,
+    Garamond: EBGaramond_400Regular,
+    Sans: Inter_400Regular,
 
     // Kept for capsule-theme backward compatibility.
-    'Geist Mono': Geist_400Regular,
+    'Geist Mono': AzeretMono_400Regular,
   });
 
   // ---------------------------------------------------------------------------
@@ -478,7 +489,8 @@ function RootLayout() {
               <BottomSheetModalProvider>
                 <ShareIntentProvider>
                   <ToastProvider>
-                    <OfflineNotice />
+                    <BackgroundMusicProvider>
+                      <OfflineNotice />
 
                     {shouldInitializeNotifications(
                       phase === 'authenticated',
@@ -531,6 +543,7 @@ function RootLayout() {
                         options={{
                           animation:
                             'slide_from_right',
+                          gestureEnabled: false,
                         }}
                       />
 
@@ -613,7 +626,8 @@ function RootLayout() {
                       <Stack.Screen name="+not-found" />
                     </Stack>
 
-                    <SheetManager />
+                      <SheetManager />
+                    </BackgroundMusicProvider>
                   </ToastProvider>
                 </ShareIntentProvider>
               </BottomSheetModalProvider>

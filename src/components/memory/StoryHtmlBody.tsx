@@ -8,7 +8,7 @@ function renderInlineHtml(html: string, keyPrefix: string): React.ReactNode[] {
   let remaining = html;
   let index = 0;
 
-  const tokenRegex = /<(strong|b|em|i|s|strike|u|a)(?:\s+href=["']([^"']+)["'])?>([\s\S]*?)<\/\1>|<br\s*\/?>/i;
+  const tokenRegex = /<(strong|b|em|i|s|strike|u|a)([^>]*)>([\s\S]*?)<\/\1>|<br\s*\/?>/i;
 
   while (remaining.length > 0) {
     const match = remaining.match(tokenRegex);
@@ -30,7 +30,8 @@ function renderInlineHtml(html: string, keyPrefix: string): React.ReactNode[] {
       nodes.push('\n');
     } else {
       const tag = (match[1] ?? '').toLowerCase();
-      const href = match[2];
+      const attributes = match[2] ?? '';
+      const href = attributes.match(/\bhref\s*=\s*["']([^"']+)["']/i)?.[1];
       const inner = match[3] ?? '';
       const childStyle = [styles.inlineBase, inlineStyles[tag as keyof typeof inlineStyles] ?? null];
       const child = renderInlineHtml(inner, `${keyPrefix}-${index}`);

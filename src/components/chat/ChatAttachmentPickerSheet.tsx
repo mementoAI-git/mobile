@@ -20,6 +20,7 @@ import {
   type BottomSheetFooterProps,
 } from '@gorhom/bottom-sheet';
 import * as MediaLibrary from 'expo-media-library/legacy';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
 import {
   Camera,
@@ -35,12 +36,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PermissionRecoveryState } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { toast } from '@/components/ui/Toast';
 import {
   getPermissionRecoveryAction,
   isPermissionGranted,
   type PermissionLike,
 } from '@/lib/permission-recovery';
 import { getPickerAssetUploadUri } from '@/features/media/picker-assets';
+import { MAX_ATTACHMENT_FILE_MB, isFileTooLarge } from '@/features/media/attachments';
 
 type PickerMode = 'gallery' | 'videos' | 'audio';
 
@@ -52,6 +55,7 @@ export type ChatPickerAsset = {
   mimeType: string;
   mediaType: 'photo' | 'video' | 'audio';
   duration?: number;
+  fileSize?: number;
 };
 
 interface ChatAttachmentPickerSheetProps {
@@ -324,6 +328,12 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
       try {
         const resolved = await Promise.all(selectedAssets.map(async (asset): Promise<ChatPickerAsset> => {
           const uploadUri = await getPickerAssetUploadUri(asset, MediaLibrary.getAssetInfoAsync);
+          let fileSize: number | undefined;
+          try {
+            const fileInfo = await FileSystem.getInfoAsync(uploadUri);
+            if (fileInfo.exists && typeof fileInfo.size === 'number') fileSize = fileInfo.size;
+          } catch {
+          }
           return {
             id: asset.id,
             uri: asset.uri,
@@ -332,8 +342,14 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
             mimeType: getAssetMimeType(asset),
             mediaType: asset.mediaType as 'photo' | 'video' | 'audio',
             duration: asset.duration,
+            fileSize,
           };
         }));
+        const oversized = resolved.filter((asset) => isFileTooLarge(asset.fileSize));
+        if (oversized.length > 0) {
+          toast(`Videos must be ${MAX_ATTACHMENT_FILE_MB} MB or smaller.`, 'error');
+          return;
+        }
         onConfirm(resolved);
         setSelected({});
         dismiss();
@@ -457,6 +473,10 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
               onPress={handleDocs}
             />
           </View>
+
+          {mode === 'videos' && (
+            <Text style={styles.videoLimit}>Videos up to {MAX_ATTACHMENT_FILE_MB} MB</Text>
+          )}
 
           <View style={styles.divider} />
 
@@ -679,6 +699,13 @@ const styles = StyleSheet.create({
   actionLabelActive: {
     color: COLORS.brand,
     fontFamily: FONTS.sansSemi,
+  },
+  videoLimit: {
+    marginTop: 8,
+    marginHorizontal: SHEET_HORIZONTAL,
+    fontFamily: FONTS.sans,
+    fontSize: 12,
+    color: COLORS.textWeak,
   },
 
   // Divider

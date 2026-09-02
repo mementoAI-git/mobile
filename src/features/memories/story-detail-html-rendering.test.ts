@@ -18,4 +18,9 @@ describe('story detail html rendering', () => {
     expect(component).toContain("s: { textDecorationLine: 'line-through'");
     expect(component).toContain('renderInlineHtml');
   });
+
+  test('supports anchors with target and rel attributes before href', () => {
+    expect(component).toContain('const attributes = match[2] ??');
+    expect(component).toContain("href\\s*=\\s*[\"']([^\"']+)[\"']");
+  });
 });

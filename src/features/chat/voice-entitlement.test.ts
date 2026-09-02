@@ -16,6 +16,21 @@ describe('voice entitlement handling', () => {
       message: 'Voice mode requires Pro or Legacy.',
     })).toEqual({ kind: 'upgrade-required' });
     expect(feature?.getVoiceConnectionFailure({
+      status: 402,
+      error: 'subscription_required',
+      feature: 'voice_mode',
+      message: 'Upgrade to continue.',
+    })).toEqual({ kind: 'upgrade-required' });
+    expect(feature?.getVoiceConnectionFailure({
+      status: 402,
+      error: 'subscription_required',
+      feature: 'storage',
+      message: 'Storage limit reached.',
+    })).toEqual({
+      kind: 'connection-error',
+      message: 'Storage limit reached.',
+    });
+    expect(feature?.getVoiceConnectionFailure({
       status: 500,
       message: 'Voice service unavailable.',
     })).toEqual({

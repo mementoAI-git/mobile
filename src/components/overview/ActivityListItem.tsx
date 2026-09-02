@@ -7,8 +7,10 @@
  * and smart date formatting.
  */
 
-import React from 'react';
-import { View } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { Svg, Path } from 'react-native-svg';
 import { ZapIconWarm } from '@/components/ui';
 import Animated from 'react-native-reanimated';
@@ -168,17 +170,39 @@ export const formatActivityDate = (date: string) => {
 interface ActivityListItemProps {
   activity: Activity;
   showDivider?: boolean;
+  fromOverview?: boolean;
 }
 
-export const ActivityListItem = React.memo(function ActivityListItem({ activity, showDivider = false }: ActivityListItemProps) {
+function isDeletedActivity(activity: Activity): boolean {
+  return activity.action?.toLowerCase() === 'deleted'
+    || activity.title?.toLowerCase().startsWith('deleted') === true;
+}
+
+export const ActivityListItem = React.memo(function ActivityListItem({ activity, showDivider = false, fromOverview = false }: ActivityListItemProps) {
+  const router = useRouter();
   const accentColor = getAccentColor(activity._id);
+  const canOpenStory = Boolean(activity.reference) && !isDeletedActivity(activity);
+  const handlePress = useCallback(() => {
+    const reference = activity.reference;
+    if (!canOpenStory || !reference) return;
+    Haptics.selectionAsync();
+    router.push({
+      pathname: '/(tabs)/stories/[id]',
+      params: { id: reference, ...(fromOverview ? { from: 'overview' } : {}) },
+    });
+  }, [activity.reference, canOpenStory, fromOverview, router]);
 
   return (
     <>
       {showDivider && (
         <View style={{ height: 1, backgroundColor: COLORS.strokeWeaker, marginHorizontal: 20 }} />
       )}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 20 }}>
+      <TouchableOpacity
+        onPress={handlePress}
+        disabled={!canOpenStory}
+        activeOpacity={0.7}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 20 }}
+      >
         {/* Icon container */}
         <View style={{
           width: 40,
@@ -206,7 +230,7 @@ export const ActivityListItem = React.memo(function ActivityListItem({ activity,
             {formatActivityDate(activity.created_at)}
           </Animated.Text>
         </View>
-      </View>
+      </TouchableOpacity>
     </>
   );
 });

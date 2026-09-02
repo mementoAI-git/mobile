@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { get } from '@/api/mutations';
+import { fetchAllPaginated } from '@/api/domain-fetchers';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import type { IBeneficiary } from '@/types';
@@ -7,7 +7,7 @@ import type { IBeneficiary } from '@/types';
 export function useBeneficiaries() {
   return useQuery({
     queryKey: queryKeys.beneficiaries,
-    queryFn: () => get<IBeneficiary[]>(endpoint.beneficiaries).then((r) => r.data),
+    queryFn: () => fetchAllPaginated<IBeneficiary>(endpoint.beneficiaries),
     staleTime: 60_000,
   });
 }

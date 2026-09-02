@@ -19,12 +19,12 @@ interface StatCardProps {
 }
  
 const valueColors = {
-  blue: 'text-[#0C71FF]',
-  pink: 'text-[#D91DAA]',
-  orange: 'text-[#FF7D0C]',
-  green: 'text-[#25C971]',
-  purple: 'text-[#6621F0]',
-  yellow: 'text-[#FF8C00]',
+  blue: 'text-info-strong',
+  pink: 'text-stat-pink',
+  orange: 'text-brand',
+  green: 'text-success-strong',
+  purple: 'text-stat-purple',
+  yellow: 'text-stat-yellow',
 };
  
 export function StatCard({

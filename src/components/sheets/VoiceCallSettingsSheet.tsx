@@ -5,8 +5,9 @@ import * as Haptics from 'expo-haptics';
 import { Button } from '@/components/ui/Button';
 import { VoiceArtwork } from '@/components/chat/VoiceArtwork';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { VOICE_CATALOG, type VoiceId } from '@/features/chat/voice-catalog';
+import { VOICE_CATALOG, getVoiceById, type VoiceId } from '@/features/chat/voice-catalog';
 import { useUiStore, useVoicePreferenceStore } from '@/store';
+import { useUpdateProfile } from '@/hooks/mutations/use-profile-mutation';
 
 interface VoiceCallSettingsSheetProps {
   selectedVoiceId: VoiceId;
@@ -17,12 +18,17 @@ interface VoiceCallSettingsSheetProps {
 export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: VoiceCallSettingsSheetProps) {
   const [draft, setDraft] = useState(selectedVoiceId);
   const selectVoice = useVoicePreferenceStore((state) => state.selectVoice);
+  const { mutate: updateProfile } = useUpdateProfile();
 
   const save = useCallback(async () => {
     await selectVoice(draft);
+    const voice = getVoiceById(draft);
+    if (voice) {
+      updateProfile({ chat_voice: voice.providerVoiceName, chat_voice_provider: 'gemini' });
+    }
     await onSaved?.(draft);
     useUiStore.getState().closeSheet();
-  }, [draft, onSaved, selectVoice]);
+  }, [draft, onSaved, selectVoice, updateProfile]);
 
   return (
     <View className="pb-2 pt-2">

@@ -17,7 +17,7 @@
  *   />
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Image, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { getThumbnailAsync } from 'expo-video-thumbnails';
 import * as Haptics from 'expo-haptics';
@@ -25,6 +25,11 @@ import { Play } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { runtimeDiagnostics, sanitizeMediaUri } from '@/lib/runtime-diagnostics';
 import { getVideoThumbnailStrategy } from '@/features/media/media-runtime-policy';
+import {
+  type SignedMediaAttachment,
+  type SignedMediaContext,
+} from '@/features/media/signed-media-access';
+import { useSignedMediaAccess } from '@/features/media/use-signed-media-access';
 
 // ─── LRU cache (bounded to avoid retaining large generated thumbnails) ─────
 
@@ -48,6 +53,8 @@ function cachePut(uri: string, thumbnailUri: string) {
 
 interface VideoThumbnailProps {
   uri: string;
+  attachment?: SignedMediaAttachment;
+  context?: SignedMediaContext;
   /**
    * Server-provided thumbnail URL (e.g. from Cloudinary fetch transformation).
    * When provided, skips `expo-video-thumbnails` extraction entirely — instant load.
@@ -63,38 +70,56 @@ interface VideoThumbnailProps {
   onPress?: () => void;
 }
 
-export function VideoThumbnail({ uri, thumbnailUrl, width, height, borderRadius = 14, onPress }: VideoThumbnailProps) {
+export function VideoThumbnail({
+  uri,
+  attachment,
+  context,
+  thumbnailUrl,
+  width,
+  height,
+  borderRadius = 14,
+  onPress,
+}: VideoThumbnailProps) {
   const fillParent = !width || !height;
+  const mediaAttachment = useMemo<SignedMediaAttachment>(
+    () => attachment ?? { _id: uri, url: uri },
+    [attachment, uri],
+  );
+  const signedMedia = useSignedMediaAccess(mediaAttachment, context);
+  const effectiveUri = signedMedia.uri;
+  const effectiveThumbnail = typeof signedMedia.attachment.thumbnail === 'string'
+    ? signedMedia.attachment.thumbnail
+    : thumbnailUrl;
 
   // If the server already provides a thumbnail URL, use it directly.
   // Otherwise fall back to client-side extraction via expo-video-thumbnails.
-  const hasServerThumb = Boolean(thumbnailUrl);
+  const hasServerThumb = Boolean(effectiveThumbnail);
   const strategy = getVideoThumbnailStrategy({
-    uri,
-    thumbnailUrl,
-    hasCachedThumbnail: thumbnailCache.has(uri),
+    uri: effectiveUri,
+    thumbnailUrl: effectiveThumbnail,
+    hasCachedThumbnail: thumbnailCache.has(effectiveUri),
   });
 
   const [thumbUri, setThumbUri] = useState<string | null>(() => {
-    if (thumbnailUrl) return thumbnailUrl;
-    return thumbnailCache.get(uri) ?? null;
+    if (effectiveThumbnail) return effectiveThumbnail;
+    return thumbnailCache.get(effectiveUri) ?? null;
   });
   const [loading, setLoading] = useState(strategy === 'extract');
 
   useEffect(() => {
-    const location = sanitizeMediaUri(uri);
-    if (strategy === 'server' && thumbnailUrl) {
+    const location = sanitizeMediaUri(effectiveUri);
+    if (strategy === 'server' && effectiveThumbnail) {
       runtimeDiagnostics.record('media', 'thumbnail-source', {
         source: 'server',
         mediaSource: location.source,
         host: location.host,
       });
-      setThumbUri(thumbnailUrl);
+      setThumbUri(effectiveThumbnail);
       setLoading(false);
       return;
     }
 
-    const cached = thumbnailCache.get(uri);
+    const cached = thumbnailCache.get(effectiveUri);
     if (strategy === 'cache' && cached) {
       runtimeDiagnostics.record('media', 'thumbnail-source', {
         source: 'memory-cache',
@@ -118,7 +143,7 @@ export function VideoThumbnail({ uri, thumbnailUrl, width, height, borderRadius 
     }
 
     // Skip extraction if server already gave us a thumbnail
-    if (!uri) {
+    if (!effectiveUri) {
       setThumbUri(null);
       setLoading(false);
       return;
@@ -132,10 +157,10 @@ export function VideoThumbnail({ uri, thumbnailUrl, width, height, borderRadius 
     setThumbUri(null);
     setLoading(true);
 
-    getThumbnailAsync(uri, { time: 0, quality: 0.4 })
+    getThumbnailAsync(effectiveUri, { time: 0, quality: 0.4 })
       .then(({ uri: t }: { uri: string }) => {
         if (cancelled) return;
-        cachePut(uri, t);
+        cachePut(effectiveUri, t);
         setThumbUri(t);
         finishExtraction({ outcome: 'success' });
       })
@@ -153,7 +178,7 @@ export function VideoThumbnail({ uri, thumbnailUrl, width, height, borderRadius 
       });
 
     return () => { cancelled = true; };
-  }, [strategy, uri, thumbnailUrl]);
+  }, [strategy, effectiveUri, effectiveThumbnail]);
 
   const handlePress = useCallback(() => {
     Haptics.selectionAsync();
@@ -179,10 +204,13 @@ export function VideoThumbnail({ uri, thumbnailUrl, width, height, borderRadius 
             outcome: 'success',
             source: hasServerThumb ? 'server' : 'generated',
           })}
-          onError={() => runtimeDiagnostics.record('media', 'thumbnail-image-load', {
-            outcome: 'failure',
-            source: hasServerThumb ? 'server' : 'generated',
-          })}
+          onError={() => {
+            signedMedia.onLoadError();
+            runtimeDiagnostics.record('media', 'thumbnail-image-load', {
+              outcome: 'failure',
+              source: hasServerThumb ? 'server' : 'generated',
+            });
+          }}
         />
       ) : (
         // Dark placeholder while loading or on error

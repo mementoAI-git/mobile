@@ -1,16 +1,16 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { get } from '@/api/mutations';
+import { fetchEntity, fetchPaginated } from '@/api/domain-fetchers';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
-import type { ICapsule, ICapsuleStats, IPagination } from '@/types';
+import type { ICapsule, ICapsuleStats } from '@/types';
 
 export function useCapsules(filter?: string) {
   return useInfiniteQuery({
     queryKey: queryKeys.capsules(filter),
     queryFn: ({ pageParam = 1 }) =>
-      get<IPagination<ICapsule>>(
+      fetchPaginated<ICapsule>(
         `${endpoint.capsule}?page=${pageParam}${filter ? `&status=${filter}` : ''}`,
-      ).then((r) => r.data),
+      ),
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,
     // 30s stale time — avoids refetch on every tab switch
@@ -21,7 +21,7 @@ export function useCapsules(filter?: string) {
 export function useCapsuleStats() {
   return useQuery({
     queryKey: queryKeys.capsuleStats,
-    queryFn: () => get<ICapsuleStats>(endpoint.capsuleStats).then((r) => r.data),
+    queryFn: () => fetchEntity<ICapsuleStats>(endpoint.capsuleStats),
     staleTime: 60_000,
   });
 }

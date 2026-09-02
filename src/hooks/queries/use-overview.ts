@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { get } from '@/api/mutations';
+import { fetchEntity } from '@/api/domain-fetchers';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import { useUserStore, useAuthStore } from '@/store';
@@ -11,8 +11,7 @@ export function useUserStats() {
   return useQuery({
     queryKey: queryKeys.userStats,
     queryFn: async () => {
-      const res = await get<any>(endpoint.userStats);
-      const stats = res.data;
+      const stats = await fetchEntity<any>(endpoint.userStats);
 
       // Sync updated stats to user store — but only when values actually change.
       // IMPORTANT: read user via getState() (not a reactive selector) so this
@@ -44,7 +43,7 @@ export function useUserStats() {
 export function useMemoriesStats() {
   return useQuery({
     queryKey: queryKeys.memoriesStats,
-    queryFn: () => get<any>(endpoint.memoriesStats).then((r) => r.data),
+    queryFn: () => fetchEntity<any>(endpoint.memoriesStats),
     staleTime: 60_000,
   });
 }
@@ -53,7 +52,7 @@ export function useMemoriesStats() {
 export function useCapsuleStats() {
   return useQuery({
     queryKey: queryKeys.capsuleStats,
-    queryFn: () => get<any>(endpoint.capsuleStats).then((r) => r.data),
+    queryFn: () => fetchEntity<any>(endpoint.capsuleStats),
     staleTime: 60_000,
   });
 }

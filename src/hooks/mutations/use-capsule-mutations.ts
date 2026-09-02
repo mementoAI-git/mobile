@@ -12,6 +12,13 @@ interface CapsulePayload {
   attachments?: string[];
   memories?: string[];
   status?: 'draft' | 'scheduled' | 'pause' | 'deleted' | 'delivered';
+  style?: {
+    themeId?: string;
+    backgroundColor: string;
+    fontSize: string;
+    textColor?: string;
+    headerColor?: string;
+  };
 }
 
 export function useCreateCapsule() {

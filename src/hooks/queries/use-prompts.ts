@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { get } from '@/api/mutations';
+import { fetchCollection, fetchEntity, fetchPaginated } from '@/api/domain-fetchers';
 import dayjs from 'dayjs';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
@@ -13,7 +13,7 @@ export function usePrompts(params?: { category?: string; limit?: number }) {
       if (params?.category) qs.set('category', params.category);
       if (params?.limit) qs.set('limit', String(params.limit));
       const query = qs.toString() ? `?${qs.toString()}` : '';
-      return get<IPrompt[]>(`${endpoint.prompts}${query}`).then((r) => r.data);
+      return fetchCollection<IPrompt>(`${endpoint.prompts}${query}`);
     },
     staleTime: 120_000,
   });
@@ -24,9 +24,7 @@ export function useDailyPrompts() {
   return useQuery({
     queryKey: queryKeys.dailyPrompts(dateKey),
     queryFn: () =>
-      get<IDashboardPromptSlot[]>(`${endpoint.prompts}?date_key=${dateKey}`).then(
-        (r) => r.data,
-      ),
+      fetchCollection<IDashboardPromptSlot>(`${endpoint.prompts}?date_key=${dateKey}`),
     staleTime: 60_000,
   });
 }
@@ -34,7 +32,7 @@ export function useDailyPrompts() {
 export function usePromptCategories() {
   return useQuery({
     queryKey: queryKeys.promptCategories,
-    queryFn: () => get<any[]>(endpoint.promptCategories).then((r) => r.data),
+    queryFn: () => fetchCollection<any>(endpoint.promptCategories),
     staleTime: 300_000,
   });
 }
@@ -42,7 +40,7 @@ export function usePromptCategories() {
 export function useOverviewPrompts() {
   return useQuery({
     queryKey: queryKeys.overviewPrompts,
-    queryFn: () => get<any[]>(endpoint.overviewPrompt).then((r) => r.data),
+    queryFn: () => fetchCollection<any>(endpoint.overviewPrompt),
     staleTime: 60_000,
   });
 }
@@ -56,23 +54,10 @@ export function useCategoryDetailsPrompts(slug: string, answered?: boolean) {
         qs.set('answered', String(answered));
       }
       const query = qs.toString() ? `?${qs.toString()}` : '';
-      return get<any>(`${endpoint.promptCategories}${slug}${query}`).then((r) => {
-        // Support paginated docs or raw array response
-        if (r.data && typeof r.data === 'object') {
-          const docs = r.data.docs || r.data.data?.docs;
-          if (docs) {
-            return {
-              prompts: docs,
-              totalDocs: r.data.totalDocs || r.data.data?.totalDocs || docs.length
-            };
-          }
-        }
-        const arr = Array.isArray(r.data) ? r.data : [];
-        return {
-          prompts: arr,
-          totalDocs: arr.length
-        };
-      });
+      return fetchPaginated<any>(`${endpoint.promptCategories}${slug}${query}`).then((page) => ({
+        prompts: page.docs,
+        totalDocs: page.totalDocs,
+      }));
     },
     staleTime: 60_000,
   });
@@ -83,8 +68,7 @@ export function useMemoryByPrompt(promptId: string) {
     queryKey: queryKeys.memoryByPrompt(promptId),
     queryFn: async () => {
       try {
-        const res = await get<any>(`${endpoint.replyPrompt}/${promptId}`);
-        return res?.data ?? null;
+        return await fetchEntity<any>(`${endpoint.replyPrompt}/${promptId}`);
       } catch (err: any) {
         if (err?.response?.status === 404 || err?.status === 404) {
           return null;

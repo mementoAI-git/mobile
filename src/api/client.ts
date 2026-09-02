@@ -6,6 +6,8 @@ import axios, {
 import { API_BASE_URL } from '@/lib/env';
 import type { ApiError, RequestOptions } from './interface';
 import type { IAuth } from '@/types';
+import { normalizeApiError } from './contract-adapter';
+import { getMementoClientHeaders } from './client-runtime-metadata';
 
 import { useAuthStore } from '@/store/auth.store';
 
@@ -19,6 +21,7 @@ const client: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    ...getMementoClientHeaders(),
   },
 });
 
@@ -44,10 +47,6 @@ client.interceptors.response.use(
       _retry?: boolean;
     };
 
-    if (originalRequest?.skipErrorHandling) {
-      return Promise.reject(error);
-    }
-
     // Auto-refresh on 401
     if (error.response?.status === 401 && !originalRequest?._retry) {
       originalRequest._retry = true;
@@ -56,18 +55,25 @@ client.interceptors.response.use(
         const newAuth = await authService.refreshAccessToken();
         originalRequest.headers.authorization = `Bearer ${newAuth.access_token}`;
         return client(originalRequest);
-      } catch {
+      } catch (refreshError) {
         const { terminateSession } = await import('@/features/auth/session-coordinator');
         await terminateSession('expired');
-        return Promise.reject(error);
+        const refreshResponse = (refreshError as AxiosError<ApiError>)?.response;
+        return Promise.reject(
+          normalizeApiError(
+            refreshResponse?.data,
+            refreshResponse?.status,
+            (refreshError as Error)?.message || 'Session expired',
+          ),
+        );
       }
     }
 
-    const apiError: ApiError = {
-      message: error.response?.data?.message ?? error.message ?? 'An error occurred',
-      status: error.response?.status,
-      errors: error.response?.data?.errors,
-    };
+    const apiError = normalizeApiError(
+      error.response?.data,
+      error.response?.status,
+      error.message || 'An error occurred',
+    );
 
     return Promise.reject(apiError);
   },

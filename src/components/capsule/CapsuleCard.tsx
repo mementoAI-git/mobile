@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, Image } from 'react-native';
+import { View, TouchableOpacity, Text } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import dayjs from 'dayjs';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
@@ -11,6 +11,8 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { getThemeById, getThemeByColor } from '@/constants/themes';
 import { cn } from '@/lib/utils';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
+import { getCapsuleDisplayRecipients } from '@/features/capsules/recipient-display';
 
 interface CapsuleCardProps {
   capsule: ICapsule;
@@ -110,6 +112,10 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
     ...(capsule.attachments || []),
     ...(capsule.memories?.flatMap(m => m.attachments || []) || [])
   ];
+  const recipients = React.useMemo(
+    () => getCapsuleDisplayRecipients(capsule),
+    [capsule.recipients, capsule.recipient_snapshots],
+  );
 
   if (layoutMode === 'list') {
     return (
@@ -140,8 +146,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
  
                   if (firstImg) {
                     return (
-                      <Image
-                        source={{ uri: firstImg.thumbnail || firstImg.url }}
+                      <SignedAttachmentImage
+                        attachment={firstImg}
+                        preferThumbnail
                         className="size-full"
                         resizeMode="cover"
                       />
@@ -204,7 +211,7 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                   <View className="flex-row items-center justify-between">
                     <Text className="text-text-weak" style={{ fontFamily: FONTS.sans, fontSize: moderateScale(8) }}>To:</Text>
                     <View className="flex-row items-center gap-1">
-                      {(capsule.recipients ?? []).slice(0, 1).map((r: any, i) => (
+                      {recipients.slice(0, 1).map((r, i) => (
                         <Text 
                           key={i} 
                           className="text-text-strong font-medium" 
@@ -214,9 +221,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                           {r.first_name || r.email?.split('@')[0]}
                         </Text>
                       ))}
-                      {capsule.recipients?.length > 1 && (
+                      {recipients.length > 1 && (
                         <Text className="text-text-weak" style={{ fontFamily: FONTS.sans, fontSize: moderateScale(9) }}>
-                          +{capsule.recipients.length - 1}
+                          +{recipients.length - 1}
                         </Text>
                       )}
                     </View>
@@ -318,8 +325,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                       style={{ width: scale(40), height: scale(40) }}
                     >
                       {showImage ? (
-                        <Image
-                          source={{ uri: (attr as any).thumbnail || attr.url }}
+                        <SignedAttachmentImage
+                          attachment={attr}
+                          preferThumbnail
                           className="size-full"
                           resizeMode="cover"
                         />
@@ -351,7 +359,7 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
               <View className="flex-row items-center justify-between">
                 <Text className="text-[10px] text-text-weak" style={{ fontFamily: FONTS.sans }}>To:</Text>
                 <View className="flex-row items-center gap-1.5">
-                  {(capsule.recipients ?? []).slice(0, 1).map((r: any, i) => (
+                  {recipients.slice(0, 1).map((r, i) => (
                     <View key={i} className="flex-row items-center gap-1.5">
                       <View className="size-5 rounded-full bg-fill-weak items-center justify-center">
                         <Text className="text-[10px] font-bold">
@@ -363,9 +371,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                       </Text>
                     </View>
                   ))}
-                  {capsule.recipients?.length > 1 && (
+                  {recipients.length > 1 && (
                     <Text className="text-xs text-text-weak" style={{ fontFamily: FONTS.sans }}>
-                      +{capsule.recipients.length - 1} other
+                      +{recipients.length - 1} other
                     </Text>
                   )}
                 </View>

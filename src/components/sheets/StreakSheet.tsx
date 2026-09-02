@@ -183,21 +183,22 @@ export function StreakSheet() {
       {/* ── Bottom stats card ───────────────────────────────────── */}
       <View style={{ marginHorizontal: 16 }}>
         <View style={{
-          // backgroundColor: '#F3F4F6',
           backgroundColor: COLORS.fillWeaker,
           borderRadius: 20,
           paddingTop: 14,
           paddingBottom: 4,
           paddingHorizontal: 4,
+          borderWidth: 1,
+          borderColor: COLORS.strokeWeaker,
         }}>
           <Text style={{
-            fontFamily: FONTS.sans,
-            fontSize: 14,
-            color: COLORS.gray950,
+            fontFamily: FONTS.sansSemi,
+            fontSize: 13,
+            color: COLORS.textStrong,
             textAlign: 'center',
             marginBottom: 8,
           }}>
-            Streak restore coming soon
+            Your Reflection Habit
           </Text>
           <View style={{
             backgroundColor: COLORS.card,
@@ -206,7 +207,7 @@ export function StreakSheet() {
             overflow: 'hidden',
           }}>
             {[
-              { label: 'Days', value: stats.streak_count || user?.streak || 0 },
+              { label: 'Day Streak', value: stats.streak_count || user?.streak || 0 },
               { label: 'Reflections', value: stats.reflections_count || 0 },
               { label: 'Stories', value: stats.stories_count || 0 },
             ].map((item, i) => (
@@ -214,14 +215,14 @@ export function StreakSheet() {
                 key={item.label}
                 style={{
                   flex: 1,
-                  paddingVertical: 20,
+                  paddingVertical: 18,
                   alignItems: 'center',
                   gap: 4,
                   borderRightWidth: i < 2 ? StyleSheet.hairlineWidth : 0,
-                  borderRightColor: COLORS.fillWeaker,
+                  borderRightColor: COLORS.strokeWeaker,
                 }}
               >
-                <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textWeak }}>
+                <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 12, color: COLORS.textWeak }}>
                   {item.label}
                 </Text>
                 <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>
@@ -231,6 +232,17 @@ export function StreakSheet() {
             ))}
           </View>
         </View>
+        <Text style={{
+          fontFamily: FONTS.sans,
+          fontSize: 11,
+          color: COLORS.textMuted,
+          textAlign: 'center',
+          marginTop: 10,
+          paddingHorizontal: 12,
+          lineHeight: 16,
+        }}>
+          Reflect daily to keep your memory archive alive and unlock deeper life insights.
+        </Text>
       </View>
     </BottomSheetView>
   );

@@ -1,4 +1,4 @@
-import { getVoiceById, type VoiceId } from './voice-catalog';
+import { getVoiceById, getVoiceByProviderName, type VoiceId } from './voice-catalog';
 import type { StateCreator } from 'zustand';
 
 export interface VoicePreferenceStorage {
@@ -23,9 +23,12 @@ export function parseVoicePreference(raw: string | null): VoiceId | null {
   if (!raw) return null;
   try {
     const value = JSON.parse(raw);
-    return typeof value === 'string' ? getVoiceById(value)?.id ?? null : null;
-  } catch {
+    if (typeof value === 'string') {
+      return getVoiceById(value)?.id ?? getVoiceByProviderName(value)?.id ?? null;
+    }
     return null;
+  } catch {
+    return getVoiceById(raw)?.id ?? getVoiceByProviderName(raw)?.id ?? null;
   }
 }
 

@@ -10,10 +10,21 @@ export type VoiceConnectionFailure =
   | { kind: 'connection-error'; message: string };
 
 export function getVoiceConnectionFailure(error: unknown): VoiceConnectionFailure {
-  const apiError = error as { status?: number; message?: string } | null;
+  const apiError = error as {
+    status?: number;
+    message?: string;
+    error?: string;
+    feature?: string;
+    data?: { error?: string; feature?: string };
+  } | null;
+  const gateError = apiError?.error ?? apiError?.data?.error;
+  const gateFeature = apiError?.feature ?? apiError?.data?.feature;
   if (
     apiError?.status === 402
-    && /voice mode requires (pro|legacy)/i.test(apiError.message ?? '')
+    && (
+      (gateError === 'subscription_required' && gateFeature === 'voice_mode')
+      || /voice mode requires (pro|legacy)/i.test(apiError.message ?? '')
+    )
   ) {
     return { kind: 'upgrade-required' };
   }

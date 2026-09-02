@@ -26,13 +26,28 @@ export function useUpdateProfile() {
     onSuccess: (response, payload) => {
       const current = queryClient.getQueryData<IUser>(queryKeys.profile);
       const returnedProfile = response?.data;
+      const updatedContext = {
+        ...(current?.context && typeof current.context === 'object' ? current.context : {}),
+        ...(payload.context && typeof payload.context === 'object' ? payload.context : {}),
+      };
       const updated = {
         ...current,
         ...payload,
         ...(returnedProfile && typeof returnedProfile === 'object' ? returnedProfile : {}),
+        context: updatedContext,
       } as IUser;
 
       queryClient.setQueryData(queryKeys.profile, updated);
+      if (updatedContext.self_description !== undefined) {
+        queryClient.setQueryData(queryKeys.userContext, (context: any) => ({
+          ...(context && typeof context === 'object' ? context : {}),
+          self_description: updatedContext.self_description,
+        }));
+        queryClient.setQueryData(queryKeys.persona, (persona: any) => persona ? {
+          ...persona,
+          self_description: updatedContext.self_description,
+        } : persona);
+      }
       const storedUser = useUserStore.getState().user;
       if (storedUser) {
         useUserStore.getState().setUser({ ...storedUser, ...updated });
