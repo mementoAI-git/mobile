@@ -69,7 +69,7 @@ export default function InsightsScreen() {
   }, [insights, sanitizeText]);
 
   const sanitizedNotes = useMemo(() => {
-    return notes.map(sanitizeText);
+    return notes.slice(0, 4).map((note: string) => sanitizeText(note));
   }, [notes, sanitizeText]);
 
   const sanitizedPreferences = useMemo(() => {
