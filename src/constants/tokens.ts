@@ -10,7 +10,7 @@
  */
 
 export const COLORS = {
-  background: '#fefbf8',
+  background: '#ffffff',
   backgroundInverse: '#12131A',
   card: '#ffffff',
 

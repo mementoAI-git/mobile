@@ -30,7 +30,7 @@ describe('startup font loading', () => {
     const tokens = await Bun.file(new URL('../../constants/tokens.ts', import.meta.url)).text();
     const tailwind = await Bun.file(new URL('../../../tailwind.config.ts', import.meta.url)).text();
 
-    expect(tokens).toContain("background: '#fefbf8'");
-    expect(tailwind).toContain("background: '#fefbf8'");
+    expect(tokens).toContain("background: '#ffffff'");
+    expect(tailwind).toContain("background: '#ffffff'");
   });
 });

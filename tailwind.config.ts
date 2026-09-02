@@ -11,7 +11,7 @@ const config: Config = {
       colors: {
         // ── Page / Surface ─────────────────────────────────────────
         // App page background: warm journal cream | card: white
-        background: '#fefbf8',
+        background: '#ffffff',
         card:       '#ffffff',
 
         // web: --fill-neutral-weak/weaker/strong (rgba(23,11,0,*))
