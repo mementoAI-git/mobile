@@ -396,7 +396,7 @@ export function ChatInput({
 
   const handleAddPickerAssets = useCallback(async (pickedAssets: ChatPickerAsset[]) => {
     await Promise.all(pickedAssets.map(asset =>
-      uploadAndAdd(asset.uploadUri, asset.mimeType, asset.name)
+      uploadAndAdd(asset.uploadUri, asset.mimeType, asset.name, { fileSize: asset.fileSize })
     ));
   }, [uploadAndAdd]);
 
