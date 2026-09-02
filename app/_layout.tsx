@@ -60,6 +60,7 @@ import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
 import { AuthenticatedNotificationManager } from '@/components/system/AuthenticatedNotificationManager';
 import { AnimatedSplash } from '@/components/system/AnimatedSplash';
 import { SheetManager } from '@/components/sheets/SheetManager';
+import { BackgroundMusicProvider } from '@/hooks/use-background-music';
 
 import { COLORS } from '@/constants/tokens';
 import {
@@ -488,7 +489,8 @@ function RootLayout() {
               <BottomSheetModalProvider>
                 <ShareIntentProvider>
                   <ToastProvider>
-                    <OfflineNotice />
+                    <BackgroundMusicProvider>
+                      <OfflineNotice />
 
                     {shouldInitializeNotifications(
                       phase === 'authenticated',
@@ -541,6 +543,7 @@ function RootLayout() {
                         options={{
                           animation:
                             'slide_from_right',
+                          gestureEnabled: false,
                         }}
                       />
 
@@ -623,7 +626,8 @@ function RootLayout() {
                       <Stack.Screen name="+not-found" />
                     </Stack>
 
-                    <SheetManager />
+                      <SheetManager />
+                    </BackgroundMusicProvider>
                   </ToastProvider>
                 </ShareIntentProvider>
               </BottomSheetModalProvider>
