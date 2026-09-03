@@ -14,7 +14,7 @@ import { Plus, Zap, Trophy, ChevronRight,  BarChart2 } from 'lucide-react-native
 import { useUiStore } from '@/store';
 import { useUserStats, useMemoriesStats, useCapsuleStats } from '@/hooks/queries/use-overview';
 import { useUserStore } from '@/store';
-import {  DashboardHeader, OverviewSkeleton, GradientText, GreetingIcon, /* SplineChart, */ JourneyStatIcon } from '@/components/ui';
+import { DashboardHeader, OverviewSkeleton, GradientText, GreetingIcon, JourneyStatIcon, Button } from '@/components/ui';
 import { UiLightning01 } from '@/components/ui/icons/SettingsIcons';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useProfile } from '@/hooks/queries/use-profile';
@@ -341,24 +341,25 @@ export default function OverviewScreen() {
                   </View>
 
                   <View className="flex-row items-center gap-3">
-                    <TouchableOpacity
+                    <Button
                       onPress={handleAddStory}
-                      activeOpacity={0.8}
-                      style={{ flex: 1.5 }}
-                      className="flex-row items-center justify-center gap-2.5 h-14 bg-brand rounded-full"
+                      size="lg"
+                      variant="primary"
+                      className="flex-[1.5]"
+                      leftIcon={<Plus size={20} color={COLORS.textInverse} strokeWidth={3} />}
                     >
-                      <Plus size={20} color="white" strokeWidth={3} />
-                      <Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Add story</Text>
-                    </TouchableOpacity>
+                      Add story
+                    </Button>
 
-                    <TouchableOpacity
+                    <Button
                       onPress={handleQuickCapture}
-                      activeOpacity={0.7}
-                      className="flex-1 flex-row items-center justify-center gap-2 h-14 bg-white rounded-full"
+                      size="lg"
+                      variant="secondary"
+                      className="flex-1 bg-white border-0 shadow-none"
+                      leftIcon={<UiLightning01 size={20} color={COLORS.textBase} strokeWidth={2} />}
                     >
-                      <UiLightning01 size={20} color={COLORS.textBase} strokeWidth={2} />
-                      <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>Quick capture</Text>
-                    </TouchableOpacity>
+                      Quick capture
+                    </Button>
                   </View>
                 </View>
               </ImageBackground>

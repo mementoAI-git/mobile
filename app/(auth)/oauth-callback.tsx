@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Text, ActivityIndicator } from 'react-native';
+import { Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '@/components/ui';
+import { Button, Spinner } from '@/components/ui';
 import endpoint from '@/api/endpoint';
 import { COLORS } from '@/constants/tokens';
 import { API_BASE_URL } from '@/lib/env';
@@ -117,7 +117,7 @@ export default function OAuthCallbackScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background items-center justify-center">
-      <ActivityIndicator size="large" color={COLORS.brand} />
+      <Spinner size="large" />
       <Text className="mt-4 text-base text-text-weak">
         {done ? 'Sign in successful. Redirecting…' : `Signing you in with ${resolvedProvider}…`}
       </Text>

@@ -2,14 +2,14 @@ import React, { useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ImageBackground, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, UserRoundPlus, Settings, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, UserRoundPlus, Settings, Trash2, FolderHeart } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useUiStore } from '@/store';
 import { useGroups } from '@/hooks/queries/use-groups';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useRemoveGroupMember } from '@/hooks/mutations/use-group-mutations';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { Avatar, Skeleton } from '@/components/ui';
+import { Avatar, Skeleton, EmptyState } from '@/components/ui';
 import { GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
 import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
 
@@ -108,11 +108,24 @@ export default function GroupDetailScreen() {
 
   if (!group) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <Text style={SETTINGS_TYPE.cardTitle}>Group not found</Text>
-        <TouchableOpacity onPress={handleBack} style={{ marginTop: 24, padding: 12, backgroundColor: COLORS.fillWeak, borderRadius: 12 }}>
-          <Text style={SETTINGS_TYPE.rowLabel}>Go Back</Text>
-        </TouchableOpacity>
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={handleBack}
+            activeOpacity={0.78}
+            style={styles.backButton}
+            accessibilityLabel="Go back"
+          >
+            <ArrowLeft size={23} color={COLORS.textBase} />
+          </TouchableOpacity>
+        </View>
+        <EmptyState
+          icon={FolderHeart}
+          title="Group not found"
+          description="This group may have been removed or no longer exists."
+          actionLabel="Back to groups"
+          onAction={handleBack}
+        />
       </SafeAreaView>
     );
   }
@@ -163,7 +176,7 @@ export default function GroupDetailScreen() {
           {/* ── Hero Banner ── */}
           <View style={[styles.heroBanner, { backgroundColor: swatchColor }]}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: FONTS.sansBold, fontSize: 24, color: '#FFFFFF', marginBottom: 4 }}>
+              <Text style={{ fontFamily: FONTS.sansBold, fontSize: 24, color: COLORS.textInverse, marginBottom: 4 }}>
                 {group.name}
               </Text>
               {createdDate && (
@@ -172,7 +185,7 @@ export default function GroupDetailScreen() {
                 </Text>
               )}
             </View>
-            <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 16, color: '#FFFFFF' }}>
+            <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 16, color: COLORS.textInverse }}>
               {members.length} {members.length === 1 ? 'Person' : 'People'}
             </Text>
           </View>

@@ -9,10 +9,12 @@ import dayjs from 'dayjs';
 import { useInfiniteActivities, type Activity } from '@/hooks/queries/use-activities';
 import { ActivityListItem } from '@/components/overview/ActivityListItem';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
+const EMPTY_MEMORIES_IMG = require('../../assets/images/illustrations/empty_memories.png');
 const PAGE_SIZE = 20;
 
 // ─── Editorial hero card ───────────────────────────────────────────────────
@@ -155,14 +157,13 @@ export default function ActivitiesScreen() {
             ))}
           </View>
         ) : displayDocs.length === 0 ? (
-          <Animated.View entering={FadeInDown.duration(400)} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 }}>
-            <Text style={[SETTINGS_TYPE.sectionTitle, { textAlign: 'center' }]}>
-              No activity yet
-            </Text>
-            <Text style={[SETTINGS_TYPE.body, { textAlign: 'center' }]}>
-              Creating memories, editing stories, sending capsules. It all shows up here.
-            </Text>
-          </Animated.View>
+          <EmptyState
+            image={EMPTY_MEMORIES_IMG}
+            title="No activity yet"
+            description="Creating memories, editing stories, and sending capsules will all show up here."
+            actionLabel="Create a story"
+            onAction={() => router.push('/create')}
+          />
         ) : (
           <ScrollView
             showsVerticalScrollIndicator={false}

@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
-import { Button } from '@/components/ui';
+import { MailX, CheckCircle2 } from 'lucide-react-native';
+import { Button, EmptyState, Spinner } from '@/components/ui';
 import { useAcceptInviteLogic } from '@/hooks/use-accept-invite-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
 
@@ -20,59 +21,33 @@ export default function AcceptInviteScreen() {
   } = useAcceptInviteLogic();
 
   if (fetching) {
-    return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color={COLORS.brand} />
-      </SafeAreaView>
-    );
+    return <Spinner fullScreen size="large" />;
   }
 
   if (fetchError) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center px-8 gap-4">
-        <Animated.Text className="text-4xl">⚠️</Animated.Text>
-        <Animated.Text 
-          className="text-xl font-semibold text-text-strong text-center"
-          style={{ fontFamily: FONTS.sansSemi }}
-        >
-          Invite not found
-        </Animated.Text>
-        <Animated.Text 
-          className="text-base text-text-weak text-center"
-          style={{ fontFamily: FONTS.sans }}
-        >
-          {fetchError}
-        </Animated.Text>
-        <Button onPress={() => router.replace('/(auth)/login')} variant="outline" size="lg">
-          Sign in
-        </Button>
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <EmptyState
+          icon={MailX}
+          title="Invite not found"
+          description={fetchError}
+          actionLabel="Sign in"
+          onAction={() => router.replace('/(auth)/login')}
+        />
       </SafeAreaView>
     );
   }
 
   if (isSuccess) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center px-8 gap-4">
-        <Animated.Text className="text-5xl">🎉</Animated.Text>
-        <Animated.Text 
-          className="text-2xl font-semibold text-text-strong text-center"
-          style={{ fontFamily: FONTS.sansSemi }}
-        >
-          Invite accepted!
-        </Animated.Text>
-        <Animated.Text 
-          className="text-base text-text-weak text-center leading-relaxed"
-          style={{ fontFamily: FONTS.sans }}
-        >
-          You're now connected as a beneficiary.
-        </Animated.Text>
-        <Button
-          onPress={() => token ? router.replace('/(tabs)/overview') : router.replace('/(auth)/login')}
-          fullWidth
-          size="lg"
-        >
-          {token ? 'Go to App' : 'Sign In'}
-        </Button>
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <EmptyState
+          icon={CheckCircle2}
+          title="Invite accepted!"
+          description="You're now connected as a beneficiary."
+          actionLabel={token ? 'Go to App' : 'Sign in'}
+          onAction={() => (token ? router.replace('/(tabs)/overview') : router.replace('/(auth)/login'))}
+        />
       </SafeAreaView>
     );
   }
