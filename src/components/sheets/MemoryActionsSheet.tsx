@@ -263,13 +263,13 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
             activeOpacity={0.85}
             style={{
               flex: 1, height: 56, borderRadius: 999,
-              backgroundColor: '#B71C1C',
+              backgroundColor: COLORS.error,
               alignItems: 'center', justifyContent: 'center',
             }}
           >
             {isDeleting
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' }}>Yes, delete</Text>
+              ? <ActivityIndicator color={COLORS.textInverse} />
+              : <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: COLORS.textInverse }}>Yes, delete</Text>
             }
           </TouchableOpacity>
         </View>

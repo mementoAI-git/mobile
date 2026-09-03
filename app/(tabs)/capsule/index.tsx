@@ -1,9 +1,9 @@
 import React, { useCallback, useState, useMemo } from 'react';
-import { FlatList, RefreshControl, View, ScrollView, ImageBackground, TouchableOpacity, TextInput } from 'react-native';
+import { FlatList, RefreshControl, View, ScrollView, ImageBackground, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Search, Grid, List, X } from 'lucide-react-native';
 import { CapsuleCard } from '@/components/capsule/CapsuleCard';
-import { StatCard, DashboardHeader, CapsuleSkeleton, EmptyState, Spinner, TimerFillIcon, ZapIcon, UnpdfIcon, PauseIcon } from '@/components/ui';
+import { StatCard, DashboardHeader, CapsuleSkeleton, EmptyState, Spinner, Button, TextInput, TimerFillIcon, ZapIcon, UnpdfIcon, PauseIcon } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -231,33 +231,32 @@ export default function CapsuleScreen() {
 
         {/* Collapsible Search Input Box */}
         {showSearch && (
-          <Animated.View entering={FadeInDown.duration(200)} className="flex-row items-center bg-white border border-stroke-weaker rounded-2xl px-4 py-2.5">
-            <Search size={16} color={COLORS.textWeak} className="mr-2" />
+          <Animated.View entering={FadeInDown.duration(200)}>
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search title, body, or recipient"
-              placeholderTextColor={COLORS.textMuted}
-              className="flex-1 text-sm text-text-strong h-8 p-0"
+              leftElement={<Search size={18} color={COLORS.textWeak} />}
+              rightElement={
+                searchQuery.length > 0 ? (
+                  <TouchableOpacity onPress={handleClearSearch} hitSlop={10}>
+                    <X size={16} color={COLORS.textWeak} />
+                  </TouchableOpacity>
+                ) : undefined
+              }
               autoFocus
             />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={handleClearSearch} hitSlop={10}>
-                <X size={16} color={COLORS.textWeak} />
-              </TouchableOpacity>
-            )}
           </Animated.View>
         )}
 
         {/* Action Button */}
-        <TouchableOpacity
+        <Button
           onPress={handleCreateNew}
-          activeOpacity={0.8}
-          className="flex-row items-center justify-center gap-2.5 h-14 rounded-full bg-brand"
+          size="lg"
+          leftIcon={<Plus size={20} color={COLORS.textInverse} strokeWidth={2.5} />}
         >
-          <Plus size={20} color="white" strokeWidth={2.5} />
-          <Animated.Text className="text-base font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Create New Capsule</Animated.Text>
-        </TouchableOpacity>
+          Create New Capsule
+        </Button>
       </Animated.View>
     ),
     [
