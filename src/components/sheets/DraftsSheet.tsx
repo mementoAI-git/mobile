@@ -171,12 +171,13 @@ export async function upsertDraft(
 export async function deleteDraft(
   email: string | null | undefined,
   id: string,
+  options?: { skipRemote?: boolean },
 ): Promise<StoryDraft[]> {
   const drafts = await loadDrafts(email);
   const updated = drafts.filter((d) => d.id !== id);
   await saveDrafts(email, updated);
 
-  if (!id.startsWith('draft_')) {
+  if (!id.startsWith('draft_') && !options?.skipRemote) {
     const netState = await NetInfo.fetch();
     if (netState.isConnected && email) {
       try {

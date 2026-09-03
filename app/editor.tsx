@@ -243,9 +243,13 @@ function PublishModalInner({
   const privacySheetRef = useRef<BottomSheetModal>(null);
   const [isAutotagging, setIsAutotagging] = useState(false);
 
-  const isEditMode = !!memoryId;
+  const isCloudDraft = !!draftId && !draftId.startsWith('draft_');
+  const targetMemoryId = memoryId || (isCloudDraft ? draftId : undefined);
+  const isExistingStory = !!memoryId;
+  const isEditMode = !!targetMemoryId;
+
   const { mutate: createMemory, isPending: createPending } = useCreateMemory();
-  const { mutate: updateMemory, isPending: updatePending } = useUpdateMemory(memoryId ?? '');
+  const { mutate: updateMemory, isPending: updatePending } = useUpdateMemory(targetMemoryId ?? '');
   const isPending = isEditMode ? updatePending : createPending;
   const { toast } = useToast();
 
@@ -307,14 +311,17 @@ function PublishModalInner({
     };
     const onSuccess = (res: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (isEditMode) {
-        // Edit: show a success toast and close — no share screen
+      if (isExistingStory) {
+        // Editing an already-published story: show success toast and close
         toast('Story updated.', 'success');
         onComplete();
       } else {
-        const id = res?.data?._id ?? res?.data?.data?._id ?? '';
-        // Delete the draft slot now that the story has been published
-        if (draftId) deleteDraft(userEmail, draftId).catch(() => {});
+        // Brand new story or promoted cloud draft
+        if (draftId) {
+          // Remove local draft slot without issuing a remote delete for the promoted memory
+          void deleteDraft(userEmail, draftId, { skipRemote: true });
+        }
+        const id = res?.data?._id ?? res?.data?.data?._id ?? targetMemoryId ?? '';
         onPublished(publishedPostUrl(id));
       }
     };
@@ -327,7 +334,7 @@ function PublishModalInner({
     }
   // attachmentIds must be in deps — without it the closure captures the initial
   // empty array and voice notes / images added before publishing are silently dropped.
-  }, [title, body, tags, attachmentIds, selectedBeneficiaryIds, selectedGroupIds, privacyMode, isEditMode, createMemory, updateMemory, toast, onComplete, onPublished, draftId, userEmail]);
+  }, [title, body, tags, attachmentIds, selectedBeneficiaryIds, selectedGroupIds, privacyMode, isExistingStory, isEditMode, targetMemoryId, createMemory, updateMemory, toast, onComplete, onPublished, draftId, userEmail]);
 
   const handleClose = useCallback(() => {
     setTags(''); setSelectedBeneficiaryIds([]); setSelectedGroupIds([]); setPrivacyMode('all'); onClose();
