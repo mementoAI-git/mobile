@@ -23,7 +23,7 @@ import dayjs from 'dayjs';
 import Animated from 'react-native-reanimated';
 import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
-import { MemTag, Skeleton } from '@/components/ui';
+import { MemTag, Skeleton, EmptyState } from '@/components/ui';
 import { StoryHtmlBody } from '@/components/memory/StoryHtmlBody';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
@@ -33,6 +33,7 @@ import { useStoryDetailLogic } from '@/hooks/use-story-detail-logic';
 import { useBackHandler } from '@/hooks/use-back-handler';
 
 const { width: SCREEN_W } = Dimensions.get('window');
+const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.png');
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -337,8 +338,24 @@ export default function StoryDetailScreen() {
 
   if (!memory) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontFamily: FONTS.sans, fontSize: 15, color: COLORS.textWeak }}>Memory not found.</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={handleBack}
+            style={styles.iconBtn}
+            activeOpacity={0.7}
+            accessibilityLabel="Go back"
+          >
+            <ChevronLeft size={20} color={COLORS.textBase} strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
+        <EmptyState
+          image={EMPTY_MEMORIES_IMG}
+          title="Story unavailable"
+          description="This story may have been removed or is no longer accessible."
+          actionLabel={returnToOverview ? 'Back to overview' : 'Back to stories'}
+          onAction={handleBack}
+        />
       </SafeAreaView>
     );
   }

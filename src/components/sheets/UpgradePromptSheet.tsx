@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Sparkles, Crown, CheckCircle2, Zap } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { Button } from '@/components/ui';
 import * as Haptics from 'expo-haptics';
 import { useQueryClient } from '@tanstack/react-query';
 import { launchBillingCheckout } from '@/features/settings/billing-flow';
@@ -103,23 +104,14 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
 
       {/* Bottom Actions */}
       <View className="gap-3">
-        <TouchableOpacity
+        <Button
           onPress={handleUpgrade}
-          disabled={loading}
-          activeOpacity={0.8}
-          className="flex-row items-center justify-center gap-2 h-14 rounded-2xl bg-brand"
+          loading={loading}
+          size="lg"
+          leftIcon={<Zap size={18} color={COLORS.textInverse} />}
         >
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <>
-              <Zap size={18} color="white" />
-              <Text className="text-base font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>
-                Upgrade Now
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
+          Upgrade Now
+        </Button>
 
         <TouchableOpacity
           onPress={onClose}

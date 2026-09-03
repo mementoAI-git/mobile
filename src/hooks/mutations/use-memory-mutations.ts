@@ -126,9 +126,10 @@ export function useDeleteMemory() {
         };
       };
       queryClient.setQueriesData({ queryKey: [queryKeys.stories()[0]] }, remover);
-      queryClient.setQueriesData({ queryKey: [queryKeys.memories()[0]] }, remover);
-      // Stats counter needs a server refetch since we can't decrement it locally
-      invalidateMemoryQueries(queryClient, { memoryId: id });
+      // Invalidate list feeds and stats caches without refetching the deleted memory
+      invalidateMemoryQueries(queryClient);
+      // Remove individual memory query from cache so active views don't refetch a deleted entity
+      queryClient.removeQueries({ queryKey: queryKeys.memory(id) });
     },
   });
 }

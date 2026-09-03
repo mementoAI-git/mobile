@@ -19,7 +19,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, Image, ScrollView,
-  ActivityIndicator, ImageBackground,
+  ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -28,6 +28,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { X, FileText, Music, Video } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { Spinner, Button } from '@/components/ui';
 import { UiZapFast, UiDatabase01 } from '@/components/ui/icons/SettingsIcons';
 import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
 
@@ -177,11 +178,7 @@ function ShareContent() {
   }, [shareIntent, resetShareIntent, router]);
 
   if (!shareIntent) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color={COLORS.brand} />
-      </SafeAreaView>
-    );
+    return <Spinner fullScreen size="large" />;
   }
 
   const firstFile = shareIntent.files?.[0];
@@ -241,33 +238,14 @@ function ShareContent() {
           {/* Action buttons */}
           <Animated.View entering={FadeInDown.delay(200).duration(400)} style={{ gap: 12 }}>
             {/* Primary — full story */}
-            <TouchableOpacity
+            <Button
               onPress={handleSaveAsMemory}
-              disabled={isProcessing}
-              activeOpacity={0.85}
-              style={{
-                height: 56,
-                borderRadius: 999,
-                backgroundColor: COLORS.brand,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                opacity: isProcessing ? 0.6 : 1,
-              }}
+              loading={isProcessing}
+              size="lg"
+              leftIcon={<UiDatabase01 size={18} color={COLORS.textInverse} strokeWidth={2} />}
             >
-              {isProcessing
-                ? <ActivityIndicator size="small" color="white" />
-                : (
-                  <>
-                    <UiDatabase01 size={18} color="white" strokeWidth={2} />
-                    <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: 'white' }}>
-                      Write a story about this
-                    </Text>
-                  </>
-                )
-              }
-            </TouchableOpacity>
+              Write a story about this
+            </Button>
 
             {/* Secondary — quick capture */}
             <TouchableOpacity

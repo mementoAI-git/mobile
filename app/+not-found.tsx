@@ -1,31 +1,21 @@
 import React from 'react';
-import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
-import { Button } from '@/components/ui';
-import { FONTS } from '@/constants/tokens';
+import { EmptyState } from '@/components/ui/EmptyState';
+
+const NOT_FOUND_IMG = require('../assets/images/illustrations/fluent-emoji-flat_ringed-planet.png');
 
 export default function NotFoundScreen() {
   const router = useRouter();
   return (
-    <SafeAreaView className="flex-1 bg-background items-center justify-center px-8 gap-4">
-      <Animated.Text className="text-5xl mb-2">🗺️</Animated.Text>
-      <Animated.Text 
-        className="text-2xl font-semibold text-text-strong text-center"
-        style={{ fontFamily: FONTS.sansSemi }}
-      >
-        Page not found
-      </Animated.Text>
-      <Animated.Text 
-        className="text-base text-text-weak text-center"
-        style={{ fontFamily: FONTS.sans }}
-      >
-        The screen you're looking for doesn't exist or has been moved.
-      </Animated.Text>
-      <Button onPress={() => router.replace('/(tabs)/overview')} variant="outline" size="lg" className="mt-4 px-10">
-        Go Home
-      </Button>
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <EmptyState
+        image={NOT_FOUND_IMG}
+        title="Page not found"
+        description="The screen you're looking for doesn't exist or has been moved."
+        actionLabel="Go home"
+        onAction={() => router.replace('/(tabs)/overview')}
+      />
     </SafeAreaView>
   );
 }
