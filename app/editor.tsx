@@ -55,6 +55,8 @@ import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import type { IBeneficiary, IFile } from '@/types';
 import { PublishPrivacySheet, type PrivacyMode } from '@/components/sheets/PublishPrivacySheet';
+import { deriveMemoryAudience, formatMemoryAudienceLabel, type MemoryAudienceSelection, type MemoryVisibility } from '@/features/memories/memory-audience';
+import { buildEditorPublishPayload } from '@/features/editor/editor-publish-payload';
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
@@ -221,6 +223,7 @@ function PublishModalInner({
   initialTags,
   initialBeneficiaryIds,
   initialGroupIds,
+  initialVisibility,
 }: {
   title: string;
   body: string;
@@ -234,12 +237,11 @@ function PublishModalInner({
   initialTags?: string;
   initialBeneficiaryIds?: string[];
   initialGroupIds?: string[];
+  initialVisibility?: MemoryVisibility;
 }) {
   const insets = useSafeAreaInsets();
   const [tags, setTags] = useState(initialTags ?? '');
-  const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>(initialBeneficiaryIds ?? []);
-  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(initialGroupIds ?? []);
-  const [privacyMode, setPrivacyMode] = useState<PrivacyMode>(initialBeneficiaryIds?.length || initialGroupIds?.length ? 'specific' : 'all');
+  const [audience, setAudience] = useState<MemoryAudienceSelection>(() => deriveMemoryAudience({ visibility: initialVisibility, beneficiaries: initialBeneficiaryIds, groups: initialGroupIds }));
   const privacySheetRef = useRef<BottomSheetModal>(null);
   const [isAutotagging, setIsAutotagging] = useState(false);
 
@@ -253,13 +255,7 @@ function PublishModalInner({
   const isPending = isEditMode ? updatePending : createPending;
   const { toast } = useToast();
 
-  const privacyLabel = useMemo(() => {
-    if (privacyMode === 'private') return 'Private · Only me';
-    if (privacyMode === 'all') return 'Everyone';
-    const total = selectedBeneficiaryIds.length + selectedGroupIds.length;
-    if (!total) return 'Choose people or groups';
-    return `${selectedBeneficiaryIds.length ? `${selectedBeneficiaryIds.length} people` : ''}${selectedBeneficiaryIds.length && selectedGroupIds.length ? ', ' : ''}${selectedGroupIds.length ? `${selectedGroupIds.length} groups` : ''}`;
-  }, [privacyMode, selectedBeneficiaryIds.length, selectedGroupIds.length]);
+  const privacyLabel = useMemo(() => formatMemoryAudienceLabel(audience), [audience]);
 
   const handleAutotag = useCallback(async () => {
     const bodyText = [title, body].filter(Boolean).join(' ').trim();
@@ -280,7 +276,7 @@ function PublishModalInner({
   }, [title, body, toast]);
 
   const handlePrivacyModeChange = useCallback((mode: PrivacyMode) => {
-    setPrivacyMode(mode);
+    setAudience((current) => ({ ...current, mode: mode === 'all' ? 'everyone' : mode }));
   }, []);
 
   const handleOpenPrivacySheet = useCallback(() => {
@@ -289,26 +285,18 @@ function PublishModalInner({
   }, []);
 
   const handleToggleBeneficiary = useCallback((id: string) => {
-    setSelectedBeneficiaryIds(prev => prev.includes(id) ? prev.filter(value => value !== id) : [...prev, id]);
+    setAudience((current) => ({ ...current, beneficiaryIds: current.beneficiaryIds.includes(id) ? current.beneficiaryIds.filter(value => value !== id) : [...current.beneficiaryIds, id] }));
   }, []);
 
   const handleToggleGroup = useCallback((id: string) => {
-    setSelectedGroupIds(prev => prev.includes(id) ? prev.filter(value => value !== id) : [...prev, id]);
+    setAudience((current) => ({ ...current, groupIds: current.groupIds.includes(id) ? current.groupIds.filter(value => value !== id) : [...current.groupIds, id] }));
   }, []);
 
   const handlePost = useCallback(() => {
     if (!title.trim() && !body.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const tagList = tags.split(/[,\s]+/).map(t => t.trim()).filter(Boolean);
-    const payload = {
-      title: title || 'Untitled', body, tags: tagList, status: 'save' as const,
-      attachments: attachmentIds.length ? attachmentIds : undefined,
-      ...(privacyMode === 'private' ? { beneficiaries: [], groups: [] } : {}),
-      ...(privacyMode === 'specific' ? {
-        beneficiaries: selectedBeneficiaryIds,
-        groups: selectedGroupIds,
-      } : {}),
-    };
+    const payload = buildEditorPublishPayload({ title, body, tags: tagList, attachmentIds, audience });
     const onSuccess = (res: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (isExistingStory) {
@@ -334,10 +322,10 @@ function PublishModalInner({
     }
   // attachmentIds must be in deps — without it the closure captures the initial
   // empty array and voice notes / images added before publishing are silently dropped.
-  }, [title, body, tags, attachmentIds, selectedBeneficiaryIds, selectedGroupIds, privacyMode, isExistingStory, isEditMode, targetMemoryId, createMemory, updateMemory, toast, onComplete, onPublished, draftId, userEmail]);
+  }, [title, body, tags, attachmentIds, audience, isExistingStory, isEditMode, targetMemoryId, createMemory, updateMemory, toast, onComplete, onPublished, draftId, userEmail]);
 
   const handleClose = useCallback(() => {
-    setTags(''); setSelectedBeneficiaryIds([]); setSelectedGroupIds([]); setPrivacyMode('all'); onClose();
+    setTags(''); setAudience(deriveMemoryAudience({})); onClose();
   }, [onClose]);
 
     return (
@@ -387,16 +375,14 @@ function PublishModalInner({
       </View>
       <PublishPrivacySheet
         ref={privacySheetRef}
-        mode={privacyMode}
-        selectedBeneficiaryIds={selectedBeneficiaryIds}
-        selectedGroupIds={selectedGroupIds}
+        mode={audience.mode === 'everyone' ? 'all' : audience.mode}
+        selectedBeneficiaryIds={audience.beneficiaryIds}
+        selectedGroupIds={audience.groupIds}
         onModeChange={handlePrivacyModeChange}
         onToggleBeneficiary={handleToggleBeneficiary}
         onToggleGroup={handleToggleGroup}
         onApply={(nextMode, nextBeneficiaryIds, nextGroupIds) => {
-          setPrivacyMode(nextMode);
-          setSelectedBeneficiaryIds(nextBeneficiaryIds);
-          setSelectedGroupIds(nextGroupIds);
+          setAudience({ mode: nextMode === 'all' ? 'everyone' : nextMode, beneficiaryIds: nextBeneficiaryIds, groupIds: nextGroupIds });
         }}
         onClose={() => privacySheetRef.current?.dismiss()}
       />
@@ -1343,6 +1329,7 @@ export default function EditorScreen() {
               initialTags={initialTags}
               initialBeneficiaryIds={initialBeneficiaryIds}
               initialGroupIds={initialGroupIds}
+              initialVisibility={initialParsedData?.visibility}
               onClose={handleClosePublishSheet}
               onComplete={handlePublishFlowComplete}
               onPublished={handlePublishCreated}
