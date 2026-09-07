@@ -54,7 +54,8 @@ describe('editor publish sheet', () => {
     expect(editor).toContain('setAudience({ mode: nextMode');
     expect(publishPrivacySheet).toContain('useGroups');
     expect(publishPrivacySheet).toContain('Specific people & groups');
-    expect(publishPrivacySheet).toContain("pointerEvents={isSpecific ? 'auto' : 'none'}");
+    expect(publishPrivacySheet).toContain("setDraftMode('specific')");
+    expect(publishPrivacySheet).not.toContain("pointerEvents={isSpecific ? 'auto' : 'none'}");
   });
 
   test('does not force avoidIosKeyboard during native-to-webview focus handoff', () => {

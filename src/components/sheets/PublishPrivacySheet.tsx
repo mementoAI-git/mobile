@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useState, useEffect, forwardRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -13,6 +13,9 @@ import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useGroups } from '@/hooks/queries/use-groups';
 import type { IBeneficiary, IGroup } from '@/types';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { normalizeCollection } from '@/features/beneficiaries/collections';
+import { buildAudienceRecipientItems, type AudienceRecipientItem } from '@/features/memories/audience-recipient-items';
+import { canApplyMemoryAudience } from '@/features/memories/memory-audience';
 
 export type PrivacyMode = 'private' | 'all' | 'specific';
 
@@ -27,32 +30,6 @@ interface Props {
   onClose: () => void;
 }
 
-interface DisplayItem {
-  id: string;
-  name: string;
-  isGroup: boolean;
-  initial: string;
-}
-
-const SAMPLE_BENEFICIARIES: IBeneficiary[] = [
-  { _id: 'sample-alexander', name: 'Alexander Wang', email: 'alexander@example.com', relationship: 'Friend', level: 1 } as any,
-  { _id: 'sample-bojanovic', name: 'Bojanovic Samvel', email: 'bojanovic@example.com', relationship: 'Colleague', level: 1 } as any,
-  { _id: 'sample-lisa', name: 'Lisa Doherty', email: 'lisa@example.com', relationship: 'Sister', level: 1 } as any,
-];
-
-const SAMPLE_GROUPS: IGroup[] = [
-  { _id: 'sample-group-family', name: 'Family', description: 'Family members' } as any,
-  { _id: 'sample-group-friends', name: 'Friends', description: 'Close friends' } as any,
-  { _id: 'sample-group-the-boys', name: 'The Boys', description: 'Weekend crew' } as any,
-];
-
-const RECENT_PILLS = [
-  { label: '@Family', bg: '#EFF6FF', text: '#2563EB', border: '#DBEAFE', groupName: 'Family' },
-  { label: '@Friends', bg: '#ECFDF5', text: '#059669', border: '#D1FAE5', groupName: 'Friends' },
-  { label: '@Church', bg: '#FFF1F2', text: '#E11D48', border: '#FFE4E6', groupName: 'Church' },
-  { label: '@Victor', bg: '#F5F3FF', text: '#7C3AED', border: '#EDE9FE', personName: 'Victor' },
-  { label: '@Fela', bg: '#ECFEFF', text: '#0D9488', border: '#CFFAFE', personName: 'Fela' },
-];
 
 export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function PublishPrivacySheet({
   mode,
@@ -78,54 +55,23 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
     setDraftGroupIds(selectedGroupIds);
   }, [mode, selectedBeneficiaryIds, selectedGroupIds]);
 
-  const { data: beneficiariesRaw } = useBeneficiaries();
-  const { data: groupsRaw } = useGroups();
+  const beneficiariesQuery = useBeneficiaries();
+  const groupsQuery = useGroups();
 
   const beneficiaries = useMemo<IBeneficiary[]>(() => {
-    const list = Array.isArray(beneficiariesRaw)
-      ? beneficiariesRaw
-      : Array.isArray((beneficiariesRaw as any)?.docs)
-      ? (beneficiariesRaw as any).docs
-      : [];
-    return list.length > 0 ? list : SAMPLE_BENEFICIARIES;
-  }, [beneficiariesRaw]);
+    return normalizeCollection<IBeneficiary>(beneficiariesQuery.data);
+  }, [beneficiariesQuery.data]);
 
   const groups = useMemo<IGroup[]>(() => {
-    const list = Array.isArray(groupsRaw)
-      ? groupsRaw
-      : Array.isArray((groupsRaw as any)?.docs)
-      ? (groupsRaw as any).docs
-      : [];
-    return list.length > 0 ? list : SAMPLE_GROUPS;
-  }, [groupsRaw]);
+    return normalizeCollection<IGroup>(groupsQuery.data);
+  }, [groupsQuery.data]);
 
   // Combined item list (users then groups) matching the design order
-  const displayItems = useMemo<DisplayItem[]>(() => {
-    const query = search.trim().toLowerCase();
-    const userItems: DisplayItem[] = beneficiaries
-      .filter((b) => Boolean(b._id))
-      .map((b) => ({
-        id: b._id!,
-        name: b.name || b.email,
-        isGroup: false,
-        initial: (b.name || b.email || 'U').charAt(0).toUpperCase(),
-      }));
+  const displayItems = useMemo(() => buildAudienceRecipientItems(beneficiaries, groups, search), [beneficiaries, groups, search]);
 
-    const groupItems: DisplayItem[] = groups
-      .filter((g) => Boolean(g._id))
-      .map((g) => ({
-        id: g._id,
-        name: g.name,
-        isGroup: true,
-        initial: (g.name || 'G').charAt(0).toUpperCase(),
-      }));
-
-    const combined = [...userItems, ...groupItems];
-    if (!query) return combined;
-    return combined.filter((item) => item.name.toLowerCase().includes(query));
-  }, [beneficiaries, groups, search]);
-
-  const isSpecific = draftMode === 'specific' || draftBeneficiaryIds.length > 0 || draftGroupIds.length > 0;
+  const isLoadingRecipients = beneficiariesQuery.isLoading || groupsQuery.isLoading;
+  const hasRecipientError = beneficiariesQuery.isError || groupsQuery.isError;
+  const canApply = canApplyMemoryAudience({ mode: draftMode === 'all' ? 'everyone' : draftMode, beneficiaryIds: draftBeneficiaryIds, groupIds: draftGroupIds });
 
   const handleSelectPrivate = useCallback(() => {
     Haptics.selectionAsync();
@@ -137,9 +83,9 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
     setDraftMode('all');
   }, []);
 
-  const handleToggleItem = useCallback((item: DisplayItem) => {
+  const handleToggleItem = useCallback((item: AudienceRecipientItem) => {
     Haptics.selectionAsync();
-    if (item.isGroup) {
+    if (item.kind === 'group') {
       setDraftGroupIds((prev) => {
         const next = prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id];
         return next;
@@ -151,45 +97,31 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
       });
     }
     // If toggling specific members, ensure mode reflects specific selection when not explicitly private
-    setDraftMode((prev) => (prev === 'private' ? 'private' : 'specific'));
+    setDraftMode('specific');
   }, []);
 
-  const handleToggleRecentPill = useCallback((pill: (typeof RECENT_PILLS)[0]) => {
-    Haptics.selectionAsync();
-    if (pill.groupName) {
-      const match = groups.find((g) => g.name.toLowerCase() === pill.groupName.toLowerCase());
-      if (match) {
-        setDraftGroupIds((prev) =>
-          prev.includes(match._id) ? prev.filter((id) => id !== match._id) : [...prev, match._id]
-        );
-        setDraftMode((prev) => (prev === 'private' ? 'private' : 'specific'));
-      }
-    } else if (pill.personName) {
-      const match = beneficiaries.find((b) => (b.name || '').toLowerCase().includes(pill.personName.toLowerCase()));
-      if (match?._id) {
-        setDraftBeneficiaryIds((prev) =>
-          prev.includes(match._id!) ? prev.filter((id) => id !== match._id!) : [...prev, match._id!]
-        );
-        setDraftMode((prev) => (prev === 'private' ? 'private' : 'specific'));
-      }
-    }
-  }, [beneficiaries, groups]);
-
-  const handleDismiss = useCallback(() => {
-    Haptics.selectionAsync();
-    // Revert drafts
+  const resetDraft = useCallback(() => {
     setDraftMode(mode);
     setDraftBeneficiaryIds(selectedBeneficiaryIds);
     setDraftGroupIds(selectedGroupIds);
+    setSearch('');
+  }, [mode, selectedBeneficiaryIds, selectedGroupIds]);
+
+  const handleDismiss = useCallback(() => {
+    Haptics.selectionAsync();
+    resetDraft();
     onClose();
-  }, [mode, selectedBeneficiaryIds, selectedGroupIds, onClose]);
+  }, [resetDraft, onClose]);
 
   const handleApply = useCallback(() => {
+    if (!canApply) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const finalMode = draftMode;
+    const finalBeneficiaryIds = finalMode === 'specific' ? draftBeneficiaryIds : [];
+    const finalGroupIds = finalMode === 'specific' ? draftGroupIds : [];
 
     if (onApply) {
-      onApply(finalMode, draftBeneficiaryIds, draftGroupIds);
+      onApply(finalMode, finalBeneficiaryIds, finalGroupIds);
     } else {
       onModeChange(finalMode);
       // Synchronize beneficiaries
@@ -212,6 +144,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
     draftMode,
     draftBeneficiaryIds,
     draftGroupIds,
+    canApply,
     onApply,
     onModeChange,
     selectedBeneficiaryIds,
@@ -235,14 +168,15 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
       snapPoints={['86%']}
       stackBehavior="push"
       enablePanDownToClose
+      onDismiss={resetDraft}
       backdropComponent={renderBackdrop}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
-      handleIndicatorStyle={{ backgroundColor: '#E5E7EB', width: 42, height: 4, borderRadius: 2 }}
-      backgroundStyle={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28 }}
+      handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3, width: 42, height: 4, borderRadius: 2 }}
+      backgroundStyle={{ backgroundColor: COLORS.background, borderTopLeftRadius: 28, borderTopRightRadius: 28 }}
     >
-      <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <View style={{ flex: 1, backgroundColor: COLORS.background }}>
         {/* ── Header ── */}
         <View
           style={{
@@ -254,7 +188,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
             justifyContent: 'space-between',
           }}
         >
-          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: '#111827' }}>
+          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>
             Who can see this story?
           </Text>
           <TouchableOpacity
@@ -267,10 +201,10 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
               borderRadius: 18,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: '#F3F4F6',
+              backgroundColor: COLORS.fillWeak,
             }}
           >
-            <X size={18} color="#374151" strokeWidth={2} />
+            <X size={18} color={COLORS.textBase} strokeWidth={2} />
           </TouchableOpacity>
         </View>
 
@@ -287,7 +221,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
               activeOpacity={0.85}
               style={{
                 flex: 1,
-                backgroundColor: '#FFF1F2',
+                backgroundColor: `${COLORS.error}0D`,
                 borderRadius: 16,
                 padding: 14,
                 position: 'relative',
@@ -303,14 +237,14 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                     width: 20,
                     height: 20,
                     borderRadius: 10,
-                    backgroundColor: '#22C55E',
+                    backgroundColor: COLORS.success,
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: 1.5,
-                    borderColor: '#FFFFFF',
+                    borderColor: COLORS.card,
                   }}
                 >
-                  <Check size={11} color="#FFFFFF" strokeWidth={3} />
+                  <Check size={11} color={COLORS.textInverse} strokeWidth={3} />
                 </View>
               )}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -319,14 +253,14 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                     width: 28,
                     height: 28,
                     borderRadius: 8,
-                    backgroundColor: '#FFE4E6',
+                    backgroundColor: `${COLORS.error}18`,
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Lock size={15} color="#EF4444" strokeWidth={2.4} />
+                  <Lock size={15} color={COLORS.error} strokeWidth={2.4} />
                 </View>
-                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: '#111827' }}>
+                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong }}>
                   Private
                 </Text>
               </View>
@@ -336,7 +270,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                   fontFamily: FONTS.sans,
                   fontSize: 12,
                   lineHeight: 16,
-                  color: '#EF4444',
+                  color: COLORS.error,
                 }}
               >
                 Story is visible to only you
@@ -349,7 +283,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
               activeOpacity={0.85}
               style={{
                 flex: 1,
-                backgroundColor: '#EFF6FF',
+                backgroundColor: `${COLORS.info}0D`,
                 borderRadius: 16,
                 padding: 14,
                 position: 'relative',
@@ -365,14 +299,14 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                     width: 20,
                     height: 20,
                     borderRadius: 10,
-                    backgroundColor: '#22C55E',
+                    backgroundColor: COLORS.success,
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: 1.5,
-                    borderColor: '#FFFFFF',
+                    borderColor: COLORS.card,
                   }}
                 >
-                  <Check size={11} color="#FFFFFF" strokeWidth={3} />
+                  <Check size={11} color={COLORS.textInverse} strokeWidth={3} />
                 </View>
               )}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -381,14 +315,14 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                     width: 28,
                     height: 28,
                     borderRadius: 8,
-                    backgroundColor: '#DBEAFE',
+                    backgroundColor: `${COLORS.info}18`,
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Users size={16} color="#2563EB" strokeWidth={2.2} />
+                  <Users size={16} color={COLORS.info} strokeWidth={2.2} />
                 </View>
-                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: '#111827' }}>
+                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong }}>
                   Everyone
                 </Text>
               </View>
@@ -398,7 +332,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                   fontFamily: FONTS.sans,
                   fontSize: 12,
                   lineHeight: 16,
-                  color: '#3B82F6',
+                  color: COLORS.info,
                 }}
               >
                 Story is visible to everyone.
@@ -414,84 +348,49 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
               height: 48,
               borderRadius: 12,
               borderWidth: 1,
-              borderColor: '#E5E7EB',
-              backgroundColor: '#FFFFFF',
+              borderColor: COLORS.strokeWeak,
+              backgroundColor: COLORS.fillWeaker,
               flexDirection: 'row',
               alignItems: 'center',
               paddingHorizontal: 12,
               gap: 10,
             }}
           >
-            <Search size={18} color="#9CA3AF" strokeWidth={1.8} />
+            <Search size={18} color={COLORS.textWeak} strokeWidth={1.8} />
             <BottomSheetTextInput
               value={search}
               onChangeText={setSearch}
               placeholder="Search user or group"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={COLORS.textMuted}
               style={{
                 flex: 1,
                 fontFamily: FONTS.sans,
                 fontSize: 14,
-                color: '#111827',
+                color: COLORS.textStrong,
                 paddingVertical: 0,
               }}
             />
           </View>
 
-          {/* ── Recently used: Section ── */}
-          <View style={{ marginTop: 16 }}>
-            <Text
-              style={{
-                paddingHorizontal: 20,
-                fontFamily: FONTS.sans,
-                fontSize: 13,
-                color: '#6B7280',
-                marginBottom: 8,
-              }}
-            >
-              Recently used:
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
-            >
-              {RECENT_PILLS.map((pill) => (
-                <TouchableOpacity
-                  key={pill.label}
-                  onPress={() => handleToggleRecentPill(pill)}
-                  activeOpacity={0.75}
-                  style={{
-                    backgroundColor: pill.bg,
-                    borderColor: pill.border,
-                    borderWidth: 1,
-                    borderRadius: 999,
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontFamily: FONTS.sansSemi,
-                      fontSize: 13,
-                      color: pill.text,
-                    }}
-                  >
-                    {pill.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
           {/* ── Specific people & groups list ── */}
           <View
             accessibilityLabel="Specific people & groups"
-            pointerEvents={isSpecific ? 'auto' : 'none'}
             style={{ marginTop: 12, paddingHorizontal: 20 }}
           >
-            {displayItems.map((item) => {
-              const isChecked = item.isGroup
+            {isLoadingRecipients && (
+              <Text style={{ paddingVertical: 24, textAlign: 'center', fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak }}>
+                Loading your trusted people…
+              </Text>
+            )}
+
+            {!isLoadingRecipients && hasRecipientError && (
+              <Text style={{ paddingVertical: 24, textAlign: 'center', fontFamily: FONTS.sans, fontSize: 14, lineHeight: 20, color: COLORS.textWeak }}>
+                We couldn’t load your trusted people. Private and Everyone are still available.
+              </Text>
+            )}
+
+            {!isLoadingRecipients && !hasRecipientError && displayItems.map((item) => {
+              const isChecked = item.kind === 'group'
                 ? draftGroupIds.includes(item.id)
                 : draftBeneficiaryIds.includes(item.id);
 
@@ -516,12 +415,12 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                       borderRadius: 5,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: isChecked ? '#FF5E00' : '#FFFFFF',
+                      backgroundColor: isChecked ? COLORS.brand : COLORS.card,
                       borderWidth: isChecked ? 0 : 1.5,
-                      borderColor: '#D1D5DB',
+                      borderColor: COLORS.strokeWeak,
                     }}
                   >
-                    {isChecked && <Check size={13} color="#FFFFFF" strokeWidth={3} />}
+                    {isChecked && <Check size={13} color={COLORS.textInverse} strokeWidth={3} />}
                   </View>
 
                   {/* Initial Avatar Circle */}
@@ -530,7 +429,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                       width: 32,
                       height: 32,
                       borderRadius: 16,
-                      backgroundColor: '#F3F4F6',
+                      backgroundColor: COLORS.fillWeak,
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
@@ -539,7 +438,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                       style={{
                         fontFamily: FONTS.sansBold,
                         fontSize: 13,
-                        color: '#111827',
+                        color: COLORS.textStrong,
                       }}
                     >
                       {item.initial}
@@ -553,30 +452,30 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                       style={{
                         fontFamily: FONTS.sansMedium,
                         fontSize: 14,
-                        color: '#1F2937',
+                        color: COLORS.textStrong,
                       }}
                     >
                       {item.name}
                     </Text>
 
-                    {item.isGroup && (
+                    {item.kind === 'group' && (
                       <View
                         style={{
                           flexDirection: 'row',
                           alignItems: 'center',
                           gap: 4,
-                          backgroundColor: '#F3F4F6',
+                          backgroundColor: COLORS.fillWeak,
                           borderRadius: 999,
                           paddingHorizontal: 8,
                           paddingVertical: 3,
                         }}
                       >
-                        <Text style={{ fontSize: 9, color: '#6B7280' }}>•</Text>
+                        <Text style={{ fontSize: 9, color: COLORS.textWeak }}>•</Text>
                         <Text
                           style={{
                             fontFamily: FONTS.sansMedium,
                             fontSize: 11,
-                            color: '#4B5563',
+                            color: COLORS.textBase,
                           }}
                         >
                           Group
@@ -588,17 +487,19 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
               );
             })}
 
-            {displayItems.length === 0 && (
+            {!isLoadingRecipients && !hasRecipientError && displayItems.length === 0 && (
               <Text
                 style={{
                   paddingVertical: 24,
                   textAlign: 'center',
                   fontFamily: FONTS.sans,
                   fontSize: 14,
-                  color: '#9CA3AF',
+                  color: COLORS.textWeak,
                 }}
               >
-                No users or groups found.
+                {search.trim()
+                  ? 'No people or groups match your search.'
+                  : 'Your trusted circle starts here. Add people or groups in Settings.'}
               </Text>
             )}
           </View>
@@ -613,9 +514,9 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
             paddingHorizontal: 20,
             paddingTop: 12,
             paddingBottom: Math.max(insets.bottom + 6, 20),
-            backgroundColor: '#FFFFFF',
+            backgroundColor: COLORS.background,
             borderTopWidth: 1,
-            borderTopColor: '#F3F4F6',
+            borderTopColor: COLORS.strokeWeaker,
           }}
         >
           <TouchableOpacity
@@ -625,7 +526,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
               flex: 1,
               height: 52,
               borderRadius: 26,
-              backgroundColor: '#F3F4F6',
+              backgroundColor: COLORS.fillWeak,
               alignItems: 'center',
               justifyContent: 'center',
             }}
@@ -634,7 +535,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
               style={{
                 fontFamily: FONTS.sansSemi,
                 fontSize: 15,
-                color: '#111827',
+                color: COLORS.textStrong,
               }}
             >
               Dismiss
@@ -643,26 +544,28 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
 
           <TouchableOpacity
             onPress={handleApply}
+            disabled={!canApply}
             activeOpacity={0.85}
             style={{
               flex: 1.2,
               height: 52,
               borderRadius: 26,
-              backgroundColor: '#FF5E00',
+              backgroundColor: COLORS.brand,
               alignItems: 'center',
               justifyContent: 'center',
-              shadowColor: '#FF5E00',
+              shadowColor: COLORS.shadow,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.2,
               shadowRadius: 8,
               elevation: 4,
+              opacity: canApply ? 1 : 0.45,
             }}
           >
             <Text
               style={{
                 fontFamily: FONTS.sansSemi,
                 fontSize: 15,
-                color: '#FFFFFF',
+                color: COLORS.textInverse,
               }}
             >
               Apply changes
