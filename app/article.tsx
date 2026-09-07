@@ -50,12 +50,19 @@ let articleHasSlid = false;
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useUserStore } from '@/store';
 import { useCreateMemory } from '@/hooks/mutations/use-memory-mutations';
-import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useToast } from '@/components/ui/Toast';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
-import type { IBeneficiary } from '@/types';
 import { publishedPostUrl } from '@/lib/env';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { PublishPrivacySheet, type PrivacyMode } from '@/components/sheets/PublishPrivacySheet';
+import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
+import {
+  deriveMemoryAudience,
+  formatMemoryAudienceLabel,
+  type MemoryAudienceSelection,
+} from '@/features/memories/memory-audience';
+import { buildArticlePublishPayload } from '@/features/editor/article-publish-payload';
 
 // ─── Surfer illustration asset ────────────────────────────────────────────────
 
@@ -236,29 +243,15 @@ function PublishModal({
 }) {
   const insets = useSafeAreaInsets();
   const [tags, setTags] = useState('');
-  const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>([]);
-  const [beneficiaryMenuOpen, setBeneficiaryMenuOpen] = useState(false);
+  const [audience, setAudience] = useState<MemoryAudienceSelection>(() => deriveMemoryAudience({}));
   const [isAutotagging, setIsAutotagging] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
+  const privacySheetRef = useRef<BottomSheetModal>(null);
 
   const { mutate: createMemory, isPending } = useCreateMemory();
-  const { data: beneficiariesRaw } = useBeneficiaries();
   const { toast } = useToast();
 
-  const beneficiaries: IBeneficiary[] = useMemo(() => {
-    if (!beneficiariesRaw) return [];
-    if (Array.isArray(beneficiariesRaw)) return beneficiariesRaw;
-    if ((beneficiariesRaw as any)?.docs) return (beneficiariesRaw as any).docs;
-    return [];
-  }, [beneficiariesRaw]);
-
-  const visibilityLabel = useMemo(() => {
-    if (!selectedBeneficiaryIds.length) return 'Everyone';
-    const names = beneficiaries
-      .filter((b) => b._id && selectedBeneficiaryIds.includes(b._id))
-      .map((b) => b.name).filter(Boolean);
-    return names.length === 1 ? names[0] : `${names.length} beneficiaries`;
-  }, [selectedBeneficiaryIds, beneficiaries]);
+  const visibilityLabel = useMemo(() => formatMemoryAudienceLabel(audience), [audience]);
 
   const handleAutotag = useCallback(async () => {
     const bodyText = [title, subtitle, body].filter(Boolean).join(' ').trim();
@@ -287,13 +280,7 @@ function PublishModal({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const tagList = tags.split(/[,\s]+/).map((t) => t.trim()).filter(Boolean);
     createMemory(
-      {
-        title: title || 'Untitled',
-        body: [subtitle, body].filter(Boolean).join('\n\n').trim(),
-        tags: tagList,
-        status: 'save',
-        beneficiaries: selectedBeneficiaryIds.length ? selectedBeneficiaryIds : undefined,
-      },
+      buildArticlePublishPayload({ title, subtitle, body, tags: tagList, audience }),
       {
         onSuccess: (res: any) => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -305,23 +292,40 @@ function PublishModal({
         },
       }
     );
-  }, [title, subtitle, body, tags, selectedBeneficiaryIds, createMemory, toast, onClose]);
-
-  const toggleBeneficiary = useCallback((id: string) => {
-    Haptics.selectionAsync();
-    setSelectedBeneficiaryIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  }, []);
+  }, [title, subtitle, body, tags, audience, createMemory, toast]);
 
   // Reset form state when modal closes
   const handleClose = useCallback(() => {
     setPublishedUrl(null);
     setTags('');
-    setSelectedBeneficiaryIds([]);
-    setBeneficiaryMenuOpen(false);
+    setAudience(deriveMemoryAudience({}));
     onClose();
   }, [onClose]);
+
+  const handlePrivacyModeChange = useCallback((nextMode: PrivacyMode) => {
+    setAudience((current) => ({
+      ...current,
+      mode: nextMode === 'all' ? 'everyone' : nextMode,
+    }));
+  }, []);
+
+  const handleToggleBeneficiary = useCallback((id: string) => {
+    setAudience((current) => ({
+      ...current,
+      beneficiaryIds: current.beneficiaryIds.includes(id)
+        ? current.beneficiaryIds.filter((candidate) => candidate !== id)
+        : [...current.beneficiaryIds, id],
+    }));
+  }, []);
+
+  const handleToggleGroup = useCallback((id: string) => {
+    setAudience((current) => ({
+      ...current,
+      groupIds: current.groupIds.includes(id)
+        ? current.groupIds.filter((candidate) => candidate !== id)
+        : [...current.groupIds, id],
+    }));
+  }, []);
 
   return (
     <Modal
@@ -330,7 +334,7 @@ function PublishModal({
       presentationStyle="fullScreen"
       onRequestClose={handleClose}
     >
-      <SafeAreaProvider>
+      <NativeModalSafeAreaBoundary>
         <SafeAreaView style={[pStyles.root, publishedUrl ? { backgroundColor: 'transparent' } : null]} edges={publishedUrl ? [] : ['top']}>
 
           {/* ── Success view ── */}
@@ -358,9 +362,9 @@ function PublishModal({
             {/* Visibility card */}
             <View style={pStyles.visibilityCard}>
               <Text style={pStyles.visibilityTitle}>Who can see this story?</Text>
-              <Text style={pStyles.visibilitySubtitle}>Stories are visible to all beneficiaries by default.</Text>
+              <Text style={pStyles.visibilitySubtitle}>New stories are private unless you choose otherwise.</Text>
               <TouchableOpacity
-                onPress={() => { Haptics.selectionAsync(); setBeneficiaryMenuOpen((o) => !o); }}
+                onPress={() => { Haptics.selectionAsync(); privacySheetRef.current?.present(); }}
                 style={pStyles.visibilitySelector}
                 activeOpacity={0.8}
               >
@@ -368,26 +372,6 @@ function PublishModal({
                 <Text style={pStyles.visibilitySelectorText}>{visibilityLabel}</Text>
                 <ChevronDown size={16} color={COLORS.textMuted} strokeWidth={2} />
               </TouchableOpacity>
-              {beneficiaryMenuOpen && (
-                <View style={pStyles.beneficiaryMenu}>
-                  <TouchableOpacity
-                    onPress={() => { setSelectedBeneficiaryIds([]); setBeneficiaryMenuOpen(false); Haptics.selectionAsync(); }}
-                    style={[pStyles.beneficiaryOption, !selectedBeneficiaryIds.length && pStyles.beneficiaryOptionActive]}
-                  >
-                    <Text style={[pStyles.beneficiaryOptionText, !selectedBeneficiaryIds.length && pStyles.beneficiaryOptionTextActive]}>Everyone</Text>
-                  </TouchableOpacity>
-                  {beneficiaries.map((b) => {
-                    if (!b._id) return null;
-                    const on = selectedBeneficiaryIds.includes(b._id);
-                    return (
-                      <TouchableOpacity key={b._id} onPress={() => toggleBeneficiary(b._id!)}
-                        style={[pStyles.beneficiaryOption, on && pStyles.beneficiaryOptionActive]}>
-                        <Text style={[pStyles.beneficiaryOptionText, on && pStyles.beneficiaryOptionTextActive]}>{b.name}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
             </View>
 
             {/* Tags */}
@@ -427,7 +411,25 @@ function PublishModal({
           </ScrollView>
           )}
         </SafeAreaView>
-      </SafeAreaProvider>
+        <PublishPrivacySheet
+          ref={privacySheetRef}
+          mode={audience.mode === 'everyone' ? 'all' : audience.mode}
+          selectedBeneficiaryIds={audience.beneficiaryIds}
+          selectedGroupIds={audience.groupIds}
+          onModeChange={handlePrivacyModeChange}
+          onToggleBeneficiary={handleToggleBeneficiary}
+          onToggleGroup={handleToggleGroup}
+          onApply={(nextMode, beneficiaryIds, groupIds) => {
+            setAudience({
+              mode: nextMode === 'all' ? 'everyone' : nextMode,
+              beneficiaryIds,
+              groupIds,
+            });
+            privacySheetRef.current?.dismiss();
+          }}
+          onClose={() => privacySheetRef.current?.dismiss()}
+        />
+      </NativeModalSafeAreaBoundary>
     </Modal>
   );
 }

@@ -196,9 +196,9 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
             activeOpacity={0.7}
             hitSlop={8}
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
+              width: 44,
+              height: 44,
+              borderRadius: 22,
               alignItems: 'center',
               justifyContent: 'center',
               backgroundColor: COLORS.fillWeak,
