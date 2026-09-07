@@ -146,6 +146,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
 
     const payload: import('@/hooks/mutations/use-quick-capture').QuickCapturePayload = {
       body: text.trim(),
+      visibility: 'private',
       attachments: uploadedAttachmentIds.length > 0 ? uploadedAttachmentIds : undefined,
       // Wire up daily prompt context so the server can link enrichment to the prompt
       ...(dailyPrompt?.prompt_type === 'static' && dailyPrompt.prompt_id

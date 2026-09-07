@@ -4,7 +4,7 @@
  * Data parity with web /memories/quick-capture:
  *  - body (plain text, 8,000 char max)
  *  - attachments[] — images/videos (gallery), audio files, voice recording, documents
- *  - beneficiaries[] — "Everyone" or specific people
+ *  - visibility — explicitly private
  *  - Draft auto-saved to AsyncStorage on dismiss if has content
  *
  * Toolbar matches web: Image | Video | Music | Mic | Smile
@@ -26,8 +26,7 @@ import {
 import { SafeAreaView, SafeAreaProvider, initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  Globe,
-  ChevronDown,
+  Lock,
   X,
   FileText,
   Play,
@@ -50,7 +49,6 @@ import { getModalBottomPadding } from '@/features/layout/modal-safe-area';
 import { useUserStore } from '@/store';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
-import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useToast } from '@/components/ui/Toast';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
@@ -71,7 +69,7 @@ import {
   type UploadAttachment,
 } from '@/features/media/attachment-upload-state';
 import { useAttachmentUploads } from '@/features/media/use-attachment-uploads';
-import type { IBeneficiary, IFile } from '@/types';
+import type { IFile } from '@/types';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -307,8 +305,6 @@ export default function CreateScreen() {
   const isMountedRef = useRef(true);
 
   const [body, setBody] = useState('');
-  const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>([]);
-  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -316,7 +312,6 @@ export default function CreateScreen() {
 
   const { mutateAsync: quickCapture, isPending } = useQuickCapture();
   const { mutateAsync: uploadFileMutation } = useFileUpload();
-  const { data: beneficiariesRaw } = useBeneficiaries();
   const { toast } = useToast();
   const {
     attachments,
@@ -341,13 +336,6 @@ export default function CreateScreen() {
   const { start: startRecording, stop: stopRecording, isRecording, duration: recDuration } = useAudioRecorder({
     onPermissionDenied: handleMicrophonePermissionDenied,
   });
-
-  const beneficiaries: IBeneficiary[] = useMemo(() => {
-    if (!beneficiariesRaw) return [];
-    if (Array.isArray(beneficiariesRaw)) return beneficiariesRaw;
-    if ((beneficiariesRaw as any)?.docs) return (beneficiariesRaw as any).docs;
-    return [];
-  }, [beneficiariesRaw]);
 
   useEffect(() => { return () => { isMountedRef.current = false; }; }, []);
 
@@ -415,13 +403,6 @@ export default function CreateScreen() {
   const hasContent = body.trim().length > 0 || uploadedIds.length > 0;
   const nearLimit = body.length > NOTE_CHAR_MAX * 0.8;
 
-  const visibilityLabel = useMemo(() => {
-    if (!selectedBeneficiaryIds.length) return 'Everyone can see this';
-    const names = beneficiaries.filter((b) => b._id && selectedBeneficiaryIds.includes(b._id)).map((b) => b.name).filter(Boolean);
-    if (names.length === 1) return `Shared with ${names[0]}`;
-    return `Shared with ${names.length} people`;
-  }, [selectedBeneficiaryIds, beneficiaries]);
-
   // ── Handlers ───────────────────────────────────────────────────────────────
 
   const handleCancel = useCallback(() => {
@@ -441,8 +422,8 @@ export default function CreateScreen() {
     try {
       await quickCapture({
         body: body.trim(),
+        visibility: 'private',
         attachments: uploadedIds.length ? uploadedIds : undefined,
-        beneficiaries: selectedBeneficiaryIds.length ? selectedBeneficiaryIds : undefined,
       });
       AsyncStorage.removeItem(DRAFT_STORAGE_KEY(user?.email)).catch(() => {});
       toast('Got it. Processing in the background…', 'success');
@@ -454,7 +435,7 @@ export default function CreateScreen() {
     } catch (err: any) {
       setSaveError(err?.message ?? 'Could not save. Try again.');
     }
-  }, [canSave, quickCapture, body, uploadedIds, selectedBeneficiaryIds, router, user?.email, toast]);
+  }, [canSave, quickCapture, body, uploadedIds, router, user?.email, toast]);
 
   // Image toolbar button — images + videos from gallery (matches web's Image icon)
   const handleImagePicker = useCallback(async () => {
@@ -534,11 +515,6 @@ export default function CreateScreen() {
   const handleRemove = useCallback((clientId: string) => {
     Haptics.selectionAsync();
     setAttachments((prev) => prev.filter((a) => a.clientId !== clientId));
-  }, []);
-
-  const toggleBeneficiary = useCallback((id: string) => {
-    Haptics.selectionAsync();
-    setSelectedBeneficiaryIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   }, []);
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -626,33 +602,11 @@ export default function CreateScreen() {
           {saveError && <Text style={styles.errorText}>{saveError}</Text>}
         </ScrollView>
 
-        {/* ── Privacy row ───────────────────────────────────────────────────── */}
+        {/* Quick Capture is intentionally private. */}
         <View style={styles.privacyRow}>
-          <Globe size={14} color={COLORS.textMuted} strokeWidth={1.8} />
-          <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setPrivacyOpen((o) => !o); }} style={styles.privacyBtn}>
-            <Text style={styles.privacyLabel}>{visibilityLabel}</Text>
-            <ChevronDown size={12} color={COLORS.textMuted} strokeWidth={2} />
-          </TouchableOpacity>
+          <Lock size={14} color={COLORS.textMuted} strokeWidth={1.8} />
+          <Text style={styles.privacyLabel}>Private · Only me</Text>
         </View>
-
-        {/* Privacy dropdown */}
-        {privacyOpen && (
-          <View style={styles.privacyDropdown}>
-            <TouchableOpacity onPress={() => { setSelectedBeneficiaryIds([]); setPrivacyOpen(false); Haptics.selectionAsync(); }}
-              style={[styles.privacyOption, !selectedBeneficiaryIds.length && styles.privacyOptionActive]}>
-              <Text style={[styles.privacyOptionText, !selectedBeneficiaryIds.length && styles.privacyOptionTextActive]}>Everyone</Text>
-            </TouchableOpacity>
-            {beneficiaries.map((b) => {
-              if (!b._id) return null;
-              const on = selectedBeneficiaryIds.includes(b._id);
-              return (
-                <TouchableOpacity key={b._id} onPress={() => toggleBeneficiary(b._id!)} style={[styles.privacyOption, on && styles.privacyOptionActive]}>
-                  <Text style={[styles.privacyOptionText, on && styles.privacyOptionTextActive]}>{b.name}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
 
         {/* ── Switch modes / add media ──────────────────────────────────── */}
         <EditorActionBar

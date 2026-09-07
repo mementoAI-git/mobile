@@ -18,7 +18,7 @@ import { SafeAreaView, SafeAreaProvider, initialWindowMetrics, useSafeAreaInsets
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   MoreHorizontal, Plus, X, Users, ChevronDown, Sparkles,
-  Copy, Check, Globe, FileText, Play, Camera, Mic, Video, Music,
+  Copy, Check, Lock, FileText, Play, Camera, Mic, Video, Music,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -36,7 +36,6 @@ import { useUserStore } from '@/store';
 import { useCreateMemory, useUpdateMemory } from '@/hooks/mutations/use-memory-mutations';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
-import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useGroups } from '@/hooks/queries/use-groups';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useToast } from '@/components/ui/Toast';
@@ -53,7 +52,7 @@ import { LinkPreviews } from '@/components/ui/LinkPreview';
 import type { EditorBridge } from '@10play/tentap-editor';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
-import type { IBeneficiary, IFile } from '@/types';
+import type { IFile } from '@/types';
 import { PublishPrivacySheet, type PrivacyMode } from '@/components/sheets/PublishPrivacySheet';
 import { deriveMemoryAudience, formatMemoryAudienceLabel, type MemoryAudienceSelection, type MemoryVisibility } from '@/features/memories/memory-audience';
 import { buildEditorPublishPayload } from '@/features/editor/editor-publish-payload';
@@ -344,7 +343,7 @@ function PublishModalInner({
               </View>
               <View style={{ backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16, marginBottom: 24 }}>
                 <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong, marginBottom: 4 }}>Who can see this story?</Text>
-                <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textBase, marginBottom: 14 }}>Stories are visible to all beneficiaries by default.</Text>
+                <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textBase, marginBottom: 14 }}>New stories are private unless you choose otherwise.</Text>
                 <TouchableOpacity
                   onPress={handleOpenPrivacySheet}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, borderWidth: 1, borderColor: COLORS.strokeWeaker }}
@@ -471,8 +470,6 @@ export default function EditorScreen() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Shared
-  const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>([]);
-  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [cameraVisible, setCameraVisible] = useState(false);
@@ -492,7 +489,6 @@ export default function EditorScreen() {
   const { mutate: createMemory } = useCreateMemory();
   const { mutateAsync: quickCapture, isPending: qcPending } = useQuickCapture();
   const { mutateAsync: uploadFileMutation } = useFileUpload();
-  const { data: beneficiariesRaw } = useBeneficiaries();
   const { toast } = useToast();
   const {
     attachments,
@@ -517,13 +513,6 @@ export default function EditorScreen() {
   const { start: startRecording, stop: stopRecording, isRecording, duration: recDuration } = useAudioRecorder({
     onPermissionDenied: handleMicrophonePermissionDenied,
   });
-
-  const beneficiaries: IBeneficiary[] = useMemo(() => {
-    if (!beneficiariesRaw) return [];
-    if (Array.isArray(beneficiariesRaw)) return beneficiariesRaw;
-    if ((beneficiariesRaw as any)?.docs) return (beneficiariesRaw as any).docs;
-    return [];
-  }, [beneficiariesRaw]);
 
   useEffect(() => { return () => { isMountedRef.current = false; if (saveTimerRef.current) clearTimeout(saveTimerRef.current); }; }, []);
 
@@ -701,7 +690,7 @@ export default function EditorScreen() {
     setSaveError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      await quickCapture({ body: qcBody.trim(), attachments: uploadedIds.length ? uploadedIds : undefined, beneficiaries: selectedBeneficiaryIds.length ? selectedBeneficiaryIds : undefined });
+      await quickCapture({ body: qcBody.trim(), visibility: 'private', attachments: uploadedIds.length ? uploadedIds : undefined });
       AsyncStorage.removeItem(QC_DRAFT_KEY(user?.email)).catch(() => {});
       toast('Got it. Processing in the background…', 'success');
       if (router.canGoBack()) {
@@ -710,13 +699,7 @@ export default function EditorScreen() {
         router.replace('/(tabs)/overview');
       }
     } catch (err: any) { setSaveError(err?.message ?? 'Could not save. Try again.'); }
-  }, [quickCapture, qcBody, selectedBeneficiaryIds, router, uploadedIds, user?.email, toast]);
-
-  const visibilityLabel = useMemo(() => {
-    if (!selectedBeneficiaryIds.length) return 'Everyone can see this';
-    const names = beneficiaries.filter(b => b._id && selectedBeneficiaryIds.includes(b._id!)).map(b => b.name).filter(Boolean);
-    return names.length === 1 ? `Shared with ${names[0]}` : `Shared with ${names.length} people`;
-  }, [selectedBeneficiaryIds, beneficiaries]);
+  }, [quickCapture, qcBody, router, uploadedIds, user?.email, toast]);
 
   // Stable onChange for StoryRichEditor — avoids recreating the bridge on every render
   // Note: does NOT call scheduleSave — draft is only saved when the user taps Cancel
@@ -1191,35 +1174,12 @@ export default function EditorScreen() {
             </ScrollView>
           )}
 
-          {/* ── Privacy (quick-capture only) ── */}
+          {/* Quick Capture is intentionally private. */}
           {!isStory && (
-            <>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingVertical: 10, borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker }}>
-                <Globe size={14} color={COLORS.textMuted} strokeWidth={1.8} />
-                <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setPrivacyOpen(o => !o); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted }}>{visibilityLabel}</Text>
-                  <ChevronDown size={12} color={COLORS.textMuted} strokeWidth={2} />
-                </TouchableOpacity>
-              </View>
-              {privacyOpen && (
-                <View style={{ marginHorizontal: 16, marginBottom: 4, backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingVertical: 4, maxHeight: 180 }}>
-                  <TouchableOpacity onPress={() => { setSelectedBeneficiaryIds([]); setPrivacyOpen(false); Haptics.selectionAsync(); }}
-                    style={[{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 }, !selectedBeneficiaryIds.length && { backgroundColor: `${COLORS.brand}12` }]}>
-                    <Text style={[{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong }, !selectedBeneficiaryIds.length && { color: COLORS.brand }]}>Everyone</Text>
-                  </TouchableOpacity>
-                  {beneficiaries.map(b => {
-                    if (!b._id) return null;
-                    const on = selectedBeneficiaryIds.includes(b._id);
-                    return (
-                      <TouchableOpacity key={b._id} onPress={() => { Haptics.selectionAsync(); setSelectedBeneficiaryIds(prev => on ? prev.filter(x => x !== b._id) : [...prev, b._id!]); }}
-                        style={[{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 }, on && { backgroundColor: `${COLORS.brand}12` }]}>
-                        <Text style={[{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong }, on && { color: COLORS.brand }]}>{b.name}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-            </>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingVertical: 10, borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker }}>
+              <Lock size={14} color={COLORS.textMuted} strokeWidth={1.8} />
+              <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted }}>Private · Only me</Text>
+            </View>
           )}
 
           {/* ── Action bar — story mode: ⊕ upload + inline formatting tools

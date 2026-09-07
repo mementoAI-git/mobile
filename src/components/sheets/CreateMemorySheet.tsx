@@ -1,110 +1,24 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet,
-} from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Button, TextInput, Spinner, LinkPreviews } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
-import {
-  Image as ImageIcon, FolderOpen, Check, X, Lock, Globe, Users,
-} from 'lucide-react-native';
+import { Image as ImageIcon, FolderOpen, X, Lock, Globe, Users } from 'lucide-react-native';
 import { useCreateMemory, useUpdateMemory } from '@/hooks/mutations/use-memory-mutations';
 import { useFileUpload } from '@/hooks/use-file-upload';
-import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
-import { useGroups } from '@/hooks/queries/use-groups';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SelectFromMediaModal } from './SelectFromMediaModal';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useUiStore } from '@/store';
-import type { IMemory, IBeneficiary, IGroup } from '@/types';
-
-// ─── Privacy model ────────────────────────────────────────────────────────────
-
-type PrivacyMode = 'private' | 'all' | 'specific';
-
-interface PrivacyOption {
-  id: PrivacyMode;
-  icon: React.ReactNode;
-  label: string;
-  sublabel: string;
-}
-
-const PRIVACY_OPTIONS: PrivacyOption[] = [
-  {
-    id: 'private',
-    icon: <Lock size={18} color={COLORS.textStrong} strokeWidth={1.8} />,
-    label: 'Only me',
-    sublabel: 'Private — only you can see this memory',
-  },
-  {
-    id: 'all',
-    icon: <Globe size={18} color={COLORS.textStrong} strokeWidth={1.8} />,
-    label: 'All beneficiaries',
-    sublabel: 'Visible to all your trusted contacts',
-  },
-  {
-    id: 'specific',
-    icon: <Users size={18} color={COLORS.textStrong} strokeWidth={1.8} />,
-    label: 'Specific people & groups',
-    sublabel: 'Choose exactly who can see this',
-  },
-];
-
-// ─── Stable list-item components ─────────────────────────────────────────────
-
-const MemoBeneficiarySelectItem = React.memo(function MemoBeneficiarySelectItem({
-  beneficiary,
-  isSelected,
-  onToggle,
-}: {
-  beneficiary: IBeneficiary;
-  isSelected: boolean;
-  onToggle: (id: string) => void;
-}) {
-  const handlePress = useCallback(() => {
-    Haptics.selectionAsync();
-    onToggle(beneficiary._id!);
-  }, [beneficiary._id, onToggle]);
-  return (
-    <TouchableOpacity onPress={handlePress} activeOpacity={0.75} style={styles.selectRow}>
-      <View style={styles.selectAvatar}><Text style={{ fontSize: 14 }}>👤</Text></View>
-      <Text style={styles.selectName} numberOfLines={1}>{beneficiary.name || beneficiary.email}</Text>
-      <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-        {isSelected && <Check size={11} color="white" strokeWidth={3} />}
-      </View>
-    </TouchableOpacity>
-  );
-});
-
-const MemoGroupSelectItem = React.memo(function MemoGroupSelectItem({
-  group,
-  isSelected,
-  onToggle,
-}: {
-  group: IGroup;
-  isSelected: boolean;
-  onToggle: (id: string) => void;
-}) {
-  const handlePress = useCallback(() => {
-    Haptics.selectionAsync();
-    onToggle(group._id);
-  }, [group._id, onToggle]);
-  const memberCount = Array.isArray(group.members) ? group.members.length : 0;
-  return (
-    <TouchableOpacity onPress={handlePress} activeOpacity={0.75} style={styles.selectRow}>
-      <View style={styles.selectAvatar}><Users size={14} color={COLORS.brand} strokeWidth={1.8} /></View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.selectName} numberOfLines={1}>{group.name}</Text>
-        {memberCount > 0 && <Text style={styles.selectMeta}>{memberCount} member{memberCount !== 1 ? 's' : ''}</Text>}
-      </View>
-      <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-        {isSelected && <Check size={11} color="white" strokeWidth={3} />}
-      </View>
-    </TouchableOpacity>
-  );
-});
+import type { IMemory } from '@/types';
+import { PublishPrivacySheet, type PrivacyMode } from './PublishPrivacySheet';
+import {
+  buildMemoryAudiencePayload,
+  deriveMemoryAudience,
+  formatMemoryAudienceLabel,
+  type MemoryAudienceSelection,
+} from '@/features/memories/memory-audience';
 
 const MemoTagPillItem = React.memo(function MemoTagPillItem({
   tag,
@@ -121,182 +35,6 @@ const MemoTagPillItem = React.memo(function MemoTagPillItem({
         <X size={14} color={COLORS.textWeak} />
       </TouchableOpacity>
     </View>
-  );
-});
-
-// ─── Privacy modal ────────────────────────────────────────────────────────────
-
-interface PrivacyModalProps {
-  privacyMode: PrivacyMode;
-  onPrivacyChange: (mode: PrivacyMode) => void;
-  selectedBeneficiaries: string[];
-  onToggleBeneficiary: (id: string) => void;
-  selectedGroups: string[];
-  onToggleGroup: (id: string) => void;
-  beneficiariesList: IBeneficiary[];
-  groupsList: IGroup[];
-  onClose: () => void;
-}
-
-const PrivacyModal = React.forwardRef<BottomSheetModal, PrivacyModalProps>(function PrivacyModal({
-  privacyMode,
-  onPrivacyChange,
-  selectedBeneficiaries,
-  onToggleBeneficiary,
-  selectedGroups,
-  onToggleGroup,
-  beneficiariesList,
-  groupsList,
-  onClose,
-}, ref) {
-  const insets = useSafeAreaInsets();
-  const hasSpecific = selectedBeneficiaries.length > 0 || selectedGroups.length > 0;
-
-  const handleSelectMode = useCallback((mode: PrivacyMode) => {
-    Haptics.selectionAsync();
-    onPrivacyChange(mode);
-  }, [onPrivacyChange]);
-
-  const handleClose = useCallback(() => {
-    Haptics.selectionAsync();
-    onClose();
-  }, [onClose]);
-
-  const handleDone = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onClose();
-  }, [onClose]);
-
-  const renderBackdrop = useCallback(
-    (backdropProps: any) => (
-      <BottomSheetBackdrop
-        {...backdropProps}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.4}
-        pressBehavior="close"
-      />
-    ),
-    []
-  );
-
-  return (
-    <BottomSheetModal
-      ref={ref}
-      index={0}
-      snapPoints={['72%', '90%']}
-      backdropComponent={renderBackdrop}
-      enablePanDownToClose
-      handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
-      backgroundStyle={{ backgroundColor: COLORS.background }}
-    >
-      <View style={[styles.privacySheet, { paddingBottom: insets.bottom ? insets.bottom + 12 : 24 }]}>
-        {/* Header */}
-        <View style={styles.panelHeader}>
-          <Text style={styles.panelTitle}>Who can see this?</Text>
-          <TouchableOpacity
-            onPress={handleClose}
-            style={styles.closeBtn}
-          >
-            <X size={16} color={COLORS.textBase} strokeWidth={2} />
-          </TouchableOpacity>
-        </View>
-
-        <BottomSheetScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          style={{ maxHeight: 520 }}
-          contentContainerStyle={{ paddingBottom: 8 }}
-        >
-          {/* Privacy options */}
-          <View style={styles.optionsContainer}>
-            {PRIVACY_OPTIONS.map((opt) => {
-              const isSelected = privacyMode === opt.id;
-              return (
-                <TouchableOpacity
-                  key={opt.id}
-                  onPress={() => handleSelectMode(opt.id)}
-                  activeOpacity={0.75}
-                  style={[styles.optionRow, isSelected && styles.optionRowSelected]}
-                >
-                  <View style={[styles.optionIcon, isSelected && styles.optionIconSelected]}>
-                    {opt.icon}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
-                      {opt.label}
-                    </Text>
-                    <Text style={styles.optionSublabel}>{opt.sublabel}</Text>
-                  </View>
-                  <View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
-                    {isSelected && <View style={styles.radioInner} />}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Specific people & groups section */}
-          {privacyMode === 'specific' && (
-            <Animated.View entering={FadeInDown.duration(300)} style={{ marginTop: 16 }}>
-              {/* Beneficiaries */}
-              {beneficiariesList.length > 0 && (
-                <View style={styles.selectSection}>
-                  <Text style={styles.sectionLabel}>BENEFICIARIES</Text>
-                  {beneficiariesList.map((b: IBeneficiary) => {
-                    if (!b._id) return null;
-                    const on = selectedBeneficiaries.includes(b._id);
-                    return (
-                      <MemoBeneficiarySelectItem
-                        key={b._id}
-                        beneficiary={b}
-                        isSelected={on}
-                        onToggle={onToggleBeneficiary}
-                      />
-                    );
-                  })}
-                </View>
-              )}
-
-              {/* Groups */}
-              {groupsList.length > 0 && (
-                <View style={[styles.selectSection, { marginTop: beneficiariesList.length > 0 ? 12 : 0 }]}>
-                  <Text style={styles.sectionLabel}>GROUPS</Text>
-                  {groupsList.map((g: IGroup) => {
-                    const on = selectedGroups.includes(g._id);
-                    return (
-                      <MemoGroupSelectItem
-                        key={g._id}
-                        group={g}
-                        isSelected={on}
-                        onToggle={onToggleGroup}
-                      />
-                    );
-                  })}
-                </View>
-              )}
-
-              {beneficiariesList.length === 0 && groupsList.length === 0 && (
-                <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-                  <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, textAlign: 'center' }}>
-                    No beneficiaries or groups yet.{'\n'}Add them in Settings.
-                  </Text>
-                </View>
-              )}
-            </Animated.View>
-          )}
-        </BottomSheetScrollView>
-
-        {/* Done button */}
-        <TouchableOpacity
-          onPress={handleDone}
-          activeOpacity={0.85}
-          style={styles.doneBtn}
-        >
-          <Text style={styles.doneBtnText}>Done</Text>
-        </TouchableOpacity>
-      </View>
-    </BottomSheetModal>
   );
 });
 
@@ -321,48 +59,19 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
   const [tagInput, setTagInput] = useState('');
 
   // ── Privacy state ────────────────────────────────────────────────────────────
-  const [privacyMode, setPrivacyMode] = useState<PrivacyMode>('private');
-  const [selectedBeneficiaries, setSelectedBeneficiaries] = useState<string[]>(
-    editData?.beneficiaries?.map(b => b._id).filter((id): id is string => !!id) || []
-  );
-  const [selectedGroups, setSelectedGroups] = useState<string[]>(
-    editData?.groups?.map(g => g._id).filter((id): id is string => !!id) || []
-  );
+  const [audience, setAudience] = useState<MemoryAudienceSelection>(() => deriveMemoryAudience(editData ?? {}));
   const mediaModalRef = React.useRef<BottomSheetModal>(null);
   const privacyModalRef = React.useRef<BottomSheetModal>(null);
 
-  const { data: beneficiariesData } = useBeneficiaries();
-  const { data: groupsData } = useGroups();
   const { mutate: createMemory, isPending: isCreating } = useCreateMemory();
   const { mutate: updateMemory, isPending: isUpdatingMemory } = useUpdateMemory(editData?._id || '');
   const { pickAndUpload, isUploading } = useFileUpload();
 
-  const beneficiariesList: IBeneficiary[] = useMemo(() => {
-    if (Array.isArray(beneficiariesData)) return beneficiariesData;
-    if ((beneficiariesData as any)?.docs) return (beneficiariesData as any).docs;
-    return [];
-  }, [beneficiariesData]);
-
-  const groupsList: IGroup[] = useMemo(() => {
-    if (Array.isArray(groupsData)) return groupsData;
-    if ((groupsData as any)?.docs) return (groupsData as any).docs;
-    return [];
-  }, [groupsData]);
-
   // ── Privacy button label ──────────────────────────────────────────────────────
-  const privacyLabel = useMemo(() => {
-    if (privacyMode === 'private') return 'Private · Only me';
-    if (privacyMode === 'all') return 'All beneficiaries';
-    const total = selectedBeneficiaries.length + selectedGroups.length;
-    if (total === 0) return 'Choose who can see this';
-    const parts: string[] = [];
-    if (selectedBeneficiaries.length > 0) parts.push(`${selectedBeneficiaries.length} person${selectedBeneficiaries.length > 1 ? 's' : ''}`);
-    if (selectedGroups.length > 0) parts.push(`${selectedGroups.length} group${selectedGroups.length > 1 ? 's' : ''}`);
-    return parts.join(', ');
-  }, [privacyMode, selectedBeneficiaries.length, selectedGroups.length]);
+  const privacyLabel = useMemo(() => formatMemoryAudienceLabel(audience), [audience]);
 
-  const PrivacyIcon = privacyMode === 'private' ? Lock : privacyMode === 'all' ? Globe : Users;
-  const privacyIsActive = privacyMode !== 'private';
+  const PrivacyIcon = audience.mode === 'private' ? Lock : audience.mode === 'everyone' ? Globe : Users;
+  const privacyIsActive = audience.mode !== 'private';
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
 
@@ -409,11 +118,21 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
   const removeTag = useCallback((t: string) => setTags(prev => prev.filter(tag => tag !== t)), []);
 
   const handleToggleBeneficiary = useCallback((id: string) => {
-    setSelectedBeneficiaries(prev => prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]);
+    setAudience((current) => ({
+      ...current,
+      beneficiaryIds: current.beneficiaryIds.includes(id)
+        ? current.beneficiaryIds.filter((value) => value !== id)
+        : [...current.beneficiaryIds, id],
+    }));
   }, []);
 
   const handleToggleGroup = useCallback((id: string) => {
-    setSelectedGroups(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]);
+    setAudience((current) => ({
+      ...current,
+      groupIds: current.groupIds.includes(id)
+        ? current.groupIds.filter((value) => value !== id)
+        : [...current.groupIds, id],
+    }));
   }, []);
 
   const handleOpenMediaModal = useCallback(() => {
@@ -432,29 +151,13 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
 
     const finalStatus = status === 'saved' ? 'save' : status;
 
-    // Build sharing payload based on privacy mode
-    let beneficiariesPayload: string[] | undefined;
-    let groupsPayload: string[] | undefined;
-
-    if (privacyMode === 'private') {
-      beneficiariesPayload = [];
-      groupsPayload = [];
-    } else if (privacyMode === 'all') {
-      beneficiariesPayload = undefined;
-      groupsPayload = undefined;
-    } else {
-      beneficiariesPayload = selectedBeneficiaries;
-      groupsPayload = selectedGroups;
-    }
-
-    const payload: any = {
+    const payload = {
       title: title.trim(),
       body: body.trim(),
       status: finalStatus,
       attachments,
       tags,
-      ...(beneficiariesPayload !== undefined ? { beneficiaries: beneficiariesPayload } : {}),
-      ...(groupsPayload !== undefined ? { groups: groupsPayload } : {}),
+      ...buildMemoryAudiencePayload(audience),
     };
 
     const mutationOptions = {
@@ -478,7 +181,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
     } else {
       createMemory(payload, mutationOptions);
     }
-  }, [title, status, privacyMode, selectedBeneficiaries, selectedGroups, body, attachments, tags, onClose, editData, updateMemory, createMemory, openSheet, toast]);
+  }, [title, status, body, attachments, tags, audience, onClose, editData, updateMemory, createMemory, openSheet, toast]);
 
 
   return (
@@ -632,192 +335,20 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
         />
       </BottomSheetScrollView>
 
-      <PrivacyModal
+      <PublishPrivacySheet
         ref={privacyModalRef}
         onClose={() => privacyModalRef.current?.dismiss()}
-        privacyMode={privacyMode}
-        onPrivacyChange={setPrivacyMode}
-        selectedBeneficiaries={selectedBeneficiaries}
+        mode={audience.mode === 'everyone' ? 'all' : audience.mode}
+        onModeChange={(mode: PrivacyMode) => setAudience((current) => ({ ...current, mode: mode === 'all' ? 'everyone' : mode }))}
+        selectedBeneficiaryIds={audience.beneficiaryIds}
         onToggleBeneficiary={handleToggleBeneficiary}
-        selectedGroups={selectedGroups}
+        selectedGroupIds={audience.groupIds}
         onToggleGroup={handleToggleGroup}
-        beneficiariesList={beneficiariesList}
-        groupsList={groupsList}
+        onApply={(mode, beneficiaryIds, groupIds) => {
+          setAudience({ mode: mode === 'all' ? 'everyone' : mode, beneficiaryIds, groupIds });
+          privacyModalRef.current?.dismiss();
+        }}
       />
     </>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  privacySheet: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-  },
-  panelHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  panelTitle: {
-    fontFamily: FONTS.serif,
-    fontSize: 22,
-    color: COLORS.textStrong,
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.fillWeak,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Privacy option rows
-  optionsContainer: {
-    gap: 8,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    minHeight: 64,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
-    backgroundColor: COLORS.fillWeaker,
-  },
-  optionRowSelected: {
-    backgroundColor: `${COLORS.brand}08`,
-    borderColor: `${COLORS.brand}25`,
-  },
-  optionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: COLORS.fillWeak,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionIconSelected: {
-    backgroundColor: `${COLORS.brand}12`,
-  },
-  optionLabel: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 15,
-    color: COLORS.textStrong,
-    marginBottom: 2,
-  },
-  optionLabelSelected: {
-    fontFamily: FONTS.sansSemi,
-    color: COLORS.brand,
-  },
-  optionSublabel: {
-    fontFamily: FONTS.sans,
-    fontSize: 12,
-    color: COLORS.textWeak,
-    lineHeight: 16,
-  },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: COLORS.strokeWeak,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 4,
-  },
-  radioOuterSelected: {
-    borderColor: COLORS.brand,
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: COLORS.brand,
-  },
-
-  // Specific section
-  selectSection: {
-    backgroundColor: COLORS.fillWeaker,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 4,
-  },
-  sectionLabel: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 10,
-    color: COLORS.textMuted,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-  selectRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.strokeWeaker,
-    minHeight: 44,
-  },
-  selectAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'white',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
-  },
-  selectName: {
-    flex: 1,
-    fontFamily: FONTS.sansMedium,
-    fontSize: 15,
-    color: COLORS.textStrong,
-  },
-  selectMeta: {
-    fontFamily: FONTS.sans,
-    fontSize: 12,
-    color: COLORS.textWeak,
-    marginTop: 1,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: COLORS.strokeWeak,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-  },
-  checkboxSelected: {
-    backgroundColor: COLORS.brand,
-    borderColor: COLORS.brand,
-  },
-
-  // Done button
-  doneBtn: {
-    height: 52,
-    borderRadius: 999,
-    backgroundColor: COLORS.brand,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-  },
-  doneBtnText: {
-    fontFamily: FONTS.sansSemi,
-    fontSize: 16,
-    color: COLORS.textInverse,
-  },
-});
