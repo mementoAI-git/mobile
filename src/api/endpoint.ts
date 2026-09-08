@@ -107,6 +107,7 @@ export default {
   billingSubscription: '/billing/subscription',
   billingCheckout: '/billing/checkout',
   billingUsage: '/billing/usage',
+  billingProfile: '/billing/profile',
   billingPortal: '/billing/portal',
   billingPromoRedeem: '/billing/promo/redeem',
   billingInvoices: '/billing/invoices',
