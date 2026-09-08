@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import dayjs from 'dayjs';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/Toast';
 import { useSubscription } from '@/hooks/queries/use-subscription';
-import { useBillingInvoices, useBillingUsage } from '@/hooks/queries/use-billing';
+import { useBillingInvoices, useBillingProfile, useBillingUsage } from '@/hooks/queries/use-billing';
+import { resolveBillingProfile } from '@/features/settings/billing-presentation';
 import {
   cancelBillingSubscription,
   openBillingPortal,
@@ -13,9 +15,13 @@ import {
 } from '@/features/settings/billing-flow';
 
 export function useBillingSettingsLogic() {
+  const router = useRouter();
+  const [activeTab, setActiveTabState] = useState<'overview' | 'invoices'>('overview');
   const { summary, isLoading: subLoading, isProOrAbove, refetch: refetchSub } = useSubscription();
-  const { data: invoices = [], isLoading: invoicesLoading, refetch: refetchInvoices } = useBillingInvoices(isProOrAbove);
+  const { data: invoices = [], isLoading: invoicesLoading, refetch: refetchInvoices } = useBillingInvoices(activeTab === 'invoices');
   const { data: usage, isLoading: usageLoading, refetch: refetchUsage } = useBillingUsage();
+  const { data: liveProfile, isLoading: profileLoading, refetch: refetchProfile } = useBillingProfile();
+  const {profile, source: profileSource} = resolveBillingProfile(liveProfile);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -27,7 +33,12 @@ export function useBillingSettingsLogic() {
   const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
 
   const refreshAll = async () => {
-    await Promise.all([refetchSub(), refetchInvoices(), refetchUsage()]);
+    await Promise.all([refetchSub(), refetchInvoices(), refetchUsage(), refetchProfile()]);
+  };
+
+  const setActiveTab = (tab: 'overview' | 'invoices') => {
+    Haptics.selectionAsync();
+    setActiveTabState(tab);
   };
 
   const handleRefresh = async () => {
@@ -52,10 +63,16 @@ export function useBillingSettingsLogic() {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setPortalBusy(true);
-      await openBillingPortal({ returnPath: '/settings/billing' });
+      const opened = await openBillingPortal({ returnPath: '/settings/billing' });
+      if (opened) await refreshAll();
     } finally {
       setPortalBusy(false);
     }
+  };
+
+  const handleUpgrade = () => {
+    Haptics.selectionAsync();
+    router.push('/pricing');
   };
 
   const handlePromo = async () => {
@@ -132,5 +149,11 @@ export function useBillingSettingsLogic() {
     confirmCancel,
     handleResume,
     isCancelled,
+    activeTab,
+    setActiveTab,
+    profile,
+    profileSource,
+    profileLoading,
+    handleUpgrade,
   };
 }
