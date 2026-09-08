@@ -21,6 +21,15 @@
 - All touch targets are at least 44 points and fire the required haptic feedback.
 - Preserve Expo Router safe-back behavior and the existing shared billing orchestration boundary.
 
+## Task 9: Tier-aware plan management and cancellation
+
+- [x] Replace the legacy three-tier pricing page with the supplied Free/Pro Manage Plan states.
+- [x] Keep monthly/annual selection and Polar-hosted checkout on the existing billing flow.
+- [x] Route downgrade and cancel actions through one global confirmation bottom sheet.
+- [x] Collect a structured cancellation reason before calling the existing cancellation endpoint.
+- [x] Add optional, backwards-compatible cancellation feedback fields to the API subscription record.
+- [ ] Run full mobile and API verification and complete native-device visual QA.
+
 ---
 
 ## File Map

@@ -1,179 +1,44 @@
-import React from 'react';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, Check } from 'lucide-react-native';
+import React, {useCallback} from 'react';
+import {ScrollView, Text, TouchableOpacity, View} from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {LinearGradient} from 'expo-linear-gradient';
+import {Check, ChevronLeft} from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { Button } from '@/components/ui';
-import { usePricingLogic, DEFERRED_FEATURES } from '@/hooks/use-pricing-logic';
-import { COLORS, FONTS } from '@/constants/tokens';
+import {Button} from '@/components/ui';
+import {COLORS, FONTS} from '@/constants/tokens';
+import {usePricingLogic} from '@/hooks/use-pricing-logic';
+import {useSubscription} from '@/hooks/queries/use-subscription';
+import {useUiStore} from '@/store';
 
-export default function PricingScreen() {
-  const {
-    interval,
-    changeInterval,
-    proPrice,
-    legacyPrice,
-    table,
-    handleCheckout,
-    formatMoney,
-    router,
-  } = usePricingLogic();
+const FREE_FEATURES = ['Add story/journals/thoughts.', 'Core chat and memories', 'Memory insights', 'Standard uploads and storage limit (200MB)'];
+const PRO_FEATURES = ['Everything in Free', 'Voice mode conversations.', 'Supermemory integration', 'Bigger storage (10GB)'];
 
-  return (
-    <SafeAreaView className="flex-1 bg-background">
-      {/* Header */}
-      <View className="flex-row items-center gap-2 px-4 pt-5 pb-3 bg-background">
-        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)/overview'); } }} className="p-1.5 -ml-1.5">
-          <ChevronLeft size={22} color={COLORS.textBase} />
-        </TouchableOpacity>
+function FeatureList({items, inverse = false}: {items: string[]; inverse?: boolean}) {
+  return <View className="gap-4 mt-7">{items.map(item => <View key={item} className="flex-row items-start gap-3"><Check size={21} color={inverse ? COLORS.textInverse : COLORS.textBase} strokeWidth={2} /><Text className="flex-1 text-[16px] leading-6" style={{fontFamily: FONTS.sans, color: inverse ? COLORS.textInverse : COLORS.textStrong}}>{item}</Text></View>)}</View>;
+}
+
+export default function ManagePlanScreen() {
+  const {interval, changeInterval, handleCheckout, router, loading} = usePricingLogic();
+  const {isProOrAbove, summary} = useSubscription();
+  const isCancellationScheduled = summary?.cancel_at_period_end === true;
+  const back = useCallback(() => { Haptics.selectionAsync(); if (router.canGoBack()) router.back(); else router.replace('/settings/billing'); }, [router]);
+  const requestCancellation = useCallback(() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); useUiStore.getState().openSheet('cancel-subscription-confirmation'); }, []);
+
+  return <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <View className="h-[104px] justify-center px-4"><View className="absolute left-4"><Button variant="secondary" size="lg" className="size-14 px-0" onPress={back}><ChevronLeft size={25} color={COLORS.textBase} /></Button></View><Text className="text-center text-[24px] text-text-strong" style={{fontFamily: FONTS.serifMedium}}>Manage Plan</Text></View>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingHorizontal: 16, paddingBottom: 40}}>
+      <View className="flex-row self-center bg-fill-weak rounded-xl p-1 w-[280px] mt-4 mb-6">{(['monthly', 'annual'] as const).map(value => <TouchableOpacity key={value} accessibilityRole="button" onPress={() => changeInterval(value)} className={`h-12 flex-1 items-center justify-center rounded-xl ${interval === value ? 'bg-text-strong' : ''}`}><Text className={interval === value ? 'text-white' : 'text-text-strong'} style={{fontFamily: FONTS.sansMedium, fontSize: 16}}>{value === 'monthly' ? 'Monthly' : 'Annual'}</Text></TouchableOpacity>)}</View>
+      <View className="rounded-[32px] bg-fill-weak px-6 py-7">
+        <Text className="text-[21px] text-text-strong" style={{fontFamily: FONTS.sansBold}}>Free</Text><Text className="text-[16px] text-text-strong mt-2" style={{fontFamily: FONTS.sansSemi}}>Capture and reflect at your own pace</Text><FeatureList items={FREE_FEATURES} />
+        <View className="flex-row items-end mt-8"><Text className="text-[42px] text-brand" style={{fontFamily: FONTS.sans}}>$0</Text><Text className="text-[16px] text-text-strong mb-2 ml-2" style={{fontFamily: FONTS.sans}}>/ month</Text></View>
+        <Button variant="outline" size="lg" fullWidth className="mt-7 bg-transparent" disabled={!isProOrAbove} onPress={requestCancellation}>{isProOrAbove ? 'Downgrade to Free' : 'Current plan'}</Button>
       </View>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-4 pb-16 pt-2">
-        <View className="items-center mb-8">
-          <Animated.Text
-            className="text-3xl text-text-strong text-center mb-3"
-            style={{ fontFamily: FONTS.serif }}
-          >
-            Plans that grow with your memories
-          </Animated.Text>
-          <Animated.Text
-            className="text-sm text-text-weak text-center mb-6 leading-relaxed"
-            style={{ fontFamily: FONTS.sans }}
-          >
-            Prices shown in US dollars. Manage your subscriptions natively or on the web.
-          </Animated.Text>
-
-          {/* Toggle */}
-          <View className="flex-row bg-fill-weaker p-1 rounded-full border border-stroke-weaker">
-            <TouchableOpacity
-              onPress={() => changeInterval('monthly')}
-              className={`px-6 py-2.5 rounded-full ${interval === 'monthly' ? 'bg-white shadow-sm' : ''}`}
-            >
-              <Animated.Text
-                className={`text-sm ${interval === 'monthly' ? 'text-text-strong font-medium' : 'text-text-weak'}`}
-                style={{ fontFamily: interval === 'monthly' ? FONTS.sansMedium : FONTS.sans }}
-              >
-                Monthly
-              </Animated.Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => changeInterval('annual')}
-              className={`px-6 py-2.5 rounded-full ${interval === 'annual' ? 'bg-white shadow-sm' : ''}`}
-            >
-              <Animated.Text
-                className={`text-sm ${interval === 'annual' ? 'text-text-strong font-medium' : 'text-text-weak'}`}
-                style={{ fontFamily: interval === 'annual' ? FONTS.sansMedium : FONTS.sans }}
-              >
-                Annual
-              </Animated.Text>
-            </TouchableOpacity>
-          </View>
-          {interval === 'annual' && (
-            <Animated.Text
-              className="text-xs text-text-weak mt-3"
-              style={{ fontFamily: FONTS.sans }}
-            >
-              Billed annually. Monthly equivalent shown below.
-            </Animated.Text>
-          )}
-        </View>
-
-        <View className="gap-5">
-          {/* Free Plan */}
-          <Animated.View entering={FadeInDown.duration(600)} className="bg-card border border-stroke-weaker rounded-3xl p-6 shadow-sm">
-            <Animated.Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>Free</Animated.Text>
-            <Animated.Text className="text-sm text-text-weak mt-1" style={{ fontFamily: FONTS.sans }}>Capture and reflect at your own pace.</Animated.Text>
-            <View className="flex-row items-baseline mt-5">
-              <Animated.Text className="text-4xl text-text-strong" style={{ fontFamily: FONTS.serif }}>$0</Animated.Text>
-              <Animated.Text className="text-sm text-text-weak ml-1" style={{ fontFamily: FONTS.sans }}>/mo</Animated.Text>
-            </View>
-            <Button variant="outline" className="mt-6 w-full" onPress={() => router.replace('/(tabs)/overview')}>
-              Current Plan
-            </Button>
-            <View className="mt-6 gap-3">
-              <View className="flex-row items-center gap-2">
-                <Check size={16} color={COLORS.success} />
-                <Animated.Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sans }}>Core chat & memories</Animated.Text>
-              </View>
-              <View className="flex-row items-center gap-2">
-                <Check size={16} color={COLORS.success} />
-                <Animated.Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sans }}>Standard uploads & limits</Animated.Text>
-              </View>
-            </View>
-          </Animated.View>
-
-          {/* Pro Plan */}
-          <Animated.View entering={FadeInDown.delay(100).duration(600)} className="bg-card border-2 border-text-strong rounded-3xl p-6 shadow-md relative mt-2">
-            <View className="absolute -top-3 self-center bg-text-strong px-3 py-1 rounded-full">
-              <Animated.Text className="text-white text-[10px] font-bold uppercase tracking-wider" style={{ fontFamily: FONTS.sansBold }}>Most popular</Animated.Text>
-            </View>
-            <Animated.Text className="text-xl text-text-strong mt-1" style={{ fontFamily: FONTS.serif }}>Pro</Animated.Text>
-            <Animated.Text className="text-sm text-text-weak mt-1" style={{ fontFamily: FONTS.sans }}>For power users who live in Memento daily.</Animated.Text>
-            <View className="flex-row items-baseline mt-5">
-              <Animated.Text className="text-4xl text-text-strong" style={{ fontFamily: FONTS.serif }}>{formatMoney(proPrice)}</Animated.Text>
-              <Animated.Text className="text-sm text-text-weak ml-1" style={{ fontFamily: FONTS.sans }}>/mo</Animated.Text>
-            </View>
-            {interval === 'annual' && (
-              <Animated.Text className="text-xs text-text-weak mt-1" style={{ fontFamily: FONTS.sans }}>Billed as {formatMoney(table.pro.annual)} per year</Animated.Text>
-            )}
-            <Button className="mt-6 w-full" onPress={() => handleCheckout('pro')}>
-              Start 14-day trial
-            </Button>
-            <View className="mt-6 gap-3">
-              <View className="flex-row items-center gap-2">
-                <Check size={16} color={COLORS.success} />
-                <Animated.Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sans }}>Voice mode</Animated.Text>
-              </View>
-              <View className="flex-row items-center gap-2">
-                <Check size={16} color={COLORS.success} />
-                <Animated.Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sans }}>Supermemory</Animated.Text>
-              </View>
-              <View className="flex-row items-center gap-2">
-                <Check size={16} color={COLORS.success} />
-                <Animated.Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sans }}>Higher limits & storage</Animated.Text>
-              </View>
-            </View>
-          </Animated.View>
-
-          {/* Legacy Plan */}
-          <Animated.View entering={FadeInDown.delay(200).duration(600)} className="bg-card border border-stroke-weaker rounded-3xl p-6 shadow-sm mt-2">
-            <Animated.Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>Legacy</Animated.Text>
-            <Animated.Text className="text-sm text-text-weak mt-1" style={{ fontFamily: FONTS.sans }}>Maximum preservation and future roadmap perks.</Animated.Text>
-            <View className="flex-row items-baseline mt-5">
-              <Animated.Text className="text-4xl text-text-strong" style={{ fontFamily: FONTS.serif }}>{formatMoney(legacyPrice)}</Animated.Text>
-              <Animated.Text className="text-sm text-text-weak ml-1" style={{ fontFamily: FONTS.sans }}>/mo</Animated.Text>
-            </View>
-            {interval === 'annual' && (
-              <Animated.Text className="text-xs text-text-weak mt-1" style={{ fontFamily: FONTS.sans }}>Billed as {formatMoney(table.legacy.annual)} per year</Animated.Text>
-            )}
-            <Animated.Text className="text-sm text-text-weak mt-4" style={{ fontFamily: FONTS.sans }}>
-              Lifetime: <Animated.Text className="font-medium text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>{formatMoney(table.legacy.lifetime)}</Animated.Text>
-            </Animated.Text>
-            <Button variant="secondary" className="mt-5 w-full" onPress={() => handleCheckout('legacy')}>
-              Start 14-day trial
-            </Button>
-            <Button variant="outline" className="mt-3 w-full" onPress={() => handleCheckout('lifetime')}>
-              Buy lifetime
-            </Button>
-          </Animated.View>
-        </View>
-
-        <View className="mt-12 mb-8">
-          <Animated.Text className="text-2xl text-text-strong mb-2" style={{ fontFamily: FONTS.serif }}>On the roadmap</Animated.Text>
-          <Animated.Text className="text-sm text-text-weak mb-5 leading-relaxed" style={{ fontFamily: FONTS.sans }}>
-            These items are shown for transparency. They are not available to purchase yet and have no enforcement in the app.
-          </Animated.Text>
-          <View className="bg-fill-weaker border border-stroke-weaker rounded-2xl overflow-hidden">
-            {DEFERRED_FEATURES.map((item, idx) => (
-              <View key={item.name} className={`p-4 flex-row justify-between items-center ${idx !== DEFERRED_FEATURES.length - 1 ? 'border-b border-stroke-weaker' : ''}`}>
-                <Animated.Text className="text-sm text-text-strong flex-1" style={{ fontFamily: FONTS.sans }}>{item.name}</Animated.Text>
-                <Animated.Text className="text-xs text-text-weak" style={{ fontFamily: FONTS.sansMedium }}>{item.tier} · {item.target}</Animated.Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+      <LinearGradient colors={[COLORS.brand, COLORS.brand, COLORS.onboardingAmberLight]} locations={[0, 0.58, 1]} className="rounded-[32px] px-6 py-7 mt-6" style={{overflow: 'hidden'}}>
+        <Text className="text-[21px] text-white" style={{fontFamily: FONTS.sansBold}}>Pro</Text><Text className="text-[16px] text-white mt-2" style={{fontFamily: FONTS.sans}}>For users who want to benefit more</Text><FeatureList items={PRO_FEATURES} inverse />
+        <View className="flex-row items-end mt-8"><Text className="text-[42px] text-white" style={{fontFamily: FONTS.sans}}>{interval === 'monthly' ? '$9.99' : '$79'}</Text><Text className="text-[16px] text-white mb-2 ml-2" style={{fontFamily: FONTS.sans}}>/ {interval === 'monthly' ? 'month' : 'year'}</Text></View>
+        <Button variant="secondary" size="lg" fullWidth className="mt-7 bg-white" loading={loading} disabled={isProOrAbove || isCancellationScheduled} onPress={() => handleCheckout('pro')}>{isProOrAbove ? 'Current plan' : 'Start 14-day trial'}</Button>
+      </LinearGradient>
+      {isProOrAbove && !isCancellationScheduled ? <View className="mt-8"><View className="flex-row justify-between items-center"><Text className="text-[20px] text-text-strong" style={{fontFamily: FONTS.sansSemi}}>Cancel plan</Text><Button variant="outline" size="md" textClassName="text-error-strong" onPress={requestCancellation}>Cancel</Button></View><Text className="text-[15px] leading-6 text-text-base mt-3" style={{fontFamily: FONTS.sans}}>If you cancel, you’ll keep full access to your plan features until the end of your billing period</Text></View> : null}
+    </ScrollView>
+  </SafeAreaView>;
 }

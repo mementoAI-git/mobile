@@ -10,7 +10,6 @@ import { useSubscription } from '@/hooks/queries/use-subscription';
 import { useBillingInvoices, useBillingProfile, useBillingUsage } from '@/hooks/queries/use-billing';
 import { resolveBillingProfile } from '@/features/settings/billing-presentation';
 import {
-  cancelBillingSubscription,
   openBillingPortal,
   redeemBillingPromo,
   resumeBillingSubscription,
@@ -32,9 +31,7 @@ export function useBillingSettingsLogic() {
   const [promo, setPromo] = useState('');
   const [promoBusy, setPromoBusy] = useState(false);
   const [portalBusy, setPortalBusy] = useState(false);
-  const [cancelBusy, setCancelBusy] = useState(false);
   const [resumeBusy, setResumeBusy] = useState(false);
-  const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
 
   const refreshAll = async () => {
     await Promise.all([refetchSub(), refetchInvoices(), refetchUsage(), refetchProfile()]);
@@ -124,18 +121,7 @@ export function useBillingSettingsLogic() {
 
   const handleCancel = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    setCancelConfirmVisible(true);
-  };
-
-  const confirmCancel = async () => {
-    setCancelConfirmVisible(false);
-    try {
-      setCancelBusy(true);
-      const success = await cancelBillingSubscription({ queryClient });
-      if (success) await refreshAll();
-    } finally {
-      setCancelBusy(false);
-    }
+    openSheet('cancel-subscription-confirmation');
   };
 
   const handleResume = async () => {
@@ -165,16 +151,12 @@ export function useBillingSettingsLogic() {
     setPromo,
     promoBusy,
     portalBusy,
-    cancelBusy,
     resumeBusy,
-    cancelConfirmVisible,
-    setCancelConfirmVisible,
     handleRefresh,
     renewLabel,
     handlePortal,
     handlePromo,
     handleCancel,
-    confirmCancel,
     handleResume,
     isCancelled,
     activeTab,

@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Button, ConfirmDialog } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
 import {
   BillingDetailsSection,
@@ -32,8 +32,8 @@ export default function BillingSettingsScreen() {
   const router = useRouter();
   const {
     summary, isProOrAbove, invoices, invoicesLoading, usage, portalBusy,
-    cancelBusy, resumeBusy, cancelConfirmVisible, setCancelConfirmVisible,
-    handleRefresh, handlePortal, handleCancel, confirmCancel, handleResume,
+    resumeBusy,
+    handleRefresh, handlePortal, handleCancel, handleResume,
     isCancelled, activeTab, setActiveTab, profile, handleUpgrade,
     handleEditBillingDetails, handleAddPaymentMethod, handleEditPaymentMethod,
   } = useBillingSettingsLogic();
@@ -76,7 +76,7 @@ export default function BillingSettingsScreen() {
             <BillingPaymentMethodsSection methods={profile.paymentMethods} onAdd={handleAddPaymentMethod} onEdit={handleEditPaymentMethod} />
             {isProOrAbove && (
               <View className="px-4 pb-8 items-center">
-                {!isCancelled ? <Button variant="ghost" size="lg" loading={cancelBusy} onPress={handleCancel} textClassName="text-error-strong">Cancel subscription</Button> : null}
+                {!isCancelled ? <Button variant="ghost" size="lg" onPress={handleCancel} textClassName="text-error-strong">Cancel subscription</Button> : null}
                 {(summary?.cancel_at_period_end || summary?.status === 'paused') && (
                   <Button variant="outline" size="lg" loading={resumeBusy} onPress={handleResume}>Resume subscription</Button>
                 )}
@@ -86,16 +86,6 @@ export default function BillingSettingsScreen() {
         ) : <BillingInvoicesPanel invoices={invoices} loading={invoicesLoading} />}
       </ScrollView>
 
-      <ConfirmDialog
-        visible={cancelConfirmVisible}
-        title="Cancel subscription?"
-        message="You'll keep access until the end of your current billing cycle. This can be reversed before then."
-        onClose={() => setCancelConfirmVisible(false)}
-        buttons={[
-          {label: 'Cancel plan', variant: 'destructive', onPress: confirmCancel},
-          {label: 'Keep my plan', variant: 'ghost', onPress: () => setCancelConfirmVisible(false)},
-        ]}
-      />
     </SafeAreaView>
   );
 }

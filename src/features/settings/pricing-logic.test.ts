@@ -20,7 +20,8 @@ describe('Pricing logic', () => {
   test('keeps pricing screen wired to the centralized logic hook', () => {
     expect(screen).toContain('usePricingLogic');
     expect(screen).toContain("handleCheckout('pro')");
-    expect(screen).toContain("handleCheckout('legacy')");
-    expect(screen).toContain("handleCheckout('lifetime')");
+    expect(screen).toContain('useSubscription');
+    expect(screen).toContain("openSheet('cancel-subscription-confirmation')");
+    expect(screen).not.toContain("handleCheckout('legacy')");
   });
 });
