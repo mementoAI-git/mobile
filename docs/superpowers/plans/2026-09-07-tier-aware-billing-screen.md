@@ -521,8 +521,8 @@ git commit -m "docs(mobile): add billing release verification"
 - Modify: `app/settings/billing.tsx`
 - Create: `src/features/settings/billing-interactions.test.ts`
 
-- [ ] Render real invoices as the attached two-column ledger with status badges, localized date, and formatted amount.
-- [ ] Open a pixel-matched billing-details sheet from Edit and persist only non-sensitive customer fields through the billing profile API.
-- [ ] Open a pixel-matched payment-method sheet from Add new/card edit and hand off actual card or PayPal entry to Polar's hosted PCI flow.
-- [ ] Register both sheets through the global SheetManager, preserve haptics and 44-point targets, and refresh billing data after hosted return.
-- [ ] Verify focused tests, then rerun the complete mobile/API release pair.
+- [x] Render real invoices as the attached two-column ledger with status badges, localized date, and formatted amount.
+- [x] Open a pixel-matched billing-details sheet from Edit and persist only non-sensitive customer fields through the billing profile API.
+- [x] Open a pixel-matched payment-method sheet from Add new/card edit and hand off actual card or PayPal entry to Polar's hosted PCI flow.
+- [x] Register both sheets through the global SheetManager, preserve haptics and 44-point targets, and refresh billing data after hosted return.
+- [x] Verify focused tests, then rerun the complete mobile/API release pair.
