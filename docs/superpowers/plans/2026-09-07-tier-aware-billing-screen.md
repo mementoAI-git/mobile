@@ -506,3 +506,23 @@ git commit -m "docs(mobile): add billing release verification"
 - No task stores or mutates payment credentials in Memento.
 - The static fixture is explicit, labeled, and production-disabled.
 - Existing checkout, portal, invoices, storage, cancel, resume, and promo behavior remains in scope.
+
+---
+
+### Task 8: Complete the attached billing interactions
+
+**Files:**
+- Modify: `src/components/billing/BillingInvoicesPanel.tsx`
+- Create: `src/components/sheets/EditBillingDetailsSheet.tsx`
+- Create: `src/components/sheets/AddPaymentMethodSheet.tsx`
+- Modify: `src/components/sheets/SheetManager.tsx`
+- Modify: `src/store/ui.store.ts`
+- Modify: `src/hooks/use-billing-settings-logic.ts`
+- Modify: `app/settings/billing.tsx`
+- Create: `src/features/settings/billing-interactions.test.ts`
+
+- [ ] Render real invoices as the attached two-column ledger with status badges, localized date, and formatted amount.
+- [ ] Open a pixel-matched billing-details sheet from Edit and persist only non-sensitive customer fields through the billing profile API.
+- [ ] Open a pixel-matched payment-method sheet from Add new/card edit and hand off actual card or PayPal entry to Polar's hosted PCI flow.
+- [ ] Register both sheets through the global SheetManager, preserve haptics and 44-point targets, and refresh billing data after hosted return.
+- [ ] Verify focused tests, then rerun the complete mobile/API release pair.

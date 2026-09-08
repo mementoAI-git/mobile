@@ -31,6 +31,8 @@ import { SecurityConfirmationSheet } from './SecurityConfirmationSheet';
 import { VoiceCallSettingsSheet } from './VoiceCallSettingsSheet';
 import { EndVoiceSessionSheet } from './EndVoiceSessionSheet';
 import { AddMemberToGroupSheet } from './AddMemberToGroupSheet';
+import { EditBillingDetailsSheet } from './EditBillingDetailsSheet';
+import { AddPaymentMethodSheet } from './AddPaymentMethodSheet';
 import { COLORS } from '@/constants/tokens';
 
 const SHEET_CONFIGS: Record<string, {
@@ -60,6 +62,8 @@ const SHEET_CONFIGS: Record<string, {
   'streak': { component: StreakSheet, dynamic: true },
   'story-drafts': { component: DraftsSheet, snapPoints: ['75%'], keyboardBehavior: 'interactive' },
   'edit-profile': { component: EditProfileSheet, snapPoints: ['92%', '100%'], dynamic: false, keyboardBehavior: 'fillParent' },
+  'edit-billing-details': { component: EditBillingDetailsSheet, snapPoints: ['76%', '94%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
+  'add-payment-method': { component: AddPaymentMethodSheet, snapPoints: ['92%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
   'change-password': { component: ChangePasswordSheet, snapPoints: ['100%'], dynamic: true, keyboardBehavior: 'interactive', keyboardBlurBehavior: 'restore', androidKeyboardInputMode: 'adjustResize' },
   'setup-two-factor': { component: SetupTwoFactorSheet, snapPoints: ['88%'], dynamic: false, keyboardBehavior: 'fillParent' },
   'security-confirmation': { component: SecurityConfirmationSheet, dynamic: true },
@@ -72,6 +76,7 @@ const SELF_MANAGED = new Set([
   'create-capsule', 'capsule-detail', 'memory-insights',
   'create-memory', 'create-group', 'add-beneficiary', 'streak',
   'edit-profile', 'add-member-to-group',
+  'edit-billing-details', 'add-payment-method',
   'change-password', 'setup-two-factor',
 ]);
 

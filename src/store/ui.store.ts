@@ -22,6 +22,8 @@ export type SheetName =
   | 'streak'
   | 'story-drafts'
   | 'edit-profile'
+  | 'edit-billing-details'
+  | 'add-payment-method'
   | 'change-password'
   | 'setup-two-factor'
   | 'security-confirmation'

@@ -4,6 +4,8 @@ import * as Haptics from 'expo-haptics';
 import dayjs from 'dayjs';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/Toast';
+import {useUiStore} from '@/store';
+import {useUpdateBillingProfile} from '@/hooks/mutations/use-billing-profile-mutation';
 import { useSubscription } from '@/hooks/queries/use-subscription';
 import { useBillingInvoices, useBillingProfile, useBillingUsage } from '@/hooks/queries/use-billing';
 import { resolveBillingProfile } from '@/features/settings/billing-presentation';
@@ -24,6 +26,8 @@ export function useBillingSettingsLogic() {
   const {profile, source: profileSource} = resolveBillingProfile(liveProfile);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const openSheet = useUiStore((state) => state.openSheet);
+  const updateBillingProfile = useUpdateBillingProfile();
 
   const [promo, setPromo] = useState('');
   const [promoBusy, setPromoBusy] = useState(false);
@@ -73,6 +77,30 @@ export function useBillingSettingsLogic() {
   const handleUpgrade = () => {
     Haptics.selectionAsync();
     router.push('/pricing');
+  };
+
+  const handleEditBillingDetails = () => {
+    Haptics.selectionAsync();
+    openSheet('edit-billing-details', {
+      profile,
+      onSave: async (values: Parameters<typeof updateBillingProfile.mutateAsync>[0]) => {
+        await updateBillingProfile.mutateAsync(values);
+        toast('Billing details updated.', 'success');
+      },
+    });
+  };
+
+  const handleAddPaymentMethod = () => {
+    Haptics.selectionAsync();
+    openSheet('add-payment-method', {
+      canManage: isProOrAbove,
+      onUpgrade: handleUpgrade,
+    });
+  };
+
+  const handleEditPaymentMethod = (_id: string) => {
+    Haptics.selectionAsync();
+    openSheet('add-payment-method', {canManage: true});
   };
 
   const handlePromo = async () => {
@@ -155,5 +183,8 @@ export function useBillingSettingsLogic() {
     profileSource,
     profileLoading,
     handleUpgrade,
+    handleEditBillingDetails,
+    handleAddPaymentMethod,
+    handleEditPaymentMethod,
   };
 }

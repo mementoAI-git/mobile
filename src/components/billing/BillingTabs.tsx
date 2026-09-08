@@ -11,6 +11,6 @@ export const BillingTabs = React.memo(function BillingTabs({active, onChange}: P
       onPress={() => onChange('overview')}>Overview</Button>
     <Button size="lg" variant={active === 'invoices' ? 'primary' : 'secondary'}
       className={active === 'invoices' ? 'bg-fill-strong h-12 px-5' : 'h-12 px-5'}
-      onPress={() => onChange('invoices')}>Recent invoices</Button>
+      onPress={() => onChange('invoices')}>{active === 'invoices' ? 'Invoices' : 'Recent invoices'}</Button>
   </View>;
 });

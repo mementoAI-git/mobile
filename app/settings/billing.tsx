@@ -35,6 +35,7 @@ export default function BillingSettingsScreen() {
     cancelBusy, resumeBusy, cancelConfirmVisible, setCancelConfirmVisible,
     handleRefresh, handlePortal, handleCancel, confirmCancel, handleResume,
     isCancelled, activeTab, setActiveTab, profile, handleUpgrade,
+    handleEditBillingDetails, handleAddPaymentMethod, handleEditPaymentMethod,
   } = useBillingSettingsLogic();
 
   const plan = getBillingTierPresentation(summary?.tier ?? 'free');
@@ -71,8 +72,8 @@ export default function BillingSettingsScreen() {
               <BillingPlanBanner {...plan} onAction={handlePlanAction} busy={portalBusy} />
               <BillingStorageCard storage={storage} />
             </View>
-            <BillingDetailsSection profile={profile} onEdit={handlePortal} />
-            <BillingPaymentMethodsSection methods={profile.paymentMethods} onAdd={handlePortal} onEdit={handlePortal} />
+            <BillingDetailsSection profile={profile} onEdit={handleEditBillingDetails} />
+            <BillingPaymentMethodsSection methods={profile.paymentMethods} onAdd={handleAddPaymentMethod} onEdit={handleEditPaymentMethod} />
             {isProOrAbove && (
               <View className="px-4 pb-8 items-center">
                 {!isCancelled ? <Button variant="ghost" size="lg" loading={cancelBusy} onPress={handleCancel} textClassName="text-error-strong">Cancel subscription</Button> : null}
