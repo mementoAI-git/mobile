@@ -6,7 +6,8 @@ import { Avatar } from './Avatar';
 import { useUserStore, useUiStore } from '@/store';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useRouter } from 'expo-router';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import * as Haptics from 'expo-haptics';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
@@ -42,7 +43,7 @@ export function DashboardHeader({ title, showStreak = true, rightElement, onStre
       <View className="flex-row items-center justify-between px-5 pt-4 pb-3 min-h-[64px]">
         <Animated.Text
           className="text-[20px] leading-[28px] text-text-strong"
-          style={{ fontFamily: FONTS.sansBold }}
+          style={TYPE.screenTitle}
         >
           {title}
         </Animated.Text>
@@ -65,7 +66,7 @@ export function DashboardHeader({ title, showStreak = true, rightElement, onStre
               }}
             >
               <Zap size={16} color={COLORS.brand} fill={COLORS.brand} />
-              <Animated.Text style={{ fontFamily: FONTS.sansBold, fontSize: 14, color: COLORS.textStrong }}>
+              <Animated.Text style={{ ...TYPE.label, color: COLORS.textStrong }}>
                 {streakCount}
               </Animated.Text>
             </TouchableOpacity>

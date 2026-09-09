@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { cn } from '@/lib/utils';
-import { FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 // Matches web badge.tsx variants (badge.tsx HEAD):
 //   default     → bg-fill-brand-strong = orange #FF5E00 text-white
@@ -45,7 +45,7 @@ export function Badge({ label, variant = 'default', className }: BadgeProps) {
     >
       <Text
         className={cn('text-xs font-medium', text)}
-        style={{ fontFamily: FONTS.sansMedium }}
+        style={TYPE.metadata}
       >
         {label}
       </Text>

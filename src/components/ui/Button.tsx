@@ -7,7 +7,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { cn } from '@/lib/utils';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
 type Size = 'xs' | 'sm' | 'md' | 'lg';
@@ -124,7 +125,7 @@ export function Button({
           {leftIcon && <View>{leftIcon}</View>}
           <Text
             className={cn(v.text, s.text, textClassName)}
-            style={{ fontFamily: FONTS.sansMedium }}
+            style={size === 'lg' ? TYPE.button : TYPE.buttonSmall}
           >
             {children}
           </Text>

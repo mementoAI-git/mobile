@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
 import { cn, getInitials } from '@/lib/utils';
-import { FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { resolveFileUrl } from '@/features/account/profile-form';
 
 interface AvatarProps {
@@ -43,7 +43,7 @@ export function Avatar({ uri, name, size = 'md', className }: AvatarProps) {
       ) : (
         <Text
           className={cn('font-medium text-text-base', s.text)}
-          style={{ fontFamily: FONTS.sansMedium }}
+          style={TYPE.label}
         >
           {initials}
         </Text>

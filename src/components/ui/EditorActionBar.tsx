@@ -44,7 +44,8 @@ import {
   Quote,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { MediaPickerMenu } from './MediaPickerMenu';
 import { RecordingIconButton } from './RecordingIconButton';
 import type { EditorBridge } from '@10play/tentap-editor';
@@ -452,15 +453,13 @@ const styles = StyleSheet.create({
     minWidth: 64,
   },
   uploadLabel: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 11,
+    ...TYPE.metadata,
     color: COLORS.textStrong,
   },
 
   // ── Quick-capture toolbar ───────────────────────────────────────────────────
   label: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 10,
+    ...TYPE.eyebrow,
     color: COLORS.textMuted,
     letterSpacing: 1,
     textTransform: 'uppercase',
@@ -487,8 +486,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.textStrong,
   },
   modePillText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 13,
+    ...TYPE.buttonSmall,
     color: COLORS.textInverse,
   },
   mediaBtn: {
@@ -512,18 +510,16 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   tooltipText: {
-    fontFamily: FONTS.sans,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     color: COLORS.textInverse,
     lineHeight: 20,
   },
   tooltipBold: {
-    fontFamily: FONTS.sansBold,
+    ...TYPE.buttonSmall,
     color: COLORS.textInverse,
   },
   tooltipDismiss: {
-    fontFamily: FONTS.sans,
-    fontSize: 11,
+    ...TYPE.metadata,
     color: 'rgba(255,255,255,0.5)',
     marginTop: 6,
   },

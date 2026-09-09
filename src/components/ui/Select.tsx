@@ -2,7 +2,8 @@ import React from 'react';
 import { TouchableOpacity, View, Text, type ViewProps } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ChevronDown } from 'lucide-react-native';
-import { FONTS, COLORS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { useUiStore } from '@/store';
 import { cn } from '@/lib/utils';
 
@@ -59,7 +60,7 @@ export function Select({
       {label && (
         <Text
           className="mb-1.5 text-sm text-text-strong"
-          style={{ fontFamily: FONTS.sansMedium }}
+          style={TYPE.label}
         >
           {label}
         </Text>
@@ -77,8 +78,7 @@ export function Select({
       >
         <Text
           style={{
-            fontFamily: FONTS.sans,
-            fontSize: 14,
+            ...TYPE.input,
             color: selectedOption ? COLORS.textStrong : COLORS.textWeak,
             flex: 1,
           }}

@@ -3,7 +3,8 @@ import { ImageBackground, View, ScrollView, ImageSourcePropType, StyleSheet, Pla
 import * as Haptics from 'expo-haptics';
 import { LucideIcon } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { scale, verticalScale } from 'react-native-size-matters';
  
@@ -66,7 +67,7 @@ export function StatCard({
             "font-bold uppercase tracking-widest text-[10px]",
             hasBg ? "text-text-weak" : "text-text-muted"
           )}
-          style={{ fontFamily: FONTS.sansBold }}
+          style={TYPE.stat}
           numberOfLines={1}
         >
           {label}
@@ -78,7 +79,7 @@ export function StatCard({
               hasBg ? "text-xl" : "text-2xl",
               valueColors[variant]
             )}
-            style={{ fontFamily: FONTS.sansBold }}
+            style={TYPE.stat}
             numberOfLines={1}
           >
             {value}
@@ -89,7 +90,7 @@ export function StatCard({
                 "text-sm font-semibold",
                 hasBg ? "text-text-strong" : "text-text-muted"
               )}
-              style={{ fontFamily: FONTS.sansSemi }}
+              style={TYPE.metadata}
             >
               {unit}
             </Animated.Text>

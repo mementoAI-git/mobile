@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { TextInput as RNTextInput, View, Text, TextInputProps, Animated, Platform } from 'react-native';
 import { cn } from '@/lib/utils';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -66,8 +67,7 @@ export function TextInput({
       {label && (
         <Text
           style={{
-            fontFamily: FONTS.sansMedium,
-            fontSize: 13,
+            ...TYPE.bodySmall,
             color: focused ? COLORS.brand : COLORS.textBase,
             marginLeft: 4,
           }}
@@ -98,8 +98,7 @@ export function TextInput({
           <InputComponent
             className={cn('flex-1 text-base text-text-strong', inputClassName)}
             style={{
-              fontFamily: FONTS.sans,
-              fontSize: 15,
+              ...TYPE.input,
               color: COLORS.textStrong,
               padding: 0,
               ...Platform.select({ android: { paddingVertical: 0 } }),
@@ -120,8 +119,7 @@ export function TextInput({
           <RNTextInput
             className={cn('flex-1 text-base text-text-strong', inputClassName)}
             style={{
-              fontFamily: FONTS.sans,
-              fontSize: 15,
+              ...TYPE.input,
               color: COLORS.textStrong,
               padding: 0,
               ...Platform.select({ android: { paddingVertical: 0 } }),
@@ -145,14 +143,14 @@ export function TextInput({
 
       {error && (
         <Text
-          style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.error, marginLeft: 4 }}
+          style={{ ...TYPE.bodySmall, color: COLORS.error, marginLeft: 4 }}
         >
           {error}
         </Text>
       )}
       {hint && !error && (
         <Text
-          style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted, marginLeft: 4 }}
+          style={{ ...TYPE.bodySmall, color: COLORS.textMuted, marginLeft: 4 }}
         >
           {hint}
         </Text>

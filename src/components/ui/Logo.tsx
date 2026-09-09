@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { cn } from '@/lib/utils';
-import { FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -25,7 +25,7 @@ export function Logo({ size = 'md', className }: LogoProps) {
         sizeStyles[size],
         className,
       )}
-      style={{ fontFamily: FONTS.serif }}
+      style={size === 'lg' ? TYPE.displayTitle : size === 'md' ? TYPE.screenTitle : TYPE.sectionTitle}
     >
       memento
     </Text>

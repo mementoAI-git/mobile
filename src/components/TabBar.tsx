@@ -23,7 +23,8 @@ import {
   PanResponder,
 } from 'react-native';
 import { Timer, Search, Home, MessageCircle, BookOpen, Compass } from 'lucide-react-native';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname } from 'expo-router';
 import { useUiStore } from '@/store';
@@ -401,8 +402,7 @@ const styles = StyleSheet.create({
 
   // Active label
   tabLabel: {
-    fontFamily: FONTS.sansSemi,
-    fontSize: 11,
+    ...TYPE.metadata,
     color: COLORS.textStrong,
     letterSpacing: 0.1,
   },
