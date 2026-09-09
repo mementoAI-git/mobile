@@ -4,7 +4,8 @@ import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import { ArrowUpRight } from 'lucide-react-native';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 const QUESTION_ICON = require('../../../assets/images/question-2.png');
 
@@ -51,15 +52,15 @@ export function ContinueReflectingCard({ title, onPress, className }: ContinueRe
         <View className="flex-1 justify-between gap-2">
           <Animated.Text
             numberOfLines={2}
-            className="text-[15px] text-text-strong leading-tight"
-            style={{ fontFamily: FONTS.serif }}
+            className="text-text-strong"
+            style={TYPE.cardTitle}
           >
             {title}
           </Animated.Text>
           <View className="flex-row items-center gap-1">
             <Animated.Text
               className="text-xs text-text-weak font-semibold"
-              style={{ fontFamily: FONTS.sans }}
+              style={TYPE.metadata}
             >
               Continue
             </Animated.Text>
@@ -70,4 +71,3 @@ export function ContinueReflectingCard({ title, onPress, className }: ContinueRe
     </Animated.View>
   );
 }
-

@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { ChevronDown, Check, X } from 'lucide-react-native';
 import { CAPSULE_THEMES, Theme } from '@/constants/themes';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 interface StylePickerProps {
   currentThemeId?: string;
@@ -40,7 +41,7 @@ export function StylePicker({
         <View className="flex-row items-end justify-between gap-4">
           {/* Theme Circles */}
           <View className="flex-1">
-            <Text className="text-[10px] text-text-weak uppercase tracking-widest font-bold mb-2" style={{ fontFamily: FONTS.sansBold }}>
+            <Text className="text-text-weak uppercase tracking-widest mb-2" style={TYPE.eyebrow}>
               Theme
             </Text>
             <View className="flex-row items-center h-10">
@@ -77,11 +78,11 @@ export function StylePicker({
             onPress={handleStylePress}
             activeOpacity={0.7}
           >
-            <Text className="text-[10px] text-text-weak uppercase tracking-widest font-bold mb-2" style={{ fontFamily: FONTS.sansBold }}>
+            <Text className="text-text-weak uppercase tracking-widest mb-2" style={TYPE.eyebrow}>
               Style
             </Text>
             <View className="h-10 px-3 rounded-lg bg-fill-weaker border border-stroke-weaker flex-row items-center justify-between">
-              <Text className="text-xs text-text-strong font-medium" style={{ fontFamily: FONTS.sansMedium }}>
+              <Text className="text-text-strong" style={TYPE.metadata}>
                 {currentTheme.name}
               </Text>
               <ChevronDown size={14} color={COLORS.textWeak} />
@@ -94,11 +95,11 @@ export function StylePicker({
             onPress={handleSizePress}
             activeOpacity={0.7}
           >
-            <Text className="text-[10px] text-text-weak uppercase tracking-widest font-bold mb-2" style={{ fontFamily: FONTS.sansBold }}>
+            <Text className="text-text-weak uppercase tracking-widest mb-2" style={TYPE.eyebrow}>
               Size
             </Text>
             <View className="h-10 px-3 rounded-lg bg-fill-weaker border border-stroke-weaker flex-row items-center justify-center">
-              <Text className="text-xs text-text-strong font-medium" style={{ fontFamily: FONTS.sansMedium }}>
+              <Text className="text-text-strong" style={TYPE.metadata}>
                 {fontSize}
               </Text>
             </View>
@@ -114,7 +115,7 @@ export function StylePicker({
         handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
       >
         <View className="px-5 py-4 border-b border-stroke-weaker flex-row justify-between items-center">
-          <Text className="text-lg font-bold" style={{ fontFamily: FONTS.sansBold }}>Select Theme</Text>
+          <Text style={TYPE.uiTitle}>Select Theme</Text>
           <TouchableOpacity onPress={() => themeModalRef.current?.dismiss()}>
             <X size={20} color={COLORS.textWeak} />
           </TouchableOpacity>
@@ -130,7 +131,7 @@ export function StylePicker({
               >
                 <View className="flex-row items-center gap-3">
                   <View className="size-8 rounded-full border border-stroke-weak" style={{ backgroundColor: theme.color }} />
-                  <Text className={`text-base font-medium ${isSelected ? 'text-brand' : 'text-text-strong'}`} style={{ fontFamily: FONTS.sansMedium }}>{theme.name}</Text>
+                  <Text className={isSelected ? 'text-brand' : 'text-text-strong'} style={TYPE.label}>{theme.name}</Text>
                 </View>
                 {isSelected && <Check size={20} color={COLORS.brand} />}
               </TouchableOpacity>
@@ -147,7 +148,7 @@ export function StylePicker({
         handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
       >
         <View className="px-5 py-4 border-b border-stroke-weaker flex-row justify-between items-center">
-          <Text className="text-lg font-bold" style={{ fontFamily: FONTS.sansBold }}>Select Size</Text>
+          <Text style={TYPE.uiTitle}>Select Size</Text>
           <TouchableOpacity onPress={() => sizeModalRef.current?.dismiss()}>
             <X size={20} color={COLORS.textWeak} />
           </TouchableOpacity>
@@ -161,7 +162,7 @@ export function StylePicker({
                 onPress={() => { onSizeSelect(size); sizeModalRef.current?.dismiss(); }}
                 className={`p-4 rounded-xl flex-row items-center justify-between border ${isSelected ? 'border-brand bg-brand/5' : 'border-stroke-weaker bg-white'}`}
               >
-                <Text className={`text-base font-medium ${isSelected ? 'text-brand' : 'text-text-strong'}`} style={{ fontFamily: FONTS.sansMedium }}>{size}</Text>
+                <Text className={isSelected ? 'text-brand' : 'text-text-strong'} style={TYPE.label}>{size}</Text>
                 {isSelected && <Check size={20} color={COLORS.brand} />}
               </TouchableOpacity>
             );

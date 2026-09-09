@@ -14,7 +14,8 @@ import {
 } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import { X } from 'lucide-react-native';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { EMOJI_CATEGORIES, type EmojiCategory } from '@/features/chat/emoji-data';
 
 interface EmojiPickerSheetProps {
@@ -148,8 +149,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   title: {
-    fontFamily: FONTS.serif,
-    fontSize: 18,
+    ...TYPE.cardTitle,
     color: COLORS.textStrong,
   },
   tabContainer: {
@@ -171,15 +171,14 @@ const styles = StyleSheet.create({
     borderColor: COLORS.brand,
   },
   tabIcon: {
-    fontSize: 16,
+    ...TYPE.cardTitle,
   },
   gridContent: {
     paddingVertical: 12,
     paddingBottom: 32,
   },
   categoryHeading: {
-    fontFamily: FONTS.sansSemi,
-    fontSize: 12,
+    ...TYPE.eyebrow,
     color: COLORS.textWeak,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -196,6 +195,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emojiText: {
-    fontSize: 26,
+    ...TYPE.screenTitle,
   },
 });

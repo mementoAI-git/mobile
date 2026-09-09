@@ -16,7 +16,8 @@ import { ZapIconWarm } from '@/components/ui';
 import Animated from 'react-native-reanimated';
 import dayjs from 'dayjs';
 import type { Activity } from '@/hooks/queries/use-activities';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 // ── Deterministic color seeding ────────────────────────────────────────────
 
@@ -219,13 +220,13 @@ export const ActivityListItem = React.memo(function ActivityListItem({ activity,
         {/* Text */}
         <View style={{ flex: 1, gap: 2 }}>
           <Animated.Text
-            style={{ fontFamily: FONTS.sansMedium, fontSize: 15, color: COLORS.textStrong, lineHeight: 20 }}
+            style={{ ...TYPE.body, color: COLORS.textStrong }}
             numberOfLines={1}
           >
             {sanitiseDescription(activity.description, activity.title)}
           </Animated.Text>
           <Animated.Text
-            style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: COLORS.textWeak, letterSpacing: 0.8, textTransform: 'uppercase', opacity: 0.55 }}
+            style={{ ...TYPE.metadata, color: COLORS.textWeak, letterSpacing: 0.8, textTransform: 'uppercase', opacity: 0.55 }}
           >
             {formatActivityDate(activity.created_at)}
           </Animated.Text>
@@ -234,4 +235,3 @@ export const ActivityListItem = React.memo(function ActivityListItem({ activity,
     </>
   );
 });
-

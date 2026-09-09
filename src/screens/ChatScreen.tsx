@@ -23,7 +23,8 @@ import { DeepDiveNudge } from '@/components/chat/DeepDiveNudge';
 import { DeepDiveBanner } from '@/components/chat/DeepDiveBanner';
 import { PromptReflectionHeader } from '@/components/chat/PromptReflectionHeader';
 import { ChatSkeleton } from '@/components/ui';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { dimensionLabel } from '@/constants/enrichment';
 import Animated, {
   FadeInDown,
@@ -423,15 +424,15 @@ export default function ChatScreen() {
         <View className="items-center gap-3 px-10">
           <Animated.Text
             entering={FadeInDown.delay(200)}
-            className="text-[28px] text-text-strong text-center"
-            style={{ fontFamily: FONTS.serif }}
+            className="text-text-strong text-center"
+            style={TYPE.screenTitle}
           >
             Your story grows here
           </Animated.Text>
           <Animated.Text
             entering={FadeInDown.delay(300)}
-            className="text-[15px] text-text-weak text-center leading-relaxed"
-            style={{ fontFamily: FONTS.sans }}
+            className="text-text-weak text-center"
+            style={TYPE.body}
           >
             Share a memory, an emotion, or just say hello. Your AI companion is here to listen and help you preserve your legacy.
           </Animated.Text>
@@ -572,15 +573,15 @@ export default function ChatScreen() {
           >
             <View className="flex-1 pr-3 pl-3" style={{ borderLeftWidth: 3, borderLeftColor: COLORS.brand }}>
               <Text
-                className="text-[10px] text-brand font-bold uppercase tracking-wider mb-0.5"
-                style={{ fontFamily: FONTS.sansBold }}
+                className="text-brand uppercase tracking-wider mb-0.5"
+                style={TYPE.eyebrow}
               >
                 Replying to {replyQuote.role === 'user' ? 'your message' : 'Memento'}
               </Text>
               <Text
-                className="text-[12px] text-text-weak leading-relaxed"
+                className="text-text-weak"
                 numberOfLines={1}
-                style={{ fontFamily: FONTS.sans }}
+                style={TYPE.bodySmall}
               >
                 {replyQuote.text}
               </Text>
@@ -659,8 +660,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: COLORS.textStrong,
     flex: 1,
-    fontFamily: FONTS.sansSemi,
-    fontSize: 17,
+    ...TYPE.uiTitle,
     lineHeight: 22,
     marginLeft: 8,
   },
@@ -693,8 +693,7 @@ const styles = StyleSheet.create({
   },
   dateSeparatorLabel: {
     color: COLORS.textBase,
-    fontFamily: FONTS.sansMedium,
-    fontSize: 11,
+    ...TYPE.metadata,
     lineHeight: 14,
   },
   loadingOlderMessages: {
@@ -706,8 +705,7 @@ const styles = StyleSheet.create({
   },
   loadingOlderLabel: {
     color: COLORS.textWeak,
-    fontFamily: FONTS.sans,
-    fontSize: 12,
+    ...TYPE.bodySmall,
     lineHeight: 16,
   },
   composerOverlay: {

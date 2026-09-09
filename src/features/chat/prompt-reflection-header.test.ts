@@ -9,8 +9,8 @@ describe('PromptReflectionHeader component', () => {
 
     expect(source).toContain("from '@/constants/tokens'");
     expect(source).toContain('COLORS.brand');
-    expect(source).toContain('FONTS.serif');
-    expect(source).toContain('FONTS.sansBold');
+    expect(source).toContain('TYPE.cardTitle');
+    expect(source).toContain('TYPE.eyebrow');
     expect(source).toContain('LayoutAnimation');
     expect(source).toContain('accessibilityRole="button"');
     expect(source).toContain('numberOfLines={1}');

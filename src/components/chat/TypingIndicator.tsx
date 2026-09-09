@@ -10,7 +10,8 @@ import Animated, {
   withSequence,
   FadeInUp
 } from 'react-native-reanimated';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 const LOADING_PHRASES = [
   "Reflecting on your words...",
@@ -91,7 +92,7 @@ export function TypingIndicator() {
         {/* Dynamic Whimsical Phrase */}
         <Text 
           className="text-xs text-text-weak italic"
-          style={{ fontFamily: FONTS.serif }}
+          style={TYPE.bodySmall}
         >
           {phrase}
         </Text>

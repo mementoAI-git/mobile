@@ -9,7 +9,8 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { Trophy } from 'lucide-react-native';
-import { FONTS, COLORS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 interface MilestoneCardProps {
   /** Points gained this session (0 = don't show) */
@@ -108,15 +109,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   titleText: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 10,
+    ...TYPE.eyebrow,
     color: COLORS.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   descriptionText: {
-    fontFamily: FONTS.serifMedium,
-    fontSize: 15,
+    ...TYPE.cardTitle,
     color: COLORS.textStrong,
   },
 });

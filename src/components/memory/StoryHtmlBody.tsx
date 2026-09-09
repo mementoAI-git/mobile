@@ -1,6 +1,7 @@
 import React from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { decodeHtmlEntities, parseStoryHtmlBlocks, type StoryHtmlBlock } from '@/features/memories/story-html';
 
 function renderInlineHtml(html: string, keyPrefix: string): React.ReactNode[] {
@@ -121,29 +122,21 @@ const inlineStyles = {
 
 const styles = StyleSheet.create({
   inlineBase: {
-    fontFamily: FONTS.sans,
-    fontSize: 17,
-    lineHeight: 28,
+    ...TYPE.bodyLarge,
     color: COLORS.textStrong,
   },
   paragraph: {
-    fontFamily: FONTS.sans,
-    fontSize: 17,
-    lineHeight: 28,
+    ...TYPE.bodyLarge,
     color: COLORS.textStrong,
     marginBottom: 14,
   },
   h1: {
-    fontFamily: FONTS.serifBold,
-    fontSize: 30,
-    lineHeight: 38,
+    ...TYPE.screenTitle,
     color: COLORS.textStrong,
     marginBottom: 14,
   },
   h2: {
-    fontFamily: FONTS.serifMedium,
-    fontSize: 24,
-    lineHeight: 32,
+    ...TYPE.sectionTitle,
     color: COLORS.textStrong,
     marginBottom: 14,
   },
@@ -154,9 +147,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   blockquoteText: {
-    fontFamily: FONTS.sans,
-    fontSize: 17,
-    lineHeight: 28,
+    ...TYPE.bodyLarge,
     color: COLORS.textWeak,
     fontStyle: 'italic',
   },
@@ -171,9 +162,8 @@ const styles = StyleSheet.create({
   },
   listMarker: {
     width: 18,
+    ...TYPE.bodyLarge,
     fontFamily: FONTS.sansBold,
-    fontSize: 17,
-    lineHeight: 28,
     color: COLORS.textStrong,
   },
 });

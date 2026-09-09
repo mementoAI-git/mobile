@@ -35,7 +35,8 @@ import {
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PermissionRecoveryState } from '@/components/ui';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { toast } from '@/components/ui/Toast';
 import {
   getPermissionRecoveryAction,
@@ -525,7 +526,7 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
                           activeOpacity={0.8}
                           style={{ paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999, backgroundColor: COLORS.brand }}
                         >
-                          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 13, color: COLORS.textInverse }}>Browse Audio Files</Text>
+                          <Text style={{ ...TYPE.buttonSmall, color: COLORS.textInverse }}>Browse Audio Files</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -646,13 +647,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: {
-    fontFamily: FONTS.serif,
-    fontSize: 22,
+    ...TYPE.sectionTitle,
     color: COLORS.textStrong,
   },
   subtitle: {
-    fontFamily: FONTS.sans,
-    fontSize: 12,
+    ...TYPE.bodySmall,
     color: COLORS.textWeak,
     marginTop: 2,
   },
@@ -691,20 +690,18 @@ const styles = StyleSheet.create({
     borderColor: `${COLORS.brand}30`,
   },
   actionLabel: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 10,
+    ...TYPE.eyebrow,
     color: COLORS.textWeak,
     textAlign: 'center',
   },
   actionLabelActive: {
     color: COLORS.brand,
-    fontFamily: FONTS.sansSemi,
+    ...TYPE.label,
   },
   videoLimit: {
     marginTop: 8,
     marginHorizontal: SHEET_HORIZONTAL,
-    fontFamily: FONTS.sans,
-    fontSize: 12,
+    ...TYPE.bodySmall,
     color: COLORS.textWeak,
   },
 
@@ -753,8 +750,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   audioLabel: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 9,
+    ...TYPE.eyebrow,
     color: COLORS.textMuted,
     textAlign: 'center',
   },
@@ -805,8 +801,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   emptyText: {
-    fontFamily: FONTS.sans,
-    fontSize: 14,
+    ...TYPE.label,
     color: COLORS.textWeak,
   },
   loader: {
@@ -837,8 +832,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.strokeWeak,
   },
   dismissText: {
-    fontFamily: FONTS.sansSemi,
-    fontSize: 15,
+    ...TYPE.button,
     color: COLORS.textBase,
   },
   addButton: {
@@ -858,8 +852,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   addText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 15,
+    ...TYPE.button,
     color: COLORS.textInverse,
   },
 });

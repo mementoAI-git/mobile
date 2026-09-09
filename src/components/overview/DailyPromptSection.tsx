@@ -4,6 +4,7 @@ import { Mic, CheckCircle2, Square, MessageSquareText } from 'lucide-react-nativ
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDailyPrompts } from '@/hooks/queries/use-prompts';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
@@ -104,11 +105,11 @@ export function DailyPromptSection() {
       <View className="flex-row items-center justify-between px-1">
         <Animated.Text
           className="text-text-strong"
-          style={{ fontFamily: FONTS.sans, fontSize: 20, lineHeight: 28 }}
+          style={TYPE.uiTitle}
         >
           Continue <Animated.Text
             className="text-text-weak"
-            style={{ fontFamily: FONTS.serif, fontSize: 24, lineHeight: 24, fontStyle: 'italic' }}
+            style={{ ...TYPE.sectionTitle, fontStyle: 'italic' }}
           >
             reflecting
           </Animated.Text>
@@ -127,8 +128,8 @@ export function DailyPromptSection() {
                   }`}
               >
                 <Animated.Text
-                  className={`text-[11px] font-bold ${activeIndex === i ? 'text-white' : 'text-text-strong'}`}
-                  style={{ fontFamily: FONTS.sansBold }}
+                  className={activeIndex === i ? 'text-white' : 'text-text-strong'}
+                  style={TYPE.metadata}
                 >
                   {p.display_label || `Prompt ${i + 1}`}
                 </Animated.Text>
@@ -139,7 +140,7 @@ export function DailyPromptSection() {
 
         <Animated.Text
           className="text-lg text-text-strong leading-[26px] mb-8"
-          style={{ fontFamily: FONTS.sansMedium }}
+          style={TYPE.cardTitle}
         >
           {promptText}
         </Animated.Text>

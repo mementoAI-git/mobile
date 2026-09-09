@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -113,8 +114,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   } as ViewStyle,
   categoryText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 10,
+    ...TYPE.eyebrow,
     color: COLORS.brand,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -128,8 +128,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   } as ViewStyle,
   expandedTitle: {
-    fontFamily: FONTS.serif,
-    fontSize: 18,
+    ...TYPE.cardTitle,
     lineHeight: 25,
     color: COLORS.textStrong,
   } as TextStyle,
@@ -148,16 +147,14 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   } as ViewStyle,
   categoryTextCompact: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 9,
+    ...TYPE.eyebrow,
     color: COLORS.brand,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   } as TextStyle,
   collapsedTitle: {
     flex: 1,
-    fontFamily: FONTS.serif,
-    fontSize: 14,
+    ...TYPE.bodySmall,
     color: COLORS.textStrong,
   } as TextStyle,
   chevronButtonCompact: {

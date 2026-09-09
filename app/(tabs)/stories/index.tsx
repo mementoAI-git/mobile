@@ -6,7 +6,8 @@ import { Plus, Search } from 'lucide-react-native';
 import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
 import { MasonryMemoryGrid } from '@/components/memory/MasonryMemoryGrid';
 import { StatCard, DashboardHeader, TextInput, StoriesSkeleton, EmptyState, Spinner } from '@/components/ui';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   FadeInDown,
@@ -143,7 +144,7 @@ export default function StoriesScreen() {
       };
       return (
       <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-4 gap-6 px-5">
-        <Animated.Text className="text-base text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+        <Animated.Text className="text-text-weak" style={TYPE.bodyLarge}>
           A secure archive for your most cherished moments and personal reflections.
         </Animated.Text>
 
@@ -198,7 +199,7 @@ export default function StoriesScreen() {
                 >
                   <Animated.Text
                     className={`text-xs font-bold ${activeFilter === f ? 'text-white' : 'text-text-base'}`}
-                    style={{ fontFamily: FONTS.sansBold }}
+                    style={TYPE.metadata}
                   >
                     {label}
                   </Animated.Text>
@@ -324,9 +325,8 @@ export default function StoriesScreen() {
             <Animated.Text
               style={[
                 labelStyle,
+                TYPE.buttonSmall,
                 {
-                  fontFamily: FONTS.sansBold,
-                  fontSize: 13,
                   color: 'white',
                   position: 'absolute',
                 }

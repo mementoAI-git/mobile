@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Skeleton } from '@/components/ui/Skeleton';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useActivities, type Activity } from '@/hooks/queries/use-activities';
@@ -40,11 +40,11 @@ export function RecentActivitiesSection() {
   return (
     <Animated.View entering={FadeInDown.delay(300)} className="gap-4">
       <View className="flex-row items-center justify-between px-1">
-        <Animated.Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
+        <Animated.Text className="text-text-strong" style={TYPE.sectionTitle}>
           Recent <Animated.Text className="text-text-weak italic">Activities</Animated.Text>
         </Animated.Text>
         <TouchableOpacity onPress={handleSeeAll} activeOpacity={0.7}>
-          <Animated.Text className="text-sm text-brand font-semibold" style={{ fontFamily: FONTS.sansSemi }}>See all</Animated.Text>
+          <Animated.Text className="text-brand" style={TYPE.buttonSmall}>See all</Animated.Text>
         </TouchableOpacity>
       </View>
 

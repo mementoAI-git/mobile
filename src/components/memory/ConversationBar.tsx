@@ -4,7 +4,8 @@ import * as Haptics from 'expo-haptics';
 import { Svg, Path } from 'react-native-svg';
 import dayjs from 'dayjs';
 import type { IMemory } from '@/types';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 interface ConversationBarProps {
@@ -62,7 +63,7 @@ export function ConversationBar({ memory, onPress, index = 0 }: ConversationBarP
         <Text
           className="text-xs text-text-weak leading-snug"
           numberOfLines={1}
-          style={{ fontFamily: FONTS.sans }}
+          style={TYPE.bodySmall}
         >
           {plainBody}
         </Text>
@@ -74,7 +75,7 @@ export function ConversationBar({ memory, onPress, index = 0 }: ConversationBarP
       return (
         <Text
           className="text-xs text-text-weak font-medium"
-          style={{ fontFamily: FONTS.sans }}
+          style={TYPE.bodySmall}
         >
           Active conversation • {msgCount} {msgCount === 1 ? 'message' : 'messages'}
         </Text>
@@ -84,7 +85,7 @@ export function ConversationBar({ memory, onPress, index = 0 }: ConversationBarP
     return (
       <Text
         className="text-xs text-text-muted italic"
-        style={{ fontFamily: FONTS.sans }}
+        style={TYPE.bodySmall}
       >
         Start a new conversation
       </Text>
@@ -116,7 +117,7 @@ export function ConversationBar({ memory, onPress, index = 0 }: ConversationBarP
           <Text
             className="text-base text-text-strong font-normal"
             numberOfLines={1}
-            style={{ fontFamily: FONTS.serif }}
+            style={TYPE.cardTitle}
           >
             {memory.title || 'Conversation'}
           </Text>
@@ -126,8 +127,8 @@ export function ConversationBar({ memory, onPress, index = 0 }: ConversationBarP
         {/* Meta timestamp */}
         <View className="shrink-0">
           <Text
-            className="text-[10px] text-text-muted font-medium tracking-wide uppercase"
-            style={{ fontFamily: FONTS.sansSemi }}
+            className="text-text-muted tracking-wide uppercase"
+            style={TYPE.eyebrow}
           >
             {dayjs(memory.updated_at ?? memory.created_at).format('MMM D')}
           </Text>
