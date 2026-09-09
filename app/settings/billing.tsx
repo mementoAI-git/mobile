@@ -49,7 +49,7 @@ export default function BillingSettingsScreen() {
 
   return (
     <SafeAreaView style={{flex: 1, backgroundColor: COLORS.background}} edges={['top']}>
-      <View className="h-[104px] px-4 justify-center">
+      <View className="h-[114px] px-4 justify-center">
         <View className="absolute left-4 z-10">
           <Button variant="secondary" size="lg" className="size-14 px-0" onPress={handleBack}>
             <ChevronLeft size={25} color={COLORS.textBase} />
@@ -60,7 +60,7 @@ export default function BillingSettingsScreen() {
 
       <BillingTabs active={activeTab} onChange={setActiveTab} />
       <ScrollView
-        className="flex-1 mt-5"
+        className="flex-1 mt-6"
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={false} onRefresh={handleRefresh} tintColor={COLORS.brand} />}
         contentContainerStyle={{paddingBottom: 48}}

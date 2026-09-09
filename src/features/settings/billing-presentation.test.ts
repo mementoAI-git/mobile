@@ -20,10 +20,21 @@ describe('billing presentation', () => {
       title: 'Unlock more with Pro', actionLabel: 'Upgrade', action: 'upgrade',
     });
     expect(getBillingTierPresentation('pro')).toMatchObject({
-      title: 'You’re on Pro', actionLabel: 'Manage', action: 'portal',
+      title: 'You’re on Memento Pro', actionLabel: 'Manage plan', action: 'portal',
     });
     expect(getBillingTierPresentation('legacy')).toMatchObject({
       title: 'Your Legacy plan', actionLabel: 'Manage', action: 'portal',
+    });
+  });
+
+  test('provides the reference paid-plan copy and active status', () => {
+    expect(getBillingTierPresentation('pro')).toEqual({
+      title: 'You’re on Memento Pro',
+      subtitle: 'You have full access to Pro features, expanded storage, and richer memory context.',
+      actionLabel: 'Manage plan',
+      action: 'portal',
+      variant: 'paid',
+      statusLabel: 'Active',
     });
   });
 });

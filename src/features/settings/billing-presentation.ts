@@ -15,10 +15,12 @@ export function resolveBillingProfile(profile: BillingProfile | null | undefined
 export function getBillingTierPresentation(tier: SubscriptionSummary['tier']) {
   if (tier === 'pro') {
     return {
-      title: 'You’re on Pro',
-      subtitle: 'Advanced features, more storage and better memory contextualization with Pro.',
-      actionLabel: 'Manage',
+      title: 'You’re on Memento Pro',
+      subtitle: 'You have full access to Pro features, expanded storage, and richer memory context.',
+      actionLabel: 'Manage plan',
       action: 'portal' as const,
+      variant: 'paid' as const,
+      statusLabel: 'Active',
     };
   }
   if (tier === 'legacy') {
@@ -27,6 +29,8 @@ export function getBillingTierPresentation(tier: SubscriptionSummary['tier']) {
       subtitle: 'Your memories, legacy tools and long-term storage are protected.',
       actionLabel: 'Manage',
       action: 'portal' as const,
+      variant: 'paid' as const,
+      statusLabel: 'Active',
     };
   }
   return {
@@ -34,5 +38,7 @@ export function getBillingTierPresentation(tier: SubscriptionSummary['tier']) {
     subtitle: 'Advanced features, more storage and better memory contextualization with Pro.',
     actionLabel: 'Upgrade',
     action: 'upgrade' as const,
+    variant: 'free' as const,
+    statusLabel: null,
   };
 }

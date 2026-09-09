@@ -11,14 +11,14 @@ function formatBytes(bytes: number) {
 }
 
 export const BillingStorageCard = React.memo(function BillingStorageCard({storage}: {storage: StoragePresentation}) {
-  return <View className="rounded-[28px] bg-fill-weak px-5 py-4">
+  return <View className="rounded-2xl bg-fill-weak px-3 py-3" style={{height: 85}}>
     <View className="flex-row justify-between items-center">
-      <Text className="text-[17px] text-text-strong" style={{fontFamily: FONTS.sansMedium}}>Storage</Text>
-      <Text className="text-[16px] text-text-base" style={{fontFamily: FONTS.sans}}>{formatBytes(storage.used)} / {formatBytes(storage.limit)} Used</Text>
+      <Text className="text-[15px] text-text-strong" style={{fontFamily: FONTS.sansSemi}}>Storage</Text>
+      <Text className="text-[15px] text-text-base" style={{fontFamily: FONTS.sans}}>{formatBytes(storage.used)} / {formatBytes(storage.limit)} Used</Text>
     </View>
-    <View className="h-[13px] rounded bg-card mt-2 overflow-hidden">
+    <View className="h-[13px] rounded bg-card mt-1.5 overflow-hidden">
       <View style={{width: `${storage.percent}%`, height: 13, backgroundColor: COLORS.onboardingAmber}} />
     </View>
-    <Text className="text-[16px] text-text-base mt-2" style={{fontFamily: FONTS.sans}}>{formatBytes(storage.remaining)} Available</Text>
+    <Text className="text-[15px] text-text-base mt-1.5" style={{fontFamily: FONTS.sans}}>{formatBytes(storage.remaining)} Available</Text>
   </View>;
 });

@@ -63,7 +63,7 @@ const SHEET_CONFIGS: Record<string, {
   'streak': { component: StreakSheet, dynamic: true },
   'story-drafts': { component: DraftsSheet, snapPoints: ['75%'], keyboardBehavior: 'interactive' },
   'edit-profile': { component: EditProfileSheet, snapPoints: ['92%', '100%'], dynamic: false, keyboardBehavior: 'fillParent' },
-  'edit-billing-details': { component: EditBillingDetailsSheet, snapPoints: ['76%', '94%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
+  'edit-billing-details': { component: EditBillingDetailsSheet, snapPoints: ['75%', '94%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
   'add-payment-method': { component: AddPaymentMethodSheet, snapPoints: ['92%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
   'cancel-subscription-confirmation': { component: CancelSubscriptionConfirmationSheet, snapPoints: ['54%'], dynamic: false },
   'change-password': { component: ChangePasswordSheet, snapPoints: ['100%'], dynamic: true, keyboardBehavior: 'interactive', keyboardBlurBehavior: 'restore', androidKeyboardInputMode: 'adjustResize' },
