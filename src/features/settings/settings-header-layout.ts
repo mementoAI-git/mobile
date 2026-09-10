@@ -1,12 +1,12 @@
 export function getSettingsHeaderLayout() {
-  const height = 88;
+  const height = 62;
   const actionSize = 44;
 
   return {
     height,
-    horizontalPadding: 24,
+    horizontalPadding: 16,
     actionSize,
-    iconSize: 23,
+    iconSize: 22,
     actionTop: (height - actionSize) / 2,
     titleCenterY: height / 2,
   } as const;

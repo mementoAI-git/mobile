@@ -5,12 +5,14 @@ import { Button } from '@/components/ui';
 type Props = { active: 'overview' | 'invoices'; onChange: (tab: 'overview' | 'invoices') => void };
 
 export const BillingTabs = React.memo(function BillingTabs({active, onChange}: Props) {
-  return <View className="flex-row gap-3 px-4">
-    <Button key={`overview-${active === 'overview' ? 'active' : 'inactive'}`} size="md" variant={active === 'overview' ? 'primary' : 'secondary'}
-      className={active === 'overview' ? 'bg-fill-strong h-8 px-3 rounded-lg' : 'h-8 px-3 rounded-lg'}
+  return <View className="mt-7 flex-row gap-3 px-4">
+    <Button size="md" variant="secondary"
+      className={active === 'overview' ? 'bg-text-strong' : undefined}
+      textClassName={active === 'overview' ? 'text-white' : undefined}
       onPress={() => onChange('overview')}>Overview</Button>
-    <Button key={`invoices-${active === 'invoices' ? 'active' : 'inactive'}`} size="md" variant={active === 'invoices' ? 'primary' : 'secondary'}
-      className={active === 'invoices' ? 'bg-fill-strong h-8 px-3 rounded-lg' : 'h-8 px-3 rounded-lg'}
+    <Button size="md" variant="secondary"
+      className={active === 'invoices' ? 'bg-text-strong' : undefined}
+      textClassName={active === 'invoices' ? 'text-white' : undefined}
       onPress={() => onChange('invoices')}>{active === 'invoices' ? 'Invoices' : 'Recent invoices'}</Button>
   </View>;
 });

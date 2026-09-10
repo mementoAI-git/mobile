@@ -20,6 +20,10 @@ describe('Settings typography', () => {
       new URL('../../components/billing/BillingInvoicesPanel.tsx', import.meta.url),
       'utf8',
     );
+    const tabs = readFileSync(
+      new URL('../../components/billing/BillingTabs.tsx', import.meta.url),
+      'utf8',
+    );
     const profile = readFileSync(
       new URL('../../../app/settings/profile.tsx', import.meta.url),
       'utf8',
@@ -27,9 +31,14 @@ describe('Settings typography', () => {
 
     expect(hubRow).toContain('style={[TYPE.body, { flex: 1 }]}');
     expect(profile).toContain('<Text style={TYPE.body}>{getValue(detail.key)}</Text>');
-    expect(billingDetails).not.toContain('TYPE.cardTitle');
-    expect(paymentMethods).not.toContain('TYPE.cardTitle');
+    expect(billingDetails).toContain('style={TYPE.sectionTitle}>Billing details');
+    expect(billingDetails).toContain('style={TYPE.bodySmall}>Billing email');
+    expect(paymentMethods).toContain('style={TYPE.sectionTitle}>Payment methods');
+    expect(paymentMethods).not.toContain('className="h-12 px-4"');
+    expect(tabs).not.toContain('h-8');
+    expect(tabs).not.toContain('rounded-lg');
     expect(invoices.match(/TYPE\.cardTitle/g)).toHaveLength(1);
+    expect(invoices).not.toContain('TYPE.bodyLarge');
     expect(invoices).not.toContain('TYPE.sectionTitle');
   });
 

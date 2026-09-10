@@ -23,8 +23,8 @@ const InvoiceRow = React.memo(function InvoiceRow({invoice}: {invoice: BillingIn
     void WebBrowser.openBrowserAsync(invoice.url);
   }, [invoice.url]);
   return <Pressable accessibilityRole={invoice.url ? 'link' : 'text'} accessibilityLabel={`${invoice.label ?? 'Memento Pro'}, ${invoice.status ?? 'pending'}, ${formatInvoiceAmount(invoice)}`} disabled={!invoice.url} onPress={open} style={({pressed}) => ({minHeight: 72, paddingHorizontal: 16, paddingVertical: 12, opacity: pressed ? 0.72 : 1, flexDirection: 'row', alignItems: 'flex-start'})}>
-    <View style={{flex: 1}}><View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}><Text style={{...TYPE.bodyLarge, color: COLORS.textStrong}}>{invoice.label ?? 'Memento Pro'}</Text><BillingStatusBadge status={invoice.status}/></View><Text style={{...TYPE.bodySmall, color: COLORS.textWeak, marginTop: 6}}>{formatInvoiceDate(invoice.created_at)}</Text></View>
-    <Text style={{...TYPE.bodyLarge, color: COLORS.textStrong, marginTop: 1}}>{formatInvoiceAmount(invoice)}</Text>
+    <View style={{flex: 1}}><View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}><Text style={{...TYPE.body, color: COLORS.textStrong}}>{invoice.label ?? 'Memento Pro'}</Text><BillingStatusBadge status={invoice.status}/></View><Text style={{...TYPE.bodySmall, color: COLORS.textWeak, marginTop: 4}}>{formatInvoiceDate(invoice.created_at)}</Text></View>
+    <Text style={{...TYPE.bodyStrong, color: COLORS.textStrong, marginTop: 1}}>{formatInvoiceAmount(invoice)}</Text>
   </Pressable>;
 });
 

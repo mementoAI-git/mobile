@@ -52,7 +52,7 @@ export default function BillingSettingsScreen() {
 
       <BillingTabs active={activeTab} onChange={setActiveTab} />
       <ScrollView
-        className="flex-1 mt-6"
+        className="mt-6 flex-1"
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={false} onRefresh={handleRefresh} tintColor={COLORS.brand} />}
         contentContainerStyle={{paddingBottom: 48}}
