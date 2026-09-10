@@ -27,11 +27,14 @@ describe('manage-plan flow', () => {
     expect(screen).not.toContain('Legacy Plan');
   });
 
-  test('keeps both plan screens back controls in the header layout and uses safe fallback navigation', () => {
+  test('keeps plan screens on the shared accessible header and uses safe fallback navigation', () => {
+    const header = read('src/components/settings/SettingsSubpageHeader.tsx');
+    expect(header).toContain('accessibilityLabel="Go back"');
+
     for (const path of ['app/pricing.tsx', 'app/settings/cancel-plan.tsx']) {
       const screen = read(path);
       expect(screen).toContain('safeBack(router');
-      expect(screen).toContain('accessibilityLabel="Go back"');
+      expect(screen).toContain('<SettingsSubpageHeader');
       expect(screen).not.toContain('className="absolute left-4"');
     }
   });

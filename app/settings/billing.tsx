@@ -1,11 +1,10 @@
 import React, { useCallback } from 'react';
 import { ImageBackground, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Button } from '@/components/ui';
-import { TYPE } from '@/constants/typography';
+import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';
 import {
   BillingDetailsSection,
   BillingInvoicesPanel,
@@ -49,14 +48,7 @@ export default function BillingSettingsScreen() {
 
   return (
     <SafeAreaView style={{flex: 1, backgroundColor: COLORS.background}} edges={['top']}>
-      <View className="h-[114px] px-4 justify-center">
-        <View className="absolute left-4 z-10">
-          <Button variant="secondary" size="lg" className="size-14 px-0" onPress={handleBack}>
-            <ChevronLeft size={25} color={COLORS.textBase} />
-          </Button>
-        </View>
-        <Text className="text-center" style={TYPE.screenTitle}>Billing</Text>
-      </View>
+      <SettingsSubpageHeader title="Billing" onBack={handleBack} />
 
       <BillingTabs active={activeTab} onChange={setActiveTab} />
       <ScrollView

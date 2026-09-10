@@ -1,7 +1,6 @@
 import React, {useCallback, useState} from 'react';
 import {Pressable, ScrollView, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {ChevronLeft} from 'lucide-react-native';
 import {useRouter} from 'expo-router';
 import {useQueryClient} from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -11,6 +10,7 @@ import {COLORS} from '@/constants/tokens';
 import {safeBack} from '@/lib/utils';
 import {cancelBillingSubscription} from '@/features/settings/billing-flow';
 import {buildCancellationPayload, CANCELLATION_REASONS, type CancellationReason} from '@/features/settings/subscription-cancellation';
+import {SettingsSubpageHeader} from '@/components/settings/SettingsSubpageHeader';
 
 export default function CancelPlanScreen() {
   const router = useRouter();
@@ -27,7 +27,7 @@ export default function CancelPlanScreen() {
     try { if (await cancelBillingSubscription({queryClient}, payload)) router.replace('/settings/billing'); } finally { setBusy(false); }
   }, [details, queryClient, reason, router]);
   return <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
-    <View className="h-[104px] flex-row items-center justify-between px-4"><Button accessibilityLabel="Go back" variant="secondary" size="lg" className="size-14 px-0" onPress={back}><ChevronLeft size={25} color={COLORS.textBase} /></Button><Text className="text-center text-text-strong" style={TYPE.screenTitle}>Cancel Plan</Text><View className="size-14" /></View>
+    <SettingsSubpageHeader title="Cancel Plan" onBack={back} />
     <ScrollView className="flex-1" contentContainerStyle={{paddingHorizontal: 16, paddingBottom: 24}} keyboardShouldPersistTaps="handled">
       <Text className="text-text-strong mt-4" style={TYPE.uiTitle}>Reason for cancellation</Text>
       <Text className="text-text-base mt-3" style={TYPE.bodyLarge}>Your feedback helps us make Memento AI better</Text>

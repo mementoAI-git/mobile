@@ -49,11 +49,17 @@ describe('Settings typography', () => {
       '../../components/beneficiaries/BeneficiaryPersonRow.tsx',
       '../../components/beneficiaries/BeneficiaryGroupRow.tsx',
       '../../components/beneficiaries/BeneficiaryEmptyState.tsx',
+      '../../components/settings/SettingsSubpageHeader.tsx',
     ].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8'));
 
     for (const source of settingsSources) {
-      expect(source).toContain("@/constants/typography");
-      expect(source).toMatch(/TYPE\.(?:screenTitle|sectionTitle|cardTitle|label|body|bodySmall)/);
+      const usesSharedHeader = source.includes('SettingsSubpageHeader');
+      expect(
+        source.includes("@/constants/typography") || usesSharedHeader,
+      ).toBe(true);
+      expect(
+        /TYPE\.(?:screenTitle|sectionTitle|cardTitle|label|body|bodySmall)/.test(source) || usesSharedHeader,
+      ).toBe(true);
       expect(source).not.toContain('settings-typography');
       expect(source).not.toContain('SETTINGS_TYPE');
     }
