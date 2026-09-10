@@ -8,6 +8,7 @@ import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/lib/utils';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 const SUMMARY_TAB_KEY = 'summary';
 
@@ -88,7 +89,7 @@ export function MemoryInsightsSheet() {
       <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 24, paddingBottom: 48 }}>
         {/* Beneficiaries section */}
         <View>
-          <Text className="text-[11px] font-semibold uppercase tracking-widest text-text-weak mb-3" style={{ fontFamily: FONTS.sansSemi }}>
+          <Text className="uppercase tracking-widest text-text-weak mb-3" style={TYPE.metadata}>
             Beneficiaries
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-4">
@@ -101,7 +102,7 @@ export function MemoryInsightsSheet() {
                     <Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>{b.name[0]}</Text>
                   )}
                 </View>
-                <Text className="text-[10px] text-text-strong text-center leading-tight truncate w-full" style={{ fontFamily: FONTS.sansMedium }}>
+                <Text className="text-text-strong text-center truncate w-full" style={TYPE.eyebrow}>
                   {b.name.split(' ')[0]}
                 </Text>
               </View>
@@ -113,7 +114,7 @@ export function MemoryInsightsSheet() {
               <View className="size-12 rounded-full border-2 border-dashed border-stroke-weak items-center justify-center bg-white/50">
                 <Plus size={18} color={COLORS.textWeak} />
               </View>
-              <Text className="text-[10px] text-text-weak text-center" style={{ fontFamily: FONTS.sans }}>Add</Text>
+              <Text className="text-text-weak text-center" style={TYPE.eyebrow}>Add</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>

@@ -16,7 +16,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui';
 import { SecurityCredentialRow } from '@/components/security/SecurityCredentialRow';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { storageKeys } from '@/constants/storage-keys';
 import { classifyPasskeyError } from '@/features/security/security-flow';
@@ -121,12 +121,12 @@ export default function SecuritySettingsScreen() {
         <TouchableOpacity onPress={handleBack} style={styles.backButton} activeOpacity={0.78}>
           <ArrowLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
-        <Text style={SETTINGS_TYPE.screenTitle}>Security</Text>
+        <Text style={TYPE.screenTitle}>Security</Text>
         <View style={{ width: 44 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <Text style={SETTINGS_TYPE.sectionTitle}>Password</Text>
+        <Text style={TYPE.sectionTitle}>Password</Text>
         <View style={styles.passwordRow}>
           <Text style={styles.passwordDots}>********</Text>
           <Button
@@ -140,8 +140,8 @@ export default function SecuritySettingsScreen() {
         </View>
 
         <View style={styles.twoFactorCard}>
-          <Text style={SETTINGS_TYPE.cardTitle}>Two-factor authentication</Text>
-          <Text style={[SETTINGS_TYPE.body, { marginTop: 8 }]}>
+          <Text style={TYPE.cardTitle}>Two-factor authentication</Text>
+          <Text style={[TYPE.body, { marginTop: 8 }]}>
             Add a verification step each time you try to sign in on a new device.
           </Text>
           {!twoFactor.is2FAEnabled && (
@@ -171,8 +171,8 @@ export default function SecuritySettingsScreen() {
         </View>
 
         <View style={{ marginTop: 26 }}>
-          <Text style={SETTINGS_TYPE.sectionTitle}>Passkeys</Text>
-          <Text style={[SETTINGS_TYPE.body, { marginTop: 8 }]}>
+          <Text style={TYPE.sectionTitle}>Passkeys</Text>
+          <Text style={[TYPE.body, { marginTop: 8 }]}>
             Sign in without a password using Fingerprint, Face ID, or your device lock.
           </Text>
           <Button
@@ -224,8 +224,8 @@ export default function SecuritySettingsScreen() {
 
           {fallbackOffered && (
             <View style={styles.fallbackCard}>
-              <Text style={SETTINGS_TYPE.cardTitle}>Passkeys aren&apos;t available here</Text>
-              <Text style={[SETTINGS_TYPE.supporting, { marginTop: 5 }]}>
+              <Text style={TYPE.cardTitle}>Passkeys aren&apos;t available here</Text>
+              <Text style={[TYPE.bodySmall, { marginTop: 5 }]}>
                 You can still protect quick sign-in with Face ID or Touch ID on this device.
               </Text>
               <Button variant="secondary" size="lg" className="mt-3 h-10" onPress={enableFallback}>
@@ -233,11 +233,11 @@ export default function SecuritySettingsScreen() {
               </Button>
             </View>
           )}
-          {message && <Text style={[SETTINGS_TYPE.supporting, { color: COLORS.error, marginTop: 10 }]}>{message}</Text>}
+          {message && <Text style={[TYPE.bodySmall, { color: COLORS.error, marginTop: 10 }]}>{message}</Text>}
         </View>
 
         <View style={styles.logoutAllRow}>
-          <Text style={SETTINGS_TYPE.cardTitle}>Log out of all devices</Text>
+          <Text style={TYPE.cardTitle}>Log out of all devices</Text>
           <Button
             variant="outline"
             size="lg"
@@ -293,8 +293,7 @@ const styles = StyleSheet.create({
   passwordDots: {
     flex: 1,
     color: COLORS.textBase,
-    fontFamily: FONTS.sans,
-    fontSize: 24,
+    ...TYPE.sectionTitle,
     letterSpacing: 3,
   },
   twoFactorCard: {

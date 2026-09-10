@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Sparkles, Crown, CheckCircle2, Zap } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Button } from '@/components/ui';
 import * as Haptics from 'expo-haptics';
 import { useQueryClient } from '@tanstack/react-query';
@@ -98,7 +99,7 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
           </Text>
         </View>
         <View className="bg-brand/10 border border-brand/20 px-3 py-1 rounded-full">
-          <Text className="text-[10px] font-bold text-brand" style={{ fontFamily: FONTS.sansBold }}>POPULAR</Text>
+          <Text className="text-brand" style={TYPE.eyebrow}>POPULAR</Text>
         </View>
       </View>
 

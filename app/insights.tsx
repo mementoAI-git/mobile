@@ -14,7 +14,9 @@ import {
   InsightsContentCard,
   type InsightsTab,
 } from '@/components/account/InsightsContentCard';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { calculateMilestones } from '@/features/insights/milestone-celebrations';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useUserStats } from '@/hooks/queries/use-overview';
@@ -185,11 +187,11 @@ export default function InsightsScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Award size={18} color={COLORS.brand} />
-                  <Text style={{ fontFamily: FONTS.serif, fontSize: 18, color: COLORS.textStrong }}>
+                  <Text style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>
                     Milestones & Streaks
                   </Text>
                 </View>
-                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 12, color: COLORS.brand }}>
+                <Text style={{ ...TYPE.metadata, color: COLORS.brand }}>
                   {milestones.filter((m) => m.achieved).length} of {milestones.length}
                 </Text>
               </View>
@@ -212,8 +214,7 @@ export default function InsightsScreen() {
                     <View style={{ flex: 1, paddingRight: 12 }}>
                       <Text
                         style={{
-                          fontFamily: FONTS.sansBold,
-                          fontSize: 14,
+                          ...TYPE.label,
                           color: milestone.achieved ? COLORS.textStrong : COLORS.textWeak,
                         }}
                       >
@@ -221,8 +222,7 @@ export default function InsightsScreen() {
                       </Text>
                       <Text
                         style={{
-                          fontFamily: FONTS.sans,
-                          fontSize: 12,
+                          ...TYPE.metadata,
                           color: COLORS.textWeak,
                           marginTop: 2,
                         }}
@@ -247,8 +247,7 @@ export default function InsightsScreen() {
                       ) : null}
                       <Text
                         style={{
-                          fontFamily: FONTS.sansSemi,
-                          fontSize: 11,
+                          ...TYPE.metadata,
                           color: milestone.achieved ? COLORS.success : COLORS.textWeak,
                         }}
                       >
@@ -288,14 +287,12 @@ const styles = {
     right: 76,
     textAlign: 'center' as const,
     color: COLORS.textStrong,
-    fontFamily: FONTS.serif,
-    fontSize: 22,
+    ...TYPE.sectionTitle,
     lineHeight: 28,
   },
   biography: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sans,
-    fontSize: 15,
+    ...TYPE.body,
     lineHeight: 21,
     marginHorizontal: 16,
     marginTop: 28,
@@ -318,8 +315,7 @@ const styles = {
   },
   tabText: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansMedium,
-    fontSize: 14,
+    ...TYPE.label,
   },
   activeTabText: {
     color: COLORS.textInverse,

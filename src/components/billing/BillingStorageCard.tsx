@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
+import { TYPE } from '@/constants/typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import type { StoragePresentation } from '@/features/settings/billing-storage';
 
@@ -13,12 +14,12 @@ function formatBytes(bytes: number) {
 export const BillingStorageCard = React.memo(function BillingStorageCard({storage}: {storage: StoragePresentation}) {
   return <View className="rounded-2xl bg-fill-weak px-3 py-3" style={{height: 85}}>
     <View className="flex-row justify-between items-center">
-      <Text className="text-[15px] text-text-strong" style={{fontFamily: FONTS.sansSemi}}>Storage</Text>
-      <Text className="text-[15px] text-text-base" style={{fontFamily: FONTS.sans}}>{formatBytes(storage.used)} / {formatBytes(storage.limit)} Used</Text>
+      <Text className="text-text-strong" style={TYPE.label}>Storage</Text>
+      <Text className="text-text-base" style={TYPE.body}>{formatBytes(storage.used)} / {formatBytes(storage.limit)} Used</Text>
     </View>
     <View className="h-[13px] rounded bg-card mt-1.5 overflow-hidden">
       <View style={{width: `${storage.percent}%`, height: 13, backgroundColor: COLORS.onboardingAmber}} />
     </View>
-    <Text className="text-[15px] text-text-base mt-1.5" style={{fontFamily: FONTS.sans}}>{formatBytes(storage.remaining)} Available</Text>
+    <Text className="text-text-base mt-1.5" style={TYPE.body}>{formatBytes(storage.remaining)} Available</Text>
   </View>;
 });

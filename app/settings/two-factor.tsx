@@ -7,7 +7,7 @@ import { UiShieldTick, UiShieldOff, UiPhone01, UiCopy01 } from '@/components/ui/
 import { Button, TextInput } from '@/components/ui';
 import { useTwoFactorSettingsLogic } from '@/hooks/use-two-factor-settings-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 
@@ -38,10 +38,10 @@ export default function TwoFactorScreen() {
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={SETTINGS_TYPE.screenTitle}>
+          <Text style={TYPE.screenTitle}>
             Two-Factor Auth
           </Text>
-          <Text style={SETTINGS_TYPE.supporting}>
+          <Text style={TYPE.bodySmall}>
             Add a second layer of protection
           </Text>
         </View>
@@ -62,10 +62,10 @@ export default function TwoFactorScreen() {
             }
           </View>
           <View className="flex-1">
-            <Text style={SETTINGS_TYPE.cardTitle}>
+            <Text style={TYPE.cardTitle}>
               {is2FAEnabled ? 'Enabled' : 'Not enabled'}
             </Text>
-            <Text className="mt-0.5" style={SETTINGS_TYPE.supporting}>
+            <Text className="mt-0.5" style={TYPE.bodySmall}>
               {is2FAEnabled
                 ? 'Your account is protected with a second factor'
                 : 'Protect your account with an authenticator app'}
@@ -95,10 +95,10 @@ export default function TwoFactorScreen() {
         {setupData && (
           <Animated.View entering={FadeInDown.delay(150).duration(500)} className="bg-white rounded-[32px] p-6 gap-5">
             <View style={{ gap: 2 }}>
-              <Text className="text-[11px] text-text-muted uppercase tracking-[2px]" style={{ fontFamily: FONTS.sansBold }}>
+              <Text className="text-text-muted uppercase tracking-[2px]" style={TYPE.metadata}>
                 Setup
               </Text>
-              <Text className="text-[13px] text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+              <Text className="text-text-weak" style={TYPE.bodySmall}>
                 Scan the QR code in your authenticator app, or copy the secret key below.
               </Text>
             </View>
@@ -107,7 +107,7 @@ export default function TwoFactorScreen() {
               <View className="size-11 rounded-2xl bg-brand/10 items-center justify-center shrink-0">
                 <UiPhone01 size={20} color={COLORS.brand} strokeWidth={1.5} />
               </View>
-              <Text className="text-[13px] text-text-weak leading-relaxed flex-1" style={{ fontFamily: FONTS.sans }}>
+              <Text className="text-text-weak flex-1" style={TYPE.bodySmall}>
                 Open your authenticator app (Google Authenticator, Authy, etc.) and scan the QR code, or enter the secret key manually.
               </Text>
             </View>
@@ -122,10 +122,10 @@ export default function TwoFactorScreen() {
                 className="bg-fill-weaker rounded-2xl p-4 border border-stroke-weaker flex-row items-center justify-between"
               >
                 <View className="flex-1">
-                  <Text className="text-[10px] text-text-muted uppercase tracking-[2px] mb-1.5" style={{ fontFamily: FONTS.sansBold }}>
+                  <Text className="text-text-muted uppercase tracking-[2px] mb-1.5" style={TYPE.eyebrow}>
                     Tap to copy the secret key
                   </Text>
-                  <Text className="text-[15px] text-text-strong tracking-[2px]" style={{ fontFamily: FONTS.mono }}>
+                  <Text className="text-text-strong tracking-[2px]" style={TYPE.mono}>
                     {setupData.secret}
                   </Text>
                 </View>

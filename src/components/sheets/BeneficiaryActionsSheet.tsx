@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { Mail, Trash2 } from 'lucide-react-native';
 import { Avatar, Button } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import type { IBeneficiary } from '@/types';
 
 export function BeneficiaryActionsSheet({
@@ -21,13 +21,13 @@ export function BeneficiaryActionsSheet({
     <View className="px-1 pb-2 pt-3">
       <View className="items-center">
         <Avatar uri={beneficiary.user?.picture_url} name={beneficiary.name} size="xl" />
-        <Text className="mt-4" style={SETTINGS_TYPE.identityTitle}>
+        <Text className="mt-4" style={TYPE.cardTitle}>
           {beneficiary.name}
         </Text>
-        <Text className="mt-1" style={SETTINGS_TYPE.body}>
+        <Text className="mt-1" style={TYPE.body}>
           {beneficiary.email}
         </Text>
-        <Text className="mt-1" style={SETTINGS_TYPE.supporting}>
+        <Text className="mt-1" style={TYPE.bodySmall}>
           {beneficiary.relationship || 'Beneficiary'}
         </Text>
       </View>

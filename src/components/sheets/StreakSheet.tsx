@@ -10,7 +10,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useUserStore } from '@/store';
 import { useUserStats } from '@/hooks/queries/use-overview';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { ZapIconWarm } from '@/components/ui';
 import { toMondayFirstIndex } from '@/features/account/account-overview';
 import { CompletedCheckmarkIcon } from '../ui/icons/CompletedCheckmarkIcon';
@@ -103,8 +105,7 @@ export function StreakSheet() {
           </View>
           {/* Number overlaps the bottom of the arc ring */}
           <Text style={{
-            fontFamily: FONTS.serifBold,
-            fontSize: 52,
+            ...TYPE.displayStat,
             color: COLORS.textStrong,
             lineHeight: 56,
             marginTop: -24,
@@ -118,10 +119,10 @@ export function StreakSheet() {
 
       {/* ── Title + subtitle ────────────────────────────────────── */}
       <View style={{ alignItems: 'center', gap: 6, marginBottom: 32, paddingHorizontal: 24 }}>
-        <Text style={{ fontFamily: FONTS.serif, fontSize: 26, color: COLORS.textStrong, textAlign: 'center' }}>
+        <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong, textAlign: 'center' }}>
           {streakCount === 1 ? 'Day' : 'Days'} streak
         </Text>
-        <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, textAlign: 'center', lineHeight: 20 }}>
+        <Text style={{ ...TYPE.label, color: COLORS.textWeak, textAlign: 'center', lineHeight: 20 }}>
           {getStreakSubtitle(streakCount, nickname)}
         </Text>
       </View>
@@ -140,8 +141,7 @@ export function StreakSheet() {
           return (
             <View key={index} style={{ flex: 1, alignItems: 'center', gap: 8 }}>
               <Text style={{
-                fontFamily: FONTS.sansBold,
-                fontSize: 11,
+                ...TYPE.metadata,
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
                 color: isToday ? COLORS.brand : COLORS.textMuted,
@@ -164,13 +164,13 @@ export function StreakSheet() {
                 // TODAY: ZapIconWarm on top, bold orange date below — no border ring
                 <View style={{ alignItems: 'center', height: 36, justifyContent: 'center', flexDirection: 'row', gap: 4  }}>
                   <ZapIconWarm size={16} />
-                  <Text style={{ fontFamily: FONTS.sansBold, fontSize: 13, color: COLORS.brand, lineHeight: 16 }}>
+                  <Text style={{ ...TYPE.bodySmall, color: COLORS.brand, lineHeight: 16 }}>
                     {dateNum}
                   </Text>
                 </View>
               ) : (
                 <View style={{ height: 36, width: 36, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 15, color: COLORS.textWeak }}>
+                  <Text style={{ ...TYPE.body, color: COLORS.textWeak }}>
                     {dateNum}
                   </Text>
                 </View>
@@ -192,8 +192,7 @@ export function StreakSheet() {
           borderColor: COLORS.strokeWeaker,
         }}>
           <Text style={{
-            fontFamily: FONTS.sansSemi,
-            fontSize: 13,
+            ...TYPE.bodySmall,
             color: COLORS.textStrong,
             textAlign: 'center',
             marginBottom: 8,
@@ -222,10 +221,10 @@ export function StreakSheet() {
                   borderRightColor: COLORS.strokeWeaker,
                 }}
               >
-                <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 12, color: COLORS.textWeak }}>
+                <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>
                   {item.label}
                 </Text>
-                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>
+                <Text style={{ ...TYPE.uiTitle, color: COLORS.textStrong }}>
                   {item.value}
                 </Text>
               </View>
@@ -233,8 +232,7 @@ export function StreakSheet() {
           </View>
         </View>
         <Text style={{
-          fontFamily: FONTS.sans,
-          fontSize: 11,
+          ...TYPE.metadata,
           color: COLORS.textMuted,
           textAlign: 'center',
           marginTop: 10,

@@ -5,7 +5,7 @@ import { X } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Button, TextInput } from '@/components/ui';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useTwoFactorSettingsLogic } from '@/hooks/use-two-factor-settings-logic';
 
@@ -29,7 +29,7 @@ export function SetupTwoFactorSheet({
   return (
     <View style={{ flex: 1 }}>
       <View style={twoFactorStyles.header}>
-        <Text style={SETTINGS_TYPE.sectionTitle}>Set up two-factor authentication</Text>
+        <Text style={TYPE.sectionTitle}>Set up two-factor authentication</Text>
         <TouchableOpacity
           onPress={() => {
             Haptics.selectionAsync();
@@ -47,11 +47,11 @@ export function SetupTwoFactorSheet({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20 }}
       >
-        <Text style={SETTINGS_TYPE.cardTitle}>Step 1</Text>
+        <Text style={TYPE.cardTitle}>Step 1</Text>
         <Text style={twoFactorStyles.copy}>Download an authenticator app:</Text>
         <Text style={twoFactorStyles.link}>1. Google Authenticator{'\n'}2. Authy.</Text>
 
-        <Text style={[SETTINGS_TYPE.cardTitle, { marginTop: 18 }]}>Step 2</Text>
+        <Text style={[TYPE.cardTitle, { marginTop: 18 }]}>Step 2</Text>
         {manual ? (
           <>
             <Text style={twoFactorStyles.copy}>
@@ -99,7 +99,7 @@ export function SetupTwoFactorSheet({
           </>
         )}
 
-        <Text style={[SETTINGS_TYPE.cardTitle, { marginTop: 18 }]}>Step 3</Text>
+        <Text style={[TYPE.cardTitle, { marginTop: 18 }]}>Step 3</Text>
         <Text style={twoFactorStyles.copy}>
           Enter the six-digit code from your authenticator app.
         </Text>
@@ -161,15 +161,13 @@ const twoFactorStyles = {
   },
   copy: {
     color: COLORS.textBase,
-    fontFamily: FONTS.sans,
-    fontSize: 14,
+    ...TYPE.label,
     lineHeight: 20,
     marginTop: 10,
   },
   link: {
     color: COLORS.brand,
-    fontFamily: FONTS.sansMedium,
-    fontSize: 14,
+    ...TYPE.label,
     lineHeight: 20,
     marginTop: 10,
   },
@@ -184,8 +182,8 @@ const twoFactorStyles = {
     alignItems: 'center' as const,
     gap: 8,
   },
-  code: { flex: 1, color: COLORS.textStrong, fontFamily: FONTS.mono, fontSize: 14 },
-  copyAction: { color: COLORS.info, fontFamily: FONTS.sansMedium, fontSize: 13 },
+  code: { flex: 1, color: COLORS.textStrong, ...TYPE.mono },
+  copyAction: { color: COLORS.info, ...TYPE.bodySmall },
   qr: { width: 126, height: 126, marginTop: 10 },
   actions: {
     flexDirection: 'row' as const,
@@ -197,5 +195,5 @@ const twoFactorStyles = {
     borderTopColor: COLORS.strokeWeaker,
     backgroundColor: COLORS.background,
   },
-  error: { color: COLORS.error, fontFamily: FONTS.sans, fontSize: 12, marginTop: 8 },
+  error: { color: COLORS.error, ...TYPE.metadata, marginTop: 8 },
 };

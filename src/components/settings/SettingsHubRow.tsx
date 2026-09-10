@@ -8,7 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 
 interface SettingsHubRowProps {
   label: string;
@@ -51,7 +51,7 @@ export const SettingsHubRow = React.memo(function SettingsHubRow({
       >
         <View style={{ width: 32, alignItems: 'center' }}>{icon}</View>
         <Text
-          style={[SETTINGS_TYPE.rowLabel, { flex: 1 }]}
+          style={[TYPE.label, { flex: 1 }]}
         >
           {label}
         </Text>

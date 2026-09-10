@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import { getGroupMemberCount } from '@/features/beneficiaries/collections';
 import { GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
 import type { IGroup } from '@/types';
@@ -30,17 +30,17 @@ export const BeneficiaryGroupRow = memo(function BeneficiaryGroupRow({
       <View className="flex-1">
         <View className="flex-row items-center">
           <View className="mr-2.5 size-3 rounded-[4px]" style={{ backgroundColor: color }} />
-          <Text style={SETTINGS_TYPE.identityTitle}>
+          <Text style={TYPE.cardTitle}>
             {group.name}
           </Text>
         </View>
         {created && (
-          <Text className="mt-1" style={SETTINGS_TYPE.supporting}>
+          <Text className="mt-1" style={TYPE.bodySmall}>
             Created {created}
           </Text>
         )}
       </View>
-      <Text className="mr-5" style={SETTINGS_TYPE.rowLabel}>
+      <Text className="mr-5" style={TYPE.label}>
         {count} {count === 1 ? 'Person' : 'People'}
       </Text>
       <ChevronRight size={24} color={COLORS.textBase} strokeWidth={2.2} />

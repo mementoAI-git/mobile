@@ -17,7 +17,9 @@ import { AccountUpgradeBanner } from '@/components/account/AccountUpgradeBanner'
 import { EnrichmentScoreCard } from '@/components/account/EnrichmentScoreCard';
 import { WeeklyProgressCard } from '@/components/account/WeeklyProgressCard';
 import { AccountSkeleton, Avatar, Button } from '@/components/ui';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import {
   clampEnrichmentScore,
   deriveAccountWeek,
@@ -168,8 +170,7 @@ export default function AccountOverviewScreen() {
               right: 76,
               textAlign: 'center',
               color: COLORS.textStrong,
-              fontFamily: FONTS.serif,
-              fontSize: 22,
+              ...TYPE.sectionTitle,
               lineHeight: 28,
             }}
           >
@@ -222,8 +223,7 @@ export default function AccountOverviewScreen() {
                       numberOfLines={2}
                       style={{
                         color: COLORS.textStrong,
-                        fontFamily: FONTS.sansBold,
-                        fontSize: 24,
+                        ...TYPE.sectionTitle,
                         lineHeight: 29,
                         letterSpacing: -0.5,
                       }}
@@ -234,8 +234,7 @@ export default function AccountOverviewScreen() {
                       numberOfLines={1}
                       style={{
                         color: COLORS.textStrong,
-                        fontFamily: FONTS.sans,
-                        fontSize: 14,
+                        ...TYPE.label,
                         lineHeight: 19,
                       }}
                     >
@@ -245,8 +244,7 @@ export default function AccountOverviewScreen() {
                       <Text
                         style={{
                           color: COLORS.textWeak,
-                          fontFamily: FONTS.sans,
-                          fontSize: 13,
+                          ...TYPE.bodySmall,
                           lineHeight: 18,
                         }}
                       >
@@ -266,8 +264,7 @@ export default function AccountOverviewScreen() {
                   <Text
                     style={{
                       color: COLORS.textStrong,
-                      fontFamily: FONTS.sans,
-                      fontSize: 15,
+                      ...TYPE.body,
                       lineHeight: 21,
                     }}
                   >
@@ -286,8 +283,7 @@ export default function AccountOverviewScreen() {
                     <Text
                       style={{
                         color: COLORS.textBase,
-                        fontFamily: FONTS.sans,
-                        fontSize: 13,
+                        ...TYPE.bodySmall,
                         lineHeight: 19,
                       }}
                     >

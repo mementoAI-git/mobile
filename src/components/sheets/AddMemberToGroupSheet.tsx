@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUiStore } from '@/store';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useAddGroupMembers } from '@/hooks/mutations/use-group-mutations';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Avatar, Button } from '@/components/ui';
 
 interface Props {
@@ -68,7 +70,7 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
     <View style={{ flex: 1 }}>
       {/* ── Header ── */}
       <View style={{ height: 68, paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>
+        <Text style={{ ...TYPE.uiTitle, color: COLORS.textStrong }}>
           Add Member to group
         </Text>
         <TouchableOpacity
@@ -89,7 +91,7 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
       >
         {nonMembers.length === 0 ? (
           <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 15, color: COLORS.textWeak, textAlign: 'center' }}>
+            <Text style={{ ...TYPE.body, color: COLORS.textWeak, textAlign: 'center' }}>
               All your beneficiaries are already in this group.
             </Text>
           </View>
@@ -117,15 +119,15 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: FONTS.sansBold, fontSize: 17, color: COLORS.textStrong }} numberOfLines={1}>
+                  <Text style={{ ...TYPE.cardTitle, color: COLORS.textStrong }} numberOfLines={1}>
                     {name}
                   </Text>
                   {member.email && (
-                    <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, marginTop: 2 }} numberOfLines={1}>
+                    <Text style={{ ...TYPE.label, color: COLORS.textWeak, marginTop: 2 }} numberOfLines={1}>
                       {member.email}
                     </Text>
                   )}
-                  <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textMuted, marginTop: 2 }}>
+                  <Text style={{ ...TYPE.label, color: COLORS.textMuted, marginTop: 2 }}>
                     {statusText}
                   </Text>
                 </View>

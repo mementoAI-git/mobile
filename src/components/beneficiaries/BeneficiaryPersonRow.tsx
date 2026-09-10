@@ -3,7 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { Avatar } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import {
   getBeneficiaryStatusBadge,
   getVaultAccessScopeLabel,
@@ -30,7 +30,7 @@ export const BeneficiaryPersonRow = memo(function BeneficiaryPersonRow({
       <Avatar uri={picture} name={beneficiary.name} size="lg" />
       <View className="ml-4 flex-1">
         <View className="flex-row items-center justify-between">
-          <Text style={SETTINGS_TYPE.identityTitle}>
+          <Text style={TYPE.cardTitle}>
             {beneficiary.name || 'Pending invitation'}
           </Text>
           <View
@@ -45,8 +45,7 @@ export const BeneficiaryPersonRow = memo(function BeneficiaryPersonRow({
           >
             <Text
               style={{
-                fontFamily: FONTS.sansBold,
-                fontSize: 10,
+                ...TYPE.eyebrow,
                 color: badge.textColor,
                 letterSpacing: 0.3,
               }}
@@ -56,19 +55,18 @@ export const BeneficiaryPersonRow = memo(function BeneficiaryPersonRow({
           </View>
         </View>
 
-        <Text numberOfLines={1} className="mt-0.5" style={SETTINGS_TYPE.body}>
+        <Text numberOfLines={1} className="mt-0.5" style={TYPE.body}>
           {beneficiary.email}
         </Text>
 
         <View className="mt-1 flex-row items-center gap-2">
-          <Text style={SETTINGS_TYPE.supporting}>
+          <Text style={TYPE.bodySmall}>
             {beneficiary.relationship || 'Beneficiary'}
           </Text>
           <Text style={{ color: COLORS.textMuted }}>•</Text>
           <Text
             style={{
-              fontFamily: FONTS.sansMedium,
-              fontSize: 12,
+              ...TYPE.metadata,
               color: COLORS.textWeak,
             }}
           >

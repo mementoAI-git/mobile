@@ -7,7 +7,9 @@ import { Check, Pencil, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { toast } from '@/components/ui/Toast';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { buildBeneficiaryInvitePayload, GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
 import {
   VAULT_ACCESS_OPTIONS,
@@ -34,7 +36,7 @@ interface PickedAvatar {
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>
+    <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>
       {children}
     </Text>
   );
@@ -59,8 +61,7 @@ function SheetInput({
           backgroundColor: COLORS.card,
           paddingHorizontal: 16,
           paddingVertical: multiline ? 14 : 0,
-          fontFamily: FONTS.sans,
-          fontSize: 16,
+          ...TYPE.bodyLarge,
           color: COLORS.textStrong,
           textAlignVertical: multiline ? 'top' : 'center',
         },
@@ -239,7 +240,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ flex: 1 }}>
           <View style={{ minHeight: 68, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>
+            <Text style={{ ...TYPE.uiTitle, color: COLORS.textStrong }}>
               {isEdit ? 'Edit Beneficiary' : 'Invite Beneficiary'}
             </Text>
             <TouchableOpacity onPress={() => { Haptics.selectionAsync(); close(); }} accessibilityRole="button" accessibilityLabel="Close invite beneficiary" style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak }}>
@@ -313,8 +314,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Text
                           style={{
-                            fontFamily: FONTS.sansBold,
-                            fontSize: 15,
+                            ...TYPE.body,
                             color: selected ? COLORS.brand : COLORS.textStrong,
                           }}
                         >
@@ -345,8 +345,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
                       </View>
                       <Text
                         style={{
-                          fontFamily: FONTS.sans,
-                          fontSize: 13,
+                          ...TYPE.bodySmall,
                           color: COLORS.textWeak,
                           lineHeight: 18,
                         }}
@@ -367,7 +366,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
                   onChangeText={setGroupSearch}
                   placeholder="Search group name to add user to"
                   placeholderTextColor={COLORS.textMuted}
-                  style={{ minHeight: 38, padding: 0, fontFamily: FONTS.sans, fontSize: 15, color: COLORS.textStrong }}
+                  style={{ minHeight: 38, padding: 0, ...TYPE.body, color: COLORS.textStrong }}
                 />
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   {filteredGroups.slice(0, 6).map((group) => {
@@ -376,7 +375,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
                     return (
                       <TouchableOpacity key={group._id} onPress={() => toggleGroup(group._id)} style={{ minHeight: 34, paddingHorizontal: 10, borderRadius: 17, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: selected ? color : COLORS.fillWeak, borderWidth: 1, borderColor: selected ? color : COLORS.strokeWeaker }}>
                         {selected ? <Check size={14} color={COLORS.textStrong} strokeWidth={2.5} /> : null}
-                        <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 12, color: COLORS.textStrong }}>{group.name}</Text>
+                        <Text style={{ ...TYPE.metadata, color: COLORS.textStrong }}>{group.name}</Text>
                       </TouchableOpacity>
                     );
                   })}

@@ -3,7 +3,9 @@ import {Text, View} from 'react-native';
 import {useRouter, type Href} from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import {AlertTriangleIcon, Button} from '@/components/ui';
+
 import {COLORS, FONTS} from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 export function CancelSubscriptionConfirmationSheet({onClose}: {onClose?: () => void}) {
   const router = useRouter();
@@ -15,8 +17,8 @@ export function CancelSubscriptionConfirmationSheet({onClose}: {onClose?: () => 
   return <View style={{paddingHorizontal: 20, paddingTop: 54, paddingBottom: 20}}>
     <View style={{alignItems: 'center'}}>
       <AlertTriangleIcon size={116} />
-      <Text style={{fontFamily: FONTS.sansBold, fontSize: 28, lineHeight: 36, color: COLORS.textStrong, textAlign: 'center', maxWidth: 360, marginTop: 42}}>Are you sure you want to cancel your subscription</Text>
-      <Text style={{fontFamily: FONTS.sans, fontSize: 17, lineHeight: 25, color: COLORS.textBase, textAlign: 'center', maxWidth: 350, marginTop: 18}}>If you cancel, you’ll keep full access to your plan features until the end of your billing period</Text>
+      <Text style={{...TYPE.screenTitle, lineHeight: 36, color: COLORS.textStrong, textAlign: 'center', maxWidth: 360, marginTop: 42}}>Are you sure you want to cancel your subscription</Text>
+      <Text style={{...TYPE.cardTitle, lineHeight: 25, color: COLORS.textBase, textAlign: 'center', maxWidth: 350, marginTop: 18}}>If you cancel, you’ll keep full access to your plan features until the end of your billing period</Text>
     </View>
     <View style={{flexDirection: 'row', gap: 12, marginTop: 52}}>
       <Button variant="secondary" size="lg" className="flex-1" onPress={onClose}>Go back</Button>

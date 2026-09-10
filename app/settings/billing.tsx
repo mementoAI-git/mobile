@@ -5,7 +5,7 @@ import { ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Button } from '@/components/ui';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import {
   BillingDetailsSection,
   BillingInvoicesPanel,
@@ -55,7 +55,7 @@ export default function BillingSettingsScreen() {
             <ChevronLeft size={25} color={COLORS.textBase} />
           </Button>
         </View>
-        <Text className="text-center" style={SETTINGS_TYPE.screenTitle}>Billing</Text>
+        <Text className="text-center" style={TYPE.screenTitle}>Billing</Text>
       </View>
 
       <BillingTabs active={activeTab} onChange={setActiveTab} />

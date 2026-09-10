@@ -22,7 +22,9 @@ import {
 import { Button, Spinner } from '@/components/ui';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useCreateCapsule, useUpdateCapsule } from '@/hooks/mutations/use-capsule-mutations';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { StylePicker } from '@/components/capsule/StylePicker';
 import dayjs from 'dayjs';
 import { useFiles } from '@/hooks/queries/use-files';
@@ -247,7 +249,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
               onSubmitEditing={handleRecipientInputSubmit}
               placeholder="Enter email address"
               placeholderTextColor={COLORS.textDisabled}
-              style={{ flex: 1, minWidth: 120, fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong, padding: 0 }}
+              style={{ flex: 1, minWidth: 120, ...TYPE.label, color: COLORS.textStrong, padding: 0 }}
               autoCapitalize="none"
               keyboardType="email-address"
               returnKeyType="done"
@@ -278,7 +280,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
                       </View>
                       <View className="items-center">
                         <Text className="text-xs text-text-strong text-center" numberOfLines={1} style={{ fontFamily: FONTS.sansMedium }}>{b.name}</Text>
-                        <Text className="text-[10px] text-text-weak text-center capitalize" numberOfLines={1} style={{ fontFamily: FONTS.sans }}>{b.relationship}</Text>
+                        <Text className="text-text-weak text-center capitalize" numberOfLines={1} style={TYPE.eyebrow}>{b.relationship}</Text>
                       </View>
                     </TouchableOpacity>
                   );
@@ -351,7 +353,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
                           resizeMode="cover"
                         />
                       ) : (
-                        <Text className={`text-[10px] font-bold uppercase ${isSelected ? 'text-brand' : 'text-text-weak'}`}>{media.type}</Text>
+                        <Text className={`uppercase ${isSelected ? 'text-brand' : 'text-text-weak'}`} style={TYPE.eyebrow}>{media.type}</Text>
                       )}
                       {isSelected && (
                         <View className="absolute top-1 right-1 bg-brand rounded-full p-0.5 shadow-sm">
@@ -381,7 +383,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
               placeholder="Header here"
               placeholderTextColor={COLORS.textMuted}
               className="text-base text-text-strong p-0 m-0"
-              style={{ fontFamily: FONTS.serif, fontSize: 16 }}
+              style={TYPE.bodyLarge}
             />
           </View>
           <View className="bg-fill-weaker border border-stroke-weaker rounded-xl px-4 py-3 min-h-[140px]">

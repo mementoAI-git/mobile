@@ -1,28 +1,9 @@
 // @ts-nocheck
 import { describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync } from 'node:fs';
-
-const typographyUrl = new URL(
-  '../../components/settings/settings-typography.ts',
-  import.meta.url,
-);
+import { readFileSync } from 'node:fs';
 
 describe('Settings typography', () => {
-  test('defines the shared editorial hierarchy', () => {
-    expect(existsSync(typographyUrl)).toBe(true);
-
-    const typography = readFileSync(typographyUrl, 'utf8');
-    expect(typography).toContain('screenTitle');
-    expect(typography).toContain('fontFamily: FONTS.serif');
-    expect(typography).toContain('identityTitle');
-    expect(typography).toContain('fontFamily: FONTS.serifMedium');
-    expect(typography).toContain('rowLabel');
-    expect(typography).toContain('fontFamily: FONTS.sansMedium');
-    expect(typography).toContain('buttonLabel');
-    expect(typography).toContain('fontFamily: FONTS.sansSemi');
-  });
-
-  test('applies the hierarchy throughout Settings', () => {
+  test('applies the global hierarchy throughout Settings', () => {
     const settingsSources = [
       '../../../app/settings/index.tsx',
       '../../../app/settings/profile.tsx',
@@ -41,7 +22,10 @@ describe('Settings typography', () => {
     ].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8'));
 
     for (const source of settingsSources) {
-      expect(source).toContain('SETTINGS_TYPE');
+      expect(source).toContain("@/constants/typography");
+      expect(source).toMatch(/TYPE\.(?:screenTitle|sectionTitle|cardTitle|label|body|bodySmall)/);
+      expect(source).not.toContain('settings-typography');
+      expect(source).not.toContain('SETTINGS_TYPE');
     }
   });
 
@@ -55,7 +39,10 @@ describe('Settings typography', () => {
     ].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8'));
 
     for (const source of settingsSheets) {
-      expect(source).toContain('SETTINGS_TYPE');
+      expect(source).toContain("@/constants/typography");
+      expect(source).toMatch(/TYPE\.(?:uiTitle|sectionTitle|cardTitle|label|body|bodySmall)/);
+      expect(source).not.toContain('settings-typography');
+      expect(source).not.toContain('SETTINGS_TYPE');
     }
   });
 });

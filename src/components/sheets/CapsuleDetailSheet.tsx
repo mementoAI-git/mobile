@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { getThemeById, getThemeByColor } from '@/constants/themes';
 import { Badge, Button } from '@/components/ui';
 import type { ICapsule } from '@/types';
@@ -237,7 +238,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
                               <Text className="text-sm text-text-strong" numberOfLines={1} style={{ fontFamily: FONTS.sansMedium }}>
                                 {a.name || 'Attachment'}
                               </Text>
-                              <Text className="text-[10px] text-text-weak uppercase" style={{ fontFamily: FONTS.sans }}>
+                              <Text className="text-text-weak uppercase" style={TYPE.eyebrow}>
                                 {a.type || 'FILE'}
                               </Text>
                             </View>

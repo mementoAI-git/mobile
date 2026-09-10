@@ -16,18 +16,18 @@ import { useDeleteAccount } from '@/hooks/mutations/use-auth-mutations';
 import { PRIVACY_URL, TERMS_URL } from '@/lib/env';
 import { useUiStore } from '@/store';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 function ComingSoonRow({ label }: { label: string }) {
   return (
     <View className="min-h-[68px] flex-row items-center justify-between gap-4">
-      <Text className="flex-1" style={SETTINGS_TYPE.rowLabel}>
+      <Text className="flex-1" style={TYPE.label}>
         {label}
       </Text>
       <View className="min-h-11 items-center justify-center rounded-2xl border border-stroke-weak bg-fill-weaker px-4 opacity-50">
-        <Text style={SETTINGS_TYPE.supporting}>
+        <Text style={TYPE.bodySmall}>
           Coming soon
         </Text>
       </View>
@@ -69,7 +69,7 @@ export default function PrivacySettingsScreen() {
         >
           <ArrowLeft size={23} color={COLORS.textBase} />
         </TouchableOpacity>
-        <Text style={SETTINGS_TYPE.screenTitle}>
+        <Text style={TYPE.screenTitle}>
           Privacy
         </Text>
         <View className="size-11" />
@@ -81,10 +81,10 @@ export default function PrivacySettingsScreen() {
       >
         <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
 
-        <Text style={SETTINGS_TYPE.sectionTitle}>
+        <Text style={TYPE.sectionTitle}>
           Manage your account privacy settings
         </Text>
-        <Text className="mt-4" style={SETTINGS_TYPE.body}>
+        <Text className="mt-4" style={TYPE.body}>
           Memento AI believes in transparent data practices. Learn how your information is protected when using our products, and visit our{' '}
           <Text
             onPress={() => openLegalUrl(PRIVACY_URL)}
@@ -109,37 +109,37 @@ export default function PrivacySettingsScreen() {
             <View className="size-8 items-center justify-center rounded-xl bg-success">
               <UiShieldTick size={18} color={COLORS.textInverse} strokeWidth={2.2} />
             </View>
-            <Text className="flex-1" style={SETTINGS_TYPE.cardTitle}>
+            <Text className="flex-1" style={TYPE.cardTitle}>
               How we protect your information
             </Text>
           </View>
-          <Text className="mt-4" style={[SETTINGS_TYPE.body, { color: COLORS.textStrong }]}>
+          <Text className="mt-4" style={[TYPE.body, { color: COLORS.textStrong }]}>
             Memento AI employs industry-standard security measures to protect your data.
           </Text>
           <View className="mt-4 gap-1.5 pl-3">
-            <Text className="text-[14px] leading-[21px] text-text-strong" style={{ fontFamily: FONTS.sans }}>
+            <Text className="text-text-strong" style={TYPE.body}>
               •  Memento AI encrypts your information and shared data in transit and at rest.
             </Text>
-            <Text className="text-[14px] leading-[21px] text-text-strong" style={{ fontFamily: FONTS.sans }}>
+            <Text className="text-text-strong" style={TYPE.body}>
               •  You control your conversations and data, and can change your sharing preferences at any time.
             </Text>
-            <Text className="text-[14px] leading-[21px] text-text-strong" style={{ fontFamily: FONTS.sans }}>
+            <Text className="text-text-strong" style={TYPE.body}>
               •  Memento AI deletes your account data when requested, subject to legal and safety obligations.
             </Text>
-            <Text className="text-[14px] leading-[21px] text-text-strong" style={{ fontFamily: FONTS.sans }}>
+            <Text className="text-text-strong" style={TYPE.body}>
               •  Memento AI doesn’t sell your personal data to third parties.
             </Text>
           </View>
         </View>
 
         <View className="mt-6 rounded-[24px] border border-stroke-weak bg-card p-5">
-          <Text className="mb-2" style={SETTINGS_TYPE.cardTitle}>
+          <Text className="mb-2" style={TYPE.cardTitle}>
             Privacy Settings
           </Text>
           <ComingSoonRow label="Export your information" />
           <ComingSoonRow label="Share stories" />
           <View className="min-h-[68px] flex-row items-center justify-between gap-4">
-            <Text className="flex-1" style={SETTINGS_TYPE.rowLabel}>
+            <Text className="flex-1" style={TYPE.label}>
               Delete your account
             </Text>
             <TouchableOpacity
@@ -148,7 +148,7 @@ export default function PrivacySettingsScreen() {
               activeOpacity={0.76}
               className="min-h-11 items-center justify-center rounded-2xl border border-error/20 bg-error/5 px-4"
             >
-              <Text className="text-[14px] text-error" style={{ fontFamily: FONTS.sansMedium }}>
+              <Text className="text-error" style={TYPE.buttonSmall}>
                 Delete account
               </Text>
             </TouchableOpacity>

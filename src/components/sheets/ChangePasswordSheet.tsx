@@ -6,7 +6,7 @@ import { X } from 'lucide-react-native';
 import { Controller, useForm } from 'react-hook-form';
 import * as Haptics from 'expo-haptics';
 import { Button, PasswordInput, TextInput } from '@/components/ui';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useChangePassword } from '@/hooks/mutations/use-auth-mutations';
 import { useProfile } from '@/hooks/queries/use-profile';
@@ -65,7 +65,7 @@ export function ChangePasswordSheet({
       showsVerticalScrollIndicator={false}
     >
       <View style={sheetStyles.header}>
-        <Text style={SETTINGS_TYPE.sectionTitle}>Change password</Text>
+        <Text style={TYPE.sectionTitle}>Change password</Text>
         <TouchableOpacity
           onPress={() => {
             Haptics.selectionAsync();
@@ -182,5 +182,5 @@ const sheetStyles = {
     borderTopColor: COLORS.strokeWeaker,
     backgroundColor: COLORS.background,
   },
-  error: { ...SETTINGS_TYPE.supporting, color: COLORS.error },
+  error: { ...TYPE.bodySmall, color: COLORS.error },
 };

@@ -8,7 +8,9 @@ import { useUiStore } from '@/store';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import * as ImagePicker from 'expo-image-picker';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { RecordingIconButton } from '@/components/ui/RecordingIconButton';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
 import { LinkPreviews } from '@/components/ui/LinkPreview';
@@ -195,15 +197,15 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
             style={{ backgroundColor: `${COLORS.brand}0D`, borderWidth: 1, borderColor: `${COLORS.brand}33` }}
           >
             <Text
-              className="text-[10px] font-bold uppercase tracking-widest"
-              style={{ fontFamily: FONTS.sansBold, color: COLORS.brand }}
+              className="uppercase tracking-widest"
+              style={{ ...TYPE.eyebrow, color: COLORS.brand }}
             >
               Prompt
             </Text>
           </View>
           <Text
-            className="text-[17px] text-text-strong leading-snug"
-            style={{ fontFamily: FONTS.serif }}
+            className="text-text-strong"
+            style={TYPE.cardTitle}
           >
             {dailyPrompt.pinned_text}
           </Text>
@@ -220,7 +222,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
           multiline
           autoFocus
           className="flex-1 text-base text-text-strong p-0 m-0"
-          style={{ fontFamily: FONTS.chatBody, fontSize: 14, textAlignVertical: 'top' }}
+          style={{ ...TYPE.label, textAlignVertical: 'top' }}
         />
 
         <LinkPreviews text={text} style={{ marginTop: 8 }} />

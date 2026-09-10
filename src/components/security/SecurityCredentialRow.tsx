@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Trash2 } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 
 interface SecurityCredentialRowProps {
   icon: React.ReactNode;
@@ -34,13 +34,13 @@ export const SecurityCredentialRow = React.memo(function SecurityCredentialRow({
       {icon}
       <View style={{ flex: 1 }}>
         <Text
-          style={SETTINGS_TYPE.rowLabel}
+          style={TYPE.label}
         >
           {title}
         </Text>
         {subtitle && (
           <Text
-            style={[SETTINGS_TYPE.supporting, { marginTop: 3 }]}
+            style={[TYPE.bodySmall, { marginTop: 3 }]}
           >
             {subtitle}
           </Text>

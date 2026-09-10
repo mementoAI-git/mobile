@@ -4,7 +4,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowUpCircle } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Button } from '@/components/ui/Button';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 interface AccountUpgradeBannerProps {
   isProOrAbove: boolean;
@@ -46,8 +48,7 @@ export const AccountUpgradeBanner = React.memo(function AccountUpgradeBanner({
           <Text
             style={{
               color: COLORS.textInverse,
-              fontFamily: FONTS.sansBold,
-              fontSize: 16,
+              ...TYPE.bodyLarge,
               lineHeight: 20,
             }}
           >
@@ -57,8 +58,7 @@ export const AccountUpgradeBanner = React.memo(function AccountUpgradeBanner({
             style={{
               color: COLORS.textInverse,
               opacity: 0.82,
-              fontFamily: FONTS.sans,
-              fontSize: 12,
+              ...TYPE.metadata,
               lineHeight: 16,
               marginTop: 5,
             }}

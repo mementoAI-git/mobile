@@ -12,7 +12,9 @@ import * as Haptics from 'expo-haptics';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useGroups } from '@/hooks/queries/use-groups';
 import type { IBeneficiary, IGroup } from '@/types';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { normalizeCollection } from '@/features/beneficiaries/collections';
 import { buildAudienceRecipientItems, type AudienceRecipientItem } from '@/features/memories/audience-recipient-items';
 import { canApplyMemoryAudience } from '@/features/memories/memory-audience';
@@ -188,7 +190,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
             justifyContent: 'space-between',
           }}
         >
-          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>
+          <Text style={{ ...TYPE.uiTitle, color: COLORS.textStrong }}>
             Who can see this story?
           </Text>
           <TouchableOpacity
@@ -260,15 +262,14 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                 >
                   <Lock size={15} color={COLORS.error} strokeWidth={2.4} />
                 </View>
-                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong }}>
+                <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>
                   Private
                 </Text>
               </View>
               <Text
                 style={{
                   marginTop: 6,
-                  fontFamily: FONTS.sans,
-                  fontSize: 12,
+                  ...TYPE.metadata,
                   lineHeight: 16,
                   color: COLORS.error,
                 }}
@@ -322,15 +323,14 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                 >
                   <Users size={16} color={COLORS.info} strokeWidth={2.2} />
                 </View>
-                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong }}>
+                <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>
                   Everyone
                 </Text>
               </View>
               <Text
                 style={{
                   marginTop: 6,
-                  fontFamily: FONTS.sans,
-                  fontSize: 12,
+                  ...TYPE.metadata,
                   lineHeight: 16,
                   color: COLORS.info,
                 }}
@@ -364,8 +364,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
               placeholderTextColor={COLORS.textMuted}
               style={{
                 flex: 1,
-                fontFamily: FONTS.sans,
-                fontSize: 14,
+                ...TYPE.label,
                 color: COLORS.textStrong,
                 paddingVertical: 0,
               }}
@@ -378,13 +377,13 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
             style={{ marginTop: 12, paddingHorizontal: 20 }}
           >
             {isLoadingRecipients && (
-              <Text style={{ paddingVertical: 24, textAlign: 'center', fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak }}>
+              <Text style={{ paddingVertical: 24, textAlign: 'center', ...TYPE.label, color: COLORS.textWeak }}>
                 Loading your trusted people…
               </Text>
             )}
 
             {!isLoadingRecipients && hasRecipientError && (
-              <Text style={{ paddingVertical: 24, textAlign: 'center', fontFamily: FONTS.sans, fontSize: 14, lineHeight: 20, color: COLORS.textWeak }}>
+              <Text style={{ paddingVertical: 24, textAlign: 'center', ...TYPE.label, lineHeight: 20, color: COLORS.textWeak }}>
                 We couldn’t load your trusted people. Private and Everyone are still available.
               </Text>
             )}
@@ -436,8 +435,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                   >
                     <Text
                       style={{
-                        fontFamily: FONTS.sansBold,
-                        fontSize: 13,
+                        ...TYPE.bodySmall,
                         color: COLORS.textStrong,
                       }}
                     >
@@ -450,8 +448,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                     <Text
                       numberOfLines={1}
                       style={{
-                        fontFamily: FONTS.sansMedium,
-                        fontSize: 14,
+                        ...TYPE.label,
                         color: COLORS.textStrong,
                       }}
                     >
@@ -470,11 +467,10 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                           paddingVertical: 3,
                         }}
                       >
-                        <Text style={{ fontSize: 9, color: COLORS.textWeak }}>•</Text>
+                        <Text style={{ ...TYPE.eyebrow, color: COLORS.textWeak }}>•</Text>
                         <Text
                           style={{
-                            fontFamily: FONTS.sansMedium,
-                            fontSize: 11,
+                            ...TYPE.metadata,
                             color: COLORS.textBase,
                           }}
                         >
@@ -492,8 +488,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
                 style={{
                   paddingVertical: 24,
                   textAlign: 'center',
-                  fontFamily: FONTS.sans,
-                  fontSize: 14,
+                  ...TYPE.label,
                   color: COLORS.textWeak,
                 }}
               >
@@ -533,8 +528,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
           >
             <Text
               style={{
-                fontFamily: FONTS.sansSemi,
-                fontSize: 15,
+                ...TYPE.body,
                 color: COLORS.textStrong,
               }}
             >
@@ -563,8 +557,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
           >
             <Text
               style={{
-                fontFamily: FONTS.sansSemi,
-                fontSize: 15,
+                ...TYPE.body,
                 color: COLORS.textInverse,
               }}
             >

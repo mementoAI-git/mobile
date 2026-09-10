@@ -11,7 +11,7 @@ import { useRemoveGroupMember } from '@/hooks/mutations/use-group-mutations';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { Avatar, Skeleton, EmptyState } from '@/components/ui';
 import { GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 
@@ -154,7 +154,7 @@ export default function GroupDetailScreen() {
             style={styles.actionPill}
           >
             <UserRoundPlus size={16} color={COLORS.textStrong} style={{ marginRight: 6 }} />
-            <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>Add member</Text>
+            <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>Add member</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -176,28 +176,28 @@ export default function GroupDetailScreen() {
           {/* ── Hero Banner ── */}
           <View style={[styles.heroBanner, { backgroundColor: swatchColor }]}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: FONTS.sansBold, fontSize: 24, color: COLORS.textInverse, marginBottom: 4 }}>
+              <Text style={{ ...TYPE.sectionTitle, color: COLORS.textInverse, marginBottom: 4 }}>
                 {group.name}
               </Text>
               {createdDate && (
-                <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>
+                <Text style={{ ...TYPE.label, color: 'rgba(255,255,255,0.8)' }}>
                   Created {createdDate}
                 </Text>
               )}
             </View>
-            <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 16, color: COLORS.textInverse }}>
+            <Text style={{ ...TYPE.bodyLarge, color: COLORS.textInverse }}>
               {members.length} {members.length === 1 ? 'Person' : 'People'}
             </Text>
           </View>
 
           {/* ── Members List ── */}
-          <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 16, color: COLORS.textStrong, marginTop: 32, marginBottom: 16, paddingHorizontal: 4 }}>
+          <Text style={{ ...TYPE.bodyLarge, color: COLORS.textStrong, marginTop: 32, marginBottom: 16, paddingHorizontal: 4 }}>
             Group members
           </Text>
 
           {members.length === 0 ? (
             <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 15, color: COLORS.textWeak }}>
+              <Text style={{ ...TYPE.body, color: COLORS.textWeak }}>
                 No members in this group yet.
               </Text>
             </View>
@@ -217,15 +217,15 @@ export default function GroupDetailScreen() {
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontFamily: FONTS.sansBold, fontSize: 17, color: COLORS.textStrong }} numberOfLines={1}>
+                      <Text style={{ ...TYPE.cardTitle, color: COLORS.textStrong }} numberOfLines={1}>
                         {name}
                       </Text>
                       {member.email && (
-                        <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, marginTop: 2 }} numberOfLines={1}>
+                        <Text style={{ ...TYPE.label, color: COLORS.textWeak, marginTop: 2 }} numberOfLines={1}>
                           {member.email}
                         </Text>
                       )}
-                      <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textMuted, marginTop: 2 }}>
+                      <Text style={{ ...TYPE.label, color: COLORS.textMuted, marginTop: 2 }}>
                         {statusText}
                       </Text>
                     </View>

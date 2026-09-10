@@ -13,7 +13,7 @@ import dayjs from 'dayjs';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Button } from '@/components/ui';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useUserContext } from '@/hooks/queries/use-persona';
@@ -76,20 +76,20 @@ export default function PersonalInfoScreen() {
           >
             <ArrowLeft size={22} color={COLORS.textBase} />
           </TouchableOpacity>
-          <Text style={SETTINGS_TYPE.screenTitle}>Personal information</Text>
+          <Text style={TYPE.screenTitle}>Personal information</Text>
           <View style={{ width: 44 }} />
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <View style={styles.aboutCard}>
-            <Text style={SETTINGS_TYPE.cardTitle}>About me</Text>
-            <Text style={[SETTINGS_TYPE.body, { color: COLORS.textStrong, marginTop: 6 }]}>
+            <Text style={TYPE.cardTitle}>About me</Text>
+            <Text style={[TYPE.body, { color: COLORS.textStrong, marginTop: 6 }]}>
               {profile?.context?.self_description?.trim() || userContext?.self_description?.trim() || 'Add a few words about yourself.'}
             </Text>
           </View>
 
           <View style={styles.detailsHeader}>
-            <Text style={SETTINGS_TYPE.sectionTitle}>Profile details</Text>
+            <Text style={TYPE.sectionTitle}>Profile details</Text>
             <Button
               variant="secondary"
               size="lg"
@@ -123,8 +123,8 @@ export default function PersonalInfoScreen() {
                   />
                 )}
                 <View style={{ paddingHorizontal: 20, paddingVertical: 18, gap: 4 }}>
-                  <Text style={SETTINGS_TYPE.supporting}>{detail.label}</Text>
-                  <Text style={SETTINGS_TYPE.rowLabel}>{getValue(detail.key)}</Text>
+                  <Text style={TYPE.bodySmall}>{detail.label}</Text>
+                  <Text style={TYPE.label}>{getValue(detail.key)}</Text>
                 </View>
               </View>
             ))}

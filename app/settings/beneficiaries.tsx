@@ -16,7 +16,7 @@ import { BeneficiaryGroupRow } from '@/components/beneficiaries/BeneficiaryGroup
 import { BeneficiaryPersonRow } from '@/components/beneficiaries/BeneficiaryPersonRow';
 import { useBeneficiariesSettingsLogic } from '@/hooks/use-beneficiaries-settings-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import {
   filterBeneficiaries,
   type BeneficiaryFilterTab,
@@ -54,15 +54,15 @@ function CountTab({
       className={`min-h-12 flex-row items-center rounded-2xl px-4 ${active ? 'bg-text-strong' : 'bg-fill-weak'}`}
     >
       <Text
-        className={`text-[16px] ${active ? 'text-white' : 'text-text-strong'}`}
-        style={{ fontFamily: FONTS.sansMedium }}
+        className={active ? 'text-white' : 'text-text-strong'}
+        style={TYPE.button}
       >
         {label}
       </Text>
       <View className={`ml-3 min-w-8 items-center rounded-full px-2 py-1 ${active ? 'bg-white/15' : 'bg-fill-weak'}`}>
         <Text
-          className={`text-[13px] ${active ? 'text-white' : 'text-text-weak'}`}
-          style={{ fontFamily: FONTS.sansMedium }}
+          className={active ? 'text-white' : 'text-text-weak'}
+          style={TYPE.bodySmall}
         >
           {count > 9 ? '9+' : count}
         </Text>
@@ -144,17 +144,17 @@ export default function BeneficiariesSettingsScreen() {
         >
           <ArrowLeft size={23} color={COLORS.textBase} />
         </TouchableOpacity>
-        <Text style={SETTINGS_TYPE.screenTitle}>
+        <Text style={TYPE.screenTitle}>
           Beneficiaries
         </Text>
         <View className="size-11" />
       </View>
 
       <View className="px-6 pb-5 pt-6">
-        <Text style={SETTINGS_TYPE.sectionTitle}>
+        <Text style={TYPE.sectionTitle}>
           Beneficiaries and groups
         </Text>
-        <Text className="mt-3" style={SETTINGS_TYPE.body}>
+        <Text className="mt-3" style={TYPE.body}>
           Invite the people who matter most. They’ll be able to receive your memories and interact with your Memento Agent.
         </Text>
         <View className="mt-7 flex-row gap-3">
@@ -170,10 +170,10 @@ export default function BeneficiariesSettingsScreen() {
           <CollectionSkeleton />
         ) : isError ? (
           <View className="flex-1 items-center justify-center px-8">
-            <Text className="text-center" style={SETTINGS_TYPE.cardTitle}>
+            <Text className="text-center" style={TYPE.cardTitle}>
               Your trusted circle needs a refresh
             </Text>
-            <Text className="mt-2 text-center" style={SETTINGS_TYPE.body}>
+            <Text className="mt-2 text-center" style={TYPE.body}>
               We couldn’t load these details right now.
             </Text>
             <Button onPress={refresh} size="lg" className="mt-5 h-14 px-9">Try again</Button>
@@ -206,8 +206,7 @@ export default function BeneficiariesSettingsScreen() {
                       >
                         <Text
                           style={{
-                            fontFamily: FONTS.sansSemi,
-                            fontSize: 12,
+                            ...TYPE.metadata,
                             color: filterTab === subTab ? COLORS.brand : COLORS.textWeak,
                             textTransform: 'capitalize',
                           }}

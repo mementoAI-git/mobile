@@ -21,7 +21,9 @@ import {
   useDeleteMemory, useBookmarkMemory, useUpdateMemory,
 } from '@/hooks/mutations/use-memory-mutations';
 import { IMemory } from '@/types';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { toast } from '@/components/ui/Toast';
 import { publishedPostUrl } from '@/lib/env';
 import { PublishPrivacySheet, type PrivacyMode } from './PublishPrivacySheet';
@@ -199,7 +201,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
 
         {/* Heading */}
         <Text style={{
-          fontFamily: FONTS.sansBold, fontSize: 22, color: COLORS.textStrong,
+          ...TYPE.sectionTitle, color: COLORS.textStrong,
           textAlign: 'center', lineHeight: 30, marginBottom: 10, paddingHorizontal: 16,
         }}>
           Delete this story?
@@ -207,7 +209,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
 
         {/* Subtext */}
         <Text style={{
-          fontFamily: FONTS.sans, fontSize: 15, color: COLORS.textWeak,
+          ...TYPE.body, color: COLORS.textWeak,
           textAlign: 'center', marginBottom: 40,
         }}>
           This action can’t be undone.
@@ -224,7 +226,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
               alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: COLORS.textStrong }}>
+            <Text style={{ ...TYPE.bodyLarge, color: COLORS.textStrong }}>
               Go back
             </Text>
           </TouchableOpacity>
@@ -241,7 +243,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
           >
             {isDeleting
               ? <ActivityIndicator color={COLORS.textInverse} />
-              : <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: COLORS.textInverse }}>Yes, delete</Text>
+              : <Text style={{ ...TYPE.bodyLarge, color: COLORS.textInverse }}>Yes, delete</Text>
             }
           </TouchableOpacity>
         </View>
@@ -352,7 +354,7 @@ const s = {
     justifyContent: 'space-between' as const,
     marginBottom: 20, paddingHorizontal: 2,
   },
-  headerTitle: { fontFamily: FONTS.sansBold, fontSize: 18, color: COLORS.textStrong },
+  headerTitle: { ...TYPE.cardTitle, color: COLORS.textStrong },
   closeBtn: {
     width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.fillWeak,
     alignItems: 'center' as const, justifyContent: 'center' as const,
@@ -362,13 +364,13 @@ const s = {
     padding: 16, backgroundColor: COLORS.card, borderRadius: 14,
     borderWidth: 1, borderColor: COLORS.strokeWeaker, marginBottom: 10,
   },
-  actionLabel: { fontFamily: FONTS.sansMedium, fontSize: 16, color: COLORS.textStrong },
+  actionLabel: { ...TYPE.bodyLarge, color: COLORS.textStrong },
   visibilityCard: {
     backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16, marginBottom: 16, gap: 12,
   },
-  visibilityTitle: { fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong },
+  visibilityTitle: { ...TYPE.body, color: COLORS.textStrong },
   visibilitySubtitle: {
-    fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textBase, marginTop: -8,
+    ...TYPE.bodySmall, color: COLORS.textBase, marginTop: -8,
   },
   visibilityTrigger: {
     flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10,
@@ -376,9 +378,9 @@ const s = {
     paddingHorizontal: 14, paddingVertical: 13,
     borderWidth: 1, borderColor: COLORS.strokeWeaker,
   },
-  visibilityLabel: { flex: 1, fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong },
+  visibilityLabel: { flex: 1, ...TYPE.label, color: COLORS.textStrong },
   tagsSection: { marginBottom: 24, gap: 8 },
-  tagsLabel: { fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong, paddingHorizontal: 2 },
+  tagsLabel: { ...TYPE.body, color: COLORS.textStrong, paddingHorizontal: 2 },
   tagsArea: {
     backgroundColor: COLORS.card, borderRadius: 14,
     borderWidth: 1, borderColor: COLORS.strokeWeak, padding: 12, minHeight: 72, gap: 8,
@@ -389,9 +391,9 @@ const s = {
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
     backgroundColor: COLORS.fillWeak, borderWidth: 1, borderColor: COLORS.strokeWeak,
   },
-  tagPillText: { fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textStrong },
+  tagPillText: { ...TYPE.bodySmall, color: COLORS.textStrong },
   tagInput: {
-    fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong, padding: 0, minHeight: 20,
+    ...TYPE.label, color: COLORS.textStrong, padding: 0, minHeight: 20,
   },
   deleteBtn: {
     height: 56, borderRadius: 999,
@@ -399,5 +401,5 @@ const s = {
     backgroundColor: `${COLORS.error}06`,
     alignItems: 'center' as const, justifyContent: 'center' as const,
   },
-  deleteBtnText: { fontFamily: FONTS.sansMedium, fontSize: 16, color: COLORS.error },
+  deleteBtnText: { ...TYPE.bodyLarge, color: COLORS.error },
 };

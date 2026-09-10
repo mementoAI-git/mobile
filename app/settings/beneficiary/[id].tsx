@@ -12,7 +12,7 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { Avatar, Skeleton, EmptyState } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 
@@ -173,7 +173,7 @@ export default function BeneficiaryDetailScreen() {
             style={styles.actionPill}
           >
             <UserRoundPen size={16} color={COLORS.textStrong} style={{ marginRight: 6 }} />
-            <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>Edit User</Text>
+            <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>Edit User</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -202,15 +202,15 @@ export default function BeneficiaryDetailScreen() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }} numberOfLines={1}>
+              <Text style={{ ...TYPE.uiTitle, color: COLORS.textStrong }} numberOfLines={1}>
                 {name}
               </Text>
               {beneficiary.email && (
-                <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, marginTop: 4 }} numberOfLines={1}>
+                <Text style={{ ...TYPE.label, color: COLORS.textWeak, marginTop: 4 }} numberOfLines={1}>
                   {beneficiary.email}
                 </Text>
               )}
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textMuted, marginTop: 4 }}>
+              <Text style={{ ...TYPE.bodySmall, color: COLORS.textMuted, marginTop: 4 }}>
                 {beneficiary.relationship || (isPendingStatus ? 'Invitation pending' : 'Beneficiary')}
               </Text>
             </View>
@@ -221,11 +221,11 @@ export default function BeneficiaryDetailScreen() {
             <View style={styles.pendingAlertCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                 <MailWarning size={20} color={COLORS.warning} style={{ marginRight: 10 }} />
-                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong }}>
+                <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>
                   Invitation Pending
                 </Text>
               </View>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textBase, lineHeight: 20, marginBottom: 16 }}>
+              <Text style={{ ...TYPE.label, color: COLORS.textBase, lineHeight: 20, marginBottom: 16 }}>
                 This beneficiary hasn't accepted your invitation yet. They won't receive memories until they join.
               </Text>
               <TouchableOpacity
@@ -235,7 +235,7 @@ export default function BeneficiaryDetailScreen() {
                 style={styles.resendButton}
               >
                 <MailPlus size={16} color={COLORS.brand} style={{ marginRight: 6 }} />
-                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 14, color: COLORS.brand }}>
+                <Text style={{ ...TYPE.label, color: COLORS.brand }}>
                   {isResending ? 'Sending...' : 'Resend Invitation'}
                 </Text>
               </TouchableOpacity>
@@ -292,7 +292,7 @@ export default function BeneficiaryDetailScreen() {
           <Text style={[styles.sectionHeader, { marginTop: 32 }]}>Groups</Text>
           
           {beneficiaryGroups.length === 0 ? (
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textMuted, marginLeft: 4 }}>
+            <Text style={{ ...TYPE.label, color: COLORS.textMuted, marginLeft: 4 }}>
               Not added to any groups.
             </Text>
           ) : (
@@ -382,8 +382,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   sectionHeader: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 15,
+    ...TYPE.body,
     color: COLORS.textStrong,
     marginTop: 32,
     marginBottom: 16,
@@ -393,8 +392,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   fieldLabel: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     color: COLORS.textStrong,
     marginLeft: 4,
   },
@@ -408,8 +406,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   fieldValueText: {
-    fontFamily: FONTS.sans,
-    fontSize: 16,
+    ...TYPE.bodyLarge,
     color: COLORS.textStrong,
   },
   groupPillsContainer: {
@@ -426,7 +423,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
   },
   groupPillText: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 14,
+    ...TYPE.label,
   }
 });

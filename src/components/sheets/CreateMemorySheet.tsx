@@ -5,7 +5,9 @@ import { useToast } from '@/components/ui/Toast';
 import { Image as ImageIcon, FolderOpen, X, Lock, Globe, Users } from 'lucide-react-native';
 import { useCreateMemory, useUpdateMemory } from '@/hooks/mutations/use-memory-mutations';
 import { useFileUpload } from '@/hooks/use-file-upload';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SelectFromMediaModal } from './SelectFromMediaModal';
@@ -197,7 +199,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
       >
         {/* ── Header ── */}
         <View className="flex-row items-center justify-between">
-          <Text className="text-[28px] text-text-strong" style={{ fontFamily: FONTS.serif }}>
+          <Text className="text-text-strong" style={TYPE.screenTitle}>
             {editData ? 'Edit Memory' : 'New Memory'}
           </Text>
           <TouchableOpacity onPress={onClose} hitSlop={6} className="size-8 rounded-full bg-fill-weaker items-center justify-center">
@@ -274,7 +276,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
               ) : (
                 <>
                   <ImageIcon size={16} color={attachments.length > 0 ? COLORS.brand : COLORS.textBase} strokeWidth={1.5} />
-                  <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: attachments.length > 0 ? COLORS.brand : COLORS.textStrong }}>
+                  <Text style={{ ...TYPE.bodySmall, color: attachments.length > 0 ? COLORS.brand : COLORS.textStrong }}>
                     {attachments.length > 0 ? `${attachments.length} file${attachments.length > 1 ? 's' : ''}` : 'Add media'}
                   </Text>
                 </>
@@ -287,7 +289,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
               className="flex-1 flex-row items-center justify-center gap-2 h-12 rounded-full border bg-fill-weaker border-stroke-weaker"
             >
               <FolderOpen size={16} color={COLORS.textBase} strokeWidth={1.5} />
-              <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textStrong }}>
+              <Text style={{ ...TYPE.bodySmall, color: COLORS.textStrong }}>
                 Library
               </Text>
             </TouchableOpacity>
@@ -305,7 +307,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
               strokeWidth={1.5}
             />
             <Text
-              style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: privacyIsActive ? COLORS.brand : COLORS.textStrong }}
+              style={{ ...TYPE.bodySmall, color: privacyIsActive ? COLORS.brand : COLORS.textStrong }}
               numberOfLines={1}
             >
               {privacyLabel}

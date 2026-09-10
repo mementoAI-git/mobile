@@ -6,7 +6,9 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import type { AccountWeekDay } from '@/features/account/account-overview';
 import { ZapIconWarm } from '../ui';
 import { CompletedCheckmarkIcon } from '../ui/icons/CompletedCheckmarkIcon';
@@ -111,8 +113,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: COLORS.textInverse,
-    fontFamily: FONTS.sansSemi,
-    fontSize: 16,
+    ...TYPE.bodyLarge,
     lineHeight: 20,
   },
   weekRow: {
@@ -127,15 +128,13 @@ const styles = StyleSheet.create({
   dayLabel: {
     color: COLORS.textInverse,
     opacity: 0.72,
-    fontFamily: FONTS.sansMedium,
-    fontSize: 11,
+    ...TYPE.metadata,
     lineHeight: 14,
   },
   todayLabel: {
     color: COLORS.brand,
     opacity: 1,
-    fontFamily: FONTS.sansBold,
-    fontSize: 9,
+    ...TYPE.eyebrow,
   },
   completedCircle: {
     width: 22,
@@ -154,8 +153,7 @@ const styles = StyleSheet.create({
   },
   todayDate: {
     color: COLORS.brand,
-    fontFamily: FONTS.sansBold,
-    fontSize: 15,
+    ...TYPE.body,
   },
   dateCircle: {
     width: 22,
@@ -166,8 +164,7 @@ const styles = StyleSheet.create({
   dateText: {
     color: COLORS.textInverse,
     opacity: 0.76,
-    fontFamily: FONTS.sansSemi,
-    fontSize: 14,
+    ...TYPE.label,
   },
   statsRow: {
     flexDirection: 'row',
@@ -181,12 +178,10 @@ const styles = StyleSheet.create({
   statLabel: {
     color: COLORS.textInverse,
     opacity: 0.56,
-    fontFamily: FONTS.sans,
-    fontSize: 12,
+    ...TYPE.metadata,
   },
   statValue: {
     color: COLORS.textInverse,
-    fontFamily: FONTS.sansMedium,
-    fontSize: 13,
+    ...TYPE.bodySmall,
   },
 });

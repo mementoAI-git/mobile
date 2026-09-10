@@ -23,7 +23,7 @@ import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { useUserStore } from '@/store';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
@@ -175,12 +175,12 @@ export default function FeedbackSettingsScreen() {
     <View key={attachment.clientId} className="min-h-[70px] flex-row items-center">
       <Image source={{ uri: attachment.uri }} className="size-14 rounded-xl bg-fill-weak" resizeMode="cover" />
       <View className="ml-3 flex-1">
-        <Text numberOfLines={1} className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+        <Text numberOfLines={1} className="text-text-strong" style={TYPE.label}>
           {attachment.name}
         </Text>
         <Text
-          className={`mt-1 text-[13px] ${attachment.status === 'failed' ? 'text-error' : 'text-text-weak'}`}
-          style={{ fontFamily: FONTS.sans }}
+          className={`mt-1 ${attachment.status === 'failed' ? 'text-error' : 'text-text-weak'}`}
+          style={TYPE.bodySmall}
         >
           {attachment.status === 'failed' ? 'Upload failed' : `${attachment.progress}%`}
         </Text>
@@ -209,7 +209,7 @@ export default function FeedbackSettingsScreen() {
           <TouchableOpacity onPress={handleBack} className="size-11 items-center justify-center rounded-full bg-fill-weak">
             <ArrowLeft size={23} color={COLORS.textBase} />
           </TouchableOpacity>
-          <Text style={SETTINGS_TYPE.screenTitle}>Send feedback</Text>
+          <Text style={TYPE.screenTitle}>Send feedback</Text>
           <View className="size-11" />
         </View>
 
@@ -239,7 +239,7 @@ export default function FeedbackSettingsScreen() {
               containerClassName="mt-7"
             />
 
-            <Text className="mb-3 mt-7" style={SETTINGS_TYPE.fieldLabel}>
+            <Text className="mb-3 mt-7" style={TYPE.label}>
               Screenshots (Optional)
             </Text>
             <Button
