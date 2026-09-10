@@ -25,6 +25,7 @@ interface ButtonProps {
   fullWidth?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  accessibilityLabel?: string;
 }
 
 // Mirrors web button.tsx variants exactly
@@ -53,10 +54,10 @@ const variantStyles: Record<Variant, { container: string; text: string }> = {
 
 // All sizes use rounded-full (web rounded-4xl = 32px pill)
 const sizeStyles: Record<Size, { container: string; text: string }> = {
-  xs: { container: 'h-6 px-2.5 gap-1 rounded-full',  text: 'text-xs font-medium' },
-  sm: { container: 'h-8 px-3 gap-1 rounded-full',    text: 'text-sm font-medium' },
-  md: { container: 'h-10 px-4 gap-1.5 rounded-full', text: 'text-sm font-medium' }, // compact button (40px)
-  lg: { container: 'h-14 px-6 gap-2 rounded-full',   text: 'text-base font-bold' }, // standard button (56px)
+  xs: { container: 'h-6 px-2.5 gap-1 rounded-full',  text: '' },
+  sm: { container: 'h-8 px-3 gap-1 rounded-full',    text: '' },
+  md: { container: 'h-10 px-4 gap-1.5 rounded-full', text: '' }, // compact button (40px)
+  lg: { container: 'h-14 px-6 gap-2 rounded-full',   text: '' }, // standard button (56px)
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -73,6 +74,7 @@ export function Button({
   fullWidth = false,
   leftIcon,
   rightIcon,
+  accessibilityLabel,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
   const v = variantStyles[variant];
@@ -92,6 +94,8 @@ export function Button({
 
   return (
     <AnimatedPressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       onPress={handlePress}
       disabled={isDisabled}
       onPressIn={() => {

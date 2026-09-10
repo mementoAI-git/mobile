@@ -81,7 +81,7 @@ const OverviewJourneyCard = React.memo(function OverviewJourneyCard({
   const content = (
     <View className="flex-row items-center justify-between p-5 flex-1">
       <View className="gap-1 flex-1">
-        <Text 
+        <Text
           className="uppercase tracking-widest text-text-weak"
           style={TYPE.eyebrow}
         >
@@ -93,13 +93,13 @@ const OverviewJourneyCard = React.memo(function OverviewJourneyCard({
       </View>
       <View className="ml-3 shrink-0">
         {typeof icon === 'number' || (icon && typeof icon === 'object' && 'uri' in icon) ? (
-          <Image 
-            source={icon} 
-            style={{ width: 44, height: 44 }} 
-            resizeMode="contain" 
+          <Image
+            source={icon}
+            style={{ width: 44, height: 44 }}
+            resizeMode="contain"
           />
         ) : typeof icon === 'string' ? (
-          <Text className="text-3xl">{icon}</Text>
+          <Text className="" style={TYPE.screenTitle}>{icon}</Text>
         ) : (
           icon
         )}
@@ -301,7 +301,7 @@ export default function OverviewScreen() {
                 <Zap size={14} color="white" fill="white" />
               </View>
               <Animated.Text className="text-text-strong flex-1" style={TYPE.label}>
-                <Animated.Text className="text-brand font-bold">{quickPending}</Animated.Text> quick capture{quickPending > 1 ? 's' : ''} finishing up...
+                <Animated.Text className="text-brand" style={TYPE.label}>{quickPending}</Animated.Text> quick capture{quickPending > 1 ? 's' : ''} finishing up...
               </Animated.Text>
               <ChevronRight size={16} color={COLORS.brand} />
             </TouchableOpacity>
@@ -451,8 +451,8 @@ export default function OverviewScreen() {
               label="BENEFICIARIES"
               valueElement={
                 <>
-                  <Text className="text-xl font-bold text-brand" style={{ fontFamily: FONTS.sansBold }}>{beneficiariesCount}</Text>
-                  <Text className="text-base font-bold text-text-strong ml-1" style={{ fontFamily: FONTS.sansBold }}>people</Text>
+                  <Text className="text-brand" style={TYPE.uiTitle}>{beneficiariesCount}</Text>
+                  <Text className="text-text-strong ml-1" style={TYPE.body}>people</Text>
                 </>
               }
               icon={<JourneyStatIcon type="beneficiaries" />}
@@ -463,7 +463,7 @@ export default function OverviewScreen() {
             <OverviewJourneyCard
               label="TIME CAPSULES"
               valueElement={
-                <Text className="text-base font-bold text-text-muted" style={{ fontFamily: FONTS.sansMedium }}>Coming soon</Text>
+                <Text className="text-text-muted" style={TYPE.body}>Coming soon</Text>
               }
               icon={<JourneyStatIcon type="capsules" />}
               bgImage={CAPSULE_BG}
@@ -473,9 +473,9 @@ export default function OverviewScreen() {
               label="STREAK COUNT"
               valueElement={
                 <>
-                  <Text className="text-base font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>You're on a </Text>
-                  <Text className="text-base font-bold text-brand" style={{ fontFamily: FONTS.sansBold }}>{streakCount}-day</Text>
-                  <Text className="text-base font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}> streak</Text>
+                  <Text className="text-text-strong" style={TYPE.body}>You're on a </Text>
+                  <Text className="text-brand" style={TYPE.body}>{streakCount}-day</Text>
+                  <Text className="text-text-strong" style={TYPE.body}> streak</Text>
                 </>
               }
               icon={<JourneyStatIcon type="streak" />}

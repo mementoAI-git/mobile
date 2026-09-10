@@ -159,7 +159,7 @@ export default function VoiceCallRoute() {
               </Text>
               <VoiceDots selectedId={draftVoiceId} onSelect={chooseVoice} />
             </View>
-            <Button fullWidth className="mb-2 h-14" textClassName="text-base" onPress={() => void confirmVoice()}>
+            <Button fullWidth className="mb-2 h-14" onPress={() => void confirmVoice()}>
               Open voice call
             </Button>
           </SafeAreaView>

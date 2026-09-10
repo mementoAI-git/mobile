@@ -198,7 +198,7 @@ export default function StoriesScreen() {
                   className={`px-6 py-2.5 rounded-full ${activeFilter === f ? 'bg-brand' : 'bg-fill-weaker'}`}
                 >
                   <Animated.Text
-                    className={`text-xs font-bold ${activeFilter === f ? 'text-white' : 'text-text-base'}`}
+                    className={activeFilter === f ? 'text-white' : 'text-text-base'}
                     style={TYPE.metadata}
                   >
                     {label}
@@ -282,7 +282,7 @@ export default function StoriesScreen() {
         )}
 
         {/* Floating Action Button - morphs width and contents on scroll */}
-        <Animated.View 
+        <Animated.View
           style={[
             floatBtnStyle,
             {

@@ -27,6 +27,15 @@ describe('manage-plan flow', () => {
     expect(screen).not.toContain('Legacy Plan');
   });
 
+  test('keeps both plan screens back controls in the header layout and uses safe fallback navigation', () => {
+    for (const path of ['app/pricing.tsx', 'app/settings/cancel-plan.tsx']) {
+      const screen = read(path);
+      expect(screen).toContain('safeBack(router');
+      expect(screen).toContain('accessibilityLabel="Go back"');
+      expect(screen).not.toContain('className="absolute left-4"');
+    }
+  });
+
   test('registers a dedicated cancellation confirmation sheet', () => {
     const manager = read('src/components/sheets/SheetManager.tsx');
     const store = read('src/store/ui.store.ts');

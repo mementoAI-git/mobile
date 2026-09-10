@@ -20,7 +20,7 @@ export function MemTag({ label, className }: MemTagProps) {
       )}
     >
       <Text
-        className="text-xs font-medium text-text-base capitalize"
+        className="text-text-base capitalize"
         style={TYPE.metadata}
       >
         {label}

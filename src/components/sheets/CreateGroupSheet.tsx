@@ -78,13 +78,13 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
       borderTopColor: COLORS.strokeWeaker,
       backgroundColor: COLORS.background,
     }}>
-      <Button variant="secondary" size="lg" className="h-14 flex-1" textClassName="text-base font-bold" onPress={close}>
+      <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={close}>
         Dismiss
       </Button>
       <Button
         size="lg"
         className="h-14 flex-1 bg-fill-strong"
-        textClassName="text-base font-bold text-white"
+        textClassName="text-white"
         loading={isPending}
         disabled={!payload || isPending}
         onPress={() => void submit()}
@@ -99,7 +99,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ flex: 1 }}>
           <View style={{ minHeight: 68, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ ...TYPE.uiTitle, color: COLORS.textStrong }}>
+            <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
               {isEdit ? 'Group Settings' : 'Create Group'}
             </Text>
             <TouchableOpacity onPress={() => { Haptics.selectionAsync(); close(); }} accessibilityRole="button" accessibilityLabel="Close create group" style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak }}>

@@ -6,7 +6,8 @@ import {Check, ChevronLeft} from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import {Button} from '@/components/ui';
 import {TYPE} from '@/constants/typography';
-import {COLORS, FONTS} from '@/constants/tokens';
+import {COLORS} from '@/constants/tokens';
+import {safeBack} from '@/lib/utils';
 import {usePricingLogic} from '@/hooks/use-pricing-logic';
 import {useSubscription} from '@/hooks/queries/use-subscription';
 import {useUiStore} from '@/store';
@@ -22,11 +23,11 @@ export default function ManagePlanScreen() {
   const {interval, changeInterval, handleCheckout, router, loading} = usePricingLogic();
   const {isProOrAbove, summary} = useSubscription();
   const isCancellationScheduled = summary?.cancel_at_period_end === true;
-  const back = useCallback(() => { Haptics.selectionAsync(); if (router.canGoBack()) router.back(); else router.replace('/settings/billing'); }, [router]);
+  const back = useCallback(() => { Haptics.selectionAsync(); safeBack(router, '/settings/billing'); }, [router]);
   const requestCancellation = useCallback(() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); useUiStore.getState().openSheet('cancel-subscription-confirmation'); }, []);
 
   return <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-    <View className="h-[104px] justify-center px-4"><View className="absolute left-4"><Button variant="secondary" size="lg" className="size-14 px-0" onPress={back}><ChevronLeft size={25} color={COLORS.textBase} /></Button></View><Text className="text-center text-text-strong" style={TYPE.screenTitle}>Manage Plan</Text></View>
+    <View className="h-[104px] flex-row items-center justify-between px-4"><Button accessibilityLabel="Go back" variant="secondary" size="lg" className="size-14 px-0" onPress={back}><ChevronLeft size={25} color={COLORS.textBase} /></Button><Text className="text-center text-text-strong" style={TYPE.screenTitle}>Manage Plan</Text><View className="size-14" /></View>
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingHorizontal: 16, paddingBottom: 40}}>
       <View className="flex-row self-center bg-fill-weak rounded-xl p-1 w-[280px] mt-4 mb-6">{(['monthly', 'annual'] as const).map(value => <TouchableOpacity key={value} accessibilityRole="button" onPress={() => changeInterval(value)} className={`h-12 flex-1 items-center justify-center rounded-xl ${interval === value ? 'bg-text-strong' : ''}`}><Text className={interval === value ? 'text-white' : 'text-text-strong'} style={TYPE.button}>{value === 'monthly' ? 'Monthly' : 'Annual'}</Text></TouchableOpacity>)}</View>
       <View className="rounded-[32px] bg-fill-weak px-6 py-7">

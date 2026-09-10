@@ -122,16 +122,14 @@ export function EditProfileSheet({
           variant="secondary"
           size="lg"
           className="h-14 flex-1"
-          textClassName="text-base font-bold"
-          onPress={onClose}
+                    onPress={onClose}
         >
           Dismiss
         </Button>
         <Button
           size="lg"
           className="h-14 flex-1"
-          textClassName="text-base font-bold"
-          loading={updateProfile.isPending}
+                    loading={updateProfile.isPending}
           onPress={submitFromFooter}
         >
           Save changes
@@ -340,7 +338,7 @@ export function EditProfileSheet({
           {field('phone', 'Phone', {
             keyboardType: 'phone-pad',
             leftElement: (
-              <Text style={{ color: COLORS.textStrong, fontFamily: FONTS.sansMedium }}>
+              <Text style={[TYPE.label, {color: COLORS.textStrong}]}>
                 🇳🇬
               </Text>
             ),

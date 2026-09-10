@@ -56,17 +56,17 @@ export default function AcceptInviteScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background px-6">
       <View className="flex-1 justify-center gap-6">
-        <Animated.Text className="text-5xl text-center">💌</Animated.Text>
+        <Animated.Text className="text-center" style={TYPE.displayTitle}>💌</Animated.Text>
 
         <View className="items-center gap-2">
-          <Animated.Text 
+          <Animated.Text
             className="text-text-strong text-center"
             style={TYPE.screenTitle}
           >
             You've been invited
           </Animated.Text>
           {inviteData?.from && (
-            <Animated.Text 
+            <Animated.Text
               className="text-text-weak text-center"
               style={TYPE.bodyLarge}
             >
@@ -77,7 +77,7 @@ export default function AcceptInviteScreen() {
 
         {inviteData?.message && (
           <View className="bg-brand-subtle rounded-2xl p-5 border border-brand-weak/10">
-            <Animated.Text 
+            <Animated.Text
               className="text-text-base italic text-center"
               style={TYPE.body}
             >
@@ -88,7 +88,7 @@ export default function AcceptInviteScreen() {
 
         {acceptError && (
           <View className="bg-error-tint border border-error-weak rounded-xl px-4 py-3">
-            <Animated.Text 
+            <Animated.Text
               className="text-error-strong text-center"
               style={TYPE.bodySmall}
             >
@@ -99,7 +99,7 @@ export default function AcceptInviteScreen() {
 
         <View className="gap-3 mt-4">
           {!token && (
-            <Animated.Text 
+            <Animated.Text
               className="text-text-weak text-center mb-2"
               style={TYPE.bodySmall}
             >

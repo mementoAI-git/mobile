@@ -190,7 +190,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
             justifyContent: 'space-between',
           }}
         >
-          <Text style={{ ...TYPE.uiTitle, color: COLORS.textStrong }}>
+          <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
             Who can see this story?
           </Text>
           <TouchableOpacity

@@ -174,7 +174,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
     <View className="px-5 pb-8 pt-2">
       {/* Header */}
       <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
+        <Text className="text-text-strong" style={TYPE.uiTitle}>
           {dailyPrompt ? "Today's Reflection" : 'Quick Capture'}
         </Text>
         <TouchableOpacity
@@ -221,7 +221,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
           placeholderTextColor={COLORS.textWeak}
           multiline
           autoFocus
-          className="flex-1 text-base text-text-strong p-0 m-0"
+          className="flex-1 text-text-strong p-0 m-0"
           style={{ ...TYPE.label, textAlignVertical: 'top' }}
         />
 
@@ -250,7 +250,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
               className={`p-2 rounded-full border shadow-sm flex-row items-center gap-1 ${attachments.length > 0 ? 'bg-brand-tint border-brand-weak' : 'bg-white border-stroke-weaker'} ${isRecording ? 'opacity-50' : ''}`}
             >
               <ImageIcon size={20} color={attachments.length > 0 ? COLORS.brand : COLORS.textBase} />
-              {attachments.length > 0 && <Text className="text-brand text-xs font-medium ml-1">{attachments.length}</Text>}
+              {attachments.length > 0 && <Text className="text-brand ml-1" style={TYPE.metadata}>{attachments.length}</Text>}
             </TouchableOpacity>
           </View>
 

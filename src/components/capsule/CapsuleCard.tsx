@@ -137,14 +137,14 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
           >
             <View className="p-3 flex-row gap-3">
               {/* Left side: Single Attachment Thumbnail */}
-              <View 
+              <View
                 className="rounded-xl bg-fill-weaker border border-stroke-weaker overflow-hidden items-center justify-center relative shrink-0"
                 style={{ width: scale(96), height: scale(96) }}
               >
                 {(() => {
                   const firstImg: any = attachments.find((attr: any) => isImage(attr.type, attr.url) && ((attr as any).thumbnail || attr.url));
                   const firstNonImg: any = attachments.find((attr: any) => !isImage(attr.type, attr.url));
- 
+
                   if (firstImg) {
                     return (
                       <SignedAttachmentImage
@@ -158,8 +158,8 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                     return renderAttachmentIcon(firstNonImg.type, firstNonImg.url);
                   } else {
                     return (
-                      <Text 
-                        className="text-text-muted italic" 
+                      <Text
+                        className="text-text-muted italic"
                         style={TYPE.eyebrow}
                       >
                         No Assets
@@ -168,7 +168,7 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                   }
                 })()}
               </View>
- 
+
               {/* Right side: Content */}
               <View className="flex-1 gap-1.5 justify-between">
                 <View className="flex-row items-center justify-between">
@@ -189,10 +189,10 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                     <MoreVertical size={scale(14)} color={COLORS.textWeak} />
                   </TouchableOpacity>
                 </View>
- 
+
                 <View>
                   <Text
-                    className="text-text-strong font-medium"
+                    className="text-text-strong"
                     numberOfLines={1}
                     style={TYPE.cardTitle}
                   >
@@ -206,16 +206,16 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                     {capsule.body || 'No message'}
                   </Text>
                 </View>
- 
+
                 {/* Compact Info Footer */}
                 <View className="bg-fill-weaker rounded-lg p-2 gap-1">
                   <View className="flex-row items-center justify-between">
                     <Text className="text-text-weak" style={TYPE.eyebrow}>To:</Text>
                     <View className="flex-row items-center gap-1">
                       {recipients.slice(0, 1).map((r, i) => (
-                        <Text 
-                          key={i} 
-                          className="text-text-strong font-medium" 
+                        <Text
+                          key={i}
+                          className="text-text-strong"
                           style={TYPE.metadata}
                           numberOfLines={1}
                         >
@@ -229,11 +229,11 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                       )}
                     </View>
                   </View>
- 
+
                   <View className="flex-row items-center justify-between">
                     <Text className="text-text-weak" style={TYPE.eyebrow}>Due:</Text>
-                    <Text 
-                      className="text-text-strong" 
+                    <Text
+                      className="text-text-strong"
                       style={TYPE.metadata}
                     >
                       {capsule.schedule_date ? dayjs(capsule.schedule_date).format('MMM D, YYYY') : 'No date'}
@@ -243,9 +243,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
               </View>
             </View>
           </TouchableOpacity>
- 
-          <Text 
-            className="text-center font-medium text-text-strong mt-1 p-1" 
+
+          <Text
+            className="text-center text-text-strong mt-1 p-1"
             style={TYPE.label}
           >
             {getDueInText()}
@@ -294,7 +294,7 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
             {/* Title & Body */}
             <View>
               <Text
-                className="text-lg text-text-strong font-medium mb-1"
+                className="text-text-strong mb-1"
                 numberOfLines={1}
                 style={TYPE.cardTitle}
               >
@@ -308,9 +308,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                 {capsule.body || 'No message'}
               </Text>
             </View>
- 
+
             {/* Attachment Strip (Parity with Web ImageThumbnail) */}
-            <View 
+            <View
               className="flex-row items-center gap-1.5 overflow-hidden"
               style={{ height: scale(40) }}
             >
@@ -337,8 +337,8 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                       )}
                       {showOverlay && (
                         <View className="absolute inset-0 bg-black/50 items-center justify-center">
-                          <Text 
-                            className="text-white font-bold" 
+                          <Text
+                            className="text-white"
                             style={TYPE.eyebrow}
                           >
                             +{attachments.length - 3}

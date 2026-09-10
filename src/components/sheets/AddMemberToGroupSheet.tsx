@@ -70,7 +70,7 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
     <View style={{ flex: 1 }}>
       {/* ── Header ── */}
       <View style={{ height: 68, paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={{ ...TYPE.uiTitle, color: COLORS.textStrong }}>
+        <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
           Add Member to group
         </Text>
         <TouchableOpacity
@@ -119,7 +119,7 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ ...TYPE.cardTitle, color: COLORS.textStrong }} numberOfLines={1}>
+                  <Text style={{ ...TYPE.bodyLarge, color: COLORS.textStrong }} numberOfLines={1}>
                     {name}
                   </Text>
                   {member.email && (
@@ -154,13 +154,13 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
         borderTopColor: COLORS.strokeWeaker,
         backgroundColor: COLORS.background,
       }}>
-        <Button variant="secondary" size="lg" className="h-[56px] flex-1" textClassName="text-base font-bold" onPress={handleClose}>
+        <Button variant="secondary" size="lg" className="h-[56px] flex-1" onPress={handleClose}>
           Dismiss
         </Button>
         <Button
           size="lg"
           className="h-[56px] flex-1 bg-text-strong"
-          textClassName="text-base font-bold text-white"
+          textClassName="text-white"
           loading={isPending}
           disabled={selectedIds.size === 0 || isPending}
           onPress={handleSubmit}

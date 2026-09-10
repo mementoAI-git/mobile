@@ -32,7 +32,7 @@ export default function NicknameScreen() {
             activeOpacity={0.7}
             className="flex-row items-center gap-1"
           >
-            <Animated.Text className="text-sm text-text-base" style={{ fontFamily: FONTS.sansMedium }}>
+            <Animated.Text className="text-text-base" style={TYPE.label}>
               Skip
             </Animated.Text>
             <ChevronRight size={16} color={COLORS.textBase} />
@@ -70,9 +70,8 @@ export default function NicknameScreen() {
             </Animated.Text>
             <Animated.Text
               entering={FadeInDown.delay(300).duration(500)}
-              className="text-base text-text-base text-center mt-3 leading-relaxed"
-              style={{ fontFamily: FONTS.sans }}
-            >
+              className="text-text-base text-center mt-3 leading-relaxed"
+              style={TYPE.body}>
               We'll use these to personalize your experience and how Memento talks to you.
             </Animated.Text>
           </View>
@@ -83,7 +82,7 @@ export default function NicknameScreen() {
               name="fullName"
               render={({ field: { onChange, onBlur, value } }) => (
                 <Animated.View entering={FadeInDown.delay(400)} className="gap-2">
-                  <Animated.Text className="text-sm font-semibold text-text-base ml-1" style={{ fontFamily: FONTS.sansSemi }}>
+                  <Animated.Text className="text-text-base ml-1" style={TYPE.label}>
                     Your Full Name
                   </Animated.Text>
                   <TextInput
@@ -103,7 +102,7 @@ export default function NicknameScreen() {
               name="nickname"
               render={({ field: { onChange, onBlur, value } }) => (
                 <Animated.View entering={FadeInDown.delay(500)} className="gap-2">
-                  <Animated.Text className="text-sm font-semibold text-text-base ml-1" style={{ fontFamily: FONTS.sansSemi }}>
+                  <Animated.Text className="text-text-base ml-1" style={TYPE.label}>
                     Preferred Nickname
                   </Animated.Text>
                   <TextInput
@@ -114,7 +113,7 @@ export default function NicknameScreen() {
                     error={errors.nickname?.message}
                     className="h-14 bg-white/80 border-stroke-weaker rounded-2xl px-4"
                   />
-                  <Animated.Text className="text-xs text-text-weak ml-1 mt-0.5" style={{ fontFamily: FONTS.sans }}>
+                  <Animated.Text className="text-text-weak ml-1 mt-0.5" style={TYPE.metadata}>
                     This is the name your AI companion will use.
                   </Animated.Text>
                 </Animated.View>

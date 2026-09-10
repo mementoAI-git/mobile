@@ -200,7 +200,7 @@ export default function RegisterScreen() {
               <Animated.Text className=" text-text-strong mb-2" style={TYPE.displayTitle}>
                 Create account
               </Animated.Text>
-              <Animated.Text className="text-lg text-text-base leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+              <Animated.Text className="text-text-base leading-relaxed" style={TYPE.bodyLarge}>
                 Start preserving your memories
               </Animated.Text>
             </Animated.View>
@@ -216,7 +216,7 @@ export default function RegisterScreen() {
                     className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
                   >
                     {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />}
-                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Sign up with a passkey</Animated.Text>
+                    <Animated.Text className="text-text-strong" style={TYPE.body}>Sign up with a passkey</Animated.Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleGoogleSignup}
@@ -225,7 +225,7 @@ export default function RegisterScreen() {
                     className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
                   >
                     {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={18} />}
-                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Continue with Google</Animated.Text>
+                    <Animated.Text className="text-text-strong" style={TYPE.body}>Continue with Google</Animated.Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleAppleSignup}
@@ -234,7 +234,7 @@ export default function RegisterScreen() {
                     className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
                   >
                     {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={18} />}
-                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansSemi }}>Continue with Apple</Animated.Text>
+                    <Animated.Text className="text-text-strong" style={TYPE.body}>Continue with Apple</Animated.Text>
                   </TouchableOpacity>
                 </Animated.View>
               )}
@@ -242,7 +242,7 @@ export default function RegisterScreen() {
               {/* Divider — fades out last before fields */}
               <Animated.View style={dividerStyle} className="flex-row items-center gap-4 my-3">
                 <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
-                <Animated.Text className="text-xs text-text-disabled lowercase" style={{ fontFamily: FONTS.sans }}>or</Animated.Text>
+                <Animated.Text className="text-text-disabled lowercase" style={TYPE.metadata}>or</Animated.Text>
                 <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
               </Animated.View>
 
@@ -316,7 +316,7 @@ export default function RegisterScreen() {
 
               {error && (
                 <View className="bg-error-weak border border-error-weak rounded-2xl px-4 py-3">
-                  <Animated.Text className="text-sm text-error-strong text-center" style={{ fontFamily: FONTS.sansMedium }}>
+                  <Animated.Text className="text-error-strong text-center" style={TYPE.label}>
                     {(error as any).message ?? 'Registration failed. Please try again.'}
                   </Animated.Text>
                 </View>
@@ -328,17 +328,19 @@ export default function RegisterScreen() {
             </View>
 
             <View className="items-center justify-center px-4 mt-6">
-              <Text className="text-xs text-text-weak text-center leading-normal" style={{ fontFamily: FONTS.sans }}>
+              <Text className="text-text-weak text-center leading-normal" style={TYPE.metadata}>
                 By creating an account, you agree to our{' '}
                 <Text
-                  className="text-brand underline font-semibold"
+                  className="text-brand underline"
+                  style={TYPE.metadata}
                   onPress={() => Linking.openURL(TERMS_URL)}
                 >
                   Terms of Service
                 </Text>
                 {' '}and{' '}
                 <Text
-                  className="text-brand underline font-semibold"
+                  className="text-brand underline"
+                  style={TYPE.metadata}
                   onPress={() => Linking.openURL(PRIVACY_URL)}
                 >
                   Privacy Policy
@@ -348,11 +350,11 @@ export default function RegisterScreen() {
             </View>
 
             <View className="flex-row items-center justify-center gap-2 mt-8">
-              <Animated.Text className="text-base text-text-weak" style={{ fontFamily: FONTS.sans }}>
+              <Animated.Text className="text-text-weak" style={TYPE.body}>
                 Already have an account?
               </Animated.Text>
               <TouchableOpacity onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/(auth)/login'); } }}>
-                <Animated.Text className="text-base text-brand font-bold" style={{ fontFamily: FONTS.sansBold }}>
+                <Animated.Text className="text-brand" style={TYPE.body}>
                   Sign in
                 </Animated.Text>
               </TouchableOpacity>

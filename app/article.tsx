@@ -830,8 +830,7 @@ const sStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   socialIcon: {
-    ...TYPE.cardTitle,
-    fontFamily: FONTS.sansBold,
+    ...TYPE.stat,
   },
   socialBtnIcon: {
     width: 28,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { decodeHtmlEntities, parseStoryHtmlBlocks, type StoryHtmlBlock } from '@/features/memories/story-html';
 
@@ -110,8 +110,8 @@ export function StoryHtmlBody({ html }: { html?: string | null }) {
 }
 
 const inlineStyles = {
-  strong: { fontFamily: FONTS.sansBold, color: COLORS.textStrong },
-  b: { fontFamily: FONTS.sansBold, color: COLORS.textStrong },
+  strong: {...TYPE.bodyStrong, color: COLORS.textStrong},
+  b: {...TYPE.bodyStrong, color: COLORS.textStrong},
   em: { fontStyle: 'italic' as const },
   i: { fontStyle: 'italic' as const },
   s: { textDecorationLine: 'line-through' as const },
@@ -162,8 +162,7 @@ const styles = StyleSheet.create({
   },
   listMarker: {
     width: 18,
-    ...TYPE.bodyLarge,
-    fontFamily: FONTS.sansBold,
+    ...TYPE.bodyStrong,
     color: COLORS.textStrong,
   },
 });

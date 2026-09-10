@@ -79,7 +79,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
   const [relationship, setRelationship] = useState(editData?.relationship || '');
   const [about, setAbout] = useState(editData?.about || '');
   const [groupSearch, setGroupSearch] = useState('');
-  
+
   const initialGroups = useMemo(() => {
     if (!editData?.groups) return [];
     return editData.groups.map(g => typeof g === 'string' ? g : (g as any)._id).filter(Boolean);
@@ -219,13 +219,13 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
       borderTopColor: COLORS.strokeWeaker,
       backgroundColor: COLORS.background,
     }}>
-      <Button variant="secondary" size="lg" className="h-14 flex-1" textClassName="text-base font-bold" onPress={close}>
+      <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={close}>
         Dismiss
       </Button>
       <Button
         size="lg"
         className="h-14 flex-1 bg-fill-strong"
-        textClassName="text-base font-bold text-white"
+        textClassName="text-white"
         loading={isPending}
         disabled={!canSubmit || isPending}
         onPress={() => void submit()}
@@ -240,7 +240,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ flex: 1 }}>
           <View style={{ minHeight: 68, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ ...TYPE.uiTitle, color: COLORS.textStrong }}>
+            <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
               {isEdit ? 'Edit Beneficiary' : 'Invite Beneficiary'}
             </Text>
             <TouchableOpacity onPress={() => { Haptics.selectionAsync(); close(); }} accessibilityRole="button" accessibilityLabel="Close invite beneficiary" style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak }}>
@@ -266,12 +266,12 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
 
             <View style={{ gap: 8 }}>
               <FieldLabel>Email address</FieldLabel>
-              <SheetInput 
-                value={email} 
-                onChangeText={setEmail} 
-                keyboardType="email-address" 
-                autoCapitalize="none" 
-                autoCorrect={false} 
+              <SheetInput
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
                 editable={!isEdit}
                 style={isEdit ? { color: COLORS.textMuted } : undefined}
               />

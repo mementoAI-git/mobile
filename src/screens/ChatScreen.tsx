@@ -419,7 +419,7 @@ export default function ChatScreen() {
           entering={FadeInUp.duration(600)}
           className="size-24 rounded-full bg-fill-weaker items-center justify-center"
         >
-          <Animated.Text className="text-4xl">🌱</Animated.Text>
+          <Animated.Text className="" style={TYPE.displayTitle}>🌱</Animated.Text>
         </Animated.View>
         <View className="items-center gap-3 px-10">
           <Animated.Text

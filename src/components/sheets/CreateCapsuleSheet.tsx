@@ -214,7 +214,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
     <>
       {/* Header */}
       <View className="px-5 pt-4 pb-4 border-b border-stroke-weaker flex-row items-center justify-between">
-        <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
+        <Text className="text-text-strong" style={TYPE.uiTitle}>
           {isEdit ? 'Edit Capsule' : 'Create Capsule'}
         </Text>
         <TouchableOpacity onPress={onClose} className="p-1.5 bg-fill-weaker rounded-full">
@@ -226,7 +226,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
 
         {/* Recipients */}
         <View className="gap-3">
-          <Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>
+          <Text className="text-text-strong" style={TYPE.label}>
             Select recipient(s)
           </Text>
 
@@ -236,7 +236,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
               const displayName = b ? b.name : id;
               return (
                 <View key={id} className="bg-fill-weaker border border-stroke-weaker rounded-full px-3 py-1.5 flex-row items-center gap-1.5">
-                  <Text className="text-xs text-text-strong" style={{ fontFamily: FONTS.sans }}>{displayName}</Text>
+                  <Text className="text-text-strong" style={TYPE.metadata}>{displayName}</Text>
                   <TouchableOpacity onPress={() => toggleRecipient(id)}>
                     <X size={12} color={COLORS.textWeak} />
                   </TouchableOpacity>
@@ -257,11 +257,11 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
           </View>
 
           <View className="bg-fill-weaker rounded-2xl p-4 mt-1">
-            <Text className="text-xs text-text-weak mb-3" style={{ fontFamily: FONTS.sans }}>Recent</Text>
+            <Text className="text-text-weak mb-3" style={TYPE.metadata}>Recent</Text>
             {loadingBeneficiaries ? (
               <Spinner />
             ) : beneficiaries.length === 0 ? (
-              <Text className="text-sm text-text-weak" style={{ fontFamily: FONTS.sans }}>No beneficiaries added yet.</Text>
+              <Text className="text-text-weak" style={TYPE.label}>No beneficiaries added yet.</Text>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
                 {beneficiaries.map((b: any) => {
@@ -274,12 +274,12 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
                       className="items-center w-16 gap-2"
                     >
                       <View className={`size-12 rounded-full items-center justify-center border-2 ${selected ? 'border-brand bg-brand' : 'border-transparent bg-white shadow-sm'}`}>
-                        <Text className={`text-lg font-bold ${selected ? 'text-white' : 'text-text-strong'}`} style={{ fontFamily: FONTS.sansBold }}>
+                        <Text className={selected ? 'text-white' : 'text-text-strong'} style={TYPE.bodyLarge}>
                           {b.name[0]?.toUpperCase()}
                         </Text>
                       </View>
                       <View className="items-center">
-                        <Text className="text-xs text-text-strong text-center" numberOfLines={1} style={{ fontFamily: FONTS.sansMedium }}>{b.name}</Text>
+                        <Text className="text-text-strong text-center" numberOfLines={1} style={TYPE.metadata}>{b.name}</Text>
                         <Text className="text-text-weak text-center capitalize" numberOfLines={1} style={TYPE.eyebrow}>{b.relationship}</Text>
                       </View>
                     </TouchableOpacity>
@@ -293,11 +293,11 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
         {/* Upload Media */}
         <View className="gap-3">
           <View className="flex-row items-center justify-between">
-            <Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>
+            <Text className="text-text-strong" style={TYPE.label}>
               Upload media
             </Text>
             <TouchableOpacity onPress={() => memoryModalRef.current?.present()}>
-              <Text className="text-sm text-brand font-medium">Add from memory</Text>
+              <Text className="text-brand" style={TYPE.label}>Add from memory</Text>
             </TouchableOpacity>
           </View>
 
@@ -310,14 +310,14 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
               <Spinner />
             ) : (
               <>
-                <Text className="text-sm font-semibold text-text-strong text-center" style={{ fontFamily: FONTS.sansSemi }}>
+                <Text className="text-text-strong text-center" style={TYPE.label}>
                   Drag and drop your file{'\n'}here or tap to upload
                 </Text>
-                <Text className="text-xs text-text-weak text-center mb-2" style={{ fontFamily: FONTS.sans }}>
+                <Text className="text-text-weak text-center mb-2" style={TYPE.metadata}>
                   Supports JPG, PNG, MP4, MP3, PDF,{'\n'}DOC, TXT. Max file size: 120mb
                 </Text>
                 <Button variant="outline" onPress={handleBrowseFiles} className="rounded-full bg-white border-stroke-weak pointer-events-none">
-                  <Text className="text-sm text-text-strong">Browse files</Text>
+                  <Text className="text-text-strong" style={TYPE.label}>Browse files</Text>
                 </Button>
               </>
             )}
@@ -325,15 +325,15 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
 
           <View className="bg-fill-weaker rounded-2xl p-4 mt-1">
             <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-xs text-text-weak" style={{ fontFamily: FONTS.sans }}>Recent</Text>
+              <Text className="text-text-weak" style={TYPE.metadata}>Recent</Text>
               <TouchableOpacity onPress={() => mediaModalRef.current?.present()}>
-                <Text className="text-xs text-brand font-medium">See all</Text>
+                <Text className="text-brand" style={TYPE.metadata}>See all</Text>
               </TouchableOpacity>
             </View>
             {loadingMedia ? (
               <Spinner />
             ) : !recentMedia?.length ? (
-              <Text className="text-sm text-text-weak" style={{ fontFamily: FONTS.sans }}>No recent media found.</Text>
+              <Text className="text-text-weak" style={TYPE.label}>No recent media found.</Text>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
                 {recentMedia.map((media: any) => {
@@ -373,7 +373,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
 
         {/* Write a message */}
         <View className="gap-3">
-          <Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>
+          <Text className="text-text-strong" style={TYPE.label}>
             Write a message
           </Text>
           <View className="bg-fill-weaker border border-stroke-weaker rounded-xl px-4 py-3">
@@ -382,7 +382,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
               onChangeText={setTitle}
               placeholder="Header here"
               placeholderTextColor={COLORS.textMuted}
-              className="text-base text-text-strong p-0 m-0"
+              className="text-text-strong p-0 m-0"
               style={TYPE.bodyLarge}
             />
           </View>
@@ -394,22 +394,22 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
               placeholderTextColor={COLORS.textMuted}
               multiline
               textAlignVertical="top"
-              className="flex-1 text-base text-text-strong p-0 m-0 leading-relaxed"
-              style={{ fontFamily: FONTS.sans, minHeight: 120 }}
+              className="flex-1 text-text-strong p-0 m-0 leading-relaxed"
+              style={[TYPE.body, {minHeight: 120}]}
             />
           </View>
         </View>
 
         {/* Capsule delivery date */}
         <View className="gap-3">
-          <Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>
+          <Text className="text-text-strong" style={TYPE.label}>
             Capsule delivery date:
           </Text>
           <TouchableOpacity
             onPress={() => dateModalRef.current?.present()}
             className="flex-row items-center justify-between p-4 bg-white border border-stroke-weaker rounded-xl"
           >
-            <Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sans }}>
+            <Text className="text-text-strong" style={TYPE.label}>
               {scheduleDate
                 ? `${dayjs(scheduleDate).format('MM/DD/YYYY')} (In ${Math.abs(dayjs(scheduleDate).diff(dayjs(), 'year'))} Years)`
                 : 'Select delivery date'}
@@ -432,7 +432,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
 
         {/* Preview */}
         <View className="gap-3">
-          <Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>
+          <Text className="text-text-strong" style={TYPE.label}>
             Preview
           </Text>
 
@@ -456,33 +456,33 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
               <View className="absolute inset-0 p-6 pt-10">
                 {/* To / From Header */}
                 <View className="flex-row items-center justify-between mb-8 opacity-80">
-                  <Text className="text-[10px]" style={{ fontFamily: selectedTheme.fonts.body, color: selectedTheme.textColor }} numberOfLines={1}>
+                  {/* typography-exception: capsule-theme-preview */}
+                  <Text style={[TYPE.eyebrow, /* typography-exception: capsule-theme-preview */ {fontFamily: selectedTheme.fonts.body, color: selectedTheme.textColor}]} numberOfLines={1}>
                     To: {recipientNames || 'Someone special'}
                   </Text>
                   {/* Decorative middle icon */}
                   <View className="size-3 rounded-full border items-center justify-center mx-2 shrink-0" style={{ borderColor: selectedTheme.headerColor }}>
                     <View className="size-1 rounded-full" style={{ backgroundColor: selectedTheme.headerColor }} />
                   </View>
-                  <Text className="text-[10px]" style={{ fontFamily: selectedTheme.fonts.body, color: selectedTheme.textColor }} numberOfLines={1}>
+                  {/* typography-exception: capsule-theme-preview */}
+                  <Text style={[TYPE.eyebrow, /* typography-exception: capsule-theme-preview */ {fontFamily: selectedTheme.fonts.body, color: selectedTheme.textColor}]} numberOfLines={1}>
                     From: {senderName}
                   </Text>
                 </View>
 
                 <Text
-                  className="text-2xl text-center mb-4 uppercase tracking-widest"
-                  style={{
-                    fontFamily: selectedTheme.fonts.header,
-                    color: selectedTheme.headerColor
-                  }}
-                >
+                  className="text-center mb-4 uppercase tracking-widest"
+                  style={[TYPE.sectionTitle, /* typography-exception: capsule-theme-preview */ {fontFamily: selectedTheme.fonts.header,
+                    color: selectedTheme.headerColor}]}>
                   {title || 'Your Title'}
                 </Text>
                 <Text
-                  className="text-sm text-center opacity-80 leading-relaxed"
-                  style={{
+                  className="text-center opacity-80 leading-relaxed"
+                  style={[TYPE.label, {
+                    /* typography-exception: capsule-theme-preview */
                     fontFamily: selectedTheme.fonts.body,
-                    color: selectedTheme.textColor
-                  }}
+                    color: selectedTheme.textColor,
+                  }]}
                   numberOfLines={6}
                 >
                   {body || 'Your message preview'}
@@ -495,7 +495,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
                 className="absolute inset-0 bg-black/40 items-center justify-center"
               >
                 <View className="bg-black/60 rounded-full px-5 py-2.5 flex-row items-center gap-2">
-                  <Text className="text-white text-sm font-medium">Tap to preview</Text>
+                  <Text className="text-white" style={TYPE.label}>Tap to preview</Text>
                 </View>
               </TouchableOpacity>
             </View>
@@ -510,14 +510,14 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
             disabled={isPending}
             className="flex-1 rounded-full border-stroke-weak"
           >
-            <Text className="text-sm text-text-strong font-medium">Save as Draft</Text>
+            <Text className="text-text-strong" style={TYPE.label}>Save as Draft</Text>
           </Button>
           <Button
             onPress={() => handleSubmit('scheduled')}
             disabled={isPending || !scheduleDate || !title.trim() || !body.trim() || recipientIds.length === 0}
             className="flex-1 bg-brand rounded-full"
           >
-            {isPending ? <Spinner color="white" /> : <Text className="text-sm text-white font-medium">{isEdit ? 'Update Capsule' : 'Schedule Capsule'}</Text>}
+            {isPending ? <Spinner color="white" /> : <Text className="text-white" style={TYPE.label}>{isEdit ? 'Update Capsule' : 'Schedule Capsule'}</Text>}
           </Button>
         </View>
 
@@ -545,7 +545,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
         handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
       >
         <View className="px-5 py-4 border-b border-stroke-weaker flex-row justify-between items-center">
-          <Text className="text-lg font-bold" style={{ fontFamily: FONTS.sansBold }}>Delivery Date</Text>
+          <Text className="" style={TYPE.bodyLarge}>Delivery Date</Text>
           <TouchableOpacity onPress={() => dateModalRef.current?.dismiss()}>
             <X size={20} color={COLORS.textWeak} />
           </TouchableOpacity>
@@ -566,7 +566,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
               }}
               className="p-4 rounded-xl border border-stroke-weaker bg-white"
             >
-              <Text className="text-base font-medium text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>{preset.label}</Text>
+              <Text className="text-text-strong" style={TYPE.body}>{preset.label}</Text>
             </TouchableOpacity>
           ))}
           <TouchableOpacity
@@ -576,7 +576,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
             }}
             className="p-4 rounded-xl border border-stroke-weaker bg-white mt-4"
           >
-            <Text className="text-base font-medium text-brand text-center" style={{ fontFamily: FONTS.sansMedium }}>Pick Custom Date...</Text>
+            <Text className="text-brand text-center" style={TYPE.body}>Pick Custom Date...</Text>
           </TouchableOpacity>
         </BottomSheetScrollView>
       </BottomSheetModal>

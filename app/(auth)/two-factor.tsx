@@ -69,8 +69,8 @@ export default function TwoFactorScreen() {
                 onKeyPress={({ nativeEvent }) => handleKeyPress(i, nativeEvent.key)}
                 keyboardType="number-pad"
                 maxLength={1}
-                className="flex-1 h-14 rounded-xl border border-stroke-weak bg-fill-weaker text-center text-xl text-text-strong"
-                style={[TYPE.input, { textAlign: 'center' }]}
+                className="flex-1 h-14 rounded-xl border border-stroke-weak bg-fill-weaker text-center text-text-strong"
+                style={[TYPE.uiTitle, { textAlign: 'center' }]}
               />
             ))}
           </View>

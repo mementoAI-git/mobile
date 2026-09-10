@@ -25,7 +25,7 @@ interface Props {
 export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOnly }: Props) {
   const openSheet = useUiStore(s => s.openSheet);
   const insets = useSafeAreaInsets();
-  
+
   // Local state for live theme preview (parity with web's interactive preview)
   const [themeId, setThemeId] = useState(initialCapsule.style?.themeId || 'blush');
   const [bgColor, setBgColor] = useState(initialCapsule.style?.backgroundColor || '#FFE5D9');
@@ -83,14 +83,14 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
       {/* Header */}
       <View className="px-6 pt-2 pb-4 flex-row items-center justify-between border-b border-stroke-weaker">
         <View>
-          <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
+          <Text className="text-text-strong" style={TYPE.uiTitle}>
             {previewOnly ? 'View Capsule' : 'Capsule Details'}
           </Text>
-          <Text className="text-xs text-text-weak" style={{ fontFamily: FONTS.sans }}>
+          <Text className="text-text-weak" style={TYPE.metadata}>
             Created {dayjs(initialCapsule.created_at).format('MMMM D, YYYY')}
           </Text>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={onClose}
           className="size-10 rounded-full bg-fill-weaker items-center justify-center"
         >
@@ -98,49 +98,50 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
         </TouchableOpacity>
       </View>
 
-      <BottomSheetScrollView 
+      <BottomSheetScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom ? insets.bottom + 24 : 40 }}
       >
         {/* Themed Preview Card (Web Style - SVG Background like CapsulePreviewCard) */}
         <View className="p-6">
-          <View 
+          <View
             className="w-full aspect-[560/697] rounded-2xl overflow-hidden border border-stroke-weaker shadow-lg relative"
             style={{ backgroundColor: bgColor }}
           >
             {/* SVG Background Layer - mirrors web's currentTheme.Background usage */}
             <currentTheme.Background width="100%" height="100%" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute' }} />
-            
+
             <View className="absolute inset-0 p-6 pt-10">
               {/* To / From Header */}
               <View className="flex-row items-center justify-between mb-8 opacity-80">
-                <Text className="text-[10px]" style={{ fontFamily: currentTheme.fonts.body, color: textColor }} numberOfLines={1}>
+                {/* typography-exception: capsule-theme-preview */}
+                <Text style={[TYPE.eyebrow, /* typography-exception: capsule-theme-preview */ {fontFamily: currentTheme.fonts.body, color: textColor}]} numberOfLines={1}>
                   To: {recipientNames || 'Someone special'}
                 </Text>
                 {/* Decorative middle icon */}
                 <View className="size-3 rounded-full border items-center justify-center mx-2 shrink-0" style={{ borderColor: headerColor }}>
                   <View className="size-1 rounded-full" style={{ backgroundColor: headerColor }} />
                 </View>
-                <Text className="text-[10px]" style={{ fontFamily: currentTheme.fonts.body, color: textColor }} numberOfLines={1}>
+                {/* typography-exception: capsule-theme-preview */}
+                <Text style={[TYPE.eyebrow, /* typography-exception: capsule-theme-preview */ {fontFamily: currentTheme.fonts.body, color: textColor}]} numberOfLines={1}>
                   From: {senderName}
                 </Text>
               </View>
 
               {/* Message Content */}
-              <Text 
-                className="text-2xl text-center mb-4 uppercase tracking-widest" 
-                style={{ 
-                  fontFamily: currentTheme.fonts.header,
-                  color: headerColor 
-                }}
-              >
+              <Text
+                className="text-center mb-4 uppercase tracking-widest"
+                style={[TYPE.sectionTitle, /* typography-exception: capsule-theme-preview */ {fontFamily: currentTheme.fonts.header,
+                  color: headerColor}]}>
                 {initialCapsule.title || 'Your Title'}
               </Text>
-              <Text 
-                className="text-sm text-center opacity-80 leading-relaxed" 
-                style={{ 
+              <Text
+                className="text-center opacity-80 leading-relaxed"
+                style={{
+                  /* typography-exception: capsule-theme-preview */
                   fontFamily: currentTheme.fonts.body,
                   color: textColor,
+                  /* typography-exception: capsule-theme-preview */
                   fontSize: fontSize === '1x' ? 12 : fontSize === '3x' ? 16 : 14,
                 }}
                 numberOfLines={10}
@@ -152,7 +153,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
 
           {/* Interactive Style Picker (Exact Web Parity) */}
           <View className="mt-6">
-            <StylePicker 
+            <StylePicker
               currentThemeId={themeId}
               fontSize={fontSize}
               onThemeSelect={(t) => {
@@ -173,11 +174,11 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
                   <Calendar size={18} color={COLORS.brand} />
                 </View>
                 <View>
-                  <Text className="text-xs text-text-weak uppercase tracking-wider font-bold" style={{ fontFamily: FONTS.sansBold }}>
+                  <Text className="text-text-weak uppercase tracking-wider" style={TYPE.metadata}>
                     Delivery Date
                   </Text>
-                  <Text className="text-base text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
-                    {initialCapsule.schedule_date 
+                  <Text className="text-text-strong" style={TYPE.body}>
+                    {initialCapsule.schedule_date
                       ? dayjs(initialCapsule.schedule_date).format('dddd, MMMM D, YYYY')
                       : 'Not scheduled (Draft)'}
                   </Text>
@@ -189,10 +190,10 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
                   <Users size={18} color={COLORS.brand} />
                 </View>
                 <View>
-                  <Text className="text-xs text-text-weak uppercase tracking-wider font-bold" style={{ fontFamily: FONTS.sansBold }}>
+                  <Text className="text-text-weak uppercase tracking-wider" style={TYPE.metadata}>
                     Recipients
                   </Text>
-                  <Text className="text-base text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+                  <Text className="text-text-strong" style={TYPE.body}>
                     {initialCapsule.recipients.length} {initialCapsule.recipients.length === 1 ? 'person' : 'people'}
                   </Text>
                 </View>
@@ -208,10 +209,10 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
                       <Bookmark size={18} color={COLORS.brand} />
                     </View>
                     <View>
-                      <Text className="text-xs text-text-weak uppercase tracking-wider font-bold" style={{ fontFamily: FONTS.sansBold }}>
+                      <Text className="text-text-weak uppercase tracking-wider" style={TYPE.metadata}>
                         Attached Memories
                       </Text>
-                      <Text className="text-base text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+                      <Text className="text-text-strong" style={TYPE.body}>
                         {initialCapsule.memories?.length ?? 0} {(initialCapsule.memories?.length ?? 0) === 1 ? 'memory' : 'memories'}
                       </Text>
                     </View>
@@ -220,7 +221,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
 
                 {initialCapsule.attachments && initialCapsule.attachments.length > 0 && (
                   <View className="gap-3">
-                    <Text className="text-xs text-text-weak uppercase tracking-wider font-bold" style={{ fontFamily: FONTS.sansBold }}>
+                    <Text className="text-text-weak uppercase tracking-wider" style={TYPE.metadata}>
                       Attached Media ({initialCapsule.attachments.length})
                     </Text>
                     <View className="gap-2">
@@ -235,7 +236,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
                               <FileText size={16} color={COLORS.textBase} />
                             </View>
                             <View className="flex-1">
-                              <Text className="text-sm text-text-strong" numberOfLines={1} style={{ fontFamily: FONTS.sansMedium }}>
+                              <Text className="text-text-strong" numberOfLines={1} style={TYPE.label}>
                                 {a.name || 'Attachment'}
                               </Text>
                               <Text className="text-text-weak uppercase" style={TYPE.eyebrow}>
@@ -254,16 +255,16 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
 
             {/* Quick Actions */}
             <View className="flex-row gap-3">
-              <Button 
-                variant="outline" 
-                className="flex-1 h-14 rounded-2xl" 
+              <Button
+                variant="outline"
+                className="flex-1 h-14 rounded-2xl"
                 onPress={handleEdit}
               >
                 <Edit3 size={18} color={COLORS.textBase} className="mr-2" />
-                <Text className="font-bold" style={{ fontFamily: FONTS.sansBold }}>Edit</Text>
+                <Text style={TYPE.button}>Edit</Text>
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="flex-1 h-14 rounded-2xl border-error/20"
                 onPress={() => {
                   onClose();
@@ -271,7 +272,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
                 }}
               >
                 <Trash2 size={18} color={COLORS.error} className="mr-2" />
-                <Text className="font-bold text-error" style={{ fontFamily: FONTS.sansBold }}>Manage</Text>
+                <Text className="text-error" style={TYPE.button}>Manage</Text>
               </Button>
             </View>
           </View>

@@ -15,7 +15,7 @@ import { UiShieldTick } from '@/components/ui/icons/SettingsIcons';
 import { useDeleteAccount } from '@/hooks/mutations/use-auth-mutations';
 import { PRIVACY_URL, TERMS_URL } from '@/lib/env';
 import { useUiStore } from '@/store';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
@@ -89,7 +89,7 @@ export default function PrivacySettingsScreen() {
           <Text
             onPress={() => openLegalUrl(PRIVACY_URL)}
             className="text-brand"
-            style={{ fontFamily: FONTS.sansBold }}
+            style={TYPE.bodyStrong}
           >
             Privacy Policy
           </Text>
@@ -97,7 +97,7 @@ export default function PrivacySettingsScreen() {
           <Text
             onPress={() => openLegalUrl(TERMS_URL)}
             className="text-brand"
-            style={{ fontFamily: FONTS.sansBold }}
+            style={TYPE.bodyStrong}
           >
             Terms
           </Text>

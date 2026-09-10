@@ -132,8 +132,7 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
             loading={loading}
             onPress={() => { void handleUpgrade(); }}
             className="h-14"
-            textClassName="text-lg font-semibold"
-          >
+                      >
             Upgrade to Pro
           </Button>
           <Button
@@ -142,8 +141,7 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
             onPress={onClose}
             variant="outline"
             className="h-14 bg-card"
-            textClassName="text-lg"
-          >
+                      >
             Let me think about it
           </Button>
         </View>

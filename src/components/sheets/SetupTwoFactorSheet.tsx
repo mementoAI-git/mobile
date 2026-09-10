@@ -47,11 +47,11 @@ export function SetupTwoFactorSheet({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20 }}
       >
-        <Text style={TYPE.cardTitle}>Step 1</Text>
+        <Text style={TYPE.bodyLarge}>Step 1</Text>
         <Text style={twoFactorStyles.copy}>Download an authenticator app:</Text>
         <Text style={twoFactorStyles.link}>1. Google Authenticator{'\n'}2. Authy.</Text>
 
-        <Text style={[TYPE.cardTitle, { marginTop: 18 }]}>Step 2</Text>
+        <Text style={[TYPE.bodyLarge, { marginTop: 18 }]}>Step 2</Text>
         {manual ? (
           <>
             <Text style={twoFactorStyles.copy}>
@@ -99,7 +99,7 @@ export function SetupTwoFactorSheet({
           </>
         )}
 
-        <Text style={[TYPE.cardTitle, { marginTop: 18 }]}>Step 3</Text>
+        <Text style={[TYPE.bodyLarge, { marginTop: 18 }]}>Step 3</Text>
         <Text style={twoFactorStyles.copy}>
           Enter the six-digit code from your authenticator app.
         </Text>

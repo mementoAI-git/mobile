@@ -57,11 +57,11 @@ export function ConversationBar({ memory, onPress, index = 0 }: ConversationBarP
   // Determine elegant dynamic subtitle details
   const renderSubtitle = () => {
     const plainBody = memory.body ? memory.body.replace(/<[^>]+>/g, '').trim() : '';
-    
+
     if (plainBody.length > 0) {
       return (
         <Text
-          className="text-xs text-text-weak leading-snug"
+          className="text-text-weak leading-snug"
           numberOfLines={1}
           style={TYPE.bodySmall}
         >
@@ -69,12 +69,12 @@ export function ConversationBar({ memory, onPress, index = 0 }: ConversationBarP
         </Text>
       );
     }
-    
+
     // If memory body is empty, but we have active messages in the conversation
     if (msgCount > 0) {
       return (
         <Text
-          className="text-xs text-text-weak font-medium"
+          className="text-text-weak"
           style={TYPE.bodySmall}
         >
           Active conversation • {msgCount} {msgCount === 1 ? 'message' : 'messages'}
@@ -84,7 +84,7 @@ export function ConversationBar({ memory, onPress, index = 0 }: ConversationBarP
 
     return (
       <Text
-        className="text-xs text-text-muted italic"
+        className="text-text-muted italic"
         style={TYPE.bodySmall}
       >
         Start a new conversation
@@ -115,7 +115,7 @@ export function ConversationBar({ memory, onPress, index = 0 }: ConversationBarP
         {/* Content details */}
         <View className="flex-1 gap-1 min-w-0">
           <Text
-            className="text-base text-text-strong font-normal"
+            className="text-text-strong"
             numberOfLines={1}
             style={TYPE.cardTitle}
           >

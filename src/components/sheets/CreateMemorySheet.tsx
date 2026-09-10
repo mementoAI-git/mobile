@@ -32,7 +32,7 @@ const MemoTagPillItem = React.memo(function MemoTagPillItem({
   const handleRemove = useCallback(() => onRemove(tag), [tag, onRemove]);
   return (
     <View className="flex-row items-center bg-white border border-stroke-weaker rounded-full pl-3 pr-1 py-1 h-8 gap-1 shadow-sm">
-      <Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>#{tag}</Text>
+      <Text className="text-text-strong" style={TYPE.label}>#{tag}</Text>
       <TouchableOpacity onPress={handleRemove} className="p-1">
         <X size={14} color={COLORS.textWeak} />
       </TouchableOpacity>
@@ -199,7 +199,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
       >
         {/* ── Header ── */}
         <View className="flex-row items-center justify-between">
-          <Text className="text-text-strong" style={TYPE.screenTitle}>
+          <Text className="text-text-strong" style={TYPE.sectionTitle}>
             {editData ? 'Edit Memory' : 'New Memory'}
           </Text>
           <TouchableOpacity onPress={onClose} hitSlop={6} className="size-8 rounded-full bg-fill-weaker items-center justify-center">
@@ -210,7 +210,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
         <View className="gap-5">
           {/* Title */}
           <View className="gap-2">
-            <Text className="text-sm font-bold text-text-muted uppercase tracking-widest ml-1" style={{ fontFamily: FONTS.sansBold }}>
+            <Text className="text-text-muted uppercase tracking-widest ml-1" style={TYPE.label}>
               Title
             </Text>
             <BottomSheetTextInput
@@ -218,14 +218,14 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
               onChangeText={setTitle}
               placeholder="What's this memory about?"
               placeholderTextColor={COLORS.textMuted}
-              className="h-14 bg-fill-weaker border border-stroke-weaker rounded-2xl px-4 text-base text-text-strong"
-              style={{ fontFamily: FONTS.sansMedium }}
+              className="h-14 bg-fill-weaker border border-stroke-weaker rounded-2xl px-4 text-text-strong"
+              style={TYPE.input}
             />
           </View>
 
           {/* Body */}
           <View className="gap-2">
-            <Text className="text-sm font-bold text-text-muted uppercase tracking-widest ml-1" style={{ fontFamily: FONTS.sansBold }}>
+            <Text className="text-text-muted uppercase tracking-widest ml-1" style={TYPE.label}>
               The Story
             </Text>
             <BottomSheetTextInput
@@ -235,15 +235,15 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
               placeholderTextColor={COLORS.textMuted}
               multiline
               numberOfLines={6}
-              className="min-h-[160px] bg-fill-weaker border border-stroke-weaker rounded-2xl px-4 py-4 text-base text-text-strong"
-              style={{ fontFamily: FONTS.sans, textAlignVertical: 'top' }}
+              className="min-h-[160px] bg-fill-weaker border border-stroke-weaker rounded-2xl px-4 py-4 text-text-strong"
+              style={[TYPE.body, {textAlignVertical: 'top'}]}
             />
             <LinkPreviews text={body} />
           </View>
 
           {/* Tags */}
           <View className="gap-2">
-            <Text className="text-sm font-bold text-text-muted uppercase tracking-widest ml-1" style={{ fontFamily: FONTS.sansBold }}>
+            <Text className="text-text-muted uppercase tracking-widest ml-1" style={TYPE.label}>
               Tags
             </Text>
             <View className="bg-fill-weaker border border-stroke-weaker rounded-2xl px-2 py-2 min-h-14 flex-row flex-wrap items-center gap-2">
@@ -257,8 +257,8 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
                 blurOnSubmit={false}
                 placeholder={tags.length === 0 ? "Add tags (press enter or space)" : "Add more"}
                 placeholderTextColor={COLORS.textMuted}
-                className="flex-1 min-w-[100px] text-sm text-text-strong h-8 px-2"
-                style={{ fontFamily: FONTS.sans }}
+                className="flex-1 min-w-[100px] text-text-strong h-8 px-2"
+                style={TYPE.label}
               />
             </View>
           </View>
@@ -324,7 +324,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
             size="lg"
             className="h-14 bg-brand rounded-full"
           >
-            <Text className="text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>
+            <Text className="text-white" style={TYPE.button}>
               {editData ? 'Save Changes' : 'Save Memory'}
             </Text>
           </Button>

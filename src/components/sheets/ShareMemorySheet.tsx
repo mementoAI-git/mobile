@@ -5,6 +5,7 @@ import { X, CheckCircle2, Copy, Share as ShareIcon, Plus } from 'lucide-react-na
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Button } from '@/components/ui';
 import { useUiStore } from '@/store';
 import { logger } from '@/lib/logger';
@@ -46,7 +47,7 @@ export function ShareMemorySheet() {
   return (
     <View className="flex-1 px-5 pb-8 pt-2">
       <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
+        <Text className="text-text-strong" style={TYPE.sectionTitle}>
           Story added
         </Text>
         <TouchableOpacity onPress={closeSheet} className="p-2 rounded-full bg-fill-weaker">
@@ -56,7 +57,7 @@ export function ShareMemorySheet() {
 
       <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 24 }}>
         <View className="gap-2">
-          <Text className="text-sm text-text-weak" style={{ fontFamily: FONTS.sans }}>
+          <Text className="text-text-weak" style={TYPE.bodySmall}>
             You have added a new story to your Memento. You can share it with others using the link below.
           </Text>
         </View>
@@ -64,21 +65,21 @@ export function ShareMemorySheet() {
         <View className="bg-fill-weaker border border-stroke-weaker rounded-2xl p-5 gap-6">
           {/* Link Copy Box */}
           <View className="gap-2">
-            <Text className="text-sm font-medium text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+            <Text className="text-text-strong" style={TYPE.label}>
               Share link
             </Text>
             <View className="flex-row items-stretch bg-white border border-stroke-weaker rounded-xl overflow-hidden h-12">
               <View className="flex-1 justify-center px-4">
-                <Text className="text-sm text-text-strong truncate" numberOfLines={1} style={{ fontFamily: FONTS.sans }}>
+                <Text className="text-text-strong truncate" numberOfLines={1} style={TYPE.body}>
                   {shareUrl}
                 </Text>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleCopy}
                 className="flex-row items-center justify-center gap-1.5 px-4 bg-fill-weaker border-l border-stroke-weaker"
               >
                 {copied ? <CheckCircle2 size={16} color={COLORS.brand} /> : <Copy size={16} color={COLORS.brand} />}
-                <Text className="text-sm font-bold text-brand" style={{ fontFamily: FONTS.sansBold }}>
+                <Text className="text-brand" style={TYPE.buttonSmall}>
                   {copied ? 'Copied' : 'Copy'}
                 </Text>
               </TouchableOpacity>
@@ -89,12 +90,12 @@ export function ShareMemorySheet() {
           <View className="gap-3">
             <View className="flex-row items-center gap-3">
               <View className="h-px flex-1 bg-stroke-weaker" />
-              <Text className="text-xs text-text-weak" style={{ fontFamily: FONTS.sans }}>Or share natively</Text>
+              <Text className="text-text-weak" style={TYPE.metadata}>Or share natively</Text>
               <View className="h-px flex-1 bg-stroke-weaker" />
             </View>
             <Button variant="outline" onPress={handleShare} className="h-12 rounded-xl bg-white border-stroke-weak">
               <ShareIcon size={18} color={COLORS.textBase} className="mr-2" />
-              <Text className="font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>Share Options...</Text>
+              <Text className="text-text-strong" style={TYPE.button}>Share Options...</Text>
             </Button>
           </View>
         </View>
@@ -102,11 +103,11 @@ export function ShareMemorySheet() {
         {/* Footer Actions */}
         <View className="flex-row gap-3 pt-2">
           <Button variant="outline" className="flex-1 h-12 rounded-full border-stroke-weak" onPress={closeSheet}>
-            <Text className="font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>Dismiss</Text>
+            <Text className="text-text-strong" style={TYPE.button}>Dismiss</Text>
           </Button>
           <Button className="flex-1 h-12 bg-brand rounded-full" onPress={handleAddAnother}>
             <Plus size={18} color="white" className="mr-1" />
-            <Text className="font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>Add Story</Text>
+            <Text className="text-white" style={TYPE.button}>Add Story</Text>
           </Button>
         </View>
       </BottomSheetScrollView>

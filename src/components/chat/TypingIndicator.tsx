@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import Animated, { 
+import Animated, {
   cancelAnimation,
-  useSharedValue, 
-  useAnimatedStyle, 
-  withRepeat, 
-  withTiming, 
-  withDelay, 
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withDelay,
   withSequence,
   FadeInUp
 } from 'react-native-reanimated';
@@ -78,7 +78,7 @@ export function TypingIndicator() {
   return (
     <Animated.View entering={FadeInUp.duration(400)} className="self-start mb-5 max-w-[85%]">
       {/* Symmetric White Bubble for AI typing state */}
-      <View 
+      <View
         style={styles.bubble}
         className="px-5 py-3.5 bg-white rounded-[20px] rounded-bl-[4px] flex-row items-center gap-3.5"
       >
@@ -90,8 +90,8 @@ export function TypingIndicator() {
         </View>
 
         {/* Dynamic Whimsical Phrase */}
-        <Text 
-          className="text-xs text-text-weak italic"
+        <Text
+          className="text-text-weak italic"
           style={TYPE.bodySmall}
         >
           {phrase}

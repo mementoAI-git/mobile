@@ -307,7 +307,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
         </View>
         {bodyText ? (
           <Text
-            className="text-xs text-text-weak leading-relaxed"
+            className="text-text-weak leading-relaxed"
             style={TYPE.bodySmall}
             numberOfLines={textBodyLines}
           >
@@ -370,7 +370,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
             </Text>
             {bodyText ? (
               <Text
-                className="text-sm leading-relaxed"
+                className="leading-relaxed"
                 style={{ ...TYPE.body, color: '#555555' }}
                 numberOfLines={2}
               >
@@ -416,7 +416,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
 
         {/* Title below the card (Pinterest-style) */}
         <Text
-          className="mt-2 px-0.5 text-center text-xs text-text-strong leading-snug"
+          className="mt-2 px-0.5 text-center text-text-strong leading-snug"
           style={TYPE.bodySmall}
           numberOfLines={2}
         >

@@ -96,7 +96,7 @@ export function TextInput({
 
         {InputComponent ? (
           <InputComponent
-            className={cn('flex-1 text-base text-text-strong', inputClassName)}
+            className={cn('flex-1 text-text-strong', inputClassName)}
             style={{
               ...TYPE.input,
               color: COLORS.textStrong,
@@ -117,7 +117,7 @@ export function TextInput({
           />
         ) : (
           <RNTextInput
-            className={cn('flex-1 text-base text-text-strong', inputClassName)}
+            className={cn('flex-1 text-text-strong', inputClassName)}
             style={{
               ...TYPE.input,
               color: COLORS.textStrong,

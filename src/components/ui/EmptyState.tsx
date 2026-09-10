@@ -40,14 +40,14 @@ export function EmptyState({
       ) : null}
 
       <Animated.Text
-        className="text-2xl text-text-strong text-center mb-2"
+        className="text-text-strong text-center mb-2"
         style={TYPE.cardTitle}
       >
         {title}
       </Animated.Text>
 
       <Animated.Text
-        className="text-base text-text-weak text-center leading-relaxed mb-8"
+        className="text-text-weak text-center mb-8"
         style={TYPE.bodySmall}
       >
         {description}

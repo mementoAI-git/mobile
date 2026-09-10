@@ -717,7 +717,7 @@ const styles = StyleSheet.create({
   privacyOption: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 },
   privacyOptionActive: { backgroundColor: `${COLORS.brand}12` },
   privacyOptionText: { ...TYPE.label, color: COLORS.textStrong },
-  privacyOptionTextActive: { color: COLORS.brand, fontFamily: FONTS.sansMedium },
+  privacyOptionTextActive: { color: COLORS.brand },
 
   // Bottom toolbar — matches web action bar layout
   toolbar: {

@@ -59,7 +59,7 @@ export function ContinueReflectingCard({ title, onPress, className }: ContinueRe
           </Animated.Text>
           <View className="flex-row items-center gap-1">
             <Animated.Text
-              className="text-xs text-text-weak font-semibold"
+              className="text-text-weak"
               style={TYPE.metadata}
             >
               Continue

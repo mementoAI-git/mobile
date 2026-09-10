@@ -297,8 +297,7 @@ export default function AccountOverviewScreen() {
                     variant="secondary"
                     size="lg"
                     className="h-10 px-4"
-                    textClassName="text-sm font-bold"
-                    onPress={openEditProfile}
+                                        onPress={openEditProfile}
                   >
                     Edit Profile
                   </Button>
@@ -306,8 +305,7 @@ export default function AccountOverviewScreen() {
                     variant="secondary"
                     size="lg"
                     className="h-10 px-4"
-                    textClassName="text-sm font-bold"
-                    onPress={openInsights}
+                                        onPress={openInsights}
                   >
                     View Insights
                   </Button>

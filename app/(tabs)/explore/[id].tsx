@@ -192,7 +192,7 @@ export default function CategoryPromptsScreen() {
                         className="flex-1 py-3 items-center relative"
                       >
                         <Animated.Text
-                          className={`text-sm font-semibold ${isActive ? 'text-brand' : 'text-text-weak'}`}
+                          className={isActive ? 'text-brand' : 'text-text-weak'}
                           style={TYPE.label}
                         >
                           {tab}
@@ -213,9 +213,8 @@ export default function CategoryPromptsScreen() {
               <View className="items-center justify-center py-16 gap-3">
                 <Inbox size={40} color={COLORS.textDisabled} strokeWidth={1.5} />
                 <Animated.Text
-                  className="text-base text-text-weak text-center"
-                  style={{ fontFamily: FONTS.sans }}
-                >
+                  className="text-text-weak text-center"
+                  style={TYPE.body}>
                   No prompts under this filter yet.
                 </Animated.Text>
               </View>

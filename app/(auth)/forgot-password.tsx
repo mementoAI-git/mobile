@@ -87,7 +87,7 @@ export default function ForgotPasswordScreen() {
   if (sent) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center px-6">
-        <Animated.Text className="text-5xl mb-6">📬</Animated.Text>
+        <Animated.Text className="mb-6" style={TYPE.displayTitle}>📬</Animated.Text>
         <Animated.Text
           className="text-text-strong text-center mb-3"
           style={TYPE.screenTitle}

@@ -72,7 +72,7 @@ export const AccountUpgradeBanner = React.memo(function AccountUpgradeBanner({
           variant="secondary"
           size="sm"
           className="absolute right-3 top-3 h-8 bg-white/20 px-3"
-          textClassName="text-white text-xs font-bold"
+ textClassName="text-white "
           leftIcon={<ArrowUpCircle size={15} color={COLORS.textInverse} strokeWidth={2.4} />}
         >
           {subscriptionKnown && !isProOrAbove ? 'Upgrade' : 'Plan details'}

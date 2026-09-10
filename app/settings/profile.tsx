@@ -94,7 +94,6 @@ export default function PersonalInfoScreen() {
               variant="secondary"
               size="lg"
               className="h-10 px-4"
-              textClassName="text-sm font-bold"
               onPress={handleEdit}
             >
               Edit Profile
@@ -124,7 +123,7 @@ export default function PersonalInfoScreen() {
                 )}
                 <View style={{ paddingHorizontal: 20, paddingVertical: 18, gap: 4 }}>
                   <Text style={TYPE.bodySmall}>{detail.label}</Text>
-                  <Text style={TYPE.label}>{getValue(detail.key)}</Text>
+                  <Text style={TYPE.body}>{getValue(detail.key)}</Text>
                 </View>
               </View>
             ))}

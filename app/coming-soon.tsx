@@ -118,8 +118,7 @@ function ComingSoonContent() {
           fullWidth
           onPress={dismiss}
           size="lg"
-          textClassName="text-base font-bold"
-        >
+                  >
           Got it
         </Button>
       </View>

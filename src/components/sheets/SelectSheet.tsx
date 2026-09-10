@@ -89,9 +89,8 @@ export function SelectSheet({
       {/* Handle label / title */}
       {placeholder && (
         <Text
-          className="text-xs uppercase tracking-widest text-text-weak mb-1"
-          style={{ fontFamily: FONTS.sansBold }}
-        >
+          className="uppercase tracking-widest text-text-weak mb-1"
+          style={TYPE.metadata}>
           {placeholder}
         </Text>
       )}

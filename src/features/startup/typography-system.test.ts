@@ -14,6 +14,7 @@ describe('global typography system', () => {
       uiTitle: {fontFamily: FONTS.sansSemi, fontSize: 20, lineHeight: 26},
       bodyLarge: {fontFamily: FONTS.sans, fontSize: 16, lineHeight: 24},
       body: {fontFamily: FONTS.sans, fontSize: 15, lineHeight: 23},
+      bodyStrong: {fontFamily: FONTS.sansBold, fontSize: 15, lineHeight: 23},
       bodySmall: {fontFamily: FONTS.sans, fontSize: 13, lineHeight: 19},
       label: {fontFamily: FONTS.sansMedium, fontSize: 14, lineHeight: 20},
       button: {fontFamily: FONTS.sansSemi, fontSize: 16, lineHeight: 22},
@@ -28,7 +29,7 @@ describe('global typography system', () => {
 
   test('exposes only the approved role names', () => {
     expect(Object.keys(TYPE).sort()).toEqual([
-      'body', 'bodyLarge', 'bodySmall', 'button', 'buttonSmall', 'cardTitle',
+      'body', 'bodyLarge', 'bodySmall', 'bodyStrong', 'button', 'buttonSmall', 'cardTitle',
       'displayStat', 'displayTitle', 'eyebrow', 'greeting', 'input', 'label',
       'metadata', 'mono', 'screenTitle', 'sectionTitle', 'stat', 'uiTitle',
     ]);

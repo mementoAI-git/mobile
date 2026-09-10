@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 import { PhoneOff } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { useUiStore } from '@/store';
 
@@ -18,10 +19,10 @@ export function EndVoiceSessionSheet({ duration, onEnd, onClose }: EndVoiceSessi
       <View className="size-20 items-center justify-center rounded-full bg-fill-weaker">
         <PhoneOff size={38} color={COLORS.warning} />
       </View>
-      <Text className="mt-6 text-center text-3xl text-text-strong" style={{ fontFamily: FONTS.serifMedium }}>
+      <Text className="mt-6 text-center text-text-strong" style={TYPE.screenTitle}>
         End this voice session?
       </Text>
-      <Text className="mt-2 text-base text-text-base" style={{ fontFamily: FONTS.sans }}>
+      <Text className="mt-2 text-text-base" style={TYPE.bodyLarge}>
         {formatVoiceCallDuration(duration)}
       </Text>
       <View className="mt-8 w-full flex-row gap-3">

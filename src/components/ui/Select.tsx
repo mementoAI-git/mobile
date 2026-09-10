@@ -59,7 +59,7 @@ export function Select({
     <View {...props}>
       {label && (
         <Text
-          className="mb-1.5 text-sm text-text-strong"
+          className="mb-1.5 text-text-strong"
           style={TYPE.label}
         >
           {label}

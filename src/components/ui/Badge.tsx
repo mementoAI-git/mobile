@@ -44,7 +44,7 @@ export function Badge({ label, variant = 'default', className }: BadgeProps) {
       )}
     >
       <Text
-        className={cn('text-xs font-medium', text)}
+        className={text}
         style={TYPE.metadata}
       >
         {label}

@@ -72,8 +72,8 @@ export function MemoryInsightsSheet() {
     return res;
   }, [insightSource]);
 
-  const filtered = activeCategory === 'all' 
-    ? allInsights 
+  const filtered = activeCategory === 'all'
+    ? allInsights
     : allInsights.filter(i => i.category === activeCategory);
 
   const aiSummary = summaryRes?.summary?.trim() || null;
@@ -81,7 +81,7 @@ export function MemoryInsightsSheet() {
   return (
     <View className="px-5 pt-2" style={{ flex: 1 }}>
       <View className="flex-row items-center justify-between mb-4 border-b border-stroke-weaker pb-3">
-        <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
+        <Text className="text-text-strong" style={TYPE.uiTitle}>
           Memory Insights
         </Text>
       </View>
@@ -99,7 +99,7 @@ export function MemoryInsightsSheet() {
                   {b.user?.picture_url ? (
                     <Image source={{ uri: b.user.picture_url }} className="size-full" />
                   ) : (
-                    <Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>{b.name[0]}</Text>
+                    <Text className="text-text-strong" style={TYPE.label}>{b.name[0]}</Text>
                   )}
                 </View>
                 <Text className="text-text-strong text-center truncate w-full" style={TYPE.eyebrow}>
@@ -107,7 +107,7 @@ export function MemoryInsightsSheet() {
                 </Text>
               </View>
             ))}
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => openSheet('add-beneficiary')}
               className="items-center gap-1.5 w-14"
             >
@@ -129,14 +129,14 @@ export function MemoryInsightsSheet() {
               onPress={() => setActiveCategory(cat.key)}
               className={cn(
                 'px-4 py-2 rounded-full border',
-                activeCategory === cat.key 
-                  ? 'bg-brand border-brand' 
+                activeCategory === cat.key
+                  ? 'bg-brand border-brand'
                   : 'bg-fill-weaker border-stroke-weaker'
               )}
             >
-              <Text 
-                className={cn('text-xs font-medium', activeCategory === cat.key ? 'text-white' : 'text-text-strong')}
-                style={{ fontFamily: FONTS.sansMedium }}
+              <Text
+                className={activeCategory === cat.key ? 'text-white' : 'text-text-strong'}
+                style={TYPE.metadata}
               >
                 {cat.label}
               </Text>
@@ -150,11 +150,11 @@ export function MemoryInsightsSheet() {
             {summaryLoading && <Spinner />}
             {aiSummary ? (
               <View className="bg-fill-weak rounded-2xl p-5 border border-stroke-weaker gap-4">
-                <Text className="text-sm text-text-strong leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+                <Text className="text-text-strong leading-relaxed" style={TYPE.label}>
                   {aiSummary}
                 </Text>
                 {summaryRes?.generated_at && (
-                  <Text className="text-xs text-text-weak" style={{ fontFamily: FONTS.sans }}>
+                  <Text className="text-text-weak" style={TYPE.metadata}>
                     Last updated {new Date(summaryRes.generated_at).toLocaleString()}
                   </Text>
                 )}
@@ -164,10 +164,10 @@ export function MemoryInsightsSheet() {
                 <View className="size-12 rounded-full bg-white flex items-center justify-center mb-3">
                   <Sparkles size={20} color={COLORS.textWeak} />
                 </View>
-                <Text className="text-sm font-medium text-text-strong text-center" style={{ fontFamily: FONTS.sansMedium }}>
+                <Text className="text-text-strong text-center" style={TYPE.label}>
                   Insights are generating
                 </Text>
-                <Text className="text-xs text-text-weak text-center mt-2 leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+                <Text className="text-text-weak text-center mt-2 leading-relaxed" style={TYPE.metadata}>
                   As you log more memories and chats, Memento's AI builds a deeper understanding of your preferences and legacy.
                 </Text>
               </View>
@@ -180,8 +180,8 @@ export function MemoryInsightsSheet() {
                 <View className="size-12 rounded-full bg-white flex items-center justify-center shadow-sm">
                   <Sparkles size={20} color={COLORS.textWeak} />
                 </View>
-                <Text className="text-sm font-medium text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>No insights yet</Text>
-                <Text className="text-xs text-text-weak text-center leading-relaxed max-w-[220px]" style={{ fontFamily: FONTS.sans }}>
+                <Text className="text-text-strong" style={TYPE.label}>No insights yet</Text>
+                <Text className="text-text-weak text-center leading-relaxed max-w-[220px]" style={TYPE.metadata}>
                   Keep using Memento — your AI will learn more about you over time.
                 </Text>
               </View>
@@ -193,7 +193,7 @@ export function MemoryInsightsSheet() {
                     <View className="size-8 rounded-lg bg-white items-center justify-center mt-0.5">
                       <Icon size={16} color={COLORS.brand} />
                     </View>
-                    <Text className="flex-1 text-sm text-text-strong leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+                    <Text className="flex-1 text-text-strong leading-relaxed" style={TYPE.label}>
                       {item.text}
                     </Text>
                   </View>

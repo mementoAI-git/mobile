@@ -51,7 +51,7 @@ export const SettingsHubRow = React.memo(function SettingsHubRow({
       >
         <View style={{ width: 32, alignItems: 'center' }}>{icon}</View>
         <Text
-          style={[TYPE.label, { flex: 1 }]}
+          style={[TYPE.body, { flex: 1 }]}
         >
           {label}
         </Text>

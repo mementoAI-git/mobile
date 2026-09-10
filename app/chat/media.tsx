@@ -6,7 +6,7 @@ import { ArrowLeft, FileText, Image as ImageIcon, Link2, Music2, Play } from 'lu
 import * as Haptics from 'expo-haptics';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { mapAttachmentsToShared, type SharedAttachment, type SharedLink } from '@/features/chat/shared-media';
 import { useConversationAttachments } from '@/hooks/queries/use-memories';
@@ -25,10 +25,10 @@ export default function ChatMediaScreen() {
   const [assetType, setAssetType] = useState<AssetType>(params.assetType ?? 'all');
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(() => new Set());
-  
+
   const attachmentsQuery = useConversationAttachments(chatId);
   const removeFile = useRemoveMemoryFile(chatId);
-  
+
   const rawAttachments = Array.isArray(attachmentsQuery.data) ? attachmentsQuery.data : attachmentsQuery.data?.attachments ?? [];
   const rawLinks = attachmentsQuery.data?.links ?? [];
 
@@ -43,7 +43,7 @@ export default function ChatMediaScreen() {
   }), [allAttachments, assetType]);
   const docs = useMemo(() => allAttachments.filter(({ category }) => category === 'file'), [allAttachments]);
   const links = useMemo(() => (rawLinks as SharedLink[]), [rawLinks]);
-  
+
   const activeAttachments = tab === 'docs' ? docs : media;
   const gap = 3;
   const tileSize = Math.floor((width - gap * 3) / 4);
@@ -77,7 +77,7 @@ export default function ChatMediaScreen() {
       <Pressable onPress={() => { Haptics.selectionAsync(); setPreviewIndex(index); }} className="mx-4 mb-3 min-h-16 flex-row items-center gap-3 rounded-2xl border border-stroke-weak bg-card px-4 py-3">
         <View className="size-11 items-center justify-center rounded-xl bg-fill-weak"><Icon size={22} color={COLORS.textStrong} /></View>
         <View className="flex-1">
-          <Text numberOfLines={1} style={{ color: COLORS.textStrong, fontFamily: FONTS.sansSemi }}>{item.name || (item.category === 'audio' ? 'Audio' : 'Document')}</Text>
+          <Text numberOfLines={1} style={[TYPE.bodyStrong, {color: COLORS.textStrong}]}>{item.name || (item.category === 'audio' ? 'Audio' : 'Document')}</Text>
           <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>{item.category === 'audio' ? 'Audio' : 'Document'}</Text>
         </View>
       </Pressable>
@@ -88,7 +88,7 @@ export default function ChatMediaScreen() {
     <Pressable onPress={() => { Haptics.selectionAsync(); void Linking.openURL(item.url); }} className="mx-4 mb-3 min-h-16 flex-row items-center gap-3 rounded-2xl border border-stroke-weak bg-card px-4 py-3">
       <View className="size-11 items-center justify-center rounded-xl bg-fill-weak"><Link2 size={22} color={COLORS.textStrong} /></View>
       <View className="flex-1">
-        <Text numberOfLines={1} style={{ color: COLORS.textStrong, fontFamily: FONTS.sansSemi }}>{item.url}</Text>
+        <Text numberOfLines={1} style={[TYPE.bodyStrong, {color: COLORS.textStrong}]}>{item.url}</Text>
         <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>Open link</Text>
       </View>
     </Pressable>
@@ -118,7 +118,7 @@ export default function ChatMediaScreen() {
           return (
             <Pressable key={id} onPress={() => { Haptics.selectionAsync(); setPreviewIndex(null); setTab(id); if (id !== 'media') setAssetType('all'); }} className="h-11 flex-1 flex-row items-center justify-center gap-2 rounded-xl" style={{ backgroundColor: active ? COLORS.textStrong : COLORS.fillWeak }}>
               <Icon size={18} color={active ? COLORS.textInverse : COLORS.textBase} />
-              <Text style={{ color: active ? COLORS.textInverse : COLORS.textStrong, fontFamily: FONTS.sansSemi }}>{label}</Text>
+              <Text style={[TYPE.buttonSmall, {color: active ? COLORS.textInverse : COLORS.textStrong}]}>{label}</Text>
             </Pressable>
           );
         })}

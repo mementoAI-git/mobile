@@ -14,8 +14,9 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit --ignoreDeprecations 6.0",
     "check:prod": "node scripts/check-production-readiness.js",
+    "check:typography": "node scripts/check-typography-compliance.js",
     "doctor": "node scripts/run-expo-doctor.js",
-    "verify": "bun run lint && bun run typecheck && bun run test && bun run check:prod",
+    "verify": "bun run lint && bun run typecheck && bun run check:typography && bun run test && bun run check:prod",
     "verify:full": "bun run verify && bun run doctor",
     "prepare": "husky"
   },

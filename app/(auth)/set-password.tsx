@@ -21,16 +21,15 @@ export default function SetPasswordScreen() {
   if (isSuccess) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center px-6">
-        <Animated.Text className="text-5xl mb-6">🔐</Animated.Text>
+        <Animated.Text className="mb-6" style={TYPE.displayTitle}>🔐</Animated.Text>
         <Animated.Text
           className=" text-text-strong text-center mb-3" style={TYPE.screenTitle}
         >
           Password updated!
         </Animated.Text>
-        <Animated.Text 
-          className="text-base text-text-weak text-center mb-8"
-          style={{ fontFamily: FONTS.sans }}
-        >
+        <Animated.Text
+          className="text-text-weak text-center mb-8"
+          style={TYPE.body}>
           Your new password is set. You can now sign in.
         </Animated.Text>
         <Button onPress={() => router.replace('/(auth)/login')} fullWidth size="lg">Sign in</Button>
@@ -53,9 +52,8 @@ export default function SetPasswordScreen() {
               New password
             </Animated.Text>
             <Animated.Text
-              className="text-lg text-text-base leading-relaxed"
-              style={{ fontFamily: FONTS.sans }}
-            >
+              className="text-text-base leading-relaxed"
+              style={TYPE.bodyLarge}>
               Choose a strong new password.
             </Animated.Text>
           </View>
@@ -71,9 +69,8 @@ export default function SetPasswordScreen() {
             {error && (
               <View className="bg-error-tint border border-error-weak rounded-xl px-4 py-3">
                 <Animated.Text
-                  className="text-sm text-error-strong text-center"
-                  style={{ fontFamily: FONTS.sansMedium }}
-                >
+                  className="text-error-strong text-center"
+                  style={TYPE.label}>
                   {(error as any).message ?? 'Couldn’t update your password. Try again.'}
                 </Animated.Text>
               </View>

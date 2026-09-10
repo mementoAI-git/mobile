@@ -144,7 +144,7 @@ export default function TwoFactorScreen() {
 
             {error && (
               <View className="rounded-2xl px-4 py-3 border" style={{ backgroundColor: `${COLORS.error}08`, borderColor: `${COLORS.error}20` }}>
-                <Text className="text-sm" style={{ fontFamily: FONTS.sans, color: COLORS.error }}>{error}</Text>
+                <Text style={[TYPE.bodySmall, { color: COLORS.error }]}>{error}</Text>
               </View>
             )}
 
