@@ -22,6 +22,7 @@ import Animated, {
 import { Button, TextInput, PasswordInput, Logo } from '@/components/ui';
 import { useLoginLogic } from '@/hooks/use-login-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Fingerprint } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -154,8 +155,7 @@ export default function LoginScreen() {
             {/* Heading — collapses second */}
             <Animated.View style={[headingStyle, { marginBottom: isKeyboardVisible ? 16 : 40 }]}>
               <Animated.Text
-                className="text-[40px] text-text-strong mb-2"
-                style={{ fontFamily: FONTS.serif }}
+                className=" text-text-strong mb-2" style={TYPE.displayTitle}
               >
                 Welcome back
               </Animated.Text>

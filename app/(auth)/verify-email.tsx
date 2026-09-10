@@ -5,6 +5,7 @@ import Animated from 'react-native-reanimated';
 import { Button, TextInput, Logo } from '@/components/ui';
 import { useVerifyEmailLogic } from '@/hooks/use-verify-email-logic';
 import { FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
@@ -26,8 +27,7 @@ export default function VerifyEmailScreen() {
         <View className="flex-1 items-center justify-center px-6">
           <Animated.Text className="text-5xl mb-6">✅</Animated.Text>
           <Animated.Text
-            className="text-[32px] text-text-strong text-center mb-3"
-            style={{ fontFamily: FONTS.serif }}
+            className=" text-text-strong text-center mb-3" style={TYPE.screenTitle}
           >
             Email verified!
           </Animated.Text>
@@ -55,8 +55,7 @@ export default function VerifyEmailScreen() {
 
         <View className="mb-10">
           <Animated.Text
-            className="text-[32px] text-text-strong mb-2"
-            style={{ fontFamily: FONTS.serif }}
+            className=" text-text-strong mb-2" style={TYPE.screenTitle}
           >
             Verify email
           </Animated.Text>

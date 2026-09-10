@@ -6,6 +6,7 @@ import { RELATIONSHIP_OPTIONS } from '@/constants/onboarding';
 import { ChevronRight, Heart, Mail, User } from 'lucide-react-native';
 import { Button, TextInput, Logo } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useBeneficiaryLogic } from '@/hooks/use-beneficiary-logic';
@@ -49,8 +50,7 @@ export default function BeneficiaryOnboardScreen() {
             <Heart size={32} color={COLORS.brand} fill={COLORS.brand} />
           </View>
           <Animated.Text
-            className="text-[34px] text-text-strong leading-[40px] text-center"
-            style={{ fontFamily: FONTS.serif }}
+            className=" text-text-strong leading-[40px] text-center" style={TYPE.displayTitle}
           >
             Add a trusted{"\n"}person
           </Animated.Text>

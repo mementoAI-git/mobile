@@ -12,6 +12,7 @@ import Animated from 'react-native-reanimated';
 import { Button, Logo } from '@/components/ui';
 import { useTwoFactorLogic } from '@/hooks/use-two-factor-logic';
 import { FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 export default function TwoFactorScreen() {
   const {
@@ -44,14 +45,14 @@ export default function TwoFactorScreen() {
           {/* Header */}
           <View className="mb-10">
             <Animated.Text
-              className="text-3xl text-text-strong mb-2"
-              style={{ fontFamily: FONTS.serif }}
+              className="text-text-strong mb-2"
+              style={TYPE.screenTitle}
             >
               Two-factor auth
             </Animated.Text>
             <Animated.Text
-              className="text-base text-text-base"
-              style={{ fontFamily: FONTS.sans }}
+              className="text-text-base"
+              style={TYPE.bodyLarge}
             >
               Enter the 6-digit code from your authenticator app.
             </Animated.Text>
@@ -69,7 +70,7 @@ export default function TwoFactorScreen() {
                 keyboardType="number-pad"
                 maxLength={1}
                 className="flex-1 h-14 rounded-xl border border-stroke-weak bg-fill-weaker text-center text-xl text-text-strong"
-                style={{ textAlign: 'center', fontFamily: FONTS.sansSemi }}
+                style={[TYPE.input, { textAlign: 'center' }]}
               />
             ))}
           </View>
@@ -77,8 +78,8 @@ export default function TwoFactorScreen() {
           {error ? (
             <View className="bg-error-weak rounded-xl px-4 py-3 mb-4">
               <Animated.Text
-                className="text-sm text-error-strong"
-                style={{ fontFamily: FONTS.sans }}
+                className="text-error-strong"
+                style={TYPE.bodySmall}
               >
                 {error}
               </Animated.Text>
@@ -100,8 +101,8 @@ export default function TwoFactorScreen() {
             className="mt-6 items-center"
           >
             <Animated.Text
-              className="text-sm text-text-base"
-              style={{ fontFamily: FONTS.sansMedium }}
+              className="text-text-base"
+              style={TYPE.buttonSmall}
             >
               Back to sign in
             </Animated.Text>

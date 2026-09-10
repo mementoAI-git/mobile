@@ -24,6 +24,7 @@ import Animated, {
 import { Button, TextInput, PasswordInput, Logo, ConfirmDialog } from '@/components/ui';
 import { useRegisterLogic } from '@/hooks/use-register-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Fingerprint } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
@@ -196,7 +197,7 @@ export default function RegisterScreen() {
 
             {/* Heading — collapses second */}
             <Animated.View style={[headingStyle, { marginBottom: isKeyboardVisible ? 16 : 40 }]}>
-              <Animated.Text className="text-[40px] text-text-strong mb-2" style={{ fontFamily: FONTS.serif }}>
+              <Animated.Text className=" text-text-strong mb-2" style={TYPE.displayTitle}>
                 Create account
               </Animated.Text>
               <Animated.Text className="text-lg text-text-base leading-relaxed" style={{ fontFamily: FONTS.sans }}>

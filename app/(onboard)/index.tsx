@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Logo } from '@/components/ui';
 import { ChevronRight } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const AnimatedText = Animated.createAnimatedComponent(Text);
@@ -45,8 +46,7 @@ export default function OnboardWelcomeScreen() {
         <View className="px-6 gap-3">
           <AnimatedText
             entering={FadeInDown.delay(400).springify()}
-            className="text-[36px] text-text-strong leading-[44px]"
-            style={{ fontFamily: FONTS.serif }}
+            className=" text-text-strong leading-[44px]" style={TYPE.displayTitle}
           >
             Hello, Welcome to Memento
           </AnimatedText>

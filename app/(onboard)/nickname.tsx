@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronRight } from 'lucide-react-native';
 import { Button, TextInput, Logo } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useNicknameLogic } from '@/hooks/use-nickname-logic';
 
@@ -63,8 +64,7 @@ export default function NicknameScreen() {
           <View className="px-8 -mt-4 mb-8">
             <Animated.Text
               entering={FadeInDown.delay(200).springify()}
-              className="text-[34px] text-text-strong leading-[40px] text-center"
-              style={{ fontFamily: FONTS.serif }}
+              className=" text-text-strong leading-[40px] text-center" style={TYPE.displayTitle}
             >
               How should we{"\n"}address you?
             </Animated.Text>

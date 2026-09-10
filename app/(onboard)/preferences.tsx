@@ -14,6 +14,7 @@ import { ChevronRight, ChevronLeft } from 'lucide-react-native';
 import { Logo, Button } from '@/components/ui';
 import { SelectionCard } from '@/components/onboarding/SelectionChip';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import Animated, { FadeInDown, FadeInRight, LinearTransition } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { usePreferencesLogic, TOTAL_STEPS, STEP_LABELS, ERROR_MESSAGES } from '@/hooks/use-preferences-logic';
@@ -140,7 +141,7 @@ export default function PreferencesScreen() {
             />
           ))}
         </View>
-        <Animated.Text className="text-[10px] text-text-weak tracking-widest uppercase mt-1" style={{ fontFamily: FONTS.sansBold }}>
+        <Animated.Text className=" text-text-weak tracking-widest uppercase mt-1" style={TYPE.eyebrow}>
           Step {step} of {TOTAL_STEPS} · {STEP_LABELS[step]}
         </Animated.Text>
       </View>
@@ -169,7 +170,7 @@ export default function PreferencesScreen() {
             <Animated.View key={`step-content-${step}`} entering={FadeInDown.duration(400)} className="gap-6">
               {step === 1 && (
                 <View className="gap-6">
-                  <Animated.Text className="text-[28px] text-text-strong leading-[36px]" style={{ fontFamily: FONTS.serif }}>
+                  <Animated.Text className=" text-text-strong leading-[36px]" style={TYPE.screenTitle}>
                     Okay, {nickname}. Let's get started.
                   </Animated.Text>
                   <View className="gap-4">
@@ -210,7 +211,7 @@ export default function PreferencesScreen() {
 
               {step === 2 && (
                 <View className="gap-4">
-                  <Animated.Text className="text-[28px] text-text-strong leading-[36px]" style={{ fontFamily: FONTS.serif }}>
+                  <Animated.Text className=" text-text-strong leading-[36px]" style={TYPE.screenTitle}>
                     Who is this Memento mostly for?
                   </Animated.Text>
                   <Animated.Text className="text-sm text-text-weak -mt-2 mb-2" style={{ fontFamily: FONTS.sans }}>Select all that apply</Animated.Text>
@@ -228,7 +229,7 @@ export default function PreferencesScreen() {
 
               {step === 3 && (
                 <View className="gap-4">
-                  <Animated.Text className="text-[28px] text-text-strong leading-[36px]" style={{ fontFamily: FONTS.serif }}>
+                  <Animated.Text className=" text-text-strong leading-[36px]" style={TYPE.screenTitle}>
                     What are your interests?
                   </Animated.Text>
                   <Animated.Text className="text-sm text-text-weak -mt-2 mb-2" style={{ fontFamily: FONTS.sans }}>Select as many as you like</Animated.Text>
@@ -256,7 +257,7 @@ export default function PreferencesScreen() {
 
               {step === 4 && (
                 <View className="gap-4">
-                  <Animated.Text className="text-[28px] text-text-strong leading-[36px]" style={{ fontFamily: FONTS.serif }}>
+                  <Animated.Text className=" text-text-strong leading-[36px]" style={TYPE.screenTitle}>
                     How would you describe your current life stage?
                   </Animated.Text>
                   {LIFE_CONTEXT_OPTIONS.map((opt) => (
@@ -273,7 +274,7 @@ export default function PreferencesScreen() {
 
               {step === 5 && (
                 <View className="gap-4">
-                  <Animated.Text className="text-[28px] text-text-strong leading-[36px]" style={{ fontFamily: FONTS.serif }}>
+                  <Animated.Text className=" text-text-strong leading-[36px]" style={TYPE.screenTitle}>
                     What is your main motivation?
                   </Animated.Text>
                   {MOTIVATION_OPTIONS.map((opt) => (
@@ -295,7 +296,7 @@ export default function PreferencesScreen() {
 
               {step === 6 && (
                 <View className="gap-4">
-                  <Animated.Text className="text-[28px] text-text-strong leading-[36px]" style={{ fontFamily: FONTS.serif }}>
+                  <Animated.Text className=" text-text-strong leading-[36px]" style={TYPE.screenTitle}>
                     What areas of life would you like to preserve?
                   </Animated.Text>
                   <View className="flex-row flex-wrap gap-2.5">
@@ -322,7 +323,7 @@ export default function PreferencesScreen() {
 
               {step === 7 && (
                 <View className="gap-4">
-                  <Animated.Text className="text-[28px] text-text-strong leading-[36px]" style={{ fontFamily: FONTS.serif }}>
+                  <Animated.Text className=" text-text-strong leading-[36px]" style={TYPE.screenTitle}>
                     Finally, how would you like to share your thoughts?
                   </Animated.Text>
                   <Animated.Text className="text-sm text-text-weak -mt-2 mb-2" style={{ fontFamily: FONTS.sans }}>Select up to 2 options</Animated.Text>
