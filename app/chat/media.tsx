@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { mapAttachmentsToShared, type SharedAttachment, type SharedLink } from '@/features/chat/shared-media';
 import { useConversationAttachments } from '@/hooks/queries/use-memories';
 import { useRemoveMemoryFile } from '@/hooks/mutations/use-memory-mutations';
@@ -77,7 +78,7 @@ export default function ChatMediaScreen() {
         <View className="size-11 items-center justify-center rounded-xl bg-fill-weak"><Icon size={22} color={COLORS.textStrong} /></View>
         <View className="flex-1">
           <Text numberOfLines={1} style={{ color: COLORS.textStrong, fontFamily: FONTS.sansSemi }}>{item.name || (item.category === 'audio' ? 'Audio' : 'Document')}</Text>
-          <Text style={{ color: COLORS.textWeak, fontFamily: FONTS.sans, fontSize: 12 }}>{item.category === 'audio' ? 'Audio' : 'Document'}</Text>
+          <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>{item.category === 'audio' ? 'Audio' : 'Document'}</Text>
         </View>
       </Pressable>
     );
@@ -88,7 +89,7 @@ export default function ChatMediaScreen() {
       <View className="size-11 items-center justify-center rounded-xl bg-fill-weak"><Link2 size={22} color={COLORS.textStrong} /></View>
       <View className="flex-1">
         <Text numberOfLines={1} style={{ color: COLORS.textStrong, fontFamily: FONTS.sansSemi }}>{item.url}</Text>
-        <Text style={{ color: COLORS.textWeak, fontFamily: FONTS.sans, fontSize: 12 }}>Open link</Text>
+        <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>Open link</Text>
       </View>
     </Pressable>
   ), []);

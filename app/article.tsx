@@ -48,6 +48,7 @@ import { useRouter } from 'expo-router';
 // resets on app restart — exactly the right scope.
 let articleHasSlid = false;
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { useUserStore } from '@/store';
 import { useCreateMemory } from '@/hooks/mutations/use-memory-mutations';
 import { useToast } from '@/components/ui/Toast';
@@ -571,7 +572,7 @@ export default function ArticleScreen() {
                   }}
                 >
                   <Volume2 size={13} color={COLORS.brand} />
-                  <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: COLORS.brand }}>
+                  <Text style={{ ...TYPE.metadata, color: COLORS.brand }}>
                     Listen
                   </Text>
                 </TouchableOpacity>
@@ -627,30 +628,30 @@ const styles = StyleSheet.create({
   kav: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 },
   cancelBtn: { height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' },
-  cancelText: { fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textBase },
+  cancelText: { ...TYPE.label, color: COLORS.textBase },
   savedPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: COLORS.fillWeaker },
   savedDot: { width: 6, height: 6, borderRadius: 3 },
-  savedText: { fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted },
+  savedText: { ...TYPE.metadata, color: COLORS.textMuted },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   moreBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' },
   nextBtn: { height: 34, paddingHorizontal: 18, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
   nextBtnDisabled: { opacity: 0.4 },
-  nextText: { fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textInverse },
+  nextText: { ...TYPE.label, color: COLORS.textInverse },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 22, paddingBottom: 24, paddingTop: 4 },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 24 },
   avatar: { width: 24, height: 24, borderRadius: 12 },
   avatarFallback: { backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.textInverse },
-  authorLabel: { fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textMuted },
-  titleInput: { fontFamily: FONTS.serif, fontSize: 34, fontWeight: '700', color: COLORS.textStrong, padding: 0, margin: 0, marginBottom: 8, lineHeight: 42, textAlignVertical: 'top' },
-  subtitleInput: { fontFamily: FONTS.sans, fontSize: 18, color: COLORS.textWeak, padding: 0, margin: 0, marginBottom: 24, lineHeight: 26, textAlignVertical: 'top' },
-  bodyInput: { fontFamily: FONTS.sans, fontSize: 16, color: COLORS.textBase, padding: 0, margin: 0, lineHeight: 26, minHeight: 300, textAlignVertical: 'top' },
+  avatarInitial: { ...TYPE.eyebrow, color: COLORS.textInverse },
+  authorLabel: { ...TYPE.bodySmall, color: COLORS.textMuted },
+  titleInput: { ...TYPE.displayTitle,  color: COLORS.textStrong, padding: 0, margin: 0, marginBottom: 8, lineHeight: 42, textAlignVertical: 'top' },
+  subtitleInput: { ...TYPE.cardTitle, color: COLORS.textWeak, padding: 0, margin: 0, marginBottom: 24, lineHeight: 26, textAlignVertical: 'top' },
+  bodyInput: { ...TYPE.bodyLarge, color: COLORS.textBase, padding: 0, margin: 0, lineHeight: 26, minHeight: 300, textAlignVertical: 'top' },
   toolbar: { flexDirection: 'column', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker, backgroundColor: COLORS.background, gap: 10 },
-  toolbarLabel: { fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.textMuted, letterSpacing: 1, textTransform: 'uppercase' },
+  toolbarLabel: { ...TYPE.eyebrow, color: COLORS.textMuted, letterSpacing: 1, textTransform: 'uppercase' },
   toolbarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   storyModePill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, paddingHorizontal: 16, borderRadius: 999, backgroundColor: COLORS.textStrong },
-  storyModeText: { fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textInverse },
+  storyModeText: { ...TYPE.label, color: COLORS.textInverse },
   mediaBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' },
   // legacy — kept so old refs don't crash
   addBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
@@ -664,22 +665,22 @@ const pStyles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
   container: { paddingHorizontal: 20, paddingTop: 8 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  headerTitle: { fontFamily: FONTS.serif, fontSize: 22, color: COLORS.textStrong },
+  headerTitle: { ...TYPE.sectionTitle, color: COLORS.textStrong },
   closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' },
   visibilityCard: { backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16, marginBottom: 24 },
-  visibilityTitle: { fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong, marginBottom: 4 },
-  visibilitySubtitle: { fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textBase, marginBottom: 14 },
+  visibilityTitle: { ...TYPE.body, color: COLORS.textStrong, marginBottom: 4 },
+  visibilitySubtitle: { ...TYPE.bodySmall, color: COLORS.textBase, marginBottom: 14 },
   visibilitySelector: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, borderWidth: 1, borderColor: COLORS.strokeWeaker },
-  visibilitySelectorText: { flex: 1, fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong },
+  visibilitySelectorText: { flex: 1, ...TYPE.label, color: COLORS.textStrong },
   tagsSection: { marginBottom: 32 },
   tagsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  tagsTitle: { fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong },
+  tagsTitle: { ...TYPE.body, color: COLORS.textStrong },
   autotagBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: `${COLORS.info}40`, backgroundColor: `${COLORS.info}08` },
-  autotagText: { fontFamily: FONTS.sansMedium, fontSize: 12, color: COLORS.info },
-  tagInput: { backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 14, paddingVertical: 14, fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong, minHeight: 50 },
+  autotagText: { ...TYPE.metadata, color: COLORS.info },
+  tagInput: { backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 14, paddingVertical: 14, ...TYPE.label, color: COLORS.textStrong, minHeight: 50 },
   postBtn: { height: 56, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
   postBtnDisabled: { opacity: 0.45 },
-  postBtnText: { fontFamily: FONTS.sansSemi, fontSize: 16, color: COLORS.textInverse },
+  postBtnText: { ...TYPE.bodyLarge, color: COLORS.textInverse },
 });
 
 // ─── Success screen styles ────────────────────────────────────────────────────
@@ -745,8 +746,7 @@ const sStyles = StyleSheet.create({
   },
 
   title: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 26,
+    ...TYPE.sectionTitle,
     color: COLORS.textStrong,
     textAlign: 'center',
     lineHeight: 34,
@@ -761,8 +761,7 @@ const sStyles = StyleSheet.create({
     gap: 16,
   },
   shareLabel: {
-    fontFamily: FONTS.sans,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     color: COLORS.textBase,
   },
 
@@ -778,8 +777,7 @@ const sStyles = StyleSheet.create({
   },
   urlText: {
     flex: 1,
-    fontFamily: FONTS.sans,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     color: COLORS.textWeak,
     paddingHorizontal: 14,
     paddingVertical: 14,
@@ -795,8 +793,7 @@ const sStyles = StyleSheet.create({
     backgroundColor: COLORS.card,
   },
   copyText: {
-    fontFamily: FONTS.sansSemi,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     color: COLORS.info,
   },
 
@@ -812,8 +809,7 @@ const sStyles = StyleSheet.create({
     backgroundColor: COLORS.strokeWeaker,
   },
   dividerText: {
-    fontFamily: FONTS.sans,
-    fontSize: 12,
+    ...TYPE.metadata,
     color: COLORS.textMuted,
   },
 
@@ -834,7 +830,7 @@ const sStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   socialIcon: {
-    fontSize: 18,
+    ...TYPE.cardTitle,
     fontFamily: FONTS.sansBold,
   },
   socialBtnIcon: {
@@ -854,8 +850,7 @@ const sStyles = StyleSheet.create({
     gap: 8,
   },
   addAnotherText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 16,
+    ...TYPE.bodyLarge,
     color: COLORS.textInverse,
   },
 
@@ -865,8 +860,7 @@ const sStyles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   dismissText: {
-    fontFamily: FONTS.sans,
-    fontSize: 15,
+    ...TYPE.body,
     color: COLORS.textBase,
     textAlign: 'center',
   },

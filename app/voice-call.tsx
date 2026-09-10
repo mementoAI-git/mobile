@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { VoiceArtwork } from '@/components/chat/VoiceArtwork';
 import { VoiceUpgradeScreen } from '@/components/chat/VoiceUpgradeScreen';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { VOICE_CATALOG, getVoiceById, type VoiceId } from '@/features/chat/voice-catalog';
 import { formatVoiceCallDuration, getVoiceCallTransition, type VoiceCallStage } from '@/features/chat/voice-call-flow';
 import { useVoiceMode } from '@/hooks/use-voice-mode';
@@ -150,10 +151,10 @@ export default function VoiceCallRoute() {
           <SafeAreaView className="flex-1 px-8" edges={['top', 'bottom']}>
             <View className="flex-1 items-center justify-center pb-24">
               <VoiceArtwork voice={getVoiceById(draftVoiceId) ?? VOICE_CATALOG[0]} size={230} />
-              <Text className="mt-7 text-3xl text-text-strong" style={{ fontFamily: FONTS.serifMedium }}>
+              <Text className="mt-7 text-text-strong" style={TYPE.screenTitle}>
                 {(getVoiceById(draftVoiceId) ?? VOICE_CATALOG[0]).name}
               </Text>
-              <Text className="mt-1 text-base text-text-base" style={{ fontFamily: FONTS.sans }}>
+              <Text className="mt-1 text-text-base" style={TYPE.bodyLarge}>
                 {(getVoiceById(draftVoiceId) ?? VOICE_CATALOG[0]).subtitle}
               </Text>
               <VoiceDots selectedId={draftVoiceId} onSelect={chooseVoice} />
@@ -181,12 +182,12 @@ export default function VoiceCallRoute() {
         </View>
         <View className="flex-1 items-center justify-center pb-28">
           <VoiceArtwork voice={selectedVoice} size={132} />
-          <Text className="mt-5 text-3xl text-text-strong" style={{ fontFamily: FONTS.sansBold }}>
+          <Text className="mt-5 text-text-strong" style={TYPE.stat}>
             {formatVoiceCallDuration(voice.recordingTime)}
           </Text>
           <View className="mt-1 flex-row items-center gap-2">
             {live ? <View className="size-2 rounded-full" style={{ backgroundColor: stage === 'muted' ? COLORS.error : COLORS.success }} /> : null}
-            <Text className="text-sm text-text-base" style={{ fontFamily: FONTS.sans }}>
+            <Text className="text-text-base" style={TYPE.label}>
               {voice.isConnecting ? 'Connecting…' : live ? 'Live session' : 'Ready when you are'}
             </Text>
           </View>
@@ -200,7 +201,7 @@ export default function VoiceCallRoute() {
               >
                 {stage === 'muted' ? 'Unmute' : 'Mute'}
               </Button>
-              <Text className="mt-3 text-sm text-text-base" style={{ fontFamily: FONTS.sans }}>
+              <Text className="mt-3 text-text-base" style={TYPE.label}>
                 {stage === 'muted' ? 'You’re muted' : 'Tap to mute'}
               </Text>
             </>

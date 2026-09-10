@@ -35,6 +35,7 @@ import {
   X, RotateCcw, Camera, Video, Zap, ZapOff, ImageIcon, Mic,
 } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import {
   getPermissionRecoveryAction,
   isPermissionGranted,
@@ -598,8 +599,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.error,
   },
   recTimerText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     color: COLORS.textInverse,
   },
 
@@ -645,8 +645,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.textInverse,
   },
   modePillText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     color: COLORS.textInverse,
   },
   modePillTextActive: {

@@ -45,6 +45,7 @@ import Animated, { FadeInDown, SlideInUp } from 'react-native-reanimated';
 // Module-level flag — SlideInUp only on the very first mount per session.
 let createHasSlid = false;
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { getModalBottomPadding } from '@/features/layout/modal-safe-area';
 import { useUserStore } from '@/store';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
@@ -128,7 +129,7 @@ function CharRing({ value, max }: { value: number; max: number }) {
       {nearLimit && (
         <Text style={{
           position: 'absolute',
-          fontFamily: FONTS.sansBold, fontSize: 7, color,
+          ...TYPE.eyebrow, color,
         }}>
           {max - value}
         </Text>
@@ -654,7 +655,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', gap: 6,
   },
   pillBrand: { backgroundColor: COLORS.brand },
-  pillText: { fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong },
+  pillText: { ...TYPE.label, color: COLORS.textStrong },
 
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 16 },
@@ -662,11 +663,11 @@ const styles = StyleSheet.create({
   userRow: { flexDirection: 'row', alignItems: 'center', marginTop: 24, marginBottom: 16, gap: 12 },
   avatar: { width: 44, height: 44, borderRadius: 22 },
   avatarFallback: { backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { fontFamily: FONTS.sansBold, fontSize: 18, color: COLORS.textInverse },
-  userName: { fontFamily: FONTS.sansSemi, fontSize: 16, color: COLORS.textStrong },
+  avatarInitial: { ...TYPE.cardTitle, color: COLORS.textInverse },
+  userName: { ...TYPE.bodyLarge, color: COLORS.textStrong },
 
   input: {
-    fontFamily: FONTS.sans, fontSize: 16, lineHeight: 24,
+    ...TYPE.bodyLarge, lineHeight: 24,
     color: COLORS.textStrong, padding: 0, margin: 0, minHeight: 80, textAlignVertical: 'top',
   },
 
@@ -674,7 +675,7 @@ const styles = StyleSheet.create({
 
   imageGrid: { marginTop: 12 },
   imgOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  imgOverlayText: { fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' },
+  imgOverlayText: { ...TYPE.bodyLarge, color: '#fff' },
   removeBtn: {
     position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 10,
     backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: COLORS.strokeWeak,
@@ -687,7 +688,7 @@ const styles = StyleSheet.create({
 
   voiceCard: { marginTop: 12, backgroundColor: COLORS.textStrong, borderRadius: 16, padding: 14, paddingRight: 36 },
   voiceRemoveBtn: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  voiceTitle: { fontFamily: FONTS.sansMedium, fontSize: 12, color: 'rgba(255,255,255,0.85)', marginBottom: 10 },
+  voiceTitle: { ...TYPE.metadata, color: 'rgba(255,255,255,0.85)', marginBottom: 10 },
   waveform: { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
   bar: { flex: 1, borderRadius: 2, backgroundColor: `${COLORS.brand}99`, maxHeight: 24 },
 
@@ -696,7 +697,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.fillWeak, borderRadius: 12,
     borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, paddingVertical: 10,
   },
-  fileName: { flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textStrong },
+  fileName: { flex: 1, ...TYPE.bodySmall, color: COLORS.textStrong },
 
   privacyRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -704,7 +705,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker,
   },
   privacyBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  privacyLabel: { fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted },
+  privacyLabel: { ...TYPE.metadata, color: COLORS.textMuted },
   privacyDropdown: {
     marginHorizontal: 16, marginBottom: 4, backgroundColor: COLORS.card,
     borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingVertical: 4, maxHeight: 180,
@@ -715,7 +716,7 @@ const styles = StyleSheet.create({
   },
   privacyOption: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 },
   privacyOptionActive: { backgroundColor: `${COLORS.brand}12` },
-  privacyOptionText: { fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong },
+  privacyOptionText: { ...TYPE.label, color: COLORS.textStrong },
   privacyOptionTextActive: { color: COLORS.brand, fontFamily: FONTS.sansMedium },
 
   // Bottom toolbar — matches web action bar layout
@@ -741,7 +742,7 @@ const styles = StyleSheet.create({
   },
   emojiRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   emojiBtn: { flex: 1, alignItems: 'center', paddingVertical: 6 },
-  emojiText: { fontSize: 22 },
+  emojiText: { ...TYPE.sectionTitle },
 
   // Video card
   videoCard: {
@@ -758,8 +759,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 8,
   },
-  videoName: { flex: 1, fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textStrong },
-  videoUploading: { fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textMuted },
+  videoName: { flex: 1, ...TYPE.metadata, color: COLORS.textStrong },
+  videoUploading: { ...TYPE.metadata, color: COLORS.textMuted },
   videoRemoveBtn: {
     position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: 11,
     backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center',
@@ -773,7 +774,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   modeLabel: {
-    fontFamily: FONTS.sansBold, fontSize: 10,
+    ...TYPE.eyebrow,
     color: COLORS.textMuted, letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
@@ -784,7 +785,7 @@ const styles = StyleSheet.create({
     borderRadius: 12, backgroundColor: COLORS.brand,
   },
   storyModeText: {
-    fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textInverse,
+    ...TYPE.label, color: COLORS.textInverse,
   },
   mediaBtn: {
     width: 42, height: 42, borderRadius: 12,
@@ -792,5 +793,5 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: COLORS.strokeWeaker,
   },
-  errorText: { fontFamily: FONTS.sans, fontSize: 13, color: COLORS.error, marginTop: 8, paddingHorizontal: 4 },
+  errorText: { ...TYPE.bodySmall, color: COLORS.error, marginTop: 8, paddingHorizontal: 4 },
 });

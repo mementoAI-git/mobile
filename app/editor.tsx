@@ -28,6 +28,7 @@ import * as Clipboard from 'expo-clipboard';
 import Animated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import {
   getAutosaveStatusBadge,
   type AutosaveStatus,
@@ -162,21 +163,21 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
           <Image source={SURFER_WEBP} style={{ position: 'absolute', width: 220, height: 220, alignSelf: 'center', bottom: 0 }} resizeMode="contain" />
         </View>
         <Animated.View entering={FadeInDown.duration(400).delay(100)} style={{ flex: 1, paddingHorizontal: 24, paddingTop: 24, alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 26, color: COLORS.textStrong, textAlign: 'center', lineHeight: 34 }}>
+          <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong, textAlign: 'center', lineHeight: 34 }}>
             Story published
           </Text>
           <View style={{ width: '100%', backgroundColor: COLORS.fillWeak, borderRadius: 20, padding: 20, gap: 16 }}>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textBase }}>Share this story with friends</Text>
+            <Text style={{ ...TYPE.bodySmall, color: COLORS.textBase }}>Share this story with friends</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, overflow: 'hidden' }}>
-              <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textWeak, paddingHorizontal: 14, paddingVertical: 14 }} numberOfLines={1}>{truncatedUrl}</Text>
+              <Text style={{ flex: 1, ...TYPE.bodySmall, color: COLORS.textWeak, paddingHorizontal: 14, paddingVertical: 14 }} numberOfLines={1}>{truncatedUrl}</Text>
               <TouchableOpacity onPress={handleCopy} activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 16, paddingVertical: 14, borderLeftWidth: 1, borderLeftColor: COLORS.strokeWeaker }}>
                 {copied ? <Check size={15} color={COLORS.success} strokeWidth={2.5} /> : <Copy size={15} color={COLORS.info} strokeWidth={2} />}
-                <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 13, color: copied ? COLORS.success : COLORS.info }}>{copied ? 'Copied!' : 'Copy'}</Text>
+                <Text style={{ ...TYPE.bodySmall, color: copied ? COLORS.success : COLORS.info }}>{copied ? 'Copied!' : 'Copy'}</Text>
               </TouchableOpacity>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={{ flex: 1, height: 1, backgroundColor: COLORS.strokeWeaker }} />
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted }}>Or share on social media</Text>
+              <Text style={{ ...TYPE.metadata, color: COLORS.textMuted }}>Or share on social media</Text>
               <View style={{ flex: 1, height: 1, backgroundColor: COLORS.strokeWeaker }} />
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16 }}>
@@ -196,10 +197,10 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
           <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onAddAnother(); }} activeOpacity={0.85}
             style={{ width: '100%', height: 56, borderRadius: 999, backgroundColor: COLORS.textStrong, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <Plus size={18} color={COLORS.textInverse} strokeWidth={2.5} />
-            <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: COLORS.textInverse }}>Add another story</Text>
+            <Text style={{ ...TYPE.bodyLarge, color: COLORS.textInverse }}>Add another story</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={onDismiss} activeOpacity={0.7} style={{ paddingVertical: 12, paddingHorizontal: 24 }}>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 15, color: COLORS.textBase, textAlign: 'center' }}>Dismiss</Text>
+            <Text style={{ ...TYPE.body, color: COLORS.textBase, textAlign: 'center' }}>Dismiss</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -336,39 +337,39 @@ function PublishModalInner({
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: Math.max(insets.bottom + 24, 32) }}
         >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <Text style={{ fontFamily: FONTS.serif, fontSize: 22, color: COLORS.textStrong }}>Publish post</Text>
+                <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>Publish post</Text>
                 <TouchableOpacity onPress={handleClose} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
                   <X size={16} color={COLORS.textBase} strokeWidth={2} />
                 </TouchableOpacity>
               </View>
               <View style={{ backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16, marginBottom: 24 }}>
-                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong, marginBottom: 4 }}>Who can see this story?</Text>
-                <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textBase, marginBottom: 14 }}>New stories are private unless you choose otherwise.</Text>
+                <Text style={{ ...TYPE.body, color: COLORS.textStrong, marginBottom: 4 }}>Who can see this story?</Text>
+                <Text style={{ ...TYPE.bodySmall, color: COLORS.textBase, marginBottom: 14 }}>New stories are private unless you choose otherwise.</Text>
                 <TouchableOpacity
                   onPress={handleOpenPrivacySheet}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, borderWidth: 1, borderColor: COLORS.strokeWeaker }}
                   activeOpacity={0.8}
                 >
                   <Users size={18} color={COLORS.textBase} strokeWidth={1.8} />
-                  <Text style={{ flex: 1, fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>{privacyLabel}</Text>
+                  <Text style={{ flex: 1, ...TYPE.label, color: COLORS.textStrong }}>{privacyLabel}</Text>
                   <ChevronDown size={16} color={COLORS.textMuted} strokeWidth={2} />
                 </TouchableOpacity>
               </View>
               <View style={{ marginBottom: 32 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong }}>Add Tags</Text>
+                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>Add Tags</Text>
                   <TouchableOpacity onPress={handleAutotag} disabled={isAutotagging} activeOpacity={0.8}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: `${COLORS.info}40`, backgroundColor: `${COLORS.info}08` }}>
                     {isAutotagging ? <ActivityIndicator size="small" color={COLORS.info} /> : <Sparkles size={13} color={COLORS.info} strokeWidth={2} />}
-                    <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 12, color: COLORS.info }}>Autotag</Text>
+                    <Text style={{ ...TYPE.metadata, color: COLORS.info }}>Autotag</Text>
                   </TouchableOpacity>
                 </View>
                 <BottomSheetTextInput value={tags} onChangeText={setTags} placeholder="Manually enter tags or use the autotag button" placeholderTextColor={COLORS.textMuted} returnKeyType="done"
-                  style={{ backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 14, paddingVertical: 14, fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong, minHeight: 50 }} />
+                  style={{ backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 14, paddingVertical: 14, ...TYPE.label, color: COLORS.textStrong, minHeight: 50 }} />
               </View>
               <TouchableOpacity onPress={handlePost} activeOpacity={0.85} disabled={(!title.trim() && !body.trim()) || isPending}
                 style={[{ height: 56, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }, ((!title.trim() && !body.trim()) || isPending) && { opacity: 0.45 }]}>
-                {isPending ? <ActivityIndicator color={COLORS.textInverse} /> : <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 16, color: COLORS.textInverse }}>Post now</Text>}
+                {isPending ? <ActivityIndicator color={COLORS.textInverse} /> : <Text style={{ ...TYPE.bodyLarge, color: COLORS.textInverse }}>Post now</Text>}
               </TouchableOpacity>
         </BottomSheetScrollView>
       </View>
@@ -877,7 +878,7 @@ export default function EditorScreen() {
               setCancelConfirmVisible(true);
             }} activeOpacity={0.7}
               style={{ height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textBase }}>Cancel</Text>
+              <Text style={{ ...TYPE.label, color: COLORS.textBase }}>Cancel</Text>
             </TouchableOpacity>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -885,7 +886,7 @@ export default function EditorScreen() {
                 <>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: COLORS.fillWeaker }}>
                     <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: autosaveBadge.dotColor }} />
-                    <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: autosaveBadge.textColor }}>{autosaveBadge.label}</Text>
+                    <Text style={{ ...TYPE.metadata, color: autosaveBadge.textColor }}>{autosaveBadge.label}</Text>
                   </View>
                   {/* My Drafts button — badge shows count, opens DraftsSheet */}
                   <TouchableOpacity onPress={() => {
@@ -932,7 +933,7 @@ export default function EditorScreen() {
                     <MoreHorizontal size={16} color={COLORS.textBase} strokeWidth={2} />
                     {draftCount > 0 && (
                       <View style={{ minWidth: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
-                        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.textInverse }}>{draftCount}</Text>
+                        <Text style={{ ...TYPE.eyebrow, color: COLORS.textInverse }}>{draftCount}</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -945,7 +946,7 @@ export default function EditorScreen() {
                     disabled={!storyHasContent || anyUploading} activeOpacity={0.8}
                     style={[{ height: 34, paddingHorizontal: 18, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }, (!storyHasContent || anyUploading) && { opacity: 0.4 }]}>
                     {anyUploading && <ActivityIndicator size="small" color={COLORS.textInverse} />}
-                    <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textInverse }}>Next</Text>
+                    <Text style={{ ...TYPE.label, color: COLORS.textInverse }}>Next</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -961,13 +962,13 @@ export default function EditorScreen() {
                   style={{ height: 34, paddingHorizontal: 12, borderRadius: 17, backgroundColor: COLORS.fillWeak, flexDirection: 'row', alignItems: 'center', gap: 4, opacity: hasQcDraft ? 1 : 0.35 }}
                 >
                   <MoreHorizontal size={14} color={COLORS.textBase} strokeWidth={2} />
-                  <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textBase }}>Draft</Text>
+                  <Text style={{ ...TYPE.bodySmall, color: COLORS.textBase }}>Draft</Text>
                 </TouchableOpacity>
               )}
               {!isStory && qcHasContent && (
                 <TouchableOpacity onPress={handleSave} disabled={!canSave || qcPending} activeOpacity={0.7}
                   style={{ height: 34, paddingHorizontal: 16, borderRadius: 17, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }}>
-                  {qcPending ? <ActivityIndicator size="small" color={COLORS.textInverse} /> : <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textInverse }}>Save</Text>}
+                  {qcPending ? <ActivityIndicator size="small" color={COLORS.textInverse} /> : <Text style={{ ...TYPE.label, color: COLORS.textInverse }}>Save</Text>}
                 </TouchableOpacity>
               )}
             </View>
@@ -989,7 +990,7 @@ export default function EditorScreen() {
                  }}
                 placeholder="Title"
                 placeholderTextColor={COLORS.textDisabled}
-                style={{ fontFamily: FONTS.serif, fontSize: 34, fontWeight: '700', color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42, marginTop: 4 }}
+                style={{ ...TYPE.displayTitle,  color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42, marginTop: 4 }}
                 returnKeyType="next"
                 autoCapitalize="sentences"
                 autoCorrect
@@ -1040,7 +1041,7 @@ export default function EditorScreen() {
                     return (
                       <View key={a.clientId} style={{ height: 44, backgroundColor: COLORS.textStrong, borderRadius: 22, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Music size={13} color={COLORS.textInverse} strokeWidth={1.8} />
-                        <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>{Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}</Text>
+                        <Text style={{ ...TYPE.metadata, color: 'rgba(255,255,255,0.85)' }}>{Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}</Text>
                         {a.isUploading
                           ? <ActivityIndicator size="small" color={COLORS.textInverse} />
                           : (
@@ -1055,7 +1056,7 @@ export default function EditorScreen() {
                   {documentAttachments.map(a => (
                     <View key={a.clientId} style={{ height: 44, backgroundColor: COLORS.fillWeak, borderRadius: 22, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 180 }}>
                       <FileText size={13} color={COLORS.brand} strokeWidth={1.8} />
-                      <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textStrong, flexShrink: 1 }} numberOfLines={1}>{a.name}</Text>
+                      <Text style={{ ...TYPE.metadata, color: COLORS.textStrong, flexShrink: 1 }} numberOfLines={1}>{a.name}</Text>
                       {a.isUploading
                         ? <ActivityIndicator size="small" color={COLORS.brand} />
                         : (
@@ -1098,7 +1099,7 @@ export default function EditorScreen() {
               <>
                 <TextInput ref={bodyRef} value={qcBody} onChangeText={v => setQcBody(v.slice(0, NOTE_CHAR_MAX))}
                   placeholder="What's on your mind?" placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
-                  style={{ fontFamily: FONTS.sans, fontSize: 16, lineHeight: 24, color: COLORS.textStrong, padding: 0, margin: 0, textAlignVertical: 'top', minHeight: 56 }}
+                  style={{ ...TYPE.bodyLarge, lineHeight: 24, color: COLORS.textStrong, padding: 0, margin: 0, textAlignVertical: 'top', minHeight: 56 }}
                   multiline autoFocus autoCorrect autoCapitalize="sentences" blurOnSubmit={false} scrollEnabled={false} maxLength={NOTE_CHAR_MAX} />
                 {isRecording && (
                   <RecordingStatus seconds={recDuration} style={{ marginTop: 8 }} />
@@ -1126,7 +1127,7 @@ export default function EditorScreen() {
                             )}
                             {isLast && (
                               <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
-                                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' }}>+{mediaAttachments.length - 6}</Text>
+                                <Text style={{ ...TYPE.bodyLarge, color: '#fff' }}>+{mediaAttachments.length - 6}</Text>
                               </View>
                             )}
                             {a.isUploading && (
@@ -1148,7 +1149,7 @@ export default function EditorScreen() {
                   return (
                     <View key={a.clientId} style={{ marginTop: 8, backgroundColor: COLORS.textStrong, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                       <Music size={14} color={COLORS.textInverse} strokeWidth={1.8} />
-                      <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>
+                      <Text style={{ flex: 1, ...TYPE.metadata, color: 'rgba(255,255,255,0.85)' }}>
                         Voice · {Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}
                       </Text>
                       {a.isUploading && <ActivityIndicator size="small" color={COLORS.textInverse} />}
@@ -1162,14 +1163,14 @@ export default function EditorScreen() {
                 {documentAttachments.map(a => (
                   <View key={a.clientId} style={{ marginTop: 6, backgroundColor: COLORS.fillWeak, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <FileText size={14} color={COLORS.brand} strokeWidth={1.8} />
-                    <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textStrong }} numberOfLines={1}>{a.name}</Text>
+                    <Text style={{ flex: 1, ...TYPE.bodySmall, color: COLORS.textStrong }} numberOfLines={1}>{a.name}</Text>
                     {a.isUploading && <ActivityIndicator size="small" color={COLORS.brand} />}
                     <TouchableOpacity onPress={() => handleRemoveAttachment(a.clientId)} hitSlop={8}>
                       <X size={12} color={COLORS.textWeak} strokeWidth={2} />
                     </TouchableOpacity>
                   </View>
                 ))}
-                {saveError && <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.error, marginTop: 8 }}>{saveError}</Text>}
+                {saveError && <Text style={{ ...TYPE.bodySmall, color: COLORS.error, marginTop: 8 }}>{saveError}</Text>}
               </>
             </ScrollView>
           )}
@@ -1178,7 +1179,7 @@ export default function EditorScreen() {
           {!isStory && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingVertical: 10, borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker }}>
               <Lock size={14} color={COLORS.textMuted} strokeWidth={1.8} />
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted }}>Private · Only me</Text>
+              <Text style={{ ...TYPE.metadata, color: COLORS.textMuted }}>Private · Only me</Text>
             </View>
           )}
 
