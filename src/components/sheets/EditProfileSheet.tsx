@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { CalendarDays, Camera, X } from 'lucide-react-native';
 import { Controller, useForm } from 'react-hook-form';
@@ -24,6 +25,7 @@ import {
 } from '@/features/account/profile-form';
 import { useUpdateProfile, useUploadProfilePicture } from '@/hooks/mutations/use-profile-mutation';
 import { useProfile } from '@/hooks/queries/use-profile';
+import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
 
 interface EditProfileSheetProps {
   onClose?: () => void;
@@ -34,6 +36,7 @@ export function EditProfileSheet({
   onClose,
   expandSheet,
 }: EditProfileSheetProps) {
+  const insets = useSafeAreaInsets();
   const { data: profile } = useProfile();
   const updateProfile = useUpdateProfile();
   const uploadProfilePicture = useUploadProfilePicture();
@@ -112,7 +115,7 @@ export function EditProfileSheet({
           gap: 12,
           paddingHorizontal: 20,
           paddingTop: 12,
-          paddingBottom: 20,
+          paddingBottom: getSheetBottomPadding(insets.bottom, 12),
           borderTopWidth: 1,
           borderTopColor: COLORS.strokeWeaker,
           backgroundColor: COLORS.background,
@@ -136,7 +139,7 @@ export function EditProfileSheet({
         </Button>
       </View>
     ),
-    [onClose, submitFromFooter, updateProfile.isPending],
+    [insets.bottom, onClose, submitFromFooter, updateProfile.isPending],
   );
 
   const field = (

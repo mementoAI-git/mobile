@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -8,6 +9,7 @@ import { Button, TextInput } from '@/components/ui';
 import { TYPE } from '@/constants/typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useTwoFactorSettingsLogic } from '@/hooks/use-two-factor-settings-logic';
+import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
 
 interface SetupTwoFactorSheetProps {
   setupData: { qr_code?: string; secret?: string };
@@ -18,6 +20,7 @@ export function SetupTwoFactorSheet({
   setupData,
   onClose,
 }: SetupTwoFactorSheetProps) {
+  const insets = useSafeAreaInsets();
   const [manual, setManual] = useState(!setupData.qr_code);
   const twoFactor = useTwoFactorSettingsLogic();
 
@@ -125,7 +128,7 @@ export function SetupTwoFactorSheet({
         {twoFactor.error && <Text style={twoFactorStyles.error}>{twoFactor.error}</Text>}
       </BottomSheetScrollView>
 
-      <View style={twoFactorStyles.actions}>
+      <View style={[twoFactorStyles.actions, {paddingBottom: getSheetBottomPadding(insets.bottom, 12)}]}>
         <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={onClose}>
           Cancel
         </Button>

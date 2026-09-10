@@ -35,6 +35,7 @@ import { EditBillingDetailsSheet } from './EditBillingDetailsSheet';
 import { AddPaymentMethodSheet } from './AddPaymentMethodSheet';
 import { CancelSubscriptionConfirmationSheet } from './CancelSubscriptionConfirmationSheet';
 import { COLORS } from '@/constants/tokens';
+import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
 
 const SHEET_CONFIGS: Record<string, {
   component: React.ComponentType<any>;
@@ -171,6 +172,7 @@ export function SheetManager({ isModal = false }: { isModal?: boolean }) {
     <BottomSheetModal
         key={activeSheet ?? 'none'}
         ref={modalRef}
+        topInset={getSheetTopInset(insets.top)}
         snapPoints={config?.snapPoints}
         enableDynamicSizing={config?.dynamic ?? true}
         enablePanDownToClose
@@ -191,7 +193,7 @@ export function SheetManager({ isModal = false }: { isModal?: boolean }) {
               collapseSheet={collapseSheet}
             />
           ) : (
-            <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: insets.bottom ? insets.bottom + 12 : 32 }}>
+            <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: getSheetBottomPadding(insets.bottom, 12) }}>
               <SheetContent {...sheetProps} onClose={animateClose} />
             </BottomSheetView>
           )

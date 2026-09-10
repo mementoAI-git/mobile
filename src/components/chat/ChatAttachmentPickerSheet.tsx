@@ -34,6 +34,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getSheetTopInset } from '@/features/layout/sheet-safe-area';
 import { PermissionRecoveryState } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -419,6 +420,7 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
     return (
       <BottomSheetModal
         ref={ref}
+        topInset={getSheetTopInset(insets.top)}
         snapPoints={['60%', '92%']}
         enableDynamicSizing={false}
         backdropComponent={renderBackdrop}

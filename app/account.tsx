@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Settings } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import dayjs from 'dayjs';
@@ -129,8 +129,7 @@ export default function AccountOverviewScreen() {
   }, [refetchProfile, refetchStats, refetchSubscription]);
 
   return (
-    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
         <ImageBackground
           source={PATTERN}
           style={{ flex: 1 }}
@@ -325,7 +324,6 @@ export default function AccountOverviewScreen() {
           )}
         </ScrollView>
       </ImageBackground>
-      </SafeAreaView>
-    </SafeAreaProvider>
+    </SafeAreaView>
   );
 }

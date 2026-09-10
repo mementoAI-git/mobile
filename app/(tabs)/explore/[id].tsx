@@ -134,7 +134,7 @@ export default function CategoryPromptsScreen() {
           <FlatList
             data={prompts}
             keyExtractor={(item, index) => item._id ?? `prompt-${index}`}
-            contentContainerClassName="p-5 gap-5"
+            contentContainerClassName="p-5 pb-32 gap-5"
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.brand} />

@@ -16,6 +16,8 @@ import * as Haptics from 'expo-haptics';
 import { X } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
 import { EMOJI_CATEGORIES, type EmojiCategory } from '@/features/chat/emoji-data';
 
 interface EmojiPickerSheetProps {
@@ -29,6 +31,7 @@ const EMOJI_SIZE = Math.floor((SCREEN_WIDTH - 40) / NUM_COLUMNS);
 
 export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetProps>(
   function EmojiPickerSheet({ onSelectEmoji, onClose }, ref) {
+    const insets = useSafeAreaInsets();
     const snapPoints = useMemo(() => ['42%', '65%'], []);
     const [activeCategoryId, setActiveCategoryId] = useState<string>(EMOJI_CATEGORIES[0].id);
 
@@ -67,6 +70,7 @@ export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetPro
     return (
       <BottomSheetModal
         ref={ref}
+        topInset={getSheetTopInset(insets.top)}
         snapPoints={snapPoints}
         backdropComponent={renderBackdrop}
         handleIndicatorStyle={styles.handleIndicator}
@@ -101,7 +105,7 @@ export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetPro
 
           {/* Emoji Grid */}
           <BottomSheetScrollView
-            contentContainerStyle={styles.gridContent}
+            contentContainerStyle={[styles.gridContent, {paddingBottom: getSheetBottomPadding(insets.bottom, 16)}]}
             showsVerticalScrollIndicator={false}
           >
             <Text style={styles.categoryHeading}>{activeCategory.name}</Text>

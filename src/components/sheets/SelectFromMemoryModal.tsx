@@ -8,6 +8,7 @@ import { Button } from '@/components/ui';
 import { useMemories } from '@/hooks/queries/use-memories';
 import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getSheetTopInset } from '@/features/layout/sheet-safe-area';
 import type { IMemory } from '@/types';
 
 interface SelectFromMemoryModalProps {
@@ -90,6 +91,7 @@ export const SelectFromMemoryModal = React.memo(
     return (
       <BottomSheetModal
         ref={ref}
+        topInset={getSheetTopInset(insets.top)}
         snapPoints={['90%']}
         backdropComponent={renderBackdrop}
         onAnimate={(fromIndex, toIndex) => {

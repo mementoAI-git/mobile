@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import Animated, {
   useSharedValue,
@@ -16,6 +17,7 @@ import { TYPE } from '@/constants/typography';
 import { ZapIconWarm } from '@/components/ui';
 import { toMondayFirstIndex } from '@/features/account/account-overview';
 import { CompletedCheckmarkIcon } from '../ui/icons/CompletedCheckmarkIcon';
+import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
 
 const STREAK_FLAME = require('../../../assets/images/illustrations/streak_flame.webp');
 
@@ -79,6 +81,7 @@ function StreakArc({ size = 120 }: { size?: number }) {
 }
 
 export function StreakSheet() {
+  const insets = useSafeAreaInsets();
   const user = useUserStore((s) => s.user);
   const { data: statsData } = useUserStats();
   const stats = statsData ?? {} as any;
@@ -94,7 +97,7 @@ export function StreakSheet() {
   const CIRCLE_SIZE = 120;
 
   return (
-    <BottomSheetView style={{ paddingTop: 20, paddingBottom: 40 }}>
+    <BottomSheetView style={{ paddingTop: 20, paddingBottom: getSheetBottomPadding(insets.bottom, 16) }}>
       {/* ── Animated arc + flame + overlapping day count ─────────── */}
       <View style={{ alignItems: 'center', marginBottom: 20 }}>
         <View style={{ alignItems: 'center' }} className="relative">

@@ -1,6 +1,7 @@
 import React, { forwardRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { StylePicker } from '@/components/capsule/StylePicker';
@@ -8,6 +9,7 @@ import { getThemeById } from '@/constants/themes';
 import type { IBeneficiary } from '@/types';
 import { useUserStore } from '@/store';
 import {TYPE} from '@/constants/typography';
+import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
 
 interface PreviewCapsuleModalProps {
   title: string;
@@ -23,6 +25,7 @@ interface PreviewCapsuleModalProps {
 }
 
 export const PreviewCapsuleModal = forwardRef<BottomSheetModal, PreviewCapsuleModalProps>((props, ref) => {
+  const insets = useSafeAreaInsets();
   const {
     title,
     body,
@@ -67,6 +70,7 @@ export const PreviewCapsuleModal = forwardRef<BottomSheetModal, PreviewCapsuleMo
   return (
     <BottomSheetModal
       ref={ref}
+      topInset={getSheetTopInset(insets.top)}
       index={0}
       snapPoints={['95%']}
       backdropComponent={renderBackdrop}
@@ -86,7 +90,7 @@ export const PreviewCapsuleModal = forwardRef<BottomSheetModal, PreviewCapsuleMo
         </View>
 
         {/* Content */}
-        <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40, gap: 16 }}>
+        <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 16 }}>
 
           {/* Controls */}
           <View className="bg-fill-weaker rounded-2xl border border-stroke-weaker p-1 mb-2">

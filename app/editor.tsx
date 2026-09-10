@@ -14,7 +14,7 @@ import {
   KeyboardAvoidingView, Platform, StyleSheet, Image,
   ActivityIndicator, Keyboard, Modal, ImageBackground, Linking,
 } from 'react-native';
-import { SafeAreaView, SafeAreaProvider, initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider, SafeAreaInsetsContext, initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   MoreHorizontal, Plus, X, Users, ChevronDown, Sparkles,
@@ -60,6 +60,7 @@ import { buildEditorPublishPayload } from '@/features/editor/editor-publish-payl
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
+import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
 import {
   DOCUMENT_PICKER_MIME_TYPES,
   MAX_ATTACHMENT_FILE_MB,
@@ -1258,8 +1259,12 @@ export default function EditorScreen() {
       />
       {/* Local sheets — must live inside a BottomSheetModalProvider scoped to
           this editor window so they display correctly on iOS fullScreenModal */}
+      <SafeAreaInsetsContext.Consumer>
+        {(modalInsets) => (
+          <>
         <BottomSheetModal
           ref={publishSheetRef}
+          topInset={getSheetTopInset(modalInsets?.top ?? 0)}
           snapPoints={['92%']}
           enablePanDownToClose
           onDismiss={() => {
@@ -1299,6 +1304,7 @@ export default function EditorScreen() {
         </BottomSheetModal>
         <BottomSheetModal
           ref={draftsSheetRef}
+          topInset={getSheetTopInset(modalInsets?.top ?? 0)}
           snapPoints={['75%']}
           enablePanDownToClose
           keyboardBehavior="interactive"
@@ -1309,10 +1315,13 @@ export default function EditorScreen() {
           handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
           backgroundStyle={{ backgroundColor: COLORS.background }}
         >
-          <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: 32 }}>
+          <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: getSheetBottomPadding(modalInsets?.bottom ?? 0, 16) }}>
             <DraftsSheet />
           </BottomSheetView>
         </BottomSheetModal>
+          </>
+        )}
+      </SafeAreaInsetsContext.Consumer>
       </BottomSheetModalProvider>
     </SafeAreaProvider>
   );

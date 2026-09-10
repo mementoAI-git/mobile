@@ -7,6 +7,7 @@ import { TYPE } from '@/constants/typography';
 import { Button, Spinner } from '@/components/ui';
 import { useFiles } from '@/hooks/queries/use-files';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getSheetTopInset } from '@/features/layout/sheet-safe-area';
 
 const { width: screenWidth } = Dimensions.get('window');
 const itemWidth = (screenWidth - 56) / 2;
@@ -124,6 +125,7 @@ export const SelectFromMediaModal = React.memo(
     return (
       <BottomSheetModal
         ref={ref}
+        topInset={getSheetTopInset(insets.top)}
         snapPoints={['90%']}
         backdropComponent={renderBackdrop}
         onAnimate={(fromIndex, toIndex) => {

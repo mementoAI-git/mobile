@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { Sparkles, Target, Heart, ListChecks, UserRound, Plus } from 'lucide-react-native';
 import { useUiStore } from '@/store';
 import { usePersona, useMemoryInsightsSummary, useUserContext } from '@/hooks/queries/use-persona';
@@ -9,6 +10,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/lib/utils';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
 
 const SUMMARY_TAB_KEY = 'summary';
 
@@ -29,6 +31,7 @@ const INSIGHT_ICONS: Record<string, any> = {
 };
 
 export function MemoryInsightsSheet() {
+  const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] = useState(SUMMARY_TAB_KEY);
   const closeSheet = useUiStore((s) => s.closeSheet);
   const openSheet = useUiStore((s) => s.openSheet);
@@ -86,7 +89,7 @@ export function MemoryInsightsSheet() {
         </Text>
       </View>
 
-      <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 24, paddingBottom: 48 }}>
+      <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 24, paddingBottom: getSheetBottomPadding(insets.bottom, 24) }}>
         {/* Beneficiaries section */}
         <View>
           <Text className="uppercase tracking-widest text-text-weak mb-3" style={TYPE.metadata}>

@@ -1,10 +1,12 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { ChevronDown, Check, X } from 'lucide-react-native';
 import { CAPSULE_THEMES, Theme } from '@/constants/themes';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
 
 interface StylePickerProps {
   currentThemeId?: string;
@@ -19,6 +21,7 @@ export function StylePicker({
   fontSize,
   onSizeSelect
 }: StylePickerProps) {
+  const insets = useSafeAreaInsets();
   const currentTheme = CAPSULE_THEMES.find(t => t.id === currentThemeId) || CAPSULE_THEMES[0];
   const sizes = ['1x', '2x', '3x'];
 
@@ -110,6 +113,7 @@ export function StylePicker({
       {/* Theme Selection Modal */}
       <BottomSheetModal
         ref={themeModalRef}
+        topInset={getSheetTopInset(insets.top)}
         snapPoints={['50%']}
         backdropComponent={renderBackdrop}
         handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
@@ -120,7 +124,7 @@ export function StylePicker({
             <X size={20} color={COLORS.textWeak} />
           </TouchableOpacity>
         </View>
-        <BottomSheetScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
+        <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 12 }}>
           {CAPSULE_THEMES.map((theme) => {
             const isSelected = theme.id === currentThemeId;
             return (
@@ -143,6 +147,7 @@ export function StylePicker({
       {/* Size Selection Modal */}
       <BottomSheetModal
         ref={sizeModalRef}
+        topInset={getSheetTopInset(insets.top)}
         snapPoints={['40%']}
         backdropComponent={renderBackdrop}
         handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
@@ -153,7 +158,7 @@ export function StylePicker({
             <X size={20} color={COLORS.textWeak} />
           </TouchableOpacity>
         </View>
-        <BottomSheetScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
+        <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 12 }}>
           {sizes.map((size) => {
             const isSelected = size === fontSize;
             return (

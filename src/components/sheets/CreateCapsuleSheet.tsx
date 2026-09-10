@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
 import { useEffect } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
@@ -540,6 +541,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
       {/* Date Options Modal */}
       <BottomSheetModal
         ref={dateModalRef}
+        topInset={getSheetTopInset(insets.top)}
         snapPoints={['50%']}
         backdropComponent={renderBackdrop}
         handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
@@ -550,7 +552,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
             <X size={20} color={COLORS.textWeak} />
           </TouchableOpacity>
         </View>
-        <BottomSheetScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
+        <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 12 }}>
           {[
             { label: 'In 3 days', days: 3 },
             { label: 'In 1 week', days: 7 },

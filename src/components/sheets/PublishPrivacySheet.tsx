@@ -7,6 +7,7 @@ import {
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getSheetTopInset } from '@/features/layout/sheet-safe-area';
 import { Check, Lock, Search, Users, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
@@ -166,6 +167,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
   return (
     <BottomSheetModal
       ref={ref}
+      topInset={getSheetTopInset(insets.top)}
       index={0}
       snapPoints={['86%']}
       stackBehavior="push"
