@@ -8,3 +8,7 @@ export function getManagePlanProCardStyle() {
     overflow: 'hidden',
   } as const;
 }
+
+export function getManagePlanProCardImageStyle() {
+  return {borderRadius: 32} as const;
+}

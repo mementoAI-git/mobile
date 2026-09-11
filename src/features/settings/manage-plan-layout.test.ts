@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { getManagePlanProCardStyle } from './manage-plan-layout';
+import {
+  getManagePlanProCardImageStyle,
+  getManagePlanProCardStyle,
+} from './manage-plan-layout';
 
 describe('manage plan card layout', () => {
   test('keeps the gradient card separated, padded, rounded, and clipped', () => {
@@ -11,5 +14,9 @@ describe('manage plan card layout', () => {
       paddingVertical: 28,
       overflow: 'hidden',
     });
+  });
+
+  test('clips the supplied Pro artwork to the card radius', () => {
+    expect(getManagePlanProCardImageStyle()).toEqual({borderRadius: 32});
   });
 });

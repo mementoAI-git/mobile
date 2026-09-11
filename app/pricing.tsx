@@ -1,7 +1,6 @@
 import React, {useCallback} from 'react';
-import {ScrollView, Text, TouchableOpacity, View} from 'react-native';
+import {ImageBackground, ScrollView, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {LinearGradient} from 'expo-linear-gradient';
 import {Check} from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import {Button} from '@/components/ui';
@@ -12,7 +11,12 @@ import {usePricingLogic} from '@/hooks/use-pricing-logic';
 import {useSubscription} from '@/hooks/queries/use-subscription';
 import {useUiStore} from '@/store';
 import {SettingsSubpageHeader} from '@/components/settings/SettingsSubpageHeader';
-import {getManagePlanProCardStyle} from '@/features/settings/manage-plan-layout';
+import {
+  getManagePlanProCardImageStyle,
+  getManagePlanProCardStyle,
+} from '@/features/settings/manage-plan-layout';
+
+const PRO_PLAN_GRADIENT = require('../assets/images/backgrounds/pro-plan-gradient.webp');
 
 const FREE_FEATURES = ['Add story/journals/thoughts.', 'Core chat and memories', 'Memory insights', 'Standard uploads and storage limit (200MB)'];
 const PRO_FEATURES = ['Everything in Free', 'Voice mode conversations.', 'Supermemory integration', 'Bigger storage (10GB)'];
@@ -37,15 +41,16 @@ export default function ManagePlanScreen() {
         <View className="flex-row items-end mt-8"><Text className="text-brand" style={TYPE.displayTitle}>$0</Text><Text className="text-text-strong mb-2 ml-2" style={TYPE.bodyLarge}>/ month</Text></View>
         <Button variant="outline" size="lg" fullWidth className="mt-7 bg-transparent" disabled={!isProOrAbove} onPress={requestCancellation}>{isProOrAbove ? 'Downgrade to Free' : 'Current plan'}</Button>
       </View>
-      <LinearGradient
-        colors={[COLORS.brand, COLORS.brand, COLORS.onboardingAmberLight]}
-        locations={[0, 0.58, 1]}
+      <ImageBackground
+        source={PRO_PLAN_GRADIENT}
+        resizeMode="cover"
+        imageStyle={getManagePlanProCardImageStyle()}
         style={getManagePlanProCardStyle()}
       >
         <Text className="text-white" style={TYPE.uiTitle}>Pro</Text><Text className="text-white mt-2" style={TYPE.bodyLarge}>For users who want to benefit more</Text><FeatureList items={PRO_FEATURES} inverse />
         <View className="flex-row items-end mt-8"><Text className="text-white" style={TYPE.displayTitle}>{interval === 'monthly' ? '$9.99' : '$79'}</Text><Text className="text-white mb-2 ml-2" style={TYPE.bodyLarge}>/ {interval === 'monthly' ? 'month' : 'year'}</Text></View>
         <Button variant="secondary" size="lg" fullWidth className="mt-7 bg-white" loading={loading} disabled={isProOrAbove || isCancellationScheduled} onPress={() => handleCheckout('pro')}>{isProOrAbove ? 'Current plan' : 'Start 14-day trial'}</Button>
-      </LinearGradient>
+      </ImageBackground>
       {isProOrAbove && !isCancellationScheduled ? <View className="mt-8"><View className="flex-row justify-between items-center"><Text className="text-text-strong" style={TYPE.uiTitle}>Cancel plan</Text><Button variant="outline" size="md" textClassName="text-error-strong" onPress={requestCancellation}>Cancel</Button></View><Text className="text-text-base mt-3" style={TYPE.body}>If you cancel, you’ll keep full access to your plan features until the end of your billing period</Text></View> : null}
     </ScrollView>
   </SafeAreaView>;
