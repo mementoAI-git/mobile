@@ -12,6 +12,7 @@ import {usePricingLogic} from '@/hooks/use-pricing-logic';
 import {useSubscription} from '@/hooks/queries/use-subscription';
 import {useUiStore} from '@/store';
 import {SettingsSubpageHeader} from '@/components/settings/SettingsSubpageHeader';
+import {getManagePlanProCardStyle} from '@/features/settings/manage-plan-layout';
 
 const FREE_FEATURES = ['Add story/journals/thoughts.', 'Core chat and memories', 'Memory insights', 'Standard uploads and storage limit (200MB)'];
 const PRO_FEATURES = ['Everything in Free', 'Voice mode conversations.', 'Supermemory integration', 'Bigger storage (10GB)'];
@@ -36,7 +37,11 @@ export default function ManagePlanScreen() {
         <View className="flex-row items-end mt-8"><Text className="text-brand" style={TYPE.displayTitle}>$0</Text><Text className="text-text-strong mb-2 ml-2" style={TYPE.bodyLarge}>/ month</Text></View>
         <Button variant="outline" size="lg" fullWidth className="mt-7 bg-transparent" disabled={!isProOrAbove} onPress={requestCancellation}>{isProOrAbove ? 'Downgrade to Free' : 'Current plan'}</Button>
       </View>
-      <LinearGradient colors={[COLORS.brand, COLORS.brand, COLORS.onboardingAmberLight]} locations={[0, 0.58, 1]} className="rounded-[32px] px-6 py-7 mt-6" style={{overflow: 'hidden'}}>
+      <LinearGradient
+        colors={[COLORS.brand, COLORS.brand, COLORS.onboardingAmberLight]}
+        locations={[0, 0.58, 1]}
+        style={getManagePlanProCardStyle()}
+      >
         <Text className="text-white" style={TYPE.uiTitle}>Pro</Text><Text className="text-white mt-2" style={TYPE.bodyLarge}>For users who want to benefit more</Text><FeatureList items={PRO_FEATURES} inverse />
         <View className="flex-row items-end mt-8"><Text className="text-white" style={TYPE.displayTitle}>{interval === 'monthly' ? '$9.99' : '$79'}</Text><Text className="text-white mb-2 ml-2" style={TYPE.bodyLarge}>/ {interval === 'monthly' ? 'month' : 'year'}</Text></View>
         <Button variant="secondary" size="lg" fullWidth className="mt-7 bg-white" loading={loading} disabled={isProOrAbove || isCancellationScheduled} onPress={() => handleCheckout('pro')}>{isProOrAbove ? 'Current plan' : 'Start 14-day trial'}</Button>
