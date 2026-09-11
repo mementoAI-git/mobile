@@ -13,7 +13,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import dayjs from 'dayjs';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { AccountUpgradeBanner } from '@/components/account/AccountUpgradeBanner';
+import { PlanSummaryBanner } from '@/components/subscription/PlanSummaryBanner';
 import { EnrichmentScoreCard } from '@/components/account/EnrichmentScoreCard';
 import { WeeklyProgressCard } from '@/components/account/WeeklyProgressCard';
 import { AccountSkeleton, Avatar, Button } from '@/components/ui';
@@ -209,7 +209,7 @@ export default function AccountOverviewScreen() {
             <AccountSkeleton />
           ) : (
             <View style={{ paddingHorizontal: 16, gap: 24 }}>
-              <AccountUpgradeBanner
+              <PlanSummaryBanner
                 isProOrAbove={isProOrAbove}
                 subscriptionKnown={Boolean(subscription) && !subscriptionLoading}
                 onPress={handleUpgrade}

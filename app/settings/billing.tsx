@@ -9,12 +9,11 @@ import {
   BillingDetailsSection,
   BillingInvoicesPanel,
   BillingPaymentMethodsSection,
-  BillingPlanBanner,
   BillingStorageCard,
   BillingTabs,
 } from '@/components/billing';
+import { PlanSummaryBanner } from '@/components/subscription/PlanSummaryBanner';
 import { COLORS } from '@/constants/tokens';
-import { getBillingTierPresentation } from '@/features/settings/billing-presentation';
 import { getStoragePresentation } from '@/features/settings/billing-storage';
 import { useBillingSettingsLogic } from '@/hooks/use-billing-settings-logic';
 
@@ -30,21 +29,20 @@ const REFERENCE_USAGE = {
 export default function BillingSettingsScreen() {
   const router = useRouter();
   const {
-    summary, isProOrAbove, invoices, invoicesLoading, usage, portalBusy,
+    summary, subLoading, isProOrAbove, invoices, invoicesLoading, usage, portalBusy,
     resumeBusy,
     handleRefresh, handlePortal, handleCancel, handleResume,
     isCancelled, activeTab, setActiveTab, profile, handleUpgrade,
     handleEditBillingDetails, handleAddPaymentMethod, handleEditPaymentMethod,
   } = useBillingSettingsLogic();
 
-  const plan = getBillingTierPresentation(summary?.tier ?? 'free');
   const storage = getStoragePresentation(usage ?? REFERENCE_USAGE, isProOrAbove);
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();
     if (router.canGoBack()) router.back();
     else router.replace('/settings');
   }, [router]);
-  const handlePlanAction = plan.action === 'upgrade' ? handleUpgrade : handlePortal;
+  const handlePlanAction = isProOrAbove ? handlePortal : handleUpgrade;
 
   return (
     <SafeAreaView style={{flex: 1, backgroundColor: COLORS.background}} edges={['top']}>
@@ -61,7 +59,12 @@ export default function BillingSettingsScreen() {
         {activeTab === 'overview' ? (
           <View>
             <View className="px-4 gap-6 pb-3">
-              <BillingPlanBanner {...plan} onAction={handlePlanAction} busy={portalBusy} />
+              <PlanSummaryBanner
+                isProOrAbove={isProOrAbove}
+                subscriptionKnown={Boolean(summary) && !subLoading}
+                onPress={handlePlanAction}
+                loading={isProOrAbove && portalBusy}
+              />
               <BillingStorageCard storage={storage} />
             </View>
             <BillingDetailsSection profile={profile} onEdit={handleEditBillingDetails} />

@@ -3,7 +3,6 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const files = [
   'BillingTabs.tsx',
-  'BillingPlanBanner.tsx',
   'BillingStorageCard.tsx',
   'BillingDetailsSection.tsx',
   'BillingPaymentMethodsSection.tsx',

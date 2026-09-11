@@ -5,20 +5,22 @@ import { ArrowUpCircle } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Button } from '@/components/ui/Button';
 
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 
-interface AccountUpgradeBannerProps {
+interface PlanSummaryBannerProps {
   isProOrAbove: boolean;
   subscriptionKnown: boolean;
   onPress: () => void;
+  loading?: boolean;
 }
 
-export const AccountUpgradeBanner = React.memo(function AccountUpgradeBanner({
+export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
   isProOrAbove,
   subscriptionKnown,
   onPress,
-}: AccountUpgradeBannerProps) {
+  loading = false,
+}: PlanSummaryBannerProps) {
   const title = !subscriptionKnown
     ? 'Your Memento plan'
     : isProOrAbove
@@ -69,10 +71,11 @@ export const AccountUpgradeBanner = React.memo(function AccountUpgradeBanner({
 
         <Button
           onPress={onPress}
+          loading={loading}
           variant="secondary"
           size="sm"
           className="absolute right-3 top-3 h-8 bg-white/20 px-3"
- textClassName="text-white "
+          textClassName="text-white"
           leftIcon={<ArrowUpCircle size={15} color={COLORS.textInverse} strokeWidth={2.4} />}
         >
           {subscriptionKnown && !isProOrAbove ? 'Upgrade' : 'Plan details'}
