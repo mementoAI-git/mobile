@@ -459,7 +459,9 @@ export default function ChatScreen() {
           <ArrowLeft size={21} color={COLORS.textStrong} strokeWidth={2.2} />
         </TouchableOpacity>
 
-        <Text numberOfLines={1} style={styles.headerTitle}>Chat</Text>
+        <Text numberOfLines={1} style={styles.headerTitle}>
+          {isPromptType ? 'Prompt' : 'Chat'}
+        </Text>
 
         <View style={styles.headerActions}>
           <TouchableOpacity
@@ -481,7 +483,7 @@ export default function ChatScreen() {
             <PhoneCall size={20} color={COLORS.textStrong} strokeWidth={2.2} />
           </TouchableOpacity>
           <TouchableOpacity
-            accessibilityLabel="Open chat settings"
+            accessibilityLabel={isPromptType ? 'Open prompt settings' : 'Open chat settings'}
             accessibilityRole="button"
             activeOpacity={0.7}
             onPress={handleActions}

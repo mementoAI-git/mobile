@@ -16,4 +16,12 @@ describe('PromptReflectionHeader component', () => {
     expect(source).toContain('numberOfLines={1}');
     expect(source).not.toMatch(/text-gray-|text-slate-/);
   });
+
+  test('titles prompt conversations as "Prompt" and host conversations as "Chat"', async () => {
+    const screen = await Bun.file(
+      new URL('../../screens/ChatScreen.tsx', import.meta.url),
+    ).text();
+
+    expect(screen).toContain("{isPromptType ? 'Prompt' : 'Chat'}");
+  });
 });
