@@ -68,6 +68,9 @@ async function pushToHistory(email: string | null | undefined, query: string): P
   await saveHistory(email, next);
 }
 
+import { stripHtml } from '@/features/memories/strip-html';
+export { stripHtml };
+
 const MemoryRow = React.memo(function MemoryRow({
   memory,
   onPress,
@@ -75,6 +78,7 @@ const MemoryRow = React.memo(function MemoryRow({
   memory: any;
   onPress: () => void;
 }) {
+  const previewBody = stripHtml(memory.body);
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -85,9 +89,9 @@ const MemoryRow = React.memo(function MemoryRow({
         <Text style={styles.resultTitle} numberOfLines={1}>
           {memory.title || 'Untitled memory'}
         </Text>
-        {memory.body ? (
+        {previewBody ? (
           <Text style={styles.resultBody} numberOfLines={1}>
-            {memory.body}
+            {previewBody}
           </Text>
         ) : null}
         <Text style={styles.resultDate}>

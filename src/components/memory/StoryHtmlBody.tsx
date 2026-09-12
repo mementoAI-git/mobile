@@ -122,11 +122,11 @@ const inlineStyles = {
 
 const styles = StyleSheet.create({
   inlineBase: {
-    ...TYPE.bodyLarge,
+    ...TYPE.body,
     color: COLORS.textStrong,
   },
   paragraph: {
-    ...TYPE.bodyLarge,
+    ...TYPE.body,
     color: COLORS.textStrong,
     marginBottom: 14,
   },
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   blockquoteText: {
-    ...TYPE.bodyLarge,
+    ...TYPE.body,
     color: COLORS.textWeak,
     fontStyle: 'italic',
   },

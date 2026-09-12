@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useUiStore } from '@/store';
@@ -12,6 +12,13 @@ export function useStoriesLogic() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
     if (value === '') {
@@ -21,13 +28,14 @@ export function useStoriesLogic() {
 
   const handleSearchSubmit = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setDebouncedSearch(search);
+    setDebouncedSearch(search.trim());
   }, [search]);
 
   const { data: statsData } = useMemoriesStats();
   const {
     data,
     isLoading,
+    isFetching,
     isFetchingNextPage,
     fetchNextPage,
     hasNextPage,
@@ -72,6 +80,7 @@ export function useStoriesLogic() {
       stories,
       stats,
       isLoading,
+      isFetching,
       isRefetching,
       refetch,
       isFetchingNextPage,
@@ -93,6 +102,7 @@ export function useStoriesLogic() {
       stories,
       stats,
       isLoading,
+      isFetching,
       isRefetching,
       refetch,
       isFetchingNextPage,

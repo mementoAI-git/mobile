@@ -46,6 +46,7 @@ export default function StoriesScreen() {
     stories,
     stats,
     isLoading,
+    isFetching,
     isRefetching,
     refetch,
     isFetchingNextPage,
@@ -144,7 +145,7 @@ export default function StoriesScreen() {
       };
       return (
       <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-4 gap-6 px-5">
-        <Animated.Text className="text-text-weak" style={TYPE.bodyLarge}>
+        <Animated.Text className="text-text-weak" style={TYPE.body}>
           A secure archive for your most cherished moments and personal reflections.
         </Animated.Text>
 
@@ -168,10 +169,16 @@ export default function StoriesScreen() {
                 onSubmitEditing={handleSearchSubmit}
                 returnKeyType="search"
                 containerClassName="flex-1"
+                textContentType="none"
+                autoComplete="off"
+                autoCorrect={false}
+                spellCheck={false}
                 leftElement={<Search size={18} color={COLORS.textWeak} />}
                 rightElement={
-                  search ? (
-                    <TouchableOpacity onPress={handleClearSearch}>
+                  isFetching && Boolean(debouncedSearch) ? (
+                    <Spinner size="small" />
+                  ) : search ? (
+                    <TouchableOpacity onPress={handleClearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <View className="size-5 bg-text-muted/10 rounded-full items-center justify-center">
                         <Plus size={12} color={COLORS.textWeak} style={{ transform: [{ rotate: '45deg' }] }} />
                       </View>
@@ -211,7 +218,7 @@ export default function StoriesScreen() {
       </Animated.View>
     );
     },
-    [stats, search, activeFilter, setActiveFilter, handleClearSearch, handleSearchChange, handleSearchSubmit],
+    [stats, search, debouncedSearch, isFetching, activeFilter, setActiveFilter, handleClearSearch, handleSearchChange, handleSearchSubmit],
   );
 
   const emptyState = (
@@ -235,13 +242,14 @@ export default function StoriesScreen() {
       <View className="flex-1">
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
 
-        {isLoading && !stories.length ? (
+        {isLoading && !stories.length && !debouncedSearch ? (
           <StoriesSkeleton />
         ) : (
           /* ── Masonry grid view (list mode commented out) ──────────── */
           <MasonryMemoryGrid
             memories={stories}
             ListHeaderComponent={listHeader}
+            ListEmptyComponent={emptyState}
             onMemoryPress={handleGridMemoryPress}
             onEndReached={handleGridEndReached}
             refreshing={isRefetching}
