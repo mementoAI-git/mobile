@@ -16,10 +16,10 @@ export function BeneficiaryEmptyState({
   return (
     <View className="min-h-[520px] items-center justify-center rounded-[24px] bg-fill-weaker px-6">
       <Icon size={70} color={COLORS.textDisabled} strokeWidth={1.7} />
-      <Text className="mt-9 text-center" style={TYPE.cardTitle}>
+      <Text className="mt-9 text-center" style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>
         {mode === 'people' ? 'No beneficiary invited yet' : 'No group created yet'}
       </Text>
-      <Text className="mt-3 max-w-[310px] text-center" style={TYPE.body}>
+      <Text className="mt-3 max-w-[310px] text-center" style={{ ...TYPE.body, color: COLORS.textWeak }}>
         {mode === 'people'
           ? "You haven’t added any beneficiaries to your Memento yet."
           : 'Create a group to organize the people who matter most.'}

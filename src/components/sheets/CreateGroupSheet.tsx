@@ -74,8 +74,6 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
       paddingHorizontal: 20,
       paddingTop: 12,
       paddingBottom: Math.max(insets.bottom, 12) + 8,
-      borderTopWidth: 1,
-      borderTopColor: COLORS.strokeWeaker,
       backgroundColor: COLORS.background,
     }}>
       <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={close}>
@@ -120,7 +118,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
                 onChangeText={setName}
                 autoCapitalize="words"
                 placeholderTextColor={COLORS.textMuted}
-                style={{ height: 56, borderWidth: 1, borderColor: COLORS.strokeWeak, borderRadius: 12, backgroundColor: COLORS.card, paddingHorizontal: 16, ...TYPE.bodyLarge, color: COLORS.textStrong }}
+                style={{ height: 56, borderRadius: 999, backgroundColor: COLORS.fillWeaker, paddingHorizontal: 20, ...TYPE.input, color: COLORS.textStrong }}
               />
             </View>
 
@@ -132,7 +130,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
                 placeholder="Enter description here"
                 placeholderTextColor={COLORS.textMuted}
                 multiline
-                style={{ minHeight: 112, borderWidth: 1, borderColor: COLORS.strokeWeak, borderRadius: 16, backgroundColor: COLORS.card, paddingHorizontal: 16, paddingVertical: 14, ...TYPE.bodyLarge, color: COLORS.textStrong, textAlignVertical: 'top' }}
+                style={{ minHeight: 112, borderRadius: 16, backgroundColor: COLORS.fillWeaker, paddingHorizontal: 16, paddingVertical: 14, ...TYPE.input, color: COLORS.textStrong, textAlignVertical: 'top' }}
               />
             </View>
 
@@ -148,7 +146,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
                       accessibilityRole="button"
                       accessibilityLabel={`Select group colour ${swatch.id + 1}`}
                       accessibilityState={{ selected }}
-                      style={{ width: 48, height: 48, borderRadius: 6, backgroundColor: swatch.color, alignItems: 'center', justifyContent: 'center' }}
+                      style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: swatch.color, alignItems: 'center', justifyContent: 'center' }}
                     >
                       {selected ? <Check size={24} color={COLORS.textInverse} strokeWidth={2.5} /> : null}
                     </TouchableOpacity>

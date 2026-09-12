@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: COLORS.textInverse,
-    ...TYPE.bodyLarge,
+    ...TYPE.body,
     lineHeight: 20,
   },
   weekRow: {

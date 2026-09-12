@@ -100,7 +100,7 @@ export function StoryNarrationPlayer({
             <Text
               numberOfLines={1}
               style={{
-                ...TYPE.bodyLarge,
+                ...TYPE.body,
                 color: COLORS.textStrong,
               }}
             >

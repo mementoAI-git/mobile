@@ -646,7 +646,7 @@ const styles = StyleSheet.create({
   authorLabel: { ...TYPE.bodySmall, color: COLORS.textMuted },
   titleInput: { ...TYPE.displayTitle,  color: COLORS.textStrong, padding: 0, margin: 0, marginBottom: 8, lineHeight: 42, textAlignVertical: 'top' },
   subtitleInput: { ...TYPE.cardTitle, color: COLORS.textWeak, padding: 0, margin: 0, marginBottom: 24, lineHeight: 26, textAlignVertical: 'top' },
-  bodyInput: { ...TYPE.bodyLarge, color: COLORS.textBase, padding: 0, margin: 0, lineHeight: 26, minHeight: 300, textAlignVertical: 'top' },
+  bodyInput: { ...TYPE.input, color: COLORS.textBase, padding: 0, margin: 0, lineHeight: 26, minHeight: 300, textAlignVertical: 'top' },
   toolbar: { flexDirection: 'column', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker, backgroundColor: COLORS.background, gap: 10 },
   toolbarLabel: { ...TYPE.eyebrow, color: COLORS.textMuted, letterSpacing: 1, textTransform: 'uppercase' },
   toolbarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -680,7 +680,7 @@ const pStyles = StyleSheet.create({
   tagInput: { backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 14, paddingVertical: 14, ...TYPE.label, color: COLORS.textStrong, minHeight: 50 },
   postBtn: { height: 56, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
   postBtnDisabled: { opacity: 0.45 },
-  postBtnText: { ...TYPE.bodyLarge, color: COLORS.textInverse },
+  postBtnText: { ...TYPE.button, color: COLORS.textInverse },
 });
 
 // ─── Success screen styles ────────────────────────────────────────────────────
@@ -849,7 +849,7 @@ const sStyles = StyleSheet.create({
     gap: 8,
   },
   addAnotherText: {
-    ...TYPE.bodyLarge,
+    ...TYPE.button,
     color: COLORS.textInverse,
   },
 

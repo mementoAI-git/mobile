@@ -77,7 +77,7 @@ export default function ChatMediaScreen() {
       <Pressable onPress={() => { Haptics.selectionAsync(); setPreviewIndex(index); }} className="mx-4 mb-3 min-h-16 flex-row items-center gap-3 rounded-2xl border border-stroke-weak bg-card px-4 py-3">
         <View className="size-11 items-center justify-center rounded-xl bg-fill-weak"><Icon size={22} color={COLORS.textStrong} /></View>
         <View className="flex-1">
-          <Text numberOfLines={1} style={[TYPE.bodyStrong, {color: COLORS.textStrong}]}>{item.name || (item.category === 'audio' ? 'Audio' : 'Document')}</Text>
+          <Text numberOfLines={1} style={[TYPE.body, {color: COLORS.textStrong}]}>{item.name || (item.category === 'audio' ? 'Audio' : 'Document')}</Text>
           <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>{item.category === 'audio' ? 'Audio' : 'Document'}</Text>
         </View>
       </Pressable>
@@ -88,7 +88,7 @@ export default function ChatMediaScreen() {
     <Pressable onPress={() => { Haptics.selectionAsync(); void Linking.openURL(item.url); }} className="mx-4 mb-3 min-h-16 flex-row items-center gap-3 rounded-2xl border border-stroke-weak bg-card px-4 py-3">
       <View className="size-11 items-center justify-center rounded-xl bg-fill-weak"><Link2 size={22} color={COLORS.textStrong} /></View>
       <View className="flex-1">
-        <Text numberOfLines={1} style={[TYPE.bodyStrong, {color: COLORS.textStrong}]}>{item.url}</Text>
+        <Text numberOfLines={1} style={[TYPE.body, {color: COLORS.textStrong}]}>{item.url}</Text>
         <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>Open link</Text>
       </View>
     </Pressable>

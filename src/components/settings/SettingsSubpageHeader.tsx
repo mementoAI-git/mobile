@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleProp, Text, TextStyle, TouchableOpacity, View } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -42,7 +42,7 @@ export const SettingsSubpageHeader = React.memo(function SettingsSubpageHeader({
       >
         <ArrowLeft size={layout.iconSize} color={COLORS.textBase} />
       </TouchableOpacity>
-      <Text style={TYPE.screenTitle}>{title}</Text>
+      <Text style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>{title}</Text>
       <View style={{ width: layout.actionSize, height: layout.actionSize }} />
     </View>
   );

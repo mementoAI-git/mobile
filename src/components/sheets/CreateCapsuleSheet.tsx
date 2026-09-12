@@ -275,7 +275,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
                       className="items-center w-16 gap-2"
                     >
                       <View className={`size-12 rounded-full items-center justify-center border-2 ${selected ? 'border-brand bg-brand' : 'border-transparent bg-white shadow-sm'}`}>
-                        <Text className={selected ? 'text-white' : 'text-text-strong'} style={TYPE.bodyLarge}>
+                        <Text className={selected ? 'text-white' : 'text-text-strong'} style={TYPE.label}>
                           {b.name[0]?.toUpperCase()}
                         </Text>
                       </View>
@@ -384,7 +384,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
               placeholder="Header here"
               placeholderTextColor={COLORS.textMuted}
               className="text-text-strong p-0 m-0"
-              style={TYPE.bodyLarge}
+              style={TYPE.input}
             />
           </View>
           <View className="bg-fill-weaker border border-stroke-weaker rounded-xl px-4 py-3 min-h-[140px]">
@@ -547,7 +547,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
         handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
       >
         <View className="px-5 py-4 border-b border-stroke-weaker flex-row justify-between items-center">
-          <Text className="" style={TYPE.bodyLarge}>Delivery Date</Text>
+          <Text className="text-text-strong" style={TYPE.sectionTitle}>Delivery Date</Text>
           <TouchableOpacity onPress={() => dateModalRef.current?.dismiss()}>
             <X size={20} color={COLORS.textWeak} />
           </TouchableOpacity>

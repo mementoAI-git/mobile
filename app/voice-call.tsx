@@ -154,7 +154,7 @@ export default function VoiceCallRoute() {
               <Text className="mt-7 text-text-strong" style={TYPE.screenTitle}>
                 {(getVoiceById(draftVoiceId) ?? VOICE_CATALOG[0]).name}
               </Text>
-              <Text className="mt-1 text-text-base" style={TYPE.bodyLarge}>
+              <Text className="mt-1 text-text-base" style={TYPE.body}>
                 {(getVoiceById(draftVoiceId) ?? VOICE_CATALOG[0]).subtitle}
               </Text>
               <VoiceDots selectedId={draftVoiceId} onSelect={chooseVoice} />

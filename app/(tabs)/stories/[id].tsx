@@ -597,7 +597,7 @@ const styles = {
   },
   dateText: { ...TYPE.bodySmall, color: COLORS.textBase },
   body: {
-    ...TYPE.bodyLarge,
+    ...TYPE.body,
     color: COLORS.textStrong,
   },
   sectionLabel: {

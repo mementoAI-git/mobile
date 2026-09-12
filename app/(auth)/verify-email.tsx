@@ -33,7 +33,7 @@ export default function VerifyEmailScreen() {
           </Animated.Text>
           <Animated.Text
             className="text-text-weak text-center mb-10 leading-relaxed"
-            style={TYPE.bodyLarge}>
+            style={TYPE.body}>
             Your email has been confirmed. You can now sign in.
           </Animated.Text>
           <Button onPress={() => router.replace('/(auth)/login')} fullWidth size="lg">
@@ -60,7 +60,7 @@ export default function VerifyEmailScreen() {
           </Animated.Text>
           <Animated.Text
             className="text-text-base leading-relaxed"
-            style={TYPE.bodyLarge}>
+            style={TYPE.body}>
             Enter the verification token from your email.
           </Animated.Text>
         </View>

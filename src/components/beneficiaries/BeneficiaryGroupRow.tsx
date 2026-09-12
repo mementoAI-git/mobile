@@ -25,25 +25,25 @@ export const BeneficiaryGroupRow = memo(function BeneficiaryGroupRow({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.76}
-      className="min-h-[80px] flex-row items-center rounded-[24px] border border-stroke-weak bg-card px-5 py-4"
+      className="min-h-[80px] flex-row items-center rounded-[24px] bg-card px-5 py-4"
     >
       <View className="flex-1">
         <View className="flex-row items-center">
           <View className="mr-2.5 size-3 rounded-[4px]" style={{ backgroundColor: color }} />
-          <Text style={TYPE.cardTitle}>
+          <Text style={{ ...TYPE.body, color: COLORS.textStrong }} numberOfLines={1}>
             {group.name}
           </Text>
         </View>
         {created && (
-          <Text className="mt-1" style={TYPE.bodySmall}>
+          <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak, marginTop: 2 }}>
             Created {created}
           </Text>
         )}
       </View>
-      <Text className="mr-5" style={TYPE.label}>
+      <Text className="mr-3" style={{ ...TYPE.bodySmall, color: COLORS.textWeak }}>
         {count} {count === 1 ? 'Person' : 'People'}
       </Text>
-      <ChevronRight size={24} color={COLORS.textBase} strokeWidth={2.2} />
+      <ChevronRight size={20} color={COLORS.textWeak} strokeWidth={2} />
     </TouchableOpacity>
   );
 });

@@ -55,13 +55,11 @@ function SheetInput({
       style={[
         {
           minHeight: multiline ? 132 : 56,
-          borderWidth: 1,
-          borderColor: COLORS.strokeWeak,
-          borderRadius: multiline ? 16 : 12,
-          backgroundColor: COLORS.card,
-          paddingHorizontal: 16,
+          borderRadius: multiline ? 16 : 999,
+          backgroundColor: COLORS.fillWeaker,
+          paddingHorizontal: multiline ? 16 : 20,
           paddingVertical: multiline ? 14 : 0,
-          ...TYPE.bodyLarge,
+          ...TYPE.input,
           color: COLORS.textStrong,
           textAlignVertical: multiline ? 'top' : 'center',
         },
@@ -215,8 +213,6 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
       paddingHorizontal: 20,
       paddingTop: 12,
       paddingBottom: Math.max(insets.bottom, 12) + 8,
-      borderTopWidth: 1,
-      borderTopColor: COLORS.strokeWeaker,
       backgroundColor: COLORS.background,
     }}>
       <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={close}>
@@ -305,9 +301,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
                       style={{
                         padding: 14,
                         borderRadius: 16,
-                        borderWidth: 1,
-                        borderColor: selected ? COLORS.brand : COLORS.strokeWeak,
-                        backgroundColor: selected ? 'rgba(255, 94, 0, 0.04)' : COLORS.card,
+                        backgroundColor: selected ? COLORS.brandSubtle : COLORS.fillWeaker,
                         gap: 3,
                       }}
                     >
@@ -325,7 +319,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
                             width: 18,
                             height: 18,
                             borderRadius: 9,
-                            borderWidth: 2,
+                            borderWidth: 1.5,
                             borderColor: selected ? COLORS.brand : COLORS.strokeWeak,
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -360,7 +354,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
 
             <View style={{ gap: 8 }}>
               <FieldLabel>Add to group(s)</FieldLabel>
-              <View style={{ minHeight: 132, borderWidth: 1, borderColor: COLORS.strokeWeak, borderRadius: 16, backgroundColor: COLORS.card, padding: 12, gap: 10 }}>
+              <View style={{ minHeight: 132, borderRadius: 16, backgroundColor: COLORS.fillWeaker, padding: 12, gap: 10 }}>
                 <BottomSheetTextInput
                   value={groupSearch}
                   onChangeText={setGroupSearch}
@@ -373,7 +367,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
                     const selected = selectedGroupIds.includes(group._id);
                     const color = GROUP_COLOR_PALETTE[group.color ?? 1]?.color ?? GROUP_COLOR_PALETTE[1].color;
                     return (
-                      <TouchableOpacity key={group._id} onPress={() => toggleGroup(group._id)} style={{ minHeight: 34, paddingHorizontal: 10, borderRadius: 17, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: selected ? color : COLORS.fillWeak, borderWidth: 1, borderColor: selected ? color : COLORS.strokeWeaker }}>
+                      <TouchableOpacity key={group._id} onPress={() => toggleGroup(group._id)} style={{ minHeight: 34, paddingHorizontal: 12, borderRadius: 999, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: selected ? color : COLORS.fillWeak }}>
                         {selected ? <Check size={14} color={COLORS.textStrong} strokeWidth={2.5} /> : null}
                         <Text style={{ ...TYPE.metadata, color: COLORS.textStrong }}>{group.name}</Text>
                       </TouchableOpacity>

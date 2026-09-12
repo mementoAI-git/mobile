@@ -52,7 +52,7 @@ export default function TwoFactorScreen() {
             </Animated.Text>
             <Animated.Text
               className="text-text-base"
-              style={TYPE.bodyLarge}
+              style={TYPE.body}
             >
               Enter the 6-digit code from your authenticator app.
             </Animated.Text>

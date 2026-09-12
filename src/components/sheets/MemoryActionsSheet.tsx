@@ -226,7 +226,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
               alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <Text style={{ ...TYPE.bodyLarge, color: COLORS.textStrong }}>
+            <Text style={{ ...TYPE.button, color: COLORS.textStrong }}>
               Go back
             </Text>
           </TouchableOpacity>
@@ -243,7 +243,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
           >
             {isDeleting
               ? <ActivityIndicator color={COLORS.textInverse} />
-              : <Text style={{ ...TYPE.bodyLarge, color: COLORS.textInverse }}>Yes, delete</Text>
+              : <Text style={{ ...TYPE.button, color: COLORS.textInverse }}>Yes, delete</Text>
             }
           </TouchableOpacity>
         </View>
@@ -361,10 +361,10 @@ const s = {
   },
   actionRow: {
     flexDirection: 'row' as const, alignItems: 'center' as const, gap: 14,
-    padding: 16, backgroundColor: COLORS.card, borderRadius: 14,
-    borderWidth: 1, borderColor: COLORS.strokeWeaker, marginBottom: 10,
+    padding: 16, backgroundColor: COLORS.card, borderRadius: 16,
+    marginBottom: 10,
   },
-  actionLabel: { ...TYPE.bodyLarge, color: COLORS.textStrong },
+  actionLabel: { ...TYPE.body, color: COLORS.textStrong },
   visibilityCard: {
     backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16, marginBottom: 16, gap: 12,
   },
@@ -376,20 +376,19 @@ const s = {
     flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10,
     backgroundColor: COLORS.card, borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 13,
-    borderWidth: 1, borderColor: COLORS.strokeWeaker,
   },
   visibilityLabel: { flex: 1, ...TYPE.label, color: COLORS.textStrong },
   tagsSection: { marginBottom: 24, gap: 8 },
   tagsLabel: { ...TYPE.body, color: COLORS.textStrong, paddingHorizontal: 2 },
   tagsArea: {
-    backgroundColor: COLORS.card, borderRadius: 14,
-    borderWidth: 1, borderColor: COLORS.strokeWeak, padding: 12, minHeight: 72, gap: 8,
+    backgroundColor: COLORS.card, borderRadius: 16,
+    padding: 12, minHeight: 72, gap: 8,
   },
   tagPillsRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 6 },
   tagPill: {
     flexDirection: 'row' as const, alignItems: 'center' as const,
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
-    backgroundColor: COLORS.fillWeak, borderWidth: 1, borderColor: COLORS.strokeWeak,
+    backgroundColor: COLORS.fillWeak,
   },
   tagPillText: { ...TYPE.bodySmall, color: COLORS.textStrong },
   tagInput: {
@@ -397,9 +396,8 @@ const s = {
   },
   deleteBtn: {
     height: 56, borderRadius: 999,
-    borderWidth: 1.5, borderColor: COLORS.error,
-    backgroundColor: `${COLORS.error}06`,
+    backgroundColor: `${COLORS.error}10`,
     alignItems: 'center' as const, justifyContent: 'center' as const,
   },
-  deleteBtnText: { ...TYPE.bodyLarge, color: COLORS.error },
+  deleteBtnText: { ...TYPE.button, color: COLORS.error },
 };

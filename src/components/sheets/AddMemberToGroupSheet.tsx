@@ -119,7 +119,7 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ ...TYPE.bodyLarge, color: COLORS.textStrong }} numberOfLines={1}>
+                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }} numberOfLines={1}>
                     {name}
                   </Text>
                   {member.email && (
@@ -150,16 +150,14 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
         paddingHorizontal: 24,
         paddingTop: 16,
         paddingBottom: Math.max(insets.bottom, 16),
-        borderTopWidth: 1,
-        borderTopColor: COLORS.strokeWeaker,
         backgroundColor: COLORS.background,
       }}>
-        <Button variant="secondary" size="lg" className="h-[56px] flex-1" onPress={handleClose}>
+        <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={handleClose}>
           Dismiss
         </Button>
         <Button
           size="lg"
-          className="h-[56px] flex-1 bg-text-strong"
+          className="h-14 flex-1 bg-text-strong"
           textClassName="text-white"
           loading={isPending}
           disabled={selectedIds.size === 0 || isPending}
@@ -178,8 +176,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
     borderRadius: 24,
   },
   checkbox: {

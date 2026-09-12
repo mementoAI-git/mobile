@@ -287,8 +287,7 @@ const styles = {
     right: 76,
     textAlign: 'center' as const,
     color: COLORS.textStrong,
-    ...TYPE.sectionTitle,
-    lineHeight: 28,
+    ...TYPE.screenTitle,
   },
   biography: {
     color: COLORS.textStrong,

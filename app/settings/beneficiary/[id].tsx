@@ -13,8 +13,10 @@ import { Avatar, Skeleton, EmptyState } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
 import { TYPE } from '@/constants/typography';
+import { getSettingsHeaderLayout } from '@/features/settings/settings-header-layout';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
+const layout = getSettingsHeaderLayout();
 
 export default function BeneficiaryDetailScreen() {
   const router = useRouter();
@@ -162,8 +164,9 @@ export default function BeneficiaryDetailScreen() {
           onPress={handleBack}
           activeOpacity={0.78}
           style={styles.backButton}
+          accessibilityLabel="Go back"
         >
-          <ArrowLeft size={23} color={COLORS.textBase} />
+          <ArrowLeft size={layout.iconSize} color={COLORS.textBase} />
         </TouchableOpacity>
         
         <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -181,7 +184,7 @@ export default function BeneficiaryDetailScreen() {
             activeOpacity={0.78}
             style={styles.iconButton}
           >
-            <Trash2 size={20} color={COLORS.textStrong} />
+            <Trash2 size={20} color={COLORS.error} />
           </TouchableOpacity>
         </View>
       </View>
@@ -304,7 +307,7 @@ export default function BeneficiaryDetailScreen() {
                     key={g._id || idx} 
                     style={[
                       styles.groupPill,
-                      { borderColor: color }
+                      { backgroundColor: `${color}18` }
                     ]}
                   >
                     <Text style={[styles.groupPillText, { color: color }]}>
@@ -324,11 +327,11 @@ export default function BeneficiaryDetailScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    height: 68,
+    height: layout.height,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: layout.horizontalPadding,
   },
   backButton: {
     width: 44,
@@ -359,16 +362,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
     borderRadius: 24,
   },
   pendingAlertCard: {
     marginTop: 16,
     padding: 20,
     backgroundColor: `${COLORS.warning}0A`, // Very subtle tint of warning gold
-    borderWidth: 1,
-    borderColor: `${COLORS.warning}33`, 
     borderRadius: 20,
   },
   resendButton: {
@@ -379,7 +378,7 @@ const styles = StyleSheet.create({
     backgroundColor: `${COLORS.brand}15`,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 16,
+    borderRadius: 999,
   },
   sectionHeader: {
     ...TYPE.body,
@@ -393,20 +392,18 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     ...TYPE.bodySmall,
-    color: COLORS.textStrong,
+    color: COLORS.textWeak,
     marginLeft: 4,
   },
   fieldValueContainer: {
     minHeight: 56,
     justifyContent: 'center',
     backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
-    borderRadius: 12,
+    borderRadius: 16,
     paddingHorizontal: 16,
   },
   fieldValueText: {
-    ...TYPE.bodyLarge,
+    ...TYPE.body,
     color: COLORS.textStrong,
   },
   groupPillsContainer: {
@@ -419,8 +416,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 999,
-    borderWidth: 1.5,
-    backgroundColor: COLORS.card,
   },
   groupPillText: {
     ...TYPE.label,

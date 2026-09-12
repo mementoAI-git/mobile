@@ -664,10 +664,10 @@ const styles = StyleSheet.create({
   avatar: { width: 44, height: 44, borderRadius: 22 },
   avatarFallback: { backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
   avatarInitial: { ...TYPE.cardTitle, color: COLORS.textInverse },
-  userName: { ...TYPE.bodyLarge, color: COLORS.textStrong },
+  userName: { ...TYPE.label, color: COLORS.textStrong },
 
   input: {
-    ...TYPE.bodyLarge, lineHeight: 24,
+    ...TYPE.input,
     color: COLORS.textStrong, padding: 0, margin: 0, minHeight: 80, textAlignVertical: 'top',
   },
 
@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
 
   imageGrid: { marginTop: 12 },
   imgOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  imgOverlayText: { ...TYPE.bodyLarge, color: '#fff' },
+  imgOverlayText: { ...TYPE.label, color: COLORS.textInverse },
   removeBtn: {
     position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 10,
     backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: COLORS.strokeWeak,

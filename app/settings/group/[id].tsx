@@ -12,8 +12,10 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { Avatar, Skeleton, EmptyState } from '@/components/ui';
 import { GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
 import { TYPE } from '@/constants/typography';
+import { getSettingsHeaderLayout } from '@/features/settings/settings-header-layout';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
+const layout = getSettingsHeaderLayout();
 
 export default function GroupDetailScreen() {
   const router = useRouter();
@@ -143,8 +145,9 @@ export default function GroupDetailScreen() {
           onPress={handleBack}
           activeOpacity={0.78}
           style={styles.backButton}
+          accessibilityLabel="Go back"
         >
-          <ArrowLeft size={23} color={COLORS.textBase} />
+          <ArrowLeft size={layout.iconSize} color={COLORS.textBase} />
         </TouchableOpacity>
         
         <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -185,13 +188,13 @@ export default function GroupDetailScreen() {
                 </Text>
               )}
             </View>
-            <Text style={{ ...TYPE.bodyLarge, color: COLORS.textInverse }}>
+            <Text style={{ ...TYPE.body, color: COLORS.textInverse }}>
               {members.length} {members.length === 1 ? 'Person' : 'People'}
             </Text>
           </View>
 
           {/* ── Members List ── */}
-          <Text style={{ ...TYPE.bodyLarge, color: COLORS.textStrong, marginTop: 32, marginBottom: 16, paddingHorizontal: 4 }}>
+          <Text style={{ ...TYPE.body, color: COLORS.textStrong, marginTop: 32, marginBottom: 16, paddingHorizontal: 4 }}>
             Group members
           </Text>
 
@@ -217,7 +220,7 @@ export default function GroupDetailScreen() {
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ ...TYPE.cardTitle, color: COLORS.textStrong }} numberOfLines={1}>
+                      <Text style={{ ...TYPE.body, color: COLORS.textStrong }} numberOfLines={1}>
                         {name}
                       </Text>
                       {member.email && (
@@ -234,7 +237,7 @@ export default function GroupDetailScreen() {
                       activeOpacity={0.7}
                       style={styles.deleteButton}
                     >
-                      <Trash2 size={20} color={COLORS.textStrong} strokeWidth={2} />
+                      <Trash2 size={20} color={COLORS.error} strokeWidth={1.8} />
                     </TouchableOpacity>
                   </View>
                 );
@@ -249,11 +252,11 @@ export default function GroupDetailScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    height: 68,
+    height: layout.height,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: layout.horizontalPadding,
   },
   backButton: {
     width: 44,
@@ -292,8 +295,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
     borderRadius: 24,
   },
   deleteButton: {
@@ -301,9 +302,7 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
+    borderRadius: 22,
     backgroundColor: COLORS.fillWeaker,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
   }
 });

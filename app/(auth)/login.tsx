@@ -161,7 +161,7 @@ export default function LoginScreen() {
               </Animated.Text>
               <Animated.Text
                 className="text-text-base leading-relaxed"
-                style={TYPE.bodyLarge}>
+                style={TYPE.body}>
                 Sign in to continue
               </Animated.Text>
             </Animated.View>

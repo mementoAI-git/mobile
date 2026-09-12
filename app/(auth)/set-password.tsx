@@ -53,7 +53,7 @@ export default function SetPasswordScreen() {
             </Animated.Text>
             <Animated.Text
               className="text-text-base leading-relaxed"
-              style={TYPE.bodyLarge}>
+              style={TYPE.body}>
               Choose a strong new password.
             </Animated.Text>
           </View>

@@ -70,8 +70,8 @@ export function Select({
         disabled={disabled}
         activeOpacity={0.7}
         className={cn(
-          'h-11 flex-row items-center justify-between px-4 rounded-4xl',
-          'border border-stroke-weak bg-fill-weaker',
+          'h-11 flex-row items-center justify-between px-4 rounded-full',
+          'bg-fill-weaker',
           disabled && 'opacity-40',
           className,
         )}

@@ -19,10 +19,10 @@ export function EndVoiceSessionSheet({ duration, onEnd, onClose }: EndVoiceSessi
       <View className="size-20 items-center justify-center rounded-full bg-fill-weaker">
         <PhoneOff size={38} color={COLORS.warning} />
       </View>
-      <Text className="mt-6 text-center text-text-strong" style={TYPE.screenTitle}>
+      <Text className="mt-6 text-center text-text-strong" style={TYPE.sectionTitle}>
         End this voice session?
       </Text>
-      <Text className="mt-2 text-text-base" style={TYPE.bodyLarge}>
+      <Text className="mt-2 text-text-base" style={TYPE.body}>
         {formatVoiceCallDuration(duration)}
       </Text>
       <View className="mt-8 w-full flex-row gap-3">

@@ -123,7 +123,8 @@ export function SecurityConfirmationSheet({
         <Text
           style={{
             maxWidth: 310,
-            ...TYPE.cardTitle,
+            ...TYPE.sectionTitle,
+            color: COLORS.textStrong,
             textAlign: 'center',
             marginTop: 30,
           }}

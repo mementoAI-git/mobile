@@ -174,7 +174,7 @@ export default function PreferencesScreen() {
                     Okay, {nickname}. Let's get started.
                   </Animated.Text>
                   <View className="gap-4">
-                    <Animated.Text className="text-text-strong" style={TYPE.bodyLarge}>
+                    <Animated.Text className="text-text-base" style={TYPE.label}>
                       How old are you?
                     </Animated.Text>
                     {AGE_BAND_OPTIONS.map((opt) => (
@@ -192,7 +192,7 @@ export default function PreferencesScreen() {
                     ))}
                   </View>
                   <View className="gap-3">
-                    <Animated.Text className="text-text-strong" style={TYPE.bodyLarge}>
+                    <Animated.Text className="text-text-base" style={TYPE.label}>
                       Where are you from?
                     </Animated.Text>
                     <View className="bg-white/80 border border-stroke-weaker rounded-2xl px-4 h-14 justify-center">

@@ -25,12 +25,12 @@ export const BeneficiaryPersonRow = memo(function BeneficiaryPersonRow({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.76}
-      className="min-h-[80px] flex-row items-center rounded-[24px] border border-stroke-weak bg-card px-5 py-4"
+      className="min-h-[80px] flex-row items-center rounded-[24px] bg-card px-5 py-4"
     >
       <Avatar uri={picture} name={beneficiary.name} size="lg" />
       <View className="ml-4 flex-1">
         <View className="flex-row items-center justify-between">
-          <Text style={TYPE.cardTitle}>
+          <Text style={{ ...TYPE.body, color: COLORS.textStrong }} numberOfLines={1}>
             {beneficiary.name || 'Pending invitation'}
           </Text>
           <View
@@ -55,26 +55,26 @@ export const BeneficiaryPersonRow = memo(function BeneficiaryPersonRow({
           </View>
         </View>
 
-        <Text numberOfLines={1} className="mt-0.5" style={TYPE.body}>
+        <Text numberOfLines={1} style={{ ...TYPE.bodySmall, color: COLORS.textWeak, marginTop: 2 }}>
           {beneficiary.email}
         </Text>
 
-        <View className="mt-1 flex-row items-center gap-2">
-          <Text style={TYPE.bodySmall}>
+        <View className="mt-1.5 flex-row items-center gap-2">
+          <Text style={{ ...TYPE.metadata, color: COLORS.textMuted }}>
             {beneficiary.relationship || 'Beneficiary'}
           </Text>
           <Text style={{ color: COLORS.textMuted }}>•</Text>
           <Text
             style={{
               ...TYPE.metadata,
-              color: COLORS.textWeak,
+              color: COLORS.textMuted,
             }}
           >
             {accessLabel}
           </Text>
         </View>
       </View>
-      <ChevronRight size={24} color={COLORS.textBase} strokeWidth={2.2} />
+      <ChevronRight size={20} color={COLORS.textWeak} strokeWidth={2} />
     </TouchableOpacity>
   );
 });

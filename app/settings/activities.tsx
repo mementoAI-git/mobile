@@ -130,7 +130,7 @@ export default function ActivitiesScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 24, paddingVertical: 16 }}>
         <TouchableOpacity
           onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
-          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.fillWeaker, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}
+          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
@@ -185,8 +185,6 @@ export default function ActivitiesScreen() {
                 backgroundColor: COLORS.card,
                 borderRadius: 24,
                 overflow: 'hidden',
-                borderWidth: 1,
-                borderColor: COLORS.strokeWeaker,
               }}
             >
               {displayDocs.map((item, index) => (

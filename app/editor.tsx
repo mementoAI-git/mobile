@@ -198,7 +198,7 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
           <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onAddAnother(); }} activeOpacity={0.85}
             style={{ width: '100%', height: 56, borderRadius: 999, backgroundColor: COLORS.textStrong, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <Plus size={18} color={COLORS.textInverse} strokeWidth={2.5} />
-            <Text style={{ ...TYPE.bodyLarge, color: COLORS.textInverse }}>Add another story</Text>
+            <Text style={{ ...TYPE.button, color: COLORS.textInverse }}>Add another story</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={onDismiss} activeOpacity={0.7} style={{ paddingVertical: 12, paddingHorizontal: 24 }}>
             <Text style={{ ...TYPE.body, color: COLORS.textBase, textAlign: 'center' }}>Dismiss</Text>
@@ -370,7 +370,7 @@ function PublishModalInner({
               </View>
               <TouchableOpacity onPress={handlePost} activeOpacity={0.85} disabled={(!title.trim() && !body.trim()) || isPending}
                 style={[{ height: 56, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }, ((!title.trim() && !body.trim()) || isPending) && { opacity: 0.45 }]}>
-                {isPending ? <ActivityIndicator color={COLORS.textInverse} /> : <Text style={{ ...TYPE.bodyLarge, color: COLORS.textInverse }}>Post now</Text>}
+                {isPending ? <ActivityIndicator color={COLORS.textInverse} /> : <Text style={{ ...TYPE.button, color: COLORS.textInverse }}>Post now</Text>}
               </TouchableOpacity>
         </BottomSheetScrollView>
       </View>
@@ -1100,7 +1100,7 @@ export default function EditorScreen() {
               <>
                 <TextInput ref={bodyRef} value={qcBody} onChangeText={v => setQcBody(v.slice(0, NOTE_CHAR_MAX))}
                   placeholder="What's on your mind?" placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
-                  style={{ ...TYPE.bodyLarge, lineHeight: 24, color: COLORS.textStrong, padding: 0, margin: 0, textAlignVertical: 'top', minHeight: 56 }}
+                  style={{ ...TYPE.input, lineHeight: 24, color: COLORS.textStrong, padding: 0, margin: 0, textAlignVertical: 'top', minHeight: 56 }}
                   multiline autoFocus autoCorrect autoCapitalize="sentences" blurOnSubmit={false} scrollEnabled={false} maxLength={NOTE_CHAR_MAX} />
                 {isRecording && (
                   <RecordingStatus seconds={recDuration} style={{ marginTop: 8 }} />
@@ -1128,7 +1128,7 @@ export default function EditorScreen() {
                             )}
                             {isLast && (
                               <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
-                                <Text style={{ ...TYPE.bodyLarge, color: '#fff' }}>+{mediaAttachments.length - 6}</Text>
+                                <Text style={{ ...TYPE.label, color: '#fff' }}>+{mediaAttachments.length - 6}</Text>
                               </View>
                             )}
                             {a.isUploading && (

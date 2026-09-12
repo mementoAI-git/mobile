@@ -71,7 +71,7 @@ export default function ExploreScreen() {
   const listHeader = useMemo(
     () => (
       <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-6">
-        <Animated.Text className="text-text-weak mb-6" style={TYPE.bodyLarge}>
+        <Animated.Text className="text-text-weak mb-6" style={TYPE.body}>
           Discover prompts that help you explore the depths of your story and find new ways to connect.
         </Animated.Text>
 

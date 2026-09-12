@@ -110,7 +110,7 @@ function FeatureItem({ icon, title, description }: { icon: string; title: string
         <Text className="" style={TYPE.sectionTitle}>{icon}</Text>
       </View>
       <View className="flex-1 gap-1">
-        <Text className="text-text-strong" style={TYPE.bodyLarge}>
+        <Text className="text-text-strong" style={TYPE.body}>
           {title}
         </Text>
         <Text className="text-text-base leading-relaxed" style={TYPE.label}>

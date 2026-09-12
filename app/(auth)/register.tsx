@@ -200,7 +200,7 @@ export default function RegisterScreen() {
               <Animated.Text className=" text-text-strong mb-2" style={TYPE.displayTitle}>
                 Create account
               </Animated.Text>
-              <Animated.Text className="text-text-base leading-relaxed" style={TYPE.bodyLarge}>
+              <Animated.Text className="text-text-base leading-relaxed" style={TYPE.body}>
                 Start preserving your memories
               </Animated.Text>
             </Animated.View>

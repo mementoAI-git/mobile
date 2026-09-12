@@ -132,7 +132,7 @@ export default function CapsuleScreen() {
   const listHeaderComponent = useMemo(
     () => (
       <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-4 gap-6">
-        <Animated.Text className="text-text-weak" style={TYPE.bodyLarge}>
+        <Animated.Text className="text-text-weak" style={TYPE.body}>
           Preserve your thoughts and media in time capsules that deliver to your loved ones exactly when you choose.
         </Animated.Text>
 

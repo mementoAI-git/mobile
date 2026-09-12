@@ -68,7 +68,7 @@ export default function AcceptInviteScreen() {
           {inviteData?.from && (
             <Animated.Text
               className="text-text-weak text-center"
-              style={TYPE.bodyLarge}
+              style={TYPE.body}
             >
               {inviteData.from} wants to add you as a beneficiary.
             </Animated.Text>

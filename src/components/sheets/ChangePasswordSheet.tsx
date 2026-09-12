@@ -181,8 +181,6 @@ const sheetStyles = {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 20,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.strokeWeaker,
     backgroundColor: COLORS.background,
   },
   error: { ...TYPE.bodySmall, color: COLORS.error },

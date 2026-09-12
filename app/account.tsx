@@ -169,8 +169,7 @@ export default function AccountOverviewScreen() {
               right: 76,
               textAlign: 'center',
               color: COLORS.textStrong,
-              ...TYPE.sectionTitle,
-              lineHeight: 28,
+              ...TYPE.screenTitle,
             }}
           >
             Account

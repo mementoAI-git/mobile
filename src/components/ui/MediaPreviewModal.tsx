@@ -554,7 +554,7 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
       </View>
 
       {/* Track name */}
-      <Text style={{ ...TYPE.bodyLarge, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>
+      <Text style={{ ...TYPE.body, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>
         {displayName}
       </Text>
 
@@ -1335,7 +1335,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   mediaName: {
-    ...TYPE.bodyLarge,
+    ...TYPE.body,
     color: COLORS.textStrong, textAlign: 'center',
   },
   mediaHint: {

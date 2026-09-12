@@ -33,7 +33,7 @@ export default function TwoFactorScreen() {
       <View className="flex-row items-center gap-3 px-6 py-4">
         <TouchableOpacity
           onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
-          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
+          className="size-11 rounded-full bg-fill-weak items-center justify-center"
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
@@ -51,7 +51,7 @@ export default function TwoFactorScreen() {
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
 
         {/* Status card */}
-        <Animated.View entering={FadeInDown.duration(500)} className="bg-white rounded-[32px] flex-row items-center gap-4 px-5 py-5">
+        <Animated.View entering={FadeInDown.duration(500)} className="bg-card rounded-[24px] flex-row items-center gap-4 px-5 py-5">
           <View
             className="size-12 rounded-2xl items-center justify-center"
             style={{ backgroundColor: is2FAEnabled ? `${COLORS.success}10` : COLORS.fillWeak }}
@@ -62,7 +62,7 @@ export default function TwoFactorScreen() {
             }
           </View>
           <View className="flex-1">
-            <Text style={TYPE.cardTitle}>
+            <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>
               {is2FAEnabled ? 'Enabled' : 'Not enabled'}
             </Text>
             <Text className="mt-0.5" style={TYPE.bodySmall}>
@@ -119,7 +119,7 @@ export default function TwoFactorScreen() {
                   Haptics.selectionAsync();
                   await Clipboard.setStringAsync(setupData.secret ?? '');
                 }}
-                className="bg-fill-weaker rounded-2xl p-4 border border-stroke-weaker flex-row items-center justify-between"
+                className="bg-fill-weaker rounded-2xl p-4 flex-row items-center justify-between"
               >
                 <View className="flex-1">
                   <Text className="text-text-muted uppercase tracking-[2px] mb-1.5" style={TYPE.eyebrow}>
@@ -143,7 +143,7 @@ export default function TwoFactorScreen() {
             />
 
             {error && (
-              <View className="rounded-2xl px-4 py-3 border" style={{ backgroundColor: `${COLORS.error}08`, borderColor: `${COLORS.error}20` }}>
+              <View className="rounded-2xl px-4 py-3" style={{ backgroundColor: `${COLORS.error}12` }}>
                 <Text style={[TYPE.bodySmall, { color: COLORS.error }]}>{error}</Text>
               </View>
             )}

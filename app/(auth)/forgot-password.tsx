@@ -96,7 +96,7 @@ export default function ForgotPasswordScreen() {
         </Animated.Text>
         <Animated.Text
           className="text-text-weak text-center mb-8"
-          style={TYPE.bodyLarge}
+          style={TYPE.body}
         >
           We've sent a reset link to {email}. Check your email and follow the instructions.
         </Animated.Text>
@@ -149,7 +149,7 @@ export default function ForgotPasswordScreen() {
             </Animated.Text>
             <Animated.Text
               className="text-text-base"
-              style={TYPE.bodyLarge}
+              style={TYPE.body}
             >
               Enter your email and we'll send you a reset link.
             </Animated.Text>
