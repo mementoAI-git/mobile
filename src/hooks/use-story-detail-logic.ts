@@ -4,6 +4,7 @@ import { useMemory } from '@/hooks/queries/use-memories';
 import { useBookmarkMemory, useDeleteMemory } from '@/hooks/mutations/use-memory-mutations';
 import { useUiStore } from '@/store';
 import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-type';
+import { buildStoryEditorSeed } from '@/features/memories/memory-audience';
 import { useCallback, useMemo } from 'react';
 
 export function useStoryDetailLogic() {
@@ -52,20 +53,7 @@ export function useStoryDetailLogic() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Serialise the full memory into a single param so the editor can populate
     // title, body, tags, beneficiaries, and all existing attachments.
-    const initialData = JSON.stringify({
-      title: memory.title ?? '',
-      body: memory.body ?? '',
-      tags: memory.tags ?? [],
-      beneficiaries: (memory.beneficiaries ?? []).map((b: any) =>
-        typeof b === 'string' ? b : b._id
-      ).filter(Boolean),
-      attachments: (memory.attachments ?? []).map((a: any) => ({
-        id: a._id ?? '',
-        url: a.url ?? '',
-        type: a.type ?? 'image/jpeg',
-        name: a.name ?? '',
-      })),
-    });
+    const initialData = JSON.stringify(buildStoryEditorSeed(memory));
     router.push({
       pathname: '/editor',
       params: {

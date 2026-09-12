@@ -55,7 +55,7 @@ import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import type { IFile } from '@/types';
 import { PublishPrivacySheet, type PrivacyMode } from '@/components/sheets/PublishPrivacySheet';
-import { deriveMemoryAudience, formatMemoryAudienceLabel, type MemoryAudienceSelection, type MemoryVisibility } from '@/features/memories/memory-audience';
+import { deriveMemoryAudience, formatMemoryAudienceLabel, normalizeAudienceIds, type MemoryAudienceSelection, type MemoryVisibility } from '@/features/memories/memory-audience';
 import { buildEditorPublishPayload } from '@/features/editor/editor-publish-payload';
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
@@ -424,14 +424,14 @@ export default function EditorScreen() {
 
   const initialBeneficiaryIds = useMemo(() => {
     if (initialParsedData?.beneficiaries && Array.isArray(initialParsedData.beneficiaries)) {
-      return initialParsedData.beneficiaries.map((b: any) => b._id || b.id).filter(Boolean);
+      return normalizeAudienceIds(initialParsedData.beneficiaries);
     }
     return [];
   }, [initialParsedData]);
 
   const initialGroupIds = useMemo(() => {
     if (initialParsedData?.groups && Array.isArray(initialParsedData.groups)) {
-      return initialParsedData.groups.map((group: any) => group._id || group.id).filter(Boolean);
+      return normalizeAudienceIds(initialParsedData.groups);
     }
     return [];
   }, [initialParsedData]);
