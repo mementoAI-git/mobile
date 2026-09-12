@@ -2,7 +2,9 @@ import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Sparkles } from 'lucide-react-native';
 import type { CategoryScore } from '@/constants/enrichment';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import {
   clampEnrichmentScore,
   normalizeEnrichmentDimensions,
@@ -152,21 +154,18 @@ const styles = StyleSheet.create({
   },
   title: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansBold,
-    fontSize: 15,
+    ...TYPE.body,
     lineHeight: 20,
   },
   description: {
     color: COLORS.textBase,
-    fontFamily: FONTS.sans,
-    fontSize: 12,
+    ...TYPE.metadata,
     lineHeight: 17,
     marginTop: 6,
   },
   score: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.serif,
-    fontSize: 42,
+    ...TYPE.displayTitle,
     lineHeight: 46,
     letterSpacing: -1.5,
   },
@@ -191,14 +190,12 @@ const styles = StyleSheet.create({
   dimensionLabel: {
     flex: 1,
     color: COLORS.textStrong,
-    fontFamily: FONTS.sans,
-    fontSize: 14,
+    ...TYPE.label,
     lineHeight: 18,
   },
   dimensionValue: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansBold,
-    fontSize: 14,
+    ...TYPE.label,
     lineHeight: 18,
   },
   listItem: {
@@ -219,8 +216,7 @@ const styles = StyleSheet.create({
   listText: {
     flex: 1,
     color: COLORS.textStrong,
-    fontFamily: FONTS.sans,
-    fontSize: 14,
+    ...TYPE.label,
     lineHeight: 20,
   },
   emptyState: {
@@ -238,14 +234,12 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansSemi,
-    fontSize: 15,
+    ...TYPE.body,
     marginTop: 12,
   },
   emptyCopy: {
     color: COLORS.textWeak,
-    fontFamily: FONTS.sans,
-    fontSize: 12,
+    ...TYPE.metadata,
     lineHeight: 18,
     textAlign: 'center',
     marginTop: 6,

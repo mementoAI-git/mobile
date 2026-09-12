@@ -33,6 +33,7 @@ interface MasonryMemoryGridProps {
   loadingMore?: boolean;
   onRefresh?: () => void;
   ListHeaderComponent?: React.ReactElement | null;
+  ListEmptyComponent?: React.ReactElement | null;
   onMemoryPress?: (memory: IMemory) => void;
   scrollY?: SharedValue<number>;
 }
@@ -54,6 +55,7 @@ export function MasonryMemoryGrid({
   loadingMore = false,
   onRefresh,
   ListHeaderComponent,
+  ListEmptyComponent,
   onMemoryPress,
   scrollY,
 }: MasonryMemoryGridProps) {
@@ -246,28 +248,36 @@ export function MasonryMemoryGrid({
         </View>
       ) : null}
 
-      {/* Two-column masonry layout */}
-      <View
-        style={{
-          flexDirection: 'row',
-          gap: COLUMN_GAP,
-          paddingHorizontal: GRID_HORIZONTAL_PADDING,
-          height: masonryLayout.containerHeight,
-        }}
-      >
-        {visibleColumns.map((col, colIndex) => (
-          <View key={`col-${colIndex}`} style={{ flex: 1, height: masonryLayout.containerHeight, position: 'relative' }}>
-            {col.map((entry) => (
-              <MasonryGridItem
-                key={getMasonryItemKey(entry.item)}
-                entry={entry}
-                onMeasure={handleLayout}
-                onMemoryPress={onMemoryPress}
-              />
-            ))}
+      {/* Two-column masonry layout or empty state */}
+      {memories.length === 0 ? (
+        ListEmptyComponent ? (
+          <View style={{ paddingHorizontal: GRID_HORIZONTAL_PADDING, paddingTop: 32 }}>
+            {ListEmptyComponent}
           </View>
-        ))}
-      </View>
+        ) : null
+      ) : (
+        <View
+          style={{
+            flexDirection: 'row',
+            gap: COLUMN_GAP,
+            paddingHorizontal: GRID_HORIZONTAL_PADDING,
+            height: masonryLayout.containerHeight,
+          }}
+        >
+          {visibleColumns.map((col, colIndex) => (
+            <View key={`col-${colIndex}`} style={{ flex: 1, height: masonryLayout.containerHeight, position: 'relative' }}>
+              {col.map((entry) => (
+                <MasonryGridItem
+                  key={getMasonryItemKey(entry.item)}
+                  entry={entry}
+                  onMeasure={handleLayout}
+                  onMemoryPress={onMemoryPress}
+                />
+              ))}
+            </View>
+          ))}
+        </View>
+      )}
     </Animated.ScrollView>
   );
 }

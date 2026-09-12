@@ -20,6 +20,7 @@ import Animated, {
 import { Button, TextInput, Logo } from '@/components/ui';
 import { useForgotPasswordLogic } from '@/hooks/use-forgot-password-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 // ─── Easing presets ───────────────────────────────────────────────────────────
 const EASE_OUT = Easing.out(Easing.cubic);
@@ -86,16 +87,16 @@ export default function ForgotPasswordScreen() {
   if (sent) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center px-6">
-        <Animated.Text className="text-5xl mb-6">📬</Animated.Text>
+        <Animated.Text className="mb-6" style={TYPE.displayTitle}>📬</Animated.Text>
         <Animated.Text
-          className="text-2xl text-text-strong text-center mb-3"
-          style={{ fontFamily: FONTS.serif }}
+          className="text-text-strong text-center mb-3"
+          style={TYPE.screenTitle}
         >
           Check your inbox
         </Animated.Text>
         <Animated.Text
-          className="text-base text-text-weak text-center mb-8"
-          style={{ fontFamily: FONTS.sans }}
+          className="text-text-weak text-center mb-8"
+          style={TYPE.body}
         >
           We've sent a reset link to {email}. Check your email and follow the instructions.
         </Animated.Text>
@@ -130,8 +131,8 @@ export default function ForgotPasswordScreen() {
           <Animated.View style={[backStyle, { marginBottom: 24 }]}>
             <TouchableOpacity onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/(auth)/login'); } }}>
               <Animated.Text
-                className="text-sm text-brand"
-                style={{ fontFamily: FONTS.sansMedium }}
+                className="text-brand"
+                style={TYPE.buttonSmall}
               >
                 ← Back to sign in
               </Animated.Text>
@@ -141,14 +142,14 @@ export default function ForgotPasswordScreen() {
           {/* Heading — collapses third */}
           <Animated.View style={[headingStyle, { marginBottom: 32 }]}>
             <Animated.Text
-              className="text-3xl text-text-strong mb-2"
-              style={{ fontFamily: FONTS.serif }}
+              className="text-text-strong mb-2"
+              style={TYPE.screenTitle}
             >
               Reset password
             </Animated.Text>
             <Animated.Text
-              className="text-base text-text-base"
-              style={{ fontFamily: FONTS.sans }}
+              className="text-text-base"
+              style={TYPE.body}
             >
               Enter your email and we'll send you a reset link.
             </Animated.Text>
@@ -168,8 +169,8 @@ export default function ForgotPasswordScreen() {
             {error && (
               <View className="bg-error-weak rounded-xl px-4 py-3">
                 <Animated.Text
-                  className="text-sm text-error-strong"
-                  style={{ fontFamily: FONTS.sans }}
+                  className="text-error-strong"
+                  style={TYPE.bodySmall}
                 >
                   {(error as any).message ?? 'Couldn’t send the reset link. Try again.'}
                 </Animated.Text>

@@ -5,7 +5,8 @@ import { X } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Button } from '@/components/ui';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { launchBillingCheckout } from '@/features/settings/billing-flow';
 import {
   getVoiceUpgradeCheckout,
@@ -131,8 +132,7 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
             loading={loading}
             onPress={() => { void handleUpgrade(); }}
             className="h-14"
-            textClassName="text-lg font-semibold"
-          >
+                      >
             Upgrade to Pro
           </Button>
           <Button
@@ -141,8 +141,7 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
             onPress={onClose}
             variant="outline"
             className="h-14 bg-card"
-            textClassName="text-lg"
-          >
+                      >
             Let me think about it
           </Button>
         </View>
@@ -172,15 +171,11 @@ const styles = StyleSheet.create({
   headingBlock: { marginTop: 10, paddingRight: 28 },
   title: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.serif,
-    fontSize: 32,
-    lineHeight: 36,
+    ...TYPE.displayTitle,
   },
   subtitle: {
     color: COLORS.textBase,
-    fontFamily: FONTS.sans,
-    fontSize: 14,
-    lineHeight: 24,
+    ...TYPE.body,
     marginTop: 12,
   },
   benefits: { gap: 12, marginTop: 24 },
@@ -195,9 +190,7 @@ const styles = StyleSheet.create({
   benefitText: {
     color: COLORS.textStrong,
     flex: 1,
-    fontFamily: FONTS.sans,
-    fontSize: 14,
-    lineHeight: 24,
+    ...TYPE.body,
   },
   plans: { gap: 12, marginTop: 24 },
   planCard: {
@@ -215,8 +208,7 @@ const styles = StyleSheet.create({
   planHeading: { alignItems: 'center', flexDirection: 'row', gap: 8 },
   planName: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansSemi,
-    fontSize: 15,
+    ...TYPE.label,
   },
   badge: {
     backgroundColor: COLORS.fillWeak,
@@ -227,29 +219,22 @@ const styles = StyleSheet.create({
   badgeSelected: { backgroundColor: COLORS.textStrong },
   badgeText: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansSemi,
-    fontSize: 11,
+    ...TYPE.metadata,
   },
   badgeTextSelected: { color: COLORS.textInverse },
   priceRow: { alignItems: 'flex-end', flexDirection: 'row', gap: 4, marginTop: 12 },
   price: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansSemi,
-    fontSize: 28,
-    lineHeight: 30,
+    ...TYPE.screenTitle,
   },
   cadence: {
     color: COLORS.textBase,
-    fontFamily: FONTS.sans,
-    fontSize: 14,
-    lineHeight: 20,
+    ...TYPE.label,
   },
   actions: { gap: 12, marginTop: 24 },
   footer: {
     color: COLORS.textBase,
-    fontFamily: FONTS.sans,
-    fontSize: 12,
-    lineHeight: 20,
+    ...TYPE.bodySmall,
     marginTop: 20,
     textAlign: 'center',
   },

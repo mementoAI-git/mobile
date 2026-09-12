@@ -4,7 +4,7 @@
  * Data parity with web /memories/quick-capture:
  *  - body (plain text, 8,000 char max)
  *  - attachments[] — images/videos (gallery), audio files, voice recording, documents
- *  - beneficiaries[] — "Everyone" or specific people
+ *  - visibility — explicitly private
  *  - Draft auto-saved to AsyncStorage on dismiss if has content
  *
  * Toolbar matches web: Image | Video | Music | Mic | Smile
@@ -26,8 +26,7 @@ import {
 import { SafeAreaView, SafeAreaProvider, initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  Globe,
-  ChevronDown,
+  Lock,
   X,
   FileText,
   Play,
@@ -46,11 +45,11 @@ import Animated, { FadeInDown, SlideInUp } from 'react-native-reanimated';
 // Module-level flag — SlideInUp only on the very first mount per session.
 let createHasSlid = false;
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { getModalBottomPadding } from '@/features/layout/modal-safe-area';
 import { useUserStore } from '@/store';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
-import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useToast } from '@/components/ui/Toast';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
@@ -71,7 +70,7 @@ import {
   type UploadAttachment,
 } from '@/features/media/attachment-upload-state';
 import { useAttachmentUploads } from '@/features/media/use-attachment-uploads';
-import type { IBeneficiary, IFile } from '@/types';
+import type { IFile } from '@/types';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -130,7 +129,7 @@ function CharRing({ value, max }: { value: number; max: number }) {
       {nearLimit && (
         <Text style={{
           position: 'absolute',
-          fontFamily: FONTS.sansBold, fontSize: 7, color,
+          ...TYPE.eyebrow, color,
         }}>
           {max - value}
         </Text>
@@ -307,8 +306,6 @@ export default function CreateScreen() {
   const isMountedRef = useRef(true);
 
   const [body, setBody] = useState('');
-  const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>([]);
-  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -316,7 +313,6 @@ export default function CreateScreen() {
 
   const { mutateAsync: quickCapture, isPending } = useQuickCapture();
   const { mutateAsync: uploadFileMutation } = useFileUpload();
-  const { data: beneficiariesRaw } = useBeneficiaries();
   const { toast } = useToast();
   const {
     attachments,
@@ -341,13 +337,6 @@ export default function CreateScreen() {
   const { start: startRecording, stop: stopRecording, isRecording, duration: recDuration } = useAudioRecorder({
     onPermissionDenied: handleMicrophonePermissionDenied,
   });
-
-  const beneficiaries: IBeneficiary[] = useMemo(() => {
-    if (!beneficiariesRaw) return [];
-    if (Array.isArray(beneficiariesRaw)) return beneficiariesRaw;
-    if ((beneficiariesRaw as any)?.docs) return (beneficiariesRaw as any).docs;
-    return [];
-  }, [beneficiariesRaw]);
 
   useEffect(() => { return () => { isMountedRef.current = false; }; }, []);
 
@@ -415,13 +404,6 @@ export default function CreateScreen() {
   const hasContent = body.trim().length > 0 || uploadedIds.length > 0;
   const nearLimit = body.length > NOTE_CHAR_MAX * 0.8;
 
-  const visibilityLabel = useMemo(() => {
-    if (!selectedBeneficiaryIds.length) return 'Everyone can see this';
-    const names = beneficiaries.filter((b) => b._id && selectedBeneficiaryIds.includes(b._id)).map((b) => b.name).filter(Boolean);
-    if (names.length === 1) return `Shared with ${names[0]}`;
-    return `Shared with ${names.length} people`;
-  }, [selectedBeneficiaryIds, beneficiaries]);
-
   // ── Handlers ───────────────────────────────────────────────────────────────
 
   const handleCancel = useCallback(() => {
@@ -441,8 +423,8 @@ export default function CreateScreen() {
     try {
       await quickCapture({
         body: body.trim(),
+        visibility: 'private',
         attachments: uploadedIds.length ? uploadedIds : undefined,
-        beneficiaries: selectedBeneficiaryIds.length ? selectedBeneficiaryIds : undefined,
       });
       AsyncStorage.removeItem(DRAFT_STORAGE_KEY(user?.email)).catch(() => {});
       toast('Got it. Processing in the background…', 'success');
@@ -454,7 +436,7 @@ export default function CreateScreen() {
     } catch (err: any) {
       setSaveError(err?.message ?? 'Could not save. Try again.');
     }
-  }, [canSave, quickCapture, body, uploadedIds, selectedBeneficiaryIds, router, user?.email, toast]);
+  }, [canSave, quickCapture, body, uploadedIds, router, user?.email, toast]);
 
   // Image toolbar button — images + videos from gallery (matches web's Image icon)
   const handleImagePicker = useCallback(async () => {
@@ -534,11 +516,6 @@ export default function CreateScreen() {
   const handleRemove = useCallback((clientId: string) => {
     Haptics.selectionAsync();
     setAttachments((prev) => prev.filter((a) => a.clientId !== clientId));
-  }, []);
-
-  const toggleBeneficiary = useCallback((id: string) => {
-    Haptics.selectionAsync();
-    setSelectedBeneficiaryIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   }, []);
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -626,33 +603,11 @@ export default function CreateScreen() {
           {saveError && <Text style={styles.errorText}>{saveError}</Text>}
         </ScrollView>
 
-        {/* ── Privacy row ───────────────────────────────────────────────────── */}
+        {/* Quick Capture is intentionally private. */}
         <View style={styles.privacyRow}>
-          <Globe size={14} color={COLORS.textMuted} strokeWidth={1.8} />
-          <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setPrivacyOpen((o) => !o); }} style={styles.privacyBtn}>
-            <Text style={styles.privacyLabel}>{visibilityLabel}</Text>
-            <ChevronDown size={12} color={COLORS.textMuted} strokeWidth={2} />
-          </TouchableOpacity>
+          <Lock size={14} color={COLORS.textMuted} strokeWidth={1.8} />
+          <Text style={styles.privacyLabel}>Private · Only me</Text>
         </View>
-
-        {/* Privacy dropdown */}
-        {privacyOpen && (
-          <View style={styles.privacyDropdown}>
-            <TouchableOpacity onPress={() => { setSelectedBeneficiaryIds([]); setPrivacyOpen(false); Haptics.selectionAsync(); }}
-              style={[styles.privacyOption, !selectedBeneficiaryIds.length && styles.privacyOptionActive]}>
-              <Text style={[styles.privacyOptionText, !selectedBeneficiaryIds.length && styles.privacyOptionTextActive]}>Everyone</Text>
-            </TouchableOpacity>
-            {beneficiaries.map((b) => {
-              if (!b._id) return null;
-              const on = selectedBeneficiaryIds.includes(b._id);
-              return (
-                <TouchableOpacity key={b._id} onPress={() => toggleBeneficiary(b._id!)} style={[styles.privacyOption, on && styles.privacyOptionActive]}>
-                  <Text style={[styles.privacyOptionText, on && styles.privacyOptionTextActive]}>{b.name}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
 
         {/* ── Switch modes / add media ──────────────────────────────────── */}
         <EditorActionBar
@@ -700,7 +655,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', gap: 6,
   },
   pillBrand: { backgroundColor: COLORS.brand },
-  pillText: { fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong },
+  pillText: { ...TYPE.label, color: COLORS.textStrong },
 
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 16 },
@@ -708,11 +663,11 @@ const styles = StyleSheet.create({
   userRow: { flexDirection: 'row', alignItems: 'center', marginTop: 24, marginBottom: 16, gap: 12 },
   avatar: { width: 44, height: 44, borderRadius: 22 },
   avatarFallback: { backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { fontFamily: FONTS.sansBold, fontSize: 18, color: COLORS.textInverse },
-  userName: { fontFamily: FONTS.sansSemi, fontSize: 16, color: COLORS.textStrong },
+  avatarInitial: { ...TYPE.cardTitle, color: COLORS.textInverse },
+  userName: { ...TYPE.label, color: COLORS.textStrong },
 
   input: {
-    fontFamily: FONTS.sans, fontSize: 16, lineHeight: 24,
+    ...TYPE.input,
     color: COLORS.textStrong, padding: 0, margin: 0, minHeight: 80, textAlignVertical: 'top',
   },
 
@@ -720,7 +675,7 @@ const styles = StyleSheet.create({
 
   imageGrid: { marginTop: 12 },
   imgOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  imgOverlayText: { fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' },
+  imgOverlayText: { ...TYPE.label, color: COLORS.textInverse },
   removeBtn: {
     position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 10,
     backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: COLORS.strokeWeak,
@@ -733,7 +688,7 @@ const styles = StyleSheet.create({
 
   voiceCard: { marginTop: 12, backgroundColor: COLORS.textStrong, borderRadius: 16, padding: 14, paddingRight: 36 },
   voiceRemoveBtn: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  voiceTitle: { fontFamily: FONTS.sansMedium, fontSize: 12, color: 'rgba(255,255,255,0.85)', marginBottom: 10 },
+  voiceTitle: { ...TYPE.metadata, color: 'rgba(255,255,255,0.85)', marginBottom: 10 },
   waveform: { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
   bar: { flex: 1, borderRadius: 2, backgroundColor: `${COLORS.brand}99`, maxHeight: 24 },
 
@@ -742,7 +697,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.fillWeak, borderRadius: 12,
     borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, paddingVertical: 10,
   },
-  fileName: { flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textStrong },
+  fileName: { flex: 1, ...TYPE.bodySmall, color: COLORS.textStrong },
 
   privacyRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -750,7 +705,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker,
   },
   privacyBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  privacyLabel: { fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted },
+  privacyLabel: { ...TYPE.metadata, color: COLORS.textMuted },
   privacyDropdown: {
     marginHorizontal: 16, marginBottom: 4, backgroundColor: COLORS.card,
     borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingVertical: 4, maxHeight: 180,
@@ -761,8 +716,8 @@ const styles = StyleSheet.create({
   },
   privacyOption: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 },
   privacyOptionActive: { backgroundColor: `${COLORS.brand}12` },
-  privacyOptionText: { fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong },
-  privacyOptionTextActive: { color: COLORS.brand, fontFamily: FONTS.sansMedium },
+  privacyOptionText: { ...TYPE.label, color: COLORS.textStrong },
+  privacyOptionTextActive: { color: COLORS.brand },
 
   // Bottom toolbar — matches web action bar layout
   toolbar: {
@@ -787,7 +742,7 @@ const styles = StyleSheet.create({
   },
   emojiRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   emojiBtn: { flex: 1, alignItems: 'center', paddingVertical: 6 },
-  emojiText: { fontSize: 22 },
+  emojiText: { ...TYPE.sectionTitle },
 
   // Video card
   videoCard: {
@@ -804,8 +759,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 8,
   },
-  videoName: { flex: 1, fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textStrong },
-  videoUploading: { fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textMuted },
+  videoName: { flex: 1, ...TYPE.metadata, color: COLORS.textStrong },
+  videoUploading: { ...TYPE.metadata, color: COLORS.textMuted },
   videoRemoveBtn: {
     position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: 11,
     backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center',
@@ -819,7 +774,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   modeLabel: {
-    fontFamily: FONTS.sansBold, fontSize: 10,
+    ...TYPE.eyebrow,
     color: COLORS.textMuted, letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
@@ -830,7 +785,7 @@ const styles = StyleSheet.create({
     borderRadius: 12, backgroundColor: COLORS.brand,
   },
   storyModeText: {
-    fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textInverse,
+    ...TYPE.label, color: COLORS.textInverse,
   },
   mediaBtn: {
     width: 42, height: 42, borderRadius: 12,
@@ -838,5 +793,5 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: COLORS.strokeWeaker,
   },
-  errorText: { fontFamily: FONTS.sans, fontSize: 13, color: COLORS.error, marginTop: 8, paddingHorizontal: 4 },
+  errorText: { ...TYPE.bodySmall, color: COLORS.error, marginTop: 8, paddingHorizontal: 4 },
 });

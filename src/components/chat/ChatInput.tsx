@@ -19,7 +19,8 @@ import { EmojiPickerSheet } from '@/components/chat/EmojiPickerSheet';
 import { insertEmojiAtPosition } from '@/features/chat/emoji-data';
 import { RecordingIconButton } from '@/components/ui/RecordingIconButton';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -1333,8 +1334,7 @@ const styles = StyleSheet.create({
 
   // Shared text input base
   sharedTextInput: {
-    fontFamily: FONTS.chatBody,
-    fontSize: 14,
+    ...TYPE.input,
     color: COLORS.textStrong,
   },
 

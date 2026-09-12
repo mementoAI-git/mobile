@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Image, TouchableOpacity, Text } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { cn } from '@/lib/utils';
 import Animated from 'react-native-reanimated';
 
@@ -54,8 +55,7 @@ export function TopicCard({ title, image, category, badge, onPress, className }:
             borderRadius: 999,
           }}>
             <Text style={{
-              fontFamily: FONTS.sansSemi,
-              fontSize: 11,
+              ...TYPE.metadata,
               color: COLORS.textStrong,
               lineHeight: 14,
             }}>
@@ -76,8 +76,7 @@ export function TopicCard({ title, image, category, badge, onPress, className }:
             borderRadius: 999,
           }}>
             <Text style={{
-              fontFamily: FONTS.sansBold,
-              fontSize: 10,
+              ...TYPE.eyebrow,
               color: COLORS.textInverse,
               lineHeight: 13,
             }}>
@@ -90,8 +89,8 @@ export function TopicCard({ title, image, category, badge, onPress, className }:
       {/* Title below image */}
       <View className="gap-1 px-1">
         <Animated.Text
-          className="text-lg text-text-strong leading-tight"
-          style={{ fontFamily: FONTS.serif }}
+          className="text-text-strong leading-tight"
+          style={TYPE.cardTitle}
           numberOfLines={3}
         >
           {title}

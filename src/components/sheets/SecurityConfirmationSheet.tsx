@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { AlertTriangle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { AlertTriangleIcon, Button, ZapIcon } from '@/components/ui';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 
 type ConfirmationKind =
@@ -123,7 +123,8 @@ export function SecurityConfirmationSheet({
         <Text
           style={{
             maxWidth: 310,
-            ...SETTINGS_TYPE.cardTitle,
+            ...TYPE.sectionTitle,
+            color: COLORS.textStrong,
             textAlign: 'center',
             marginTop: 30,
           }}
@@ -135,7 +136,7 @@ export function SecurityConfirmationSheet({
         <Text
           style={{
             maxWidth: 320,
-            ...SETTINGS_TYPE.body,
+            ...TYPE.body,
             textAlign: 'center',
             marginTop: 12,
           }}
@@ -146,8 +147,7 @@ export function SecurityConfirmationSheet({
           <Text
             style={{
               color: COLORS.warning,
-              fontFamily: FONTS.sansMedium,
-              fontSize: 12,
+              ...TYPE.metadata,
               lineHeight: 18,
               textAlign: 'center',
               marginTop: 12,

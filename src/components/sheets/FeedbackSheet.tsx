@@ -10,6 +10,7 @@ import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import { useToast } from '@/components/ui/Toast';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { logger } from '@/lib/logger';
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
@@ -20,7 +21,7 @@ export function FeedbackSheet() {
   const user = useUserStore(s => s.user);
   const closeSheet = useUiStore((s) => s.closeSheet);
   const { toast } = useToast();
-  
+
   const [type, setType] = useState(FEEDBACK_OPTIONS[0]);
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState(user?.email || '');
@@ -60,13 +61,13 @@ export function FeedbackSheet() {
         const fileUri = asset.uri;
         const fileName = fileUri.split('/').pop() || 'screenshot.jpg';
         const fileType = asset.mimeType || 'image/jpeg';
-        
+
         const uploaded = await uploadFile({
           uri: fileUri,
           name: fileName,
           type: fileType,
         });
-        
+
         if (isMountedRef.current && uploaded && uploaded._id) {
           setAttachments(prev => [...prev, uploaded._id]);
         }
@@ -82,7 +83,7 @@ export function FeedbackSheet() {
   const handleSend = async () => {
     if (!message.trim()) return;
     setIsSubmitting(true);
-    
+
     try {
       await client.post(endpoint.feedback, {
         type,
@@ -90,7 +91,7 @@ export function FeedbackSheet() {
         email: email || user?.email,
         screenshots: attachments
       });
-      
+
       if (isMountedRef.current) {
         toast('Feedback sent.', 'success');
         closeSheet();
@@ -108,25 +109,25 @@ export function FeedbackSheet() {
   return (
     <BottomSheetScrollView showsVerticalScrollIndicator={false} className="gap-4">
       <Text
-        className="text-2xl text-text-strong mb-2"
-        style={{ fontFamily: FONTS.serif }}
+        className="text-text-strong mb-2"
+        style={TYPE.sectionTitle}
       >
         Send feedback
       </Text>
 
       <View className="mb-2">
-        <Text className="text-sm font-medium text-text-strong mb-1.5" style={{ fontFamily: FONTS.sansMedium }}>Type</Text>
-        <TouchableOpacity 
+        <Text className="text-text-strong mb-1.5" style={TYPE.label}>Type</Text>
+        <TouchableOpacity
           onPress={() => setShowTypeSelect(!showTypeSelect)}
           className="border border-stroke-weaker bg-white rounded-xl px-3 py-3"
         >
-          <Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sans }}>{type}</Text>
+          <Text className="text-text-strong" style={TYPE.label}>{type}</Text>
         </TouchableOpacity>
-        
+
         {showTypeSelect && (
           <View className="mt-2 bg-fill-weak rounded-xl border border-stroke-weaker overflow-hidden">
             {FEEDBACK_OPTIONS.map((opt) => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key={opt}
                 onPress={() => {
                   setType(opt);
@@ -134,7 +135,7 @@ export function FeedbackSheet() {
                 }}
                 className={`px-3 py-3 border-b border-stroke-weaker last:border-b-0 ${type === opt ? 'bg-fill-weaker' : ''}`}
               >
-                <Text className={`text-sm ${type === opt ? 'font-medium text-brand' : 'text-text-strong'}`} style={{ fontFamily: type === opt ? FONTS.sansMedium : FONTS.sans }}>{opt}</Text>
+                <Text className={type === opt ? 'text-brand' : 'text-text-strong'} style={type === opt ? TYPE.label : TYPE.body}>{opt}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -166,8 +167,8 @@ export function FeedbackSheet() {
       )}
 
       <View className="mt-2">
-        <Text className="text-sm font-medium text-text-strong mb-1.5" style={{ fontFamily: FONTS.sansMedium }}>Screenshots (optional)</Text>
-        <TouchableOpacity 
+        <Text className="text-text-strong mb-1.5" style={TYPE.label}>Screenshots (optional)</Text>
+        <TouchableOpacity
           onPress={handlePickImage}
           disabled={isUploading}
           className={`self-start flex-row items-center justify-center py-2 px-4 rounded-full border ${attachments.length > 0 ? 'bg-brand-tint border-brand-weak' : 'bg-fill-weaker border-stroke-weaker'}`}
@@ -177,7 +178,7 @@ export function FeedbackSheet() {
           ) : (
             <>
               <ImageIcon size={16} color={attachments.length > 0 ? COLORS.brand : COLORS.textBase} />
-              <Text className={`text-xs ml-2 ${attachments.length > 0 ? 'text-brand' : 'text-text-strong'}`} style={{ fontFamily: FONTS.sansMedium }}>
+              <Text className={`ml-2 ${attachments.length > 0 ? 'text-brand' : 'text-text-strong'}`} style={TYPE.metadata}>
                 {attachments.length > 0 ? `${attachments.length} Attached` : 'Choose images'}
               </Text>
             </>

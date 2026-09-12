@@ -14,11 +14,11 @@ import {
   KeyboardAvoidingView, Platform, StyleSheet, Image,
   ActivityIndicator, Keyboard, Modal, ImageBackground, Linking,
 } from 'react-native';
-import { SafeAreaView, SafeAreaProvider, initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider, SafeAreaInsetsContext, initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   MoreHorizontal, Plus, X, Users, ChevronDown, Sparkles,
-  Copy, Check, Globe, FileText, Play, Camera, Mic, Video, Music,
+  Copy, Check, Lock, FileText, Play, Camera, Mic, Video, Music,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -28,6 +28,7 @@ import * as Clipboard from 'expo-clipboard';
 import Animated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import {
   getAutosaveStatusBadge,
   type AutosaveStatus,
@@ -36,7 +37,6 @@ import { useUserStore } from '@/store';
 import { useCreateMemory, useUpdateMemory } from '@/hooks/mutations/use-memory-mutations';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
-import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useGroups } from '@/hooks/queries/use-groups';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useToast } from '@/components/ui/Toast';
@@ -53,11 +53,14 @@ import { LinkPreviews } from '@/components/ui/LinkPreview';
 import type { EditorBridge } from '@10play/tentap-editor';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
-import type { IBeneficiary, IFile } from '@/types';
+import type { IFile } from '@/types';
 import { PublishPrivacySheet, type PrivacyMode } from '@/components/sheets/PublishPrivacySheet';
+import { deriveMemoryAudience, formatMemoryAudienceLabel, type MemoryAudienceSelection, type MemoryVisibility } from '@/features/memories/memory-audience';
+import { buildEditorPublishPayload } from '@/features/editor/editor-publish-payload';
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
+import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
 import {
   DOCUMENT_PICKER_MIME_TYPES,
   MAX_ATTACHMENT_FILE_MB,
@@ -161,21 +164,21 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
           <Image source={SURFER_WEBP} style={{ position: 'absolute', width: 220, height: 220, alignSelf: 'center', bottom: 0 }} resizeMode="contain" />
         </View>
         <Animated.View entering={FadeInDown.duration(400).delay(100)} style={{ flex: 1, paddingHorizontal: 24, paddingTop: 24, alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 26, color: COLORS.textStrong, textAlign: 'center', lineHeight: 34 }}>
+          <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong, textAlign: 'center', lineHeight: 34 }}>
             Story published
           </Text>
           <View style={{ width: '100%', backgroundColor: COLORS.fillWeak, borderRadius: 20, padding: 20, gap: 16 }}>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textBase }}>Share this story with friends</Text>
+            <Text style={{ ...TYPE.bodySmall, color: COLORS.textBase }}>Share this story with friends</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, overflow: 'hidden' }}>
-              <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textWeak, paddingHorizontal: 14, paddingVertical: 14 }} numberOfLines={1}>{truncatedUrl}</Text>
+              <Text style={{ flex: 1, ...TYPE.bodySmall, color: COLORS.textWeak, paddingHorizontal: 14, paddingVertical: 14 }} numberOfLines={1}>{truncatedUrl}</Text>
               <TouchableOpacity onPress={handleCopy} activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 16, paddingVertical: 14, borderLeftWidth: 1, borderLeftColor: COLORS.strokeWeaker }}>
                 {copied ? <Check size={15} color={COLORS.success} strokeWidth={2.5} /> : <Copy size={15} color={COLORS.info} strokeWidth={2} />}
-                <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 13, color: copied ? COLORS.success : COLORS.info }}>{copied ? 'Copied!' : 'Copy'}</Text>
+                <Text style={{ ...TYPE.bodySmall, color: copied ? COLORS.success : COLORS.info }}>{copied ? 'Copied!' : 'Copy'}</Text>
               </TouchableOpacity>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={{ flex: 1, height: 1, backgroundColor: COLORS.strokeWeaker }} />
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted }}>Or share on social media</Text>
+              <Text style={{ ...TYPE.metadata, color: COLORS.textMuted }}>Or share on social media</Text>
               <View style={{ flex: 1, height: 1, backgroundColor: COLORS.strokeWeaker }} />
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16 }}>
@@ -195,10 +198,10 @@ function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
           <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onAddAnother(); }} activeOpacity={0.85}
             style={{ width: '100%', height: 56, borderRadius: 999, backgroundColor: COLORS.textStrong, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <Plus size={18} color={COLORS.textInverse} strokeWidth={2.5} />
-            <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: COLORS.textInverse }}>Add another story</Text>
+            <Text style={{ ...TYPE.button, color: COLORS.textInverse }}>Add another story</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={onDismiss} activeOpacity={0.7} style={{ paddingVertical: 12, paddingHorizontal: 24 }}>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 15, color: COLORS.textBase, textAlign: 'center' }}>Dismiss</Text>
+            <Text style={{ ...TYPE.body, color: COLORS.textBase, textAlign: 'center' }}>Dismiss</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -221,6 +224,7 @@ function PublishModalInner({
   initialTags,
   initialBeneficiaryIds,
   initialGroupIds,
+  initialVisibility,
 }: {
   title: string;
   body: string;
@@ -234,12 +238,11 @@ function PublishModalInner({
   initialTags?: string;
   initialBeneficiaryIds?: string[];
   initialGroupIds?: string[];
+  initialVisibility?: MemoryVisibility;
 }) {
   const insets = useSafeAreaInsets();
   const [tags, setTags] = useState(initialTags ?? '');
-  const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>(initialBeneficiaryIds ?? []);
-  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(initialGroupIds ?? []);
-  const [privacyMode, setPrivacyMode] = useState<PrivacyMode>(initialBeneficiaryIds?.length || initialGroupIds?.length ? 'specific' : 'all');
+  const [audience, setAudience] = useState<MemoryAudienceSelection>(() => deriveMemoryAudience({ visibility: initialVisibility, beneficiaries: initialBeneficiaryIds, groups: initialGroupIds }));
   const privacySheetRef = useRef<BottomSheetModal>(null);
   const [isAutotagging, setIsAutotagging] = useState(false);
 
@@ -253,13 +256,7 @@ function PublishModalInner({
   const isPending = isEditMode ? updatePending : createPending;
   const { toast } = useToast();
 
-  const privacyLabel = useMemo(() => {
-    if (privacyMode === 'private') return 'Private · Only me';
-    if (privacyMode === 'all') return 'Everyone';
-    const total = selectedBeneficiaryIds.length + selectedGroupIds.length;
-    if (!total) return 'Choose people or groups';
-    return `${selectedBeneficiaryIds.length ? `${selectedBeneficiaryIds.length} people` : ''}${selectedBeneficiaryIds.length && selectedGroupIds.length ? ', ' : ''}${selectedGroupIds.length ? `${selectedGroupIds.length} groups` : ''}`;
-  }, [privacyMode, selectedBeneficiaryIds.length, selectedGroupIds.length]);
+  const privacyLabel = useMemo(() => formatMemoryAudienceLabel(audience), [audience]);
 
   const handleAutotag = useCallback(async () => {
     const bodyText = [title, body].filter(Boolean).join(' ').trim();
@@ -280,7 +277,7 @@ function PublishModalInner({
   }, [title, body, toast]);
 
   const handlePrivacyModeChange = useCallback((mode: PrivacyMode) => {
-    setPrivacyMode(mode);
+    setAudience((current) => ({ ...current, mode: mode === 'all' ? 'everyone' : mode }));
   }, []);
 
   const handleOpenPrivacySheet = useCallback(() => {
@@ -289,26 +286,18 @@ function PublishModalInner({
   }, []);
 
   const handleToggleBeneficiary = useCallback((id: string) => {
-    setSelectedBeneficiaryIds(prev => prev.includes(id) ? prev.filter(value => value !== id) : [...prev, id]);
+    setAudience((current) => ({ ...current, beneficiaryIds: current.beneficiaryIds.includes(id) ? current.beneficiaryIds.filter(value => value !== id) : [...current.beneficiaryIds, id] }));
   }, []);
 
   const handleToggleGroup = useCallback((id: string) => {
-    setSelectedGroupIds(prev => prev.includes(id) ? prev.filter(value => value !== id) : [...prev, id]);
+    setAudience((current) => ({ ...current, groupIds: current.groupIds.includes(id) ? current.groupIds.filter(value => value !== id) : [...current.groupIds, id] }));
   }, []);
 
   const handlePost = useCallback(() => {
     if (!title.trim() && !body.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const tagList = tags.split(/[,\s]+/).map(t => t.trim()).filter(Boolean);
-    const payload = {
-      title: title || 'Untitled', body, tags: tagList, status: 'save' as const,
-      attachments: attachmentIds.length ? attachmentIds : undefined,
-      ...(privacyMode === 'private' ? { beneficiaries: [], groups: [] } : {}),
-      ...(privacyMode === 'specific' ? {
-        beneficiaries: selectedBeneficiaryIds,
-        groups: selectedGroupIds,
-      } : {}),
-    };
+    const payload = buildEditorPublishPayload({ title, body, tags: tagList, attachmentIds, audience });
     const onSuccess = (res: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (isExistingStory) {
@@ -334,10 +323,10 @@ function PublishModalInner({
     }
   // attachmentIds must be in deps — without it the closure captures the initial
   // empty array and voice notes / images added before publishing are silently dropped.
-  }, [title, body, tags, attachmentIds, selectedBeneficiaryIds, selectedGroupIds, privacyMode, isExistingStory, isEditMode, targetMemoryId, createMemory, updateMemory, toast, onComplete, onPublished, draftId, userEmail]);
+  }, [title, body, tags, attachmentIds, audience, isExistingStory, isEditMode, targetMemoryId, createMemory, updateMemory, toast, onComplete, onPublished, draftId, userEmail]);
 
   const handleClose = useCallback(() => {
-    setTags(''); setSelectedBeneficiaryIds([]); setSelectedGroupIds([]); setPrivacyMode('all'); onClose();
+    setTags(''); setAudience(deriveMemoryAudience({})); onClose();
   }, [onClose]);
 
     return (
@@ -349,54 +338,52 @@ function PublishModalInner({
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: Math.max(insets.bottom + 24, 32) }}
         >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <Text style={{ fontFamily: FONTS.serif, fontSize: 22, color: COLORS.textStrong }}>Publish post</Text>
+                <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>Publish post</Text>
                 <TouchableOpacity onPress={handleClose} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
                   <X size={16} color={COLORS.textBase} strokeWidth={2} />
                 </TouchableOpacity>
               </View>
               <View style={{ backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16, marginBottom: 24 }}>
-                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong, marginBottom: 4 }}>Who can see this story?</Text>
-                <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textBase, marginBottom: 14 }}>Stories are visible to all beneficiaries by default.</Text>
+                <Text style={{ ...TYPE.body, color: COLORS.textStrong, marginBottom: 4 }}>Who can see this story?</Text>
+                <Text style={{ ...TYPE.bodySmall, color: COLORS.textBase, marginBottom: 14 }}>New stories are private unless you choose otherwise.</Text>
                 <TouchableOpacity
                   onPress={handleOpenPrivacySheet}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, borderWidth: 1, borderColor: COLORS.strokeWeaker }}
                   activeOpacity={0.8}
                 >
                   <Users size={18} color={COLORS.textBase} strokeWidth={1.8} />
-                  <Text style={{ flex: 1, fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>{privacyLabel}</Text>
+                  <Text style={{ flex: 1, ...TYPE.label, color: COLORS.textStrong }}>{privacyLabel}</Text>
                   <ChevronDown size={16} color={COLORS.textMuted} strokeWidth={2} />
                 </TouchableOpacity>
               </View>
               <View style={{ marginBottom: 32 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong }}>Add Tags</Text>
+                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>Add Tags</Text>
                   <TouchableOpacity onPress={handleAutotag} disabled={isAutotagging} activeOpacity={0.8}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: `${COLORS.info}40`, backgroundColor: `${COLORS.info}08` }}>
                     {isAutotagging ? <ActivityIndicator size="small" color={COLORS.info} /> : <Sparkles size={13} color={COLORS.info} strokeWidth={2} />}
-                    <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 12, color: COLORS.info }}>Autotag</Text>
+                    <Text style={{ ...TYPE.metadata, color: COLORS.info }}>Autotag</Text>
                   </TouchableOpacity>
                 </View>
                 <BottomSheetTextInput value={tags} onChangeText={setTags} placeholder="Manually enter tags or use the autotag button" placeholderTextColor={COLORS.textMuted} returnKeyType="done"
-                  style={{ backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 14, paddingVertical: 14, fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong, minHeight: 50 }} />
+                  style={{ backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 14, paddingVertical: 14, ...TYPE.label, color: COLORS.textStrong, minHeight: 50 }} />
               </View>
               <TouchableOpacity onPress={handlePost} activeOpacity={0.85} disabled={(!title.trim() && !body.trim()) || isPending}
                 style={[{ height: 56, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }, ((!title.trim() && !body.trim()) || isPending) && { opacity: 0.45 }]}>
-                {isPending ? <ActivityIndicator color={COLORS.textInverse} /> : <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 16, color: COLORS.textInverse }}>Post now</Text>}
+                {isPending ? <ActivityIndicator color={COLORS.textInverse} /> : <Text style={{ ...TYPE.button, color: COLORS.textInverse }}>Post now</Text>}
               </TouchableOpacity>
         </BottomSheetScrollView>
       </View>
       <PublishPrivacySheet
         ref={privacySheetRef}
-        mode={privacyMode}
-        selectedBeneficiaryIds={selectedBeneficiaryIds}
-        selectedGroupIds={selectedGroupIds}
+        mode={audience.mode === 'everyone' ? 'all' : audience.mode}
+        selectedBeneficiaryIds={audience.beneficiaryIds}
+        selectedGroupIds={audience.groupIds}
         onModeChange={handlePrivacyModeChange}
         onToggleBeneficiary={handleToggleBeneficiary}
         onToggleGroup={handleToggleGroup}
         onApply={(nextMode, nextBeneficiaryIds, nextGroupIds) => {
-          setPrivacyMode(nextMode);
-          setSelectedBeneficiaryIds(nextBeneficiaryIds);
-          setSelectedGroupIds(nextGroupIds);
+          setAudience({ mode: nextMode === 'all' ? 'everyone' : nextMode, beneficiaryIds: nextBeneficiaryIds, groupIds: nextGroupIds });
         }}
         onClose={() => privacySheetRef.current?.dismiss()}
       />
@@ -485,8 +472,6 @@ export default function EditorScreen() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Shared
-  const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>([]);
-  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [cameraVisible, setCameraVisible] = useState(false);
@@ -506,7 +491,6 @@ export default function EditorScreen() {
   const { mutate: createMemory } = useCreateMemory();
   const { mutateAsync: quickCapture, isPending: qcPending } = useQuickCapture();
   const { mutateAsync: uploadFileMutation } = useFileUpload();
-  const { data: beneficiariesRaw } = useBeneficiaries();
   const { toast } = useToast();
   const {
     attachments,
@@ -531,13 +515,6 @@ export default function EditorScreen() {
   const { start: startRecording, stop: stopRecording, isRecording, duration: recDuration } = useAudioRecorder({
     onPermissionDenied: handleMicrophonePermissionDenied,
   });
-
-  const beneficiaries: IBeneficiary[] = useMemo(() => {
-    if (!beneficiariesRaw) return [];
-    if (Array.isArray(beneficiariesRaw)) return beneficiariesRaw;
-    if ((beneficiariesRaw as any)?.docs) return (beneficiariesRaw as any).docs;
-    return [];
-  }, [beneficiariesRaw]);
 
   useEffect(() => { return () => { isMountedRef.current = false; if (saveTimerRef.current) clearTimeout(saveTimerRef.current); }; }, []);
 
@@ -715,7 +692,7 @@ export default function EditorScreen() {
     setSaveError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      await quickCapture({ body: qcBody.trim(), attachments: uploadedIds.length ? uploadedIds : undefined, beneficiaries: selectedBeneficiaryIds.length ? selectedBeneficiaryIds : undefined });
+      await quickCapture({ body: qcBody.trim(), visibility: 'private', attachments: uploadedIds.length ? uploadedIds : undefined });
       AsyncStorage.removeItem(QC_DRAFT_KEY(user?.email)).catch(() => {});
       toast('Got it. Processing in the background…', 'success');
       if (router.canGoBack()) {
@@ -724,13 +701,7 @@ export default function EditorScreen() {
         router.replace('/(tabs)/overview');
       }
     } catch (err: any) { setSaveError(err?.message ?? 'Could not save. Try again.'); }
-  }, [quickCapture, qcBody, selectedBeneficiaryIds, router, uploadedIds, user?.email, toast]);
-
-  const visibilityLabel = useMemo(() => {
-    if (!selectedBeneficiaryIds.length) return 'Everyone can see this';
-    const names = beneficiaries.filter(b => b._id && selectedBeneficiaryIds.includes(b._id!)).map(b => b.name).filter(Boolean);
-    return names.length === 1 ? `Shared with ${names[0]}` : `Shared with ${names.length} people`;
-  }, [selectedBeneficiaryIds, beneficiaries]);
+  }, [quickCapture, qcBody, router, uploadedIds, user?.email, toast]);
 
   // Stable onChange for StoryRichEditor — avoids recreating the bridge on every render
   // Note: does NOT call scheduleSave — draft is only saved when the user taps Cancel
@@ -908,7 +879,7 @@ export default function EditorScreen() {
               setCancelConfirmVisible(true);
             }} activeOpacity={0.7}
               style={{ height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textBase }}>Cancel</Text>
+              <Text style={{ ...TYPE.label, color: COLORS.textBase }}>Cancel</Text>
             </TouchableOpacity>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -916,7 +887,7 @@ export default function EditorScreen() {
                 <>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: COLORS.fillWeaker }}>
                     <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: autosaveBadge.dotColor }} />
-                    <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: autosaveBadge.textColor }}>{autosaveBadge.label}</Text>
+                    <Text style={{ ...TYPE.metadata, color: autosaveBadge.textColor }}>{autosaveBadge.label}</Text>
                   </View>
                   {/* My Drafts button — badge shows count, opens DraftsSheet */}
                   <TouchableOpacity onPress={() => {
@@ -963,7 +934,7 @@ export default function EditorScreen() {
                     <MoreHorizontal size={16} color={COLORS.textBase} strokeWidth={2} />
                     {draftCount > 0 && (
                       <View style={{ minWidth: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
-                        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.textInverse }}>{draftCount}</Text>
+                        <Text style={{ ...TYPE.eyebrow, color: COLORS.textInverse }}>{draftCount}</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -976,7 +947,7 @@ export default function EditorScreen() {
                     disabled={!storyHasContent || anyUploading} activeOpacity={0.8}
                     style={[{ height: 34, paddingHorizontal: 18, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }, (!storyHasContent || anyUploading) && { opacity: 0.4 }]}>
                     {anyUploading && <ActivityIndicator size="small" color={COLORS.textInverse} />}
-                    <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textInverse }}>Next</Text>
+                    <Text style={{ ...TYPE.label, color: COLORS.textInverse }}>Next</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -992,13 +963,13 @@ export default function EditorScreen() {
                   style={{ height: 34, paddingHorizontal: 12, borderRadius: 17, backgroundColor: COLORS.fillWeak, flexDirection: 'row', alignItems: 'center', gap: 4, opacity: hasQcDraft ? 1 : 0.35 }}
                 >
                   <MoreHorizontal size={14} color={COLORS.textBase} strokeWidth={2} />
-                  <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textBase }}>Draft</Text>
+                  <Text style={{ ...TYPE.bodySmall, color: COLORS.textBase }}>Draft</Text>
                 </TouchableOpacity>
               )}
               {!isStory && qcHasContent && (
                 <TouchableOpacity onPress={handleSave} disabled={!canSave || qcPending} activeOpacity={0.7}
                   style={{ height: 34, paddingHorizontal: 16, borderRadius: 17, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }}>
-                  {qcPending ? <ActivityIndicator size="small" color={COLORS.textInverse} /> : <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textInverse }}>Save</Text>}
+                  {qcPending ? <ActivityIndicator size="small" color={COLORS.textInverse} /> : <Text style={{ ...TYPE.label, color: COLORS.textInverse }}>Save</Text>}
                 </TouchableOpacity>
               )}
             </View>
@@ -1020,7 +991,7 @@ export default function EditorScreen() {
                  }}
                 placeholder="Title"
                 placeholderTextColor={COLORS.textDisabled}
-                style={{ fontFamily: FONTS.serif, fontSize: 34, fontWeight: '700', color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42, marginTop: 4 }}
+                style={{ ...TYPE.displayTitle,  color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42, marginTop: 4 }}
                 returnKeyType="next"
                 autoCapitalize="sentences"
                 autoCorrect
@@ -1071,7 +1042,7 @@ export default function EditorScreen() {
                     return (
                       <View key={a.clientId} style={{ height: 44, backgroundColor: COLORS.textStrong, borderRadius: 22, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Music size={13} color={COLORS.textInverse} strokeWidth={1.8} />
-                        <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>{Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}</Text>
+                        <Text style={{ ...TYPE.metadata, color: 'rgba(255,255,255,0.85)' }}>{Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}</Text>
                         {a.isUploading
                           ? <ActivityIndicator size="small" color={COLORS.textInverse} />
                           : (
@@ -1086,7 +1057,7 @@ export default function EditorScreen() {
                   {documentAttachments.map(a => (
                     <View key={a.clientId} style={{ height: 44, backgroundColor: COLORS.fillWeak, borderRadius: 22, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 180 }}>
                       <FileText size={13} color={COLORS.brand} strokeWidth={1.8} />
-                      <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textStrong, flexShrink: 1 }} numberOfLines={1}>{a.name}</Text>
+                      <Text style={{ ...TYPE.metadata, color: COLORS.textStrong, flexShrink: 1 }} numberOfLines={1}>{a.name}</Text>
                       {a.isUploading
                         ? <ActivityIndicator size="small" color={COLORS.brand} />
                         : (
@@ -1129,7 +1100,7 @@ export default function EditorScreen() {
               <>
                 <TextInput ref={bodyRef} value={qcBody} onChangeText={v => setQcBody(v.slice(0, NOTE_CHAR_MAX))}
                   placeholder="What's on your mind?" placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
-                  style={{ fontFamily: FONTS.sans, fontSize: 16, lineHeight: 24, color: COLORS.textStrong, padding: 0, margin: 0, textAlignVertical: 'top', minHeight: 56 }}
+                  style={{ ...TYPE.input, lineHeight: 24, color: COLORS.textStrong, padding: 0, margin: 0, textAlignVertical: 'top', minHeight: 56 }}
                   multiline autoFocus autoCorrect autoCapitalize="sentences" blurOnSubmit={false} scrollEnabled={false} maxLength={NOTE_CHAR_MAX} />
                 {isRecording && (
                   <RecordingStatus seconds={recDuration} style={{ marginTop: 8 }} />
@@ -1157,7 +1128,7 @@ export default function EditorScreen() {
                             )}
                             {isLast && (
                               <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
-                                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: '#fff' }}>+{mediaAttachments.length - 6}</Text>
+                                <Text style={{ ...TYPE.label, color: '#fff' }}>+{mediaAttachments.length - 6}</Text>
                               </View>
                             )}
                             {a.isUploading && (
@@ -1179,7 +1150,7 @@ export default function EditorScreen() {
                   return (
                     <View key={a.clientId} style={{ marginTop: 8, backgroundColor: COLORS.textStrong, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                       <Music size={14} color={COLORS.textInverse} strokeWidth={1.8} />
-                      <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>
+                      <Text style={{ flex: 1, ...TYPE.metadata, color: 'rgba(255,255,255,0.85)' }}>
                         Voice · {Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}
                       </Text>
                       {a.isUploading && <ActivityIndicator size="small" color={COLORS.textInverse} />}
@@ -1193,47 +1164,24 @@ export default function EditorScreen() {
                 {documentAttachments.map(a => (
                   <View key={a.clientId} style={{ marginTop: 6, backgroundColor: COLORS.fillWeak, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <FileText size={14} color={COLORS.brand} strokeWidth={1.8} />
-                    <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textStrong }} numberOfLines={1}>{a.name}</Text>
+                    <Text style={{ flex: 1, ...TYPE.bodySmall, color: COLORS.textStrong }} numberOfLines={1}>{a.name}</Text>
                     {a.isUploading && <ActivityIndicator size="small" color={COLORS.brand} />}
                     <TouchableOpacity onPress={() => handleRemoveAttachment(a.clientId)} hitSlop={8}>
                       <X size={12} color={COLORS.textWeak} strokeWidth={2} />
                     </TouchableOpacity>
                   </View>
                 ))}
-                {saveError && <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.error, marginTop: 8 }}>{saveError}</Text>}
+                {saveError && <Text style={{ ...TYPE.bodySmall, color: COLORS.error, marginTop: 8 }}>{saveError}</Text>}
               </>
             </ScrollView>
           )}
 
-          {/* ── Privacy (quick-capture only) ── */}
+          {/* Quick Capture is intentionally private. */}
           {!isStory && (
-            <>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingVertical: 10, borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker }}>
-                <Globe size={14} color={COLORS.textMuted} strokeWidth={1.8} />
-                <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setPrivacyOpen(o => !o); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted }}>{visibilityLabel}</Text>
-                  <ChevronDown size={12} color={COLORS.textMuted} strokeWidth={2} />
-                </TouchableOpacity>
-              </View>
-              {privacyOpen && (
-                <View style={{ marginHorizontal: 16, marginBottom: 4, backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingVertical: 4, maxHeight: 180 }}>
-                  <TouchableOpacity onPress={() => { setSelectedBeneficiaryIds([]); setPrivacyOpen(false); Haptics.selectionAsync(); }}
-                    style={[{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 }, !selectedBeneficiaryIds.length && { backgroundColor: `${COLORS.brand}12` }]}>
-                    <Text style={[{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong }, !selectedBeneficiaryIds.length && { color: COLORS.brand }]}>Everyone</Text>
-                  </TouchableOpacity>
-                  {beneficiaries.map(b => {
-                    if (!b._id) return null;
-                    const on = selectedBeneficiaryIds.includes(b._id);
-                    return (
-                      <TouchableOpacity key={b._id} onPress={() => { Haptics.selectionAsync(); setSelectedBeneficiaryIds(prev => on ? prev.filter(x => x !== b._id) : [...prev, b._id!]); }}
-                        style={[{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 }, on && { backgroundColor: `${COLORS.brand}12` }]}>
-                        <Text style={[{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong }, on && { color: COLORS.brand }]}>{b.name}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-            </>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingVertical: 10, borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker }}>
+              <Lock size={14} color={COLORS.textMuted} strokeWidth={1.8} />
+              <Text style={{ ...TYPE.metadata, color: COLORS.textMuted }}>Private · Only me</Text>
+            </View>
           )}
 
           {/* ── Action bar — story mode: ⊕ upload + inline formatting tools
@@ -1311,8 +1259,12 @@ export default function EditorScreen() {
       />
       {/* Local sheets — must live inside a BottomSheetModalProvider scoped to
           this editor window so they display correctly on iOS fullScreenModal */}
+      <SafeAreaInsetsContext.Consumer>
+        {(modalInsets) => (
+          <>
         <BottomSheetModal
           ref={publishSheetRef}
+          topInset={getSheetTopInset(modalInsets?.top ?? 0)}
           snapPoints={['92%']}
           enablePanDownToClose
           onDismiss={() => {
@@ -1343,6 +1295,7 @@ export default function EditorScreen() {
               initialTags={initialTags}
               initialBeneficiaryIds={initialBeneficiaryIds}
               initialGroupIds={initialGroupIds}
+              initialVisibility={initialParsedData?.visibility}
               onClose={handleClosePublishSheet}
               onComplete={handlePublishFlowComplete}
               onPublished={handlePublishCreated}
@@ -1351,6 +1304,7 @@ export default function EditorScreen() {
         </BottomSheetModal>
         <BottomSheetModal
           ref={draftsSheetRef}
+          topInset={getSheetTopInset(modalInsets?.top ?? 0)}
           snapPoints={['75%']}
           enablePanDownToClose
           keyboardBehavior="interactive"
@@ -1361,10 +1315,13 @@ export default function EditorScreen() {
           handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
           backgroundStyle={{ backgroundColor: COLORS.background }}
         >
-          <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: 32 }}>
+          <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: getSheetBottomPadding(modalInsets?.bottom ?? 0, 16) }}>
             <DraftsSheet />
           </BottomSheetView>
         </BottomSheetModal>
+          </>
+        )}
+      </SafeAreaInsetsContext.Consumer>
       </BottomSheetModalProvider>
     </SafeAreaProvider>
   );

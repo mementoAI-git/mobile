@@ -37,6 +37,7 @@ import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, cancelAnimation, type SharedValue } from 'react-native-reanimated';
 import { ChevronLeft, Share2, X, Mic, FileText, Music, Play, Pause, RotateCcw, Link2, Download, Trash2, MessageSquare } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
@@ -553,7 +554,7 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
       </View>
 
       {/* Track name */}
-      <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 16, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>
+      <Text style={{ ...TYPE.body, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>
         {displayName}
       </Text>
 
@@ -582,8 +583,8 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
           <View pointerEvents="none" style={{ height: '100%', width: `${Math.round(progress * 100)}%`, borderRadius: 2, backgroundColor: COLORS.brand }} />
         </TouchableOpacity>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak }}>{formatDuration(currentTime)}</Text>
-          <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak }}>{formatDuration(duration)}</Text>
+          <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>{formatDuration(currentTime)}</Text>
+          <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>{formatDuration(duration)}</Text>
         </View>
       </View>
     </View>
@@ -1130,8 +1131,8 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
                 <Link2 size={20} color={COLORS.textBase} strokeWidth={1.8} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>Share memory link</Text>
-                <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>Copy and share the public link</Text>
+                <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>Share memory link</Text>
+                <Text style={{ ...TYPE.metadata, color: COLORS.textWeak, marginTop: 1 }}>Copy and share the public link</Text>
               </View>
             </TouchableOpacity>
           )}
@@ -1148,8 +1149,8 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
                   <Share2 size={20} color={COLORS.textBase} strokeWidth={1.8} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>Share file</Text>
-                  <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>Send via message, email or another app</Text>
+                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>Share file</Text>
+                  <Text style={{ ...TYPE.metadata, color: COLORS.textWeak, marginTop: 1 }}>Send via message, email or another app</Text>
                 </View>
               </TouchableOpacity>
 
@@ -1166,8 +1167,8 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
                   <Download size={20} color={COLORS.textBase} strokeWidth={1.8} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>{saveActionTitle}</Text>
-                  <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>{saveActionDescription}</Text>
+                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>{saveActionTitle}</Text>
+                  <Text style={{ ...TYPE.metadata, color: COLORS.textWeak, marginTop: 1 }}>{saveActionDescription}</Text>
                 </View>
               </TouchableOpacity>
             </>
@@ -1183,8 +1184,8 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
                   <Download size={20} color={COLORS.textBase} strokeWidth={1.8} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>{saveActionTitle}</Text>
-                  <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>{saveActionDescription}</Text>
+                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>{saveActionTitle}</Text>
+                  <Text style={{ ...TYPE.metadata, color: COLORS.textWeak, marginTop: 1 }}>{saveActionDescription}</Text>
                 </View>
               </TouchableOpacity>
 
@@ -1201,8 +1202,8 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
                   <Share2 size={20} color={COLORS.textBase} strokeWidth={1.8} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 15, color: COLORS.textStrong }}>Share file</Text>
-                  <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textWeak, marginTop: 1 }}>Send via message, email or another app</Text>
+                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>Share file</Text>
+                  <Text style={{ ...TYPE.metadata, color: COLORS.textWeak, marginTop: 1 }}>Send via message, email or another app</Text>
                 </View>
               </TouchableOpacity>
             </>
@@ -1279,7 +1280,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.strokeWeaker,
   },
   shareLabel: {
-    fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textBase,
+    ...TYPE.label, color: COLORS.textBase,
   },
   galleryHeaderActions: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -1295,7 +1296,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 7,
   },
   galleryViewMessageText: {
-    color: COLORS.textStrong, fontFamily: FONTS.sansMedium, fontSize: 14,
+    color: COLORS.textStrong, ...TYPE.label,
   },
 
   // Slides
@@ -1334,11 +1335,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   mediaName: {
-    fontFamily: FONTS.sansMedium, fontSize: 16,
+    ...TYPE.body,
     color: COLORS.textStrong, textAlign: 'center',
   },
   mediaHint: {
-    fontFamily: FONTS.sans, fontSize: 13,
+    ...TYPE.bodySmall,
     color: COLORS.textMuted, textAlign: 'center',
   },
 
@@ -1355,8 +1356,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   videoTimeText: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 12,
+    ...TYPE.metadata,
     color: COLORS.textStrong,
     minWidth: 36,
     textAlign: 'center',
@@ -1392,8 +1392,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.brand,
   },
   videoSpeedText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 12,
+    ...TYPE.metadata,
     color: COLORS.textStrong,
   },
 
@@ -1487,8 +1486,7 @@ const styles = StyleSheet.create({
   },
   galleryActionNoticeText: {
     color: COLORS.textInverse,
-    fontFamily: FONTS.sansSemi,
-    fontSize: 13,
+    ...TYPE.bodySmall,
   },
   galleryConfirmationOverlay: {
     bottom: 0,
@@ -1521,14 +1519,12 @@ const styles = StyleSheet.create({
   },
   galleryConfirmationTitle: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.serif,
-    fontSize: 24,
+    ...TYPE.sectionTitle,
     textAlign: 'center',
   },
   galleryConfirmationCopy: {
     color: COLORS.textBase,
-    fontFamily: FONTS.sans,
-    fontSize: 14,
+    ...TYPE.label,
     lineHeight: 20,
     textAlign: 'center',
   },
@@ -1548,8 +1544,7 @@ const styles = StyleSheet.create({
   },
   galleryConfirmationCancelText: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansBold,
-    fontSize: 15,
+    ...TYPE.body,
   },
   galleryConfirmationDelete: {
     alignItems: 'center',
@@ -1561,7 +1556,6 @@ const styles = StyleSheet.create({
   },
   galleryConfirmationDeleteText: {
     color: COLORS.textInverse,
-    fontFamily: FONTS.sansBold,
-    fontSize: 15,
+    ...TYPE.body,
   },
 });

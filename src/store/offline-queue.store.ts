@@ -6,18 +6,31 @@ import { post, put } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { queryClient } from '@/lib/query-client';
 import { logger } from '@/lib/logger';
+import type { MemoryMutationPayload } from '@/features/memories/memory-mutation-payload';
 
-export interface OfflineMutation {
+interface OfflineMutationBase {
   id: string;
-  type: 'create_memory' | 'update_memory';
-  payload: any;
   createdAt: string;
 }
+
+export type OfflineMutation = OfflineMutationBase &
+  (
+    | { type: 'create_memory'; payload: MemoryMutationPayload }
+    | {
+        type: 'update_memory';
+        payload: { id: string } & Partial<MemoryMutationPayload>;
+      }
+  );
+
+type OfflineMemoryPayload = OfflineMutation['payload'];
 
 interface OfflineQueueState {
   queue: OfflineMutation[];
   isSyncing: boolean;
-  enqueueMutation: (type: OfflineMutation['type'], payload: any) => Promise<void>;
+  enqueueMutation: (
+    type: OfflineMutation['type'],
+    payload: OfflineMemoryPayload
+  ) => Promise<void>;
   dequeueMutation: (id: string) => Promise<void>;
   loadQueue: () => Promise<void>;
   syncQueue: () => Promise<void>;
@@ -30,12 +43,12 @@ export const useOfflineQueueStore = create<OfflineQueueState>((set, get) => ({
   isSyncing: false,
 
   enqueueMutation: async (type, payload) => {
-    const newMutation: OfflineMutation = {
+    const newMutation = {
       id: `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       type,
       payload,
       createdAt: new Date().toISOString(),
-    };
+    } as OfflineMutation;
 
     const nextQueue = [...get().queue, newMutation];
     set({ queue: nextQueue });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { cn } from '@/lib/utils';
-import { FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 interface MemTagProps {
   label: string;
@@ -20,8 +20,8 @@ export function MemTag({ label, className }: MemTagProps) {
       )}
     >
       <Text
-        className="text-xs font-medium text-text-base capitalize"
-        style={{ fontFamily: FONTS.sansMedium }}
+        className="text-text-base capitalize"
+        style={TYPE.metadata}
       >
         {label}
       </Text>

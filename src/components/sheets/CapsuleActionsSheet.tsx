@@ -4,7 +4,9 @@ import { Pencil, Eye, Pause, Play, RotateCcw, Trash2 } from 'lucide-react-native
 import { useDeleteCapsule, useUpdateCapsule } from '@/hooks/mutations/use-capsule-mutations';
 import { ICapsule } from '@/types';
 import { useUiStore } from '@/store';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import * as Haptics from 'expo-haptics';
 
 interface CapsuleActionsSheetProps {
@@ -77,15 +79,14 @@ export function CapsuleActionsSheet({ capsule, onClose }: CapsuleActionsSheetPro
       <View className="flex-1">
         <Text
           style={{
-            fontFamily: FONTS.sansMedium,
-            fontSize: 14,
+            ...TYPE.label,
             color: danger ? COLORS.error : COLORS.textStrong,
           }}
         >
           {label}
         </Text>
         {description && (
-          <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textWeak, marginTop: 1 }}>
+          <Text style={{ ...TYPE.metadata, color: COLORS.textWeak, marginTop: 1 }}>
             {description}
           </Text>
         )}

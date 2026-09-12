@@ -28,6 +28,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { X, FileText, Music, Video } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Spinner, Button } from '@/components/ui';
 import { UiZapFast, UiDatabase01 } from '@/components/ui/icons/SettingsIcons';
 import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
@@ -77,7 +78,7 @@ function FilePreview({ uri, mimeType, name }: { uri: string; mimeType?: string; 
     }}>
       {icons[cat]}
       {name ? (
-        <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textWeak, textAlign: 'center', paddingHorizontal: 20 }} numberOfLines={2}>
+        <Text style={{ ...TYPE.label, color: COLORS.textWeak, textAlign: 'center', paddingHorizontal: 20 }} numberOfLines={2}>
           {name}
         </Text>
       ) : null}
@@ -191,7 +192,7 @@ function ShareContent() {
 
         {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 12 }}>
-          <Text style={{ fontFamily: FONTS.serif, fontSize: 22, color: COLORS.textStrong }}>
+          <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
             Save to Memento
           </Text>
           <TouchableOpacity
@@ -214,13 +215,13 @@ function ShareContent() {
               />
             ) : null}
             {fileCount > 1 && (
-              <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textWeak, marginTop: 8, textAlign: 'center' }}>
+              <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak, marginTop: 8, textAlign: 'center' }}>
                 +{fileCount - 1} more file{fileCount - 1 > 1 ? 's' : ''}
               </Text>
             )}
             {hasText && (
               <View style={{ marginTop: 12, backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16 }}>
-                <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong, lineHeight: 20 }} numberOfLines={4}>
+                <Text style={{ ...TYPE.label, color: COLORS.textStrong, lineHeight: 20 }} numberOfLines={4}>
                   {shareIntent.text}
                 </Text>
               </View>
@@ -230,7 +231,7 @@ function ShareContent() {
           {/* Context line */}
           <Animated.Text
             entering={FadeInDown.delay(100).duration(400)}
-            style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, lineHeight: 20, textAlign: 'center', paddingHorizontal: 8 }}
+            style={{ ...TYPE.label, color: COLORS.textWeak, lineHeight: 20, textAlign: 'center', paddingHorizontal: 8 }}
           >
             What would you like to do with this?
           </Animated.Text>
@@ -266,7 +267,7 @@ function ShareContent() {
               }}
             >
               <UiZapFast size={16} color={COLORS.textStrong} strokeWidth={2} />
-              <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textStrong }}>
+              <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>
                 Quick capture
               </Text>
             </TouchableOpacity>
@@ -277,7 +278,7 @@ function ShareContent() {
               activeOpacity={0.7}
               style={{ paddingVertical: 12, alignItems: 'center' }}
             >
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textMuted }}>
+              <Text style={{ ...TYPE.label, color: COLORS.textMuted }}>
                 Not now
               </Text>
             </TouchableOpacity>

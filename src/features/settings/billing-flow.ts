@@ -7,6 +7,7 @@ import { queryKeys } from '@/constants/query-keys';
 import { logger } from '@/lib/logger';
 import { toast } from '@/components/ui/Toast';
 import { extractBillingUrl } from './billing-adapters';
+import type { BillingCancellationFeedback } from './subscription-cancellation';
 
 export type BillingCheckoutTier = 'pro' | 'legacy';
 export type BillingCheckoutInterval = 'monthly' | 'annual' | 'lifetime';
@@ -101,9 +102,12 @@ export async function redeemBillingPromo(code: string, { queryClient }: BillingM
   }
 }
 
-export async function cancelBillingSubscription({ queryClient }: BillingMutationOptions = {}) {
+export async function cancelBillingSubscription(
+  { queryClient }: BillingMutationOptions = {},
+  feedback?: BillingCancellationFeedback,
+) {
   try {
-    await post(endpoint.billingCancel, {});
+    await post(endpoint.billingCancel, feedback ?? {});
     toast('Your subscription cancellation has been scheduled.', 'success');
     await invalidateBillingQueries(queryClient);
     return true;

@@ -31,7 +31,11 @@ import { SecurityConfirmationSheet } from './SecurityConfirmationSheet';
 import { VoiceCallSettingsSheet } from './VoiceCallSettingsSheet';
 import { EndVoiceSessionSheet } from './EndVoiceSessionSheet';
 import { AddMemberToGroupSheet } from './AddMemberToGroupSheet';
+import { EditBillingDetailsSheet } from './EditBillingDetailsSheet';
+import { AddPaymentMethodSheet } from './AddPaymentMethodSheet';
+import { CancelSubscriptionConfirmationSheet } from './CancelSubscriptionConfirmationSheet';
 import { COLORS } from '@/constants/tokens';
+import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
 
 const SHEET_CONFIGS: Record<string, {
   component: React.ComponentType<any>;
@@ -60,10 +64,13 @@ const SHEET_CONFIGS: Record<string, {
   'streak': { component: StreakSheet, dynamic: true },
   'story-drafts': { component: DraftsSheet, snapPoints: ['75%'], keyboardBehavior: 'interactive' },
   'edit-profile': { component: EditProfileSheet, snapPoints: ['92%', '100%'], dynamic: false, keyboardBehavior: 'fillParent' },
+  'edit-billing-details': { component: EditBillingDetailsSheet, snapPoints: ['94%', '100%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
+  'add-payment-method': { component: AddPaymentMethodSheet, snapPoints: ['94%', '100%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
+  'cancel-subscription-confirmation': { component: CancelSubscriptionConfirmationSheet, dynamic: true },
   'change-password': { component: ChangePasswordSheet, snapPoints: ['100%'], dynamic: true, keyboardBehavior: 'interactive', keyboardBlurBehavior: 'restore', androidKeyboardInputMode: 'adjustResize' },
-  'setup-two-factor': { component: SetupTwoFactorSheet, snapPoints: ['88%'], dynamic: false, keyboardBehavior: 'fillParent' },
+  'setup-two-factor': { component: SetupTwoFactorSheet, snapPoints: ['92%'], dynamic: false, keyboardBehavior: 'fillParent' },
   'security-confirmation': { component: SecurityConfirmationSheet, dynamic: true },
-  'voice-call-settings': { component: VoiceCallSettingsSheet, snapPoints: ['82%'], dynamic: false },
+  'voice-call-settings': { component: VoiceCallSettingsSheet, dynamic: true },
   'end-voice-session': { component: EndVoiceSessionSheet, dynamic: true },
 };
 
@@ -72,6 +79,7 @@ const SELF_MANAGED = new Set([
   'create-capsule', 'capsule-detail', 'memory-insights',
   'create-memory', 'create-group', 'add-beneficiary', 'streak',
   'edit-profile', 'add-member-to-group',
+  'edit-billing-details', 'add-payment-method',
   'change-password', 'setup-two-factor',
 ]);
 
@@ -164,6 +172,7 @@ export function SheetManager({ isModal = false }: { isModal?: boolean }) {
     <BottomSheetModal
         key={activeSheet ?? 'none'}
         ref={modalRef}
+        topInset={getSheetTopInset(insets.top)}
         snapPoints={config?.snapPoints}
         enableDynamicSizing={config?.dynamic ?? true}
         enablePanDownToClose
@@ -184,7 +193,7 @@ export function SheetManager({ isModal = false }: { isModal?: boolean }) {
               collapseSheet={collapseSheet}
             />
           ) : (
-            <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: insets.bottom ? insets.bottom + 12 : 32 }}>
+            <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: getSheetBottomPadding(insets.bottom, 12) }}>
               <SheetContent {...sheetProps} onClose={animateClose} />
             </BottomSheetView>
           )

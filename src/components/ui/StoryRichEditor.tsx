@@ -21,6 +21,7 @@ import {
   Heading1, Heading2, List, ListOrdered, Quote,
 } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
+import { TYPE_METRICS } from '@/constants/typography';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,16 +135,16 @@ export const StoryRichEditor = forwardRef<StoryRichEditorRef, Props>(
         body { margin: 0; padding: 0; background: #ffffff; }
         .tiptap, .ProseMirror {
           padding: 8px 20px 20px 20px !important;
-          font-size: 16px;
-          line-height: 1.7;
+          font-size: ${TYPE_METRICS.body.fontSize}px;
+          line-height: ${TYPE_METRICS.body.lineHeight}px;
           color: rgba(23,11,0,0.65);
           font-family: -apple-system, sans-serif;
           outline: none;
           word-break: break-word;
         }
         .tiptap p, .ProseMirror p { margin: 0 0 8px 0; }
-        .tiptap h1, .ProseMirror h1 { font-size: 28px; font-weight: 700; margin: 0 0 8px 0; color: rgba(23,11,0,0.9); }
-        .tiptap h2, .ProseMirror h2 { font-size: 22px; font-weight: 600; margin: 0 0 8px 0; color: rgba(23,11,0,0.9); }
+        .tiptap h1, .ProseMirror h1 { font-size: ${TYPE_METRICS.screenTitle.fontSize}px; line-height: ${TYPE_METRICS.screenTitle.lineHeight}px; font-weight: 700; margin: 0 0 8px 0; color: rgba(23,11,0,0.9); }
+        .tiptap h2, .ProseMirror h2 { font-size: ${TYPE_METRICS.sectionTitle.fontSize}px; line-height: ${TYPE_METRICS.sectionTitle.lineHeight}px; font-weight: 600; margin: 0 0 8px 0; color: rgba(23,11,0,0.9); }
         .tiptap u, .ProseMirror u { text-decoration: underline; text-decoration-color: rgba(23,11,0,0.4); text-underline-offset: 3px; }
         .tiptap strong, .ProseMirror strong { color: rgba(23,11,0,0.9); }
         .tiptap em, .ProseMirror em { color: rgba(23,11,0,0.65); }

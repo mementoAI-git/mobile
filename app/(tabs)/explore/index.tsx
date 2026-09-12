@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoryCard } from '@/components/explore/CategoryCard';
 import { ContinueReflectingCard } from '@/components/explore/ContinueReflectingCard';
 import { DashboardHeader, ExploreSkeleton, EmptyState, Spinner } from '@/components/ui';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { CATEGORY_META } from '@/constants/categories';
 import { formatCategoryProgress } from '@/features/explore/category-progress';
 import { getPromptCategorySlug } from '@/features/explore/category-identity';
@@ -70,13 +71,13 @@ export default function ExploreScreen() {
   const listHeader = useMemo(
     () => (
       <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-6">
-        <Animated.Text className="text-base text-text-weak leading-relaxed mb-6" style={{ fontFamily: FONTS.sans }}>
+        <Animated.Text className="text-text-weak mb-6" style={TYPE.body}>
           Discover prompts that help you explore the depths of your story and find new ways to connect.
         </Animated.Text>
 
         {staticPrompts.length > 0 && (
           <View className="mb-6">
-            <Animated.Text className="text-[22px] text-text-strong font-normal mb-4" style={{ fontFamily: FONTS.serif }}>
+            <Animated.Text className="text-text-strong mb-4" style={TYPE.sectionTitle}>
               Continue reflecting
             </Animated.Text>
             <ScrollView
@@ -92,7 +93,7 @@ export default function ExploreScreen() {
           </View>
         )}
 
-        <Animated.Text className="text-[22px] text-text-strong font-normal mb-4" style={{ fontFamily: FONTS.serif }}>
+        <Animated.Text className="text-text-strong mb-4" style={TYPE.sectionTitle}>
           Explore categories
         </Animated.Text>
       </Animated.View>
@@ -136,7 +137,7 @@ export default function ExploreScreen() {
           <View className="absolute inset-0 bg-black/10 items-center justify-center z-50">
             <View className="bg-white p-6 rounded-2xl shadow-lg border border-stroke-weaker items-center gap-3">
               <Spinner size="large" color={COLORS.brand} />
-              <Animated.Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sansBold }}>Starting reflect session...</Animated.Text>
+              <Animated.Text className="text-text-strong" style={TYPE.label}>Starting reflect session...</Animated.Text>
             </View>
           </View>
         )}

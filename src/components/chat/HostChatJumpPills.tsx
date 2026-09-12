@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { FONTS, COLORS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { enrichmentCategoryLabel, type JumpPill } from '@/constants/enrichment';
 import type { IMessage } from '@/types';
 
@@ -73,7 +74,7 @@ export function HostChatJumpPills({
           activeOpacity={0.7}
           className="border border-stroke-weaker bg-fill-weaker rounded-full px-3 py-1.5"
         >
-          <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textBase }}>
+          <Text style={{ ...TYPE.metadata, color: COLORS.textBase }}>
             {formatMonthKey(key)}
           </Text>
         </TouchableOpacity>
@@ -95,7 +96,7 @@ export function HostChatJumpPills({
           activeOpacity={0.8}
           className="flex-row items-center gap-1.5 bg-brand/5 border border-brand/15 rounded-full px-3 py-1.5"
         >
-          <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.brand }}>
+          <Text style={{ ...TYPE.metadata, color: COLORS.brand }}>
             {enrichmentCategoryLabel(pill.category_key)}
           </Text>
         </TouchableOpacity>

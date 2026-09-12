@@ -7,7 +7,9 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Check } from 'lucide-react-native';
+
 import { FONTS, COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import type { SelectOption } from '@/components/ui/Select';
 import { Separator } from '@/components/ui/Separator';
 
@@ -56,8 +58,7 @@ export function SelectSheet({
           <View className="flex-1 gap-0.5">
             <Text
               style={{
-                fontFamily: isSelected ? FONTS.sansSemi : FONTS.sans,
-                fontSize: 15,
+                ...(isSelected ? TYPE.label : TYPE.body),
                 color: isSelected ? COLORS.textStrong : COLORS.textBase,
               }}
             >
@@ -66,8 +67,7 @@ export function SelectSheet({
             {item.description ? (
               <Text
                 style={{
-                  fontFamily: FONTS.sans,
-                  fontSize: 12,
+                  ...TYPE.metadata,
                   color: COLORS.textWeak,
                 }}
               >
@@ -89,9 +89,8 @@ export function SelectSheet({
       {/* Handle label / title */}
       {placeholder && (
         <Text
-          className="text-xs uppercase tracking-widest text-text-weak mb-1"
-          style={{ fontFamily: FONTS.sansBold }}
-        >
+          className="uppercase tracking-widest text-text-weak mb-1"
+          style={TYPE.metadata}>
           {placeholder}
         </Text>
       )}

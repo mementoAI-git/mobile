@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Spinner } from '@/components/ui';
 import endpoint from '@/api/endpoint';
 import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { API_BASE_URL } from '@/lib/env';
 import { establishSession, restoreSessionWithCredentials } from '@/features/auth/session-coordinator';
 import { completeAuthResponse } from '@/features/auth/auth-completion';
@@ -106,8 +107,8 @@ export default function OAuthCallbackScreen() {
   if (error) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center px-6">
-        <Text className="text-2xl font-serif text-text-strong mb-3">Sign in failed</Text>
-        <Text className="text-base text-text-weak text-center mb-8">{error}</Text>
+        <Text className="text-text-strong mb-3" style={TYPE.screenTitle}>Sign in failed</Text>
+        <Text className="text-text-weak text-center mb-8" style={TYPE.body}>{error}</Text>
         <Button onPress={() => router.replace('/(auth)/login')} fullWidth size="lg">
           Back to sign in
         </Button>
@@ -118,7 +119,7 @@ export default function OAuthCallbackScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background items-center justify-center">
       <Spinner size="large" />
-      <Text className="mt-4 text-base text-text-weak">
+      <Text className="mt-4 text-text-weak" style={TYPE.body}>
         {done ? 'Sign in successful. Redirecting…' : `Signing you in with ${resolvedProvider}…`}
       </Text>
     </SafeAreaView>

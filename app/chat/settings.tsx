@@ -31,6 +31,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { getChatSettingsLayout } from '@/features/chat/chat-settings-layout';
 import { VoiceArtwork } from '@/components/chat/VoiceArtwork';
 import {
@@ -566,8 +567,7 @@ const styles = StyleSheet.create({
   headerSpacer: { height: 40, width: 40 },
   screenTitle: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansBold,
-    fontSize: 17,
+    ...TYPE.cardTitle,
     lineHeight: 22,
   },
   content: {
@@ -593,21 +593,18 @@ const styles = StyleSheet.create({
   },
   scoreTitle: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansBold,
-    fontSize: 15,
+    ...TYPE.body,
     lineHeight: 20,
     marginBottom: 6,
   },
   scoreDescription: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sans,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     lineHeight: 17,
   },
   scoreValue: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.serif,
-    fontSize: 52,
+    ...TYPE.displayStat,
     lineHeight: 57,
   },
   scoreBar: {
@@ -643,8 +640,7 @@ const styles = StyleSheet.create({
   scoreActionLabel: {
     color: COLORS.textStrong,
     flex: 1,
-    fontFamily: FONTS.sans,
-    fontSize: 12.5,
+    ...TYPE.bodySmall,
     lineHeight: 16,
   },
   mediaGrid: {
@@ -662,8 +658,7 @@ const styles = StyleSheet.create({
   },
   mediaLabel: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sans,
-    fontSize: 11,
+    ...TYPE.metadata,
     lineHeight: 14,
   },
   sharedRow: {
@@ -679,8 +674,7 @@ const styles = StyleSheet.create({
   sharedLabel: {
     color: COLORS.textStrong,
     flex: 1,
-    fontFamily: FONTS.sansSemi,
-    fontSize: 17,
+    ...TYPE.cardTitle,
     lineHeight: 22,
   },
   deepDiveSection: {
@@ -697,8 +691,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansBold,
-    fontSize: 17,
+    ...TYPE.cardTitle,
     lineHeight: 22,
   },
   insightRow: {
@@ -722,14 +715,12 @@ const styles = StyleSheet.create({
   insightTitle: {
     color: COLORS.textStrong,
     flex: 1,
-    fontFamily: FONTS.sansBold,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     lineHeight: 17,
   },
   insightCopy: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sans,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     lineHeight: 16,
   },
   twoColumnGrid: {
@@ -769,14 +760,12 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansBold,
-    fontSize: 14,
+    ...TYPE.label,
     lineHeight: 18,
   },
   cardSubtitle: {
     color: COLORS.textBase,
-    fontFamily: FONTS.sans,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     lineHeight: 17,
   },
   sliderHitArea: {

@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { CalendarDays, Camera, X } from 'lucide-react-native';
 import { Controller, useForm } from 'react-hook-form';
@@ -14,7 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { Avatar, Button, TextInput } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import {
   normalizeProfileForm,
@@ -24,6 +25,7 @@ import {
 } from '@/features/account/profile-form';
 import { useUpdateProfile, useUploadProfilePicture } from '@/hooks/mutations/use-profile-mutation';
 import { useProfile } from '@/hooks/queries/use-profile';
+import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
 
 interface EditProfileSheetProps {
   onClose?: () => void;
@@ -34,6 +36,7 @@ export function EditProfileSheet({
   onClose,
   expandSheet,
 }: EditProfileSheetProps) {
+  const insets = useSafeAreaInsets();
   const { data: profile } = useProfile();
   const updateProfile = useUpdateProfile();
   const uploadProfilePicture = useUploadProfilePicture();
@@ -112,9 +115,7 @@ export function EditProfileSheet({
           gap: 12,
           paddingHorizontal: 20,
           paddingTop: 12,
-          paddingBottom: 20,
-          borderTopWidth: 1,
-          borderTopColor: COLORS.strokeWeaker,
+          paddingBottom: Math.max(getSheetBottomPadding(insets.bottom, 12), 20),
           backgroundColor: COLORS.background,
         }}
       >
@@ -122,23 +123,21 @@ export function EditProfileSheet({
           variant="secondary"
           size="lg"
           className="h-14 flex-1"
-          textClassName="text-base font-bold"
-          onPress={onClose}
+                    onPress={onClose}
         >
           Dismiss
         </Button>
         <Button
           size="lg"
           className="h-14 flex-1"
-          textClassName="text-base font-bold"
-          loading={updateProfile.isPending}
+                    loading={updateProfile.isPending}
           onPress={submitFromFooter}
         >
           Save changes
         </Button>
       </View>
     ),
-    [onClose, submitFromFooter, updateProfile.isPending],
+    [insets.bottom, onClose, submitFromFooter, updateProfile.isPending],
   );
 
   const field = (
@@ -196,7 +195,7 @@ export function EditProfileSheet({
             justifyContent: 'space-between',
           }}
         >
-          <Text style={SETTINGS_TYPE.sectionTitle}>
+          <Text style={TYPE.sectionTitle}>
             Edit profile
           </Text>
           <TouchableOpacity
@@ -309,7 +308,7 @@ export function EditProfileSheet({
               disabled={uploadProfilePicture.isPending}
               style={{ marginTop: 8 }}
             >
-              <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.brand }}>
+              <Text style={{ ...TYPE.bodySmall, color: COLORS.brand }}>
                 {uploadProfilePicture.isPending ? 'Uploading photo...' : 'Change profile photo'}
               </Text>
             </TouchableOpacity>
@@ -340,7 +339,7 @@ export function EditProfileSheet({
           {field('phone', 'Phone', {
             keyboardType: 'phone-pad',
             leftElement: (
-              <Text style={{ color: COLORS.textStrong, fontFamily: FONTS.sansMedium }}>
+              <Text style={[TYPE.label, {color: COLORS.textStrong}]}>
                 🇳🇬
               </Text>
             ),
@@ -350,7 +349,7 @@ export function EditProfileSheet({
           {field('bio', 'About me', { multiline: true, numberOfLines: 3 })}
 
           {updateProfile.isError && (
-            <Text style={[SETTINGS_TYPE.supporting, { color: COLORS.error }]}>
+            <Text style={[TYPE.bodySmall, { color: COLORS.error }]}>
               We couldn&apos;t save those changes. Please try again.
             </Text>
           )}

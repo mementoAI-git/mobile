@@ -7,7 +7,8 @@ import type { ICapsule } from '@/types';
 import { Badge } from '@/components/ui';
 import { MoreVertical, Calendar, Users, Play, Mic, FileText } from 'lucide-react-native';
 import { useUiStore } from '@/store';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { getThemeById, getThemeByColor } from '@/constants/themes';
 import { cn } from '@/lib/utils';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
@@ -136,14 +137,14 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
           >
             <View className="p-3 flex-row gap-3">
               {/* Left side: Single Attachment Thumbnail */}
-              <View 
+              <View
                 className="rounded-xl bg-fill-weaker border border-stroke-weaker overflow-hidden items-center justify-center relative shrink-0"
                 style={{ width: scale(96), height: scale(96) }}
               >
                 {(() => {
                   const firstImg: any = attachments.find((attr: any) => isImage(attr.type, attr.url) && ((attr as any).thumbnail || attr.url));
                   const firstNonImg: any = attachments.find((attr: any) => !isImage(attr.type, attr.url));
- 
+
                   if (firstImg) {
                     return (
                       <SignedAttachmentImage
@@ -157,9 +158,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                     return renderAttachmentIcon(firstNonImg.type, firstNonImg.url);
                   } else {
                     return (
-                      <Text 
-                        className="text-text-muted italic" 
-                        style={{ fontFamily: FONTS.sans, fontSize: moderateScale(10) }}
+                      <Text
+                        className="text-text-muted italic"
+                        style={TYPE.eyebrow}
                       >
                         No Assets
                       </Text>
@@ -167,7 +168,7 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                   }
                 })()}
               </View>
- 
+
               {/* Right side: Content */}
               <View className="flex-1 gap-1.5 justify-between">
                 <View className="flex-row items-center justify-between">
@@ -188,52 +189,52 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                     <MoreVertical size={scale(14)} color={COLORS.textWeak} />
                   </TouchableOpacity>
                 </View>
- 
+
                 <View>
                   <Text
-                    className="text-text-strong font-medium"
+                    className="text-text-strong"
                     numberOfLines={1}
-                    style={{ fontFamily: FONTS.serif, fontSize: moderateScale(16) }}
+                    style={TYPE.cardTitle}
                   >
                     {capsule.title || 'Untitled Capsule'}
                   </Text>
                   <Text
                     className="text-text-weak leading-tight"
                     numberOfLines={2}
-                    style={{ fontFamily: FONTS.sans, fontSize: moderateScale(10) }}
+                    style={TYPE.bodySmall}
                   >
                     {capsule.body || 'No message'}
                   </Text>
                 </View>
- 
+
                 {/* Compact Info Footer */}
                 <View className="bg-fill-weaker rounded-lg p-2 gap-1">
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-text-weak" style={{ fontFamily: FONTS.sans, fontSize: moderateScale(8) }}>To:</Text>
+                    <Text className="text-text-weak" style={TYPE.eyebrow}>To:</Text>
                     <View className="flex-row items-center gap-1">
                       {recipients.slice(0, 1).map((r, i) => (
-                        <Text 
-                          key={i} 
-                          className="text-text-strong font-medium" 
-                          style={{ fontFamily: FONTS.sansMedium, fontSize: moderateScale(10) }} 
+                        <Text
+                          key={i}
+                          className="text-text-strong"
+                          style={TYPE.metadata}
                           numberOfLines={1}
                         >
                           {r.first_name || r.email?.split('@')[0]}
                         </Text>
                       ))}
                       {recipients.length > 1 && (
-                        <Text className="text-text-weak" style={{ fontFamily: FONTS.sans, fontSize: moderateScale(9) }}>
+                        <Text className="text-text-weak" style={TYPE.eyebrow}>
                           +{recipients.length - 1}
                         </Text>
                       )}
                     </View>
                   </View>
- 
+
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-text-weak" style={{ fontFamily: FONTS.sans, fontSize: moderateScale(8) }}>Due:</Text>
-                    <Text 
-                      className="text-text-strong" 
-                      style={{ fontFamily: FONTS.sansMedium, fontSize: moderateScale(10) }}
+                    <Text className="text-text-weak" style={TYPE.eyebrow}>Due:</Text>
+                    <Text
+                      className="text-text-strong"
+                      style={TYPE.metadata}
                     >
                       {capsule.schedule_date ? dayjs(capsule.schedule_date).format('MMM D, YYYY') : 'No date'}
                     </Text>
@@ -242,10 +243,10 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
               </View>
             </View>
           </TouchableOpacity>
- 
-          <Text 
-            className="text-center font-medium text-text-strong mt-1 p-1" 
-            style={{ fontFamily: FONTS.sansMedium, fontSize: moderateScale(14) }}
+
+          <Text
+            className="text-center text-text-strong mt-1 p-1"
+            style={TYPE.label}
           >
             {getDueInText()}
           </Text>
@@ -293,23 +294,23 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
             {/* Title & Body */}
             <View>
               <Text
-                className="text-lg text-text-strong font-medium mb-1"
+                className="text-text-strong mb-1"
                 numberOfLines={1}
-                style={{ fontFamily: FONTS.serif }}
+                style={TYPE.cardTitle}
               >
                 {capsule.title || 'Untitled Capsule'}
               </Text>
               <Text
                 className="text-text-weak leading-relaxed border-t border-fill-weaker pt-2"
                 numberOfLines={2}
-                style={{ fontFamily: FONTS.sans, fontSize: moderateScale(12) }}
+                style={TYPE.bodySmall}
               >
                 {capsule.body || 'No message'}
               </Text>
             </View>
- 
+
             {/* Attachment Strip (Parity with Web ImageThumbnail) */}
-            <View 
+            <View
               className="flex-row items-center gap-1.5 overflow-hidden"
               style={{ height: scale(40) }}
             >
@@ -336,9 +337,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                       )}
                       {showOverlay && (
                         <View className="absolute inset-0 bg-black/50 items-center justify-center">
-                          <Text 
-                            className="text-white font-bold" 
-                            style={{ fontSize: moderateScale(10) }}
+                          <Text
+                            className="text-white"
+                            style={TYPE.eyebrow}
                           >
                             +{attachments.length - 3}
                           </Text>
@@ -349,7 +350,7 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                 })
               ) : (
                 <View className="h-10 justify-center">
-                  <Text className="text-[10px] text-text-muted italic" style={{ fontFamily: FONTS.sans }}>No Assets</Text>
+                  <Text className="text-text-muted italic" style={TYPE.eyebrow}>No Assets</Text>
                 </View>
               )}
             </View>
@@ -357,22 +358,22 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
             {/* Recipients & Info Footer */}
             <View className="bg-fill-weaker rounded-xl p-3 gap-2">
               <View className="flex-row items-center justify-between">
-                <Text className="text-[10px] text-text-weak" style={{ fontFamily: FONTS.sans }}>To:</Text>
+                <Text className="text-text-weak" style={TYPE.eyebrow}>To:</Text>
                 <View className="flex-row items-center gap-1.5">
                   {recipients.slice(0, 1).map((r, i) => (
                     <View key={i} className="flex-row items-center gap-1.5">
                       <View className="size-5 rounded-full bg-fill-weak items-center justify-center">
-                        <Text className="text-[10px] font-bold">
+                        <Text style={TYPE.eyebrow}>
                           {(r.first_name || r.email || '?')[0].toUpperCase()}
                         </Text>
                       </View>
-                      <Text className="text-xs text-text-strong font-medium" style={{ fontFamily: FONTS.sansMedium }}>
+                      <Text className="text-text-strong" style={TYPE.metadata}>
                         {r.first_name || r.email?.split('@')[0]}
                       </Text>
                     </View>
                   ))}
                   {recipients.length > 1 && (
-                    <Text className="text-xs text-text-weak" style={{ fontFamily: FONTS.sans }}>
+                    <Text className="text-text-weak" style={TYPE.metadata}>
                       +{recipients.length - 1} other
                     </Text>
                   )}
@@ -380,10 +381,10 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
               </View>
 
               <View className="flex-row items-center justify-between">
-                <Text className="text-[10px] text-text-weak" style={{ fontFamily: FONTS.sans }}>Due Date:</Text>
+                <Text className="text-text-weak" style={TYPE.eyebrow}>Due Date:</Text>
                 <View className="flex-row items-center gap-1">
                   <Calendar size={12} color={COLORS.textWeak} />
-                  <Text className="text-xs text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+                  <Text className="text-text-strong" style={TYPE.metadata}>
                     {capsule.schedule_date ? dayjs(capsule.schedule_date).format('MMM D, YYYY') : 'No date'}
                   </Text>
                 </View>
@@ -392,7 +393,7 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
           </View>
         </TouchableOpacity>
 
-        <Text className="text-center text-sm font-medium text-text-strong mt-1 p-1" style={{ fontFamily: FONTS.sansMedium }}>
+        <Text className="text-center text-text-strong mt-1 p-1" style={TYPE.label}>
           {getDueInText()}
         </Text>
       </Animated.View>

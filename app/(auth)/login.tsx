@@ -22,6 +22,7 @@ import Animated, {
 import { Button, TextInput, PasswordInput, Logo } from '@/components/ui';
 import { useLoginLogic } from '@/hooks/use-login-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Fingerprint } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -154,15 +155,13 @@ export default function LoginScreen() {
             {/* Heading — collapses second */}
             <Animated.View style={[headingStyle, { marginBottom: isKeyboardVisible ? 16 : 40 }]}>
               <Animated.Text
-                className="text-[40px] text-text-strong mb-2"
-                style={{ fontFamily: FONTS.serif }}
+                className=" text-text-strong mb-2" style={TYPE.displayTitle}
               >
                 Welcome back
               </Animated.Text>
               <Animated.Text
-                className="text-lg text-text-base leading-relaxed"
-                style={{ fontFamily: FONTS.sans }}
-              >
+                className="text-text-base leading-relaxed"
+                style={TYPE.body}>
                 Sign in to continue
               </Animated.Text>
             </Animated.View>
@@ -178,7 +177,7 @@ export default function LoginScreen() {
                     className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
                   >
                     {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />}
-                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansBold }}>{securityLoginLabel}</Animated.Text>
+                    <Animated.Text className="text-text-strong" style={TYPE.body}>{securityLoginLabel}</Animated.Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleGoogleLogin}
@@ -187,7 +186,7 @@ export default function LoginScreen() {
                     className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
                   >
                     {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={18} />}
-                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansBold }}>Continue with Google</Animated.Text>
+                    <Animated.Text className="text-text-strong" style={TYPE.body}>Continue with Google</Animated.Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleAppleLogin}
@@ -196,7 +195,7 @@ export default function LoginScreen() {
                     className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
                   >
                     {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={18} />}
-                    <Animated.Text className="text-base text-text-strong font-semibold" style={{ fontFamily: FONTS.sansBold }}>Continue with Apple</Animated.Text>
+                    <Animated.Text className="text-text-strong" style={TYPE.body}>Continue with Apple</Animated.Text>
                   </TouchableOpacity>
                 </Animated.View>
               )}
@@ -205,9 +204,8 @@ export default function LoginScreen() {
               <Animated.View style={dividerStyle} className="flex-row items-center gap-4 my-3">
                 <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
                 <Animated.Text
-                  className="text-xs text-text-disabled lowercase"
-                  style={{ fontFamily: FONTS.sans }}
-                >
+                  className="text-text-disabled lowercase"
+                  style={TYPE.metadata}>
                   or
                 </Animated.Text>
                 <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
@@ -263,9 +261,8 @@ export default function LoginScreen() {
                     {rememberMe && <View className="size-1.5 rounded-full bg-white" />}
                   </View>
                   <Animated.Text
-                    className="text-xs text-text-base"
-                    style={{ fontFamily: FONTS.sans }}
-                  >
+                    className="text-text-base"
+                    style={TYPE.metadata}>
                     Remember for 30 days
                   </Animated.Text>
                 </TouchableOpacity>
@@ -275,9 +272,8 @@ export default function LoginScreen() {
                   className="py-1"
                 >
                   <Animated.Text
-                    className="text-xs text-brand font-bold underline"
-                    style={{ fontFamily: FONTS.sansBold }}
-                  >
+                    className="text-brand underline"
+                    style={TYPE.metadata}>
                     Forgot password?
                   </Animated.Text>
                 </TouchableOpacity>
@@ -298,16 +294,14 @@ export default function LoginScreen() {
             {/* Footer */}
             <View className="flex-row items-center justify-center gap-2 mt-10">
               <Animated.Text
-                className="text-base text-text-weak"
-                style={{ fontFamily: FONTS.sans }}
-              >
+                className="text-text-weak"
+                style={TYPE.body}>
                 Don't have an account?
               </Animated.Text>
               <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
                 <Animated.Text
-                  className="text-base text-brand font-bold"
-                  style={{ fontFamily: FONTS.sansBold }}
-                >
+                  className="text-brand"
+                  style={TYPE.body}>
                   Sign up
                 </Animated.Text>
               </TouchableOpacity>

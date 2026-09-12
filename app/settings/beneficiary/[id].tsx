@@ -12,9 +12,11 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { Avatar, Skeleton, EmptyState } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
+import { getSettingsHeaderLayout } from '@/features/settings/settings-header-layout';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
+const layout = getSettingsHeaderLayout();
 
 export default function BeneficiaryDetailScreen() {
   const router = useRouter();
@@ -162,8 +164,9 @@ export default function BeneficiaryDetailScreen() {
           onPress={handleBack}
           activeOpacity={0.78}
           style={styles.backButton}
+          accessibilityLabel="Go back"
         >
-          <ArrowLeft size={23} color={COLORS.textBase} />
+          <ArrowLeft size={layout.iconSize} color={COLORS.textBase} />
         </TouchableOpacity>
         
         <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -173,7 +176,7 @@ export default function BeneficiaryDetailScreen() {
             style={styles.actionPill}
           >
             <UserRoundPen size={16} color={COLORS.textStrong} style={{ marginRight: 6 }} />
-            <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>Edit User</Text>
+            <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>Edit User</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -181,7 +184,7 @@ export default function BeneficiaryDetailScreen() {
             activeOpacity={0.78}
             style={styles.iconButton}
           >
-            <Trash2 size={20} color={COLORS.textStrong} />
+            <Trash2 size={20} color={COLORS.error} />
           </TouchableOpacity>
         </View>
       </View>
@@ -202,15 +205,15 @@ export default function BeneficiaryDetailScreen() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }} numberOfLines={1}>
+              <Text style={{ ...TYPE.uiTitle, color: COLORS.textStrong }} numberOfLines={1}>
                 {name}
               </Text>
               {beneficiary.email && (
-                <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, marginTop: 4 }} numberOfLines={1}>
+                <Text style={{ ...TYPE.label, color: COLORS.textWeak, marginTop: 4 }} numberOfLines={1}>
                   {beneficiary.email}
                 </Text>
               )}
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textMuted, marginTop: 4 }}>
+              <Text style={{ ...TYPE.bodySmall, color: COLORS.textMuted, marginTop: 4 }}>
                 {beneficiary.relationship || (isPendingStatus ? 'Invitation pending' : 'Beneficiary')}
               </Text>
             </View>
@@ -221,11 +224,11 @@ export default function BeneficiaryDetailScreen() {
             <View style={styles.pendingAlertCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                 <MailWarning size={20} color={COLORS.warning} style={{ marginRight: 10 }} />
-                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong }}>
+                <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>
                   Invitation Pending
                 </Text>
               </View>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textBase, lineHeight: 20, marginBottom: 16 }}>
+              <Text style={{ ...TYPE.label, color: COLORS.textBase, lineHeight: 20, marginBottom: 16 }}>
                 This beneficiary hasn't accepted your invitation yet. They won't receive memories until they join.
               </Text>
               <TouchableOpacity
@@ -235,7 +238,7 @@ export default function BeneficiaryDetailScreen() {
                 style={styles.resendButton}
               >
                 <MailPlus size={16} color={COLORS.brand} style={{ marginRight: 6 }} />
-                <Text style={{ fontFamily: FONTS.sansBold, fontSize: 14, color: COLORS.brand }}>
+                <Text style={{ ...TYPE.label, color: COLORS.brand }}>
                   {isResending ? 'Sending...' : 'Resend Invitation'}
                 </Text>
               </TouchableOpacity>
@@ -292,7 +295,7 @@ export default function BeneficiaryDetailScreen() {
           <Text style={[styles.sectionHeader, { marginTop: 32 }]}>Groups</Text>
           
           {beneficiaryGroups.length === 0 ? (
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textMuted, marginLeft: 4 }}>
+            <Text style={{ ...TYPE.label, color: COLORS.textMuted, marginLeft: 4 }}>
               Not added to any groups.
             </Text>
           ) : (
@@ -304,7 +307,7 @@ export default function BeneficiaryDetailScreen() {
                     key={g._id || idx} 
                     style={[
                       styles.groupPill,
-                      { borderColor: color }
+                      { backgroundColor: `${color}18` }
                     ]}
                   >
                     <Text style={[styles.groupPillText, { color: color }]}>
@@ -324,11 +327,11 @@ export default function BeneficiaryDetailScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    height: 68,
+    height: layout.height,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: layout.horizontalPadding,
   },
   backButton: {
     width: 44,
@@ -359,16 +362,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
     borderRadius: 24,
   },
   pendingAlertCard: {
     marginTop: 16,
     padding: 20,
     backgroundColor: `${COLORS.warning}0A`, // Very subtle tint of warning gold
-    borderWidth: 1,
-    borderColor: `${COLORS.warning}33`, 
     borderRadius: 20,
   },
   resendButton: {
@@ -379,11 +378,10 @@ const styles = StyleSheet.create({
     backgroundColor: `${COLORS.brand}15`,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 16,
+    borderRadius: 999,
   },
   sectionHeader: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 15,
+    ...TYPE.body,
     color: COLORS.textStrong,
     marginTop: 32,
     marginBottom: 16,
@@ -393,23 +391,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   fieldLabel: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 13,
-    color: COLORS.textStrong,
+    ...TYPE.bodySmall,
+    color: COLORS.textWeak,
     marginLeft: 4,
   },
   fieldValueContainer: {
     minHeight: 56,
     justifyContent: 'center',
     backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
-    borderRadius: 12,
+    borderRadius: 16,
     paddingHorizontal: 16,
   },
   fieldValueText: {
-    fontFamily: FONTS.sans,
-    fontSize: 16,
+    ...TYPE.body,
     color: COLORS.textStrong,
   },
   groupPillsContainer: {
@@ -422,11 +416,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 999,
-    borderWidth: 1.5,
-    backgroundColor: COLORS.card,
   },
   groupPillText: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 14,
+    ...TYPE.label,
   }
 });

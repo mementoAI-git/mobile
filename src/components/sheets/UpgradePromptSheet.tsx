@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Sparkles, Crown, CheckCircle2, Zap } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Button } from '@/components/ui';
 import * as Haptics from 'expo-haptics';
 import { useQueryClient } from '@tanstack/react-query';
@@ -50,16 +51,14 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
         <View className="size-16 rounded-3xl bg-brand/10 border border-brand/20 items-center justify-center shadow-sm mb-4">
           <Crown size={32} color={COLORS.brand} strokeWidth={2} />
         </View>
-        <Text 
-          className="text-2xl text-center text-text-strong font-semibold mb-2" 
-          style={{ fontFamily: FONTS.serif }}
-        >
+        <Text
+          className="text-center text-text-strong mb-2"
+          style={TYPE.sectionTitle}>
           Unlock Premium Memento
         </Text>
-        <Text 
-          className="text-sm text-center text-text-weak px-4 leading-relaxed" 
-          style={{ fontFamily: FONTS.sans }}
-        >
+        <Text
+          className="text-center text-text-weak px-4 leading-relaxed"
+          style={TYPE.label}>
           You have reached the free tier limit of **5 Time Capsules**. Upgrade to Pro to preserve infinite future memories.
         </Text>
       </View>
@@ -72,10 +71,10 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
               <CheckCircle2 size={18} color={COLORS.brand} />
             </View>
             <View className="flex-1">
-              <Text className="text-sm font-semibold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>
+              <Text className="text-text-strong" style={TYPE.label}>
                 {f.title}
               </Text>
-              <Text className="text-xs text-text-weak mt-0.5" style={{ fontFamily: FONTS.sans }}>
+              <Text className="text-text-weak mt-0.5" style={TYPE.metadata}>
                 {f.desc}
               </Text>
             </View>
@@ -87,18 +86,18 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
       <View className="bg-white border border-brand/30 rounded-3xl p-5 shadow-md flex-row items-center justify-between mb-8 relative overflow-hidden">
         {/* Abstract subtle accent glow */}
         <View className="absolute right-0 top-0 size-24 bg-brand/5 rounded-full blur-2xl -mr-6 -mt-6 pointer-events-none" />
-        
+
         <View>
           <View className="flex-row items-center gap-1.5 mb-1">
-            <Text className="text-sm font-bold text-brand uppercase tracking-wider" style={{ fontFamily: FONTS.sansBold }}>Memento Pro</Text>
+            <Text className="text-brand uppercase tracking-wider" style={TYPE.label}>Memento Pro</Text>
             <Sparkles size={12} color={COLORS.brand} />
           </View>
-          <Text className="text-2xl font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>
-            $9.99<Text className="text-xs text-text-weak font-normal" style={{ fontFamily: FONTS.sans }}> / month</Text>
+          <Text className="text-text-strong" style={TYPE.sectionTitle}>
+            $9.99<Text className="text-text-weak" style={TYPE.metadata}> / month</Text>
           </Text>
         </View>
         <View className="bg-brand/10 border border-brand/20 px-3 py-1 rounded-full">
-          <Text className="text-[10px] font-bold text-brand" style={{ fontFamily: FONTS.sansBold }}>POPULAR</Text>
+          <Text className="text-brand" style={TYPE.eyebrow}>POPULAR</Text>
         </View>
       </View>
 
@@ -119,7 +118,7 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
           activeOpacity={0.7}
           className="h-12 items-center justify-center"
         >
-          <Text className="text-sm text-text-weak font-semibold" style={{ fontFamily: FONTS.sansMedium }}>
+          <Text className="text-text-weak" style={TYPE.label}>
             Maybe Later
           </Text>
         </TouchableOpacity>

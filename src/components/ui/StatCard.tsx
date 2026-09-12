@@ -3,10 +3,11 @@ import { ImageBackground, View, ScrollView, ImageSourcePropType, StyleSheet, Pla
 import * as Haptics from 'expo-haptics';
 import { LucideIcon } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { scale, verticalScale } from 'react-native-size-matters';
- 
+
 interface StatCardProps {
   label: string;
   value: string | number;
@@ -17,7 +18,7 @@ interface StatCardProps {
   className?: string;
   variant?: 'blue' | 'pink' | 'orange' | 'green' | 'purple' | 'yellow';
 }
- 
+
 const valueColors = {
   blue: 'text-info-strong',
   pink: 'text-stat-pink',
@@ -26,7 +27,7 @@ const valueColors = {
   purple: 'text-stat-purple',
   yellow: 'text-stat-yellow',
 };
- 
+
 export function StatCard({
   label,
   value,
@@ -39,21 +40,21 @@ export function StatCard({
 }: StatCardProps) {
   const scaleValue = useSharedValue(1);
   const hasBg = !!bg;
- 
+
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scaleValue.value }],
   }));
- 
+
   const handlePressIn = () => {
     if (onPress) scaleValue.value = withSpring(0.97);
   };
- 
+
   const handlePressOut = () => {
     if (onPress) scaleValue.value = withSpring(1);
   };
- 
+
   const content = (
-    <View 
+    <View
       className={cn(
         "flex-row items-center justify-between px-5 py-4 w-full",
         !hasBg && "bg-fill-weaker"
@@ -63,10 +64,10 @@ export function StatCard({
       <View className="gap-1 flex-shrink" style={{ flex: 1 }}>
         <Animated.Text
           className={cn(
-            "font-bold uppercase tracking-widest text-[10px]",
+            "uppercase tracking-widest",
             hasBg ? "text-text-weak" : "text-text-muted"
           )}
-          style={{ fontFamily: FONTS.sansBold }}
+          style={TYPE.eyebrow}
           numberOfLines={1}
         >
           {label}
@@ -74,11 +75,9 @@ export function StatCard({
         <View className="flex-row items-baseline gap-1.5">
           <Animated.Text
             className={cn(
-              'font-bold',
-              hasBg ? "text-xl" : "text-2xl",
               valueColors[variant]
             )}
-            style={{ fontFamily: FONTS.sansBold }}
+            style={TYPE.stat}
             numberOfLines={1}
           >
             {value}
@@ -86,10 +85,9 @@ export function StatCard({
           {unit ? (
             <Animated.Text
               className={cn(
-                "text-sm font-semibold",
                 hasBg ? "text-text-strong" : "text-text-muted"
               )}
-              style={{ fontFamily: FONTS.sansSemi }}
+              style={TYPE.metadata}
             >
               {unit}
             </Animated.Text>
@@ -102,7 +100,7 @@ export function StatCard({
           React.isValidElement(Icon) ? "opacity-100" : (hasBg ? "opacity-30" : "opacity-20")
         )}>
           {typeof Icon === 'string' ? (
-            <Animated.Text className="text-3xl">{Icon}</Animated.Text>
+            <Animated.Text style={TYPE.screenTitle}>{Icon}</Animated.Text>
           ) : React.isValidElement(Icon) ? (
             Icon
           ) : (

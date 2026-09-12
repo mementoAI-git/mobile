@@ -21,6 +21,7 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 const LOGO_3D = require('../../../assets/splash-icon.jpg');
 const LOGO_FLAT = require('../../../assets/images/memento_flat.webp');
@@ -567,16 +568,10 @@ const styles = StyleSheet.create({
   },
 
   wordmarkLetter: {
-    fontFamily: Platform.select({
-      ios: 'Iowan Old Style',
-      android: 'serif',
-      default: 'serif',
-    }),
-
-    fontSize: 36,
+    ...TYPE.displayTitle,
     lineHeight: 44,
 
-    fontWeight: '400',
+
 
     // color: '#000000',
     color: COLORS.textStrong,

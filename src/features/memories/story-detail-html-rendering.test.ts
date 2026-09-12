@@ -14,7 +14,7 @@ describe('story detail html rendering', () => {
 
   test('supports the editor html subset including quotes and inline formatting', () => {
     expect(component).toContain("case 'blockquote':");
-    expect(component).toContain("strong: { fontFamily: FONTS.sansBold");
+    expect(component).toContain('strong: {...TYPE.bodyStrong');
     expect(component).toContain("s: { textDecorationLine: 'line-through'");
     expect(component).toContain('renderInlineHtml');
   });

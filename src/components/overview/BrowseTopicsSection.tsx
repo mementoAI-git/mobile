@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useOverviewPrompts } from '@/hooks/queries/use-prompts';
 import { useEnrichmentStats } from '@/hooks/use-enrichment-stats';
@@ -91,11 +91,11 @@ export function BrowseTopicsSection() {
   return (
     <Animated.View entering={FadeInDown.delay(250)} className="gap-5">
       <View className="flex-row items-center justify-between px-1">
-        <Animated.Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
+        <Animated.Text className="text-text-strong" style={TYPE.sectionTitle}>
           Browse conversations <Animated.Text className="text-text-weak italic">by topics</Animated.Text>
         </Animated.Text>
         <TouchableOpacity onPress={handleSeeAll} activeOpacity={0.7}>
-          <Animated.Text className="text-sm text-brand font-semibold" style={{ fontFamily: FONTS.sansSemi }}>See all</Animated.Text>
+          <Animated.Text className="text-brand" style={TYPE.buttonSmall}>See all</Animated.Text>
         </TouchableOpacity>
       </View>
 

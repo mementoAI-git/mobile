@@ -4,7 +4,8 @@ import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react-native';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 interface CategoryCardProps {
   title: string;
@@ -58,8 +59,8 @@ export const CategoryCard = React.memo(function CategoryCard({
         <View className="p-7 gap-3">
           <View className="flex-row items-center justify-between">
             <Animated.Text
-              className="text-[26px] text-text-strong leading-tight flex-1"
-              style={{ fontFamily: FONTS.serif }}
+              className="text-text-strong flex-1"
+              style={TYPE.screenTitle}
             >
               {title}
             </Animated.Text>
@@ -69,8 +70,8 @@ export const CategoryCard = React.memo(function CategoryCard({
           </View>
           {subtitle && (
             <Animated.Text
-              className="text-[15px] text-text-base leading-relaxed opacity-80"
-              style={{ fontFamily: FONTS.sans }}
+              className="text-text-base opacity-80"
+              style={TYPE.body}
             >
               {subtitle}
             </Animated.Text>
@@ -90,8 +91,7 @@ export const CategoryCard = React.memo(function CategoryCard({
             >
               <Animated.Text
                 style={{
-                  fontFamily: FONTS.sansBold,
-                  fontSize: 11,
+                  ...TYPE.metadata,
                   color: isComplete ? COLORS.success : COLORS.textWeak,
                   letterSpacing: 0.5,
                 }}
@@ -105,4 +105,3 @@ export const CategoryCard = React.memo(function CategoryCard({
     </Animated.View>
   );
 });
-

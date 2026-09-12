@@ -126,6 +126,7 @@ export interface IMemory {
   category?: string;
   summary?: string;
   topics?: string[];
+  visibility?: 'private' | 'everyone';
   groups?: IMemoryAccessItem[];
   beneficiaries?: IMemoryAccessItem[];
   /** Quick capture / daily-prompt enrichment state — mirrors web enrichment_status */

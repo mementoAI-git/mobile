@@ -6,6 +6,7 @@ import { MailX, CheckCircle2 } from 'lucide-react-native';
 import { Button, EmptyState, Spinner } from '@/components/ui';
 import { useAcceptInviteLogic } from '@/hooks/use-accept-invite-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 export default function AcceptInviteScreen() {
   const {
@@ -55,19 +56,19 @@ export default function AcceptInviteScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background px-6">
       <View className="flex-1 justify-center gap-6">
-        <Animated.Text className="text-5xl text-center">💌</Animated.Text>
+        <Animated.Text className="text-center" style={TYPE.displayTitle}>💌</Animated.Text>
 
         <View className="items-center gap-2">
-          <Animated.Text 
-            className="text-3xl text-text-strong text-center"
-            style={{ fontFamily: FONTS.serif }}
+          <Animated.Text
+            className="text-text-strong text-center"
+            style={TYPE.screenTitle}
           >
             You've been invited
           </Animated.Text>
           {inviteData?.from && (
-            <Animated.Text 
-              className="text-base text-text-weak text-center"
-              style={{ fontFamily: FONTS.sans }}
+            <Animated.Text
+              className="text-text-weak text-center"
+              style={TYPE.body}
             >
               {inviteData.from} wants to add you as a beneficiary.
             </Animated.Text>
@@ -76,9 +77,9 @@ export default function AcceptInviteScreen() {
 
         {inviteData?.message && (
           <View className="bg-brand-subtle rounded-2xl p-5 border border-brand-weak/10">
-            <Animated.Text 
-              className="text-sm text-text-base leading-relaxed italic text-center"
-              style={{ fontFamily: FONTS.sans }}
+            <Animated.Text
+              className="text-text-base italic text-center"
+              style={TYPE.body}
             >
               "{inviteData.message}"
             </Animated.Text>
@@ -87,9 +88,9 @@ export default function AcceptInviteScreen() {
 
         {acceptError && (
           <View className="bg-error-tint border border-error-weak rounded-xl px-4 py-3">
-            <Animated.Text 
-              className="text-sm text-error-strong text-center"
-              style={{ fontFamily: FONTS.sansMedium }}
+            <Animated.Text
+              className="text-error-strong text-center"
+              style={TYPE.bodySmall}
             >
               {(acceptError as any).message ?? 'Couldn’t accept the invitation. Try again.'}
             </Animated.Text>
@@ -98,9 +99,9 @@ export default function AcceptInviteScreen() {
 
         <View className="gap-3 mt-4">
           {!token && (
-            <Animated.Text 
-              className="text-sm text-text-weak text-center mb-2"
-              style={{ fontFamily: FONTS.sans }}
+            <Animated.Text
+              className="text-text-weak text-center mb-2"
+              style={TYPE.bodySmall}
             >
               You'll need to sign in or create an account to accept this invite.
             </Animated.Text>

@@ -11,12 +11,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, FolderPlus, UserRoundPlus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Button, Skeleton } from '@/components/ui';
+import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';
 import { BeneficiaryEmptyState } from '@/components/beneficiaries/BeneficiaryEmptyState';
 import { BeneficiaryGroupRow } from '@/components/beneficiaries/BeneficiaryGroupRow';
 import { BeneficiaryPersonRow } from '@/components/beneficiaries/BeneficiaryPersonRow';
 import { useBeneficiariesSettingsLogic } from '@/hooks/use-beneficiaries-settings-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import {
   filterBeneficiaries,
   type BeneficiaryFilterTab,
@@ -51,20 +52,23 @@ function CountTab({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.78}
-      className={`min-h-12 flex-row items-center rounded-2xl px-4 ${active ? 'bg-text-strong' : 'bg-fill-weak'}`}
+      accessibilityRole="tab"
+      accessibilityLabel={`${label}, ${count}`}
+      accessibilityState={{ selected: active }}
+      className={`h-11 flex-row items-center rounded-full px-5 ${active ? 'bg-text-strong' : 'bg-fill-weaker'}`}
     >
       <Text
-        className={`text-[16px] ${active ? 'text-white' : 'text-text-strong'}`}
-        style={{ fontFamily: FONTS.sansMedium }}
+        className={active ? 'text-white' : 'text-text-strong'}
+        style={TYPE.buttonSmall}
       >
         {label}
       </Text>
-      <View className={`ml-3 min-w-8 items-center rounded-full px-2 py-1 ${active ? 'bg-white/15' : 'bg-fill-weak'}`}>
+      <View className={`ml-2.5 rounded-full px-2 py-0.5 ${active ? 'bg-white/20' : 'bg-fill-weak'}`}>
         <Text
-          className={`text-[13px] ${active ? 'text-white' : 'text-text-weak'}`}
-          style={{ fontFamily: FONTS.sansMedium }}
+          className={active ? 'text-white' : 'text-text-weak'}
+          style={TYPE.metadata}
         >
-          {count > 9 ? '9+' : count}
+          {count > 99 ? '99+' : count}
         </Text>
       </View>
     </TouchableOpacity>
@@ -136,44 +140,28 @@ export default function BeneficiariesSettingsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <View className="h-[88px] flex-row items-center justify-between px-6">
-        <TouchableOpacity
-          onPress={handleBack}
-          activeOpacity={0.78}
-          className="size-11 items-center justify-center rounded-full bg-fill-weak"
-        >
-          <ArrowLeft size={23} color={COLORS.textBase} />
-        </TouchableOpacity>
-        <Text style={SETTINGS_TYPE.screenTitle}>
-          Beneficiaries
-        </Text>
-        <View className="size-11" />
-      </View>
+      <SettingsSubpageHeader title="Beneficiaries" onBack={handleBack} />
 
-      <View className="px-6 pb-5 pt-6">
-        <Text style={SETTINGS_TYPE.sectionTitle}>
-          Beneficiaries and groups
-        </Text>
-        <Text className="mt-3" style={SETTINGS_TYPE.body}>
+      <View className="px-6 pb-4 pt-1">
+        <Text style={{ ...TYPE.body, color: COLORS.textWeak }}>
           Invite the people who matter most. They’ll be able to receive your memories and interact with your Memento Agent.
         </Text>
-        <View className="mt-7 flex-row gap-3">
+        <View className="mt-5 flex-row gap-3">
           <CountTab label="People" count={beneficiaries.length} active={tab === 'people'} onPress={() => selectTab('people')} />
           <CountTab label="Groups" count={groups.length} active={tab === 'groups'} onPress={() => selectTab('groups')} />
         </View>
       </View>
 
-      <View className="h-px bg-stroke-weaker" />
       <View className="flex-1">
         <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
         {isLoading ? (
           <CollectionSkeleton />
         ) : isError ? (
           <View className="flex-1 items-center justify-center px-8">
-            <Text className="text-center" style={SETTINGS_TYPE.cardTitle}>
+            <Text className="text-center" style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>
               Your trusted circle needs a refresh
             </Text>
-            <Text className="mt-2 text-center" style={SETTINGS_TYPE.body}>
+            <Text className="mt-2 text-center" style={{ ...TYPE.body, color: COLORS.textWeak }}>
               We couldn’t load these details right now.
             </Text>
             <Button onPress={refresh} size="lg" className="mt-5 h-14 px-9">Try again</Button>
@@ -198,16 +186,14 @@ export default function BeneficiariesSettingsScreen() {
                           setFilterTab(subTab);
                         }}
                         activeOpacity={0.7}
-                        className={`rounded-full border px-4 py-2 ${
-                          filterTab === subTab
-                            ? 'border-brand bg-brand/10'
-                            : 'border-stroke-weaker bg-fill-weaker'
-                        }`}
+                        className={`rounded-full px-4 py-2 ${filterTab === subTab
+                            ? 'bg-brand/10'
+                            : 'bg-fill-weaker'
+                          }`}
                       >
                         <Text
                           style={{
-                            fontFamily: FONTS.sansSemi,
-                            fontSize: 12,
+                            ...TYPE.metadata,
                             color: filterTab === subTab ? COLORS.brand : COLORS.textWeak,
                             textTransform: 'capitalize',
                           }}

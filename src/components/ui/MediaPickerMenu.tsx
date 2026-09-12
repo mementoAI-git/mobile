@@ -13,7 +13,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
 import { Image as ImageIcon, ImagePlus, AudioLines, Music } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 export interface MediaPickerMenuProps {
   visible: boolean;
@@ -145,8 +146,7 @@ const styles = StyleSheet.create({
     borderColor: `${COLORS.brand}20`,
   },
   label: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 11,
+    ...TYPE.metadata,
     color: COLORS.textStrong,
   },
   labelRecording: {

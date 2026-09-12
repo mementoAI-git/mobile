@@ -33,7 +33,8 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { getModalBottomPadding } from '@/features/layout/modal-safe-area';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -199,15 +200,13 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontFamily: FONTS.serif,
-    fontSize: 22,
+    ...TYPE.sectionTitle,
     color: COLORS.textStrong,
     marginBottom: 4,
   },
 
   message: {
-    fontFamily: FONTS.sans,
-    fontSize: 14,
+    ...TYPE.body,
     color: COLORS.textBase,
     lineHeight: 21,
     marginBottom: 8,
@@ -231,8 +230,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.brand,
   },
   btnTextPrimary: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 16,
+    ...TYPE.button,
     color: COLORS.textInverse,
   },
 
@@ -243,8 +241,7 @@ const styles = StyleSheet.create({
     borderColor: `${COLORS.error}25`,
   },
   btnTextDestructive: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 16,
+    ...TYPE.button,
     color: COLORS.error,
   },
 
@@ -253,8 +250,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   btnTextGhost: {
-    fontFamily: FONTS.sans,
-    fontSize: 15,
+    ...TYPE.body,
     color: COLORS.textMuted,
   },
 
@@ -268,8 +264,7 @@ const styles = StyleSheet.create({
 
   btnText: {
     // base — overridden by variant styles above
-    fontFamily: FONTS.sansBold,
-    fontSize: 16,
+    ...TYPE.button,
     color: COLORS.textStrong,
   },
 });

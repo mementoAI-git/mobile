@@ -25,7 +25,9 @@ import { useUiStore, useUserStore } from '@/store';
 import { useStories } from '@/hooks/queries/use-memories';
 import { useOverviewPrompts } from '@/hooks/queries/use-prompts';
 import { secureStorage } from '@/lib/secure-storage';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 dayjs.extend(relativeTime);
@@ -66,6 +68,9 @@ async function pushToHistory(email: string | null | undefined, query: string): P
   await saveHistory(email, next);
 }
 
+import { stripHtml } from '@/features/memories/strip-html';
+export { stripHtml };
+
 const MemoryRow = React.memo(function MemoryRow({
   memory,
   onPress,
@@ -73,6 +78,7 @@ const MemoryRow = React.memo(function MemoryRow({
   memory: any;
   onPress: () => void;
 }) {
+  const previewBody = stripHtml(memory.body);
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -83,9 +89,9 @@ const MemoryRow = React.memo(function MemoryRow({
         <Text style={styles.resultTitle} numberOfLines={1}>
           {memory.title || 'Untitled memory'}
         </Text>
-        {memory.body ? (
+        {previewBody ? (
           <Text style={styles.resultBody} numberOfLines={1}>
-            {memory.body}
+            {previewBody}
           </Text>
         ) : null}
         <Text style={styles.resultDate}>
@@ -419,8 +425,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: FONTS.sans,
-    fontSize: 15,
+    ...TYPE.body,
     color: COLORS.textStrong,
   },
   clearBtn: {
@@ -446,15 +451,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   sectionTitle: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 11,
+    ...TYPE.metadata,
     color: COLORS.textWeak,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   clearAllText: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 12,
+    ...TYPE.metadata,
     color: COLORS.brand,
   },
 
@@ -473,8 +476,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   suggestionText: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 14,
+    ...TYPE.label,
     color: COLORS.textBase,
     flex: 1,
     lineHeight: 20,
@@ -505,8 +507,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   recentLabel: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     color: COLORS.textBase,
     flexShrink: 1,
   },
@@ -537,18 +538,15 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   resultTitle: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 14,
+    ...TYPE.label,
     color: COLORS.textStrong,
   },
   resultBody: {
-    fontFamily: FONTS.sans,
-    fontSize: 12,
+    ...TYPE.metadata,
     color: COLORS.textWeak,
   },
   resultDate: {
-    fontFamily: FONTS.sans,
-    fontSize: 11,
+    ...TYPE.metadata,
     color: COLORS.textMuted,
     marginTop: 2,
   },
@@ -571,14 +569,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyTitle: {
-    fontFamily: FONTS.serif,
-    fontSize: 20,
+    ...TYPE.uiTitle,
     color: COLORS.textStrong,
     marginTop: 8,
   },
   emptyBody: {
-    fontFamily: FONTS.sans,
-    fontSize: 14,
+    ...TYPE.label,
     color: COLORS.textWeak,
     textAlign: 'center',
     maxWidth: 260,

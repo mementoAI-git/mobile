@@ -11,9 +11,11 @@ import { useRemoveGroupMember } from '@/hooks/mutations/use-group-mutations';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { Avatar, Skeleton, EmptyState } from '@/components/ui';
 import { GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
+import { getSettingsHeaderLayout } from '@/features/settings/settings-header-layout';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
+const layout = getSettingsHeaderLayout();
 
 export default function GroupDetailScreen() {
   const router = useRouter();
@@ -143,8 +145,9 @@ export default function GroupDetailScreen() {
           onPress={handleBack}
           activeOpacity={0.78}
           style={styles.backButton}
+          accessibilityLabel="Go back"
         >
-          <ArrowLeft size={23} color={COLORS.textBase} />
+          <ArrowLeft size={layout.iconSize} color={COLORS.textBase} />
         </TouchableOpacity>
         
         <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -154,7 +157,7 @@ export default function GroupDetailScreen() {
             style={styles.actionPill}
           >
             <UserRoundPlus size={16} color={COLORS.textStrong} style={{ marginRight: 6 }} />
-            <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>Add member</Text>
+            <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>Add member</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -176,28 +179,28 @@ export default function GroupDetailScreen() {
           {/* ── Hero Banner ── */}
           <View style={[styles.heroBanner, { backgroundColor: swatchColor }]}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: FONTS.sansBold, fontSize: 24, color: COLORS.textInverse, marginBottom: 4 }}>
+              <Text style={{ ...TYPE.sectionTitle, color: COLORS.textInverse, marginBottom: 4 }}>
                 {group.name}
               </Text>
               {createdDate && (
-                <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>
+                <Text style={{ ...TYPE.label, color: 'rgba(255,255,255,0.8)' }}>
                   Created {createdDate}
                 </Text>
               )}
             </View>
-            <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 16, color: COLORS.textInverse }}>
+            <Text style={{ ...TYPE.body, color: COLORS.textInverse }}>
               {members.length} {members.length === 1 ? 'Person' : 'People'}
             </Text>
           </View>
 
           {/* ── Members List ── */}
-          <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 16, color: COLORS.textStrong, marginTop: 32, marginBottom: 16, paddingHorizontal: 4 }}>
+          <Text style={{ ...TYPE.body, color: COLORS.textStrong, marginTop: 32, marginBottom: 16, paddingHorizontal: 4 }}>
             Group members
           </Text>
 
           {members.length === 0 ? (
             <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 15, color: COLORS.textWeak }}>
+              <Text style={{ ...TYPE.body, color: COLORS.textWeak }}>
                 No members in this group yet.
               </Text>
             </View>
@@ -217,15 +220,15 @@ export default function GroupDetailScreen() {
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontFamily: FONTS.sansBold, fontSize: 17, color: COLORS.textStrong }} numberOfLines={1}>
+                      <Text style={{ ...TYPE.body, color: COLORS.textStrong }} numberOfLines={1}>
                         {name}
                       </Text>
                       {member.email && (
-                        <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, marginTop: 2 }} numberOfLines={1}>
+                        <Text style={{ ...TYPE.label, color: COLORS.textWeak, marginTop: 2 }} numberOfLines={1}>
                           {member.email}
                         </Text>
                       )}
-                      <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textMuted, marginTop: 2 }}>
+                      <Text style={{ ...TYPE.label, color: COLORS.textMuted, marginTop: 2 }}>
                         {statusText}
                       </Text>
                     </View>
@@ -234,7 +237,7 @@ export default function GroupDetailScreen() {
                       activeOpacity={0.7}
                       style={styles.deleteButton}
                     >
-                      <Trash2 size={20} color={COLORS.textStrong} strokeWidth={2} />
+                      <Trash2 size={20} color={COLORS.error} strokeWidth={1.8} />
                     </TouchableOpacity>
                   </View>
                 );
@@ -249,11 +252,11 @@ export default function GroupDetailScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    height: 68,
+    height: layout.height,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: layout.horizontalPadding,
   },
   backButton: {
     width: 44,
@@ -292,8 +295,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
     borderRadius: 24,
   },
   deleteButton: {
@@ -301,9 +302,7 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
+    borderRadius: 22,
     backgroundColor: COLORS.fillWeaker,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
   }
 });
