@@ -37,7 +37,7 @@ export function useUpdateCapsule(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: Partial<CapsulePayload>) =>
-      put<ICapsule>(endpoint.capsuleDelete.replace(':id', id), payload),
+      put<ICapsule>(endpoint.capsuleById.replace(':id', id), payload),
     onSuccess: (_res, variables) => {
       // Instantly patch known text/status fields in the capsule list cache
       const safeFields: Partial<ICapsule> = {};
@@ -68,7 +68,7 @@ export function useDeleteCapsule() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
-      del(endpoint.capsuleDelete.replace(':id', id)),
+      del(endpoint.capsuleById.replace(':id', id)),
     onSuccess: (_res, id) => {
       // Instantly remove deleted capsule from list — no refetch
       const remover = (old: any) => {

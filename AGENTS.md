@@ -25,13 +25,13 @@ All colors come from `COLORS` in `src/constants/tokens.ts` and the Tailwind conf
 #### Background Surfaces
 | Use | Token | Value | Tailwind class |
 |-----|-------|-------|----------------|
-| Primary screen bg | `COLORS.background` | `#fefbf8` | `bg-background` |
+| Primary screen bg | `COLORS.background` | `#ffffff` | `bg-background` |
 | Card / Sheet bg | `COLORS.card` | `#ffffff` | `bg-card` or `bg-white` |
 | Onboarding screens | `COLORS.onboardingCream` | `#FAF7F2` | `bg-onboarding-cream` |
 | Elevated fill | `COLORS.fillWeak` | `rgba(23,11,0,0.04)` | `bg-fill-weak` |
 | Subtle fill | `COLORS.fillWeaker` | `rgba(23,11,0,0.02)` | `bg-fill-weaker` |
 
-> ⚠️ **Never use pure `#ffffff` for full-screen backgrounds.** Use `bg-background` (`#fefbf8`) — the warm cream is what makes the app feel like a physical journal.
+> ⚠️ **Page background is `COLORS.background` (`#ffffff`), enforced by startup tests.** Warm journal cream lives on `sand-1` (`#fefbf8`) and `COLORS.onboardingCream` — use those for onboarding and textured washes, not as the default screen fill.
 
 #### Brand
 | Use | Token | Value | Tailwind |
@@ -254,7 +254,7 @@ Topic pills:   Seeded hue system (stableHash of topic string → HSL color)
 
 #### Navigation / Tab Bar
 ```
-Tab bar bg:     bg-background (#fefbf8)
+Tab bar bg:     bg-background (#ffffff)
 Active icon:    COLORS.brand + strokeWidth 2.2
 Inactive icon:  COLORS.textMuted + strokeWidth 1.8
 Active label:   FONTS.sansSemi, COLORS.brand
@@ -382,7 +382,7 @@ Empty state titles should be warm and inviting, not system-speak (e.g., "Your st
 ### Colors
 - ❌ Never use `#ff0000`, `bg-red-500`, `text-red-600`, or any generic Tailwind red for errors
 - ❌ Never use `text-gray-*`, `text-slate-*` for body/UI text — use `text-text-*` tokens
-- ❌ Never use a pure `#ffffff` screen background — use `bg-background` (#fefbf8)
+- ❌ Never invent a second page fill — use `bg-background` (`#ffffff`). Cream (`sand-1` / `onboardingCream`) is for onboarding and texture, not the default screen.
 - ❌ Never hardcode arbitrary hex values — all color must come from `COLORS.*` or approved exceptions
 
 ### AI-Generated Content

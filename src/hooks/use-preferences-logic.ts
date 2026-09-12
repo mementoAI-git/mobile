@@ -53,7 +53,6 @@ export const ERROR_MESSAGES: Record<number, string> = {
 export function usePreferencesLogic() {
   const router = useRouter();
   const user = useUserStore((s) => s.user);
-  const setUser = useUserStore((s) => s.setUser);
   const scrollRef = useRef<ScrollView>(null);
 
   const [step, setStep] = useState(1);
@@ -90,16 +89,11 @@ export function usePreferencesLogic() {
       await post(endpoint.completeOnboarding, {
         ...state,
         ageBand: state.ageBand ?? '',
-        isComplete: true,
+        isComplete: false,
         stepReached: TOTAL_STEPS,
       });
-      if (user && setUser) {
-        setUser({ ...user, onboarded: true, onboarding_status: 'completed' });
-      }
     } catch {
-      if (user && setUser) {
-        setUser({ ...user, onboarded: true, onboarding_status: 'completed' });
-      }
+      // Preferences persist is best-effort; the beneficiary step still completes onboarding.
     } finally {
       setSaving(false);
       router.push('/(onboard)/beneficiary');

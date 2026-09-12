@@ -57,6 +57,7 @@ export function useVoiceMode({
   const sessionIdRef = useRef<string | null>(null);
   const transcriptRef = useRef({ user: '', ai: '' });
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const playbackSourcesRef = useRef<Array<{ stop: () => void }>>([]);
 
   const handleAudioBuffer = useCallback((buffer: AudioStreamBuffer) => {
     if (isMutedRef.current || !sessionRef.current) return;
@@ -116,6 +117,7 @@ export function useVoiceMode({
     nextPlaybackTimeRef.current = Math.max(nextPlaybackTimeRef.current, context.currentTime);
     source.start(nextPlaybackTimeRef.current);
     nextPlaybackTimeRef.current += audioBuffer.duration;
+    playbackSourcesRef.current.push(source);
   }, []);
 
   const handleLiveMessage = useCallback((message: LiveServerMessage) => {
@@ -149,6 +151,15 @@ export function useVoiceMode({
     } catch {
       // The native stream may already be released during unmount.
     }
+    playbackSourcesRef.current.forEach((source) => {
+      try {
+        source.stop();
+      } catch {
+        // Already finished.
+      }
+    });
+    playbackSourcesRef.current = [];
+    nextPlaybackTimeRef.current = 0;
     const session = sessionRef.current;
     sessionRef.current = null;
     session?.close();

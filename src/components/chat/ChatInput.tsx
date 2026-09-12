@@ -212,7 +212,7 @@ export function ChatInput({
   const [compactMeasuredHeight, setCompactMeasuredHeight] = useState(COMPACT_TEXT_MIN_HEIGHT);
   const [compactMeasuredPadding, setCompactMeasuredPadding] = useState(0);
   const [expandedMeasuredHeight, setExpandedMeasuredHeight] = useState(EXPANDED_TEXT_MIN_HEIGHT);
-  const [isTextComposerExpanded, setIsTextComposerExpanded] = useState(false);
+  const [isTextComposerExpanded, setIsTextComposerExpanded] = useState(Boolean(initialAudioUri));
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -271,12 +271,7 @@ export function ChatInput({
     },
   });
 
-  useEffect(() => {
-    if (initialAudioUri) {
-      void uploadAndAdd(initialAudioUri, 'audio/m4a', 'voice-reflection.m4a');
-      setIsTextComposerExpanded(true);
-    }
-  }, [initialAudioUri, uploadAndAdd]);
+
 
   // ─── Voice-to-text ────────────────────────────────────────────────────────
 

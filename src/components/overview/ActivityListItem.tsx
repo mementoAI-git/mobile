@@ -22,11 +22,11 @@ import { TYPE } from '@/constants/typography';
 // ── Deterministic color seeding ────────────────────────────────────────────
 
 const ACCENT_COLORS = [
-  '#3B82F6', // blue
-  '#F59E0B', // amber
-  '#10B981', // emerald
-  '#EC4899', // pink
-  '#8B5CF6', // violet
+  COLORS.info,
+  COLORS.warning,
+  COLORS.success,
+  COLORS.statPink,
+  COLORS.statPurple,
 ];
 
 function stableHash(str: string): number {

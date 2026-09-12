@@ -34,6 +34,7 @@ interface OfflineQueueState {
   dequeueMutation: (id: string) => Promise<void>;
   loadQueue: () => Promise<void>;
   syncQueue: () => Promise<void>;
+  clearQueue: () => Promise<void>;
 }
 
 const STORAGE_KEY = 'MEMENTO_OFFLINE_MUTATIONS';
@@ -73,6 +74,11 @@ export const useOfflineQueueStore = create<OfflineQueueState>((set, get) => ({
     }
   },
 
+  clearQueue: async () => {
+    set({ queue: [] });
+    await AsyncStorage.removeItem(STORAGE_KEY);
+  },
+
   syncQueue: async () => {
     const { queue, isSyncing } = get();
     if (isSyncing || queue.length === 0) return;
@@ -97,7 +103,8 @@ export const useOfflineQueueStore = create<OfflineQueueState>((set, get) => ({
         await get().dequeueMutation(item.id);
       } catch (err: any) {
         logger.error(`Offline sync failed for mutation ${item.id}:`, err);
-        if (err?.response?.status >= 400 && err?.response?.status < 500) {
+        const status = err?.httpStatus ?? err?.status ?? err?.response?.status;
+        if (typeof status === 'number' && status >= 400 && status < 500) {
           await get().dequeueMutation(item.id);
         } else {
           break;
