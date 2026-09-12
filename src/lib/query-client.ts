@@ -14,9 +14,11 @@ export const queryClient = new QueryClient({
   },
 });
 
+export const QUERY_PERSIST_KEY = 'MEMENTO_OFFLINE_CACHE';
+
 const asyncStoragePersister = createAsyncStoragePersister({
   storage: AsyncStorage,
-  key: 'MEMENTO_OFFLINE_CACHE',
+  key: QUERY_PERSIST_KEY,
   throttleTime: 1000,
 });
 
@@ -24,4 +26,11 @@ persistQueryClient({
   queryClient,
   persister: asyncStoragePersister,
   maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+  dehydrateOptions: {
+    shouldDehydrateQuery: (query) => query.state.status === 'success',
+  },
 });
+
+export async function clearPersistedQueryCache() {
+  await AsyncStorage.removeItem(QUERY_PERSIST_KEY);
+}

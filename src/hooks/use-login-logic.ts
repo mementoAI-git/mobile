@@ -167,13 +167,14 @@ export function useLoginLogic() {
         }
 
         try {
-          const begin = await client.post(endpoint.passkeyLoginBegin, { email });
+          const skipAuth = { skipAuth: true } as const;
+          const begin = await client.post(endpoint.passkeyLoginBegin, { email }, skipAuth as never);
           const { challenge_id: challengeId, ...request } = begin.data?.data ?? {};
           const assertion = await Passkey.get(request);
           const complete = await client.post(endpoint.passkeyLoginComplete, {
             challenge_id: challengeId,
             response: assertion,
-          });
+          }, skipAuth as never);
           const completion = await completeAuthResponse(complete.data, establishSession);
           if (completion.kind !== 'session') throw new Error('Missing passkey session');
 
@@ -198,7 +199,11 @@ export function useLoginLogic() {
       }
 
       // Exchange refresh_token for a new access/refresh token pair
-      const res = await client.post(endpoint.refreshToken, { refresh_token: refreshToken });
+      const res = await client.post(
+        endpoint.refreshToken,
+        { refresh_token: refreshToken },
+        { skipAuth: true } as never,
+      );
       const completion = await completeAuthResponse(res.data, establishSession);
 
       if (completion.kind !== 'session') {

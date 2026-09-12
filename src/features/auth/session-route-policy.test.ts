@@ -19,6 +19,7 @@ describe('session route policy', () => {
     expect(getAction({ phase: 'anonymous', group: '(auth)', onboardingStatus: null, pendingHref: null })).toEqual({ type: 'none' });
     expect(getAction({ phase: 'authenticated', group: '(auth)', onboardingStatus: 'never', pendingHref: null })).toEqual({ type: 'replace', href: '/(onboard)', consumePendingHref: false });
     expect(getAction({ phase: 'authenticated', group: '(auth)', onboardingStatus: 'completed', pendingHref: '/chat/thread-1' })).toEqual({ type: 'replace', href: '/chat/thread-1', consumePendingHref: true });
+    expect(getAction({ phase: 'authenticated', group: '(onboard)', onboardingStatus: 'skipped', pendingHref: null })).toEqual({ type: 'replace', href: '/(tabs)/overview', consumePendingHref: false });
     expect(getAction({ phase: 'authenticated', group: '(tabs)', onboardingStatus: 'completed', pendingHref: null })).toEqual({ type: 'none' });
   });
 

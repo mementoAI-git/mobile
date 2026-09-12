@@ -87,6 +87,7 @@ export default {
 
   // capsule
   capsule: '/capsule',
+  capsuleById: '/capsule/:id',
   capsuleDelete: '/capsule/:id',
   capsuleStats: '/capsule/stats',
 

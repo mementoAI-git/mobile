@@ -40,8 +40,16 @@ export default function OAuthCallbackScreen() {
         return typeof val === 'string' ? val : undefined;
       };
 
-      const { access_token, refresh_token, expires_at, refresh_expires_at, onboarding_status, user } = params;
-      
+      const {
+        access_token,
+        refresh_token,
+        expires_at,
+        access_expires_at,
+        refresh_expires_at,
+        onboarding_status,
+        user,
+      } = params;
+
       let parsedUser = user;
       const userStr = getSingleParam(user);
       if (userStr) {
@@ -52,14 +60,20 @@ export default function OAuthCallbackScreen() {
 
       const token = getSingleParam(access_token);
       const refresh = getSingleParam(refresh_token);
-      
+      const accessExpiresAt =
+        getSingleParam(access_expires_at) || getSingleParam(expires_at) || '';
+      const refreshExpiresAt = getSingleParam(refresh_expires_at) ?? '';
+      const onboardingStatus = getSingleParam(onboarding_status);
+
       const credentials = {
         access_token: token ?? '',
         refresh_token: refresh ?? '',
-        expires_at: getSingleParam(expires_at) ?? '',
-        refresh_expires_at: getSingleParam(refresh_expires_at) ?? '',
+        access_expires_at: accessExpiresAt,
+        expires_at: accessExpiresAt,
+        refresh_expires_at: refreshExpiresAt,
+        ...(onboardingStatus ? { onboarding_status: onboardingStatus } : {}),
       };
-      
+
       if (parsedUser && typeof parsedUser !== 'string') {
         const completion = await completeAuthResponse(
           { data: { ...credentials, user: parsedUser } },

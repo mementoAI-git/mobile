@@ -3,11 +3,14 @@ import dayjs from 'dayjs';
 import { secureStorage } from '@/lib/secure-storage';
 import { API_BASE_URL } from '@/lib/env';
 import type { IAuth } from '@/types';
-import { storageKeys } from '@/constants/storage-keys';
 import endpoint from './endpoint';
 import { commitRefreshedCredentials } from '@/features/auth/session-coordinator';
 import { normalizeAuthCompletion } from './contract-adapter';
 import { getMementoClientHeaders } from './client-runtime-metadata';
+import {
+  persistSessionCredentials,
+  readSessionCredentials,
+} from '@/features/auth/session-credentials';
 
 class AuthService {
   private refreshPromise: Promise<IAuth> | null = null;
@@ -25,15 +28,14 @@ class AuthService {
 
   async getAuthData(): Promise<IAuth | null> {
     try {
-      const raw = await secureStorage.getItem(storageKeys.auth);
-      return raw ? JSON.parse(raw) : null;
+      return await readSessionCredentials(secureStorage);
     } catch {
       return null;
     }
   }
 
   async setAuthData(authData: IAuth): Promise<void> {
-    await secureStorage.setItem(storageKeys.auth, JSON.stringify(authData));
+    await persistSessionCredentials(authData, secureStorage);
   }
 
   async refreshAccessToken(): Promise<IAuth> {
