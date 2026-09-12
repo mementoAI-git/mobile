@@ -1,6 +1,6 @@
 import React, {useCallback, useState} from 'react';
-import {KeyboardAvoidingView, Platform, Text, TouchableOpacity, View} from 'react-native';
-import {BottomSheetScrollView, BottomSheetTextInput, BottomSheetView} from '@gorhom/bottom-sheet';
+import {Text, TouchableOpacity, View} from 'react-native';
+import {BottomSheetScrollView, BottomSheetTextInput} from '@gorhom/bottom-sheet';
 import {ChevronDown, X} from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import {Button} from '@/components/ui';
 import {COLORS} from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import type {BillingProfile} from '@/features/settings/billing-adapters';
+import {getSheetBottomPadding} from '@/features/layout/sheet-safe-area';
 
 export interface BillingDetailsForm {
   email: string;
@@ -25,10 +26,56 @@ export interface BillingDetailsForm {
 }
 
 function Field({label, value, onChangeText, multiline, select}: {label: string; value: string; onChangeText: (value: string) => void; multiline?: boolean; select?: boolean}) {
-  return <View style={{gap: 8}}><Text style={{...TYPE.label, color: COLORS.textStrong}}>{label}</Text><View><BottomSheetTextInput value={value} onChangeText={onChangeText} multiline={multiline} keyboardType={label.includes('email') ? 'email-address' : 'default'} autoCapitalize={label.includes('email') ? 'none' : 'words'} style={{minHeight: multiline ? 84 : 40, height: multiline ? 84 : 40, borderWidth: 1, borderColor: COLORS.strokeWeak, borderRadius: 10, backgroundColor: COLORS.card, paddingHorizontal: 12, paddingRight: select ? 42 : 12, paddingVertical: multiline ? 10 : 0, ...TYPE.input, color: COLORS.textStrong, textAlignVertical: multiline ? 'top' : 'center'}}/>{select ? <View pointerEvents="none" style={{position: 'absolute', right: 14, top: 9}}><ChevronDown size={22} color={COLORS.textBase}/></View> : null}</View></View>;
+  return (
+    <View style={{gap: 8}}>
+      <Text style={{...TYPE.label, color: COLORS.textStrong}}>{label}</Text>
+      <View>
+        <BottomSheetTextInput
+          value={value}
+          onChangeText={onChangeText}
+          multiline={multiline}
+          keyboardType={label.includes('email') ? 'email-address' : 'default'}
+          autoCapitalize={label.includes('email') ? 'none' : 'words'}
+          style={{
+            minHeight: multiline ? 88 : 48,
+            height: multiline ? 88 : 48,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: COLORS.strokeWeak,
+            backgroundColor: COLORS.card,
+            paddingHorizontal: 16,
+            paddingRight: select ? 42 : 16,
+            paddingVertical: multiline ? 12 : 0,
+            ...TYPE.input,
+            color: COLORS.textStrong,
+            textAlignVertical: multiline ? 'top' : 'center',
+          }}
+        />
+        {select ? (
+          <View pointerEvents="none" style={{position: 'absolute', right: 14, top: 14}}>
+            <ChevronDown size={20} color={COLORS.textBase}/>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
 }
 
-export function EditBillingDetailsSheet({profile, onSave, onClose}: {profile: BillingProfile; onSave: (values: BillingDetailsForm) => Promise<void>; onClose: () => void}) {
+export function EditBillingDetailsSheet({
+  profile,
+  onSave,
+  onClose,
+  expandSheet,
+  canManage = true,
+  onUpgrade,
+}: {
+  profile: BillingProfile;
+  onSave?: (values: BillingDetailsForm) => Promise<void>;
+  onClose: () => void;
+  expandSheet?: () => void;
+  canManage?: boolean;
+  onUpgrade?: () => void;
+}) {
   const insets = useSafeAreaInsets();
   const address = profile.address;
   const originalAbout = [address?.line1, address?.line2, address?.city, address?.state, address?.postalCode].filter(Boolean).join(', ');
@@ -47,10 +94,54 @@ export function EditBillingDetailsSheet({profile, onSave, onClose}: {profile: Bi
   });
   const [saving, setSaving] = useState(false);
   const set = useCallback((key: keyof BillingDetailsForm, value: string) => setValues(current => ({...current, [key]: value})), []);
-  const submit = useCallback(async () => {setSaving(true); try {Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); await onSave(values); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onClose();} finally {setSaving(false);}}, [onClose, onSave, values]);
-  return <BottomSheetView style={{flex: 1}}><KeyboardAvoidingView style={{flex: 1}} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-    <View style={{minHeight: 86, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}><Text style={{...TYPE.sectionTitle, color: COLORS.textStrong}}>Edit Billing Details</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="Close billing details" onPress={onClose} style={{width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak}}><X size={20} color={COLORS.textStrong}/></TouchableOpacity></View>
-    <BottomSheetScrollView style={{flex: 1}} keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal: 20, paddingTop: 7, paddingBottom: 20, gap: 18}}><Field label="Billing email address" value={values.email} onChangeText={value => set('email', value)}/><Field label="Name" value={values.name} onChangeText={value => set('name', value)}/><Field label="Relationship" value={values.relationship} onChangeText={value => set('relationship', value)}/><Field label="About" value={values.about} onChangeText={value => set('about', value)} multiline/><Field label="Country" value={values.country} onChangeText={value => set('country', value)} select/></BottomSheetScrollView>
-    <View style={{flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 12) + 8, borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker, backgroundColor: COLORS.background}}><Button variant="secondary" size="lg" className="h-[52px] flex-1" onPress={onClose}>Dismiss</Button><Button size="lg" className="h-[52px] flex-1 bg-fill-strong" loading={saving} onPress={() => void submit()}>Save Changes</Button></View>
-  </KeyboardAvoidingView></BottomSheetView>;
+  const submit = useCallback(async () => {
+    setSaving(true);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      if (onSave) {
+        await onSave(values);
+      } else if (!canManage) {
+        onClose();
+        onUpgrade?.();
+        return;
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }, [canManage, onClose, onSave, onUpgrade, values]);
+
+  return (
+    <View style={{flex: 1}}>
+      <View style={{minHeight: 64, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
+        <Text style={{...TYPE.sectionTitle, color: COLORS.textStrong}}>Edit Billing Details</Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Close billing details"
+          onPress={onClose}
+          style={{width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak}}
+        >
+          <X size={18} color={COLORS.textStrong}/>
+        </TouchableOpacity>
+      </View>
+      <BottomSheetScrollView
+        style={{flex: 1}}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        onScrollBeginDrag={expandSheet}
+        contentContainerStyle={{paddingHorizontal: 20, paddingTop: 4, paddingBottom: 48, gap: 16}}
+      >
+        <Field label="Billing email address" value={values.email} onChangeText={value => set('email', value)}/>
+        <Field label="Name" value={values.name} onChangeText={value => set('name', value)}/>
+        <Field label="Relationship" value={values.relationship} onChangeText={value => set('relationship', value)}/>
+        <Field label="About" value={values.about} onChangeText={value => set('about', value)} multiline/>
+        <Field label="Country" value={values.country} onChangeText={value => set('country', value)} select/>
+      </BottomSheetScrollView>
+      <View style={{flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(getSheetBottomPadding(insets.bottom, 12), 16), backgroundColor: COLORS.background}}>
+        <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={onClose}>Dismiss</Button>
+        <Button size="lg" className="h-14 flex-1 bg-text-strong" loading={saving} onPress={() => void submit()}>Save Changes</Button>
+      </View>
+    </View>
+  );
 }

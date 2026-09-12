@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { TYPE } from '@/constants/typography';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
 import type { StoragePresentation } from '@/features/settings/billing-storage';
 
 function formatBytes(bytes: number) {
@@ -12,14 +12,29 @@ function formatBytes(bytes: number) {
 }
 
 export const BillingStorageCard = React.memo(function BillingStorageCard({storage}: {storage: StoragePresentation}) {
-  return <View className="rounded-2xl bg-fill-weak px-3 py-3" style={{height: 85}}>
-    <View className="flex-row justify-between items-center">
-      <Text className="text-text-strong" style={TYPE.label}>Storage</Text>
-      <Text className="text-text-base" style={TYPE.body}>{formatBytes(storage.used)} / {formatBytes(storage.limit)} Used</Text>
+  return (
+    <View className="rounded-[24px] p-5" style={{ backgroundColor: COLORS.fillWeak }}>
+      <View className="flex-row justify-between items-center">
+        <Text style={{ ...TYPE.bodyStrong, color: COLORS.textStrong }}>Storage</Text>
+        <Text style={{ ...TYPE.label, color: COLORS.textWeak }}>
+          {formatBytes(storage.used)} / {formatBytes(storage.limit)} Used
+        </Text>
+      </View>
+      <View style={{ height: 12, borderRadius: 999, backgroundColor: COLORS.card, marginTop: 14, overflow: 'hidden', justifyContent: 'center' }}>
+        <View
+          style={{
+            width: `${Math.min(storage.percent, 100)}%`,
+            height: '100%',
+            borderRadius: 999,
+            backgroundColor: COLORS.brand,
+          }}
+        />
+      </View>
+      <View style={{ marginTop: 10 }}>
+        <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak }}>
+          {formatBytes(storage.remaining)} Available
+        </Text>
+      </View>
     </View>
-    <View className="h-[13px] rounded bg-card mt-1.5 overflow-hidden">
-      <View style={{width: `${storage.percent}%`, height: 13, backgroundColor: COLORS.onboardingAmber}} />
-    </View>
-    <Text className="text-text-base mt-1.5" style={TYPE.body}>{formatBytes(storage.remaining)} Available</Text>
-  </View>;
+  );
 });

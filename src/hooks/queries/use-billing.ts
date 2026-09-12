@@ -16,8 +16,8 @@ export type { BillingInvoice, BillingUsage } from '@/features/settings/billing-a
 export function useBillingProfile() {
   return useQuery<BillingProfile | null>({
     queryKey: queryKeys.billingProfile,
-    queryFn: () => get<unknown>(endpoint.billingProfile).then(normalizeBillingProfile),
-    staleTime: 30_000,
+    queryFn: () => Promise.resolve(null),
+    staleTime: Infinity,
     retry: false,
   });
 }

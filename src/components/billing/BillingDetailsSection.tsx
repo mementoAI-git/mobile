@@ -1,24 +1,81 @@
 import React from 'react';
-import { Text, View } from 'react-native';
-import { Pencil } from 'lucide-react-native';
-import { Button } from '@/components/ui';
-import { TYPE } from '@/constants/typography';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { FileText, Pencil } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import type { BillingProfile } from '@/features/settings/billing-adapters';
 
 export const BillingDetailsSection = React.memo(function BillingDetailsSection({profile, onEdit}: {profile: BillingProfile; onEdit: () => void}) {
   const address = profile.address;
   const addressLines = address ? [address.line1, address.line2, [address.city, address.state, address.postalCode].filter(Boolean).join(', '), address.country].filter(Boolean) : [];
-  return <View className="px-4 py-6 border-t border-stroke-weak">
-    <View className="min-h-14 flex-row items-center">
-      <Text className="flex-1 text-text-strong" style={TYPE.sectionTitle}>Billing details</Text>
-      <Button variant="secondary" size="lg" className="h-10 px-4" leftIcon={<Pencil size={18} color={COLORS.textStrong}/>} onPress={onEdit}>Edit</Button>
+  
+  return (
+    <View className="rounded-[24px] pt-1 pb-2">
+      {/* Header row */}
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center gap-2.5">
+          <FileText size={18} color={COLORS.textStrong} strokeWidth={2} />
+          <Text style={{ ...TYPE.bodyStrong, color: COLORS.textStrong }}>
+            Billing details
+          </Text>
+        </View>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Edit billing details"
+          activeOpacity={0.75}
+          onPress={() => {
+            Haptics.selectionAsync();
+            onEdit();
+          }}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            height: 36,
+            paddingHorizontal: 14,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: COLORS.strokeWeak,
+            backgroundColor: COLORS.card,
+          }}
+        >
+          <Pencil size={14} color={COLORS.textStrong} strokeWidth={2} />
+          <Text style={{ ...TYPE.buttonSmall, color: COLORS.textStrong }}>
+            Edit
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Field values */}
+      <View className="mt-5">
+        <View>
+          <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak }}>
+            Billing email
+          </Text>
+          <Text style={{ ...TYPE.body, color: profile.email ? COLORS.textStrong : COLORS.textMuted, marginTop: 4 }}>
+            {profile.email ?? '—'}
+          </Text>
+        </View>
+
+        <View style={{ marginTop: 18 }}>
+          <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak }}>
+            Name
+          </Text>
+          <Text style={{ ...TYPE.body, color: profile.name ? COLORS.textStrong : COLORS.textMuted, marginTop: 4 }}>
+            {profile.name ?? '—'}
+          </Text>
+        </View>
+
+        <View style={{ marginTop: 18 }}>
+          <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak }}>
+            Address
+          </Text>
+          <Text style={{ ...TYPE.body, color: addressLines.length ? COLORS.textStrong : COLORS.textMuted, marginTop: 4, lineHeight: 23 }}>
+            {addressLines.length ? addressLines.join('\n') : '—'}
+          </Text>
+        </View>
+      </View>
     </View>
-    <Text className="mt-4 text-text-weak" style={TYPE.bodySmall}>Billing email</Text>
-    <Text className="mt-2 text-text-strong" style={TYPE.body}>{profile.email ?? '—'}</Text>
-    <Text className="mt-5 text-text-weak" style={TYPE.bodySmall}>Name</Text>
-    <Text className="mt-2 text-text-strong" style={TYPE.body}>{profile.name ?? '—'}</Text>
-    <Text className="mt-5 text-text-weak" style={TYPE.bodySmall}>Address</Text>
-    <Text className="mt-2 text-text-strong" style={TYPE.body}>{addressLines.length ? addressLines.join('\n') : '—'}</Text>
-  </View>;
+  );
 });

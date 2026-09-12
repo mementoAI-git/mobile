@@ -17,8 +17,8 @@ export function CancelSubscriptionConfirmationSheet({onClose}: {onClose?: () => 
   return <View style={{paddingHorizontal: 20, paddingTop: 54, paddingBottom: 20}}>
     <View style={{alignItems: 'center'}}>
       <AlertTriangleIcon size={116} />
-      <Text style={{...TYPE.screenTitle, lineHeight: 36, color: COLORS.textStrong, textAlign: 'center', maxWidth: 360, marginTop: 42}}>Are you sure you want to cancel your subscription</Text>
-      <Text style={{...TYPE.bodyLarge, color: COLORS.textBase, textAlign: 'center', maxWidth: 350, marginTop: 18}}>If you cancel, you’ll keep full access to your plan features until the end of your billing period</Text>
+      <Text style={{...TYPE.sectionTitle, color: COLORS.textStrong, textAlign: 'center', maxWidth: 360, marginTop: 42}}>Are you sure you want to cancel your subscription</Text>
+      <Text style={{...TYPE.body, color: COLORS.textBase, textAlign: 'center', maxWidth: 350, marginTop: 18}}>If you cancel, you’ll keep full access to your plan features until the end of your billing period</Text>
     </View>
     <View style={{flexDirection: 'row', gap: 12, marginTop: 52}}>
       <Button variant="secondary" size="lg" className="flex-1" onPress={onClose}>Go back</Button>

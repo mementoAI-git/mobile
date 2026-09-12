@@ -4,8 +4,8 @@ import * as Haptics from 'expo-haptics';
 import dayjs from 'dayjs';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/Toast';
-import {useUiStore} from '@/store';
-import {useUpdateBillingProfile} from '@/hooks/mutations/use-billing-profile-mutation';
+import { useUiStore } from '@/store';
+import { useProfile } from '@/hooks/queries/use-profile';
 import { useSubscription } from '@/hooks/queries/use-subscription';
 import { useBillingInvoices, useBillingProfile, useBillingUsage } from '@/hooks/queries/use-billing';
 import { resolveBillingProfile } from '@/features/settings/billing-presentation';
@@ -21,12 +21,12 @@ export function useBillingSettingsLogic() {
   const { summary, isLoading: subLoading, isProOrAbove, refetch: refetchSub } = useSubscription();
   const { data: invoices = [], isLoading: invoicesLoading, refetch: refetchInvoices } = useBillingInvoices(activeTab === 'invoices');
   const { data: usage, isLoading: usageLoading, refetch: refetchUsage } = useBillingUsage();
+  const { data: userProfile } = useProfile();
   const { data: liveProfile, isLoading: profileLoading, refetch: refetchProfile } = useBillingProfile();
-  const {profile, source: profileSource} = resolveBillingProfile(liveProfile);
+  const { profile, source: profileSource } = resolveBillingProfile(liveProfile, userProfile);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const openSheet = useUiStore((state) => state.openSheet);
-  const updateBillingProfile = useUpdateBillingProfile();
 
   const [promo, setPromo] = useState('');
   const [promoBusy, setPromoBusy] = useState(false);
@@ -80,9 +80,14 @@ export function useBillingSettingsLogic() {
     Haptics.selectionAsync();
     openSheet('edit-billing-details', {
       profile,
-      onSave: async (values: Parameters<typeof updateBillingProfile.mutateAsync>[0]) => {
-        await updateBillingProfile.mutateAsync(values);
-        toast('Billing details updated.', 'success');
+      canManage: isProOrAbove,
+      onUpgrade: handleUpgrade,
+      onSave: async () => {
+        if (isProOrAbove) {
+          await openBillingPortal({ returnPath: '/settings/billing' });
+        } else {
+          handleUpgrade();
+        }
       },
     });
   };

@@ -1,15 +1,38 @@
+import type { IUser } from '@/types';
 import type { BillingProfile, SubscriptionSummary } from './billing-adapters';
-import { BILLING_REFERENCE_FIXTURE } from './billing-fixture';
 
-export type BillingProfileSource = 'live' | 'fixture';
+export type BillingProfileSource = 'live' | 'user';
 
-export function resolveBillingProfile(profile: BillingProfile | null | undefined): {
+export function resolveBillingProfile(
+  profile?: BillingProfile | null,
+  user?: Partial<IUser> | null,
+): {
   profile: BillingProfile;
   source: BillingProfileSource;
 } {
-  return profile
-    ? {profile, source: 'live'}
-    : {profile: BILLING_REFERENCE_FIXTURE, source: 'fixture'};
+  if (profile) {
+    return { profile, source: 'live' };
+  }
+
+  const fullName = user?.fullname
+    || [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim()
+    || null;
+  const addressLine = user?.location || undefined;
+  const country = user?.country || undefined;
+
+  return {
+    profile: {
+      email: user?.email ?? null,
+      name: fullName,
+      address: (addressLine || country) ? {
+        line1: addressLine,
+        country: country,
+      } : null,
+      paymentMethods: [],
+      management: 'polar_portal',
+    },
+    source: 'user',
+  };
 }
 
 export function getBillingTierPresentation(tier: SubscriptionSummary['tier']) {

@@ -6,13 +6,36 @@ import {
 } from './billing-presentation';
 
 describe('billing presentation', () => {
-  test('uses the exact reference fixture until live profile data replaces it', () => {
-    expect(resolveBillingProfile(null)).toEqual({
-      profile: BILLING_REFERENCE_FIXTURE,
-      source: 'fixture',
+  test('resolves profile from live data or derives from authenticated user', () => {
+    const user = {
+      email: 'alex@example.com',
+      first_name: 'Alex',
+      last_name: 'Rivera',
+      location: 'San Francisco, CA',
+      country: 'US',
+    };
+    expect(resolveBillingProfile(null, user)).toEqual({
+      profile: {
+        email: 'alex@example.com',
+        name: 'Alex Rivera',
+        address: {
+          line1: 'San Francisco, CA',
+          country: 'US',
+        },
+        paymentMethods: [],
+        management: 'polar_portal',
+      },
+      source: 'user',
     });
-    const live = {...BILLING_REFERENCE_FIXTURE, email: 'live@example.com'};
-    expect(resolveBillingProfile(live)).toEqual({profile: live, source: 'live'});
+
+    const live = {
+      email: 'live@example.com',
+      name: 'Live Customer',
+      address: null,
+      paymentMethods: [],
+      management: 'polar_portal' as const,
+    };
+    expect(resolveBillingProfile(live, user)).toEqual({ profile: live, source: 'live' });
   });
 
   test('derives one screen with tier-specific plan actions', () => {

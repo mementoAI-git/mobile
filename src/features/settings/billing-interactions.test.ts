@@ -35,8 +35,12 @@ describe('billing reference interactions', () => {
   test('keeps billing sheet footers inside the fixed-height sheet viewport', () => {
     const details = read('src/components/sheets/EditBillingDetailsSheet.tsx');
     const payment = read('src/components/sheets/AddPaymentMethodSheet.tsx');
-    expect(details).toContain('<BottomSheetView style={{flex: 1}}>');
-    expect(payment).toContain('<BottomSheetView style={{flex: 1}}>');
+    expect(details).toContain('<View style={{flex: 1}}>');
+    expect(payment).toContain('<View style={{flex: 1}}>');
+    expect(details).not.toContain('BottomSheetView');
+    expect(payment).not.toContain('BottomSheetView');
+    expect(details).toContain('getSheetBottomPadding');
+    expect(payment).toContain('getSheetBottomPadding');
   });
 
   test('routes billing actions to the reference sheets', () => {
