@@ -53,4 +53,10 @@ describe('manage-plan flow', () => {
     expect(screen).toContain('cancelBillingSubscription');
     expect(flow).toContain('feedback?: BillingCancellationFeedback');
   });
+
+  test('keeps manage plan scrollable with flex container and bottom padding', () => {
+    const screen = read('app/pricing.tsx');
+    expect(screen).toMatch(/<ScrollView[^>]*className="[^"]*flex-1/);
+    expect(screen).toMatch(/contentContainerStyle=\{\{[^}]*paddingBottom:\s*56/);
+  });
 });

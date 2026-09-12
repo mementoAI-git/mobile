@@ -50,11 +50,11 @@ export function SetupTwoFactorSheet({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20 }}
       >
-        <Text style={TYPE.bodyLarge}>Step 1</Text>
+        <Text style={TYPE.label}>Step 1</Text>
         <Text style={twoFactorStyles.copy}>Download an authenticator app:</Text>
         <Text style={twoFactorStyles.link}>1. Google Authenticator{'\n'}2. Authy.</Text>
 
-        <Text style={[TYPE.bodyLarge, { marginTop: 18 }]}>Step 2</Text>
+        <Text style={[TYPE.label, { marginTop: 18 }]}>Step 2</Text>
         {manual ? (
           <>
             <Text style={twoFactorStyles.copy}>
@@ -102,7 +102,7 @@ export function SetupTwoFactorSheet({
           </>
         )}
 
-        <Text style={[TYPE.bodyLarge, { marginTop: 18 }]}>Step 3</Text>
+        <Text style={[TYPE.label, { marginTop: 18 }]}>Step 3</Text>
         <Text style={twoFactorStyles.copy}>
           Enter the six-digit code from your authenticator app.
         </Text>
@@ -128,7 +128,7 @@ export function SetupTwoFactorSheet({
         {twoFactor.error && <Text style={twoFactorStyles.error}>{twoFactor.error}</Text>}
       </BottomSheetScrollView>
 
-      <View style={[twoFactorStyles.actions, {paddingBottom: getSheetBottomPadding(insets.bottom, 12)}]}>
+      <View style={[twoFactorStyles.actions, {paddingBottom: Math.max(getSheetBottomPadding(insets.bottom, 12), 20)}]}>
         <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={onClose}>
           Cancel
         </Button>
@@ -176,10 +176,9 @@ const twoFactorStyles = {
   },
   codeRow: {
     minHeight: 48,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeak,
-    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: COLORS.fillWeaker,
+    paddingHorizontal: 16,
     marginTop: 10,
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
@@ -194,8 +193,6 @@ const twoFactorStyles = {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 20,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.strokeWeaker,
     backgroundColor: COLORS.background,
   },
   error: { color: COLORS.error, ...TYPE.metadata, marginTop: 8 },

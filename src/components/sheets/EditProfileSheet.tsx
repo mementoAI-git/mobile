@@ -115,9 +115,7 @@ export function EditProfileSheet({
           gap: 12,
           paddingHorizontal: 20,
           paddingTop: 12,
-          paddingBottom: getSheetBottomPadding(insets.bottom, 12),
-          borderTopWidth: 1,
-          borderTopColor: COLORS.strokeWeaker,
+          paddingBottom: Math.max(getSheetBottomPadding(insets.bottom, 12), 20),
           backgroundColor: COLORS.background,
         }}
       >
