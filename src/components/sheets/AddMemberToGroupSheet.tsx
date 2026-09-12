@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUiStore } from '@/store';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useAddGroupMembers } from '@/hooks/mutations/use-group-mutations';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Avatar, Button } from '@/components/ui';
 
 interface Props {
@@ -68,7 +70,7 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
     <View style={{ flex: 1 }}>
       {/* ── Header ── */}
       <View style={{ height: 68, paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>
+        <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
           Add Member to group
         </Text>
         <TouchableOpacity
@@ -89,7 +91,7 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
       >
         {nonMembers.length === 0 ? (
           <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 15, color: COLORS.textWeak, textAlign: 'center' }}>
+            <Text style={{ ...TYPE.body, color: COLORS.textWeak, textAlign: 'center' }}>
               All your beneficiaries are already in this group.
             </Text>
           </View>
@@ -117,15 +119,15 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: FONTS.sansBold, fontSize: 17, color: COLORS.textStrong }} numberOfLines={1}>
+                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }} numberOfLines={1}>
                     {name}
                   </Text>
                   {member.email && (
-                    <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, marginTop: 2 }} numberOfLines={1}>
+                    <Text style={{ ...TYPE.label, color: COLORS.textWeak, marginTop: 2 }} numberOfLines={1}>
                       {member.email}
                     </Text>
                   )}
-                  <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textMuted, marginTop: 2 }}>
+                  <Text style={{ ...TYPE.label, color: COLORS.textMuted, marginTop: 2 }}>
                     {statusText}
                   </Text>
                 </View>
@@ -148,17 +150,15 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
         paddingHorizontal: 24,
         paddingTop: 16,
         paddingBottom: Math.max(insets.bottom, 16),
-        borderTopWidth: 1,
-        borderTopColor: COLORS.strokeWeaker,
         backgroundColor: COLORS.background,
       }}>
-        <Button variant="secondary" size="lg" className="h-[56px] flex-1" textClassName="text-base font-bold" onPress={handleClose}>
+        <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={handleClose}>
           Dismiss
         </Button>
         <Button
           size="lg"
-          className="h-[56px] flex-1 bg-text-strong"
-          textClassName="text-base font-bold text-white"
+          className="h-14 flex-1 bg-text-strong"
+          textClassName="text-white"
           loading={isPending}
           disabled={selectedIds.size === 0 || isPending}
           onPress={handleSubmit}
@@ -176,8 +176,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
     borderRadius: 24,
   },
   checkbox: {

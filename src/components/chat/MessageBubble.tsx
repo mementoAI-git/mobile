@@ -5,7 +5,8 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import type { IMessage } from '@/types';
 import dayjs from 'dayjs';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { CornerDownRight, FileText, Music, Play, ExternalLink, Copy } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import type { PreviewAttachment } from '@/components/ui/MediaPreviewModal';
@@ -110,7 +111,7 @@ function AttachmentTile({ attachment, onPress }: {
       <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
         <View style={{ width: 120, height: 120, borderRadius: 12, backgroundColor: COLORS.textStrong, alignItems: 'center', justifyContent: 'center' }}>
           <Play size={28} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 4 }} />
-          <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 4 }} numberOfLines={1}>{attachment.name}</Text>
+          <Text style={{ ...TYPE.eyebrow, color: 'rgba(255,255,255,0.7)', marginTop: 4 }} numberOfLines={1}>{attachment.name}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -132,7 +133,7 @@ function AttachmentTile({ attachment, onPress }: {
         <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: `${COLORS.brand}12`, alignItems: 'center', justifyContent: 'center' }}>
           <Icon size={16} color={COLORS.brand} strokeWidth={1.8} />
         </View>
-        <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 12, color: COLORS.textStrong, flex: 1 }} numberOfLines={1}>{shortName}</Text>
+        <Text style={{ ...TYPE.metadata, color: COLORS.textStrong, flex: 1 }} numberOfLines={1}>{shortName}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -151,7 +152,7 @@ function FaviconBadge({ url, hostname }: { url: string; hostname: string }) {
   if (!url || failed) {
     return (
       <View style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: 'rgba(0,0,0,0.15)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: 'white' }}>{letter}</Text>
+        <Text style={{ ...TYPE.metadata, color: 'white' }}>{letter}</Text>
       </View>
     );
   }
@@ -240,7 +241,7 @@ function LinkPreviewChip({ preview }: { preview: LinkPreviewData }) {
   if (!preview.loaded) {
     return (
       <TouchableOpacity onPress={handlePress} activeOpacity={0.7} style={{ marginTop: 4 }}>
-        <Text style={{ fontFamily: FONTS.sans, fontSize: 12, color: COLORS.linkPreview, textDecorationLine: 'underline' }} numberOfLines={1}>
+        <Text style={{ ...TYPE.metadata, color: COLORS.linkPreview, textDecorationLine: 'underline' }} numberOfLines={1}>
           {shortenUrl(preview.url)}
         </Text>
       </TouchableOpacity>
@@ -273,15 +274,15 @@ function LinkPreviewChip({ preview }: { preview: LinkPreviewData }) {
         <View style={{ flexShrink: 1, justifyContent: 'center', gap: 2 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <FaviconBadge url={preview.faviconUrl} hostname={preview.hostname} />
-            <Text style={{ fontFamily: FONTS.sansBold, fontSize: 10, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: 0.5 }} numberOfLines={1}>
+            <Text style={{ ...TYPE.eyebrow, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: 0.5 }} numberOfLines={1}>
               {preview.hostname}
             </Text>
           </View>
-          <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: '#ffffff' }} numberOfLines={1}>
+          <Text style={{ ...TYPE.metadata, color: '#ffffff' }} numberOfLines={1}>
             {preview.title || 'Link'}
           </Text>
           {preview.description && (
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: 'rgba(255,255,255,0.9)' }} numberOfLines={2}>
+            <Text style={{ ...TYPE.eyebrow, color: 'rgba(255,255,255,0.9)' }} numberOfLines={2}>
               {preview.description}
             </Text>
           )}
@@ -336,7 +337,7 @@ function AttachmentPlaceholder({
       gap: 6,
     }}>
       <FileText size={22} color={COLORS.textWeak} strokeWidth={1.8} />
-      <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 10, color: COLORS.textWeak, textAlign: 'center' }} numberOfLines={2}>
+      <Text style={{ ...TYPE.eyebrow, color: COLORS.textWeak, textAlign: 'center' }} numberOfLines={2}>
         {name || 'Preview unavailable'}
       </Text>
     </View>
@@ -455,7 +456,7 @@ function AttachmentGrid({ attachments, onTap }: {
                   <MediaPreviewTile attachment={a} width={tileW} height={tileH} borderRadius={10} onPress={() => onTap(origIdx)} />
                   {showOverlay && (
                     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.62)', alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ fontFamily: FONTS.sansBold, fontSize: 18, color: '#fff' }}>+{overflow}</Text>
+                      <Text style={{ ...TYPE.uiTitle, color: '#fff' }}>+{overflow}</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -627,8 +628,7 @@ const styles = StyleSheet.create({
   assistantSurface: { backgroundColor: COLORS.background },
   messageText: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.chatBody,
-    fontSize: 15,
+    ...TYPE.body,
     lineHeight: 20,
   },
   replyQuote: {
@@ -642,8 +642,7 @@ const styles = StyleSheet.create({
   },
   replyQuoteText: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.serif,
-    fontSize: 14,
+    ...TYPE.bodySmall,
     lineHeight: 18,
   },
   metaRow: {
@@ -657,8 +656,7 @@ const styles = StyleSheet.create({
   metaRowAssistant: { justifyContent: 'flex-start' },
   timeLabel: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sans,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     lineHeight: 18,
   },
   metaIconButton: {
@@ -675,8 +673,7 @@ const styles = StyleSheet.create({
   },
   replyLabel: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sans,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     lineHeight: 18,
   },
 });

@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Trash2 } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 
 interface SecurityCredentialRowProps {
   icon: React.ReactNode;
@@ -20,27 +20,28 @@ export const SecurityCredentialRow = React.memo(function SecurityCredentialRow({
   return (
     <View
       style={{
-        minHeight: 62,
-        borderWidth: 1,
-        borderColor: COLORS.strokeWeak,
-        borderRadius: 12,
-        paddingHorizontal: 12,
+        minHeight: 64,
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
-        backgroundColor: COLORS.card,
+        gap: 12,
+        backgroundColor: COLORS.fillWeaker,
       }}
     >
       {icon}
       <View style={{ flex: 1 }}>
         <Text
-          style={SETTINGS_TYPE.rowLabel}
+          style={{ ...TYPE.body, color: COLORS.textStrong }}
+          numberOfLines={1}
         >
           {title}
         </Text>
         {subtitle && (
           <Text
-            style={[SETTINGS_TYPE.supporting, { marginTop: 3 }]}
+            style={{ ...TYPE.bodySmall, color: COLORS.textWeak, marginTop: 2 }}
+            numberOfLines={1}
           >
             {subtitle}
           </Text>
@@ -53,13 +54,15 @@ export const SecurityCredentialRow = React.memo(function SecurityCredentialRow({
           accessibilityLabel={`Delete ${title}`}
           activeOpacity={0.7}
           style={{
-            width: 44,
-            height: 44,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
             alignItems: 'center',
             justifyContent: 'center',
+            backgroundColor: `${COLORS.error}10`,
           }}
         >
-          <Trash2 size={21} color={COLORS.textBase} />
+          <Trash2 size={18} color={COLORS.error} />
         </TouchableOpacity>
       )}
     </View>

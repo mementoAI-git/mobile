@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text, View } from 'react-native';
 import { Check } from 'lucide-react-native';
 import { FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 interface SelectionCardProps {
   label: string;
@@ -25,19 +26,19 @@ export function SelectionCard({ label, sublabel, icon, selected, onPress, varian
       }`}
     >
       {icon ? (
-        <Text className="text-xl w-7 text-center">{icon}</Text>
+        <Text className="w-7 text-center" style={TYPE.uiTitle}>{icon}</Text>
       ) : null}
       <View className="flex-1">
         <Text
-          className={`text-sm leading-snug ${selected ? 'text-brand' : 'text-text-strong'}`}
-          style={{ fontFamily: FONTS.sansMedium }}
+          className={selected ? 'text-brand' : 'text-text-strong'}
+          style={TYPE.label}
         >
           {label}
         </Text>
         {sublabel ? (
           <Text
-            className="text-xs text-text-weak mt-0.5 leading-snug"
-            style={{ fontFamily: FONTS.sans }}
+            className="text-text-weak mt-0.5"
+            style={TYPE.bodySmall}
           >
             {sublabel}
           </Text>
@@ -67,8 +68,8 @@ export function SelectionChip({ label, selected, onPress }: { label: string; sel
       className={`px-4 py-2.5 rounded-full border ${selected ? 'bg-brand border-brand' : 'bg-card border-stroke-weak'}`}
     >
       <Text
-        className={`text-sm ${selected ? 'text-white' : 'text-text-base'}`}
-        style={{ fontFamily: FONTS.sansMedium }}
+        className={selected ? 'text-white' : 'text-text-base'}
+        style={TYPE.label}
       >
         {label}
       </Text>

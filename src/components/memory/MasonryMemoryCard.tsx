@@ -8,7 +8,8 @@ import { MoreHorizontal } from 'lucide-react-native';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { useUiStore } from '@/store';
-import { COLORS, FONTS, CARD_PASTEL_SURFACES } from '@/constants/tokens';
+import { COLORS, CARD_PASTEL_SURFACES } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import type { IMemory } from '@/types';
 import dayjs from 'dayjs';
 import { getMediaCategory } from '@/features/media/media-type';
@@ -40,7 +41,7 @@ function AttachmentCount({ memory }: { memory: IMemory }) {
   if (total <= 1) return null;
   return (
     <View style={{ position: 'absolute', top: 8, left: 8, zIndex: 10, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
-      <Text style={{ fontFamily: FONTS.sansBold, fontSize: 12, color: '#fff' }}>1/{total}</Text>
+      <Text style={{ ...TYPE.metadata, color: '#fff' }}>1/{total}</Text>
     </View>
   );
 }
@@ -218,10 +219,10 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
                   <View key={i} style={{ width: 2.5, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />
                 ))}
               </View>
-              <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: COLORS.textInverse, flex: 1 }} numberOfLines={1}>
+              <Text style={{ ...TYPE.metadata, color: COLORS.textInverse, flex: 1 }} numberOfLines={1}>
                 {fileName}
               </Text>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>
+              <Text style={{ ...TYPE.metadata, color: 'rgba(255,255,255,0.7)' }}>
                 {duration}
               </Text>
             </View>
@@ -247,7 +248,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
                     <View key={i} style={{ width: 3, height: h, backgroundColor: COLORS.textInverse, borderRadius: 2, opacity: 0.8 }} />
                   ))}
                 </View>
-                <Text style={{ fontFamily: FONTS.sansBold, color: COLORS.textInverse }} className="text-sm tracking-widest">
+                <Text style={{ ...TYPE.metadata, color: COLORS.textInverse }} className="tracking-widest">
                   {duration}
                 </Text>
               </View>
@@ -272,13 +273,13 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
               ))}
             </View>
             <Text
-              style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.textStrong, textAlign: 'center' }}
+              style={{ ...TYPE.metadata, color: COLORS.textStrong, textAlign: 'center' }}
               numberOfLines={2}
             >
               {fileName}
             </Text>
             <View className="bg-white/80 rounded-full px-3 py-1">
-              <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: COLORS.textBase }}>
+              <Text style={{ ...TYPE.metadata, color: COLORS.textBase }}>
                 {duration}
               </Text>
             </View>
@@ -306,8 +307,8 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
         </View>
         {bodyText ? (
           <Text
-            className="text-xs text-text-weak leading-relaxed"
-            style={{ fontFamily: FONTS.sans }}
+            className="text-text-weak leading-relaxed"
+            style={TYPE.bodySmall}
             numberOfLines={textBodyLines}
           >
             {bodyText}
@@ -321,7 +322,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
                 className="rounded-full px-2 py-0.5"
                 style={{ backgroundColor: `${surface.border}99`, borderWidth: 1, borderColor: surface.border }}
               >
-                <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: COLORS.textWeak }}>#{tag}</Text>
+                <Text style={{ ...TYPE.eyebrow, color: COLORS.textWeak }}>#{tag}</Text>
               </View>
             ))}
           </View>
@@ -361,16 +362,16 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
           <View className="px-5 pt-4 pb-5 gap-3">
             {!hasMedia && <InProgressBadge memory={memory} />}
             <Text
-              className="text-[22px] text-text-strong leading-tight"
-              style={{ fontFamily: FONTS.serif }}
+              className="text-text-strong"
+              style={TYPE.cardTitle}
               numberOfLines={2}
             >
               {storyTitle}
             </Text>
             {bodyText ? (
               <Text
-                className="text-sm leading-relaxed"
-                style={{ fontFamily: FONTS.sans, color: '#555555' }}
+                className="leading-relaxed"
+                style={{ ...TYPE.body, color: '#555555' }}
                 numberOfLines={2}
               >
                 {bodyText}
@@ -384,7 +385,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
                     className="rounded-full px-2.5 py-0.5"
                     style={{ backgroundColor: `${surface.border}99`, borderWidth: 1, borderColor: surface.border }}
                   >
-                    <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textWeak }}>#{tag}</Text>
+                    <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>#{tag}</Text>
                   </View>
                 ))}
               </View>
@@ -415,8 +416,8 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
 
         {/* Title below the card (Pinterest-style) */}
         <Text
-          className="mt-2 px-0.5 text-center text-xs text-text-strong leading-snug"
-          style={{ fontFamily: FONTS.sansMedium }}
+          className="mt-2 px-0.5 text-center text-text-strong leading-snug"
+          style={TYPE.bodySmall}
           numberOfLines={2}
         >
           {storyTitle}

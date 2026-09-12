@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Button, TextInput } from '@/components/ui';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useTwoFactorSettingsLogic } from '@/hooks/use-two-factor-settings-logic';
+import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
 
 interface SetupTwoFactorSheetProps {
   setupData: { qr_code?: string; secret?: string };
@@ -18,6 +20,7 @@ export function SetupTwoFactorSheet({
   setupData,
   onClose,
 }: SetupTwoFactorSheetProps) {
+  const insets = useSafeAreaInsets();
   const [manual, setManual] = useState(!setupData.qr_code);
   const twoFactor = useTwoFactorSettingsLogic();
 
@@ -29,7 +32,7 @@ export function SetupTwoFactorSheet({
   return (
     <View style={{ flex: 1 }}>
       <View style={twoFactorStyles.header}>
-        <Text style={SETTINGS_TYPE.sectionTitle}>Set up two-factor authentication</Text>
+        <Text style={TYPE.sectionTitle}>Set up two-factor authentication</Text>
         <TouchableOpacity
           onPress={() => {
             Haptics.selectionAsync();
@@ -47,11 +50,11 @@ export function SetupTwoFactorSheet({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20 }}
       >
-        <Text style={SETTINGS_TYPE.cardTitle}>Step 1</Text>
+        <Text style={TYPE.label}>Step 1</Text>
         <Text style={twoFactorStyles.copy}>Download an authenticator app:</Text>
         <Text style={twoFactorStyles.link}>1. Google Authenticator{'\n'}2. Authy.</Text>
 
-        <Text style={[SETTINGS_TYPE.cardTitle, { marginTop: 18 }]}>Step 2</Text>
+        <Text style={[TYPE.label, { marginTop: 18 }]}>Step 2</Text>
         {manual ? (
           <>
             <Text style={twoFactorStyles.copy}>
@@ -99,7 +102,7 @@ export function SetupTwoFactorSheet({
           </>
         )}
 
-        <Text style={[SETTINGS_TYPE.cardTitle, { marginTop: 18 }]}>Step 3</Text>
+        <Text style={[TYPE.label, { marginTop: 18 }]}>Step 3</Text>
         <Text style={twoFactorStyles.copy}>
           Enter the six-digit code from your authenticator app.
         </Text>
@@ -125,7 +128,7 @@ export function SetupTwoFactorSheet({
         {twoFactor.error && <Text style={twoFactorStyles.error}>{twoFactor.error}</Text>}
       </BottomSheetScrollView>
 
-      <View style={twoFactorStyles.actions}>
+      <View style={[twoFactorStyles.actions, {paddingBottom: Math.max(getSheetBottomPadding(insets.bottom, 12), 20)}]}>
         <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={onClose}>
           Cancel
         </Button>
@@ -161,31 +164,28 @@ const twoFactorStyles = {
   },
   copy: {
     color: COLORS.textBase,
-    fontFamily: FONTS.sans,
-    fontSize: 14,
+    ...TYPE.label,
     lineHeight: 20,
     marginTop: 10,
   },
   link: {
     color: COLORS.brand,
-    fontFamily: FONTS.sansMedium,
-    fontSize: 14,
+    ...TYPE.label,
     lineHeight: 20,
     marginTop: 10,
   },
   codeRow: {
     minHeight: 48,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeak,
-    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: COLORS.fillWeaker,
+    paddingHorizontal: 16,
     marginTop: 10,
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     gap: 8,
   },
-  code: { flex: 1, color: COLORS.textStrong, fontFamily: FONTS.mono, fontSize: 14 },
-  copyAction: { color: COLORS.info, fontFamily: FONTS.sansMedium, fontSize: 13 },
+  code: { flex: 1, color: COLORS.textStrong, ...TYPE.mono },
+  copyAction: { color: COLORS.info, ...TYPE.bodySmall },
   qr: { width: 126, height: 126, marginTop: 10 },
   actions: {
     flexDirection: 'row' as const,
@@ -193,9 +193,7 @@ const twoFactorStyles = {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 20,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.strokeWeaker,
     backgroundColor: COLORS.background,
   },
-  error: { color: COLORS.error, fontFamily: FONTS.sans, fontSize: 12, marginTop: 8 },
+  error: { color: COLORS.error, ...TYPE.metadata, marginTop: 8 },
 };

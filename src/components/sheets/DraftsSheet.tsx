@@ -16,7 +16,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { X, FileText } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useUiStore, useOfflineQueueStore } from '@/store';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import dayjs from 'dayjs';
 import NetInfo from '@react-native-community/netinfo';
 import { get, post, put, del } from '@/api/mutations';
@@ -259,13 +261,12 @@ export function DraftsSheet() {
           paddingBottom: 16,
         }}
       >
-        <Text style={{ fontFamily: FONTS.serif, fontSize: 22, color: COLORS.textStrong }}>
+        <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
           My Drafts
         </Text>
         <Text
           style={{
-            fontFamily: FONTS.sansMedium,
-            fontSize: 13,
+            ...TYPE.bodySmall,
             color: COLORS.textMuted,
           }}
         >
@@ -298,8 +299,7 @@ export function DraftsSheet() {
           </View>
           <Text
             style={{
-              fontFamily: FONTS.serif,
-              fontSize: 18,
+              ...TYPE.cardTitle,
               color: COLORS.textStrong,
               textAlign: 'center',
             }}
@@ -308,8 +308,7 @@ export function DraftsSheet() {
           </Text>
           <Text
             style={{
-              fontFamily: FONTS.sans,
-              fontSize: 14,
+              ...TYPE.label,
               color: COLORS.textBase,
               textAlign: 'center',
               lineHeight: 22,
@@ -345,8 +344,7 @@ export function DraftsSheet() {
             <View style={{ flex: 1, gap: 4 }}>
               <Text
                 style={{
-                  fontFamily: FONTS.sansMedium,
-                  fontSize: 15,
+                  ...TYPE.body,
                   color: COLORS.textStrong,
                 }}
                 numberOfLines={1}
@@ -356,8 +354,7 @@ export function DraftsSheet() {
               {bodyPreview.length > 0 && (
                 <Text
                   style={{
-                    fontFamily: FONTS.sans,
-                    fontSize: 13,
+                    ...TYPE.bodySmall,
                     color: COLORS.textBase,
                     lineHeight: 19,
                   }}
@@ -368,8 +365,7 @@ export function DraftsSheet() {
               )}
               <Text
                 style={{
-                  fontFamily: FONTS.sans,
-                  fontSize: 11,
+                  ...TYPE.metadata,
                   color: COLORS.textMuted,
                   marginTop: 2,
                 }}

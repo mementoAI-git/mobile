@@ -4,7 +4,8 @@ import { Check, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Button } from '@/components/ui/Button';
 import { VoiceArtwork } from '@/components/chat/VoiceArtwork';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { VOICE_CATALOG, getVoiceById, type VoiceId } from '@/features/chat/voice-catalog';
 import { useUiStore, useVoicePreferenceStore } from '@/store';
 import { useUpdateProfile } from '@/hooks/mutations/use-profile-mutation';
@@ -33,12 +34,12 @@ export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: Vo
   return (
     <View className="pb-2 pt-2">
       <View className="mb-5 flex-row items-center justify-between">
-        <Text className="text-2xl text-text-strong" style={{ fontFamily: FONTS.serifMedium }}>Settings</Text>
+        <Text className="text-text-strong" style={TYPE.sectionTitle}>Settings</Text>
         <Pressable onPress={onClose} className="size-11 items-center justify-center rounded-full bg-fill-weaker">
           <X size={20} color={COLORS.textBase} />
         </Pressable>
       </View>
-      <Text className="mb-3 text-base text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>Change voice</Text>
+      <Text className="mb-3 text-text-strong" style={TYPE.label}>Change voice</Text>
       <View className="gap-3">
         {VOICE_CATALOG.map((voice) => {
           const selected = voice.id === draft;
@@ -51,8 +52,8 @@ export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: Vo
             >
               <VoiceArtwork voice={voice} size={48} />
               <View className="ml-4 flex-1">
-                <Text className="text-base text-text-strong" style={{ fontFamily: FONTS.sansSemi }}>{voice.name}</Text>
-                <Text className="text-sm text-text-base" style={{ fontFamily: FONTS.sans }}>{voice.subtitle}</Text>
+                <Text className="text-text-strong" style={TYPE.button}>{voice.name}</Text>
+                <Text className="text-text-base" style={TYPE.bodySmall}>{voice.subtitle}</Text>
               </View>
               {selected ? <View className="size-6 items-center justify-center rounded-full bg-brand"><Check size={15} color={COLORS.textInverse} /></View> : null}
             </Pressable>

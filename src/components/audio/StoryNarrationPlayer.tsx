@@ -5,6 +5,7 @@ import { Play, Pause, X, RotateCcw, Volume2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import {
   type NarrationTrack,
   type PlaybackSpeed,
@@ -99,8 +100,7 @@ export function StoryNarrationPlayer({
             <Text
               numberOfLines={1}
               style={{
-                fontFamily: FONTS.serif,
-                fontSize: 16,
+                ...TYPE.body,
                 color: COLORS.textStrong,
               }}
             >
@@ -109,8 +109,7 @@ export function StoryNarrationPlayer({
             <Text
               numberOfLines={1}
               style={{
-                fontFamily: FONTS.sans,
-                fontSize: 12,
+                ...TYPE.metadata,
                 color: COLORS.textWeak,
               }}
             >
@@ -157,10 +156,10 @@ export function StoryNarrationPlayer({
           />
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ fontFamily: FONTS.mono, fontSize: 10, color: COLORS.textMuted }}>
+          <Text style={{ ...TYPE.eyebrow, color: COLORS.textMuted }}>
             {formatNarrationTime(currentTime)}
           </Text>
-          <Text style={{ fontFamily: FONTS.mono, fontSize: 10, color: COLORS.textMuted }}>
+          <Text style={{ ...TYPE.eyebrow, color: COLORS.textMuted }}>
             {formatNarrationTime(duration)}
           </Text>
         </View>
@@ -179,7 +178,7 @@ export function StoryNarrationPlayer({
             backgroundColor: COLORS.fillWeak,
           }}
         >
-          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 12, color: COLORS.textStrong }}>
+          <Text style={{ ...TYPE.metadata, color: COLORS.textStrong }}>
             {speed}x
           </Text>
         </TouchableOpacity>

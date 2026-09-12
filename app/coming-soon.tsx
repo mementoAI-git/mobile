@@ -14,6 +14,7 @@ import {
 } from 'lucide-react-native';
 import { Button } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import {
   resolveComingSoonFeature,
   type ComingSoonBenefit,
@@ -117,8 +118,7 @@ function ComingSoonContent() {
           fullWidth
           onPress={dismiss}
           size="lg"
-          textClassName="text-base font-bold"
-        >
+                  >
           Got it
         </Button>
       </View>
@@ -186,24 +186,21 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     color: COLORS.brand,
-    fontFamily: FONTS.sansBold,
-    fontSize: 11,
+    ...TYPE.metadata,
     letterSpacing: 1.4,
     lineHeight: 16,
     textAlign: 'center',
   },
   title: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansBold,
-    fontSize: 30,
+    ...TYPE.screenTitle,
     lineHeight: 37,
     marginTop: 10,
     textAlign: 'center',
   },
   description: {
     color: COLORS.textBase,
-    fontFamily: FONTS.sans,
-    fontSize: 15,
+    ...TYPE.body,
     lineHeight: 23,
     marginTop: 12,
     maxWidth: 330,
@@ -222,14 +219,12 @@ const styles = StyleSheet.create({
   benefitCopy: { flex: 1, paddingTop: 1 },
   benefitTitle: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansBold,
-    fontSize: 15,
+    ...TYPE.body,
     lineHeight: 20,
   },
   benefitDescription: {
     color: COLORS.textBase,
-    fontFamily: FONTS.sans,
-    fontSize: 14,
+    ...TYPE.label,
     lineHeight: 20,
     marginTop: 2,
   },

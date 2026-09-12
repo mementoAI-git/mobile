@@ -3,31 +3,24 @@ import { post, put, del } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { invalidateMemoryQueries } from '@/features/memories/cache';
 import { queryKeys } from '@/constants/query-keys';
-import type { IMemory, IDailyPromptCapture } from '@/types';
+import type { IMemory } from '@/types';
+import {
+  serializeMemoryMutationPayload,
+  type MemoryMutationPayload,
+} from '@/features/memories/memory-mutation-payload';
 import NetInfo from '@react-native-community/netinfo';
 import { useOfflineQueueStore } from '@/store/offline-queue.store';
-
-interface CreateMemoryPayload {
-  title: string;
-  body: string;
-  tags?: string[];
-  status?: 'draft' | 'save' | string;
-  level?: number;
-  attachments?: string[];
-  groups?: string[];
-  beneficiaries?: string[];
-  daily_prompt?: IDailyPromptCapture;
-}
 
 export function useCreateMemory() {
   const queryClient = useQueryClient();
   const enqueueMutation = useOfflineQueueStore((s) => s.enqueueMutation);
 
   return useMutation({
-    mutationFn: async (payload: CreateMemoryPayload) => {
+    mutationFn: async (payload: MemoryMutationPayload) => {
+      const serializedPayload = serializeMemoryMutationPayload(payload);
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
-        await enqueueMutation('create_memory', payload);
+        await enqueueMutation('create_memory', serializedPayload);
         return {
           data: {
             _id: `offline-${Date.now()}`,
@@ -40,7 +33,7 @@ export function useCreateMemory() {
           } as any,
         };
       }
-      return post<IMemory>(endpoint.memories, payload);
+      return post<IMemory>(endpoint.memories, serializedPayload);
     },
     onSuccess: (_res, variables) => {
       invalidateMemoryQueries(queryClient, {
@@ -57,19 +50,20 @@ export function useUpdateMemory(id: string) {
   const enqueueMutation = useOfflineQueueStore((s) => s.enqueueMutation);
 
   return useMutation({
-    mutationFn: async (payload: Partial<CreateMemoryPayload>) => {
+    mutationFn: async (payload: Partial<MemoryMutationPayload>) => {
+      const serializedPayload = serializeMemoryMutationPayload(payload);
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
-        await enqueueMutation('update_memory', { id, ...payload });
+        await enqueueMutation('update_memory', { id, ...serializedPayload });
         return {
           data: {
             _id: id,
-            ...payload,
+            ...serializedPayload,
             updated_at: new Date().toISOString(),
           } as any,
         };
       }
-      return put<IMemory>(endpoint.memory.replace(':id', id), payload);
+      return put<IMemory>(endpoint.memory.replace(':id', id), serializedPayload);
     },
     onSuccess: (_response, variables) => {
       // Server PUT returns the PRE-update document (MongoDB { new: false } default).

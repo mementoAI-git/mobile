@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Image, ImageSourcePropType, TouchableOpacity } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { LucideIcon } from 'lucide-react-native';
 
 interface EmptyStateProps {
@@ -39,15 +40,15 @@ export function EmptyState({
       ) : null}
 
       <Animated.Text
-        className="text-2xl text-text-strong text-center mb-2"
-        style={{ fontFamily: FONTS.serif }}
+        className="text-text-strong text-center mb-2"
+        style={TYPE.cardTitle}
       >
         {title}
       </Animated.Text>
 
       <Animated.Text
-        className="text-base text-text-weak text-center leading-relaxed mb-8"
-        style={{ fontFamily: FONTS.sans }}
+        className="text-text-weak text-center mb-8"
+        style={TYPE.bodySmall}
       >
         {description}
       </Animated.Text>
@@ -58,7 +59,7 @@ export function EmptyState({
           activeOpacity={0.8}
           className="bg-brand rounded-full px-8 py-3.5 shadow-sm"
         >
-          <Animated.Text className="text-white font-semibold text-base" style={{ fontFamily: FONTS.sansMedium }}>
+          <Animated.Text className="text-white" style={TYPE.button}>
             {actionLabel}
           </Animated.Text>
         </TouchableOpacity>

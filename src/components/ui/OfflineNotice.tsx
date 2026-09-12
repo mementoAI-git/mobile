@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Animated, StyleSheet, Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { WifiOff } from 'lucide-react-native';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useOfflineQueueStore } from '@/store/offline-queue.store';
 
@@ -97,7 +98,7 @@ export function OfflineNotice() {
     >
       <View className="flex-row items-center gap-2 px-4 py-2 bg-text-strong rounded-full">
         <WifiOff size={16} color={COLORS.brand} strokeWidth={2} />
-        <Text className="text-white text-xs font-medium" style={{ fontFamily: FONTS.sansMedium }}>
+        <Text className="text-white" style={TYPE.metadata}>
           You're offline. Some features may be limited.
         </Text>
       </View>

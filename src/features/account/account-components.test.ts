@@ -4,7 +4,7 @@ import { describe, expect, test } from 'bun:test';
 describe('account overview components', () => {
   test('reuse shared UI and semantic design tokens', async () => {
     const banner = await Bun.file(
-      new URL('../../components/account/AccountUpgradeBanner.tsx', import.meta.url),
+      new URL('../../components/subscription/PlanSummaryBanner.tsx', import.meta.url),
     ).text();
     const score = await Bun.file(
       new URL('../../components/account/EnrichmentScoreCard.tsx', import.meta.url),

@@ -12,7 +12,8 @@ import {
 import { Image as ExpoImage } from 'expo-image';
 import { ExternalLink, X, Globe } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { useLinkPreview, type LinkPreviewData } from '@/hooks/use-link-preview';
 
 // ─── Favicon Badge ────────────────────────────────────────────────────────────
@@ -231,21 +232,18 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   cardHostText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 10,
+    ...TYPE.eyebrow,
     color: COLORS.textWeak,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   cardTitle: {
-    fontFamily: FONTS.sansSemi,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     lineHeight: 18,
     color: COLORS.textStrong,
   },
   cardDescription: {
-    fontFamily: FONTS.sans,
-    fontSize: 11,
+    ...TYPE.metadata,
     lineHeight: 15,
     color: COLORS.textWeak,
   },
@@ -273,8 +271,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.strokeWeaker,
   },
   chipText: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 12,
+    ...TYPE.metadata,
     color: COLORS.textStrong,
     flex: 1,
   },
@@ -288,8 +285,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   faviconFallbackText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 9,
+    ...TYPE.eyebrow,
     color: COLORS.textWeak,
   },
   faviconImage: {

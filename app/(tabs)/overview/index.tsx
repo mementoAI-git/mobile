@@ -17,6 +17,7 @@ import { useUserStore } from '@/store';
 import { DashboardHeader, OverviewSkeleton, GradientText, GreetingIcon, JourneyStatIcon, Button } from '@/components/ui';
 import { UiLightning01 } from '@/components/ui/icons/SettingsIcons';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useQueryClient } from '@tanstack/react-query';
@@ -80,9 +81,9 @@ const OverviewJourneyCard = React.memo(function OverviewJourneyCard({
   const content = (
     <View className="flex-row items-center justify-between p-5 flex-1">
       <View className="gap-1 flex-1">
-        <Text 
-          className="text-[10px] font-bold uppercase tracking-widest text-text-weak" 
-          style={{ fontFamily: FONTS.sansBold }}
+        <Text
+          className="uppercase tracking-widest text-text-weak"
+          style={TYPE.eyebrow}
         >
           {label}
         </Text>
@@ -92,13 +93,13 @@ const OverviewJourneyCard = React.memo(function OverviewJourneyCard({
       </View>
       <View className="ml-3 shrink-0">
         {typeof icon === 'number' || (icon && typeof icon === 'object' && 'uri' in icon) ? (
-          <Image 
-            source={icon} 
-            style={{ width: 44, height: 44 }} 
-            resizeMode="contain" 
+          <Image
+            source={icon}
+            style={{ width: 44, height: 44 }}
+            resizeMode="contain"
           />
         ) : typeof icon === 'string' ? (
-          <Text className="text-3xl">{icon}</Text>
+          <Text className="" style={TYPE.screenTitle}>{icon}</Text>
         ) : (
           icon
         )}
@@ -279,11 +280,11 @@ export default function OverviewScreen() {
             <View className="flex-1">
               <Animated.Text
                 className="text-text-strong"
-                style={{ fontFamily: FONTS.sans, fontSize: 24, lineHeight: 32 }}
+                style={TYPE.greeting}
               >
                 {greeting}
                 {displayName && (
-                  <Animated.Text style={{ color: COLORS.success, fontFamily: FONTS.sansMedium }}> {displayName}.</Animated.Text>
+                  <Animated.Text style={{ ...TYPE.greeting, color: COLORS.success }}> {displayName}.</Animated.Text>
                 )}
               </Animated.Text>
             </View>
@@ -299,8 +300,8 @@ export default function OverviewScreen() {
               <View className="size-8 bg-brand rounded-full items-center justify-center">
                 <Zap size={14} color="white" fill="white" />
               </View>
-              <Animated.Text className="text-sm text-text-strong flex-1" style={{ fontFamily: FONTS.sansMedium }}>
-                <Animated.Text className="text-brand font-bold">{quickPending}</Animated.Text> quick capture{quickPending > 1 ? 's' : ''} finishing up...
+              <Animated.Text className="text-text-strong flex-1" style={TYPE.label}>
+                <Animated.Text className="text-brand" style={TYPE.label}>{quickPending}</Animated.Text> quick capture{quickPending > 1 ? 's' : ''} finishing up...
               </Animated.Text>
               <ChevronRight size={16} color={COLORS.brand} />
             </TouchableOpacity>
@@ -319,7 +320,7 @@ export default function OverviewScreen() {
                   <View className="flex-row items-start justify-between">
                       <Text
                         className="text-text-strong flex-1"
-                        style={{ fontFamily: FONTS.sans, fontSize: 16, lineHeight: 24 }}
+                        style={TYPE.bodyLarge}
                       >
                       What's on your{"\n"}mind today?
                     </Text>
@@ -330,12 +331,12 @@ export default function OverviewScreen() {
                     >
                       <View className="flex-row items-center gap-1.5">
                         <Zap size={14} color={COLORS.brand} fill={COLORS.brand} />
-                        <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>{streakCount}</Text>
+                        <Text className="text-text-strong" style={TYPE.buttonSmall}>{streakCount}</Text>
                       </View>
                       <View className="w-px h-3 bg-stroke-weaker" />
                       <View className="flex-row items-center gap-1.5">
                         <Trophy size={14} color={COLORS.warning} />
-                        <Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>{enrichmentScore}%</Text>
+                        <Text className="text-text-strong" style={TYPE.buttonSmall}>{enrichmentScore}%</Text>
                       </View>
                     </TouchableOpacity>
                   </View>
@@ -379,17 +380,17 @@ export default function OverviewScreen() {
                   <View className="flex-row items-center gap-4">
                     <GradientText
                       colors={['#5B9BD5', '#A8D4F5']}
-                      style={{ fontSize: 48, fontFamily: FONTS.serif, lineHeight: 54 }}
+                      style={TYPE.displayStat}
                     >
                       {enrichmentScore}%
                     </GradientText>
                     <View className="bg-white/80 px-3 py-1.5 rounded-full border border-white/30">
-                      <Text className="text-[10px] font-bold text-text-strong uppercase tracking-widest" style={{ fontFamily: FONTS.sansBold }}>
+                      <Text className="text-text-strong uppercase tracking-widest" style={TYPE.eyebrow}>
                         Enrichment score
                       </Text>
                     </View>
                   </View>
-                  <Text className="text-[15px] text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+                  <Text className="text-text-weak" style={TYPE.body}>
                     Share stories & files to build context. Link apps to enrich your Memento.
                   </Text>
                   <TouchableOpacity
@@ -407,7 +408,7 @@ export default function OverviewScreen() {
                     }}
                   >
                     <BarChart2 size={15} color={COLORS.textWeak} strokeWidth={1.5} />
-                    <Text style={{ fontFamily: FONTS.sansBold, fontSize: 12, color: COLORS.textStrong }}>View insights</Text>
+                    <Text style={{ ...TYPE.buttonSmall, color: COLORS.textStrong }}>View insights</Text>
                   </TouchableOpacity>
                 </View>
               </ImageBackground>
@@ -423,7 +424,7 @@ export default function OverviewScreen() {
           {/* ── Stat Column (Web Parity Stack) ────────────────────────── */}
           <View className="gap-4">
             <View className="px-1">
-              <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>Your Journey</Text>
+              <Text className="text-text-strong" style={TYPE.sectionTitle}>Your Journey</Text>
             </View>
 
             <OverviewJourneyCard
@@ -431,11 +432,11 @@ export default function OverviewScreen() {
               valueElement={
                 <View className="gap-0.5">
                   <View className="flex-row items-baseline">
-                    <Text className="text-xl font-bold text-info-strong" style={{ fontFamily: FONTS.sansBold }}>{memoriesCount}</Text>
-                    <Text className="text-base font-bold text-text-strong ml-1" style={{ fontFamily: FONTS.sansBold }}>items</Text>
+                    <Text className="text-info-strong" style={TYPE.stat}>{memoriesCount}</Text>
+                    <Text className="text-text-strong ml-1" style={TYPE.button}>items</Text>
                   </View>
                   {weeklyMemories > 0 && (
-                    <Text className="text-[11px] text-text-weak" style={{ fontFamily: FONTS.sans }}>
+                    <Text className="text-text-weak" style={TYPE.metadata}>
                       +{weeklyMemories} this week
                     </Text>
                   )}
@@ -450,8 +451,8 @@ export default function OverviewScreen() {
               label="BENEFICIARIES"
               valueElement={
                 <>
-                  <Text className="text-xl font-bold text-brand" style={{ fontFamily: FONTS.sansBold }}>{beneficiariesCount}</Text>
-                  <Text className="text-base font-bold text-text-strong ml-1" style={{ fontFamily: FONTS.sansBold }}>people</Text>
+                  <Text className="text-brand" style={TYPE.uiTitle}>{beneficiariesCount}</Text>
+                  <Text className="text-text-strong ml-1" style={TYPE.body}>people</Text>
                 </>
               }
               icon={<JourneyStatIcon type="beneficiaries" />}
@@ -462,7 +463,7 @@ export default function OverviewScreen() {
             <OverviewJourneyCard
               label="TIME CAPSULES"
               valueElement={
-                <Text className="text-base font-bold text-text-muted" style={{ fontFamily: FONTS.sansMedium }}>Coming soon</Text>
+                <Text className="text-text-muted" style={TYPE.body}>Coming soon</Text>
               }
               icon={<JourneyStatIcon type="capsules" />}
               bgImage={CAPSULE_BG}
@@ -472,9 +473,9 @@ export default function OverviewScreen() {
               label="STREAK COUNT"
               valueElement={
                 <>
-                  <Text className="text-base font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>You're on a </Text>
-                  <Text className="text-base font-bold text-brand" style={{ fontFamily: FONTS.sansBold }}>{streakCount}-day</Text>
-                  <Text className="text-base font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}> streak</Text>
+                  <Text className="text-text-strong" style={TYPE.body}>You're on a </Text>
+                  <Text className="text-brand" style={TYPE.body}>{streakCount}-day</Text>
+                  <Text className="text-text-strong" style={TYPE.body}> streak</Text>
                 </>
               }
               icon={<JourneyStatIcon type="streak" />}

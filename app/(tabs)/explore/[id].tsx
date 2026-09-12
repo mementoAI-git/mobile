@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Inbox } from 'lucide-react-native';
 import { Spinner, ExploreSkeleton, EmptyState } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useCategoryPromptsLogic } from '@/hooks/use-category-prompts-logic';
 import * as Haptics from 'expo-haptics';
@@ -43,7 +44,7 @@ export default function CategoryPromptsScreen() {
       >
         {/* Question Tag */}
         <View className="absolute top-4 right-4 px-2 py-0.5 rounded-full bg-brand/5 border border-brand/10">
-          <Animated.Text className="text-[10px] text-brand font-bold capitalize" style={{ fontFamily: FONTS.sans }}>
+          <Animated.Text className="text-brand capitalize" style={TYPE.eyebrow}>
             Question
           </Animated.Text>
         </View>
@@ -59,8 +60,8 @@ export default function CategoryPromptsScreen() {
           </View>
           <View className="flex-1 pt-1">
             <Animated.Text
-              className="text-[17px] text-text-strong leading-relaxed"
-              style={{ fontFamily: FONTS.serif }}
+              className="text-text-strong"
+              style={TYPE.cardTitle}
             >
               {item.title}
             </Animated.Text>
@@ -78,8 +79,8 @@ export default function CategoryPromptsScreen() {
             className="px-5 py-2 rounded-full border border-stroke-strong bg-white active:bg-fill-weaker"
           >
             <Animated.Text
-              className="text-xs text-text-strong font-semibold"
-              style={{ fontFamily: FONTS.sans }}
+              className="text-text-strong"
+              style={TYPE.buttonSmall}
             >
               Reply question
             </Animated.Text>
@@ -105,9 +106,9 @@ export default function CategoryPromptsScreen() {
           <ChevronLeft size={20} color={COLORS.textBase} />
         </TouchableOpacity>
         <Animated.Text
-          className="text-[22px] text-text-strong capitalize flex-1 pr-6"
+          className="text-text-strong capitalize flex-1 pr-6"
           numberOfLines={1}
-          style={{ fontFamily: FONTS.serif }}
+          style={TYPE.screenTitle}
         >
           {categoryMeta.title}
         </Animated.Text>
@@ -120,7 +121,7 @@ export default function CategoryPromptsScreen() {
           <View className="absolute inset-0 bg-black/10 items-center justify-center z-50">
             <View className="bg-white p-6 rounded-2xl shadow-lg border border-stroke-weaker items-center gap-3">
               <Spinner size="large" color={COLORS.brand} />
-              <Animated.Text className="text-sm text-text-strong" style={{ fontFamily: FONTS.sansBold }}>Starting reflect session...</Animated.Text>
+              <Animated.Text className="text-text-strong" style={TYPE.label}>Starting reflect session...</Animated.Text>
             </View>
           </View>
         )}
@@ -133,7 +134,7 @@ export default function CategoryPromptsScreen() {
           <FlatList
             data={prompts}
             keyExtractor={(item, index) => item._id ?? `prompt-${index}`}
-            contentContainerClassName="p-5 gap-5"
+            contentContainerClassName="p-5 pb-32 gap-5"
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.brand} />
@@ -153,14 +154,14 @@ export default function CategoryPromptsScreen() {
                   )}
                   <View className="gap-2">
                     <Animated.Text
-                      className="text-[26px] text-text-strong leading-tight capitalize"
-                      style={{ fontFamily: FONTS.serif }}
+                      className="text-text-strong capitalize"
+                      style={TYPE.screenTitle}
                     >
                       {categoryMeta.title}
                     </Animated.Text>
                     <Animated.Text
-                      className="text-[14px] text-text-base leading-relaxed opacity-80"
-                      style={{ fontFamily: FONTS.sans }}
+                      className="text-text-base opacity-80"
+                      style={TYPE.body}
                     >
                       {categoryMeta.subtitle}
                     </Animated.Text>
@@ -168,7 +169,7 @@ export default function CategoryPromptsScreen() {
                   <View className="flex-row">
                     <View className="px-3 py-1.5 rounded-full bg-fill-weaker border border-stroke-weaker flex-row items-center gap-1.5">
                       <View className="size-2 rounded-full bg-brand" />
-                      <Animated.Text className="text-xs text-text-strong font-medium" style={{ fontFamily: FONTS.sans }}>
+                      <Animated.Text className="text-text-strong" style={TYPE.metadata}>
                         {totalDocs} topics
                       </Animated.Text>
                     </View>
@@ -191,8 +192,8 @@ export default function CategoryPromptsScreen() {
                         className="flex-1 py-3 items-center relative"
                       >
                         <Animated.Text
-                          className={`text-sm font-semibold ${isActive ? 'text-brand' : 'text-text-weak'}`}
-                          style={{ fontFamily: FONTS.sans }}
+                          className={isActive ? 'text-brand' : 'text-text-weak'}
+                          style={TYPE.label}
                         >
                           {tab}
                         </Animated.Text>
@@ -212,9 +213,8 @@ export default function CategoryPromptsScreen() {
               <View className="items-center justify-center py-16 gap-3">
                 <Inbox size={40} color={COLORS.textDisabled} strokeWidth={1.5} />
                 <Animated.Text
-                  className="text-base text-text-weak text-center"
-                  style={{ fontFamily: FONTS.sans }}
-                >
+                  className="text-text-weak text-center"
+                  style={TYPE.body}>
                   No prompts under this filter yet.
                 </Animated.Text>
               </View>

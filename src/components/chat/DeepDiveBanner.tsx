@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Layers, X } from 'lucide-react-native';
-import { FONTS, COLORS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 interface DeepDiveBannerProps {
   dimensionLabel: string;
@@ -21,7 +22,7 @@ export function DeepDiveBanner({ dimensionLabel, onExit }: DeepDiveBannerProps) 
       <View className="flex-row items-center gap-2 bg-brand/10 border border-brand/20 rounded-full px-3 py-1.5">
         <Layers size={13} color={COLORS.brand} strokeWidth={2.5} />
         <Text
-          style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.brand }}
+          style={{ ...TYPE.metadata, color: COLORS.brand }}
           numberOfLines={1}
         >
           Deep dive · {dimensionLabel}

@@ -2,14 +2,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { invalidateMemoryQueries } from '@/features/memories/cache';
+import type { MemoryVisibility } from '@/features/memories/memory-audience';
 
 export interface QuickCapturePayload {
   /** Plain text body — AI enriches title/tags server-side */
   body: string;
   /** Array of uploaded file _id strings */
   attachments?: string[];
-  /** Beneficiary _id strings for sharing (empty = public) */
-  beneficiaries?: string[];
+  /** Quick Capture callers explicitly preserve the product's private default. */
+  visibility: Extract<MemoryVisibility, 'private'>;
   /** From a daily prompt: 'static' | 'ai-generated' */
   prompt_type?: 'static' | 'ai-generated';
   /** prompt_id when prompt_type === 'static' */
@@ -32,7 +33,7 @@ export function useQuickCapture() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: QuickCapturePayload) =>
-      post(endpoint.memoriesQuickCapture, payload),
+      post(endpoint.memoriesQuickCapture, { ...payload, visibility: 'private' }),
     onSuccess: (_res, variables) => {
       // Invalidate stories + stats so the processing badge appears
       invalidateMemoryQueries(queryClient, {

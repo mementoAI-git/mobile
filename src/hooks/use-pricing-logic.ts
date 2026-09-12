@@ -26,7 +26,7 @@ export const DEFERRED_FEATURES = [
 export function usePricingLogic() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [interval, setInterval] = useState<BillingInterval>('annual');
+  const [interval, setInterval] = useState<BillingInterval>('monthly');
   const [loading, setLoading] = useState(false);
   const currency: Currency = 'USD';
   const table = PRICING_TABLE[currency];

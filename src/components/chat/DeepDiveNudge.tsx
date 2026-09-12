@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { X, Sparkles } from 'lucide-react-native';
-import { FONTS, COLORS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { dimensionLabel, type LifeDimension } from '@/constants/enrichment';
 
 interface DeepDiveNudgeProps {
@@ -35,18 +36,18 @@ export function DeepDiveNudge({ dimension, question, onDeepDive, onDismiss }: De
 
         {/* Text */}
         <View className="flex-1 gap-1.5">
-          <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.textStrong }}>
+          <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>
             Explore {label}
           </Text>
           {question ? (
             <Text
-              style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textWeak, lineHeight: 16 }}
+              style={{ ...TYPE.metadata, color: COLORS.textWeak }}
               numberOfLines={2}
             >
               {question}
             </Text>
           ) : (
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textWeak }}>
+            <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>
               You haven't shared much here yet. Want to go deeper?
             </Text>
           )}
@@ -61,7 +62,7 @@ export function DeepDiveNudge({ dimension, question, onDeepDive, onDismiss }: De
               activeOpacity={0.8}
               className="flex-row items-center gap-1 bg-brand rounded-full px-3 py-1.5"
             >
-              <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 11, color: '#fff' }}>
+              <Text style={{ ...TYPE.metadata, color: '#fff' }}>
                 Go deeper
               </Text>
             </TouchableOpacity>
@@ -74,7 +75,7 @@ export function DeepDiveNudge({ dimension, question, onDeepDive, onDismiss }: De
               activeOpacity={0.7}
               className="flex-row items-center gap-1 border border-stroke-weaker rounded-full px-3 py-1.5"
             >
-              <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textWeak }}>
+              <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>
                 Not now
               </Text>
             </TouchableOpacity>

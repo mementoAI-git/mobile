@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { get } from '@/api/mutations';
 import { fetchEntity, fetchPaginated } from '@/api/domain-fetchers';
 import endpoint from '@/api/endpoint';
@@ -49,6 +49,7 @@ export function useStories(
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,
     enabled: shouldEnableStoriesQuery(options?.enabled),
+    placeholderData: keepPreviousData,
     // 30s stale time — avoids refetch on every tab switch
     staleTime: 30_000,
   });

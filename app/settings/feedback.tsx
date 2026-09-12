@@ -10,20 +10,21 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, ImagePlus, RotateCcw, Trash2 } from 'lucide-react-native';
+import { ImagePlus, RotateCcw, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Button, Select, TextInput } from '@/components/ui';
 import type { SelectOption } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
+import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';
 import { useFeedbackMutation } from '@/hooks/mutations/use-feedback-mutation';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { useUserStore } from '@/store';
-import { COLORS, FONTS } from '@/constants/tokens';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
@@ -172,15 +173,18 @@ export default function FeedbackSettingsScreen() {
   }, [attachments, canSubmit, message, router, submitFeedback, type, user?.email]);
 
   const attachmentRows = useMemo(() => attachments.map((attachment) => (
-    <View key={attachment.clientId} className="min-h-[70px] flex-row items-center">
-      <Image source={{ uri: attachment.uri }} className="size-14 rounded-xl bg-fill-weak" resizeMode="cover" />
+    <View key={attachment.clientId} className="min-h-[56px] flex-row items-center py-2">
+      <Image source={{ uri: attachment.uri }} className="size-12 rounded-xl bg-fill-weak" resizeMode="cover" />
       <View className="ml-3 flex-1">
-        <Text numberOfLines={1} className="text-[15px] text-text-strong" style={{ fontFamily: FONTS.sansMedium }}>
+        <Text numberOfLines={1} style={{ ...TYPE.body, color: COLORS.textStrong }}>
           {attachment.name}
         </Text>
         <Text
-          className={`mt-1 text-[13px] ${attachment.status === 'failed' ? 'text-error' : 'text-text-weak'}`}
-          style={{ fontFamily: FONTS.sans }}
+          style={{
+            ...TYPE.bodySmall,
+            color: attachment.status === 'failed' ? COLORS.error : COLORS.textWeak,
+            marginTop: 2,
+          }}
         >
           {attachment.status === 'failed' ? 'Upload failed' : `${attachment.progress}%`}
         </Text>
@@ -188,88 +192,105 @@ export default function FeedbackSettingsScreen() {
       {attachment.status === 'failed' && (
         <TouchableOpacity
           onPress={() => retryUpload(attachment.clientId)}
-          className="mr-1 size-11 items-center justify-center rounded-full"
+          className="mr-1 size-10 items-center justify-center rounded-full bg-fill-weaker"
         >
-          <RotateCcw size={20} color={COLORS.brand} />
+          <RotateCcw size={18} color={COLORS.brand} />
         </TouchableOpacity>
       )}
       <TouchableOpacity
         onPress={() => removeAttachment(attachment.clientId)}
-        className="size-11 items-center justify-center rounded-full"
+        className="size-10 items-center justify-center rounded-full bg-fill-weaker"
       >
-        <Trash2 size={22} color={COLORS.textBase} />
+        <Trash2 size={18} color={COLORS.error} />
       </TouchableOpacity>
     </View>
   )), [attachments, removeAttachment, retryUpload]);
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View className="h-[88px] flex-row items-center justify-between px-6">
-          <TouchableOpacity onPress={handleBack} className="size-11 items-center justify-center rounded-full bg-fill-weak">
-            <ArrowLeft size={23} color={COLORS.textBase} />
-          </TouchableOpacity>
-          <Text style={SETTINGS_TYPE.screenTitle}>Send feedback</Text>
-          <View className="size-11" />
-        </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
+      <SettingsSubpageHeader title="Send feedback" onBack={handleBack} />
 
-        <View className="flex-1">
-          <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
+      <View className="flex-1">
+        <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
+        <KeyboardAvoidingView
+          className="flex-1"
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+        >
           <ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 26, paddingBottom: 28 }}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 }}
           >
-            <Select
-              label="Feedback type"
-              options={FEEDBACK_OPTIONS}
-              value={type}
-              onValueChange={setType}
-              className="h-14 rounded-2xl bg-card"
-            />
+            {/* Main feedback form inside journal card */}
+            <View className="rounded-[24px] bg-card p-5 gap-5">
+              <Select
+                label="Feedback type"
+                options={FEEDBACK_OPTIONS}
+                value={type}
+                onValueChange={setType}
+                className="h-14 rounded-full"
+              />
 
-            <TextInput
-              label="Add a comment"
-              value={message}
-              onChangeText={setMessage}
-              placeholder="Tell us what happened or what would make Memento better"
-              multiline
-              textAlignVertical="top"
-              inputClassName="min-h-[280px]"
-              containerClassName="mt-7"
-            />
+              <TextInput
+                label="Add a comment"
+                value={message}
+                onChangeText={setMessage}
+                placeholder="Tell us what happened or what would make Memento better"
+                multiline
+                textAlignVertical="top"
+                inputClassName="min-h-[160px]"
+              />
+            </View>
 
-            <Text className="mb-3 mt-7" style={SETTINGS_TYPE.fieldLabel}>
-              Screenshots (Optional)
-            </Text>
-            <Button
-              variant="secondary"
-              size="lg"
-              className="h-14"
-              leftIcon={<ImagePlus size={22} color={COLORS.textStrong} />}
-              onPress={handlePickImages}
-            >
-              Choose images
-            </Button>
-            <View className="mt-4 gap-2">{attachmentRows}</View>
+            {/* Screenshots section inside journal card */}
+            <View className="mt-4 rounded-[24px] bg-card p-5">
+              <View className="flex-row items-center justify-between mb-1">
+                <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>
+                  Screenshots
+                </Text>
+                <Text style={{ ...TYPE.metadata, color: COLORS.textMuted }}>
+                  OPTIONAL
+                </Text>
+              </View>
+              <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak, marginBottom: 14 }}>
+                Attach images to help us diagnose the issue.
+              </Text>
+
+              <Button
+                variant="secondary"
+                size="md"
+                className="h-11 rounded-full px-5 self-start"
+                leftIcon={<ImagePlus size={18} color={COLORS.textStrong} />}
+                onPress={handlePickImages}
+              >
+                Choose images
+              </Button>
+
+              {attachments.length > 0 && (
+                <View className="mt-4 gap-1">
+                  {attachmentRows}
+                </View>
+              )}
+            </View>
           </ScrollView>
-        </View>
 
-        <View
-          className="border-t border-stroke-weaker bg-background px-6 pt-4"
-          style={{ paddingBottom: Math.max(insets.bottom, 16) }}
-        >
-          <Button
-            size="lg"
-            className="h-14"
-            onPress={handleSubmit}
-            disabled={!canSubmit}
-            loading={submitFeedback.isPending}
+          <View
+            className="px-5 pt-3 bg-background"
+            style={{ paddingBottom: Math.max(insets.bottom, 16) }}
           >
-            Send feedback
-          </Button>
-        </View>
-      </KeyboardAvoidingView>
+            <Button
+              size="lg"
+              className="h-14 w-full"
+              onPress={handleSubmit}
+              disabled={!canSubmit}
+              loading={submitFeedback.isPending}
+            >
+              Send feedback
+            </Button>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }

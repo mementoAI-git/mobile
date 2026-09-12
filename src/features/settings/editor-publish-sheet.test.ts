@@ -50,11 +50,12 @@ describe('editor publish sheet', () => {
   test('uses a nested privacy sheet with beneficiaries, groups, and global visibility modes', () => {
     expect(editor).toContain('const privacySheetRef = useRef<BottomSheetModal>(null);');
     expect(editor).toContain('<PublishPrivacySheet');
-    expect(editor).toContain("privacyMode === 'private' ? { beneficiaries: [], groups: [] }");
-    expect(editor).toContain("privacyMode === 'specific'");
+    expect(editor).toContain('buildEditorPublishPayload({');
+    expect(editor).toContain('setAudience({ mode: nextMode');
     expect(publishPrivacySheet).toContain('useGroups');
     expect(publishPrivacySheet).toContain('Specific people & groups');
-    expect(publishPrivacySheet).toContain("pointerEvents={isSpecific ? 'auto' : 'none'}");
+    expect(publishPrivacySheet).toContain("setDraftMode('specific')");
+    expect(publishPrivacySheet).not.toContain("pointerEvents={isSpecific ? 'auto' : 'none'}");
   });
 
   test('does not force avoidIosKeyboard during native-to-webview focus handoff', () => {

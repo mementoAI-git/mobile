@@ -3,7 +3,6 @@ export default {
   login: '/auth/login',
   register: '/auth/register',
   sendLink: '/auth/send-link',
-  resendLink: '/auth/resend-link',
   verifyEmail: '/auth/verify-email',
   refreshToken: '/auth/refresh-token',
   logout: '/auth/logout',

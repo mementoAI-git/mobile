@@ -13,7 +13,8 @@ import Animated, {
   withSpring,
   FadeIn,
 } from 'react-native-reanimated';
-import { FONTS, COLORS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { cn } from '@/lib/utils';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -96,8 +97,7 @@ export function Tabs({
             >
               <Text
                 style={{
-                  fontFamily: isActive ? FONTS.sansSemi : FONTS.sansMedium,
-                  fontSize: 13,
+                  ...(isActive ? TYPE.buttonSmall : TYPE.label),
                   color: isActive ? COLORS.textInverse : COLORS.textWeak,
                 }}
                 numberOfLines={1}
@@ -121,8 +121,7 @@ export function Tabs({
           >
             <Text
               style={{
-                fontFamily: isActive ? FONTS.sansSemi : FONTS.sans,
-                fontSize: 14,
+                ...(isActive ? TYPE.buttonSmall : TYPE.label),
                 color: isActive ? COLORS.textStrong : COLORS.textWeak,
               }}
               numberOfLines={1}

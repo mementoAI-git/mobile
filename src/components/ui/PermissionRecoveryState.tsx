@@ -2,7 +2,8 @@ import React, { useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import type { LucideIcon } from 'lucide-react-native';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 type PermissionRecoveryTone = 'light' | 'dark';
 
@@ -104,14 +105,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.12)',
   },
   title: {
-    fontFamily: FONTS.serif,
-    fontSize: 25,
+    ...TYPE.screenTitle,
     textAlign: 'center',
   },
   description: {
     marginTop: 8,
-    fontFamily: FONTS.sans,
-    fontSize: 14,
+    ...TYPE.body,
     lineHeight: 21,
     textAlign: 'center',
   },
@@ -128,8 +127,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.brand,
   },
   primaryText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 15,
+    ...TYPE.button,
     color: COLORS.textInverse,
   },
   secondaryButton: {
@@ -149,7 +147,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.12)',
   },
   secondaryText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 14,
+    ...TYPE.buttonSmall,
   },
 });

@@ -14,7 +14,10 @@ import {
 } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import { X } from 'lucide-react-native';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
 import { EMOJI_CATEGORIES, type EmojiCategory } from '@/features/chat/emoji-data';
 
 interface EmojiPickerSheetProps {
@@ -28,6 +31,7 @@ const EMOJI_SIZE = Math.floor((SCREEN_WIDTH - 40) / NUM_COLUMNS);
 
 export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetProps>(
   function EmojiPickerSheet({ onSelectEmoji, onClose }, ref) {
+    const insets = useSafeAreaInsets();
     const snapPoints = useMemo(() => ['42%', '65%'], []);
     const [activeCategoryId, setActiveCategoryId] = useState<string>(EMOJI_CATEGORIES[0].id);
 
@@ -66,6 +70,7 @@ export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetPro
     return (
       <BottomSheetModal
         ref={ref}
+        topInset={getSheetTopInset(insets.top)}
         snapPoints={snapPoints}
         backdropComponent={renderBackdrop}
         handleIndicatorStyle={styles.handleIndicator}
@@ -100,7 +105,7 @@ export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetPro
 
           {/* Emoji Grid */}
           <BottomSheetScrollView
-            contentContainerStyle={styles.gridContent}
+            contentContainerStyle={[styles.gridContent, {paddingBottom: getSheetBottomPadding(insets.bottom, 16)}]}
             showsVerticalScrollIndicator={false}
           >
             <Text style={styles.categoryHeading}>{activeCategory.name}</Text>
@@ -148,8 +153,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   title: {
-    fontFamily: FONTS.serif,
-    fontSize: 18,
+    ...TYPE.cardTitle,
     color: COLORS.textStrong,
   },
   tabContainer: {
@@ -171,15 +175,14 @@ const styles = StyleSheet.create({
     borderColor: COLORS.brand,
   },
   tabIcon: {
-    fontSize: 16,
+    ...TYPE.cardTitle,
   },
   gridContent: {
     paddingVertical: 12,
     paddingBottom: 32,
   },
   categoryHeading: {
-    fontFamily: FONTS.sansSemi,
-    fontSize: 12,
+    ...TYPE.eyebrow,
     color: COLORS.textWeak,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -196,6 +199,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emojiText: {
-    fontSize: 26,
+    ...TYPE.screenTitle,
   },
 });

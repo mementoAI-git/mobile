@@ -6,7 +6,8 @@ import { Plus, Search } from 'lucide-react-native';
 import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
 import { MasonryMemoryGrid } from '@/components/memory/MasonryMemoryGrid';
 import { StatCard, DashboardHeader, TextInput, StoriesSkeleton, EmptyState, Spinner } from '@/components/ui';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   FadeInDown,
@@ -45,6 +46,7 @@ export default function StoriesScreen() {
     stories,
     stats,
     isLoading,
+    isFetching,
     isRefetching,
     refetch,
     isFetchingNextPage,
@@ -143,7 +145,7 @@ export default function StoriesScreen() {
       };
       return (
       <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-4 gap-6 px-5">
-        <Animated.Text className="text-base text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+        <Animated.Text className="text-text-weak" style={TYPE.body}>
           A secure archive for your most cherished moments and personal reflections.
         </Animated.Text>
 
@@ -167,10 +169,16 @@ export default function StoriesScreen() {
                 onSubmitEditing={handleSearchSubmit}
                 returnKeyType="search"
                 containerClassName="flex-1"
+                textContentType="none"
+                autoComplete="off"
+                autoCorrect={false}
+                spellCheck={false}
                 leftElement={<Search size={18} color={COLORS.textWeak} />}
                 rightElement={
-                  search ? (
-                    <TouchableOpacity onPress={handleClearSearch}>
+                  isFetching && Boolean(debouncedSearch) ? (
+                    <Spinner size="small" />
+                  ) : search ? (
+                    <TouchableOpacity onPress={handleClearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <View className="size-5 bg-text-muted/10 rounded-full items-center justify-center">
                         <Plus size={12} color={COLORS.textWeak} style={{ transform: [{ rotate: '45deg' }] }} />
                       </View>
@@ -197,8 +205,8 @@ export default function StoriesScreen() {
                   className={`px-6 py-2.5 rounded-full ${activeFilter === f ? 'bg-brand' : 'bg-fill-weaker'}`}
                 >
                   <Animated.Text
-                    className={`text-xs font-bold ${activeFilter === f ? 'text-white' : 'text-text-base'}`}
-                    style={{ fontFamily: FONTS.sansBold }}
+                    className={activeFilter === f ? 'text-white' : 'text-text-base'}
+                    style={TYPE.metadata}
                   >
                     {label}
                   </Animated.Text>
@@ -210,7 +218,7 @@ export default function StoriesScreen() {
       </Animated.View>
     );
     },
-    [stats, search, activeFilter, setActiveFilter, handleClearSearch, handleSearchChange, handleSearchSubmit],
+    [stats, search, debouncedSearch, isFetching, activeFilter, setActiveFilter, handleClearSearch, handleSearchChange, handleSearchSubmit],
   );
 
   const emptyState = (
@@ -234,13 +242,14 @@ export default function StoriesScreen() {
       <View className="flex-1">
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
 
-        {isLoading && !stories.length ? (
+        {isLoading && !stories.length && !debouncedSearch ? (
           <StoriesSkeleton />
         ) : (
           /* ── Masonry grid view (list mode commented out) ──────────── */
           <MasonryMemoryGrid
             memories={stories}
             ListHeaderComponent={listHeader}
+            ListEmptyComponent={emptyState}
             onMemoryPress={handleGridMemoryPress}
             onEndReached={handleGridEndReached}
             refreshing={isRefetching}
@@ -281,7 +290,7 @@ export default function StoriesScreen() {
         )}
 
         {/* Floating Action Button - morphs width and contents on scroll */}
-        <Animated.View 
+        <Animated.View
           style={[
             floatBtnStyle,
             {
@@ -324,9 +333,8 @@ export default function StoriesScreen() {
             <Animated.Text
               style={[
                 labelStyle,
+                TYPE.buttonSmall,
                 {
-                  fontFamily: FONTS.sansBold,
-                  fontSize: 13,
                   color: 'white',
                   position: 'absolute',
                 }

@@ -7,17 +7,19 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Settings } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import dayjs from 'dayjs';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { AccountUpgradeBanner } from '@/components/account/AccountUpgradeBanner';
+import { PlanSummaryBanner } from '@/components/subscription/PlanSummaryBanner';
 import { EnrichmentScoreCard } from '@/components/account/EnrichmentScoreCard';
 import { WeeklyProgressCard } from '@/components/account/WeeklyProgressCard';
 import { AccountSkeleton, Avatar, Button } from '@/components/ui';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import {
   clampEnrichmentScore,
   deriveAccountWeek,
@@ -127,8 +129,7 @@ export default function AccountOverviewScreen() {
   }, [refetchProfile, refetchStats, refetchSubscription]);
 
   return (
-    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
         <ImageBackground
           source={PATTERN}
           style={{ flex: 1 }}
@@ -168,9 +169,7 @@ export default function AccountOverviewScreen() {
               right: 76,
               textAlign: 'center',
               color: COLORS.textStrong,
-              fontFamily: FONTS.serif,
-              fontSize: 22,
-              lineHeight: 28,
+              ...TYPE.screenTitle,
             }}
           >
             Account
@@ -209,7 +208,7 @@ export default function AccountOverviewScreen() {
             <AccountSkeleton />
           ) : (
             <View style={{ paddingHorizontal: 16, gap: 24 }}>
-              <AccountUpgradeBanner
+              <PlanSummaryBanner
                 isProOrAbove={isProOrAbove}
                 subscriptionKnown={Boolean(subscription) && !subscriptionLoading}
                 onPress={handleUpgrade}
@@ -222,8 +221,7 @@ export default function AccountOverviewScreen() {
                       numberOfLines={2}
                       style={{
                         color: COLORS.textStrong,
-                        fontFamily: FONTS.sansBold,
-                        fontSize: 24,
+                        ...TYPE.sectionTitle,
                         lineHeight: 29,
                         letterSpacing: -0.5,
                       }}
@@ -234,8 +232,7 @@ export default function AccountOverviewScreen() {
                       numberOfLines={1}
                       style={{
                         color: COLORS.textStrong,
-                        fontFamily: FONTS.sans,
-                        fontSize: 14,
+                        ...TYPE.label,
                         lineHeight: 19,
                       }}
                     >
@@ -245,8 +242,7 @@ export default function AccountOverviewScreen() {
                       <Text
                         style={{
                           color: COLORS.textWeak,
-                          fontFamily: FONTS.sans,
-                          fontSize: 13,
+                          ...TYPE.bodySmall,
                           lineHeight: 18,
                         }}
                       >
@@ -266,8 +262,7 @@ export default function AccountOverviewScreen() {
                   <Text
                     style={{
                       color: COLORS.textStrong,
-                      fontFamily: FONTS.sans,
-                      fontSize: 15,
+                      ...TYPE.body,
                       lineHeight: 21,
                     }}
                   >
@@ -286,8 +281,7 @@ export default function AccountOverviewScreen() {
                     <Text
                       style={{
                         color: COLORS.textBase,
-                        fontFamily: FONTS.sans,
-                        fontSize: 13,
+                        ...TYPE.bodySmall,
                         lineHeight: 19,
                       }}
                     >
@@ -301,8 +295,7 @@ export default function AccountOverviewScreen() {
                     variant="secondary"
                     size="lg"
                     className="h-10 px-4"
-                    textClassName="text-sm font-bold"
-                    onPress={openEditProfile}
+                                        onPress={openEditProfile}
                   >
                     Edit Profile
                   </Button>
@@ -310,8 +303,7 @@ export default function AccountOverviewScreen() {
                     variant="secondary"
                     size="lg"
                     className="h-10 px-4"
-                    textClassName="text-sm font-bold"
-                    onPress={openInsights}
+                                        onPress={openInsights}
                   >
                     View Insights
                   </Button>
@@ -331,7 +323,6 @@ export default function AccountOverviewScreen() {
           )}
         </ScrollView>
       </ImageBackground>
-      </SafeAreaView>
-    </SafeAreaProvider>
+    </SafeAreaView>
   );
 }

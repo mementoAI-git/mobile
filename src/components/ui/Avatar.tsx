@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
 import { cn, getInitials } from '@/lib/utils';
-import { FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { resolveFileUrl } from '@/features/account/profile-form';
 
 interface AvatarProps {
@@ -17,11 +17,11 @@ interface AvatarProps {
 //   Fallback: bg-muted (fill-weak) text-muted-foreground (text-base)
 //   Border: border border-stroke-weaker (web: after:border after:border-border)
 const sizeMap = {
-  xs: { container: 'w-6 h-6',   text: 'text-[10px]' },
-  sm: { container: 'w-8 h-8',   text: 'text-xs' },
-  md: { container: 'w-10 h-10', text: 'text-sm' },
-  lg: { container: 'w-12 h-12', text: 'text-base' },
-  xl: { container: 'w-20 h-20', text: 'text-xl' },
+  xs: { container: 'w-6 h-6',   text: TYPE.eyebrow },
+  sm: { container: 'w-8 h-8',   text: TYPE.metadata },
+  md: { container: 'w-10 h-10', text: TYPE.label },
+  lg: { container: 'w-12 h-12', text: TYPE.bodyLarge },
+  xl: { container: 'w-20 h-20', text: TYPE.stat },
 };
 
 export function Avatar({ uri, name, size = 'md', className }: AvatarProps) {
@@ -42,8 +42,8 @@ export function Avatar({ uri, name, size = 'md', className }: AvatarProps) {
         <Image source={{ uri: resolvedUri }} className="w-full h-full" resizeMode="cover" />
       ) : (
         <Text
-          className={cn('font-medium text-text-base', s.text)}
-          style={{ fontFamily: FONTS.sansMedium }}
+          className="text-text-base"
+          style={s.text}
         >
           {initials}
         </Text>

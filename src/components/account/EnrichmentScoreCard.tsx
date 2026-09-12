@@ -7,7 +7,9 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { clampEnrichmentScore } from '@/features/account/account-overview';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -95,21 +97,18 @@ const styles = StyleSheet.create({
   },
   title: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sansBold,
-    fontSize: 15,
+    ...TYPE.body,
     lineHeight: 19,
   },
   description: {
     color: COLORS.textBase,
-    fontFamily: FONTS.sans,
-    fontSize: 12,
+    ...TYPE.metadata,
     lineHeight: 16,
     marginTop: 5,
   },
   score: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.serif,
-    fontSize: 42,
+    ...TYPE.displayTitle,
     lineHeight: 46,
     letterSpacing: -1.5,
   },
@@ -139,8 +138,7 @@ const styles = StyleSheet.create({
   insightText: {
     flex: 1,
     color: COLORS.textStrong,
-    fontFamily: FONTS.sans,
-    fontSize: 12,
+    ...TYPE.metadata,
     lineHeight: 16,
   },
 });

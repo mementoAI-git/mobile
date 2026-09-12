@@ -51,6 +51,68 @@ export interface BillingUsage {
   memory_integration_count?: number;
 }
 
+export interface BillingAddress {
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+}
+
+export interface BillingPaymentMethod {
+  id: string;
+  brand: string;
+  last4: string;
+  isDefault: boolean;
+}
+
+export interface BillingProfile {
+  email: string | null;
+  name: string | null;
+  address: BillingAddress | null;
+  paymentMethods: BillingPaymentMethod[];
+  management: 'polar_portal';
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+export function normalizeBillingProfile(payload: unknown): BillingProfile | null {
+  const raw = normalizeEntityResponse<Record<string, unknown>>(payload).data;
+  if (!raw) return null;
+  const sourceAddress = raw.address && typeof raw.address === 'object' && !Array.isArray(raw.address)
+    ? raw.address as Record<string, unknown>
+    : null;
+  const address = sourceAddress ? {
+    line1: optionalString(sourceAddress.line1),
+    line2: optionalString(sourceAddress.line2),
+    city: optionalString(sourceAddress.city),
+    state: optionalString(sourceAddress.state),
+    postalCode: optionalString(sourceAddress.postal_code),
+    country: optionalString(sourceAddress.country),
+  } : null;
+  const paymentMethods = Array.isArray(raw.payment_methods)
+    ? raw.payment_methods.flatMap(method => {
+      if (!method || typeof method !== 'object' || Array.isArray(method)) return [];
+      const item = method as Record<string, unknown>;
+      const id = optionalString(item.id);
+      const brand = optionalString(item.brand);
+      const last4 = optionalString(item.last4);
+      if (!id || !brand || !last4 || !/^\d{4}$/.test(last4)) return [];
+      return [{id, brand: brand.toLowerCase(), last4, isDefault: item.is_default === true}];
+    })
+    : [];
+  return {
+    email: optionalString(raw.email) ?? null,
+    name: optionalString(raw.name) ?? null,
+    address: address && Object.values(address).some(Boolean) ? address : null,
+    paymentMethods,
+    management: 'polar_portal',
+  };
+}
+
 const USAGE_KEYS = [
   'storage_used_bytes',
   'storage_reserved_bytes',

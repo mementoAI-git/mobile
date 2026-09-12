@@ -4,6 +4,7 @@ import { Mic, CheckCircle2, Square, MessageSquareText } from 'lucide-react-nativ
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDailyPrompts } from '@/hooks/queries/use-prompts';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
@@ -104,11 +105,11 @@ export function DailyPromptSection() {
       <View className="flex-row items-center justify-between px-1">
         <Animated.Text
           className="text-text-strong"
-          style={{ fontFamily: FONTS.sans, fontSize: 20, lineHeight: 28 }}
+          style={TYPE.uiTitle}
         >
           Continue <Animated.Text
             className="text-text-weak"
-            style={{ fontFamily: FONTS.serif, fontSize: 24, lineHeight: 24, fontStyle: 'italic' }}
+            style={{ ...TYPE.sectionTitle, fontStyle: 'italic' }}
           >
             reflecting
           </Animated.Text>
@@ -127,8 +128,8 @@ export function DailyPromptSection() {
                   }`}
               >
                 <Animated.Text
-                  className={`text-[11px] font-bold ${activeIndex === i ? 'text-white' : 'text-text-strong'}`}
-                  style={{ fontFamily: FONTS.sansBold }}
+                  className={activeIndex === i ? 'text-white' : 'text-text-strong'}
+                  style={TYPE.metadata}
                 >
                   {p.display_label || `Prompt ${i + 1}`}
                 </Animated.Text>
@@ -138,8 +139,8 @@ export function DailyPromptSection() {
         )}
 
         <Animated.Text
-          className="text-lg text-text-strong leading-[26px] mb-8"
-          style={{ fontFamily: FONTS.sansMedium }}
+          className="text-text-strong leading-[26px] mb-8"
+          style={TYPE.cardTitle}
         >
           {promptText}
         </Animated.Text>
@@ -147,7 +148,7 @@ export function DailyPromptSection() {
         {activeRow.answered ? (
           <View className="flex-row items-center gap-2">
             <CheckCircle2 size={16} color={COLORS.success} />
-            <Animated.Text className="text-sm text-text-weak" style={{ fontFamily: FONTS.sans }}>
+            <Animated.Text className="text-text-weak" style={TYPE.label}>
               You've already shared a reflection today.
             </Animated.Text>
           </View>
@@ -158,7 +159,7 @@ export function DailyPromptSection() {
             className="flex-row items-center justify-center gap-3 bg-text-strong rounded-full h-12 px-6 self-start"
           >
             <View className="size-3 rounded-full bg-white animate-pulse" />
-            <Animated.Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>
+            <Animated.Text className="text-white" style={TYPE.label}>
               Recording ({formatRecordingDuration(duration || 0)}) • Tap to send
             </Animated.Text>
             <Square size={14} color="white" fill="white" />
@@ -171,7 +172,7 @@ export function DailyPromptSection() {
               className="flex-row items-center justify-center gap-2 bg-text-strong rounded-full h-12 px-5"
             >
               <Mic size={18} color="white" strokeWidth={2.5} />
-              <Animated.Text className="text-sm font-bold text-white" style={{ fontFamily: FONTS.sansBold }}>
+              <Animated.Text className="text-white" style={TYPE.label}>
                 Speak reflection
               </Animated.Text>
             </TouchableOpacity>
@@ -182,7 +183,7 @@ export function DailyPromptSection() {
               className="flex-row items-center justify-center gap-2 bg-fill-weaker border border-stroke-weaker rounded-full h-12 px-5"
             >
               <MessageSquareText size={16} color={COLORS.textStrong} strokeWidth={2} />
-              <Animated.Text className="text-sm font-bold text-text-strong" style={{ fontFamily: FONTS.sansBold }}>
+              <Animated.Text className="text-text-strong" style={TYPE.label}>
                 Write
               </Animated.Text>
             </TouchableOpacity>

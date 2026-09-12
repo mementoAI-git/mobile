@@ -28,7 +28,8 @@ import { StoryHtmlBody } from '@/components/memory/StoryHtmlBody';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { useStoryDetailLogic } from '@/hooks/use-story-detail-logic';
 import { useBackHandler } from '@/hooks/use-back-handler';
 
@@ -97,7 +98,7 @@ const MemoMosaicTile = React.memo(function MemoMosaicTile({
       />
       {showMoreCount && showMoreCount > 0 ? (
         <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.52)', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 18, color: '#fff' }}>+{showMoreCount} more</Text>
+          <Text style={{ ...TYPE.uiTitle, color: '#fff' }}>+{showMoreCount} more</Text>
         </View>
       ) : null}
     </TouchableOpacity>
@@ -135,8 +136,8 @@ const MemoAudioCard = React.memo(function MemoAudioCard({
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 1.5, height: 14 }}>
             {[5, 10, 14, 11, 7, 12, 8, 14].map((h, i) => <View key={i} style={{ width: 2.5, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />)}
           </View>
-          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 12, color: '#fff', flex: 1 }} numberOfLines={1}>{fileName}</Text>
-          {dur > 0 && <Text style={{ fontFamily: FONTS.sans, fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>{fmt(dur)}</Text>}
+          <Text style={{ ...TYPE.metadata, color: '#fff', flex: 1 }} numberOfLines={1}>{fileName}</Text>
+          {dur > 0 && <Text style={{ ...TYPE.metadata, color: 'rgba(255,255,255,0.7)' }}>{fmt(dur)}</Text>}
         </View>
       </TouchableOpacity>
     );
@@ -160,12 +161,12 @@ const MemoAudioCard = React.memo(function MemoAudioCard({
             <View key={i} style={{ flex: 1, height: barH, borderRadius: 2, backgroundColor: `${COLORS.brand}cc`, maxHeight: 28 }} />
           ))}
         </View>
-        <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: 'rgba(255,255,255,0.9)', textAlign: 'center' }} numberOfLines={2}>
+        <Text style={{ ...TYPE.metadata, color: 'rgba(255,255,255,0.9)', textAlign: 'center' }} numberOfLines={2}>
           {fileName}
         </Text>
         {dur > 0 && (
           <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
-            <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>{fmt(dur)}</Text>
+            <Text style={{ ...TYPE.metadata, color: 'rgba(255,255,255,0.8)' }}>{fmt(dur)}</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -183,10 +184,10 @@ const MemoAudioCard = React.memo(function MemoAudioCard({
           <View key={i} style={{ width: 3, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />
         ))}
       </View>
-      <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>{fileName}</Text>
+      <Text style={{ ...TYPE.metadata, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>{fileName}</Text>
       {dur > 0 && (
         <View style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
-          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: COLORS.textBase }}>{fmt(dur)}</Text>
+          <Text style={{ ...TYPE.metadata, color: COLORS.textBase }}>{fmt(dur)}</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -214,14 +215,14 @@ const MemoDocumentCard = React.memo(function MemoDocumentCard({
       <View style={{ width: 48, height: 48, backgroundColor: COLORS.card, borderRadius: 14, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}>
         <FileText size={24} color={COLORS.brand} strokeWidth={1.5} />
       </View>
-      <Text style={{ fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>
+      <Text style={{ ...TYPE.metadata, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>
         {item.name || 'Document'}
       </Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
         <View style={{ backgroundColor: `${COLORS.brand}15`, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-          <Text style={{ fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.brand }}>{fileType}</Text>
+          <Text style={{ ...TYPE.eyebrow, color: COLORS.brand }}>{fileType}</Text>
         </View>
-        {fileSize && <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: COLORS.textMuted }}>{fileSize}</Text>}
+        {fileSize && <Text style={{ ...TYPE.eyebrow, color: COLORS.textMuted }}>{fileSize}</Text>}
       </View>
     </TouchableOpacity>
   );
@@ -563,13 +564,9 @@ const styles = {
     backgroundColor: COLORS.fillWeak,
     borderWidth: 1, borderColor: COLORS.strokeWeaker,
   },
-  editLabel: {
-    fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textBase,
-  },
+  editLabel: { ...TYPE.label, color: COLORS.textBase },
   title: {
-    fontFamily: FONTS.serif,
-    fontSize: 30,
-    lineHeight: 38,
+    ...TYPE.screenTitle,
     color: COLORS.textStrong,
   },
   metaRow: {
@@ -594,24 +591,17 @@ const styles = {
     backgroundColor: COLORS.card,
     borderWidth: 1, borderColor: COLORS.strokeWeak,
   },
-  tagText: {
-    fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textBase,
-  },
+  tagText: { ...TYPE.bodySmall, color: COLORS.textBase },
   dateRow: {
     flexDirection: 'row' as const, alignItems: 'center' as const, gap: 5,
   },
-  dateText: {
-    fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textBase,
-  },
+  dateText: { ...TYPE.bodySmall, color: COLORS.textBase },
   body: {
-    fontFamily: FONTS.sans,
-    fontSize: 17,
-    lineHeight: 28,
+    ...TYPE.body,
     color: COLORS.textStrong,
   },
   sectionLabel: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 10,
+    ...TYPE.eyebrow,
     letterSpacing: 1.2,
     textTransform: 'uppercase' as const,
     color: COLORS.textMuted,

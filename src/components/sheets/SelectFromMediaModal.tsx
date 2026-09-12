@@ -3,9 +3,11 @@ import { View, Text, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { X, Search, Check, Play, Music, FileText } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { Button, Spinner } from '@/components/ui';
 import { useFiles } from '@/hooks/queries/use-files';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getSheetTopInset } from '@/features/layout/sheet-safe-area';
 
 const { width: screenWidth } = Dimensions.get('window');
 const itemWidth = (screenWidth - 56) / 2;
@@ -29,12 +31,12 @@ export const SelectFromMediaModal = React.memo(
   forwardRef<BottomSheetModal, SelectFromMediaModalProps>((props, ref) => {
     const { selectedIds, onConfirm } = props;
     const insets = useSafeAreaInsets();
-    
+
     const [localSelected, setLocalSelected] = useState<string[]>([]);
     const [query, setQuery] = useState('');
-    
+
     const { data: mediaFiles = [], isLoading } = useFiles<MediaFileItem>({ limit: 100 });
-    
+
     const selectedSet = useMemo(() => new Set(localSelected), [localSelected]);
 
     const results = useMemo(() => {
@@ -77,7 +79,7 @@ export const SelectFromMediaModal = React.memo(
       const isSelected = selectedSet.has(id);
       const isVideo = item.type?.startsWith('video/') || item.name?.endsWith('.mp4');
       const isAudio = item.type?.startsWith('audio/') || item.name?.endsWith('.mp3') || item.name?.endsWith('.m4a');
-      
+
       return (
         <TouchableOpacity
           onPress={() => toggleSelection(id)}
@@ -86,8 +88,8 @@ export const SelectFromMediaModal = React.memo(
           className="relative rounded-2xl overflow-hidden border border-stroke-weaker bg-fill-weak"
         >
           {item.url || item.thumbnail ? (
-            <Image 
-              source={{ uri: item.thumbnail || item.url }} 
+            <Image
+              source={{ uri: item.thumbnail || item.url }}
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
             />
@@ -123,6 +125,7 @@ export const SelectFromMediaModal = React.memo(
     return (
       <BottomSheetModal
         ref={ref}
+        topInset={getSheetTopInset(insets.top)}
         snapPoints={['90%']}
         backdropComponent={renderBackdrop}
         onAnimate={(fromIndex, toIndex) => {
@@ -138,7 +141,7 @@ export const SelectFromMediaModal = React.memo(
         <View className="flex-1 px-5 pt-4 pb-8" style={{ paddingBottom: insets.bottom ? insets.bottom + 12 : 32 }}>
           {/* Header */}
           <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serifMedium }}>Select Media</Text>
+            <Text className="text-text-strong" style={TYPE.sectionTitle}>Select Media</Text>
             <TouchableOpacity onPress={handleClose}>
               <X size={20} color={COLORS.textWeak} />
             </TouchableOpacity>
@@ -152,8 +155,8 @@ export const SelectFromMediaModal = React.memo(
               placeholderTextColor={COLORS.textMuted}
               value={query}
               onChangeText={setQuery}
-              className="flex-1 text-sm text-text-strong p-0"
-              style={{ fontFamily: FONTS.sans }}
+              className="flex-1 text-text-strong p-0"
+              style={TYPE.input}
             />
           </View>
 
@@ -177,13 +180,13 @@ export const SelectFromMediaModal = React.memo(
           {/* Footer Actions */}
           <View className="absolute bottom-5 left-5 right-5 flex-row gap-4 bg-background pt-4 border-t border-stroke-weaker">
             <Button variant="outline" onPress={handleClose} className="flex-1 rounded-full border-stroke-weak bg-white">
-              <Text className="text-sm font-medium text-text-strong">Cancel</Text>
+              <Text className="text-text-strong" style={TYPE.buttonSmall}>Cancel</Text>
             </Button>
-            <Button 
-              onPress={handleConfirm} 
+            <Button
+              onPress={handleConfirm}
               className="flex-1 bg-brand rounded-full"
             >
-              <Text className="text-sm font-medium text-white">
+              <Text className="text-white" style={TYPE.buttonSmall}>
                 {localSelected.length > 0 ? `Select ${localSelected.length} items` : 'Select items'}
               </Text>
             </Button>

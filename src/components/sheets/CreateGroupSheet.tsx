@@ -6,7 +6,9 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { toast } from '@/components/ui/Toast';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { buildGroupPayload, GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
 import { useCreateGroup, useUpdateGroup } from '@/hooks/mutations/use-group-mutations';
 import type { IGroup } from '@/types';
@@ -18,7 +20,7 @@ interface Props {
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>
+    <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>
       {children}
     </Text>
   );
@@ -72,17 +74,15 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
       paddingHorizontal: 20,
       paddingTop: 12,
       paddingBottom: Math.max(insets.bottom, 12) + 8,
-      borderTopWidth: 1,
-      borderTopColor: COLORS.strokeWeaker,
       backgroundColor: COLORS.background,
     }}>
-      <Button variant="secondary" size="lg" className="h-14 flex-1" textClassName="text-base font-bold" onPress={close}>
+      <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={close}>
         Dismiss
       </Button>
       <Button
         size="lg"
         className="h-14 flex-1 bg-fill-strong"
-        textClassName="text-base font-bold text-white"
+        textClassName="text-white"
         loading={isPending}
         disabled={!payload || isPending}
         onPress={() => void submit()}
@@ -97,7 +97,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ flex: 1 }}>
           <View style={{ minHeight: 68, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>
+            <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
               {isEdit ? 'Group Settings' : 'Create Group'}
             </Text>
             <TouchableOpacity onPress={() => { Haptics.selectionAsync(); close(); }} accessibilityRole="button" accessibilityLabel="Close create group" style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak }}>
@@ -118,7 +118,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
                 onChangeText={setName}
                 autoCapitalize="words"
                 placeholderTextColor={COLORS.textMuted}
-                style={{ height: 56, borderWidth: 1, borderColor: COLORS.strokeWeak, borderRadius: 12, backgroundColor: COLORS.card, paddingHorizontal: 16, fontFamily: FONTS.sans, fontSize: 16, color: COLORS.textStrong }}
+                style={{ height: 56, borderRadius: 999, backgroundColor: COLORS.fillWeaker, paddingHorizontal: 20, ...TYPE.input, color: COLORS.textStrong }}
               />
             </View>
 
@@ -130,7 +130,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
                 placeholder="Enter description here"
                 placeholderTextColor={COLORS.textMuted}
                 multiline
-                style={{ minHeight: 112, borderWidth: 1, borderColor: COLORS.strokeWeak, borderRadius: 16, backgroundColor: COLORS.card, paddingHorizontal: 16, paddingVertical: 14, fontFamily: FONTS.sans, fontSize: 16, color: COLORS.textStrong, textAlignVertical: 'top' }}
+                style={{ minHeight: 112, borderRadius: 16, backgroundColor: COLORS.fillWeaker, paddingHorizontal: 16, paddingVertical: 14, ...TYPE.input, color: COLORS.textStrong, textAlignVertical: 'top' }}
               />
             </View>
 
@@ -146,7 +146,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
                       accessibilityRole="button"
                       accessibilityLabel={`Select group colour ${swatch.id + 1}`}
                       accessibilityState={{ selected }}
-                      style={{ width: 48, height: 48, borderRadius: 6, backgroundColor: swatch.color, alignItems: 'center', justifyContent: 'center' }}
+                      style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: swatch.color, alignItems: 'center', justifyContent: 'center' }}
                     >
                       {selected ? <Check size={24} color={COLORS.textInverse} strokeWidth={2.5} /> : null}
                     </TouchableOpacity>

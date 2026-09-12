@@ -11,7 +11,7 @@ import { ActivityListItem } from '@/components/overview/ActivityListItem';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 const EMPTY_MEMORIES_IMG = require('../../assets/images/illustrations/empty_memories.png');
@@ -34,10 +34,10 @@ function EditorialHeroCard({ totalDocs }: { totalDocs: number }) {
       style={{ marginHorizontal: 20, marginBottom: 20, borderRadius: 32, overflow: 'hidden', backgroundColor: COLORS.card }}
     >
       <ImageBackground source={WELCOME_BG} style={{ padding: 24, gap: 12 }} imageStyle={{ opacity: 0.04 }} resizeMode="repeat">
-        <Text style={{ fontFamily: FONTS.serif, fontSize: 22, color: COLORS.textStrong, lineHeight: 28 }}>
+        <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong, lineHeight: 28 }}>
           Your legacy{'\n'}is growing.
         </Text>
-        <Text style={{ fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textWeak, lineHeight: 21 }}>
+        <Text style={{ ...TYPE.label, color: COLORS.textWeak, lineHeight: 21 }}>
           {bodyText}
         </Text>
       </ImageBackground>
@@ -79,10 +79,10 @@ function StatsBanner({ totalDocs, docs }: { totalDocs: number; docs: Activity[] 
         <React.Fragment key={s.label}>
           {i > 0 && <View style={{ width: 1, backgroundColor: COLORS.strokeWeaker, marginVertical: 14 }} />}
           <View style={{ flex: 1, alignItems: 'center', paddingVertical: 16, gap: 3 }}>
-            <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.brand, lineHeight: 24 }}>
+            <Text style={{ ...TYPE.uiTitle, color: COLORS.brand, lineHeight: 24 }}>
               {s.value}
             </Text>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: 10, color: COLORS.textMuted, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+            <Text style={{ ...TYPE.eyebrow, color: COLORS.textMuted, letterSpacing: 0.5, textTransform: 'uppercase' }}>
               {s.label}
             </Text>
           </View>
@@ -130,15 +130,15 @@ export default function ActivitiesScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 24, paddingVertical: 16 }}>
         <TouchableOpacity
           onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
-          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.fillWeaker, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}
+          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}
         >
           <ChevronLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={SETTINGS_TYPE.screenTitle}>
+          <Text style={TYPE.screenTitle}>
             Activity
           </Text>
-          <Text style={[SETTINGS_TYPE.supporting, { marginTop: 1 }]}>
+          <Text style={[TYPE.bodySmall, { marginTop: 1 }]}>
             {showCount && totalDocs > 0
               ? `${totalDocs} actions across your account`
               : ''}
@@ -185,8 +185,6 @@ export default function ActivitiesScreen() {
                 backgroundColor: COLORS.card,
                 borderRadius: 24,
                 overflow: 'hidden',
-                borderWidth: 1,
-                borderColor: COLORS.strokeWeaker,
               }}
             >
               {displayDocs.map((item, index) => (
@@ -211,8 +209,7 @@ export default function ActivitiesScreen() {
             {!hasNextPage && totalDocs > 0 && (
               <Text
                 style={{
-                  fontFamily: FONTS.sans,
-                  fontSize: 11,
+                  ...TYPE.metadata,
                   color: COLORS.textMuted,
                   textAlign: 'center',
                   marginTop: 24,

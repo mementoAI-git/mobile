@@ -1,7 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-native';
 import { X } from 'lucide-react-native';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 interface RecordingStatusProps {
   seconds?: number;
@@ -81,8 +82,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.brand,
   },
   text: {
-    fontFamily: FONTS.sansSemi,
-    fontSize: 11,
+    ...TYPE.metadata,
     color: COLORS.textBase,
   },
   cancelButton: {

@@ -14,6 +14,7 @@ import { ChevronRight, ChevronLeft } from 'lucide-react-native';
 import { Logo, Button } from '@/components/ui';
 import { SelectionCard } from '@/components/onboarding/SelectionChip';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import Animated, { FadeInDown, FadeInRight, LinearTransition } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { usePreferencesLogic, TOTAL_STEPS, STEP_LABELS, ERROR_MESSAGES } from '@/hooks/use-preferences-logic';
@@ -121,7 +122,7 @@ export default function PreferencesScreen() {
       <View className="flex-row items-center justify-between px-6 pt-2 pb-1">
         <Logo size="md" />
         <TouchableOpacity onPress={handleSkip} activeOpacity={0.7} className="flex-row items-center gap-1">
-          <Animated.Text className="text-sm text-text-weak" style={{ fontFamily: FONTS.sansMedium }}>
+          <Animated.Text className="text-text-weak" style={TYPE.label}>
             Skip
           </Animated.Text>
           <ChevronRight size={14} color={COLORS.textMuted} />
@@ -140,7 +141,7 @@ export default function PreferencesScreen() {
             />
           ))}
         </View>
-        <Animated.Text className="text-[10px] text-text-weak tracking-widest uppercase mt-1" style={{ fontFamily: FONTS.sansBold }}>
+        <Animated.Text className=" text-text-weak tracking-widest uppercase mt-1" style={TYPE.eyebrow}>
           Step {step} of {TOTAL_STEPS} · {STEP_LABELS[step]}
         </Animated.Text>
       </View>
@@ -169,11 +170,11 @@ export default function PreferencesScreen() {
             <Animated.View key={`step-content-${step}`} entering={FadeInDown.duration(400)} className="gap-6">
               {step === 1 && (
                 <View className="gap-6">
-                  <Animated.Text className="text-[28px] text-text-strong leading-[36px]" style={{ fontFamily: FONTS.serif }}>
+                  <Animated.Text className=" text-text-strong leading-[36px]" style={TYPE.screenTitle}>
                     Okay, {nickname}. Let's get started.
                   </Animated.Text>
                   <View className="gap-4">
-                    <Animated.Text className="text-lg text-text-strong" style={{ fontFamily: FONTS.serif }}>
+                    <Animated.Text className="text-text-base" style={TYPE.label}>
                       How old are you?
                     </Animated.Text>
                     {AGE_BAND_OPTIONS.map((opt) => (
@@ -191,7 +192,7 @@ export default function PreferencesScreen() {
                     ))}
                   </View>
                   <View className="gap-3">
-                    <Animated.Text className="text-lg text-text-strong" style={{ fontFamily: FONTS.serif }}>
+                    <Animated.Text className="text-text-base" style={TYPE.label}>
                       Where are you from?
                     </Animated.Text>
                     <View className="bg-white/80 border border-stroke-weaker rounded-2xl px-4 h-14 justify-center">
@@ -200,8 +201,8 @@ export default function PreferencesScreen() {
                         onChangeText={(v) => updateState(() => ({ whereFrom: v }))}
                         placeholder="City, country"
                         placeholderTextColor={COLORS.textMuted}
-                        className="text-base text-text-strong p-0 m-0"
-                        style={{ fontFamily: FONTS.sans }}
+                        className="text-text-strong p-0 m-0"
+                        style={TYPE.input}
                       />
                     </View>
                   </View>
@@ -210,10 +211,10 @@ export default function PreferencesScreen() {
 
               {step === 2 && (
                 <View className="gap-4">
-                  <Animated.Text className="text-[28px] text-text-strong leading-[36px]" style={{ fontFamily: FONTS.serif }}>
+                  <Animated.Text className=" text-text-strong leading-[36px]" style={TYPE.screenTitle}>
                     Who is this Memento mostly for?
                   </Animated.Text>
-                  <Animated.Text className="text-sm text-text-weak -mt-2 mb-2" style={{ fontFamily: FONTS.sans }}>Select all that apply</Animated.Text>
+                  <Animated.Text className="text-text-weak -mt-2 mb-2" style={TYPE.label}>Select all that apply</Animated.Text>
                   {MEMENTO_FOR_OPTIONS.map((opt) => (
                     <SelectionCard
                       key={opt.value}
@@ -228,10 +229,10 @@ export default function PreferencesScreen() {
 
               {step === 3 && (
                 <View className="gap-4">
-                  <Animated.Text className="text-[28px] text-text-strong leading-[36px]" style={{ fontFamily: FONTS.serif }}>
+                  <Animated.Text className=" text-text-strong leading-[36px]" style={TYPE.screenTitle}>
                     What are your interests?
                   </Animated.Text>
-                  <Animated.Text className="text-sm text-text-weak -mt-2 mb-2" style={{ fontFamily: FONTS.sans }}>Select as many as you like</Animated.Text>
+                  <Animated.Text className="text-text-weak -mt-2 mb-2" style={TYPE.label}>Select as many as you like</Animated.Text>
                   <View className="flex-row flex-wrap gap-2.5">
                     {PASSION_OPTIONS.map((opt) => (
                       <TouchableOpacity
@@ -243,8 +244,8 @@ export default function PreferencesScreen() {
                       >
                         <Animated.Text>{opt.icon}</Animated.Text>
                         <Animated.Text
-                          className={`text-sm font-medium ${state.passions.includes(opt.value) ? 'text-white' : 'text-text-strong'}`}
-                          style={{ fontFamily: FONTS.sansMedium }}
+                          className={state.passions.includes(opt.value) ? 'text-white' : 'text-text-strong'}
+                          style={TYPE.buttonSmall}
                         >
                           {opt.label}
                         </Animated.Text>
@@ -256,7 +257,7 @@ export default function PreferencesScreen() {
 
               {step === 4 && (
                 <View className="gap-4">
-                  <Animated.Text className="text-[28px] text-text-strong leading-[36px]" style={{ fontFamily: FONTS.serif }}>
+                  <Animated.Text className=" text-text-strong leading-[36px]" style={TYPE.screenTitle}>
                     How would you describe your current life stage?
                   </Animated.Text>
                   {LIFE_CONTEXT_OPTIONS.map((opt) => (
@@ -273,7 +274,7 @@ export default function PreferencesScreen() {
 
               {step === 5 && (
                 <View className="gap-4">
-                  <Animated.Text className="text-[28px] text-text-strong leading-[36px]" style={{ fontFamily: FONTS.serif }}>
+                  <Animated.Text className=" text-text-strong leading-[36px]" style={TYPE.screenTitle}>
                     What is your main motivation?
                   </Animated.Text>
                   {MOTIVATION_OPTIONS.map((opt) => (
@@ -295,7 +296,7 @@ export default function PreferencesScreen() {
 
               {step === 6 && (
                 <View className="gap-4">
-                  <Animated.Text className="text-[28px] text-text-strong leading-[36px]" style={{ fontFamily: FONTS.serif }}>
+                  <Animated.Text className=" text-text-strong leading-[36px]" style={TYPE.screenTitle}>
                     What areas of life would you like to preserve?
                   </Animated.Text>
                   <View className="flex-row flex-wrap gap-2.5">
@@ -309,8 +310,8 @@ export default function PreferencesScreen() {
                       >
                         <Animated.Text>{opt.icon}</Animated.Text>
                         <Animated.Text
-                          className={`text-sm font-medium ${state.priorityDimensions.includes(opt.value) ? 'text-white' : 'text-text-strong'}`}
-                          style={{ fontFamily: FONTS.sansMedium }}
+                          className={state.priorityDimensions.includes(opt.value) ? 'text-white' : 'text-text-strong'}
+                          style={TYPE.buttonSmall}
                         >
                           {opt.label}
                         </Animated.Text>
@@ -322,10 +323,10 @@ export default function PreferencesScreen() {
 
               {step === 7 && (
                 <View className="gap-4">
-                  <Animated.Text className="text-[28px] text-text-strong leading-[36px]" style={{ fontFamily: FONTS.serif }}>
+                  <Animated.Text className=" text-text-strong leading-[36px]" style={TYPE.screenTitle}>
                     Finally, how would you like to share your thoughts?
                   </Animated.Text>
-                  <Animated.Text className="text-sm text-text-weak -mt-2 mb-2" style={{ fontFamily: FONTS.sans }}>Select up to 2 options</Animated.Text>
+                  <Animated.Text className="text-text-weak -mt-2 mb-2" style={TYPE.label}>Select up to 2 options</Animated.Text>
                   {EXPRESSION_OPTIONS.map((opt) => (
                     <SelectionCard
                       key={opt.value}
@@ -354,7 +355,7 @@ export default function PreferencesScreen() {
       {/* ── Footer ────────────────────────────────────────────────────────── */}
       <View className="px-8 pb-10 pt-4 bg-onboarding-cream gap-4 border-t border-white/40">
         {showError && (
-          <Animated.Text entering={FadeInDown} className="text-center text-xs text-error font-medium" style={{ fontFamily: FONTS.sansMedium }}>
+          <Animated.Text entering={FadeInDown} className="text-center text-error" style={TYPE.metadata}>
             {ERROR_MESSAGES[step]}
           </Animated.Text>
         )}
@@ -371,7 +372,7 @@ export default function PreferencesScreen() {
             loading={saving}
             className="flex-1 h-14 bg-brand rounded-full"
           >
-            <Animated.Text className="text-white font-bold" style={{ fontFamily: FONTS.sansBold }}>
+            <Animated.Text className="text-white" style={TYPE.button}>
               {step === TOTAL_STEPS ? "Begin Journey" : 'Continue'}
             </Animated.Text>
           </Button>

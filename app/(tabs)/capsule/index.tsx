@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Search, Grid, List, X } from 'lucide-react-native';
 import { CapsuleCard } from '@/components/capsule/CapsuleCard';
 import { StatCard, DashboardHeader, CapsuleSkeleton, EmptyState, Spinner, Button, TextInput, TimerFillIcon, ZapIcon, UnpdfIcon, PauseIcon } from '@/components/ui';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useCapsulesLogic } from '@/hooks/use-capsules-logic';
@@ -131,7 +132,7 @@ export default function CapsuleScreen() {
   const listHeaderComponent = useMemo(
     () => (
       <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-4 gap-6">
-        <Animated.Text className="text-base text-text-weak leading-relaxed" style={{ fontFamily: FONTS.sans }}>
+        <Animated.Text className="text-text-weak" style={TYPE.body}>
           Preserve your thoughts and media in time capsules that deliver to your loved ones exactly when you choose.
         </Animated.Text>
 
@@ -198,7 +199,7 @@ export default function CapsuleScreen() {
                   activeOpacity={0.7}
                   className={`px-5 py-2.5 rounded-full ${isActive ? 'bg-brand' : 'bg-fill-weaker'}`}
                 >
-                  <Animated.Text className={`text-xs font-bold ${isActive ? 'text-white' : 'text-text-base'}`} style={{ fontFamily: FONTS.sansBold }}>
+                  <Animated.Text className={isActive ? 'text-white' : 'text-text-base'} style={TYPE.metadata}>
                     {label}
                   </Animated.Text>
                 </TouchableOpacity>

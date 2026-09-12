@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, PanResponder, GestureResponderEvent } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import * as Haptics from 'expo-haptics';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 
@@ -25,12 +26,12 @@ const DEFAULT_DATA: ChartPoint[] = [
   { label: 'Sun', value: 6 },
 ];
 
-export function SplineChart({ 
-  data = DEFAULT_DATA, 
-  height = 180, 
+export function SplineChart({
+  data = DEFAULT_DATA,
+  height = 180,
 }: SplineChartProps) {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
-  
+
   // Initial width dynamically computed: screen width minus external margins (48px) and card padding (40px)
   const initialWidth = Dimensions.get('window').width - 88;
   const [containerWidth, setContainerWidth] = useState(initialWidth);
@@ -78,7 +79,7 @@ export function SplineChart({
   }
 
   // Generate path for the filled gradient area underneath the spline
-  const fillD = coords.length > 0 
+  const fillD = coords.length > 0
     ? `${pathD} L ${coords[coords.length - 1].x} ${paddingTop + chartHeight} L ${coords[0].x} ${paddingTop + chartHeight} Z`
     : '';
 
@@ -132,23 +133,23 @@ export function SplineChart({
     <View className="bg-white border border-stroke-weaker rounded-3xl p-5 overflow-hidden">
       <View className="flex-row items-center justify-between mb-4">
         <View>
-          <Text className="text-xs text-text-weak font-medium uppercase tracking-wider" style={{ fontFamily: FONTS.sansMedium }}>
+          <Text className="text-text-weak uppercase tracking-wider" style={TYPE.metadata}>
             Memory Activity
           </Text>
-          <Text className="text-lg font-bold text-text-strong mt-0.5" style={{ fontFamily: FONTS.sansBold }}>
+          <Text className="text-text-strong mt-0.5" style={TYPE.stat}>
             Story Trends
           </Text>
         </View>
-        
+
         {activePoint ? (
           <View className="bg-brand/10 border border-brand/20 px-3 py-1 rounded-full">
-            <Text className="text-xs font-bold text-brand" style={{ fontFamily: FONTS.sansBold }}>
+            <Text className="text-brand" style={TYPE.eyebrow}>
               {activePoint.value} {activePoint.value === 1 ? 'story' : 'stories'} on {activePoint.label}
             </Text>
           </View>
         ) : (
           <View className="bg-fill-weaker px-3 py-1 rounded-full">
-            <Text className="text-[10px] text-text-weak font-semibold uppercase tracking-wider" style={{ fontFamily: FONTS.sansBold }}>
+            <Text className="text-text-weak uppercase tracking-wider" style={TYPE.eyebrow}>
               Touch & drag to inspect
             </Text>
           </View>
@@ -156,8 +157,8 @@ export function SplineChart({
       </View>
 
       {/* Measure the inner available width directly on the SVG wrapper view */}
-      <View 
-        {...panResponder.panHandlers} 
+      <View
+        {...panResponder.panHandlers}
         className="relative w-full"
         onLayout={handleLayout}
       >
@@ -168,24 +169,24 @@ export function SplineChart({
               <Stop offset="100%" stopColor={COLORS.brand} stopOpacity="0.0" />
             </LinearGradient>
           </Defs>
- 
+
           {/* Grid lines (horizontal) */}
           {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
             const y = paddingTop + p * chartHeight;
             const val = Math.round(maxVal - p * (maxVal - minVal));
             return (
               <React.Fragment key={i}>
-                <Line 
-                  x1={paddingLeft} 
-                  y1={y} 
-                  x2={containerWidth - paddingRight} 
-                  y2={y} 
-                  stroke={COLORS.strokeWeaker} 
-                  strokeWidth={scale(1)} 
+                <Line
+                  x1={paddingLeft}
+                  y1={y}
+                  x2={containerWidth - paddingRight}
+                  y2={y}
+                  stroke={COLORS.strokeWeaker}
+                  strokeWidth={scale(1)}
                   strokeDasharray={`${scale(4)} ${scale(4)}`}
                 />
-                <SvgText 
-                  x={paddingLeft - scale(8)} 
+                <SvgText
+                  x={paddingLeft - scale(8)}
                   y={y + verticalScale(3)}
                   textAnchor="end"
                   fill={COLORS.textMuted}
@@ -197,69 +198,69 @@ export function SplineChart({
               </React.Fragment>
             );
           })}
- 
+
           {/* Fill path under curve */}
           {fillD ? <Path d={fillD} fill="url(#chartGradient)" /> : null}
- 
+
           {/* Spline line curve */}
           {pathD ? (
-            <Path 
-              d={pathD} 
-              fill="none" 
-              stroke={COLORS.brand} 
-              strokeWidth={scale(3.5)} 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
+            <Path
+              d={pathD}
+              fill="none"
+              stroke={COLORS.brand}
+              strokeWidth={scale(3.5)}
+              strokeLinecap="round"
+              strokeLinejoin="round"
             />
           ) : null}
- 
+
           {/* Node dots */}
           {coords.map((coord, i) => (
-            <Circle 
-              key={i} 
-              cx={coord.x} 
-              cy={coord.y} 
-              r={scale(4.5)} 
-              fill="white" 
-              stroke={COLORS.brand} 
-              strokeWidth={scale(2.5)} 
+            <Circle
+              key={i}
+              cx={coord.x}
+              cy={coord.y}
+              r={scale(4.5)}
+              fill="white"
+              stroke={COLORS.brand}
+              strokeWidth={scale(2.5)}
             />
           ))}
- 
+
           {/* Touch-interactive guide lines and indicators */}
           {activePoint && (
             <React.Fragment>
               {/* Vertical line guide */}
-              <Line 
-                x1={activePoint.x} 
-                y1={paddingTop} 
-                x2={activePoint.x} 
-                y2={paddingTop + chartHeight} 
-                stroke={COLORS.brand} 
-                strokeWidth={scale(1.5)} 
+              <Line
+                x1={activePoint.x}
+                y1={paddingTop}
+                x2={activePoint.x}
+                y2={paddingTop + chartHeight}
+                stroke={COLORS.brand}
+                strokeWidth={scale(1.5)}
               />
               {/* Pulsing focal circle dot */}
-              <Circle 
-                cx={activePoint.x} 
-                cy={activePoint.y} 
-                r={scale(7.5)} 
-                fill={COLORS.brand} 
+              <Circle
+                cx={activePoint.x}
+                cy={activePoint.y}
+                r={scale(7.5)}
+                fill={COLORS.brand}
                 opacity="0.3"
               />
-              <Circle 
-                cx={activePoint.x} 
-                cy={activePoint.y} 
-                r={scale(4.5)} 
-                fill={COLORS.brand} 
+              <Circle
+                cx={activePoint.x}
+                cy={activePoint.y}
+                r={scale(4.5)}
+                fill={COLORS.brand}
               />
             </React.Fragment>
           )}
- 
+
           {/* X Axis Labels */}
           {coords.map((coord, i) => (
-            <SvgText 
-              key={i} 
-              x={coord.x} 
+            <SvgText
+              key={i}
+              x={coord.x}
               y={paddingTop + chartHeight + verticalScale(18)}
               textAnchor="middle"
               fill={activeIdx === i ? COLORS.brand : COLORS.textMuted}

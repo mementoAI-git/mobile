@@ -24,7 +24,7 @@ describe('billing module consistency', () => {
     expect(billingHook).toContain('useBillingUsage');
     expect(billingHook).toContain('openBillingPortal');
     expect(billingHook).toContain('redeemBillingPromo');
-    expect(billingHook).toContain('cancelBillingSubscription');
+    expect(billingHook).toContain("openSheet('cancel-subscription-confirmation')");
     expect(billingHook).toContain('resumeBillingSubscription');
   });
 

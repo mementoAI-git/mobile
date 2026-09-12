@@ -13,45 +13,31 @@ import {
 } from 'react-native';
 import {
   X, Share2, Bookmark, BookmarkCheck,
-  Users, ChevronDown, ChevronUp, Trash2, AlertTriangle,
+  Users, ChevronDown, Trash2, AlertTriangle,
 } from 'lucide-react-native';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import {
   useDeleteMemory, useBookmarkMemory, useUpdateMemory,
 } from '@/hooks/mutations/use-memory-mutations';
-import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
-import { IMemory, IBeneficiary } from '@/types';
+import { IMemory } from '@/types';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { toast } from '@/components/ui/Toast';
 import { publishedPostUrl } from '@/lib/env';
+import { PublishPrivacySheet, type PrivacyMode } from './PublishPrivacySheet';
+import {
+  buildMemoryAudiencePayload,
+  deriveMemoryAudience,
+  formatMemoryAudienceLabel,
+  type MemoryAudienceSelection,
+} from '@/features/memories/memory-audience';
 
 interface Props {
   memory: IMemory;
   onClose?: () => void;
 }
-
-// ── Stable list item components ─────────────────────────────────────────────
-
-const MemoBeneficiaryOption = React.memo(function MemoBeneficiaryOption({
-  beneficiary,
-  isActive,
-  onToggle,
-}: {
-  beneficiary: IBeneficiary;
-  isActive: boolean;
-  onToggle: (id: string) => void;
-}) {
-  const handlePress = useCallback(() => onToggle(beneficiary._id!), [beneficiary._id, onToggle]);
-  return (
-    <TouchableOpacity
-      onPress={handlePress}
-      style={[s.dropdownOption, isActive && s.dropdownOptionActive]}
-      activeOpacity={0.8}
-    >
-      <Text style={[s.dropdownOptionText, isActive && s.dropdownOptionTextActive]}>{beneficiary.name}</Text>
-    </TouchableOpacity>
-  );
-});
 
 const MemoTagPill = React.memo(function MemoTagPill({
   tag,
@@ -76,48 +62,30 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
   const { mutate: deleteMemory, isPending: isDeleting } = useDeleteMemory();
   const { mutate: toggleBookmark, isPending: isBookmarking } = useBookmarkMemory();
   const { mutate: updateMemory } = useUpdateMemory(memory._id);
-  const { data: beneficiariesRaw } = useBeneficiaries();
-
-  const beneficiaries: IBeneficiary[] = useMemo(() => {
-    if (!beneficiariesRaw) return [];
-    if (Array.isArray(beneficiariesRaw)) return beneficiariesRaw;
-    if ((beneficiariesRaw as any)?.docs) return (beneficiariesRaw as any).docs;
-    return [];
-  }, [beneficiariesRaw]);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [visibilityOpen, setVisibilityOpen] = useState(false);
-  const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>(
-    (memory.beneficiaries ?? [])
-      .map((b: any) => (typeof b === 'string' ? b : b._id))
-      .filter(Boolean)
-  );
+  const originalAudience = useMemo(() => deriveMemoryAudience(memory), [memory]);
+  const [audience, setAudience] = useState<MemoryAudienceSelection>(() => deriveMemoryAudience(memory));
+  const privacySheetRef = React.useRef<BottomSheetModal>(null);
   const [tags, setTags] = useState<string[]>(memory.tags ?? []);
   const [tagInput, setTagInput] = useState('');
 
-  const visibilityLabel = useMemo(() => {
-    if (!selectedBeneficiaryIds.length) return 'Everyone';
-    const names = beneficiaries
-      .filter(b => b._id && selectedBeneficiaryIds.includes(b._id))
-      .map(b => b.name)
-      .filter(Boolean);
-    return names.length === 1 ? names[0] : `${names.length} people`;
-  }, [selectedBeneficiaryIds, beneficiaries]);
+  const visibilityLabel = useMemo(() => formatMemoryAudienceLabel(audience), [audience]);
 
   const handleClose = useCallback(() => {
     const hasTagChange =
       JSON.stringify(tags.slice().sort()) !==
       JSON.stringify((memory.tags ?? []).slice().sort());
-    const origBeneficiaries = (memory.beneficiaries ?? [])
-      .map((b: any) => (typeof b === 'string' ? b : b._id))
-      .filter(Boolean);
     const hasVisibilityChange =
-      JSON.stringify(selectedBeneficiaryIds.slice().sort()) !==
-      JSON.stringify(origBeneficiaries.slice().sort());
+      JSON.stringify(buildMemoryAudiencePayload(audience)) !==
+      JSON.stringify(buildMemoryAudiencePayload(originalAudience));
 
     if (hasTagChange || hasVisibilityChange) {
       updateMemory(
-        { tags, beneficiaries: selectedBeneficiaryIds },
+        {
+          tags,
+          ...(hasVisibilityChange ? buildMemoryAudiencePayload(audience) : {}),
+        },
         {
           onSuccess: () => toast('Story updated', 'success'),
           onError: () => toast('Could not save changes', 'error'),
@@ -125,7 +93,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
       );
     }
     onClose?.();
-  }, [tags, selectedBeneficiaryIds, memory, updateMemory, onClose]);
+  }, [tags, audience, originalAudience, memory.tags, updateMemory, onClose]);
 
   const handleShare = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -157,10 +125,21 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
   }, [memory, deleteMemory, onClose]);
 
   const toggleBeneficiary = useCallback((id: string) => {
-    Haptics.selectionAsync();
-    setSelectedBeneficiaryIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
+    setAudience((current) => ({
+      ...current,
+      beneficiaryIds: current.beneficiaryIds.includes(id)
+        ? current.beneficiaryIds.filter((value) => value !== id)
+        : [...current.beneficiaryIds, id],
+    }));
+  }, []);
+
+  const toggleGroup = useCallback((id: string) => {
+    setAudience((current) => ({
+      ...current,
+      groupIds: current.groupIds.includes(id)
+        ? current.groupIds.filter((value) => value !== id)
+        : [...current.groupIds, id],
+    }));
   }, []);
 
   const addTag = useCallback(() => {
@@ -207,12 +186,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
 
   const handleToggleVisibility = useCallback(() => {
     Haptics.selectionAsync();
-    setVisibilityOpen(o => !o);
-  }, []);
-
-  const handleSelectEveryone = useCallback(() => {
-    setSelectedBeneficiaryIds([]);
-    Haptics.selectionAsync();
+    privacySheetRef.current?.present();
   }, []);
 
   // ── Delete confirmation view ────────────────────────────────────────────────
@@ -222,12 +196,12 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
       <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 24, paddingHorizontal: 4 }}>
         {/* Warning icon */}
         <View style={{ marginBottom: 24, marginTop: 8 }}>
-          <AlertTriangle size={96} color="#F59E0B" fill="#F59E0B" strokeWidth={0} />
+          <AlertTriangle size={96} color={COLORS.warning} fill={COLORS.warning} strokeWidth={0} />
         </View>
 
         {/* Heading */}
         <Text style={{
-          fontFamily: FONTS.sansBold, fontSize: 22, color: COLORS.textStrong,
+          ...TYPE.sectionTitle, color: COLORS.textStrong,
           textAlign: 'center', lineHeight: 30, marginBottom: 10, paddingHorizontal: 16,
         }}>
           Delete this story?
@@ -235,7 +209,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
 
         {/* Subtext */}
         <Text style={{
-          fontFamily: FONTS.sans, fontSize: 15, color: COLORS.textWeak,
+          ...TYPE.body, color: COLORS.textWeak,
           textAlign: 'center', marginBottom: 40,
         }}>
           This action can’t be undone.
@@ -252,7 +226,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
               alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: COLORS.textStrong }}>
+            <Text style={{ ...TYPE.button, color: COLORS.textStrong }}>
               Go back
             </Text>
           </TouchableOpacity>
@@ -269,7 +243,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
           >
             {isDeleting
               ? <ActivityIndicator color={COLORS.textInverse} />
-              : <Text style={{ fontFamily: FONTS.sansBold, fontSize: 16, color: COLORS.textInverse }}>Yes, delete</Text>
+              : <Text style={{ ...TYPE.button, color: COLORS.textInverse }}>Yes, delete</Text>
             }
           </TouchableOpacity>
         </View>
@@ -280,6 +254,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
   // ── Actions list ────────────────────────────────────────────────────────────
 
   return (
+    <>
     <ScrollView
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
@@ -311,41 +286,15 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
       {/* Who can see? */}
       <View style={s.visibilityCard}>
         <Text style={s.visibilityTitle}>Who can see this story?</Text>
-        <Text style={s.visibilitySubtitle}>Stories are visible to all beneficiaries by default.</Text>
+        <Text style={s.visibilitySubtitle}>This story stays private unless you choose otherwise.</Text>
         <TouchableOpacity
           onPress={handleToggleVisibility}
           style={s.visibilityTrigger} activeOpacity={0.8}
         >
           <Users size={16} color={COLORS.textBase} strokeWidth={1.8} />
           <Text style={s.visibilityLabel}>{visibilityLabel}</Text>
-          {visibilityOpen
-            ? <ChevronUp size={16} color={COLORS.textMuted} strokeWidth={2} />
-            : <ChevronDown size={16} color={COLORS.textMuted} strokeWidth={2} />
-          }
+          <ChevronDown size={16} color={COLORS.textMuted} strokeWidth={2} />
         </TouchableOpacity>
-        {visibilityOpen && (
-          <View style={s.dropdownList}>
-            <TouchableOpacity
-              onPress={handleSelectEveryone}
-              style={[s.dropdownOption, !selectedBeneficiaryIds.length && s.dropdownOptionActive]}
-              activeOpacity={0.8}
-            >
-              <Text style={[s.dropdownOptionText, !selectedBeneficiaryIds.length && s.dropdownOptionTextActive]}>Everyone</Text>
-            </TouchableOpacity>
-            {beneficiaries.map(b => {
-              if (!b._id) return null;
-              const on = selectedBeneficiaryIds.includes(b._id);
-              return (
-                <MemoBeneficiaryOption
-                  key={b._id}
-                  beneficiary={b}
-                  isActive={on}
-                  onToggle={toggleBeneficiary}
-                />
-              );
-            })}
-          </View>
-        )}
       </View>
 
       {/* Tags */}
@@ -379,6 +328,21 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
         <Text style={s.deleteBtnText}>Delete story</Text>
       </TouchableOpacity>
     </ScrollView>
+    <PublishPrivacySheet
+      ref={privacySheetRef}
+      mode={audience.mode === 'everyone' ? 'all' : audience.mode}
+      selectedBeneficiaryIds={audience.beneficiaryIds}
+      selectedGroupIds={audience.groupIds}
+      onModeChange={(mode: PrivacyMode) => setAudience((current) => ({ ...current, mode: mode === 'all' ? 'everyone' : mode }))}
+      onToggleBeneficiary={toggleBeneficiary}
+      onToggleGroup={toggleGroup}
+      onApply={(mode, beneficiaryIds, groupIds) => {
+        setAudience({ mode: mode === 'all' ? 'everyone' : mode, beneficiaryIds, groupIds });
+        privacySheetRef.current?.dismiss();
+      }}
+      onClose={() => privacySheetRef.current?.dismiss()}
+    />
+    </>
   );
 }
 
@@ -390,60 +354,50 @@ const s = {
     justifyContent: 'space-between' as const,
     marginBottom: 20, paddingHorizontal: 2,
   },
-  headerTitle: { fontFamily: FONTS.sansBold, fontSize: 18, color: COLORS.textStrong },
+  headerTitle: { ...TYPE.cardTitle, color: COLORS.textStrong },
   closeBtn: {
     width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.fillWeak,
     alignItems: 'center' as const, justifyContent: 'center' as const,
   },
   actionRow: {
     flexDirection: 'row' as const, alignItems: 'center' as const, gap: 14,
-    padding: 16, backgroundColor: COLORS.card, borderRadius: 14,
-    borderWidth: 1, borderColor: COLORS.strokeWeaker, marginBottom: 10,
+    padding: 16, backgroundColor: COLORS.card, borderRadius: 16,
+    marginBottom: 10,
   },
-  actionLabel: { fontFamily: FONTS.sansMedium, fontSize: 16, color: COLORS.textStrong },
+  actionLabel: { ...TYPE.body, color: COLORS.textStrong },
   visibilityCard: {
     backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16, marginBottom: 16, gap: 12,
   },
-  visibilityTitle: { fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong },
+  visibilityTitle: { ...TYPE.body, color: COLORS.textStrong },
   visibilitySubtitle: {
-    fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textBase, marginTop: -8,
+    ...TYPE.bodySmall, color: COLORS.textBase, marginTop: -8,
   },
   visibilityTrigger: {
     flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10,
     backgroundColor: COLORS.card, borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 13,
-    borderWidth: 1, borderColor: COLORS.strokeWeaker,
   },
-  visibilityLabel: { flex: 1, fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong },
-  dropdownList: {
-    backgroundColor: COLORS.card, borderRadius: 12,
-    borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingVertical: 4,
-  },
-  dropdownOption: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 },
-  dropdownOptionActive: { backgroundColor: `${COLORS.brand}12` },
-  dropdownOptionText: { fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong },
-  dropdownOptionTextActive: { color: COLORS.brand, fontFamily: FONTS.sansMedium },
+  visibilityLabel: { flex: 1, ...TYPE.label, color: COLORS.textStrong },
   tagsSection: { marginBottom: 24, gap: 8 },
-  tagsLabel: { fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong, paddingHorizontal: 2 },
+  tagsLabel: { ...TYPE.body, color: COLORS.textStrong, paddingHorizontal: 2 },
   tagsArea: {
-    backgroundColor: COLORS.card, borderRadius: 14,
-    borderWidth: 1, borderColor: COLORS.strokeWeak, padding: 12, minHeight: 72, gap: 8,
+    backgroundColor: COLORS.card, borderRadius: 16,
+    padding: 12, minHeight: 72, gap: 8,
   },
   tagPillsRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 6 },
   tagPill: {
     flexDirection: 'row' as const, alignItems: 'center' as const,
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
-    backgroundColor: COLORS.fillWeak, borderWidth: 1, borderColor: COLORS.strokeWeak,
+    backgroundColor: COLORS.fillWeak,
   },
-  tagPillText: { fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textStrong },
+  tagPillText: { ...TYPE.bodySmall, color: COLORS.textStrong },
   tagInput: {
-    fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong, padding: 0, minHeight: 20,
+    ...TYPE.label, color: COLORS.textStrong, padding: 0, minHeight: 20,
   },
   deleteBtn: {
     height: 56, borderRadius: 999,
-    borderWidth: 1.5, borderColor: COLORS.error,
-    backgroundColor: `${COLORS.error}06`,
+    backgroundColor: `${COLORS.error}10`,
     alignItems: 'center' as const, justifyContent: 'center' as const,
   },
-  deleteBtnText: { fontFamily: FONTS.sansMedium, fontSize: 16, color: COLORS.error },
+  deleteBtnText: { ...TYPE.button, color: COLORS.error },
 };

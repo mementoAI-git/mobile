@@ -4,12 +4,23 @@ import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import {
   normalizeBillingInvoices,
+  normalizeBillingProfile,
   normalizeBillingUsage,
   type BillingInvoice,
   type BillingUsage,
+  type BillingProfile,
 } from '@/features/settings/billing-adapters';
 
 export type { BillingInvoice, BillingUsage } from '@/features/settings/billing-adapters';
+
+export function useBillingProfile() {
+  return useQuery<BillingProfile | null>({
+    queryKey: queryKeys.billingProfile,
+    queryFn: () => Promise.resolve(null),
+    staleTime: Infinity,
+    retry: false,
+  });
+}
 
 export function useBillingInvoices(enabled = true) {
   return useQuery<BillingInvoice[]>({

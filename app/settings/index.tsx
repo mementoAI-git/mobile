@@ -23,7 +23,7 @@ import {
   UiUsers01,
 } from '@/components/ui/icons/SettingsIcons';
 import { SettingsHubRow } from '@/components/settings/SettingsHubRow';
-import { SETTINGS_TYPE } from '@/components/settings/settings-typography';
+import { TYPE } from '@/constants/typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useProfileSettingsLogic } from '@/hooks/use-profile-settings-logic';
 
@@ -84,7 +84,7 @@ export default function SettingsIndex() {
         >
           <ArrowLeft size={22} color={COLORS.textBase} />
         </TouchableOpacity>
-        <Text style={SETTINGS_TYPE.screenTitle}>Settings</Text>
+        <Text style={TYPE.screenTitle}>Settings</Text>
         <View style={{ width: 44 }} />
       </View>
 
@@ -101,7 +101,7 @@ export default function SettingsIndex() {
             className="h-14 w-14 border-0"
           />
           <View style={{ flex: 1 }}>
-            <Text numberOfLines={1} style={SETTINGS_TYPE.identityTitle}>{displayName}</Text>
+            <Text numberOfLines={1} style={TYPE.cardTitle}>{displayName}</Text>
             <Text numberOfLines={1} style={styles.profileEmail}>{profile?.email}</Text>
             {memberSince && <Text style={styles.memberSince}>{memberSince}</Text>}
           </View>
@@ -152,10 +152,10 @@ export default function SettingsIndex() {
           style={styles.logout}
         >
           <UiLogOut01 size={24} color={COLORS.error} />
-          <Text style={[SETTINGS_TYPE.rowLabel, { color: COLORS.error }]}>Log out</Text>
+          <Text style={[TYPE.label, { color: COLORS.error }]}>Log out</Text>
         </TouchableOpacity>
 
-        <Text style={[SETTINGS_TYPE.utilityLabel, styles.communityLabel]}>JOIN OUR COMMUNITY</Text>
+        <Text style={[TYPE.metadata, styles.communityLabel]}>JOIN OUR COMMUNITY</Text>
         <View style={styles.communityRow}>
           {COMMUNITY_LINKS.map((item) => (
             <TouchableOpacity
@@ -208,14 +208,12 @@ const styles = StyleSheet.create({
   },
   profileEmail: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sans,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     marginTop: 2,
   },
   memberSince: {
     color: COLORS.textWeak,
-    fontFamily: FONTS.sans,
-    fontSize: 12,
+    ...TYPE.metadata,
     marginTop: 2,
   },
   logout: {
@@ -245,14 +243,12 @@ const styles = StyleSheet.create({
   communityIcon: { width: 28, height: 28 },
   communityText: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.sans,
-    fontSize: 10,
+    ...TYPE.eyebrow,
     marginTop: 6,
   },
   version: {
     color: COLORS.textWeak,
-    fontFamily: FONTS.sans,
-    fontSize: 12,
+    ...TYPE.metadata,
     textAlign: 'center',
     marginTop: 14,
   },

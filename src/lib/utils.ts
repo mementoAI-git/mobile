@@ -1,10 +1,10 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-type SafeBackRouter = {
+type SafeBackRouter<Fallback> = {
   canGoBack: () => boolean;
   back: () => void;
-  replace: (href: string) => void;
+  replace: (href: Fallback) => void;
 };
 
 export function cn(...inputs: ClassValue[]) {
@@ -19,7 +19,7 @@ export function cn(...inputs: ClassValue[]) {
  * Usage:
  *   safeBack(router, '/(tabs)/overview');
  */
-export function safeBack(router: SafeBackRouter, fallback: string = '/(tabs)/overview') {
+export function safeBack<Fallback>(router: SafeBackRouter<Fallback>, fallback: Fallback) {
   if (router.canGoBack()) {
     router.back();
   } else {

@@ -19,7 +19,8 @@ import { View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MotiView, AnimatePresence } from 'moti';
 import { Check, AlertTriangle, Info } from 'lucide-react-native';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,8 +135,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 <Text
                   style={{
                     flex: 1,
-                    fontFamily: FONTS.sansMedium,
-                    fontSize: 14,
+                    ...TYPE.label,
                     color: '#ffffff',
                     lineHeight: 20,
                   }}

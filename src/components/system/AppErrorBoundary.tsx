@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
 import { Button } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { SENTRY_DSN } from '@/lib/env';
 import { logger } from '@/lib/logger';
 
@@ -91,22 +92,19 @@ const styles = StyleSheet.create({
   },
   markText: {
     color: COLORS.brand,
-    fontFamily: FONTS.serifBold,
-    fontSize: 34,
+    ...TYPE.displayTitle,
     lineHeight: 40,
   },
   title: {
     color: COLORS.textStrong,
-    fontFamily: FONTS.serif,
-    fontSize: 30,
+    ...TYPE.screenTitle,
     lineHeight: 36,
     textAlign: 'center',
     marginBottom: 10,
   },
   body: {
     color: COLORS.textBase,
-    fontFamily: FONTS.sans,
-    fontSize: 15,
+    ...TYPE.body,
     lineHeight: 22,
     textAlign: 'center',
     maxWidth: 320,

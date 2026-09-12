@@ -7,7 +7,9 @@ import { Check, Pencil, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { toast } from '@/components/ui/Toast';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { buildBeneficiaryInvitePayload, GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
 import {
   VAULT_ACCESS_OPTIONS,
@@ -34,7 +36,7 @@ interface PickedAvatar {
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong }}>
+    <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>
       {children}
     </Text>
   );
@@ -53,14 +55,11 @@ function SheetInput({
       style={[
         {
           minHeight: multiline ? 132 : 56,
-          borderWidth: 1,
-          borderColor: COLORS.strokeWeak,
-          borderRadius: multiline ? 16 : 12,
-          backgroundColor: COLORS.card,
-          paddingHorizontal: 16,
+          borderRadius: multiline ? 16 : 999,
+          backgroundColor: COLORS.fillWeaker,
+          paddingHorizontal: multiline ? 16 : 20,
           paddingVertical: multiline ? 14 : 0,
-          fontFamily: FONTS.sans,
-          fontSize: 16,
+          ...TYPE.input,
           color: COLORS.textStrong,
           textAlignVertical: multiline ? 'top' : 'center',
         },
@@ -78,7 +77,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
   const [relationship, setRelationship] = useState(editData?.relationship || '');
   const [about, setAbout] = useState(editData?.about || '');
   const [groupSearch, setGroupSearch] = useState('');
-  
+
   const initialGroups = useMemo(() => {
     if (!editData?.groups) return [];
     return editData.groups.map(g => typeof g === 'string' ? g : (g as any)._id).filter(Boolean);
@@ -214,17 +213,15 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
       paddingHorizontal: 20,
       paddingTop: 12,
       paddingBottom: Math.max(insets.bottom, 12) + 8,
-      borderTopWidth: 1,
-      borderTopColor: COLORS.strokeWeaker,
       backgroundColor: COLORS.background,
     }}>
-      <Button variant="secondary" size="lg" className="h-14 flex-1" textClassName="text-base font-bold" onPress={close}>
+      <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={close}>
         Dismiss
       </Button>
       <Button
         size="lg"
         className="h-14 flex-1 bg-fill-strong"
-        textClassName="text-base font-bold text-white"
+        textClassName="text-white"
         loading={isPending}
         disabled={!canSubmit || isPending}
         onPress={() => void submit()}
@@ -239,7 +236,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ flex: 1 }}>
           <View style={{ minHeight: 68, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ fontFamily: FONTS.sansBold, fontSize: 20, color: COLORS.textStrong }}>
+            <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
               {isEdit ? 'Edit Beneficiary' : 'Invite Beneficiary'}
             </Text>
             <TouchableOpacity onPress={() => { Haptics.selectionAsync(); close(); }} accessibilityRole="button" accessibilityLabel="Close invite beneficiary" style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak }}>
@@ -265,12 +262,12 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
 
             <View style={{ gap: 8 }}>
               <FieldLabel>Email address</FieldLabel>
-              <SheetInput 
-                value={email} 
-                onChangeText={setEmail} 
-                keyboardType="email-address" 
-                autoCapitalize="none" 
-                autoCorrect={false} 
+              <SheetInput
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
                 editable={!isEdit}
                 style={isEdit ? { color: COLORS.textMuted } : undefined}
               />
@@ -304,17 +301,14 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
                       style={{
                         padding: 14,
                         borderRadius: 16,
-                        borderWidth: 1,
-                        borderColor: selected ? COLORS.brand : COLORS.strokeWeak,
-                        backgroundColor: selected ? 'rgba(255, 94, 0, 0.04)' : COLORS.card,
+                        backgroundColor: selected ? COLORS.brandSubtle : COLORS.fillWeaker,
                         gap: 3,
                       }}
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Text
                           style={{
-                            fontFamily: FONTS.sansBold,
-                            fontSize: 15,
+                            ...TYPE.body,
                             color: selected ? COLORS.brand : COLORS.textStrong,
                           }}
                         >
@@ -325,7 +319,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
                             width: 18,
                             height: 18,
                             borderRadius: 9,
-                            borderWidth: 2,
+                            borderWidth: 1.5,
                             borderColor: selected ? COLORS.brand : COLORS.strokeWeak,
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -345,8 +339,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
                       </View>
                       <Text
                         style={{
-                          fontFamily: FONTS.sans,
-                          fontSize: 13,
+                          ...TYPE.bodySmall,
                           color: COLORS.textWeak,
                           lineHeight: 18,
                         }}
@@ -361,22 +354,22 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
 
             <View style={{ gap: 8 }}>
               <FieldLabel>Add to group(s)</FieldLabel>
-              <View style={{ minHeight: 132, borderWidth: 1, borderColor: COLORS.strokeWeak, borderRadius: 16, backgroundColor: COLORS.card, padding: 12, gap: 10 }}>
+              <View style={{ minHeight: 132, borderRadius: 16, backgroundColor: COLORS.fillWeaker, padding: 12, gap: 10 }}>
                 <BottomSheetTextInput
                   value={groupSearch}
                   onChangeText={setGroupSearch}
                   placeholder="Search group name to add user to"
                   placeholderTextColor={COLORS.textMuted}
-                  style={{ minHeight: 38, padding: 0, fontFamily: FONTS.sans, fontSize: 15, color: COLORS.textStrong }}
+                  style={{ minHeight: 38, padding: 0, ...TYPE.body, color: COLORS.textStrong }}
                 />
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   {filteredGroups.slice(0, 6).map((group) => {
                     const selected = selectedGroupIds.includes(group._id);
                     const color = GROUP_COLOR_PALETTE[group.color ?? 1]?.color ?? GROUP_COLOR_PALETTE[1].color;
                     return (
-                      <TouchableOpacity key={group._id} onPress={() => toggleGroup(group._id)} style={{ minHeight: 34, paddingHorizontal: 10, borderRadius: 17, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: selected ? color : COLORS.fillWeak, borderWidth: 1, borderColor: selected ? color : COLORS.strokeWeaker }}>
+                      <TouchableOpacity key={group._id} onPress={() => toggleGroup(group._id)} style={{ minHeight: 34, paddingHorizontal: 12, borderRadius: 999, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: selected ? color : COLORS.fillWeak }}>
                         {selected ? <Check size={14} color={COLORS.textStrong} strokeWidth={2.5} /> : null}
-                        <Text style={{ fontFamily: FONTS.sansMedium, fontSize: 12, color: COLORS.textStrong }}>{group.name}</Text>
+                        <Text style={{ ...TYPE.metadata, color: COLORS.textStrong }}>{group.name}</Text>
                       </TouchableOpacity>
                     );
                   })}

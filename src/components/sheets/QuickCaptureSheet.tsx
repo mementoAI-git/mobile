@@ -8,7 +8,9 @@ import { useUiStore } from '@/store';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import * as ImagePicker from 'expo-image-picker';
+
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { RecordingIconButton } from '@/components/ui/RecordingIconButton';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
 import { LinkPreviews } from '@/components/ui/LinkPreview';
@@ -146,6 +148,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
 
     const payload: import('@/hooks/mutations/use-quick-capture').QuickCapturePayload = {
       body: text.trim(),
+      visibility: 'private',
       attachments: uploadedAttachmentIds.length > 0 ? uploadedAttachmentIds : undefined,
       // Wire up daily prompt context so the server can link enrichment to the prompt
       ...(dailyPrompt?.prompt_type === 'static' && dailyPrompt.prompt_id
@@ -171,7 +174,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
     <View className="px-5 pb-8 pt-2">
       {/* Header */}
       <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-xl text-text-strong" style={{ fontFamily: FONTS.serif }}>
+        <Text className="text-text-strong" style={TYPE.uiTitle}>
           {dailyPrompt ? "Today's Reflection" : 'Quick Capture'}
         </Text>
         <TouchableOpacity
@@ -194,15 +197,15 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
             style={{ backgroundColor: `${COLORS.brand}0D`, borderWidth: 1, borderColor: `${COLORS.brand}33` }}
           >
             <Text
-              className="text-[10px] font-bold uppercase tracking-widest"
-              style={{ fontFamily: FONTS.sansBold, color: COLORS.brand }}
+              className="uppercase tracking-widest"
+              style={{ ...TYPE.eyebrow, color: COLORS.brand }}
             >
               Prompt
             </Text>
           </View>
           <Text
-            className="text-[17px] text-text-strong leading-snug"
-            style={{ fontFamily: FONTS.serif }}
+            className="text-text-strong"
+            style={TYPE.cardTitle}
           >
             {dailyPrompt.pinned_text}
           </Text>
@@ -218,8 +221,8 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
           placeholderTextColor={COLORS.textWeak}
           multiline
           autoFocus
-          className="flex-1 text-base text-text-strong p-0 m-0"
-          style={{ fontFamily: FONTS.chatBody, fontSize: 14, textAlignVertical: 'top' }}
+          className="flex-1 text-text-strong p-0 m-0"
+          style={{ ...TYPE.label, textAlignVertical: 'top' }}
         />
 
         <LinkPreviews text={text} style={{ marginTop: 8 }} />
@@ -247,7 +250,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
               className={`p-2 rounded-full border shadow-sm flex-row items-center gap-1 ${attachments.length > 0 ? 'bg-brand-tint border-brand-weak' : 'bg-white border-stroke-weaker'} ${isRecording ? 'opacity-50' : ''}`}
             >
               <ImageIcon size={20} color={attachments.length > 0 ? COLORS.brand : COLORS.textBase} />
-              {attachments.length > 0 && <Text className="text-brand text-xs font-medium ml-1">{attachments.length}</Text>}
+              {attachments.length > 0 && <Text className="text-brand ml-1" style={TYPE.metadata}>{attachments.length}</Text>}
             </TouchableOpacity>
           </View>
 

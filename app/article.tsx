@@ -48,14 +48,22 @@ import { useRouter } from 'expo-router';
 // resets on app restart — exactly the right scope.
 let articleHasSlid = false;
 import { COLORS, FONTS } from '@/constants/tokens';
+import { TYPE } from '@/constants/typography';
 import { useUserStore } from '@/store';
 import { useCreateMemory } from '@/hooks/mutations/use-memory-mutations';
-import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useToast } from '@/components/ui/Toast';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
-import type { IBeneficiary } from '@/types';
 import { publishedPostUrl } from '@/lib/env';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { PublishPrivacySheet, type PrivacyMode } from '@/components/sheets/PublishPrivacySheet';
+import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
+import {
+  deriveMemoryAudience,
+  formatMemoryAudienceLabel,
+  type MemoryAudienceSelection,
+} from '@/features/memories/memory-audience';
+import { buildArticlePublishPayload } from '@/features/editor/article-publish-payload';
 
 // ─── Surfer illustration asset ────────────────────────────────────────────────
 
@@ -236,29 +244,15 @@ function PublishModal({
 }) {
   const insets = useSafeAreaInsets();
   const [tags, setTags] = useState('');
-  const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<string[]>([]);
-  const [beneficiaryMenuOpen, setBeneficiaryMenuOpen] = useState(false);
+  const [audience, setAudience] = useState<MemoryAudienceSelection>(() => deriveMemoryAudience({}));
   const [isAutotagging, setIsAutotagging] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
+  const privacySheetRef = useRef<BottomSheetModal>(null);
 
   const { mutate: createMemory, isPending } = useCreateMemory();
-  const { data: beneficiariesRaw } = useBeneficiaries();
   const { toast } = useToast();
 
-  const beneficiaries: IBeneficiary[] = useMemo(() => {
-    if (!beneficiariesRaw) return [];
-    if (Array.isArray(beneficiariesRaw)) return beneficiariesRaw;
-    if ((beneficiariesRaw as any)?.docs) return (beneficiariesRaw as any).docs;
-    return [];
-  }, [beneficiariesRaw]);
-
-  const visibilityLabel = useMemo(() => {
-    if (!selectedBeneficiaryIds.length) return 'Everyone';
-    const names = beneficiaries
-      .filter((b) => b._id && selectedBeneficiaryIds.includes(b._id))
-      .map((b) => b.name).filter(Boolean);
-    return names.length === 1 ? names[0] : `${names.length} beneficiaries`;
-  }, [selectedBeneficiaryIds, beneficiaries]);
+  const visibilityLabel = useMemo(() => formatMemoryAudienceLabel(audience), [audience]);
 
   const handleAutotag = useCallback(async () => {
     const bodyText = [title, subtitle, body].filter(Boolean).join(' ').trim();
@@ -287,13 +281,7 @@ function PublishModal({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const tagList = tags.split(/[,\s]+/).map((t) => t.trim()).filter(Boolean);
     createMemory(
-      {
-        title: title || 'Untitled',
-        body: [subtitle, body].filter(Boolean).join('\n\n').trim(),
-        tags: tagList,
-        status: 'save',
-        beneficiaries: selectedBeneficiaryIds.length ? selectedBeneficiaryIds : undefined,
-      },
+      buildArticlePublishPayload({ title, subtitle, body, tags: tagList, audience }),
       {
         onSuccess: (res: any) => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -305,23 +293,40 @@ function PublishModal({
         },
       }
     );
-  }, [title, subtitle, body, tags, selectedBeneficiaryIds, createMemory, toast, onClose]);
-
-  const toggleBeneficiary = useCallback((id: string) => {
-    Haptics.selectionAsync();
-    setSelectedBeneficiaryIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  }, []);
+  }, [title, subtitle, body, tags, audience, createMemory, toast]);
 
   // Reset form state when modal closes
   const handleClose = useCallback(() => {
     setPublishedUrl(null);
     setTags('');
-    setSelectedBeneficiaryIds([]);
-    setBeneficiaryMenuOpen(false);
+    setAudience(deriveMemoryAudience({}));
     onClose();
   }, [onClose]);
+
+  const handlePrivacyModeChange = useCallback((nextMode: PrivacyMode) => {
+    setAudience((current) => ({
+      ...current,
+      mode: nextMode === 'all' ? 'everyone' : nextMode,
+    }));
+  }, []);
+
+  const handleToggleBeneficiary = useCallback((id: string) => {
+    setAudience((current) => ({
+      ...current,
+      beneficiaryIds: current.beneficiaryIds.includes(id)
+        ? current.beneficiaryIds.filter((candidate) => candidate !== id)
+        : [...current.beneficiaryIds, id],
+    }));
+  }, []);
+
+  const handleToggleGroup = useCallback((id: string) => {
+    setAudience((current) => ({
+      ...current,
+      groupIds: current.groupIds.includes(id)
+        ? current.groupIds.filter((candidate) => candidate !== id)
+        : [...current.groupIds, id],
+    }));
+  }, []);
 
   return (
     <Modal
@@ -330,7 +335,7 @@ function PublishModal({
       presentationStyle="fullScreen"
       onRequestClose={handleClose}
     >
-      <SafeAreaProvider>
+      <NativeModalSafeAreaBoundary>
         <SafeAreaView style={[pStyles.root, publishedUrl ? { backgroundColor: 'transparent' } : null]} edges={publishedUrl ? [] : ['top']}>
 
           {/* ── Success view ── */}
@@ -358,9 +363,9 @@ function PublishModal({
             {/* Visibility card */}
             <View style={pStyles.visibilityCard}>
               <Text style={pStyles.visibilityTitle}>Who can see this story?</Text>
-              <Text style={pStyles.visibilitySubtitle}>Stories are visible to all beneficiaries by default.</Text>
+              <Text style={pStyles.visibilitySubtitle}>New stories are private unless you choose otherwise.</Text>
               <TouchableOpacity
-                onPress={() => { Haptics.selectionAsync(); setBeneficiaryMenuOpen((o) => !o); }}
+                onPress={() => { Haptics.selectionAsync(); privacySheetRef.current?.present(); }}
                 style={pStyles.visibilitySelector}
                 activeOpacity={0.8}
               >
@@ -368,26 +373,6 @@ function PublishModal({
                 <Text style={pStyles.visibilitySelectorText}>{visibilityLabel}</Text>
                 <ChevronDown size={16} color={COLORS.textMuted} strokeWidth={2} />
               </TouchableOpacity>
-              {beneficiaryMenuOpen && (
-                <View style={pStyles.beneficiaryMenu}>
-                  <TouchableOpacity
-                    onPress={() => { setSelectedBeneficiaryIds([]); setBeneficiaryMenuOpen(false); Haptics.selectionAsync(); }}
-                    style={[pStyles.beneficiaryOption, !selectedBeneficiaryIds.length && pStyles.beneficiaryOptionActive]}
-                  >
-                    <Text style={[pStyles.beneficiaryOptionText, !selectedBeneficiaryIds.length && pStyles.beneficiaryOptionTextActive]}>Everyone</Text>
-                  </TouchableOpacity>
-                  {beneficiaries.map((b) => {
-                    if (!b._id) return null;
-                    const on = selectedBeneficiaryIds.includes(b._id);
-                    return (
-                      <TouchableOpacity key={b._id} onPress={() => toggleBeneficiary(b._id!)}
-                        style={[pStyles.beneficiaryOption, on && pStyles.beneficiaryOptionActive]}>
-                        <Text style={[pStyles.beneficiaryOptionText, on && pStyles.beneficiaryOptionTextActive]}>{b.name}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
             </View>
 
             {/* Tags */}
@@ -427,7 +412,25 @@ function PublishModal({
           </ScrollView>
           )}
         </SafeAreaView>
-      </SafeAreaProvider>
+        <PublishPrivacySheet
+          ref={privacySheetRef}
+          mode={audience.mode === 'everyone' ? 'all' : audience.mode}
+          selectedBeneficiaryIds={audience.beneficiaryIds}
+          selectedGroupIds={audience.groupIds}
+          onModeChange={handlePrivacyModeChange}
+          onToggleBeneficiary={handleToggleBeneficiary}
+          onToggleGroup={handleToggleGroup}
+          onApply={(nextMode, beneficiaryIds, groupIds) => {
+            setAudience({
+              mode: nextMode === 'all' ? 'everyone' : nextMode,
+              beneficiaryIds,
+              groupIds,
+            });
+            privacySheetRef.current?.dismiss();
+          }}
+          onClose={() => privacySheetRef.current?.dismiss()}
+        />
+      </NativeModalSafeAreaBoundary>
     </Modal>
   );
 }
@@ -569,7 +572,7 @@ export default function ArticleScreen() {
                   }}
                 >
                   <Volume2 size={13} color={COLORS.brand} />
-                  <Text style={{ fontFamily: FONTS.sansBold, fontSize: 11, color: COLORS.brand }}>
+                  <Text style={{ ...TYPE.metadata, color: COLORS.brand }}>
                     Listen
                   </Text>
                 </TouchableOpacity>
@@ -625,30 +628,30 @@ const styles = StyleSheet.create({
   kav: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 },
   cancelBtn: { height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' },
-  cancelText: { fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textBase },
+  cancelText: { ...TYPE.label, color: COLORS.textBase },
   savedPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: COLORS.fillWeaker },
   savedDot: { width: 6, height: 6, borderRadius: 3 },
-  savedText: { fontFamily: FONTS.sans, fontSize: 12, color: COLORS.textMuted },
+  savedText: { ...TYPE.metadata, color: COLORS.textMuted },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   moreBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' },
   nextBtn: { height: 34, paddingHorizontal: 18, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
   nextBtnDisabled: { opacity: 0.4 },
-  nextText: { fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textInverse },
+  nextText: { ...TYPE.label, color: COLORS.textInverse },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 22, paddingBottom: 24, paddingTop: 4 },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 24 },
   avatar: { width: 24, height: 24, borderRadius: 12 },
   avatarFallback: { backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.textInverse },
-  authorLabel: { fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textMuted },
-  titleInput: { fontFamily: FONTS.serif, fontSize: 34, fontWeight: '700', color: COLORS.textStrong, padding: 0, margin: 0, marginBottom: 8, lineHeight: 42, textAlignVertical: 'top' },
-  subtitleInput: { fontFamily: FONTS.sans, fontSize: 18, color: COLORS.textWeak, padding: 0, margin: 0, marginBottom: 24, lineHeight: 26, textAlignVertical: 'top' },
-  bodyInput: { fontFamily: FONTS.sans, fontSize: 16, color: COLORS.textBase, padding: 0, margin: 0, lineHeight: 26, minHeight: 300, textAlignVertical: 'top' },
+  avatarInitial: { ...TYPE.eyebrow, color: COLORS.textInverse },
+  authorLabel: { ...TYPE.bodySmall, color: COLORS.textMuted },
+  titleInput: { ...TYPE.displayTitle,  color: COLORS.textStrong, padding: 0, margin: 0, marginBottom: 8, lineHeight: 42, textAlignVertical: 'top' },
+  subtitleInput: { ...TYPE.cardTitle, color: COLORS.textWeak, padding: 0, margin: 0, marginBottom: 24, lineHeight: 26, textAlignVertical: 'top' },
+  bodyInput: { ...TYPE.input, color: COLORS.textBase, padding: 0, margin: 0, lineHeight: 26, minHeight: 300, textAlignVertical: 'top' },
   toolbar: { flexDirection: 'column', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker, backgroundColor: COLORS.background, gap: 10 },
-  toolbarLabel: { fontFamily: FONTS.sansBold, fontSize: 10, color: COLORS.textMuted, letterSpacing: 1, textTransform: 'uppercase' },
+  toolbarLabel: { ...TYPE.eyebrow, color: COLORS.textMuted, letterSpacing: 1, textTransform: 'uppercase' },
   toolbarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   storyModePill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, paddingHorizontal: 16, borderRadius: 999, backgroundColor: COLORS.textStrong },
-  storyModeText: { fontFamily: FONTS.sansSemi, fontSize: 14, color: COLORS.textInverse },
+  storyModeText: { ...TYPE.label, color: COLORS.textInverse },
   mediaBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' },
   // legacy — kept so old refs don't crash
   addBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
@@ -662,27 +665,22 @@ const pStyles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
   container: { paddingHorizontal: 20, paddingTop: 8 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  headerTitle: { fontFamily: FONTS.serif, fontSize: 22, color: COLORS.textStrong },
+  headerTitle: { ...TYPE.sectionTitle, color: COLORS.textStrong },
   closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' },
   visibilityCard: { backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16, marginBottom: 24 },
-  visibilityTitle: { fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong, marginBottom: 4 },
-  visibilitySubtitle: { fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textBase, marginBottom: 14 },
+  visibilityTitle: { ...TYPE.body, color: COLORS.textStrong, marginBottom: 4 },
+  visibilitySubtitle: { ...TYPE.bodySmall, color: COLORS.textBase, marginBottom: 14 },
   visibilitySelector: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, borderWidth: 1, borderColor: COLORS.strokeWeaker },
-  visibilitySelectorText: { flex: 1, fontFamily: FONTS.sansMedium, fontSize: 14, color: COLORS.textStrong },
-  beneficiaryMenu: { marginTop: 8, backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingVertical: 4 },
-  beneficiaryOption: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, marginHorizontal: 4 },
-  beneficiaryOptionActive: { backgroundColor: `${COLORS.brand}12` },
-  beneficiaryOptionText: { fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong },
-  beneficiaryOptionTextActive: { color: COLORS.brand, fontFamily: FONTS.sansMedium },
+  visibilitySelectorText: { flex: 1, ...TYPE.label, color: COLORS.textStrong },
   tagsSection: { marginBottom: 32 },
   tagsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  tagsTitle: { fontFamily: FONTS.sansBold, fontSize: 15, color: COLORS.textStrong },
+  tagsTitle: { ...TYPE.body, color: COLORS.textStrong },
   autotagBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: `${COLORS.info}40`, backgroundColor: `${COLORS.info}08` },
-  autotagText: { fontFamily: FONTS.sansMedium, fontSize: 12, color: COLORS.info },
-  tagInput: { backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 14, paddingVertical: 14, fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textStrong, minHeight: 50 },
+  autotagText: { ...TYPE.metadata, color: COLORS.info },
+  tagInput: { backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 14, paddingVertical: 14, ...TYPE.label, color: COLORS.textStrong, minHeight: 50 },
   postBtn: { height: 56, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
   postBtnDisabled: { opacity: 0.45 },
-  postBtnText: { fontFamily: FONTS.sansSemi, fontSize: 16, color: COLORS.textInverse },
+  postBtnText: { ...TYPE.button, color: COLORS.textInverse },
 });
 
 // ─── Success screen styles ────────────────────────────────────────────────────
@@ -748,8 +746,7 @@ const sStyles = StyleSheet.create({
   },
 
   title: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 26,
+    ...TYPE.sectionTitle,
     color: COLORS.textStrong,
     textAlign: 'center',
     lineHeight: 34,
@@ -764,8 +761,7 @@ const sStyles = StyleSheet.create({
     gap: 16,
   },
   shareLabel: {
-    fontFamily: FONTS.sans,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     color: COLORS.textBase,
   },
 
@@ -781,8 +777,7 @@ const sStyles = StyleSheet.create({
   },
   urlText: {
     flex: 1,
-    fontFamily: FONTS.sans,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     color: COLORS.textWeak,
     paddingHorizontal: 14,
     paddingVertical: 14,
@@ -798,8 +793,7 @@ const sStyles = StyleSheet.create({
     backgroundColor: COLORS.card,
   },
   copyText: {
-    fontFamily: FONTS.sansSemi,
-    fontSize: 13,
+    ...TYPE.bodySmall,
     color: COLORS.info,
   },
 
@@ -815,8 +809,7 @@ const sStyles = StyleSheet.create({
     backgroundColor: COLORS.strokeWeaker,
   },
   dividerText: {
-    fontFamily: FONTS.sans,
-    fontSize: 12,
+    ...TYPE.metadata,
     color: COLORS.textMuted,
   },
 
@@ -837,8 +830,7 @@ const sStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   socialIcon: {
-    fontSize: 18,
-    fontFamily: FONTS.sansBold,
+    ...TYPE.stat,
   },
   socialBtnIcon: {
     width: 28,
@@ -857,8 +849,7 @@ const sStyles = StyleSheet.create({
     gap: 8,
   },
   addAnotherText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 16,
+    ...TYPE.button,
     color: COLORS.textInverse,
   },
 
@@ -868,8 +859,7 @@ const sStyles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   dismissText: {
-    fontFamily: FONTS.sans,
-    fontSize: 15,
+    ...TYPE.body,
     color: COLORS.textBase,
     textAlign: 'center',
   },
