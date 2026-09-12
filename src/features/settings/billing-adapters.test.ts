@@ -78,8 +78,27 @@ describe('mobile Polar billing adapters', () => {
   test('normalizes canonical and legacy usage and invoice collections', () => {
     expect(normalizeBillingUsage({ data: { storage_used_bytes: 5, storage_limit_bytes: 200 } })).toMatchObject({ storage_used_bytes: 5 });
     expect(normalizeBillingUsage({ data: { data: { storage_used_bytes: 7, storage_limit_bytes: 200 } } })).toMatchObject({ storage_used_bytes: 7 });
-    expect(normalizeBillingInvoices({ data: [{ label: 'August' }] })).toEqual([{ label: 'August' }]);
-    expect(normalizeBillingInvoices({ data: { data: [{ label: 'July' }] } })).toEqual([{ label: 'July' }]);
+    expect(normalizeBillingInvoices({ data: [{ label: 'August' }] })).toMatchObject([{ label: 'August' }]);
+    expect(normalizeBillingInvoices({ data: { data: [{ label: 'July' }] } })).toMatchObject([{ label: 'July' }]);
+    expect(normalizeBillingInvoices({
+      data: [{
+        id: 'in_1',
+        hosted_invoice_url: 'https://polar.sh/invoice',
+        number: 'INV-01',
+        total: 1999,
+        currency: 'USD',
+        issued_at: '2026-08-01T00:00:00.000Z',
+        status: 'paid',
+      }],
+    })).toMatchObject([{
+      id: 'in_1',
+      url: 'https://polar.sh/invoice',
+      label: 'INV-01',
+      amount: 1999,
+      currency: 'USD',
+      created_at: '2026-08-01T00:00:00.000Z',
+      status: 'paid',
+    }]);
   });
 
   test('extracts checkout and portal URLs from either response shape', () => {
