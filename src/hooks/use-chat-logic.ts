@@ -240,9 +240,6 @@ export function useChatLogic() {
       lastMessage?.role === 'ai'
     ) {
       queryClient.invalidateQueries({ queryKey: queryKeys.userStats });
-      if (activeChatId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.promptMessages(activeChatId) });
-      }
       if (isPromptType && id) {
         queryClient.invalidateQueries({ queryKey: queryKeys.overviewPrompts });
         queryClient.invalidateQueries({ queryKey: queryKeys.dailyPrompts() });
@@ -250,7 +247,7 @@ export function useChatLogic() {
       }
     }
     prevMessagesLengthRef.current = messages.length;
-  }, [activeChatId, id, isPromptType, messages, queryClient]);
+  }, [id, isPromptType, messages, queryClient]);
 
   const handleEnterDeepDive = useCallback((dimension: LifeDimension) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

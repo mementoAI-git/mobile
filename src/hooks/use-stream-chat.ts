@@ -64,8 +64,12 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
   }, []);
 
   useEffect(() => {
-    if (lastMemoryIdRef.current === memoryId) return;
+    const previousMemoryId = lastMemoryIdRef.current;
     lastMemoryIdRef.current = memoryId;
+    // Only reset if transitioning between two distinct established conversations
+    if (!previousMemoryId || !memoryId || previousMemoryId === memoryId) {
+      return;
+    }
     abortRef.current?.abort();
     readerRef.current?.cancel().catch(() => undefined);
     readerRef.current = null;
@@ -177,6 +181,7 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
 
         if (isMountedRef.current && !controller.signal.aborted) {
           streamOutcome = 'success';
+          streamingRef.current = false;
           setMessages((prev) => [...prev, {
             _id: createMessageId(),
             role: 'ai',
@@ -185,11 +190,13 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
             isLive: true,
           }]);
           setStreamingText('');
+          setStreaming(false);
         }
       } catch (err: any) {
         streamOutcome = err?.name === 'AbortError' ? 'abort' : 'failure';
         streamErrorClass = err instanceof Error ? err.name : 'UnknownError';
         if (isMountedRef.current && err?.name !== 'AbortError') {
+          streamingRef.current = false;
           setMessages((prev) => [
             ...prev,
             {
@@ -200,6 +207,7 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
             },
           ]);
           setStreamingText('');
+          setStreaming(false);
         }
       } finally {
         finishStream({
