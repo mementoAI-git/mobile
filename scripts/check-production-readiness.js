@@ -270,7 +270,6 @@ assert(
 const registerSourceForUrls = read('app/(auth)/register.tsx');
 const loginSourceForUrls = read('src/hooks/use-login-logic.ts');
 assert(!/API_BASE_URL\.replace\('\/api'/.test(registerSourceForUrls), 'Signup web URL must use SIGNUP_URL, not API_BASE_URL string replacement.');
-assert(/SIGNUP_URL/.test(registerSourceForUrls), 'Passkey signup must use SIGNUP_URL.');
 assert(!/memento:\/\/oauth-callback/.test(registerSourceForUrls), 'Register OAuth redirects must use oauthCallbackUrl().');
 assert(!/memento:\/\/oauth-callback/.test(loginSourceForUrls), 'Login OAuth redirects must use oauthCallbackUrl().');
 assert(!/openAuthSessionAsync\([^,]+,\s*'memento:\/\/'/.test(registerSourceForUrls), 'Register auth sessions must use AUTH_SESSION_RETURN_URL.');

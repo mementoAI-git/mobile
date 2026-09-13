@@ -21,16 +21,15 @@ import Animated, {
   withDelay,
   Easing,
 } from 'react-native-reanimated';
-import { Button, TextInput, PasswordInput, Logo, ConfirmDialog } from '@/components/ui';
+import { Button, TextInput, PasswordInput, Logo } from '@/components/ui';
 import { useRegisterLogic } from '@/hooks/use-register-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { Fingerprint } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
-import { PRIVACY_URL, SIGNUP_URL, TERMS_URL } from '@/lib/env';
+import { PRIVACY_URL, TERMS_URL } from '@/lib/env';
 import { AUTH_SESSION_RETURN_URL, oauthCallbackUrl } from '@/lib/navigation';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
@@ -70,9 +69,7 @@ export default function RegisterScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
-  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [passkeyConfirmVisible, setPasskeyConfirmVisible] = useState(false);
 
   // ─── Cascade animation values ────────────────────────────────────────────
   // Each section has its own opacity + translateY shared value.
@@ -125,21 +122,7 @@ export default function RegisterScreen() {
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
-  const handlePasskeySignup = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setPasskeyConfirmVisible(true);
-  };
 
-  const confirmPasskeyOpen = async () => {
-    setPasskeyConfirmVisible(false);
-    try {
-      setPasskeyLoading(true);
-      const { openAuthSessionAsync } = await import('expo-web-browser');
-      await openAuthSessionAsync(SIGNUP_URL, AUTH_SESSION_RETURN_URL);
-    } catch { /* silent */ } finally {
-      setPasskeyLoading(false);
-    }
-  };
 
   const handleGoogleSignup = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -210,17 +193,8 @@ export default function RegisterScreen() {
               {!isKeyboardVisible && (
                 <Animated.View style={oauthStyle} className="gap-4">
                   <TouchableOpacity
-                    onPress={handlePasskeySignup}
-                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                    activeOpacity={0.8}
-                    className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
-                  >
-                    {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />}
-                    <Animated.Text className="text-text-strong" style={TYPE.body}>Sign up with a passkey</Animated.Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
                     onPress={handleGoogleSignup}
-                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                    disabled={googleLoading || appleLoading || isPending}
                     activeOpacity={0.8}
                     className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
                   >
@@ -229,7 +203,7 @@ export default function RegisterScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleAppleSignup}
-                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                    disabled={googleLoading || appleLoading || isPending}
                     activeOpacity={0.8}
                     className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
                   >
@@ -363,16 +337,7 @@ export default function RegisterScreen() {
         </KeyboardAvoidingView>
       </SafeAreaView>
 
-      <ConfirmDialog
-        visible={passkeyConfirmVisible}
-        title="Register with a passkey"
-        message="To create a secure cross-device passkey, please use the Memento web portal. Would you like to open it now?"
-        onClose={() => setPasskeyConfirmVisible(false)}
-        buttons={[
-          { label: 'Open web portal', variant: 'primary', onPress: confirmPasskeyOpen },
-          { label: 'Not now', variant: 'ghost', onPress: () => setPasskeyConfirmVisible(false) },
-        ]}
-      />
+
     </ImageBackground>
   );
 }
