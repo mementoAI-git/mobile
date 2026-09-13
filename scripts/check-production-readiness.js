@@ -116,7 +116,7 @@ assert(expo.web?.favicon === './assets/favicon.png', 'Web favicon must be config
 
 const splashPlugin = findPlugin('expo-splash-screen');
 assert(Array.isArray(splashPlugin), 'expo-splash-screen plugin must use explicit options.');
-assert(splashPlugin[1]?.image === './assets/splash-icon.jpg', 'Splash plugin image must point to the committed splash asset.');
+assert(splashPlugin[1]?.image === './assets/icon.png', 'Splash plugin image must point to the committed splash asset.');
 assert(splashPlugin[1]?.resizeMode === 'contain', 'Splash plugin must use contain resize mode.');
 assert(splashPlugin[1]?.backgroundColor.toLowerCase() === '#ffffff', 'Splash plugin background must be white.');
 assert(splashPlugin[1]?.imageWidth === 120, 'Splash plugin imageWidth must be locked for native parity.');

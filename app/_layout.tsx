@@ -1,6 +1,6 @@
 import '../global.css';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Platform,
@@ -61,6 +61,8 @@ import { AuthenticatedNotificationManager } from '@/components/system/Authentica
 import { AnimatedSplash } from '@/components/system/AnimatedSplash';
 import { SheetManager } from '@/components/sheets/SheetManager';
 import { BackgroundMusicProvider } from '@/hooks/use-background-music';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storageKeys } from '@/constants/storage-keys';
 
 import { COLORS } from '@/constants/tokens';
 import {
@@ -115,11 +117,16 @@ if (Platform.OS === 'web') {
 // with the React Native animated splash.
 void SplashScreen.preventAutoHideAsync();
 
-// Both assets used by AnimatedSplash should be ready before the native splash
-// disappears.
+// Every cinematic asset should be ready before the native splash disappears.
 const SPLASH_ASSETS = [
-  require('../assets/splash-icon.jpg'),
-  require('../assets/images/memento_flat.webp'),
+  require('../assets/images/splash-cinematic/journal.jpg'),
+  require('../assets/images/splash-cinematic/hug.jpg'),
+  require('../assets/images/splash-cinematic/typewriter.jpg'),
+  require('../assets/images/splash-cinematic/phone.jpg'),
+  require('../assets/images/splash-cinematic/avatar-1.jpg'),
+  require('../assets/images/splash-cinematic/avatar-2.jpg'),
+  require('../assets/images/splash-cinematic/avatar-3.jpg'),
+  require('../assets/images/backgrounds/welcome_bg.png'),
 ];
 
 // -----------------------------------------------------------------------------
@@ -254,6 +261,33 @@ function RootLayout() {
   const [splashAssetsReady, setSplashAssetsReady] =
     useState(false);
 
+  const [hasSeenSplash, setHasSeenSplash] =
+    useState<boolean | null>(null);
+
+  const hideNativeSplash = useCallback(async () => {
+    await SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    AsyncStorage.getItem(storageKeys.welcomeOnce)
+      .then((seen) => {
+        if (mounted) {
+          setHasSeenSplash(seen === 'true');
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setHasSeenSplash(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const sessionStable =
     phase === 'anonymous' ||
     phase === 'authenticated';
@@ -305,6 +339,7 @@ function RootLayout() {
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
+    if (hasSeenSplash !== false) return;
     let mounted = true;
 
     Asset.loadAsync(SPLASH_ASSETS)
@@ -328,7 +363,7 @@ function RootLayout() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [hasSeenSplash]);
 
   // ---------------------------------------------------------------------------
   // App readiness
@@ -430,29 +465,19 @@ function RootLayout() {
     }
   }, []);
 
-  // ---------------------------------------------------------------------------
-  // Native splash -> animated splash handoff
-  //
-  // Important:
-  // AnimatedSplash is mounted first.
-  // Then we wait one frame before removing the native splash.
-  //
-  // This prevents:
-  // native splash -> blank frame -> RN splash
-  // ---------------------------------------------------------------------------
-
+  // Dismiss native splash directly if the user has already seen the intro splash.
   useEffect(() => {
     if (
       !hydrated ||
       !fontsLoaded ||
-      !splashAssetsReady ||
-      !sessionStable
+      !sessionStable ||
+      hasSeenSplash !== true
     ) {
       return;
     }
 
     const frame = requestAnimationFrame(() => {
-      SplashScreen.hideAsync().catch(() => {});
+      void hideNativeSplash();
     });
 
     return () => {
@@ -461,8 +486,9 @@ function RootLayout() {
   }, [
     hydrated,
     fontsLoaded,
-    splashAssetsReady,
     sessionStable,
+    hasSeenSplash,
+    hideNativeSplash,
   ]);
 
   // Keep native splash up while our critical boot resources load.
@@ -470,7 +496,7 @@ function RootLayout() {
   // Do NOT include sessionStable here.
   // SessionBootstrap needs to mount during "authenticating"
   // so it can finish restoring the stored session.
-  if (!hydrated || !fontsLoaded) {
+  if (!hydrated || !fontsLoaded || hasSeenSplash === null) {
     return null;
   }
 
@@ -637,10 +663,16 @@ function RootLayout() {
       </GestureHandlerRootView>
 
       {showAnimatedSplash &&
+        hasSeenSplash === false &&
         sessionStable &&
         splashAssetsReady && (
           <AnimatedSplash
+            onReady={hideNativeSplash}
             onDone={() => {
+              void AsyncStorage.setItem(
+                storageKeys.welcomeOnce,
+                'true',
+              );
               setShowAnimatedSplash(false);
             }}
           />
