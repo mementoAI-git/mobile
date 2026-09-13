@@ -31,12 +31,19 @@ function sanitizeDraft(value: Record<string, unknown>): FirstRunOnboardingDraft 
     typeof value.motivation === 'string' && validMotivations.has(value.motivation as OnboardingMotivation)
       ? (value.motivation as OnboardingMotivation)
       : null;
-  const lifeAreas = Array.isArray(value.lifeAreas)
-    ? value.lifeAreas.filter(
-        (area): area is EnrichmentCategory =>
-          typeof area === 'string' && validLifeAreas.has(area as EnrichmentCategory),
-      )
-    : [];
+  const lifeAreas: EnrichmentCategory[] = [];
+  if (Array.isArray(value.lifeAreas)) {
+    for (const area of value.lifeAreas) {
+      if (
+        typeof area === 'string' &&
+        validLifeAreas.has(area as EnrichmentCategory) &&
+        !lifeAreas.includes(area as EnrichmentCategory)
+      ) {
+        lifeAreas.push(area as EnrichmentCategory);
+      }
+      if (lifeAreas.length === 3) break;
+    }
+  }
   const step =
     typeof value.step === 'number' && Number.isInteger(value.step) && value.step >= 1 && value.step <= 4
       ? (value.step as FirstRunOnboardingDraft['step'])
@@ -46,7 +53,10 @@ function sanitizeDraft(value: Record<string, unknown>): FirstRunOnboardingDraft 
     preferredName:
       typeof value.preferredName === 'string' ? value.preferredName : EMPTY_ONBOARDING_DRAFT.preferredName,
     motivation,
-    about: typeof value.about === 'string' ? value.about : EMPTY_ONBOARDING_DRAFT.about,
+    about:
+      typeof value.about === 'string'
+        ? value.about.slice(0, 500)
+        : EMPTY_ONBOARDING_DRAFT.about,
     lifeAreas,
     step,
   };

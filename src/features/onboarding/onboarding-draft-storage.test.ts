@@ -104,6 +104,79 @@ describe('onboarding draft storage', () => {
     });
   });
 
+  test('recovers invalid scalar fields to their empty defaults', async () => {
+    const storage = createStorage({
+      [storageKeys.onboardingState]: JSON.stringify({
+        version: 1,
+        preferredName: 42,
+        motivation: 'not-a-motivation',
+        about: null,
+        lifeAreas: ['identity_self', 'passions_interests'],
+        step: 2,
+      }),
+    });
+
+    expect(await readOnboardingDraft(storage)).toEqual({
+      ...EMPTY_ONBOARDING_DRAFT,
+      lifeAreas: ['identity_self', 'passions_interests'],
+      step: 2,
+    });
+  });
+
+  test('recovers missing preferred name and about fields to empty strings', async () => {
+    const storage = createStorage({
+      [storageKeys.onboardingState]: JSON.stringify({
+        version: 1,
+        motivation: 'self_reflection',
+        lifeAreas: ['identity_self', 'passions_interests'],
+        step: 2,
+      }),
+    });
+
+    expect(await readOnboardingDraft(storage)).toEqual({
+      ...EMPTY_ONBOARDING_DRAFT,
+      motivation: 'self_reflection',
+      lifeAreas: ['identity_self', 'passions_interests'],
+      step: 2,
+    });
+  });
+
+  test('deduplicates and caps saved life areas at three canonical values', async () => {
+    const storage = createStorage({
+      [storageKeys.onboardingState]: JSON.stringify({
+        version: 1,
+        ...completeDraft,
+        lifeAreas: [
+          'identity_self',
+          'identity_self',
+          'passions_interests',
+          'work_purpose',
+          'memories_experiences',
+        ],
+      }),
+    });
+
+    expect(await readOnboardingDraft(storage)).toEqual({
+      ...completeDraft,
+      lifeAreas: ['identity_self', 'passions_interests', 'work_purpose'],
+    });
+  });
+
+  test('caps an overlong saved about response at 500 characters', async () => {
+    const storage = createStorage({
+      [storageKeys.onboardingState]: JSON.stringify({
+        version: 1,
+        ...completeDraft,
+        about: 'a'.repeat(501),
+      }),
+    });
+
+    expect(await readOnboardingDraft(storage)).toEqual({
+      ...completeDraft,
+      about: 'a'.repeat(500),
+    });
+  });
+
   test('writes a versioned draft under the onboarding state key', async () => {
     const storage = createStorage();
 
