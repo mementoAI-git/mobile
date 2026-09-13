@@ -70,6 +70,7 @@ describe('cinematic startup splash', () => {
     }
     expect(layout).toContain('<AnimatedSplash');
     expect(layout).toContain('onReady={hideNativeSplash}');
+    expect(layout).toContain('replaySpeed={hasSeenSplash === true ? 2 : 1}');
     expect(layout.match(/SplashScreen\.hideAsync\(\)/g)).toHaveLength(1);
     expect(layout).toContain('setShowAnimatedSplash(false)');
 

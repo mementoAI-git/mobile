@@ -66,6 +66,11 @@ const SOFT = Easing.bezierFn(0.4, 0, 0.2, 1);
 interface AnimatedSplashProps {
   onDone: () => void;
   onReady: () => Promise<void>;
+  /**
+   * Speed multiplier for the clock. 1 = full 8s cinematic (first launch),
+   * 2 = 4s compressed replay (returning user).
+   */
+  replaySpeed?: number;
 }
 
 function phase(value: number, start: number, duration: number) {
@@ -458,7 +463,7 @@ const SkipButton = memo(function SkipButton({
   );
 });
 
-export function AnimatedSplash({ onDone, onReady }: AnimatedSplashProps) {
+export function AnimatedSplash({ onDone, onReady, replaySpeed = 1 }: AnimatedSplashProps) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const clock = useSharedValue(0);
@@ -532,9 +537,10 @@ export function AnimatedSplash({ onDone, onReady }: AnimatedSplashProps) {
       );
       return;
     }
+    const playDuration = Math.round(CINEMATIC_SPLASH.duration / replaySpeed);
     clock.value = withTiming(
       CINEMATIC_SPLASH.duration,
-      { duration: CINEMATIC_SPLASH.duration, easing: Easing.linear },
+      { duration: playDuration, easing: Easing.linear },
       (complete) => {
         if (complete) runOnJS(finish)();
       },
@@ -542,10 +548,10 @@ export function AnimatedSplash({ onDone, onReady }: AnimatedSplashProps) {
 
     const skipTimer = setTimeout(() => {
       if (mountedRef.current) setSkipVisible(true);
-    }, CINEMATIC_SPLASH.skipVisibleAt);
+    }, Math.round(CINEMATIC_SPLASH.skipVisibleAt / replaySpeed));
 
     return () => clearTimeout(skipTimer);
-  }, [clock, dismiss, finish, nativeSplashHidden, reduceMotion]);
+  }, [clock, dismiss, finish, nativeSplashHidden, reduceMotion, replaySpeed]);
 
   const containerStyle = useAnimatedStyle(() => {
     const timedExit = softPhase(

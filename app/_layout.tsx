@@ -339,7 +339,7 @@ function RootLayout() {
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    if (hasSeenSplash !== false) return;
+    if (hasSeenSplash === null) return;
     let mounted = true;
 
     Asset.loadAsync(SPLASH_ASSETS)
@@ -464,32 +464,6 @@ function RootLayout() {
       RNStatusBar.setTranslucent(false);
     }
   }, []);
-
-  // Dismiss native splash directly if the user has already seen the intro splash.
-  useEffect(() => {
-    if (
-      !hydrated ||
-      !fontsLoaded ||
-      !sessionStable ||
-      hasSeenSplash !== true
-    ) {
-      return;
-    }
-
-    const frame = requestAnimationFrame(() => {
-      void hideNativeSplash();
-    });
-
-    return () => {
-      cancelAnimationFrame(frame);
-    };
-  }, [
-    hydrated,
-    fontsLoaded,
-    sessionStable,
-    hasSeenSplash,
-    hideNativeSplash,
-  ]);
 
   // Keep native splash up while our critical boot resources load.
   //
@@ -663,10 +637,10 @@ function RootLayout() {
       </GestureHandlerRootView>
 
       {showAnimatedSplash &&
-        hasSeenSplash === false &&
         sessionStable &&
         splashAssetsReady && (
           <AnimatedSplash
+            replaySpeed={hasSeenSplash === true ? 2 : 1}
             onReady={hideNativeSplash}
             onDone={() => {
               void AsyncStorage.setItem(
