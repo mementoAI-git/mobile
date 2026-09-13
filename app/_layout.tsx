@@ -119,13 +119,13 @@ void SplashScreen.preventAutoHideAsync();
 
 // Every cinematic asset should be ready before the native splash disappears.
 const SPLASH_ASSETS = [
-  require('../assets/images/splash-cinematic/journal.jpg'),
-  require('../assets/images/splash-cinematic/hug.jpg'),
-  require('../assets/images/splash-cinematic/typewriter.jpg'),
-  require('../assets/images/splash-cinematic/phone.jpg'),
-  require('../assets/images/splash-cinematic/avatar-1.jpg'),
-  require('../assets/images/splash-cinematic/avatar-2.jpg'),
-  require('../assets/images/splash-cinematic/avatar-3.jpg'),
+  require('../assets/images/splash-cinematic/journal.webp'),
+  require('../assets/images/splash-cinematic/hug.webp'),
+  require('../assets/images/splash-cinematic/typewriter.webp'),
+  require('../assets/images/splash-cinematic/phone.webp'),
+  require('../assets/images/splash-cinematic/avatar-1.webp'),
+  require('../assets/images/splash-cinematic/avatar-2.webp'),
+  require('../assets/images/splash-cinematic/avatar-3.webp'),
   require('../assets/images/backgrounds/welcome_bg.png'),
 ];
 
@@ -258,7 +258,7 @@ function RootLayout() {
   const [showAnimatedSplash, setShowAnimatedSplash] =
     useState(true);
 
-  const [splashAssetsReady, setSplashAssetsReady] =
+  const [splashFinished, setSplashFinished] =
     useState(false);
 
   const [hasSeenSplash, setHasSeenSplash] =
@@ -335,35 +335,24 @@ function RootLayout() {
   }, [hydrate]);
 
   // ---------------------------------------------------------------------------
-  // Warm the splash assets while the native splash is still on screen.
-  // ---------------------------------------------------------------------------
-
+  // Dismiss the animated splash once the animation/skip finishes AND the session is stable.
   useEffect(() => {
-    if (hasSeenSplash === null) return;
-    let mounted = true;
+    if (splashFinished && sessionStable) {
+      setShowAnimatedSplash(false);
+    }
+  }, [splashFinished, sessionStable]);
 
-    Asset.loadAsync(SPLASH_ASSETS)
-      .catch((error) => {
-        // Asset preload failure shouldn't permanently trap the
-        // user behind the native splash. Bundled require() may
-        // still resolve when AnimatedSplash mounts.
-        if (__DEV__) {
-          logger.warn(
-            'Splash asset preload failed:',
-            error,
-          );
-        }
-      })
-      .finally(() => {
-        if (mounted) {
-          setSplashAssetsReady(true);
-        }
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [hasSeenSplash]);
+  // Warm the splash assets in the background.
+  useEffect(() => {
+    Asset.loadAsync(SPLASH_ASSETS).catch((error) => {
+      if (__DEV__) {
+        logger.warn(
+          'Splash asset preload failed:',
+          error,
+        );
+      }
+    });
+  }, []);
 
   // ---------------------------------------------------------------------------
   // App readiness
@@ -636,21 +625,23 @@ function RootLayout() {
         </KeyboardProvider>
       </GestureHandlerRootView>
 
-      {showAnimatedSplash &&
-        sessionStable &&
-        splashAssetsReady && (
-          <AnimatedSplash
-            replaySpeed={hasSeenSplash === true ? 2 : 1}
-            onReady={hideNativeSplash}
-            onDone={() => {
-              void AsyncStorage.setItem(
-                storageKeys.welcomeOnce,
-                'true',
-              );
+      {showAnimatedSplash && (
+        <AnimatedSplash
+          replaySpeed={hasSeenSplash === true ? 2 : 1}
+          onReady={hideNativeSplash}
+          onDone={() => {
+            void AsyncStorage.setItem(
+              storageKeys.welcomeOnce,
+              'true',
+            );
+            if (sessionStable) {
               setShowAnimatedSplash(false);
-            }}
-          />
-        )}
+            } else {
+              setSplashFinished(true);
+            }
+          }}
+        />
+      )}
     </SafeAreaProvider>
   );
 }

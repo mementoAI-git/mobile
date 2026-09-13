@@ -30,13 +30,13 @@ describe('cinematic startup splash', () => {
   test('keeps the source particle field and all required bundled artwork', () => {
     expect(CINEMATIC_SPLASH_PARTICLES).toHaveLength(14);
     expect(cinematicSplashAssetNames()).toEqual([
-      'journal.jpg',
-      'hug.jpg',
-      'typewriter.jpg',
-      'phone.jpg',
-      'avatar-1.jpg',
-      'avatar-2.jpg',
-      'avatar-3.jpg',
+      'journal.webp',
+      'hug.webp',
+      'typewriter.webp',
+      'phone.webp',
+      'avatar-1.webp',
+      'avatar-2.webp',
+      'avatar-3.webp',
     ]);
   });
 

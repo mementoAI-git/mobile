@@ -101,12 +101,12 @@ export type CinematicSplashCard = (typeof CINEMATIC_SPLASH_CARDS)[number];
 
 export function cinematicSplashAssetNames(): string[] {
   return [
-    'journal.jpg',
-    'hug.jpg',
-    'typewriter.jpg',
-    'phone.jpg',
-    'avatar-1.jpg',
-    'avatar-2.jpg',
-    'avatar-3.jpg',
+    'journal.webp',
+    'hug.webp',
+    'typewriter.webp',
+    'phone.webp',
+    'avatar-1.webp',
+    'avatar-2.webp',
+    'avatar-3.webp',
   ];
 }

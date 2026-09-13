@@ -12,7 +12,6 @@ import {
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { Battery, Signal, Wifi } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import Animated, {
@@ -38,13 +37,13 @@ import {
   type CinematicSplashCard,
 } from '@/features/startup/cinematic-splash';
 
-const JOURNAL = require('../../../assets/images/splash-cinematic/journal.jpg');
-const HUG = require('../../../assets/images/splash-cinematic/hug.jpg');
-const TYPEWRITER = require('../../../assets/images/splash-cinematic/typewriter.jpg');
-const PHONE = require('../../../assets/images/splash-cinematic/phone.jpg');
-const AVATAR_ONE = require('../../../assets/images/splash-cinematic/avatar-1.jpg');
-const AVATAR_TWO = require('../../../assets/images/splash-cinematic/avatar-2.jpg');
-const AVATAR_THREE = require('../../../assets/images/splash-cinematic/avatar-3.jpg');
+const JOURNAL = require('../../../assets/images/splash-cinematic/journal.webp');
+const HUG = require('../../../assets/images/splash-cinematic/hug.webp');
+const TYPEWRITER = require('../../../assets/images/splash-cinematic/typewriter.webp');
+const PHONE = require('../../../assets/images/splash-cinematic/phone.webp');
+const AVATAR_ONE = require('../../../assets/images/splash-cinematic/avatar-1.webp');
+const AVATAR_TWO = require('../../../assets/images/splash-cinematic/avatar-2.webp');
+const AVATAR_THREE = require('../../../assets/images/splash-cinematic/avatar-3.webp');
 const GRAIN = require('../../../assets/images/backgrounds/welcome_bg.png');
 
 const CARD_IMAGES: Record<CinematicSplashCard['id'], ImageSourcePropType> = {
@@ -415,28 +414,6 @@ const BrandPromise = memo(function BrandPromise({ clock, stageHeight }: ClockPro
   );
 });
 
-const CinematicStatusBar = memo(function CinematicStatusBar({
-  clock,
-  topInset,
-}: ClockProps & { topInset: number }) {
-  const animatedStyle = useAnimatedStyle(() => {
-    const t = softPhase(clock.value, 1_600, 600);
-    return { opacity: t };
-  });
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[styles.status, { top: Math.max(14, topInset) }, animatedStyle]}
-    >
-      <Text style={styles.statusText}>9:41</Text>
-      <View style={styles.statusIcons}>
-        <Signal size={14} color={COLORS.splashInk} strokeWidth={2.4} />
-        <Wifi size={14} color={COLORS.splashInk} strokeWidth={2.4} />
-        <Battery size={16} color={COLORS.splashInk} strokeWidth={2.2} />
-      </View>
-    </Animated.View>
-  );
-});
 
 const SkipButton = memo(function SkipButton({
   clock,
@@ -590,7 +567,6 @@ export function AnimatedSplash({ onDone, onReady, replaySpeed = 1 }: AnimatedSpl
       <PromptCard clock={clock} stageWidth={width} stageHeight={height} />
       <LogoMark clock={clock} stageHeight={height} />
       <BrandPromise clock={clock} stageHeight={height} />
-      <CinematicStatusBar clock={clock} topInset={insets.top} />
       {reduceMotion === false && skipVisible ? (
         <SkipButton clock={clock} onPress={dismissSplash} topInset={insets.top} />
       ) : null}
@@ -694,12 +670,6 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
   },
   avatarOverlap: { marginLeft: -10 },
-  status: {
-    position: 'absolute', left: 0, right: 0, zIndex: 20,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, paddingTop: 14,
-  },
-  statusText: { ...TYPE.bodyStrong, color: COLORS.splashInk, letterSpacing: -0.3 },
-  statusIcons: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   skipWrap: { position: 'absolute', left: '50%', zIndex: 22, marginLeft: -30 },
   skipButton: { width: 60, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   skipText: { ...TYPE.eyebrow, color: COLORS.splashMuted, letterSpacing: 0.4, textTransform: 'uppercase' },
