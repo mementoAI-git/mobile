@@ -3,16 +3,13 @@ import {
   AccessibilityInfo,
   ImageBackground,
   type ImageSourcePropType,
-  Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import Animated, {
   cancelAnimation,
@@ -415,40 +412,13 @@ const BrandPromise = memo(function BrandPromise({ clock, stageHeight }: ClockPro
 });
 
 
-const SkipButton = memo(function SkipButton({
-  clock,
-  onPress,
-  topInset,
-}: ClockProps & { onPress: () => void; topInset: number }) {
-  const animatedStyle = useAnimatedStyle(() => {
-    const enter = softPhase(clock.value, CINEMATIC_SPLASH.skipVisibleAt, 400);
-    const leave = 1 - softPhase(clock.value, CINEMATIC_SPLASH.exitStart, 100);
-    return { opacity: enter * leave };
-  });
-  return (
-    <Animated.View style={[styles.skipWrap, { top: Math.max(14, topInset) }, animatedStyle]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Skip splash animation"
-        hitSlop={8}
-        onPress={onPress}
-        style={styles.skipButton}
-      >
-        <Text style={styles.skipText}>Skip</Text>
-      </Pressable>
-    </Animated.View>
-  );
-});
-
 export function AnimatedSplash({ onDone, onReady, replaySpeed = 1 }: AnimatedSplashProps) {
   const { width, height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const clock = useSharedValue(0);
   const dismiss = useSharedValue(0);
   const [reduceMotion, setReduceMotion] = useState<boolean | null>(null);
   const [nativeSplashHidden, setNativeSplashHidden] = useState(false);
   const [visible, setVisible] = useState(true);
-  const [skipVisible, setSkipVisible] = useState(false);
   const finishedRef = useRef(false);
   const mountedRef = useRef(true);
   const readyStartedRef = useRef(false);
@@ -469,14 +439,6 @@ export function AnimatedSplash({ onDone, onReady, replaySpeed = 1 }: AnimatedSpl
     setVisible(false);
     onDoneRef.current();
   }, []);
-
-  const dismissSplash = useCallback(() => {
-    if (finishedRef.current) return;
-    void Haptics.selectionAsync();
-    dismiss.value = withTiming(1, { duration: 250, easing: SOFT }, (complete) => {
-      if (complete) runOnJS(finish)();
-    });
-  }, [dismiss, finish]);
 
   const handleLayout = useCallback(() => {
     if (readyStartedRef.current) return;
@@ -522,12 +484,6 @@ export function AnimatedSplash({ onDone, onReady, replaySpeed = 1 }: AnimatedSpl
         if (complete) runOnJS(finish)();
       },
     );
-
-    const skipTimer = setTimeout(() => {
-      if (mountedRef.current) setSkipVisible(true);
-    }, Math.round(CINEMATIC_SPLASH.skipVisibleAt / replaySpeed));
-
-    return () => clearTimeout(skipTimer);
   }, [clock, dismiss, finish, nativeSplashHidden, reduceMotion, replaySpeed]);
 
   const containerStyle = useAnimatedStyle(() => {
@@ -567,9 +523,6 @@ export function AnimatedSplash({ onDone, onReady, replaySpeed = 1 }: AnimatedSpl
       <PromptCard clock={clock} stageWidth={width} stageHeight={height} />
       <LogoMark clock={clock} stageHeight={height} />
       <BrandPromise clock={clock} stageHeight={height} />
-      {reduceMotion === false && skipVisible ? (
-        <SkipButton clock={clock} onPress={dismissSplash} topInset={insets.top} />
-      ) : null}
       <View pointerEvents="none" style={styles.grain}>
         <ImageBackground
           source={GRAIN}
@@ -670,9 +623,6 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
   },
   avatarOverlap: { marginLeft: -10 },
-  skipWrap: { position: 'absolute', left: '50%', zIndex: 22, marginLeft: -30 },
-  skipButton: { width: 60, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  skipText: { ...TYPE.eyebrow, color: COLORS.splashMuted, letterSpacing: 0.4, textTransform: 'uppercase' },
   grain: { ...StyleSheet.absoluteFill, zIndex: 30, opacity: 0.09 },
   grainImage: { opacity: 0.35 },
 });
