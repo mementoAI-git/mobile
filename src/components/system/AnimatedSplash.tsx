@@ -41,6 +41,7 @@ const PHONE = require('../../../assets/images/splash-cinematic/phone.webp');
 const AVATAR_ONE = require('../../../assets/images/splash-cinematic/avatar-1.webp');
 const AVATAR_TWO = require('../../../assets/images/splash-cinematic/avatar-2.webp');
 const AVATAR_THREE = require('../../../assets/images/splash-cinematic/avatar-3.webp');
+const LOGO_MARK = require('../../../assets/images/splash-cinematic/memento_mark.webp');
 const GRAIN = require('../../../assets/images/backgrounds/welcome_bg.png');
 
 const CARD_IMAGES: Record<CinematicSplashCard['id'], ImageSourcePropType> = {
@@ -338,13 +339,11 @@ const LogoMark = memo(function LogoMark({ clock, stageHeight }: ClockProps & { s
       accessibilityLabel="Memento"
       style={[styles.mark, { top: stageHeight * 0.396 }, animatedStyle]}
     >
-      <Svg width="100%" height="100%" viewBox="0 0 88 88">
-        <Rect width="88" height="88" rx="22" fill={COLORS.splashEmber} />
-        <Path
-          fill={COLORS.textInverse}
-          d="M18 66V24h12.2L44 49.6 57.8 24H70v42H59.2V40.2L44 64.4 28.8 40.2V66H18Z"
-        />
-      </Svg>
+      <Animated.Image
+        source={LOGO_MARK}
+        resizeMode="contain"
+        style={styles.markImage}
+      />
     </Animated.View>
   );
 });
@@ -593,22 +592,34 @@ const styles = StyleSheet.create({
   mark: {
     position: 'absolute',
     left: '50%',
-    width: 86,
-    height: 86,
-    marginLeft: -43,
+    width: 90,
+    height: 90,
+    marginLeft: -45,
     zIndex: 12,
     shadowColor: COLORS.splashEmber,
-    shadowOffset: { width: 0, height: 18 },
+    shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.28,
-    shadowRadius: 24,
+    shadowRadius: 22,
     elevation: 4,
+  },
+  markImage: {
+    width: '100%',
+    height: '100%',
   },
   copy: { position: 'absolute', left: 0, right: 0, zIndex: 12, alignItems: 'center', paddingHorizontal: 28 },
   vowLine: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 9 },
   word: { position: 'relative' },
   vowText: { ...TYPE.displayTitle, color: COLORS.splashInk, letterSpacing: -1.08 },
   vowHighlight: { ...TYPE.displayTitle, fontStyle: 'italic' },
-  highlight: { position: 'absolute', top: 3, left: -4, right: -4, bottom: 1, backgroundColor: COLORS.splashLime },
+  highlight: {
+    position: 'absolute',
+    top: 3,
+    left: -4,
+    right: -4,
+    bottom: 1,
+    backgroundColor: COLORS.splashLime,
+    borderRadius: 4,
+  },
   lede: { ...TYPE.bodyLarge, marginTop: 18, color: COLORS.splashMuted, letterSpacing: -0.32 },
   faces: { flexDirection: 'row', justifyContent: 'center', marginTop: 18 },
   avatar: {
