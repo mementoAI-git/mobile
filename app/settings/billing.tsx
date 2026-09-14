@@ -27,7 +27,7 @@ export default function BillingSettingsScreen() {
   const {
     summary, subLoading, isProOrAbove, invoices, invoicesLoading, usage, portalBusy,
     resumeBusy,
-    handleRefresh, handlePortal, handleCancel, handleResume,
+    handleRefresh, refreshing, handlePortal, handleCancel, handleResume,
     isCancelled, activeTab, setActiveTab, profile, handleUpgrade,
     handleEditBillingDetails, handleAddPaymentMethod, handleEditPaymentMethod,
   } = useBillingSettingsLogic();
@@ -50,7 +50,7 @@ export default function BillingSettingsScreen() {
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={handleRefresh} tintColor={COLORS.brand} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.brand} />}
         contentContainerStyle={{paddingTop: 20, paddingBottom: 48}}
       >
         <ImageBackground source={PATTERN} className="absolute inset-0" style={{opacity: 0.02}} resizeMode="repeat" />
@@ -61,6 +61,9 @@ export default function BillingSettingsScreen() {
               subscriptionKnown={Boolean(summary) && !subLoading}
               onPress={handlePlanAction}
               loading={isProOrAbove && portalBusy}
+              tier={summary?.tier}
+              status={summary?.status}
+              cancelAtPeriodEnd={summary?.cancel_at_period_end}
             />
             <View className="mt-4">
               <BillingStorageCard storage={storage} />

@@ -50,7 +50,7 @@ describe('conversation cursor pagination', () => {
 
     const persisted = [
       { _id: 'srv-1', role: 'user', text: "What's the moral?" },
-      { _id: 'srv-2', role: 'ai', text: "That's a sharp question, Saviour." },
+      { _id: 'srv-2', role: 'assistant', text: "That's a sharp question, Saviour." },
     ];
     const live = [
       { _id: 'chat-opt-1', role: 'user', text: "What's the moral?" },

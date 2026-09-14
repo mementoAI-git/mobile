@@ -1,6 +1,6 @@
 import '../global.css';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Platform,
@@ -61,6 +61,8 @@ import { AuthenticatedNotificationManager } from '@/components/system/Authentica
 import { AnimatedSplash } from '@/components/system/AnimatedSplash';
 import { SheetManager } from '@/components/sheets/SheetManager';
 import { BackgroundMusicProvider } from '@/hooks/use-background-music';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storageKeys } from '@/constants/storage-keys';
 
 import { COLORS } from '@/constants/tokens';
 import {
@@ -115,11 +117,17 @@ if (Platform.OS === 'web') {
 // with the React Native animated splash.
 void SplashScreen.preventAutoHideAsync();
 
-// Both assets used by AnimatedSplash should be ready before the native splash
-// disappears.
+// Every cinematic asset should be ready before the native splash disappears.
 const SPLASH_ASSETS = [
-  require('../assets/splash-icon.jpg'),
-  require('../assets/images/memento_flat.webp'),
+  require('../assets/images/splash-cinematic/journal.webp'),
+  require('../assets/images/splash-cinematic/hug.webp'),
+  require('../assets/images/splash-cinematic/typewriter.webp'),
+  require('../assets/images/splash-cinematic/phone.webp'),
+  require('../assets/images/splash-cinematic/avatar-1.webp'),
+  require('../assets/images/splash-cinematic/avatar-2.webp'),
+  require('../assets/images/splash-cinematic/avatar-3.webp'),
+  require('../assets/images/splash-cinematic/memento_mark.webp'),
+  require('../assets/images/backgrounds/welcome_bg.png'),
 ];
 
 // -----------------------------------------------------------------------------
@@ -251,8 +259,35 @@ function RootLayout() {
   const [showAnimatedSplash, setShowAnimatedSplash] =
     useState(true);
 
-  const [splashAssetsReady, setSplashAssetsReady] =
+  const [splashFinished, setSplashFinished] =
     useState(false);
+
+  const [hasSeenSplash, setHasSeenSplash] =
+    useState<boolean | null>(null);
+
+  const hideNativeSplash = useCallback(async () => {
+    await SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    AsyncStorage.getItem(storageKeys.welcomeOnce)
+      .then((seen) => {
+        if (mounted) {
+          setHasSeenSplash(seen === 'true');
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setHasSeenSplash(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const sessionStable =
     phase === 'anonymous' ||
@@ -301,33 +336,23 @@ function RootLayout() {
   }, [hydrate]);
 
   // ---------------------------------------------------------------------------
-  // Warm the splash assets while the native splash is still on screen.
-  // ---------------------------------------------------------------------------
-
+  // Dismiss the animated splash once the animation/skip finishes AND the session is stable.
   useEffect(() => {
-    let mounted = true;
+    if (splashFinished && sessionStable) {
+      setShowAnimatedSplash(false);
+    }
+  }, [splashFinished, sessionStable]);
 
-    Asset.loadAsync(SPLASH_ASSETS)
-      .catch((error) => {
-        // Asset preload failure shouldn't permanently trap the
-        // user behind the native splash. Bundled require() may
-        // still resolve when AnimatedSplash mounts.
-        if (__DEV__) {
-          logger.warn(
-            'Splash asset preload failed:',
-            error,
-          );
-        }
-      })
-      .finally(() => {
-        if (mounted) {
-          setSplashAssetsReady(true);
-        }
-      });
-
-    return () => {
-      mounted = false;
-    };
+  // Warm the splash assets in the background.
+  useEffect(() => {
+    Asset.loadAsync(SPLASH_ASSETS).catch((error) => {
+      if (__DEV__) {
+        logger.warn(
+          'Splash asset preload failed:',
+          error,
+        );
+      }
+    });
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -430,47 +455,12 @@ function RootLayout() {
     }
   }, []);
 
-  // ---------------------------------------------------------------------------
-  // Native splash -> animated splash handoff
-  //
-  // Important:
-  // AnimatedSplash is mounted first.
-  // Then we wait one frame before removing the native splash.
-  //
-  // This prevents:
-  // native splash -> blank frame -> RN splash
-  // ---------------------------------------------------------------------------
-
-  useEffect(() => {
-    if (
-      !hydrated ||
-      !fontsLoaded ||
-      !splashAssetsReady ||
-      !sessionStable
-    ) {
-      return;
-    }
-
-    const frame = requestAnimationFrame(() => {
-      SplashScreen.hideAsync().catch(() => {});
-    });
-
-    return () => {
-      cancelAnimationFrame(frame);
-    };
-  }, [
-    hydrated,
-    fontsLoaded,
-    splashAssetsReady,
-    sessionStable,
-  ]);
-
   // Keep native splash up while our critical boot resources load.
   //
   // Do NOT include sessionStable here.
   // SessionBootstrap needs to mount during "authenticating"
   // so it can finish restoring the stored session.
-  if (!hydrated || !fontsLoaded) {
+  if (!hydrated || !fontsLoaded || hasSeenSplash === null) {
     return null;
   }
 
@@ -636,15 +626,23 @@ function RootLayout() {
         </KeyboardProvider>
       </GestureHandlerRootView>
 
-      {showAnimatedSplash &&
-        sessionStable &&
-        splashAssetsReady && (
-          <AnimatedSplash
-            onDone={() => {
+      {showAnimatedSplash && (
+        <AnimatedSplash
+          replaySpeed={hasSeenSplash === true ? 2 : 1}
+          onReady={hideNativeSplash}
+          onDone={() => {
+            void AsyncStorage.setItem(
+              storageKeys.welcomeOnce,
+              'true',
+            );
+            if (sessionStable) {
               setShowAnimatedSplash(false);
-            }}
-          />
-        )}
+            } else {
+              setSplashFinished(true);
+            }
+          }}
+        />
+      )}
     </SafeAreaProvider>
   );
 }

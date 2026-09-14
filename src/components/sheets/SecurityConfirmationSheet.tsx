@@ -14,6 +14,7 @@ type ConfirmationKind =
   | 'logout-all-devices'
   | 'logout-current-device'
   | 'remove-beneficiary'
+  | 'remove-member'
   | 'delete-account';
 
 interface SecurityConfirmationSheetProps {
@@ -71,6 +72,12 @@ const COPY: Record<ConfirmationKind, {
   'remove-beneficiary': {
     title: 'Remove this beneficiary?',
     description: 'They will no longer have access to the memories and capsules you share.',
+    confirm: 'Remove',
+    destructive: true,
+  },
+  'remove-member': {
+    title: 'Remove this member?',
+    description: 'They will no longer belong to this group.',
     confirm: 'Remove',
     destructive: true,
   },

@@ -24,5 +24,7 @@ describe('production environment bundling', () => {
     expect(layout).not.toContain('mobileReplayIntegration()');
     expect(app).toContain('replaysSessionSampleRate: 0');
     expect(app).toContain('replaysOnErrorSampleRate: 0');
+    expect(app).toContain('sendDefaultPii: false');
+    expect(app).not.toContain('ingest.sentry.io');
   });
 });

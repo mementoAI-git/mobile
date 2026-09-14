@@ -10,7 +10,7 @@ import { useStartConversation, useCreateMemory } from '@/hooks/mutations/use-mem
 import { useStreamChat } from '@/hooks/use-stream-chat';
 import { useEnrichmentStats } from '@/hooks/use-enrichment-stats';
 import { useProfile } from '@/hooks/queries/use-profile';
-import { useUiStore, useUserStore } from '@/store';
+import { useUiStore, useAuthStore, useUserStore } from '@/store';
 import { queryKeys } from '@/constants/query-keys';
 import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import type { ChatReplyQuote } from '@/lib/utils';
@@ -157,18 +157,17 @@ export function useChatLogic() {
       // If no host conversation exists yet for host chat, initialize it on the backend
       if (!targetChatId && !isPromptType) {
         try {
-          const res = await startConversationMutation({ text });
+          const res = await startConversationMutation({});
           const createdMemory = res?.data ?? res;
           const newId = (createdMemory as any)?.memory_id || createdMemory?._id || (createdMemory as any)?.id;
           if (newId) {
             targetChatId = newId;
             queryClient.invalidateQueries({ queryKey: queryKeys.profile });
-            const currentUser = useUserStore.getState().user;
+            const currentUser = useUserStore.getState().user ?? useAuthStore.getState().user;
             if (currentUser) {
-              useUserStore.getState().setUser({
-                ...currentUser,
-                primary_conversation_id: newId,
-              });
+              const next = { ...currentUser, primary_conversation_id: newId };
+              useUserStore.getState().setUser(next);
+              useAuthStore.getState().updateUser(next);
             }
           }
         } catch {
@@ -182,7 +181,7 @@ export function useChatLogic() {
           const isStaticPromptId = Boolean(id && id !== 'new' && /^[0-9a-fA-F]{24}$/.test(id));
           const res = await createMemoryMutation({
             title: promptTitle || 'Daily reflection',
-            body: text,
+            body: '',
             type: 'conversation',
             status: 'save',
             ...(isStaticPromptId

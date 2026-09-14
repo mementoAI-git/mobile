@@ -92,6 +92,32 @@ export function buildMemoryAudiencePayload(
   };
 }
 
+export function buildStoryEditorSeed(memory: {
+  title?: string;
+  body?: string;
+  tags?: string[];
+  visibility?: unknown;
+  beneficiaries?: RecipientLike[] | null;
+  groups?: RecipientLike[] | null;
+  attachments?: Array<{ _id?: string; url?: string; type?: string; name?: string }>;
+}) {
+  const audience = deriveMemoryAudience(memory);
+  return {
+    title: memory.title ?? '',
+    body: memory.body ?? '',
+    tags: memory.tags ?? [],
+    visibility: audience.mode === 'everyone' ? 'everyone' as const : 'private' as const,
+    beneficiaries: audience.beneficiaryIds,
+    groups: audience.groupIds,
+    attachments: (memory.attachments ?? []).map((attachment) => ({
+      id: attachment._id ?? '',
+      url: attachment.url ?? '',
+      type: attachment.type ?? 'image/jpeg',
+      name: attachment.name ?? '',
+    })),
+  };
+}
+
 export function formatMemoryAudienceLabel(
   selection: MemoryAudienceSelection
 ): string {

@@ -38,6 +38,13 @@ export function mergeConversationMessagePages(pages: ConversationMessagePage[]) 
   return messages;
 }
 
+export function isSameChatRole(roleA?: string, roleB?: string): boolean {
+  if (roleA === roleB) return true;
+  const isAssistantA = roleA === 'assistant' || roleA === 'ai';
+  const isAssistantB = roleB === 'assistant' || roleB === 'ai';
+  return Boolean(isAssistantA && isAssistantB);
+}
+
 export function mergeAllConversationMessages(
   persistedMessages: ChatListMessage[],
   liveMessages: ChatListMessage[],
@@ -52,7 +59,7 @@ export function mergeAllConversationMessages(
       if (p._id && live._id && p._id === live._id) return true;
       const pText = (p.text ?? p.content ?? '').trim();
       const liveText = (live.text ?? live.content ?? '').trim();
-      if (p.role === live.role && pText && liveText && pText === liveText) {
+      if (isSameChatRole(p.role, live.role) && pText && liveText && pText === liveText) {
         return true;
       }
       return false;

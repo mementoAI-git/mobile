@@ -32,6 +32,7 @@ export function useBillingSettingsLogic() {
   const [promoBusy, setPromoBusy] = useState(false);
   const [portalBusy, setPortalBusy] = useState(false);
   const [resumeBusy, setResumeBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const refreshAll = async () => {
     await Promise.all([refetchSub(), refetchInvoices(), refetchUsage(), refetchProfile()]);
@@ -44,7 +45,12 @@ export function useBillingSettingsLogic() {
 
   const handleRefresh = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await refreshAll();
+    setRefreshing(true);
+    try {
+      await refreshAll();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const renewLabel = () => {
@@ -158,6 +164,7 @@ export function useBillingSettingsLogic() {
     portalBusy,
     resumeBusy,
     handleRefresh,
+    refreshing,
     renewLabel,
     handlePortal,
     handlePromo,

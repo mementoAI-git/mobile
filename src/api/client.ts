@@ -4,8 +4,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios';
 import { API_BASE_URL } from '@/lib/env';
-import type { ApiError, RequestOptions } from './interface';
-import type { IAuth } from '@/types';
+import type { ApiError } from './interface';
 import { normalizeApiError } from './contract-adapter';
 import { getMementoClientHeaders } from './client-runtime-metadata';
 
@@ -43,12 +42,18 @@ client.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ApiError>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
+      skipAuth?: boolean;
       skipErrorHandling?: boolean;
       _retry?: boolean;
     };
 
-    // Auto-refresh on 401
-    if (error.response?.status === 401 && !originalRequest?._retry) {
+    // Auto-refresh on 401 for authenticated calls only. Login/register 401s
+    // must not attempt a refresh or terminate an existing session.
+    if (
+      error.response?.status === 401 &&
+      !originalRequest?._retry &&
+      !originalRequest?.skipAuth
+    ) {
       originalRequest._retry = true;
       try {
         const { authService } = await import('./auth-service');

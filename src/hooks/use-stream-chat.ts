@@ -47,6 +47,7 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
   memoryIdRef.current = memoryId;
   const promptIdRef = useRef(promptId);
   promptIdRef.current = promptId;
+  const lastMemoryIdRef = useRef(memoryId);
   const createMessageIdRef = useRef<ReturnType<typeof createChatMessageIdFactory> | null>(null);
   if (!createMessageIdRef.current) {
     createMessageIdRef.current = createChatMessageIdFactory();
@@ -61,6 +62,22 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
       readerRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const previousMemoryId = lastMemoryIdRef.current;
+    lastMemoryIdRef.current = memoryId;
+    // Only reset if transitioning between two distinct established conversations
+    if (!previousMemoryId || !memoryId || previousMemoryId === memoryId) {
+      return;
+    }
+    abortRef.current?.abort();
+    readerRef.current?.cancel().catch(() => undefined);
+    readerRef.current = null;
+    streamingRef.current = false;
+    setMessages([]);
+    setStreamingText('');
+    setStreaming(false);
+  }, [memoryId]);
 
   const send = useCallback(
     async (text: string, options?: SendOptions) => {
@@ -117,7 +134,7 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
           },
           body: JSON.stringify({
             // Send text only if non-empty — media-only messages omit the text field entirely
-            ...(text.trim() ? { text: text.trim() } : {}),
+            ...(apiPrompt ? { text: apiPrompt } : {}),
             // Use ref so this always reads the latest memoryId without being a dep
             ...(targetMemoryId ? { memory: targetMemoryId } : {}),
             // If no memoryId yet, send prompt_id to associate this conversation with the prompt
@@ -137,6 +154,9 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
           signal: controller.signal,
         });
 
+        if (!response.ok) {
+          throw new Error(`Prompt stream failed (${response.status})`);
+        }
         if (!response.body) throw new Error('No response body');
 
         const reader = response.body.getReader();
@@ -161,6 +181,7 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
 
         if (isMountedRef.current && !controller.signal.aborted) {
           streamOutcome = 'success';
+          streamingRef.current = false;
           setMessages((prev) => [...prev, {
             _id: createMessageId(),
             role: 'ai',
@@ -169,11 +190,13 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
             isLive: true,
           }]);
           setStreamingText('');
+          setStreaming(false);
         }
       } catch (err: any) {
         streamOutcome = err?.name === 'AbortError' ? 'abort' : 'failure';
         streamErrorClass = err instanceof Error ? err.name : 'UnknownError';
         if (isMountedRef.current && err?.name !== 'AbortError') {
+          streamingRef.current = false;
           setMessages((prev) => [
             ...prev,
             {
@@ -184,6 +207,7 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
             },
           ]);
           setStreamingText('');
+          setStreaming(false);
         }
       } finally {
         finishStream({

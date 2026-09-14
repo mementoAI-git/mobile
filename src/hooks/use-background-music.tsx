@@ -27,6 +27,8 @@ interface BackgroundMusicContextType {
   playTrack: (key: BackgroundTrackKey) => Promise<void>;
   stopTrack: () => Promise<void>;
   togglePlay: () => Promise<void>;
+  pauseForVoice: () => void;
+  resumeAfterVoice: () => void;
   tracks: readonly BackgroundTrack[];
 }
 
@@ -38,6 +40,7 @@ export function BackgroundMusicProvider({ children }: { children: React.ReactNod
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolumeState] = useState(50);
   const playerRef = useRef<AudioPlayer | null>(null);
+  const pausedForVoiceRef = useRef(false);
 
   // Restore saved volume
   useEffect(() => {
@@ -124,6 +127,28 @@ export function BackgroundMusicProvider({ children }: { children: React.ReactNod
     [stopTrack, volume]
   );
 
+  const pauseForVoice = useCallback(() => {
+    if (!playerRef.current || !isPlaying) return;
+    try {
+      playerRef.current.pause();
+      pausedForVoiceRef.current = true;
+      setIsPlaying(false);
+    } catch {
+      // Ignored
+    }
+  }, [isPlaying]);
+
+  const resumeAfterVoice = useCallback(() => {
+    if (!playerRef.current || !pausedForVoiceRef.current) return;
+    try {
+      playerRef.current.play();
+      pausedForVoiceRef.current = false;
+      setIsPlaying(true);
+    } catch {
+      pausedForVoiceRef.current = false;
+    }
+  }, []);
+
   const togglePlay = useCallback(async () => {
     if (!playerRef.current || currentTrack === 'none') {
       if (currentTrack !== 'none') {
@@ -180,6 +205,8 @@ export function BackgroundMusicProvider({ children }: { children: React.ReactNod
         playTrack,
         stopTrack,
         togglePlay,
+        pauseForVoice,
+        resumeAfterVoice,
         tracks: BACKGROUND_TRACKS,
       }}
     >
@@ -200,6 +227,8 @@ export function useBackgroundMusic() {
       playTrack: async () => {},
       stopTrack: async () => {},
       togglePlay: async () => {},
+      pauseForVoice: () => {},
+      resumeAfterVoice: () => {},
       tracks: BACKGROUND_TRACKS,
     };
   }

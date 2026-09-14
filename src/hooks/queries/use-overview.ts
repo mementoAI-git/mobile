@@ -19,11 +19,13 @@ export function useUserStats() {
       // loop on the Overview screen.
       // Only sync `streak` — it's the one stat field that lives on IUser.
       // enrichment_score is read directly from statsData in the Overview screen.
-      const { user, setUser } = useUserStore.getState();
+      const user = useUserStore.getState().user ?? useAuthStore.getState().user;
       if (stats && user) {
         const newStreak = stats.streak_count ?? user.streak;
         if (newStreak !== user.streak) {
-          setUser({ ...user, streak: newStreak });
+          const next = { ...user, streak: newStreak };
+          useUserStore.getState().setUser(next);
+          useAuthStore.getState().updateUser(next);
         }
       }
 

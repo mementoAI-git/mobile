@@ -162,7 +162,7 @@ export default function ActivitiesScreen() {
             title="No activity yet"
             description="Creating memories, editing stories, and sending capsules will all show up here."
             actionLabel="Create a story"
-            onAction={() => router.push('/create')}
+            onAction={() => router.push('/editor?mode=quick-capture')}
           />
         ) : (
           <ScrollView

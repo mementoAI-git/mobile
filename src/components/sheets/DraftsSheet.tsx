@@ -126,6 +126,7 @@ export async function upsertDraft(
       const payload = {
         title: draft.title?.trim() || 'Untitled',
         body: draft.body,
+        status: 'draft' as const,
         attachments: draft.attachments?.map((a) => a.fileId) || [],
       };
 
@@ -146,6 +147,7 @@ export async function upsertDraft(
     const payload = {
       title: draft.title?.trim() || 'Untitled',
       body: draft.body,
+      status: 'draft' as const,
       attachments: draft.attachments?.map((a) => a.fileId) || [],
     };
     if (draft.id.startsWith('draft_')) {

@@ -14,6 +14,7 @@ import { TYPE } from '@/constants/typography';
 import { VOICE_CATALOG, getVoiceById, type VoiceId } from '@/features/chat/voice-catalog';
 import { formatVoiceCallDuration, getVoiceCallTransition, type VoiceCallStage } from '@/features/chat/voice-call-flow';
 import { useVoiceMode } from '@/hooks/use-voice-mode';
+import { useBackgroundMusic } from '@/hooks/use-background-music';
 import { useAuthStore, useUiStore, useVoicePreferenceStore } from '@/store';
 
 function VoiceDots({ selectedId, onSelect }: { selectedId: VoiceId; onSelect: (id: VoiceId) => void }) {
@@ -53,6 +54,7 @@ export default function VoiceCallRoute() {
     [draftVoiceId, selectedVoiceId],
   );
   const voice = useVoiceMode({ memoryId, voiceName: selectedVoice.providerVoiceName });
+  const { pauseForVoice, resumeAfterVoice } = useBackgroundMusic();
 
   useEffect(() => {
     if (hydratedForUser !== userKey) void hydrate(userKey);
@@ -70,14 +72,31 @@ export default function VoiceCallRoute() {
   }, [hydratedForUser, isHydrating, selectedVoiceId, userKey]);
 
   useEffect(() => {
-    if (stage === 'connecting' && voice.isConnected) setStage('live');
+    if (stage === 'connecting' && voice.isConnected) {
+      setStage(getVoiceCallTransition(stage, 'connected'));
+    }
   }, [stage, voice.isConnected]);
 
+  useEffect(() => {
+    if (stage === 'connecting' && voice.connectionFailure) {
+      setStage(getVoiceCallTransition(stage, 'connection-failed'));
+    }
+  }, [stage, voice.connectionFailure]);
+
+  useEffect(() => {
+    if (stage === 'live' || stage === 'muted' || stage === 'connecting') {
+      pauseForVoice();
+      return;
+    }
+    resumeAfterVoice();
+  }, [pauseForVoice, resumeAfterVoice, stage]);
+
   const close = useCallback(async () => {
+    resumeAfterVoice();
     await voice.disconnect();
     if (router.canGoBack()) router.back();
     else router.replace('/(tabs)/chat');
-  }, [router, voice]);
+  }, [resumeAfterVoice, router, voice]);
 
   const chooseVoice = useCallback((id: VoiceId) => {
     Haptics.selectionAsync();

@@ -38,10 +38,10 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
   };
 
   const premiumFeatures = [
-    { title: 'Unlimited Time Capsules', desc: 'Free accounts are capped at a maximum of 5' },
+    { title: 'Unlimited Time Capsules', desc: 'Free accounts can schedule up to 5 timed messages' },
     { title: 'Premium AI Memory Insights', desc: 'Deep emotional trends and summary histories' },
     { title: 'Custom AI Voices & Avatars', desc: 'Preserve your exact speaking tone and style' },
-    { title: 'High-Definition Assets Storage', desc: 'Upload up to 50GB of voice, image & doc files' },
+    { title: 'High-Definition Assets Storage', desc: 'Upload up to 10GB of voice, image & doc files' },
   ];
 
   return (
@@ -59,7 +59,7 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
         <Text
           className="text-center text-text-weak px-4 leading-relaxed"
           style={TYPE.label}>
-          You have reached the free tier limit of **5 Time Capsules**. Upgrade to Pro to preserve infinite future memories.
+          You have reached the free tier limit of 5 time capsules. Upgrade to Pro to preserve more future memories.
         </Text>
       </View>
 

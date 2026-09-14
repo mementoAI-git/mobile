@@ -1,5 +1,6 @@
 import type { ApiError, ApiResponse } from './interface';
 import type { IAuth, IUser } from '@/types';
+import { sanitizeUser } from '@/features/auth/session-credentials';
 
 export type AuthCompletion =
   | { kind: 'session'; credentials: IAuth; user: IUser }
@@ -74,7 +75,7 @@ export function normalizeAuthCompletion(payload: unknown): AuthCompletion {
       refresh_expires_at: refreshExpiresAt,
       ...(onboardingStatus ? { onboarding_status: onboardingStatus } : {}),
     },
-    user: user as unknown as IUser,
+    user: sanitizeUser(user as unknown as IUser),
   };
 }
 

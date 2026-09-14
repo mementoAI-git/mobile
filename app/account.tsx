@@ -212,6 +212,9 @@ export default function AccountOverviewScreen() {
                 isProOrAbove={isProOrAbove}
                 subscriptionKnown={Boolean(subscription) && !subscriptionLoading}
                 onPress={handleUpgrade}
+                tier={subscription?.tier}
+                status={subscription?.status}
+                cancelAtPeriodEnd={subscription?.cancel_at_period_end}
               />
 
               <Animated.View entering={FadeInDown.delay(160).duration(500)} style={{ gap: 14 }}>

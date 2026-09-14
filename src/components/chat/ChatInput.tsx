@@ -177,10 +177,9 @@ const PLUS_ICON_SURFACE_SIZE = 36;
 const PLUS_ICON_EMPTY_RADIUS = PLUS_ICON_SURFACE_SIZE / 2;
 const PLUS_ICON_ACTIVE_RADIUS = scale(12);
 const ACTION_SQUIRCLE_RADIUS = 18;
-// const COMPACT_TEXT_MIN_HEIGHT = verticalScale(24);
 const COMPACT_TEXT_MIN_HEIGHT = Platform.select({
-  ios: verticalScale(34),
-  android: verticalScale(33),
+  ios: verticalScale(24),
+  android: verticalScale(24),
 }) as number;
 const COMPACT_MULTILINE_VERTICAL_PADDING = scale(4);
 const EXPANDED_TEXT_MIN_HEIGHT = verticalScale(22);
@@ -199,7 +198,7 @@ export function ChatInput({
   onSend,
   onStop,
   disabled,
-  placeholder = 'Type here to start a conversation',
+  placeholder = 'Type a message...',
   loading,
   maxComposerHeight,
   parentOwnsBottomSafeArea = false,
@@ -212,7 +211,7 @@ export function ChatInput({
   const [compactMeasuredHeight, setCompactMeasuredHeight] = useState(COMPACT_TEXT_MIN_HEIGHT);
   const [compactMeasuredPadding, setCompactMeasuredPadding] = useState(0);
   const [expandedMeasuredHeight, setExpandedMeasuredHeight] = useState(EXPANDED_TEXT_MIN_HEIGHT);
-  const [isTextComposerExpanded, setIsTextComposerExpanded] = useState(false);
+  const [isTextComposerExpanded, setIsTextComposerExpanded] = useState(Boolean(initialAudioUri));
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -271,12 +270,7 @@ export function ChatInput({
     },
   });
 
-  useEffect(() => {
-    if (initialAudioUri) {
-      void uploadAndAdd(initialAudioUri, 'audio/m4a', 'voice-reflection.m4a');
-      setIsTextComposerExpanded(true);
-    }
-  }, [initialAudioUri, uploadAndAdd]);
+
 
   // ─── Voice-to-text ────────────────────────────────────────────────────────
 
@@ -1334,13 +1328,13 @@ const styles = StyleSheet.create({
 
   // Shared text input base
   sharedTextInput: {
-    ...TYPE.input,
+    ...TYPE.label,
     color: COLORS.textStrong,
   },
 
   // Compact variant
   compactTextInput: {
-    paddingVertical: Platform.OS === 'ios' ? 0 : scale(4),
+    paddingVertical: 0,
     minHeight: COMPACT_TEXT_MIN_HEIGHT,
     textAlignVertical: 'center',
     justifyContent: 'center',

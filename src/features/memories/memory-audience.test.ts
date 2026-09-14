@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   buildMemoryAudiencePayload,
   canApplyMemoryAudience,
+  buildStoryEditorSeed,
   deriveMemoryAudience,
   formatMemoryAudienceLabel,
   type MemoryAudiencePayload,
@@ -115,6 +116,25 @@ describe('memory audience initialization', () => {
       mode: 'private',
       beneficiaryIds: [],
       groupIds: [],
+    });
+  });
+
+  test('serializes editor seed ids from mixed recipient shapes', () => {
+    expect(buildStoryEditorSeed({
+      title: 'Sunday',
+      body: 'Hello',
+      tags: ['family'],
+      visibility: 'private',
+      beneficiaries: ['b1', { _id: 'b1' }, { id: 'b2' }],
+      groups: [{ _id: 'g1' }],
+    })).toEqual({
+      title: 'Sunday',
+      body: 'Hello',
+      tags: ['family'],
+      visibility: 'private',
+      beneficiaries: ['b1', 'b2'],
+      groups: ['g1'],
+      attachments: [],
     });
   });
 

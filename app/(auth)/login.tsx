@@ -71,6 +71,7 @@ export default function LoginScreen() {
     appleLoading,
     passkeyLoading,
     securityLoginLabel,
+    isSecurityLoginAvailable,
     onSubmit,
     handleGoogleLogin,
     handleAppleLogin,
@@ -170,15 +171,17 @@ export default function LoginScreen() {
               {/* Full OAuth pills — only shown when keyboard is hidden */}
               {!isKeyboardVisible && (
                 <Animated.View style={oauthStyle} className="gap-4">
-                  <TouchableOpacity
-                    onPress={handlePasskeyLogin}
-                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                    activeOpacity={0.8}
-                    className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
-                  >
-                    {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />}
-                    <Animated.Text className="text-text-strong" style={TYPE.body}>{securityLoginLabel}</Animated.Text>
-                  </TouchableOpacity>
+                  {isSecurityLoginAvailable && (
+                    <TouchableOpacity
+                      onPress={handlePasskeyLogin}
+                      disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                      activeOpacity={0.8}
+                      className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
+                    >
+                      {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />}
+                      <Animated.Text className="text-text-strong" style={TYPE.body}>{securityLoginLabel}</Animated.Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     onPress={handleGoogleLogin}
                     disabled={googleLoading || appleLoading || passkeyLoading || isPending}

@@ -3,6 +3,7 @@ export default {
   login: '/auth/login',
   register: '/auth/register',
   sendLink: '/auth/send-link',
+  resendVerification: '/auth/send-link',
   verifyEmail: '/auth/verify-email',
   refreshToken: '/auth/refresh-token',
   logout: '/auth/logout',
@@ -87,6 +88,7 @@ export default {
 
   // capsule
   capsule: '/capsule',
+  capsuleById: '/capsule/:id',
   capsuleDelete: '/capsule/:id',
   capsuleStats: '/capsule/stats',
 

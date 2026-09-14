@@ -184,8 +184,34 @@ export function normalizeBillingUsage(payload: unknown): BillingUsage | null {
   };
 }
 
+function normalizeBillingInvoice(item: unknown): BillingInvoice {
+  const source = item && typeof item === 'object' && !Array.isArray(item)
+    ? item as Record<string, unknown>
+    : {};
+  const created = source.created_at
+    ?? source.issued_at
+    ?? (typeof source.created === 'number'
+      ? new Date(source.created * 1000).toISOString()
+      : source.created);
+  const amount = source.amount ?? source.total ?? source.amount_paid;
+  return {
+    ...(source as BillingInvoice),
+    id: optionalString(source.id),
+    url: optionalString(source.url)
+      ?? optionalString(source.hosted_invoice_url)
+      ?? optionalString(source.invoice_pdf),
+    label: optionalString(source.label)
+      ?? optionalString(source.number)
+      ?? optionalString(source.id),
+    created_at: typeof created === 'string' ? created : undefined,
+    amount: typeof amount === 'number' && Number.isFinite(amount) ? amount : undefined,
+    currency: source.currency === 'USD' || source.currency === 'NGN' ? source.currency : undefined,
+    status: optionalString(source.status),
+  };
+}
+
 export function normalizeBillingInvoices(payload: unknown): BillingInvoice[] {
-  return normalizeCollectionResponse<BillingInvoice>(payload).data;
+  return normalizeCollectionResponse<unknown>(payload).data.map(normalizeBillingInvoice);
 }
 
 export function extractBillingUrl(

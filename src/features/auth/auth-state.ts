@@ -4,6 +4,11 @@ import { storageKeys } from '@/constants/storage-keys';
 import type { SessionPhase } from './session-types';
 
 import type { TerminationReason } from './session-coordinator';
+import {
+  deleteSessionCredentials,
+  persistSessionCredentials,
+  readSessionCredentials,
+} from './session-credentials';
 
 export interface AuthStorage {
   getItem: (key: string) => Promise<string | null>;
@@ -68,8 +73,7 @@ export function createAuthState(storage: AuthStorage): StateCreator<AuthState> {
 
     hydrateCredentials: async () => {
       try {
-        const raw = await storage.getItem(storageKeys.auth);
-        const token = raw ? (JSON.parse(raw) as IAuth) : null;
+        const token = await readSessionCredentials(storage);
         if (!token?.access_token || !token?.refresh_token) {
           get().finishAnonymous();
           return;
@@ -81,7 +85,7 @@ export function createAuthState(storage: AuthStorage): StateCreator<AuthState> {
     },
 
     setAuth: async (token) => {
-      await storage.setItem(storageKeys.auth, JSON.stringify(token));
+      await persistSessionCredentials(token, storage);
       set((state) => ({
         token,
         phase: state.user ? 'authenticated' : 'authenticating',
@@ -92,7 +96,7 @@ export function createAuthState(storage: AuthStorage): StateCreator<AuthState> {
       get().beginTermination();
       try {
         await Promise.all([
-          storage.deleteItem(storageKeys.auth),
+          deleteSessionCredentials(storage),
           storage.deleteItem(storageKeys.syncedPushToken),
         ]);
       } finally {

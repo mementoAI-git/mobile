@@ -6,12 +6,32 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import {
+  getBillingTierPresentation,
+} from '@/features/settings/billing-presentation';
+import type { SubscriptionSummary } from '@/features/settings/billing-adapters';
 
 interface PlanSummaryBannerProps {
   isProOrAbove: boolean;
   subscriptionKnown: boolean;
   onPress: () => void;
   loading?: boolean;
+  tier?: SubscriptionSummary['tier'];
+  status?: SubscriptionSummary['status'];
+  cancelAtPeriodEnd?: boolean;
+}
+
+function statusBadgeLabel(
+  presentationStatus: string | null,
+  status?: SubscriptionSummary['status'],
+  cancelAtPeriodEnd?: boolean,
+) {
+  if (cancelAtPeriodEnd) return 'Cancels at period end';
+  if (status === 'trialing') return 'Trial';
+  if (status === 'past_due') return 'Past due';
+  if (status === 'paused') return 'Paused';
+  if (status === 'cancelled') return 'Cancelled';
+  return presentationStatus;
 }
 
 export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
@@ -19,12 +39,19 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
   subscriptionKnown,
   onPress,
   loading = false,
+  tier,
+  status,
+  cancelAtPeriodEnd,
 }: PlanSummaryBannerProps) {
-  if (isProOrAbove) {
+  const resolvedTier = tier ?? (isProOrAbove ? 'pro' : 'free');
+  const presentation = getBillingTierPresentation(resolvedTier);
+  const badge = statusBadgeLabel(presentation.statusLabel, status, cancelAtPeriodEnd);
+
+  if (presentation.variant === 'paid') {
     return (
       <Animated.View entering={FadeInDown.delay(80).duration(500)}>
         <LinearGradient
-          colors={['#FF6200', '#F5A65B']}
+          colors={[COLORS.brand, COLORS.statYellow]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
@@ -41,22 +68,22 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
                 color: COLORS.textInverse,
               }}
             >
-              You're on Memento Pro
+              {presentation.title}
             </Text>
             <View
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 6,
-                backgroundColor: '#FFFFFF',
+                backgroundColor: COLORS.textInverse,
                 borderRadius: 999,
                 paddingHorizontal: 12,
                 paddingVertical: 4.5,
               }}
             >
-              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#1E1915' }} />
-              <Text style={{ ...TYPE.metadata, color: '#1E1915' }}>
-                Active
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.shadow }} />
+              <Text style={{ ...TYPE.metadata, color: COLORS.shadow }}>
+                {badge}
               </Text>
             </View>
           </View>
@@ -70,13 +97,13 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
               maxWidth: 320,
             }}
           >
-            You have full access to Pro features, expanded storage, and richer memory context.
+            {presentation.subtitle}
           </Text>
 
           {/* Bottom row: Manage plan button */}
           <TouchableOpacity
             accessibilityRole="button"
-            accessibilityLabel="Manage plan"
+            accessibilityLabel={presentation.actionLabel}
             onPress={onPress}
             disabled={loading}
             activeOpacity={0.8}
@@ -90,7 +117,7 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
             }}
           >
             <Text style={{ ...TYPE.buttonSmall, color: COLORS.textInverse }}>
-              Manage plan
+              {presentation.actionLabel}
             </Text>
           </TouchableOpacity>
         </LinearGradient>
@@ -102,7 +129,10 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
   return (
     <Animated.View entering={FadeInDown.delay(80).duration(500)}>
       <LinearGradient
-        colors={['#0085FF', '#38BDF8']}
+        colors={[
+          COLORS.info,
+          COLORS.blue6,
+        ]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{
@@ -120,7 +150,7 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
               color: COLORS.textInverse,
             }}
           >
-            Unlock more with Pro
+            {presentation.title}
           </Text>
           <TouchableOpacity
             accessibilityRole="button"
@@ -140,7 +170,7 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
           >
             <ArrowUpCircle size={16} color={COLORS.textInverse} strokeWidth={2.2} />
             <Text style={{ ...TYPE.buttonSmall, color: COLORS.textInverse }}>
-              Upgrade
+              {presentation.actionLabel}
             </Text>
           </TouchableOpacity>
         </View>
@@ -154,7 +184,7 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
             maxWidth: 320,
           }}
         >
-          Advanced features, more storage and better memory contextualization with Pro.
+          {presentation.subtitle}
         </Text>
       </LinearGradient>
     </Animated.View>

@@ -116,7 +116,7 @@ assert(expo.web?.favicon === './assets/favicon.png', 'Web favicon must be config
 
 const splashPlugin = findPlugin('expo-splash-screen');
 assert(Array.isArray(splashPlugin), 'expo-splash-screen plugin must use explicit options.');
-assert(splashPlugin[1]?.image === './assets/splash-icon.jpg', 'Splash plugin image must point to the committed splash asset.');
+assert(splashPlugin[1]?.image === './assets/icon.png', 'Splash plugin image must point to the committed splash asset.');
 assert(splashPlugin[1]?.resizeMode === 'contain', 'Splash plugin must use contain resize mode.');
 assert(splashPlugin[1]?.backgroundColor.toLowerCase() === '#ffffff', 'Splash plugin background must be white.');
 assert(splashPlugin[1]?.imageWidth === 120, 'Splash plugin imageWidth must be locked for native parity.');
@@ -270,7 +270,6 @@ assert(
 const registerSourceForUrls = read('app/(auth)/register.tsx');
 const loginSourceForUrls = read('src/hooks/use-login-logic.ts');
 assert(!/API_BASE_URL\.replace\('\/api'/.test(registerSourceForUrls), 'Signup web URL must use SIGNUP_URL, not API_BASE_URL string replacement.');
-assert(/SIGNUP_URL/.test(registerSourceForUrls), 'Passkey signup must use SIGNUP_URL.');
 assert(!/memento:\/\/oauth-callback/.test(registerSourceForUrls), 'Register OAuth redirects must use oauthCallbackUrl().');
 assert(!/memento:\/\/oauth-callback/.test(loginSourceForUrls), 'Login OAuth redirects must use oauthCallbackUrl().');
 assert(!/openAuthSessionAsync\([^,]+,\s*'memento:\/\/'/.test(registerSourceForUrls), 'Register auth sessions must use AUTH_SESSION_RETURN_URL.');

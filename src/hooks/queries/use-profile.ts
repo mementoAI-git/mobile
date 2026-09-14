@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchEntity } from '@/api/domain-fetchers';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
-import { useAuthStore, useUserStore } from '@/store';
+import { useAuthStore } from '@/store';
+import { syncAuthenticatedUser } from '@/features/auth/session-coordinator';
 import type { IUser } from '@/types';
 
 export function useProfile() {
@@ -16,8 +17,7 @@ export function useProfile() {
         // Use getState() (imperative read) so this queryFn does NOT subscribe
         // to useUserStore reactively — avoids triggering a re-render loop on
         // every background refetch.
-        useUserStore.getState().setUser(profile);
-        if (useAuthStore.getState().token) useAuthStore.getState().updateUser(profile);
+        return syncAuthenticatedUser(profile);
       }
       return profile;
     },

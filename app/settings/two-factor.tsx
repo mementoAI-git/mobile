@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, ScrollView, TouchableOpacity, ImageBackground, Text} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -26,6 +26,10 @@ export default function TwoFactorScreen() {
     handleDisable,
     router,
   } = useTwoFactorSettingsLogic();
+
+  useEffect(() => {
+    router.replace('/settings/account');
+  }, [router]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
