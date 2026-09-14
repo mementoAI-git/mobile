@@ -37,6 +37,7 @@ export function useLoginLogic() {
   const [appleLoading, setAppleLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [securityLoginLabel, setSecurityLoginLabel] = useState('Sign in securely');
+  const [isSecurityLoginAvailable, setIsSecurityLoginAvailable] = useState(false);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(schema),
@@ -57,6 +58,7 @@ export function useLoginLogic() {
         hasNativePasskey: Boolean(passkeyCredentialId),
         hasBiometricFallback: biometricsEnabled === 'true',
       });
+      setIsSecurityLoginAvailable(method !== 'unenrolled');
       setSecurityLoginLabel(
         method === 'passkey'
           ? 'Sign in with a passkey'
@@ -234,6 +236,7 @@ export function useLoginLogic() {
     appleLoading,
     passkeyLoading,
     securityLoginLabel,
+    isSecurityLoginAvailable,
     onSubmit: form.handleSubmit(onSubmit),
     handleGoogleLogin,
     handleAppleLogin,

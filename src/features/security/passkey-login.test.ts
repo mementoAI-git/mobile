@@ -16,6 +16,8 @@ describe('passkey-first login', () => {
     expect(logic).toContain('storageKeys.passkeyCredentialId');
     expect(logic).toContain('storageKeys.biometricsRefreshToken');
     expect(logic).toContain('selectSecurityLoginMethod');
+    expect(logic).toContain('isSecurityLoginAvailable');
+    expect(screen).toContain('isSecurityLoginAvailable');
     expect(screen).toContain('{securityLoginLabel}');
   });
 });
