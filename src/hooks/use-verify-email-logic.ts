@@ -45,6 +45,16 @@ export function useVerifyEmailLogic() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [resendNotice, setResendNotice] = useState<string | null>(null);
 
+  // Sync token if received via deep link while mounted
+  useEffect(() => {
+    if (initialToken) {
+      const normalized = normalizeOtpInput(initialToken);
+      if (normalized) {
+        setCode(normalized);
+      }
+    }
+  }, [initialToken]);
+
   // Initialize resend cooldown timer (30s) if user just arrived from registration
   const [sentAtMs, setSentAtMs] = useState<number | null>(() => (email ? Date.now() : null));
   const [secondsRemaining, setSecondsRemaining] = useState<number>(() =>
