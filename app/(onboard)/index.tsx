@@ -1,16 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Logo } from '@/components/ui';
 import { ChevronRight } from 'lucide-react-native';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { post } from '@/api/mutations';
-import endpoint from '@/api/endpoint';
-import { useAuthStore, useUserStore } from '@/store';
-import type { IUser } from '@/types';
+import { useFirstRunOnboarding } from '@/hooks/use-first-run-onboarding';
 
 const AnimatedText = Animated.createAnimatedComponent(Text);
 
@@ -19,24 +16,7 @@ const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 export default function OnboardWelcomeScreen() {
   const router = useRouter();
-  const [skipping, setSkipping] = useState(false);
-
-  const handleSkip = async () => {
-    if (skipping) return;
-    setSkipping(true);
-    try {
-      await post(endpoint.onboardingSkip, {});
-    } catch {
-      // Local skip still lets the user into the app if the network call fails.
-    }
-    const current = useUserStore.getState().user ?? useAuthStore.getState().user;
-    if (current) {
-      const skipped: IUser = { ...current, onboarded: true, onboarding_status: 'skipped' };
-      useUserStore.getState().setUser(skipped);
-      useAuthStore.getState().updateUser(skipped);
-    }
-    router.replace('/(tabs)/overview');
-  };
+  const { handleSkip, isSkipping } = useFirstRunOnboarding();
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
@@ -44,7 +24,7 @@ export default function OnboardWelcomeScreen() {
         <Logo size="md" />
         <TouchableOpacity
           onPress={handleSkip}
-          disabled={skipping}
+          disabled={isSkipping}
           className="flex-row items-center gap-1"
         >
           <Text className="text-text-base" style={TYPE.label}>
@@ -118,7 +98,7 @@ export default function OnboardWelcomeScreen() {
             size="lg"
             className="h-14 bg-brand rounded-full"
           >
-            <Text className="text-white" style={TYPE.body}>Continue</Text>
+            <Text className="text-white" style={TYPE.button}>Continue</Text>
           </Button>
         </View>
       </ScrollView>
