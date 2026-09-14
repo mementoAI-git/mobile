@@ -5,6 +5,7 @@ import {
   completeFirstRunOnboarding,
   OnboardingCompletionError,
   type OnboardingCompletionDependencies,
+  type OnboardingSessionOwnership,
 } from './onboarding-completion';
 
 const payload: OnboardingCompatibilityPayload = {
@@ -49,10 +50,16 @@ const completedUser: IUser = {
   onboarding_step_reached: 4,
 };
 
+const ownership: OnboardingSessionOwnership = {
+  accountId: 'user-1',
+  sessionId: 'session-1',
+};
+
 function createDependencies(
   overrides: Partial<OnboardingCompletionDependencies> = {},
 ): OnboardingCompletionDependencies {
   return {
+    getOwnership: mock(() => ownership),
     writeProfile: mock(async () => undefined),
     writePersona: mock(async () => undefined),
     writeOnboarding: mock(async () => undefined),
@@ -200,5 +207,57 @@ describe('first-run onboarding completion transaction', () => {
 
     expect(result).toBe(completedUser);
     expect(sideEffects).toEqual(['auth-store', 'compatibility-store', 'clear-draft']);
+  });
+
+  test('stops before the next network write when the initiating session logs out', async () => {
+    let currentOwnership: OnboardingSessionOwnership | null = ownership;
+    const writePersona = mock(async () => undefined);
+    const completeOnboarding = mock(async () => completedUser);
+    const setAuthUser = mock(() => undefined);
+    const clearDraft = mock(async () => undefined);
+    const dependencies = createDependencies({
+      getOwnership: () => currentOwnership,
+      writeProfile: async () => {
+        currentOwnership = null;
+      },
+      writePersona,
+      completeOnboarding,
+      setAuthUser,
+      clearDraft,
+    });
+
+    await expect(completeFirstRunOnboarding(payload, dependencies)).rejects.toMatchObject({
+      stage: 'ownership',
+    });
+
+    expect(writePersona).not.toHaveBeenCalled();
+    expect(completeOnboarding).not.toHaveBeenCalled();
+    expect(setAuthUser).not.toHaveBeenCalled();
+    expect(clearDraft).not.toHaveBeenCalled();
+  });
+
+  test('does not update local state when the account switches after completion', async () => {
+    let currentOwnership: OnboardingSessionOwnership | null = ownership;
+    const setAuthUser = mock(() => undefined);
+    const setCompatibilityUser = mock(() => undefined);
+    const clearDraft = mock(async () => undefined);
+    const dependencies = createDependencies({
+      getOwnership: () => currentOwnership,
+      completeOnboarding: async () => {
+        currentOwnership = { accountId: 'user-2', sessionId: 'session-2' };
+        return completedUser;
+      },
+      setAuthUser,
+      setCompatibilityUser,
+      clearDraft,
+    });
+
+    await expect(completeFirstRunOnboarding(payload, dependencies)).rejects.toMatchObject({
+      stage: 'ownership',
+    });
+
+    expect(setAuthUser).not.toHaveBeenCalled();
+    expect(setCompatibilityUser).not.toHaveBeenCalled();
+    expect(clearDraft).not.toHaveBeenCalled();
   });
 });

@@ -8,6 +8,13 @@ export type OnboardingCompletionStage =
   | 'completion'
   | 'completed-user'
   | 'skip'
+  | 'profile-acknowledgement'
+  | 'persona-acknowledgement'
+  | 'onboarding-acknowledgement'
+  | 'completion-acknowledgement'
+  | 'skip-acknowledgement'
+  | 'profile-refresh'
+  | 'ownership'
   | 'auth-store'
   | 'compatibility-store'
   | 'draft';
@@ -36,11 +43,20 @@ export interface OnboardingCompletionWrite {
   stepReached: number;
 }
 
+export interface OnboardingSessionOwnership {
+  accountId: string;
+  sessionId: string;
+}
+
 export interface OnboardingCompletionDependencies {
+  getOwnership(): OnboardingSessionOwnership | null;
   writeProfile(payload: OnboardingProfileWrite): Promise<void>;
   writePersona(payload: OnboardingPersonaWrite): Promise<void>;
   writeOnboarding(payload: OnboardingAnswersWrite): Promise<void>;
-  completeOnboarding(payload: OnboardingCompletionWrite): Promise<IUser | null>;
+  completeOnboarding(
+    payload: OnboardingCompletionWrite,
+    ownership: OnboardingSessionOwnership,
+  ): Promise<IUser | null>;
   setAuthUser(user: IUser): void;
   setCompatibilityUser(user: IUser): void;
   clearDraft(): Promise<void>;
@@ -63,23 +79,55 @@ async function atStage<T>(
   try {
     return await operation();
   } catch (cause) {
+    if (cause instanceof OnboardingCompletionError) throw cause;
     throw new OnboardingCompletionError(stage, cause);
   }
+}
+
+export function assertOnboardingOwnership(
+  expected: OnboardingSessionOwnership,
+  actual: OnboardingSessionOwnership | null,
+): void {
+  if (
+    !actual ||
+    actual.accountId !== expected.accountId ||
+    actual.sessionId !== expected.sessionId
+  ) {
+    throw new OnboardingCompletionError(
+      'ownership',
+      new Error('The authenticated session changed during onboarding.'),
+    );
+  }
+}
+
+export function getOnboardingUserAccountId(user: IUser): string {
+  return user._id?.trim() || user.email.trim().toLowerCase();
 }
 
 export async function completeFirstRunOnboarding(
   draft: OnboardingCompatibilityPayload,
   dependencies: OnboardingCompletionDependencies,
 ): Promise<IUser> {
+  const ownership = dependencies.getOwnership();
+  if (!ownership) {
+    throw new OnboardingCompletionError(
+      'ownership',
+      new Error('An authenticated onboarding session is required.'),
+    );
+  }
+
+  assertOnboardingOwnership(ownership, dependencies.getOwnership());
   await atStage('profile', () =>
     dependencies.writeProfile({ nickname: draft.nickname }),
   );
+  assertOnboardingOwnership(ownership, dependencies.getOwnership());
   await atStage('persona', () =>
     dependencies.writePersona({
       self_description: draft.self_description,
       join_reasons: [...draft.join_reasons],
     }),
   );
+  assertOnboardingOwnership(ownership, dependencies.getOwnership());
   await atStage('onboarding', () =>
     dependencies.writeOnboarding({
       motivation: draft.motivationType ?? '',
@@ -89,27 +137,38 @@ export async function completeFirstRunOnboarding(
     }),
   );
 
+  assertOnboardingOwnership(ownership, dependencies.getOwnership());
   const completedUser = await atStage('completion', () =>
-    dependencies.completeOnboarding({
-      self_description: draft.self_description,
-      join_reasons: [...draft.join_reasons],
-      current_priority: [...draft.priorityDimensions],
-      motivationType: draft.motivationType,
-      stepReached: draft.stepReached,
-    }),
+    dependencies.completeOnboarding(
+      {
+        self_description: draft.self_description,
+        join_reasons: [...draft.join_reasons],
+        current_priority: [...draft.priorityDimensions],
+        motivationType: draft.motivationType,
+        stepReached: draft.stepReached,
+      },
+      ownership,
+    ),
   );
 
-  if (!completedUser || completedUser.onboarding_status !== 'completed') {
+  if (
+    !completedUser ||
+    completedUser.onboarding_status !== 'completed' ||
+    getOnboardingUserAccountId(completedUser) !== ownership.accountId
+  ) {
     throw new OnboardingCompletionError(
       'completed-user',
       new Error('The server did not return a completed user.'),
     );
   }
 
+  assertOnboardingOwnership(ownership, dependencies.getOwnership());
   await atStage('auth-store', () => dependencies.setAuthUser(completedUser));
+  assertOnboardingOwnership(ownership, dependencies.getOwnership());
   await atStage('compatibility-store', () =>
     dependencies.setCompatibilityUser(completedUser),
   );
+  assertOnboardingOwnership(ownership, dependencies.getOwnership());
   await atStage('draft', () => dependencies.clearDraft());
 
   return completedUser;
