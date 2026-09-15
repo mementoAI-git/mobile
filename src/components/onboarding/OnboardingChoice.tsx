@@ -13,23 +13,21 @@ import { TYPE } from '@/constants/typography';
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export interface MotivationChoiceProps {
-  value: string;
   label: string;
   sublabel?: string;
-  emoji?: string;
-  selected?: boolean;
-  onSelect: (value: string) => void;
+  icon?: React.ReactNode;
+  selected: boolean;
+  onPress: () => boolean | void;
   disabled?: boolean;
   testID?: string;
 }
 
 export function MotivationChoice({
-  value,
   label,
   sublabel,
-  emoji,
-  selected = false,
-  onSelect,
+  icon,
+  selected,
+  onPress,
   disabled = false,
   testID,
 }: MotivationChoiceProps) {
@@ -46,9 +44,13 @@ export function MotivationChoice({
 
   const handlePress = useCallback(() => {
     if (disabled) return;
+    const accepted = onPress();
+    if (accepted === false) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return;
+    }
     Haptics.selectionAsync();
-    onSelect(value);
-  }, [disabled, onSelect, value]);
+  }, [disabled, onPress]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -61,26 +63,26 @@ export function MotivationChoice({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
-      accessibilityRole="button"
-      accessibilityState={{ selected, disabled }}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected, disabled }}
       accessibilityLabel={label}
       style={animatedStyle}
-      className={`flex-row items-center gap-3 px-4 py-3.5 rounded-2xl border ${
+      className={`min-h-[44px] flex-row items-center gap-3 px-4 py-3.5 rounded-2xl border ${
         selected
           ? 'bg-brand/[0.06] border-brand'
           : 'bg-card border-stroke-weaker'
       }`}
     >
-      {emoji ? (
+      {icon ? (
         <View className="w-8 h-8 rounded-full bg-fill-weak items-center justify-center">
-          <Text style={TYPE.label}>{emoji}</Text>
+          {icon}
         </View>
       ) : null}
 
       <View className="flex-1">
         <Text
           className={selected ? 'text-brand' : 'text-text-strong'}
-          style={TYPE.label}
+          style={TYPE.buttonSmall}
         >
           {label}
         </Text>
@@ -105,21 +107,19 @@ export function MotivationChoice({
 }
 
 export interface LifeAreaChoiceProps {
-  value: string;
   label: string;
-  emoji?: string;
-  selected?: boolean;
-  onToggle: (value: string) => void;
+  icon?: React.ReactNode;
+  selected: boolean;
+  onPress: () => boolean | void;
   disabled?: boolean;
   testID?: string;
 }
 
 export function LifeAreaChoice({
-  value,
   label,
-  emoji,
-  selected = false,
-  onToggle,
+  icon,
+  selected,
+  onPress,
   disabled = false,
   testID,
 }: LifeAreaChoiceProps) {
@@ -127,7 +127,7 @@ export function LifeAreaChoice({
 
   const handlePressIn = useCallback(() => {
     if (disabled) return;
-    scale.value = withSpring(0.96);
+    scale.value = withSpring(0.98);
   }, [disabled, scale]);
 
   const handlePressOut = useCallback(() => {
@@ -136,9 +136,13 @@ export function LifeAreaChoice({
 
   const handlePress = useCallback(() => {
     if (disabled) return;
+    const accepted = onPress();
+    if (accepted === false) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return;
+    }
     Haptics.selectionAsync();
-    onToggle(value);
-  }, [disabled, onToggle, value]);
+  }, [disabled, onPress]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -155,15 +159,13 @@ export function LifeAreaChoice({
       accessibilityState={{ checked: selected, disabled }}
       accessibilityLabel={label}
       style={animatedStyle}
-      className={`flex-row items-center gap-2 px-4 py-2.5 rounded-full border shadow-sm ${
+      className={`min-h-[44px] flex-row items-center gap-2 px-4 py-2.5 rounded-full border ${
         selected
           ? 'bg-brand/[0.08] border-brand'
           : 'bg-card border-stroke-weaker'
       }`}
     >
-      {emoji ? (
-        <Text style={TYPE.label}>{emoji}</Text>
-      ) : null}
+      {icon}
       <Text
         className={selected ? 'text-brand' : 'text-text-strong'}
         style={TYPE.buttonSmall}

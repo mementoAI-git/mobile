@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import {
 import {
   FIRST_RUN_MOTIVATIONS,
   FIRST_RUN_LIFE_AREAS,
+  type FirstRunLifeAreaOption,
+  type FirstRunMotivationOption,
   type OnboardingStep,
 } from '@/features/onboarding/first-run-onboarding';
 import { useFirstRunOnboarding } from '@/hooks/use-first-run-onboarding';
@@ -51,6 +53,57 @@ const STEP_METADATA: Record<
     subtitle: 'Pick the areas you want to reflect on first. You can always change this later.',
   },
 };
+
+interface MotivationOptionRowProps {
+  option: FirstRunMotivationOption;
+  selected: boolean;
+  onSelect: (value: FirstRunMotivationOption['value']) => void;
+}
+
+const MotivationOptionRow = React.memo(function MotivationOptionRow({
+  option,
+  selected,
+  onSelect,
+}: MotivationOptionRowProps) {
+  const handlePress = useCallback(() => {
+    onSelect(option.value);
+  }, [onSelect, option.value]);
+
+  return (
+    <MotivationChoice
+      label={option.label}
+      icon={<Text style={TYPE.label}>{option.emoji}</Text>}
+      selected={selected}
+      onPress={handlePress}
+    />
+  );
+});
+
+interface LifeAreaOptionPillProps {
+  option: FirstRunLifeAreaOption;
+  selected: boolean;
+  onToggle: (value: FirstRunLifeAreaOption['value']) => boolean;
+}
+
+const LifeAreaOptionPill = React.memo(function LifeAreaOptionPill({
+  option,
+  selected,
+  onToggle,
+}: LifeAreaOptionPillProps) {
+  const handlePress = useCallback(
+    () => onToggle(option.value),
+    [onToggle, option.value],
+  );
+
+  return (
+    <LifeAreaChoice
+      label={option.label}
+      icon={<Text style={TYPE.label}>{option.emoji}</Text>}
+      selected={selected}
+      onPress={handlePress}
+    />
+  );
+});
 
 export default function PreferencesScreen() {
   const router = useRouter();
@@ -132,6 +185,22 @@ export default function PreferencesScreen() {
     }
   };
 
+  const handleMotivationSelect = useCallback(
+    (motivation: FirstRunMotivationOption['value']) => {
+      setErrorMessage(null);
+      setMotivation(motivation);
+    },
+    [setMotivation],
+  );
+
+  const handleLifeAreaToggle = useCallback(
+    (lifeArea: FirstRunLifeAreaOption['value']) => {
+      setErrorMessage(null);
+      return toggleLifeArea(lifeArea);
+    },
+    [toggleLifeArea],
+  );
+
   const currentMeta = STEP_METADATA[internalStep];
   const preferredName = draft.preferredName.trim();
 
@@ -178,16 +247,11 @@ export default function PreferencesScreen() {
         {internalStep === 2 && (
           <View className="gap-3">
             {FIRST_RUN_MOTIVATIONS.map((opt) => (
-              <MotivationChoice
+              <MotivationOptionRow
                 key={opt.value}
-                value={opt.value}
-                label={opt.label}
-                emoji={opt.emoji}
+                option={opt}
                 selected={draft.motivation === opt.value}
-                onSelect={(val) => {
-                  setErrorMessage(null);
-                  setMotivation(val as any);
-                }}
+                onSelect={handleMotivationSelect}
               />
             ))}
           </View>
@@ -269,16 +333,11 @@ export default function PreferencesScreen() {
 
             <View className="flex-row flex-wrap gap-2.5">
               {FIRST_RUN_LIFE_AREAS.map((opt) => (
-                <LifeAreaChoice
+                <LifeAreaOptionPill
                   key={opt.value}
-                  value={opt.value}
-                  label={opt.label}
-                  emoji={opt.emoji}
+                  option={opt}
                   selected={draft.lifeAreas.includes(opt.value)}
-                  onToggle={() => {
-                    setErrorMessage(null);
-                    toggleLifeArea(opt.value);
-                  }}
+                  onToggle={handleLifeAreaToggle}
                 />
               ))}
             </View>

@@ -2,7 +2,6 @@ import React from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -11,7 +10,11 @@ import {
   ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  LinearTransition,
+  ReduceMotion,
+} from 'react-native-reanimated';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { Button, Logo } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
@@ -70,7 +73,11 @@ export function OnboardingShell({
   const hasFooter = Boolean(primaryAction || secondaryAction || footer || errorMessage);
 
   const content = (
-    <View className="flex-1 px-6">
+    <Animated.View
+      key={`onboarding-content-${step ?? 'static'}`}
+      entering={FadeInDown.duration(600).reduceMotion(ReduceMotion.System)}
+      className="flex-1 px-6"
+    >
       {title ? (
         <View className="mb-6">
           <Text className="text-text-strong mb-2" style={TYPE.displayTitle}>
@@ -84,7 +91,7 @@ export function OnboardingShell({
         </View>
       ) : null}
       {children}
-    </View>
+    </Animated.View>
   );
 
   return (
@@ -105,15 +112,15 @@ export function OnboardingShell({
           <View className="flex-row items-center justify-between min-h-[44px]">
             <View className="w-16 items-start justify-center">
               {onBack ? (
-                <TouchableOpacity
+                <Button
+                  variant="ghost"
                   onPress={onBack}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
                   accessibilityLabel="Go back"
-                  className="w-10 h-10 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
+                  leftIcon={<ChevronLeft size={20} color={COLORS.textStrong} />}
+                  className="size-11 px-0 gap-0 rounded-full bg-fill-weaker border border-stroke-weaker"
                 >
-                  <ChevronLeft size={20} color={COLORS.textStrong} />
-                </TouchableOpacity>
+                  {null}
+                </Button>
               ) : showLogo ? (
                 <Logo size="md" />
               ) : null}
@@ -149,19 +156,17 @@ export function OnboardingShell({
 
             <View className="w-16 items-end justify-center">
               {onSkip ? (
-                <TouchableOpacity
+                <Button
+                  variant="ghost"
                   onPress={onSkip}
                   disabled={isSkipping}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
+                  loading={isSkipping}
                   accessibilityLabel={skipLabel}
-                  className="flex-row items-center gap-1 py-1"
+                  rightIcon={<ChevronRight size={14} color={COLORS.textWeak} />}
+                  className="min-h-[44px] px-0 gap-1"
                 >
-                  <Text className="text-text-base" style={TYPE.label}>
-                    {skipLabel}
-                  </Text>
-                  <ChevronRight size={14} color={COLORS.textWeak} />
-                </TouchableOpacity>
+                  {skipLabel}
+                </Button>
               ) : null}
             </View>
           </View>
@@ -177,7 +182,7 @@ export function OnboardingShell({
           <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={contentContainerStyle}
+            contentContainerStyle={[{ flexGrow: 1 }, contentContainerStyle]}
             className="flex-1"
           >
             {content}
@@ -185,56 +190,55 @@ export function OnboardingShell({
         ) : (
           content
         )}
-      </KeyboardAvoidingView>
 
-      {/* Footer */}
-      {hasFooter ? (
-        <View className="px-6 pt-3 pb-4 bg-background/95 border-t border-stroke-weaker">
-          {errorMessage ? (
-            <Animated.Text
-              entering={FadeInDown.duration(200)}
-              className="text-center text-error mb-3"
-              style={TYPE.metadata}
-            >
-              {errorMessage}
-            </Animated.Text>
-          ) : null}
+        {/* Footer */}
+        {hasFooter ? (
+          <View className="px-6 pt-3 pb-4 bg-background/95 border-t border-stroke-weaker">
+            {errorMessage ? (
+              <Animated.Text
+                entering={FadeInDown.duration(200).reduceMotion(ReduceMotion.System)}
+                className="text-center text-error mb-3"
+                style={TYPE.metadata}
+              >
+                {errorMessage}
+              </Animated.Text>
+            ) : null}
 
-          {footer ? (
-            footer
-          ) : (
-            <View className="flex-row items-center gap-3">
-              {secondaryAction ? (
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  onPress={secondaryAction.onPress}
-                  disabled={secondaryAction.disabled}
-                  className="flex-1 h-14 rounded-full"
-                >
-                  <Text className="text-text-strong" style={TYPE.button}>
+            {footer ? (
+              footer
+            ) : (
+              <View className="flex-row items-center gap-3">
+                {secondaryAction ? (
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    onPress={secondaryAction.onPress}
+                    loading={secondaryAction.loading}
+                    disabled={secondaryAction.disabled}
+                    accessibilityLabel={secondaryAction.label}
+                    className="flex-1 h-14 rounded-full"
+                  >
                     {secondaryAction.label}
-                  </Text>
-                </Button>
-              ) : null}
+                  </Button>
+                ) : null}
 
-              {primaryAction ? (
-                <Button
-                  size="lg"
-                  onPress={primaryAction.onPress}
-                  loading={primaryAction.loading}
-                  disabled={primaryAction.disabled}
-                  className="flex-1 h-14 bg-brand rounded-full"
-                >
-                  <Text className="text-white" style={TYPE.button}>
+                {primaryAction ? (
+                  <Button
+                    size="lg"
+                    onPress={primaryAction.onPress}
+                    loading={primaryAction.loading}
+                    disabled={primaryAction.disabled}
+                    accessibilityLabel={primaryAction.label}
+                    className="flex-1 h-14 bg-brand rounded-full"
+                  >
                     {primaryAction.label}
-                  </Text>
-                </Button>
-              ) : null}
-            </View>
-          )}
-        </View>
-      ) : null}
+                  </Button>
+                ) : null}
+              </View>
+            )}
+          </View>
+        ) : null}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

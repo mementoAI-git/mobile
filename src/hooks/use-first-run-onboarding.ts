@@ -109,7 +109,6 @@ export function useFirstRunOnboarding() {
 
   const setMotivation = useCallback(
     (motivation: OnboardingMotivation) => {
-      Haptics.selectionAsync();
       setDraft((prev) => {
         const next = { ...prev, motivation };
         persistDraft(next);
@@ -134,10 +133,8 @@ export function useFirstRunOnboarding() {
     (category: EnrichmentCategory): boolean => {
       const result = setLifeAreaSelection(draft.lifeAreas, category);
       if (!result.accepted) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         return false;
       }
-      Haptics.selectionAsync();
       setDraft((prev) => {
         const next = { ...prev, lifeAreas: [...result.values] };
         persistDraft(next);
