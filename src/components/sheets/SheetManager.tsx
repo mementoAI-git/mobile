@@ -34,6 +34,7 @@ import { AddMemberToGroupSheet } from './AddMemberToGroupSheet';
 import { EditBillingDetailsSheet } from './EditBillingDetailsSheet';
 import { AddPaymentMethodSheet } from './AddPaymentMethodSheet';
 import { CancelSubscriptionConfirmationSheet } from './CancelSubscriptionConfirmationSheet';
+import { EmojiPickerSheet } from '@/components/chat/EmojiPickerSheet';
 import { COLORS } from '@/constants/tokens';
 import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
 
@@ -72,6 +73,7 @@ const SHEET_CONFIGS: Record<string, {
   'security-confirmation': { component: SecurityConfirmationSheet, dynamic: true },
   'voice-call-settings': { component: VoiceCallSettingsSheet, dynamic: true },
   'end-voice-session': { component: EndVoiceSessionSheet, dynamic: true },
+  'emoji-picker': { component: EmojiPickerSheet, dynamic: false, snapPoints: ['42%', '65%'] },
 };
 
 // Sheets that manage their own BottomSheetView / layout
@@ -81,6 +83,7 @@ const SELF_MANAGED = new Set([
   'edit-profile', 'add-member-to-group',
   'edit-billing-details', 'add-payment-method',
   'change-password', 'setup-two-factor',
+  'emoji-picker',
 ]);
 
 const MODAL_SEGMENTS = new Set([

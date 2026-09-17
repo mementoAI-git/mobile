@@ -14,8 +14,9 @@ import {
   KeyboardAvoidingView, Platform, StyleSheet, Image,
   ActivityIndicator, Keyboard, Modal, ImageBackground, Linking,
 } from 'react-native';
-import { SafeAreaView, SafeAreaProvider, SafeAreaInsetsContext, initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaInsetsContext, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
 import {
   MoreHorizontal, Plus, X, Users, ChevronDown, Sparkles,
   Copy, Check, Lock, FileText, Play, Camera, Mic, Video, Music,
@@ -825,8 +826,7 @@ export default function EditorScreen() {
   }, [setAttachments]);
 
   return (
-    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <BottomSheetModalProvider>
+    <NativeModalSafeAreaBoundary>
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
 
@@ -1227,7 +1227,7 @@ export default function EditorScreen() {
       />
 
       <Modal visible={!!publishedUrl} animationType="slide" presentationStyle="fullScreen" statusBarTranslucent onRequestClose={handleDismissPublishedSuccess}>
-        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <SafeAreaProvider>
           {(publishedUrl || lastPublishedUrlRef.current) ? (
             <PublishSuccessView
               publishedUrl={publishedUrl || lastPublishedUrlRef.current || ''}
@@ -1322,7 +1322,6 @@ export default function EditorScreen() {
           </>
         )}
       </SafeAreaInsetsContext.Consumer>
-      </BottomSheetModalProvider>
-    </SafeAreaProvider>
+    </NativeModalSafeAreaBoundary>
   );
 }

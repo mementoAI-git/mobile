@@ -1,15 +1,10 @@
-import { create } from 'zustand';
-import type { IUser } from '@/types';
+import { createUserStoreBridge, type UserStoreProxyState } from '@/features/auth/user-store-bridge';
+import { useAuthStore } from './auth.store';
 
-interface UserState {
-  user: IUser | null;
-  setUser: (user: IUser) => void;
-  clearUser: () => void;
-}
+export type { UserStoreProxyState };
 
-/** Compatibility mirror. Auth and routing read useAuthStore.user instead. */
-export const useUserStore = create<UserState>((set) => ({
-  user: null,
-  setUser: (user) => set({ user }),
-  clearUser: () => set({ user: null }),
-}));
+/**
+ * Compatibility proxy delegating directly to authoritative useAuthStore.user.
+ * Prevents dual-store identity drift while preserving existing call-sites.
+ */
+export const useUserStore = createUserStoreBridge(useAuthStore as any);

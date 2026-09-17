@@ -129,6 +129,7 @@ export function Button({
           {leftIcon && <View>{leftIcon}</View>}
           <Text
             numberOfLines={1}
+            maxFontSizeMultiplier={1.4}
             className={cn(v.text, s.text, textClassName)}
             style={size === 'lg' ? TYPE.button : TYPE.buttonSmall}
           >

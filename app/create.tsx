@@ -21,10 +21,10 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
-  Modal,
 } from 'react-native';
-import { SafeAreaView, SafeAreaProvider, initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
 import {
   Lock,
   X,
@@ -46,8 +46,8 @@ import Animated, { FadeInDown, SlideInUp } from 'react-native-reanimated';
 let createHasSlid = false;
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { getModalBottomPadding } from '@/features/layout/modal-safe-area';
-import { useUserStore } from '@/store';
+import { useUserStore, useUiStore } from '@/store';
+import { Avatar } from '@/components/ui/Avatar';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
@@ -77,14 +77,6 @@ import type { IFile } from '@/types';
 const NOTE_CHAR_MAX = 8000;
 
 const DRAFT_STORAGE_KEY = (email?: string | null) => `qc_draft_${email ?? 'anon'}`;
-
-// Common emojis — no external library needed
-const EMOJI_ROWS = [
-  ['😊', '😄', '😍', '🥰', '😂', '🤣', '😭', '😢'],
-  ['❤️', '🔥', '✨', '🎉', '👏', '🙌', '💯', '🤔'],
-  ['😅', '🥹', '😎', '🤩', '🫶', '💪', '👍', '🙏'],
-  ['🌟', '💡', '📝', '🎯', '🚀', '🌈', '☀️', '🌙'],
-];
 
 // File types accepted by the document picker (audio + documents)
 const FILE_INPUT_MIME = DOCUMENT_PICKER_MIME_TYPES;
@@ -134,19 +126,6 @@ function CharRing({ value, max }: { value: number; max: number }) {
           {max - value}
         </Text>
       )}
-    </View>
-  );
-}
-
-// ─── Avatar ───────────────────────────────────────────────────────────────────
-
-function UserAvatar({ user }: { user: { first_name?: string; picture_url?: string; picture?: string } | null }) {
-  const uri = user?.picture_url || user?.picture;
-  const initial = user?.first_name?.charAt(0).toUpperCase() ?? '?';
-  if (uri) return <Image source={{ uri }} style={styles.avatar} />;
-  return (
-    <View style={[styles.avatar, styles.avatarFallback]}>
-      <Text style={styles.avatarInitial}>{initial}</Text>
     </View>
   );
 }
@@ -264,39 +243,6 @@ function VideoCard({ item, onRemove }: { item: AttachmentItem; onRemove: (id: st
   );
 }
 
-// ─── Emoji picker ─────────────────────────────────────────────────────────────
-
-function EmojiPicker({ onSelect, onClose }: { onSelect: (e: string) => void; onClose: () => void }) {
-  return (
-    <Modal transparent animationType="fade" onRequestClose={onClose}>
-      <SafeAreaProvider>
-        <EmojiPickerContent onSelect={onSelect} onClose={onClose} />
-      </SafeAreaProvider>
-    </Modal>
-  );
-}
-
-function EmojiPickerContent({ onSelect, onClose }: { onSelect: (e: string) => void; onClose: () => void }) {
-  const insets = useSafeAreaInsets();
-
-  return (
-    <View style={StyleSheet.absoluteFill}>
-      <TouchableOpacity style={styles.emojiBackdrop} activeOpacity={1} onPress={onClose} />
-      <View style={[styles.emojiPicker, { bottom: getModalBottomPadding(insets.bottom, 80) }]}>
-        {EMOJI_ROWS.map((row, ri) => (
-          <View key={ri} style={styles.emojiRow}>
-            {row.map((e) => (
-              <TouchableOpacity key={e} onPress={() => { onSelect(e); onClose(); }} style={styles.emojiBtn}>
-                <Text style={styles.emojiText}>{e}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function CreateScreen() {
@@ -306,7 +252,6 @@ export default function CreateScreen() {
   const isMountedRef = useRef(true);
 
   const [body, setBody] = useState('');
-  const [showEmoji, setShowEmoji] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -521,12 +466,8 @@ export default function CreateScreen() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    // SafeAreaProvider here is intentional — fullScreenModal creates a new
-    // UIViewController that doesn't inherit the root provider's inset measurements.
-    // initialWindowMetrics gives this modal its own synchronous safe-area context.
-    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+    <NativeModalSafeAreaBoundary>
       <SafeAreaView style={styles.root}>
-      {showEmoji && <EmojiPicker onSelect={insertEmoji} onClose={() => setShowEmoji(false)} />}
       <Animated.View style={{ flex: 1 }} entering={(() => { const anim = createHasSlid ? undefined : SlideInUp.duration(350); createHasSlid = true; return anim; })()}>
       <KeyboardAvoidingView style={styles.kav} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
 
@@ -555,7 +496,7 @@ export default function CreateScreen() {
 
           {/* User context */}
           <Animated.View entering={FadeInDown.duration(300)} style={styles.userRow}>
-            <UserAvatar user={user} />
+            <Avatar uri={user?.picture_url || user?.picture} name={user?.nickname || user?.first_name} size="sm" />
             <Text style={styles.userName}>{user?.nickname || user?.first_name || 'You'}</Text>
           </Animated.View>
 
@@ -634,7 +575,7 @@ export default function CreateScreen() {
           if (attachments.length <= 1) setPreviewVisible(false);
         }}
       />
-    </SafeAreaProvider>
+    </NativeModalSafeAreaBoundary>
   );
 }
 
