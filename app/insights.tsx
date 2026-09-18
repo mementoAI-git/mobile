@@ -7,7 +7,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Settings, Award, CheckCircle2 } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Settings,
+  Award,
+} from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import {
@@ -19,13 +23,16 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { calculateMilestones } from '@/features/insights/milestone-celebrations';
 import { useProfile } from '@/hooks/queries/use-profile';
-import { useUserStats } from '@/hooks/queries/use-overview';
+import { useUserStats, useCapsuleStats, useMemoriesStats } from '@/hooks/queries/use-overview';
+import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
+import { useUserStore } from '@/store';
 import {
   usePersona,
   useUserContext,
 } from '@/hooks/queries/use-persona';
 
 const PATTERN = require('../assets/images/backgrounds/welcome_bg.png');
+const STREAK_BG = require('../assets/images/backgrounds/streak_card_bg.png');
 
 const TABS: { key: InsightsTab; label: string }[] = [
   { key: 'enrichment', label: 'Enrichment score' },
@@ -37,8 +44,12 @@ const TABS: { key: InsightsTab; label: string }[] = [
 export default function InsightsScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<InsightsTab>('enrichment');
+  const user = useUserStore((s) => s.user);
   const { data: profile } = useProfile();
   const { data: stats } = useUserStats();
+  const { data: memoriesStats } = useMemoriesStats();
+  const { data: capsuleStats } = useCapsuleStats();
+  const { data: beneficiariesRaw } = useBeneficiaries();
   const { data: persona } = usePersona();
   const { data: context } = useUserContext();
 
@@ -53,41 +64,73 @@ export default function InsightsScreen() {
   );
   const notes = insightSource?.important_notes ?? [];
   const preferences = insightSource?.key_preferences ?? [];
-  const biography = profile?.context?.self_description?.trim()
-    || insightSource?.self_description?.trim()
-    || null;
+  const nickname = user?.nickname?.trim() || profile?.nickname?.trim();
+  const firstName = user?.first_name?.trim() || profile?.first_name?.trim();
+  const gender = user?.gender || profile?.gender;
 
-  const userName = profile?.nickname || profile?.first_name || 'You';
+  const pronounSubject = gender === 'female' ? 'She' : gender === 'male' ? 'He' : 'They';
+  const pronounSubjectLower = gender === 'female' ? 'she' : gender === 'male' ? 'he' : 'they';
+  const pronounPossessive = gender === 'female' ? 'Her' : gender === 'male' ? 'His' : 'Their';
+  const pronounPossessiveLower = gender === 'female' ? 'her' : gender === 'male' ? 'his' : 'their';
+
+  // Resolved identity: nickname > first name > third-person pronoun
+  const resolvedName = nickname || firstName;
 
   const sanitizeText = useCallback((text: string) => {
     if (!text) return '';
+    if (resolvedName) {
+      return text
+        .replace(/\bThe user's\b/g, `${resolvedName}'s`)
+        .replace(/\bthe user's\b/g, `${resolvedName}'s`)
+        .replace(/\bThe user\b/g, resolvedName)
+        .replace(/\bthe user\b/g, resolvedName);
+    }
     return text
-      .replace(/\bThe user\b/g, userName)
-      .replace(/\bthe user\b/g, userName);
-  }, [userName]);
+      .replace(/\bThe user's\b/g, pronounPossessive)
+      .replace(/\bthe user's\b/g, pronounPossessiveLower)
+      .replace(/\bThe user\b/g, pronounSubject)
+      .replace(/\bthe user\b/g, pronounSubjectLower);
+  }, [resolvedName, pronounPossessive, pronounPossessiveLower, pronounSubject, pronounSubjectLower]);
 
   const sanitizedInsights = useMemo(() => {
     return insights.map(sanitizeText);
   }, [insights, sanitizeText]);
 
   const sanitizedNotes = useMemo(() => {
-    return notes.slice(0, 4).map((note: string) => sanitizeText(note));
+    return notes.map((note: string) => sanitizeText(note));
   }, [notes, sanitizeText]);
 
   const sanitizedPreferences = useMemo(() => {
     return preferences.map(sanitizeText);
   }, [preferences, sanitizeText]);
 
-  const milestones = useMemo(() => {
-    return calculateMilestones({
-      memoryCount: stats?.memories_count,
-      streakDays: stats?.streak_days,
-      capsuleCount: stats?.capsules_count,
-      enrichmentScore: Number(stats?.enrichment_score) || 0,
-      beneficiaryCount: stats?.beneficiaries_count,
-    });
-  }, [stats]);
+  const { milestoneStats, milestones } = useMemo(() => {
+    const memoryCount = Number(stats?.stories_count ?? memoriesStats?.stories_count) || 0;
+    const streakDays = Number(user?.streak ?? stats?.streak_count ?? profile?.streak) || 0;
+    const capsuleCount = Number(capsuleStats?.scheduled_count ?? capsuleStats?.delivered_count) || 0;
+    const beneficiaryCount = (() => {
+      if (stats?.beneficiary_count != null && Number(stats.beneficiary_count) > 0) {
+        return Number(stats.beneficiary_count);
+      }
+      if (Array.isArray(beneficiariesRaw)) return beneficiariesRaw.length;
+      if ((beneficiariesRaw as any)?.totalDocs != null) return Number((beneficiariesRaw as any).totalDocs);
+      if ((beneficiariesRaw as any)?.docs) return (beneficiariesRaw as any).docs.length;
+      return 0;
+    })();
 
+    const list = calculateMilestones({
+      memoryCount,
+      streakDays,
+      capsuleCount,
+      enrichmentScore: Number(stats?.enrichment_score) || 0,
+      beneficiaryCount,
+    });
+
+    return {
+      milestoneStats: { memoryCount, streakDays, capsuleCount, beneficiaryCount },
+      milestones: list,
+    };
+  }, [stats, memoriesStats, user, profile, capsuleStats, beneficiariesRaw]);
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();
@@ -104,6 +147,11 @@ export default function InsightsScreen() {
     Haptics.selectionAsync();
     setActiveTab(tab);
   }, []);
+
+  const achievedCount = useMemo(
+    () => milestones.filter((m) => m.achieved).length,
+    [milestones],
+  );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
@@ -139,8 +187,6 @@ export default function InsightsScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 32 }}
         >
-          {/* {biography && <Text style={styles.biography}>{biography}</Text>} */}
-
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -163,7 +209,7 @@ export default function InsightsScreen() {
             })}
           </ScrollView>
 
-          <View style={{ paddingHorizontal: 16, marginTop: 28, gap: 20 }}>
+          <View style={{ paddingHorizontal: 16, marginTop: 24, gap: 18 }}>
             <InsightsContentCard
               activeTab={activeTab}
               score={Number(stats?.enrichment_score) || 0}
@@ -179,84 +225,120 @@ export default function InsightsScreen() {
                 backgroundColor: COLORS.card,
                 borderRadius: 24,
                 borderWidth: 1,
-                borderColor: COLORS.strokeWeak,
-                padding: 20,
-                gap: 16,
+                borderColor: COLORS.strokeWeaker,
+                overflow: 'hidden',
+                shadowColor: COLORS.shadow,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.05,
+                shadowRadius: 16,
+                elevation: 2,
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Award size={18} color={COLORS.brand} />
-                  <Text style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>
-                    Milestones & Streaks
-                  </Text>
-                </View>
-                <Text style={{ ...TYPE.metadata, color: COLORS.brand }}>
-                  {milestones.filter((m) => m.achieved).length} of {milestones.length}
-                </Text>
-              </View>
-
-              <View style={{ gap: 12 }}>
-                {milestones.map((milestone) => (
-                  <View
-                    key={milestone.id}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: 14,
-                      borderRadius: 16,
-                      borderWidth: 1,
-                      borderColor: milestone.achieved ? COLORS.strokeWeak : COLORS.strokeWeaker,
-                      backgroundColor: milestone.achieved ? 'rgba(6, 122, 87, 0.04)' : COLORS.fillWeaker,
-                    }}
-                  >
-                    <View style={{ flex: 1, paddingRight: 12 }}>
-                      <Text
-                        style={{
-                          ...TYPE.label,
-                          color: milestone.achieved ? COLORS.textStrong : COLORS.textWeak,
-                        }}
-                      >
-                        {milestone.title}
-                      </Text>
-                      <Text
-                        style={{
-                          ...TYPE.metadata,
-                          color: COLORS.textWeak,
-                          marginTop: 2,
-                        }}
-                      >
-                        {milestone.description}
-                      </Text>
-                    </View>
-
+              <ImageBackground
+                source={STREAK_BG}
+                style={{ width: '100%', padding: 20, gap: 16 }}
+                resizeMode="cover"
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                     <View
                       style={{
-                        paddingHorizontal: 10,
-                        paddingVertical: 5,
-                        borderRadius: 12,
-                        backgroundColor: milestone.achieved ? 'rgba(6, 122, 87, 0.1)' : COLORS.fillWeak,
-                        flexDirection: 'row',
+                        width: 36,
+                        height: 36,
+                        borderRadius: 18,
+                        backgroundColor: COLORS.brandSubtle,
+                        borderWidth: 1,
+                        borderColor: 'rgba(255, 94, 0, 0.15)',
                         alignItems: 'center',
-                        gap: 4,
+                        justifyContent: 'center',
                       }}
                     >
-                      {milestone.achieved ? (
-                        <CheckCircle2 size={12} color={COLORS.success} />
-                      ) : null}
-                      <Text
+                      <Award size={18} color={COLORS.brand} strokeWidth={2.2} />
+                    </View>
+                    <Text style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>
+                      Milestones & Streaks
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 4,
+                      borderRadius: 999,
+                      backgroundColor: COLORS.brandSubtle,
+                      borderWidth: 1,
+                      borderColor: 'rgba(255, 94, 0, 0.15)',
+                    }}
+                  >
+                    <Text style={{ ...TYPE.bodyStrong, color: COLORS.brand }}>
+                      {achievedCount} of {milestones.length}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ gap: 10 }}>
+                  {milestones.map((milestone) => (
+                    <View
+                      key={milestone.id}
+                      style={{
+                        backgroundColor: milestone.achieved
+                          ? 'rgba(6, 122, 87, 0.05)'
+                          : 'rgba(255, 255, 255, 0.8)',
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: milestone.achieved
+                          ? 'rgba(6, 122, 87, 0.15)'
+                          : COLORS.strokeWeaker,
+                        paddingHorizontal: 16,
+                        paddingVertical: 14,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 16,
+                      }}
+                    >
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text
+                          style={{
+                            ...TYPE.bodyStrong,
+                            color: COLORS.textStrong,
+                          }}
+                        >
+                          {milestone.title}
+                        </Text>
+                        <Text
+                          style={{
+                            ...TYPE.metadata,
+                            color: COLORS.textWeak,
+                            lineHeight: 16,
+                          }}
+                        >
+                          {milestone.description}
+                        </Text>
+                      </View>
+
+                      <View
                         style={{
-                          ...TYPE.metadata,
-                          color: milestone.achieved ? COLORS.success : COLORS.textWeak,
+                          paddingHorizontal: 10,
+                          paddingVertical: 4,
+                          borderRadius: 999,
+                          backgroundColor: milestone.achieved
+                            ? 'rgba(6, 122, 87, 0.08)'
+                            : COLORS.fillWeak,
                         }}
                       >
-                        {milestone.progressLabel}
-                      </Text>
+                        <Text
+                          style={{
+                            ...TYPE.metadata,
+                            color: milestone.achieved ? COLORS.success : COLORS.textWeak,
+                          }}
+                        >
+                          {milestone.progressLabel}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                ))}
-              </View>
+                  ))}
+                </View>
+              </ImageBackground>
             </View>
           </View>
         </ScrollView>
@@ -279,7 +361,14 @@ const styles = {
     borderRadius: 22,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    backgroundColor: COLORS.fillWeak,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   headerTitle: {
     position: 'absolute' as const,
@@ -289,28 +378,24 @@ const styles = {
     color: COLORS.textStrong,
     ...TYPE.screenTitle,
   },
-  biography: {
-    color: COLORS.textStrong,
-    ...TYPE.body,
-    lineHeight: 21,
-    marginHorizontal: 16,
-    marginTop: 28,
-  },
   tabs: {
     paddingHorizontal: 16,
-    gap: 12,
+    gap: 8,
     marginTop: 14,
   },
   tab: {
-    minHeight: 44,
-    paddingHorizontal: 14,
-    borderRadius: 9,
+    minHeight: 40,
+    paddingHorizontal: 16,
+    borderRadius: 10,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     backgroundColor: COLORS.fillWeak,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   activeTab: {
     backgroundColor: COLORS.textStrong,
+    borderColor: COLORS.textStrong,
   },
   tabText: {
     color: COLORS.textStrong,

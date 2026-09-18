@@ -136,7 +136,12 @@ export function StatCard({
         style={styles.shadow}
       >
         {bg ? (
-          <ImageBackground source={bg} className="w-full" imageStyle={{ borderRadius: 24 }} resizeMode="cover">
+          <ImageBackground
+            source={bg}
+            className="w-full"
+            style={{ width: '100%' }}
+            resizeMode="cover"
+          >
             {content}
           </ImageBackground>
         ) : content}

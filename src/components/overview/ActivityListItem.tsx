@@ -202,7 +202,7 @@ export const ActivityListItem = React.memo(function ActivityListItem({ activity,
         onPress={handlePress}
         disabled={!canOpenStory}
         activeOpacity={0.7}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 20 }}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 20 }}
       >
         {/* Icon container */}
         <View style={{

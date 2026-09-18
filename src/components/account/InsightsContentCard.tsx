@@ -1,7 +1,12 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Sparkles } from 'lucide-react-native';
+import { ImageBackground, StyleSheet, Text, View } from 'react-native';
+import { FileText } from 'lucide-react-native';
 import type { CategoryScore } from '@/constants/enrichment';
+
+const ENRICHMENT_BG = require('../../../assets/images/backgrounds/enrichment_bg.png');
+const MEMORIES_BG = require('../../../assets/images/backgrounds/memories_card_bg.png');
+const STREAK_BG = require('../../../assets/images/backgrounds/streak_card_bg.png');
+const BENEFI_BG = require('../../../assets/images/backgrounds/benefi_card_bg.png');
 
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -62,6 +67,21 @@ export const InsightsContentCard = React.memo(function InsightsContentCard({
     [categoryScores],
   );
 
+  const tabBg = useMemo(() => {
+    switch (activeTab) {
+      case 'enrichment':
+        return ENRICHMENT_BG;
+      case 'notes':
+        return MEMORIES_BG;
+      case 'insights':
+        return STREAK_BG;
+      case 'preferences':
+        return BENEFI_BG;
+      default:
+        return ENRICHMENT_BG;
+    }
+  }, [activeTab]);
+
   if (activeTab !== 'enrichment') {
     const items = activeTab === 'insights'
       ? insights
@@ -71,27 +91,55 @@ export const InsightsContentCard = React.memo(function InsightsContentCard({
 
     return (
       <View style={styles.card}>
-        <Text style={styles.title}>{TAB_TITLES[activeTab]}</Text>
-        {items.length > 0 ? (
-          <View style={{ gap: 10, marginTop: 14 }}>
-            {items.map((item, index) => (
-              <View key={`${activeTab}-${index}`} style={styles.listItem}>
-                <View style={styles.bullet} />
-                  <Text numberOfLines={4} style={styles.listText}>{toScannableInsight(item)}</Text>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Sparkles size={18} color={COLORS.brand} />
-            </View>
-            <Text style={styles.emptyTitle}>Your story is still unfolding</Text>
-            <Text style={styles.emptyCopy}>
-              Keep capturing memories and Memento will shape these insights over time.
+        <ImageBackground
+          source={tabBg}
+          style={styles.cardBg}
+          resizeMode="cover"
+        >
+          <View style={styles.tabHeaderRow}>
+            <Text style={styles.eyebrow}>
+              {TAB_TITLES[activeTab].toUpperCase()}
             </Text>
+            {items.length > 0 && (
+              <Text style={styles.itemCount}>
+                {items.length} {items.length === 1 ? 'entry' : 'entries'}
+              </Text>
+            )}
           </View>
-        )}
+
+          {items.length > 0 ? (
+            <View style={{ gap: 10, marginTop: 14 }}>
+              {items.map((item, index) => (
+                <View key={`${activeTab}-${index}`} style={styles.listItem}>
+                  <View style={styles.bullet} />
+                  <Text numberOfLines={4} style={styles.listText}>
+                    {toScannableInsight(item)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <FileText size={22} color={COLORS.textWeak} strokeWidth={1.75} />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {activeTab === 'notes'
+                  ? 'No notes yet'
+                  : activeTab === 'insights'
+                    ? 'No reflections yet'
+                    : 'No preferences yet'}
+              </Text>
+              <Text style={styles.emptyCopy}>
+                {activeTab === 'notes'
+                  ? 'As you record memories and stories, your key notes and observations will be preserved here.'
+                  : activeTab === 'insights'
+                    ? 'Keep capturing moments and your personal archive will grow over time.'
+                    : 'Your storytelling style and narrative preferences will appear here as you write.'}
+              </Text>
+            </View>
+          )}
+        </ImageBackground>
       </View>
     );
   }
@@ -100,147 +148,220 @@ export const InsightsContentCard = React.memo(function InsightsContentCard({
 
   return (
     <View style={styles.card}>
-      <View style={styles.headingRow}>
-        <View style={{ flex: 1, paddingRight: 8 }}>
-          <Text style={styles.title}>My Enrichment score</Text>
-          <Text style={styles.description}>
-            Your Enrichment score reflects your memory health across 10 key life areas.
-          </Text>
-        </View>
-        <Text style={styles.score}>{safeScore}%</Text>
-      </View>
-
-      <View
-        style={styles.progress}
-        accessibilityRole="progressbar"
-        accessibilityValue={{ min: 0, max: 100, now: safeScore }}
+      <ImageBackground
+        source={tabBg}
+        style={styles.cardBg}
+        resizeMode="cover"
       >
-        {dimensions.map((dimension, index) => (
-          <View
-            key={dimension.key}
-            style={{ flex: 1, backgroundColor: DIMENSION_COLORS[index] }}
-          />
-        ))}
-      </View>
-
-      <View style={{ gap: 10, marginTop: 18 }}>
-        {dimensions.map((dimension, index) => (
-          <View key={dimension.key} style={styles.dimensionRow}>
-            <View
-              style={[
-                styles.dimensionSwatch,
-                { backgroundColor: DIMENSION_COLORS[index] },
-              ]}
-            />
-            <Text style={styles.dimensionLabel}>{dimension.label}</Text>
-            <Text style={styles.dimensionValue}>{dimension.score}%</Text>
+        <View style={styles.headingRow}>
+          <View style={{ flex: 1, paddingRight: 12 }}>
+            <Text style={styles.eyebrow}>MY ENRICHMENT SCORE</Text>
+            <Text style={styles.description}>
+              Your memory health score across 10 core life dimensions.
+            </Text>
           </View>
-        ))}
-      </View>
+          <View style={styles.scoreContainer}>
+            <Text style={styles.scoreNumber}>{safeScore}</Text>
+            <Text style={styles.scorePercent}>%</Text>
+          </View>
+        </View>
+
+        <View
+          style={styles.progressTrack}
+          accessibilityRole="progressbar"
+          accessibilityValue={{ min: 0, max: 100, now: safeScore }}
+        >
+          {dimensions.map((dimension, index) => (
+            <View
+              key={dimension.key}
+              style={{
+                flex: 1,
+                height: '100%',
+                backgroundColor: DIMENSION_COLORS[index],
+              }}
+            />
+          ))}
+        </View>
+
+        <View style={{ gap: 8, marginTop: 20 }}>
+          {dimensions.map((dimension, index) => (
+            <View key={dimension.key} style={styles.dimensionRow}>
+              <View style={styles.dimensionLeft}>
+                <View
+                  style={[
+                    styles.dimensionSwatch,
+                    { backgroundColor: DIMENSION_COLORS[index] },
+                  ]}
+                />
+                <Text style={styles.dimensionLabel}>{dimension.label}</Text>
+              </View>
+              <View style={styles.dimensionPill}>
+                <Text style={styles.dimensionValue}>{dimension.score}%</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </ImageBackground>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
-    backgroundColor: COLORS.fillWeak,
-    paddingHorizontal: 12,
-    paddingVertical: 15,
+    borderRadius: 24,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
+    overflow: 'hidden',
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  cardBg: {
+    alignSelf: 'stretch',
+    padding: 20,
   },
   headingRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    justifyContent: 'space-between',
   },
-  title: {
-    color: COLORS.textStrong,
-    ...TYPE.body,
-    lineHeight: 20,
+  tabHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  eyebrow: {
+    color: COLORS.textWeak,
+    ...TYPE.eyebrow,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  itemCount: {
+    color: COLORS.textWeak,
+    ...TYPE.metadata,
   },
   description: {
     color: COLORS.textBase,
-    ...TYPE.metadata,
-    lineHeight: 17,
+    ...TYPE.bodySmall,
     marginTop: 6,
+    lineHeight: 19,
   },
-  score: {
-    color: COLORS.textStrong,
-    ...TYPE.displayTitle,
-    lineHeight: 46,
-    letterSpacing: -1.5,
+  scoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    backgroundColor: COLORS.brandSubtle,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 94, 0, 0.15)',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
-  progress: {
-    height: 24,
-    borderRadius: 4,
+  scoreNumber: {
+    color: COLORS.brand,
+    ...TYPE.screenTitle,
+  },
+  scorePercent: {
+    color: COLORS.brand,
+    ...TYPE.uiTitle,
+    marginLeft: 2,
+  },
+  progressTrack: {
+    height: 8,
+    borderRadius: 999,
     flexDirection: 'row',
     overflow: 'hidden',
-    marginTop: 14,
+    marginTop: 18,
+    backgroundColor: COLORS.fillWeak,
+    gap: 2,
   },
   dimensionRow: {
-    minHeight: 22,
+    minHeight: 38,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+  },
+  dimensionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    paddingRight: 8,
   },
   dimensionSwatch: {
-    width: 16,
-    height: 16,
+    width: 12,
+    height: 12,
     borderRadius: 3,
-    marginRight: 8,
+    marginRight: 10,
   },
   dimensionLabel: {
-    flex: 1,
     color: COLORS.textStrong,
     ...TYPE.label,
-    lineHeight: 18,
+  },
+  dimensionPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
   },
   dimensionValue: {
     color: COLORS.textStrong,
-    ...TYPE.label,
-    lineHeight: 18,
+    ...TYPE.metadata,
   },
   listItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
-    borderRadius: 12,
-    padding: 12,
-    backgroundColor: COLORS.card,
+    gap: 12,
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
   },
   bullet: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    marginTop: 6,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 7,
     backgroundColor: COLORS.brand,
   },
   listText: {
     flex: 1,
     color: COLORS.textStrong,
-    ...TYPE.label,
+    ...TYPE.bodySmall,
     lineHeight: 20,
   },
   emptyState: {
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 40,
+    paddingVertical: 36,
   },
   emptyIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.brandSubtle,
+    backgroundColor: COLORS.fillWeak,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
   },
   emptyTitle: {
     color: COLORS.textStrong,
-    ...TYPE.body,
-    marginTop: 12,
+    ...TYPE.cardTitle,
+    marginTop: 14,
   },
   emptyCopy: {
     color: COLORS.textWeak,
-    ...TYPE.metadata,
-    lineHeight: 18,
+    ...TYPE.bodySmall,
+    lineHeight: 20,
     textAlign: 'center',
     marginTop: 6,
   },

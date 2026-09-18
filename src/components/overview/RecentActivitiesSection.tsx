@@ -44,11 +44,11 @@ export function RecentActivitiesSection() {
           Recent <Animated.Text className="text-text-weak italic">Activities</Animated.Text>
         </Animated.Text>
         <TouchableOpacity onPress={handleSeeAll} activeOpacity={0.7}>
-          <Animated.Text className="text-brand" style={TYPE.buttonSmall}>See all</Animated.Text>
+          <Animated.Text style={TYPE.buttonSmall}>See all</Animated.Text>
         </TouchableOpacity>
       </View>
 
-      <View className="bg-white border border-stroke-weaker rounded-[32px] overflow-hidden">
+      <View className="overflow-hidden">
         {activities.map((activity, index) => (
           <ActivityListItem
             key={activity._id || index}

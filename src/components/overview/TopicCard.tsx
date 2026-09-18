@@ -90,7 +90,7 @@ export function TopicCard({ title, image, category, badge, onPress, className }:
       <View className="gap-1 px-1">
         <Animated.Text
           className="text-text-strong leading-tight"
-          style={TYPE.cardTitle}
+          style={TYPE.body}
           numberOfLines={3}
         >
           {title}

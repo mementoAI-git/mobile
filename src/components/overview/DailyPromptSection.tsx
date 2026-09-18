@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
-import { Mic, CheckCircle2, Square, MessageSquareText } from 'lucide-react-native';
+import { Mic, CheckCircle2, Square, MessageSquareText, ArrowRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -165,27 +165,52 @@ export function DailyPromptSection() {
             <Square size={14} color="white" fill="white" />
           </TouchableOpacity>
         ) : (
+          // <View className="flex-row items-center gap-3">
+          //   <TouchableOpacity
+          //     onPress={handleToggleVoice}
+          //     activeOpacity={0.8}
+          //     className="flex-row items-center justify-center gap-2 bg-text-strong rounded-full h-12 px-5"
+          //   >
+          //     <Mic size={18} color="white" strokeWidth={2.5} />
+          //     <Animated.Text className="text-white" style={TYPE.label}>
+          //       Speak reflection
+          //     </Animated.Text>
+          //   </TouchableOpacity>
+
+          //   <TouchableOpacity
+          //     onPress={handleCapture}
+          //     activeOpacity={0.7}
+          //     className="flex-row items-center justify-center gap-2 bg-fill-weaker border border-stroke-weaker rounded-full h-12 px-5"
+          //   >
+          //     <MessageSquareText size={16} color={COLORS.textStrong} strokeWidth={2} />
+          //     <Animated.Text className="text-text-strong" style={TYPE.label}>
+          //       Write
+          //     </Animated.Text>
+          //   </TouchableOpacity>
+          // </View>
+
           <View className="flex-row items-center gap-3">
-            <TouchableOpacity
+            {/* <TouchableOpacity
               onPress={handleToggleVoice}
               activeOpacity={0.8}
               className="flex-row items-center justify-center gap-2 bg-text-strong rounded-full h-12 px-5"
             >
               <Mic size={18} color="white" strokeWidth={2.5} />
               <Animated.Text className="text-white" style={TYPE.label}>
-                Speak reflection
+                Reply Prompt
               </Animated.Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <TouchableOpacity
               onPress={handleCapture}
               activeOpacity={0.7}
-              className="flex-row items-center justify-center gap-2 bg-fill-weaker border border-stroke-weaker rounded-full h-12 px-5"
+              // className="flex-row items-center justify-center gap-2 bg-fill-weaker border border-stroke-weaker rounded-full h-12 px-5"
+              className="flex-row items-center justify-center gap-2 bg-text-strong rounded-full h-12 px-5"
             >
-              <MessageSquareText size={16} color={COLORS.textStrong} strokeWidth={2} />
-              <Animated.Text className="text-text-strong" style={TYPE.label}>
-                Write
+              <Animated.Text className="text-white" style={TYPE.label}>
+                Reply Prompt
               </Animated.Text>
+              <ArrowRight size={16} color={COLORS.background} strokeWidth={2} />
             </TouchableOpacity>
           </View>
         )}
