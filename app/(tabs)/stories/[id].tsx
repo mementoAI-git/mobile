@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ChevronLeft, Pencil, MoreHorizontal,
-  FileText, Music, CalendarDays,
+  FileText, CalendarDays, MessageSquare,
 } from 'lucide-react-native';
 import dayjs from 'dayjs';
 import Animated from 'react-native-reanimated';
@@ -32,6 +32,8 @@ import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { useStoryDetailLogic } from '@/hooks/use-story-detail-logic';
 import { useBackHandler } from '@/hooks/use-back-handler';
+import { useConversationMessages } from '@/hooks/queries/use-memories';
+import { mergeConversationMessagePages } from '@/features/chat/conversation-pagination';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.png');
@@ -227,6 +229,65 @@ const MemoDocumentCard = React.memo(function MemoDocumentCard({
     </TouchableOpacity>
   );
 });
+
+// ─── Prompt Reply Section ─────────────────────────────────────────────────────
+// For daily reflection / prompt memories the user's actual reply is stored as
+// chat messages (role: 'user'), not in memory.body. We fetch them here and
+// display them as a clean prose block.
+
+function PromptReplySection({ memoryId }: { memoryId: string }) {
+  const {
+    data: messagePages,
+    isLoading,
+  } = useConversationMessages(memoryId);
+
+  const userReplies = useMemo(() => {
+    const all = mergeConversationMessagePages(messagePages?.pages ?? []);
+    return all.filter(
+      (m) => m.role === 'user' && (m.text || (m as any).content),
+    );
+  }, [messagePages]);
+
+  if (isLoading) {
+    return (
+      <View style={{ paddingHorizontal: 20, paddingTop: 16, gap: 8 }}>
+        <Skeleton style={{ height: 16, width: '90%', borderRadius: 6 }} />
+        <Skeleton style={{ height: 16, width: '75%', borderRadius: 6 }} />
+        <Skeleton style={{ height: 16, width: '83%', borderRadius: 6 }} />
+      </View>
+    );
+  }
+
+  if (userReplies.length === 0) return null;
+
+  return (
+    <View style={{ paddingHorizontal: 20, paddingTop: 16, gap: 6 }}>
+      {/* Section label */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+        <MessageSquare size={13} color={COLORS.textMuted} strokeWidth={1.8} />
+        <Text style={{ ...TYPE.eyebrow, color: COLORS.textMuted, letterSpacing: 1.1, textTransform: 'uppercase' }}>
+          Your reply
+        </Text>
+      </View>
+
+      {userReplies.map((msg, i) => {
+        const text = (msg.text || (msg as any).content || '').trim();
+        return (
+          <Text
+            key={msg._id || `reply-${i}`}
+            style={{
+              ...TYPE.body,
+              color: COLORS.textStrong,
+              lineHeight: 26,
+            }}
+          >
+            {text}
+          </Text>
+        );
+      })}
+    </View>
+  );
+}
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
@@ -509,6 +570,11 @@ export default function StoryDetailScreen() {
             <StoryHtmlBody html={memory.body} />
           </View>
         ) : null}
+
+        {/* ── Prompt reply thread (for conversation/prompt memories) ── */}
+        {memory.type === 'conversation' && !memory.body && (
+          <PromptReplySection memoryId={memory._id} />
+        )}
 
         {/* ── Other attachments (documents only) ── */}
         {otherAttachments.length > 0 && (
