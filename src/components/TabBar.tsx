@@ -21,13 +21,13 @@ import {
   StyleSheet,
   Platform,
   PanResponder,
+  useWindowDimensions,
 } from 'react-native';
-import { Timer, Search, Home, MessageCircle, BookOpen, Compass } from 'lucide-react-native';
+import { Timer, Settings, Search, Home, MessageCircle, BookOpen, Compass } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { usePathname } from 'expo-router';
-import { useUiStore } from '@/store';
+import { useRouter, usePathname } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { resolveTabSwipeTarget } from '@/lib/tab-swipe';
 import { getTabBarItemWidths } from '@/features/navigation/tab-bar-layout';
@@ -164,20 +164,43 @@ const TabItem = memo(function TabItem({
             style={styles.tabIcon}
             resizeMode="contain"
           />
-        ) : (
-          // Fallback Lucide icon (Capsule tab until asset is added)
+        ) : tabKey === 'capsule' ? (
           <Timer
             size={ICON_SIZE}
-            color={isFocused ? COLORS.textStrong : COLORS.textMuted}
+            color={isFocused ? COLORS.brand : COLORS.textBase}
+            strokeWidth={isFocused ? 2.2 : 1.8}
+          />
+        ) : tabKey === 'stories' ? (
+          <BookOpen
+            size={ICON_SIZE}
+            color={isFocused ? COLORS.brand : COLORS.textBase}
+            strokeWidth={isFocused ? 2.2 : 1.8}
+          />
+        ) : tabKey === 'chat' ? (
+          <MessageCircle
+            size={ICON_SIZE}
+            color={isFocused ? COLORS.brand : COLORS.textBase}
+            strokeWidth={isFocused ? 2.2 : 1.8}
+          />
+        ) : tabKey === 'explore' ? (
+          <Compass
+            size={ICON_SIZE}
+            color={isFocused ? COLORS.brand : COLORS.textBase}
+            strokeWidth={isFocused ? 2.2 : 1.8}
+          />
+        ) : (
+          <Home
+            size={ICON_SIZE}
+            color={isFocused ? COLORS.brand : COLORS.textBase}
             strokeWidth={isFocused ? 2.2 : 1.8}
           />
         )}
 
-        {/* Label — only rendered when active */}
+        {/* Label — only rendered for focused tab */}
         {isFocused && (
           <Animated.Text
-            entering={FadeIn.duration(200)}
-            exiting={FadeOut.duration(150)}
+            entering={FadeIn.duration(160)}
+            exiting={FadeOut.duration(100)}
             style={styles.tabLabel}
             numberOfLines={1}
           >
@@ -191,13 +214,11 @@ const TabItem = memo(function TabItem({
 
 // ─── Main TabBar ──────────────────────────────────────────────────────────────
 
-import { useWindowDimensions } from 'react-native';
-
 export function TabBar({ state, navigation }: TabBarProps) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const pathname = usePathname();
-  const openSheet = useUiStore(s => s.openSheet);
 
   // Count how many tabs are currently mapped into the UI
   const visibleTabsCount = state.routes.filter(r => !!TAB_LABELS[r.name.split('/')[0]]).length;
@@ -213,33 +234,36 @@ export function TabBar({ state, navigation }: TabBarProps) {
   const isHidden =
     pathname === '/chat' ||
     !!pathname.match(/^\/chat\/[^/]+$/) ||
-    !!pathname.match(/^\/(tabs\/)?stories\/[^/]+$/);
+    !!pathname.match(/^\/stories\/[^/]+$/) ||
+    pathname === '/account' ||
+    pathname === '/settings' ||
+    !!pathname.match(/^\/settings\/[^/]+$/);
 
-  const swipeStateRef = useRef({ isHidden, index: state.index, routes: state.routes, navigation });
-  swipeStateRef.current = { isHidden, index: state.index, routes: state.routes, navigation };
+  // ── Swipe responder (retained from original TabBar) ──────────────────────
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const navRef = useRef(navigation);
+  navRef.current = navigation;
 
   const swipeResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        const current = swipeStateRef.current;
-        if (current.isHidden) return false;
-        const horizontalDrag = Math.abs(gestureState.dx);
-        const verticalDrag = Math.abs(gestureState.dy);
-        return horizontalDrag > 28 && horizontalDrag > verticalDrag * 1.2;
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const current = swipeStateRef.current;
-        if (current.isHidden) return;
-        const targetIndex = resolveTabSwipeTarget(current.index, current.routes.length, gestureState.dx);
-        if (targetIndex == null) return;
-        const targetRoute = current.routes[targetIndex];
-        if (!targetRoute) return;
-        Haptics.selectionAsync();
-        current.navigation.navigate(targetRoute.name);
+      onMoveShouldSetPanResponder: (_, { dx, dy }) =>
+        Math.abs(dx) > 15 && Math.abs(dy) < 12,
+      onPanResponderRelease: (_, { dx }) => {
+        const target = resolveTabSwipeTarget(
+          stateRef.current.index,
+          stateRef.current.routes.length,
+          dx,
+        );
+        if (target !== null) {
+          Haptics.selectionAsync();
+          navRef.current.navigate(stateRef.current.routes[target].name);
+        }
       },
     }),
   ).current;
 
+  // ── Tab press handler ─────────────────────────────────────────────────────
   const handleTabPress = useCallback((routeName: string, routeKey: string, isFocused: boolean) => {
     const event = navigation.emit({
       type: 'tabPress',
@@ -251,10 +275,10 @@ export function TabBar({ state, navigation }: TabBarProps) {
     navigation.navigate(routeName);
   }, [navigation]);
 
-  const handleSearchPress = useCallback(() => {
+  const handleSettingsPress = useCallback(() => {
     Haptics.selectionAsync();
-    openSheet('search-memory');
-  }, [openSheet]);
+    router.push('/settings');
+  }, [router]);
 
   const bottomPad = insets.bottom ? insets.bottom + 24 : 36;
 
@@ -303,19 +327,15 @@ export function TabBar({ state, navigation }: TabBarProps) {
         })}
       </View>
 
-      {/* ── Detached search circle ── */}
+      {/* ── Detached settings circle ── */}
       <Pressable
-        onPress={handleSearchPress}
+        onPress={handleSettingsPress}
         accessibilityRole="button"
-        accessibilityLabel="Search"
+        accessibilityLabel="Settings"
         style={styles.searchCircle}
         android_ripple={{ color: COLORS.brandSubtle, borderless: true, radius: 28 }}
       >
-        {ICONS.search ? (
-          <Image source={ICONS.search} style={styles.searchIcon} resizeMode="contain" />
-        ) : (
-          <Search size={22} color={COLORS.textBase} strokeWidth={1.8} />
-        )}
+        <Settings size={22} color={COLORS.textBase} strokeWidth={1.8} />
       </Pressable>
     </Animated.View>
   );

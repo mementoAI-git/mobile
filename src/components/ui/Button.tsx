@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 
-type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'black';
 type Size = 'xs' | 'sm' | 'md' | 'lg';
 
 interface ButtonProps {
@@ -50,14 +50,18 @@ const variantStyles: Record<Variant, { container: string; text: string }> = {
     container: 'bg-error-strong',
     text: 'text-white',
   },
+  black: {
+    container: "bg-black",
+    text: "text-white"
+  }
 };
 
 // All sizes use rounded-full (web rounded-4xl = 32px pill)
 const sizeStyles: Record<Size, { container: string; text: string }> = {
-  xs: { container: 'h-6 px-2.5 gap-1 rounded-full',  text: '' },
-  sm: { container: 'h-8 px-3 gap-1 rounded-full',    text: '' },
+  xs: { container: 'h-6 px-2.5 gap-1 rounded-full', text: '' },
+  sm: { container: 'h-8 px-3 gap-1 rounded-full', text: '' },
   md: { container: 'h-10 px-4 gap-1.5 rounded-full', text: '' }, // compact button (40px)
-  lg: { container: 'h-14 px-6 gap-2 rounded-full',   text: '' }, // standard button (56px)
+  lg: { container: 'h-14 px-6 gap-2 rounded-full', text: '' }, // standard button (56px)
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
