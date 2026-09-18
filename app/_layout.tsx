@@ -46,6 +46,12 @@ import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono';
 import { PatrickHandSC_400Regular } from '@expo-google-fonts/patrick-hand-sc';
 import { Handlee_400Regular } from '@expo-google-fonts/handlee';
 import { CutiveMono_400Regular } from '@expo-google-fonts/cutive-mono';
+import {
+  Geist_400Regular,
+  Geist_500Medium,
+  Geist_600SemiBold,
+  Geist_700Bold,
+} from '@expo-google-fonts/geist';
 
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -266,7 +272,7 @@ function RootLayout() {
     useState<boolean | null>(null);
 
   const hideNativeSplash = useCallback(async () => {
-    await SplashScreen.hideAsync().catch(() => {});
+    await SplashScreen.hideAsync().catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -310,11 +316,16 @@ function RootLayout() {
     PatrickHandSC_400Regular,
     Handlee_400Regular,
     CutiveMono_400Regular,
+    Geist_400Regular,
+    Geist_500Medium,
+    Geist_600SemiBold,
+    Geist_700Bold,
 
     // Map web font family names directly to RN loaded fonts.
     'Patrick Hand SC': PatrickHandSC_400Regular,
     Handlee: Handlee_400Regular,
     Cutive: CutiveMono_400Regular,
+    Geist: Geist_400Regular,
 
     'Portrait Script': require(
       '../assets/fonts/Portrait-script-regular.ttf',
@@ -362,9 +373,9 @@ function RootLayout() {
   useEffect(() => {
     useUiStore.getState().setAppReady(
       navigationReady &&
-        hydrated &&
-        sessionStable &&
-        Boolean(fontsLoaded),
+      hydrated &&
+      sessionStable &&
+      Boolean(fontsLoaded),
     );
   }, [
     navigationReady,
@@ -482,139 +493,146 @@ function RootLayout() {
                     <BackgroundMusicProvider>
                       <OfflineNotice />
 
-                    {shouldInitializeNotifications(
-                      phase === 'authenticated',
-                      Boolean(token),
-                    ) ? (
-                      <AuthenticatedNotificationManager />
-                    ) : null}
+                      {shouldInitializeNotifications(
+                        phase === 'authenticated',
+                        Boolean(token),
+                      ) ? (
+                        <AuthenticatedNotificationManager />
+                      ) : null}
 
-                    <ShareIntentWatcher />
+                      <ShareIntentWatcher />
 
-                    <Stack
-                      screenOptions={{
-                        headerShown: false,
-                      }}
-                    >
-                      <Stack.Screen name="(auth)" />
-
-                      <Stack.Screen name="(onboard)" />
-
-                      <Stack.Screen
-                        name="(tabs)"
-                        options={{
-                          contentStyle: {
-                            backgroundColor:
-                              COLORS.background,
-                          },
+                      <Stack
+                        screenOptions={{
+                          headerShown: false,
                         }}
-                      />
+                      >
+                        <Stack.Screen name="(auth)" />
 
-                      <Stack.Screen
-                        name="account"
-                        options={{
-                          animation:
-                            'slide_from_right',
-                        }}
-                      />
+                        <Stack.Screen name="(onboard)" />
 
-                      <Stack.Screen
-                        name="insights"
-                        options={{
-                          animation:
-                            'slide_from_right',
-                        }}
-                      />
+                        <Stack.Screen
+                          name="(tabs)"
+                          options={{
+                            contentStyle: {
+                              backgroundColor:
+                                COLORS.background,
+                            },
+                          }}
+                        />
 
-                      <Stack.Screen name="chat/[id]" />
+                        <Stack.Screen
+                          name="account"
+                          options={{
+                            animation:
+                              'slide_from_right',
+                          }}
+                        />
 
-                      <Stack.Screen
-                        name="chat/settings"
-                        options={{
-                          animation:
-                            'slide_from_right',
-                          gestureEnabled: false,
-                        }}
-                      />
+                        <Stack.Screen
+                          name="insights"
+                          options={{
+                            animation:
+                              'slide_from_right',
+                          }}
+                        />
 
-                      <Stack.Screen
-                        name="chat/media"
-                        options={{
-                          animation:
-                            'slide_from_right',
-                        }}
-                      />
+                        <Stack.Screen name="chat/[id]" />
 
-                      <Stack.Screen
-                        name="coming-soon"
-                        options={{
-                          presentation:
-                            'fullScreenModal',
-                          animation:
-                            'slide_from_bottom',
-                        }}
-                      />
+                        <Stack.Screen
+                          name="chat/settings"
+                          options={{
+                            animation:
+                              'slide_from_right',
+                            gestureEnabled: false,
+                          }}
+                        />
 
-                      <Stack.Screen
-                        name="voice-call"
-                        options={{
-                          presentation:
-                            'fullScreenModal',
-                          animation:
-                            'slide_from_bottom',
-                        }}
-                      />
+                        <Stack.Screen
+                          name="chat/media"
+                          options={{
+                            animation:
+                              'slide_from_right',
+                          }}
+                        />
 
-                      <Stack.Screen
-                        name="share"
-                        options={{
-                          presentation:
-                            'fullScreenModal',
-                          animation:
-                            'slide_from_bottom',
-                        }}
-                      />
+                        <Stack.Screen
+                          name="coming-soon"
+                          options={{
+                            presentation:
+                              'fullScreenModal',
+                            animation:
+                              'slide_from_bottom',
+                          }}
+                        />
 
-                      <Stack.Screen
-                        name="editor"
-                        options={{
-                          presentation:
-                            'fullScreenModal',
-                          animation:
-                            'slide_from_bottom',
-                        }}
-                      />
+                        <Stack.Screen
+                          name="voice-call"
+                          options={{
+                            presentation:
+                              'fullScreenModal',
+                            animation:
+                              'slide_from_bottom',
+                          }}
+                        />
 
-                      <Stack.Screen
-                        name="create"
-                        options={{
-                          presentation:
-                            'fullScreenModal',
-                          animation: 'none',
-                        }}
-                      />
+                        <Stack.Screen
+                          name="share"
+                          options={{
+                            presentation:
+                              'fullScreenModal',
+                            animation:
+                              'slide_from_bottom',
+                          }}
+                        />
 
-                      <Stack.Screen
-                        name="article"
-                        options={{
-                          presentation:
-                            'fullScreenModal',
-                          animation: 'none',
-                        }}
-                      />
+                        <Stack.Screen
+                          name="editor"
+                          options={{
+                            presentation:
+                              'fullScreenModal',
+                            animation:
+                              'slide_from_bottom',
+                          }}
+                        />
 
-                      <Stack.Screen
-                        name="settings"
-                        options={{
-                          animation:
-                            'slide_from_right',
-                        }}
-                      />
+                        <Stack.Screen
+                          name="create"
+                          options={{
+                            presentation:
+                              'fullScreenModal',
+                            animation: 'none',
+                          }}
+                        />
 
-                      <Stack.Screen name="accept-invite/[id]" />
+                        <Stack.Screen
+                          name="article"
+                          options={{
+                            presentation:
+                              'fullScreenModal',
+                            animation: 'none',
+                          }}
+                        />
 
-                      <Stack.Screen name="+not-found" />
-                    </Stack>
+                        <Stack.Screen
+                          name="settings"
+                          options={{
+                            animation:
+                              'slide_from_right',
+                          }}
+                        />
+
+                        <Stack.Screen
+                          name="splash-preview"
+                          options={{
+                            animation: 'none',
+                          }}
+                        />
+
+                        <Stack.Screen name="accept-invite/[id]" />
+
+                        <Stack.Screen name="+not-found" />
+                      </Stack>
 
                       <SheetManager />
                     </BackgroundMusicProvider>
