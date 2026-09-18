@@ -83,6 +83,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
 }: MasonryMemoryCardProps) {
   // Default press: navigate to detail. Stable regardless of whether onPress is provided.
   const handlePress = useCallback(() => {
+    Haptics.selectionAsync();
     if (onPress) {
       onPress();
     } else {
@@ -151,6 +152,9 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
             <TouchableOpacity
               onPress={handleActions}
               hitSlop={8}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={`Options for ${storyTitle}`}
               className="absolute top-2 right-2 size-8 rounded-full bg-white/20 items-center justify-center"
             >
               <MoreHorizontal size={14} color={COLORS.textInverse} />
@@ -184,6 +188,9 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
           <TouchableOpacity
             onPress={handleActions}
             hitSlop={8}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={`Options for ${storyTitle}`}
             className="absolute top-2 right-2 size-8 rounded-full bg-white/90 items-center justify-center shadow-sm"
           >
             <MoreHorizontal size={14} color={COLORS.textBase} />
@@ -330,6 +337,9 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
         <TouchableOpacity
           onPress={handleActions}
           hitSlop={8}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`Options for ${storyTitle}`}
           className="absolute top-2 right-2 size-7 rounded-full items-center justify-center"
           style={{ backgroundColor: `${surface.border}cc` }}
         >
@@ -353,6 +363,9 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           activeOpacity={0.95}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`Memory: ${storyTitle}`}
         >
           {hasMedia && (
             <View className="overflow-hidden rounded-t-[24px]">
@@ -395,6 +408,9 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
         <TouchableOpacity
           onPress={handleActions}
           hitSlop={8}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`Options for ${storyTitle}`}
           className="absolute top-3 right-3 size-8 rounded-full bg-fill-weak border border-stroke-weaker items-center justify-center"
         >
           <MoreHorizontal size={14} color={COLORS.textBase} />
@@ -411,6 +427,9 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={0.95}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`Memory: ${storyTitle}`}
       >
         {visual}
 

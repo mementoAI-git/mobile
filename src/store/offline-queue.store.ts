@@ -2,27 +2,18 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { toast } from '@/components/ui/Toast';
-import { post, put } from '@/api/mutations';
+import { post, put, del } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { queryClient } from '@/lib/query-client';
 import { logger } from '@/lib/logger';
-import type { MemoryMutationPayload } from '@/features/memories/memory-mutation-payload';
+import {
+  enqueueOfflineMutation,
+  dequeueOfflineMutation,
+  type OfflineMutation,
+  type OfflineMemoryPayload,
+} from '@/features/memories/offline-queue-state';
 
-interface OfflineMutationBase {
-  id: string;
-  createdAt: string;
-}
-
-export type OfflineMutation = OfflineMutationBase &
-  (
-    | { type: 'create_memory'; payload: MemoryMutationPayload }
-    | {
-        type: 'update_memory';
-        payload: { id: string } & Partial<MemoryMutationPayload>;
-      }
-  );
-
-type OfflineMemoryPayload = OfflineMutation['payload'];
+export type { OfflineMutation, OfflineMemoryPayload };
 
 interface OfflineQueueState {
   queue: OfflineMutation[];
@@ -44,21 +35,14 @@ export const useOfflineQueueStore = create<OfflineQueueState>((set, get) => ({
   isSyncing: false,
 
   enqueueMutation: async (type, payload) => {
-    const newMutation = {
-      id: `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-      type,
-      payload,
-      createdAt: new Date().toISOString(),
-    } as OfflineMutation;
-
-    const nextQueue = [...get().queue, newMutation];
+    const nextQueue = enqueueOfflineMutation(get().queue, type, payload);
     set({ queue: nextQueue });
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(nextQueue));
     toast('Saved offline. Syncing automatically when back online.', 'info');
   },
 
   dequeueMutation: async (id) => {
-    const nextQueue = get().queue.filter((item) => item.id !== id);
+    const nextQueue = dequeueOfflineMutation(get().queue, id);
     set({ queue: nextQueue });
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(nextQueue));
   },
@@ -96,8 +80,13 @@ export const useOfflineQueueStore = create<OfflineQueueState>((set, get) => ({
           await post(endpoint.memories, item.payload);
         } else if (item.type === 'update_memory') {
           const { id: memoryId, ...payload } = item.payload;
-          if (memoryId) {
+          if (memoryId && !memoryId.startsWith('offline-')) {
             await put(endpoint.memory.replace(':id', memoryId), payload);
+          }
+        } else if (item.type === 'delete_memory') {
+          const { id: memoryId } = item.payload;
+          if (memoryId && !memoryId.startsWith('offline-')) {
+            await del(endpoint.memory.replace(':id', memoryId));
           }
         }
         await get().dequeueMutation(item.id);
@@ -117,3 +106,4 @@ export const useOfflineQueueStore = create<OfflineQueueState>((set, get) => ({
     toast('Offline sync complete!', 'success');
   },
 }));
+

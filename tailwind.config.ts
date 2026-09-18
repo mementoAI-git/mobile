@@ -140,6 +140,8 @@ const config: Config = {
         'averia-bold':  ['AveriaSerifLibre_700Bold',    'serif'],
         /** Geist — geometric sans used by web for UI numerics/code contexts */
         geist:          ['Geist_400Regular', 'system-ui', 'sans-serif'],
+        'geist-medium': ['Geist_500Medium',  'system-ui', 'sans-serif'],
+        'geist-semi':   ['Geist_600SemiBold','system-ui', 'sans-serif'],
         'geist-bold':   ['Geist_700Bold',    'system-ui', 'sans-serif'],
         /** Georgia — system serif used on web for category card subtitles (18px) */
         georgia:        ['Georgia', 'serif'],

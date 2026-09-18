@@ -26,6 +26,7 @@ import { useRegisterLogic } from '@/hooks/use-register-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import Svg, { Path } from 'react-native-svg';
+import { X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
@@ -171,17 +172,30 @@ export default function RegisterScreen() {
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="on-drag"
           >
-            {/* Logo — collapses away first */}
-            {!isKeyboardVisible && (
-              <Animated.View style={logoStyle} className="mb-10">
-                <Logo size="md" />
-              </Animated.View>
-            )}
+            {/* Top Navigation Row */}
+            <View className="flex-row items-center justify-between mb-8">
+              <Logo size="md" />
+              <TouchableOpacity
+                onPress={() => {
+                  if (router.canGoBack()) {
+                    router.back();
+                  } else {
+                    router.replace('/(auth)/login');
+                  }
+                }}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Close and return to sign in"
+                className="w-10 h-10 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
+              >
+                <X size={18} color={COLORS.textStrong} />
+              </TouchableOpacity>
+            </View>
 
             {/* Heading — collapses second */}
-            <Animated.View style={[headingStyle, { marginBottom: isKeyboardVisible ? 16 : 40 }]}>
-              <Animated.Text className=" text-text-strong mb-2" style={TYPE.displayTitle}>
-                Create account
+            <Animated.View style={[headingStyle, { marginBottom: isKeyboardVisible ? 16 : 32 }]}>
+              <Animated.Text className="text-text-strong mb-2" style={TYPE.displayTitle}>
+                Create an account
               </Animated.Text>
               <Animated.Text className="text-text-base leading-relaxed" style={TYPE.body}>
                 Start preserving your memories
@@ -191,24 +205,24 @@ export default function RegisterScreen() {
             <View className="gap-4">
               {/* Full OAuth pills — only shown when keyboard is hidden */}
               {!isKeyboardVisible && (
-                <Animated.View style={oauthStyle} className="gap-4">
+                <Animated.View style={oauthStyle} className="gap-3">
                   <TouchableOpacity
                     onPress={handleGoogleSignup}
                     disabled={googleLoading || appleLoading || isPending}
                     activeOpacity={0.8}
-                    className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
+                    className="flex-row items-center justify-center gap-3 rounded-full min-h-[52px] px-4 border border-stroke-weak bg-fill-weaker"
                   >
                     {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={18} />}
-                    <Animated.Text className="text-text-strong" style={TYPE.body}>Continue with Google</Animated.Text>
+                    <Animated.Text className="text-text-strong" style={TYPE.button}>Continue with Google</Animated.Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleAppleSignup}
                     disabled={googleLoading || appleLoading || isPending}
                     activeOpacity={0.8}
-                    className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
+                    className="flex-row items-center justify-center gap-3 rounded-full min-h-[52px] px-4 border border-stroke-weak bg-fill-weaker"
                   >
                     {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={18} />}
-                    <Animated.Text className="text-text-strong" style={TYPE.body}>Continue with Apple</Animated.Text>
+                    <Animated.Text className="text-text-strong" style={TYPE.button}>Continue with Apple</Animated.Text>
                   </TouchableOpacity>
                 </Animated.View>
               )}

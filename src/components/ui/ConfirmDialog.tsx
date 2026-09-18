@@ -1,8 +1,9 @@
 /**
  * ConfirmDialog — on-brand replacement for React Native's Alert.alert()
  *
- * Renders a fully custom Modal over the current screen, styled with Memento's
- * warm cream background, serif title, rounded-full buttons, and brand backdrop.
+ * Renders via @gorhom/bottom-sheet BottomSheetModal over the current screen,
+ * styled with Memento's warm cream background, serif title, rounded-full buttons,
+ * and brand backdrop.
  *
  * Usage:
  *   const [visible, setVisible] = useState(false);
@@ -19,9 +20,8 @@
  *   />
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
-  Modal,
   View,
   Text,
   TouchableOpacity,
@@ -29,13 +29,15 @@ import {
   Platform,
 } from 'react-native';
 import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { getModalBottomPadding } from '@/features/layout/modal-safe-area';
+import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,33 +69,28 @@ export function ConfirmDialog({
   buttons,
   onClose,
 }: ConfirmDialogProps) {
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
-      <SafeAreaProvider>
-        <ConfirmDialogContent
-          title={title}
-          message={message}
-          buttons={buttons}
-          onClose={onClose}
-        />
-      </SafeAreaProvider>
-    </Modal>
-  );
-}
-
-function ConfirmDialogContent({
-  title,
-  message,
-  buttons,
-  onClose,
-}: Omit<ConfirmDialogProps, 'visible'>) {
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    if (visible) {
+      bottomSheetRef.current?.present();
+    } else {
+      bottomSheetRef.current?.dismiss();
+    }
+  }, [visible]);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        opacity={0.5}
+      />
+    ),
+    [],
+  );
 
   const handleButton = useCallback((btn: ConfirmButton) => {
     if (btn.disabled) return;
@@ -106,97 +103,87 @@ function ConfirmDialogContent({
   }, []);
 
   return (
-    <View style={StyleSheet.absoluteFill}>
-      {/* Backdrop */}
-      <TouchableOpacity
-        style={styles.backdrop}
-        activeOpacity={1}
-        onPress={onClose}
-      />
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      enableDynamicSizing
+      backdropComponent={renderBackdrop}
+      handleIndicatorStyle={styles.handleIndicator}
+      backgroundStyle={styles.sheetBackground}
+      onDismiss={onClose}
+    >
+      <BottomSheetView
+        style={[
+          styles.card,
+          {
+            paddingBottom: Math.max(
+              getSheetBottomPadding(insets.bottom, 16),
+              24,
+            ),
+          },
+        ]}
+      >
+        {/* Title */}
+        <Text style={styles.title}>{title}</Text>
 
-      {/* Card */}
-      <View style={[styles.container, { paddingBottom: Math.max(getModalBottomPadding(insets.bottom, 16), 32) }]}>
-        <View style={styles.card}>
-          {/* Title */}
-          <Text style={styles.title}>{title}</Text>
+        {/* Optional message */}
+        {message ? <Text style={styles.message}>{message}</Text> : null}
 
-          {/* Optional message */}
-          {message ? (
-            <Text style={styles.message}>{message}</Text>
-          ) : null}
-
-          {/* Buttons */}
-          <View style={styles.buttons}>
-            {buttons.map((btn, idx) => (
-              <TouchableOpacity
-                key={idx}
-                onPress={() => handleButton(btn)}
-                disabled={btn.disabled}
-                activeOpacity={0.85}
+        {/* Buttons */}
+        <View style={styles.buttons}>
+          {buttons.map((btn, idx) => (
+            <TouchableOpacity
+              key={idx}
+              onPress={() => handleButton(btn)}
+              disabled={btn.disabled}
+              activeOpacity={0.85}
+              style={[
+                styles.btn,
+                btn.variant === 'primary' && styles.btnPrimary,
+                btn.variant === 'destructive' && styles.btnDestructive,
+                btn.variant === 'ghost' && styles.btnGhost,
+                !btn.variant && styles.btnPrimary,
+                btn.disabled && styles.btnDisabled,
+              ]}
+            >
+              <Text
                 style={[
-                  styles.btn,
-                  btn.variant === 'primary' && styles.btnPrimary,
-                  btn.variant === 'destructive' && styles.btnDestructive,
-                  btn.variant === 'ghost' && styles.btnGhost,
-                  // default to primary when variant is omitted
-                  !btn.variant && styles.btnPrimary,
-                  btn.disabled && styles.btnDisabled,
+                  styles.btnText,
+                  btn.variant === 'primary' && styles.btnTextPrimary,
+                  !btn.variant && styles.btnTextPrimary,
+                  btn.variant === 'destructive' && styles.btnTextDestructive,
+                  btn.variant === 'ghost' && styles.btnTextGhost,
+                  btn.disabled && styles.btnTextDisabled,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.btnText,
-                    btn.variant === 'primary' && styles.btnTextPrimary,
-                    !btn.variant && styles.btnTextPrimary,
-                    btn.variant === 'destructive' && styles.btnTextDestructive,
-                    btn.variant === 'ghost' && styles.btnTextGhost,
-                    btn.disabled && styles.btnTextDisabled,
-                  ]}
-                >
-                  {btn.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                {btn.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      </View>
-    </View>
+      </BottomSheetView>
+    </BottomSheetModal>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(23,11,0,0.5)',
+  sheetBackground: {
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
   },
 
-  container: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 16,
-    paddingTop: 8,
+  handleIndicator: {
+    backgroundColor: COLORS.strokeStrong,
+    opacity: 0.3,
+    width: 36,
   },
 
   card: {
-    backgroundColor: COLORS.background,
-    borderRadius: 28,
     paddingHorizontal: 20,
-    paddingTop: 28,
-    paddingBottom: 8,
+    paddingTop: 12,
     gap: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.shadow,
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.07,
-        shadowRadius: 20,
-      },
-      android: { elevation: 8 },
-    }),
   },
 
   title: {
@@ -263,7 +250,6 @@ const styles = StyleSheet.create({
   },
 
   btnText: {
-    // base — overridden by variant styles above
     ...TYPE.button,
     color: COLORS.textStrong,
   },

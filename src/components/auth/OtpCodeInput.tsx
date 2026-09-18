@@ -1,9 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
   TextInput as RNTextInput,
-  Pressable,
   Platform,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -15,7 +14,7 @@ export interface OtpCodeInputProps {
   onChange: (value: string) => void;
   onComplete?: (code: string) => void;
   disabled?: boolean;
-  hasError?: boolean;
+  error?: boolean;
   autoFocus?: boolean;
 }
 
@@ -26,18 +25,20 @@ export function OtpCodeInput({
   onChange,
   onComplete,
   disabled = false,
-  hasError = false,
+  error = false,
   autoFocus = true,
 }: OtpCodeInputProps) {
   const inputRef = useRef<RNTextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
 
-  const handlePress = () => {
+  const handlePress = useCallback(() => {
     if (disabled) return;
+    Haptics.selectionAsync();
     inputRef.current?.focus();
-  };
+  }, [disabled]);
 
-  const handleTextChange = (text: string) => {
+  const handleTextChange = useCallback((text: string) => {
+    if (disabled) return;
     const normalized = normalizeOtpInput(text);
     if (normalized !== value) {
       Haptics.selectionAsync();
@@ -47,27 +48,28 @@ export function OtpCodeInput({
         onComplete?.(normalized);
       }
     }
-  };
+  }, [disabled, onChange, onComplete, value]);
+
+  const handleFocus = useCallback(() => setIsFocused(true), []);
+  const handleBlur = useCallback(() => setIsFocused(false), []);
 
   // Determine which cell index is currently active for typing
   const activeIndex = Math.min(value.length, 5);
 
   return (
-    <Pressable
-      onPress={handlePress}
-      accessible
-      accessibilityRole="text"
-      accessibilityLabel={`Verification code input, currently ${value.length} of 6 digits entered`}
-      className="w-full my-2"
-    >
+    <View className="w-full my-2">
       {/* 6 Visual Digit Cells */}
-      <View className="flex-row items-center justify-between gap-2.5">
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        className="flex-row items-center justify-between gap-2.5"
+      >
         {OTP_CELLS.map((index) => {
           const char = value[index] ?? '';
           const isCellActive = isFocused && !disabled && index === activeIndex;
 
           let borderClass = 'border-stroke-weaker';
-          if (hasError) {
+          if (error) {
             borderClass = 'border-error';
           } else if (isCellActive) {
             borderClass = 'border-brand border-2';
@@ -91,23 +93,26 @@ export function OtpCodeInput({
         })}
       </View>
 
-      {/* Hidden Native Input for Autofill, Paste, and Keyboard */}
+      {/* Transparent native input owns editing, accessibility, autofill, and paste. */}
       <RNTextInput
         ref={inputRef}
         value={value}
         onChangeText={handleTextChange}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+        onPressIn={handlePress}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         keyboardType="number-pad"
         textContentType="oneTimeCode"
         autoComplete={Platform.OS === 'android' ? 'sms-otp' : 'one-time-code'}
-        maxLength={6}
         editable={!disabled}
         autoFocus={autoFocus}
         caretHidden
-        className="absolute -top-[9999px] -left-[9999px] w-1 h-1 opacity-0"
-        aria-hidden
+        accessibilityLabel="Verification code"
+        accessibilityHint={error ? 'Check your six-digit code and try again.' : 'Enter the six-digit code from your email.'}
+        accessibilityState={{ disabled }}
+        style={TYPE.input}
+        className="absolute inset-0 w-full h-full text-transparent bg-transparent"
       />
-    </Pressable>
+    </View>
   );
 }

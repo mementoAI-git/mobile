@@ -16,7 +16,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { BottomSheetView, BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { Search, X, Clock, ChevronRight, Sparkles } from 'lucide-react-native';
+import { Search, X, Clock, ChevronRight, Compass } from 'lucide-react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import dayjs from 'dayjs';
@@ -182,6 +182,8 @@ export function SearchMemorySheet() {
   const [history, setHistory] = useState<string[]>([]);
   const inputRef = useRef<any>(null);
 
+  const [isFocused, setIsFocused] = useState(false);
+
   // Load history on mount
   useEffect(() => {
     loadHistory(email).then(setHistory);
@@ -210,13 +212,6 @@ export function SearchMemorySheet() {
   const isEmpty = hasSearchQuery ? !isFetching && results.length === 0 : false;
 
   // ── Navigate only after the keyboard has fully dismissed ──────────────
-  // Calling router.push() while the keyboard is still animating down causes
-  // the new screen to measure its layout against a keyboard-present window
-  // height on Android, scattering the UI.
-  // We listen for keyboardDidHide (fires after the animation completes)
-  // rather than using a fixed setTimeout which races on slow devices.
-  // A 600ms fallback covers the case where the keyboard was already hidden
-  // (no event fires) or the user tapped without the input focused.
   const navigateAfterKeyboard = useCallback((navigate: () => void) => {
     let done = false;
     const run = () => {
@@ -277,13 +272,32 @@ export function SearchMemorySheet() {
   // ── Render ─────────────────────────────────────────────────────────────
   return (
     <BottomSheetView style={styles.container}>
+      {/* ── Sheet Header ── */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Search</Text>
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.selectionAsync();
+            closeSheet();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Close search"
+          style={styles.closeBtn}
+          hitSlop={6}
+        >
+          <X size={16} color={COLORS.textStrong} />
+        </TouchableOpacity>
+      </View>
+
       {/* ── Search input ── */}
-      <View style={styles.inputWrapper}>
-        <Search size={18} color={COLORS.textWeak} />
+      <View style={[styles.inputWrapper, isFocused && styles.inputWrapperFocused]}>
+        <Search size={18} color={isFocused ? COLORS.brand : COLORS.textWeak} strokeWidth={2} />
         <BottomSheetTextInput
           ref={inputRef}
           value={query}
           onChangeText={setQuery}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           placeholder="Search your memories"
           placeholderTextColor={COLORS.textMuted}
           autoFocus
@@ -291,8 +305,8 @@ export function SearchMemorySheet() {
           returnKeyType="search"
         />
         {query.length > 0 && (
-          <TouchableOpacity onPress={handleClear} activeOpacity={0.7} style={styles.clearBtn}>
-            <X size={14} color={COLORS.textWeak} />
+          <TouchableOpacity onPress={handleClear} activeOpacity={0.7} style={styles.clearBtn} hitSlop={6}>
+            <X size={12} color={COLORS.textWeak} />
           </TouchableOpacity>
         )}
       </View>
@@ -309,8 +323,10 @@ export function SearchMemorySheet() {
             {suggestions.length > 0 && (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Sparkles size={13} color={COLORS.brand} />
-                  <Text style={styles.sectionTitle}>Suggested for you</Text>
+                  <View style={styles.sectionTitleGroup}>
+                    <Compass size={14} color={COLORS.textWeak} strokeWidth={1.8} />
+                    <Text style={styles.sectionTitle}>Suggested for you</Text>
+                  </View>
                 </View>
                 <View style={styles.suggestionList}>
                   {suggestions.map((s: any) => (
@@ -328,8 +344,11 @@ export function SearchMemorySheet() {
             {history.length > 0 && (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Recent searches</Text>
-                  <TouchableOpacity onPress={handleClearAll} activeOpacity={0.7}>
+                  <View style={styles.sectionTitleGroup}>
+                    <Clock size={14} color={COLORS.textWeak} />
+                    <Text style={styles.sectionTitle}>Recent searches</Text>
+                  </View>
+                  <TouchableOpacity onPress={handleClearAll} activeOpacity={0.7} hitSlop={8}>
                     <Text style={styles.clearAllText}>Clear all</Text>
                   </TouchableOpacity>
                 </View>
@@ -349,7 +368,7 @@ export function SearchMemorySheet() {
             {/* No history + no suggestions */}
             {suggestions.length === 0 && history.length === 0 && (
               <View style={styles.emptyCenter}>
-                <Search size={32} color={COLORS.textDisabled} />
+                <Search size={36} color={COLORS.textMuted} strokeWidth={1.5} />
                 <Text style={styles.emptyTitle}>Search your memories</Text>
                 <Text style={styles.emptyBody}>
                   Type anything to search across all your stories and conversations.
@@ -367,7 +386,7 @@ export function SearchMemorySheet() {
               <View style={styles.section}>
                 {[1, 2, 3, 4].map((i) => (
                   <View key={i} style={styles.skeletonRow}>
-                    <View style={{ flex: 1, gap: 6 }}>
+                    <View style={{ flex: 1, gap: 8 }}>
                       <Skeleton className="h-4 w-3/4 rounded-full" />
                       <Skeleton className="h-3 w-full rounded-full" />
                     </View>
@@ -376,17 +395,19 @@ export function SearchMemorySheet() {
               </View>
             ) : isEmpty ? (
               <View style={styles.emptyCenter}>
-                <Search size={32} color={COLORS.textDisabled} />
+                <Search size={36} color={COLORS.textMuted} strokeWidth={1.5} />
                 <Text style={styles.emptyTitle}>Nothing found</Text>
                 <Text style={styles.emptyBody}>
-                  No memories match "{debouncedQuery}". Try different keywords.
+                  No memories match &ldquo;{debouncedQuery}&rdquo;. Try different keywords.
                 </Text>
               </View>
             ) : (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  {results.length} {results.length === 1 ? 'result' : 'results'}
-                </Text>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>
+                    {results.length} {results.length === 1 ? 'RESULT' : 'RESULTS'}
+                  </Text>
+                </View>
                 {results.map((memory: any) => (
                   <MemoMemoryRowItem
                     key={memory._id}
@@ -407,8 +428,27 @@ export function SearchMemorySheet() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 8,
+    paddingTop: 4,
     paddingBottom: 32,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  headerTitle: {
+    ...TYPE.sectionTitle,
+    color: COLORS.textStrong,
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.fillWeaker,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -417,15 +457,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     height: 52,
     borderRadius: 999,
-    backgroundColor: COLORS.fillWeak,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.strokeWeak,
+    backgroundColor: COLORS.fillWeaker,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
     paddingHorizontal: 16,
     gap: 10,
   },
+  inputWrapperFocused: {
+    borderColor: COLORS.brand,
+  },
   input: {
     flex: 1,
-    ...TYPE.body,
+    ...TYPE.input,
     color: COLORS.textStrong,
   },
   clearBtn: {
@@ -448,36 +491,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  sectionTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
   sectionTitle: {
-    ...TYPE.metadata,
+    ...TYPE.eyebrow,
     color: COLORS.textWeak,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 1.2,
   },
   clearAllText: {
-    ...TYPE.metadata,
+    ...TYPE.buttonSmall,
     color: COLORS.brand,
   },
 
   // Suggestions
   suggestionList: {
-    gap: 2,
+    gap: 8,
   },
   suggestionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     backgroundColor: COLORS.fillWeaker,
-    borderRadius: 14,
-    gap: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
+    gap: 12,
   },
   suggestionText: {
     ...TYPE.label,
-    color: COLORS.textBase,
+    color: COLORS.textStrong,
     flex: 1,
     lineHeight: 20,
   },
@@ -491,15 +540,15 @@ const styles = StyleSheet.create({
   recentPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.fillWeak,
-    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: COLORS.fillWeaker,
+    borderWidth: 1,
     borderColor: COLORS.strokeWeaker,
     borderRadius: 999,
-    paddingLeft: 10,
-    paddingRight: 6,
-    paddingVertical: 6,
-    gap: 4,
-    maxWidth: 200,
+    paddingLeft: 12,
+    paddingRight: 8,
+    paddingVertical: 7,
+    gap: 6,
+    maxWidth: 220,
   },
   recentPillText: {
     flexDirection: 'row',
@@ -508,7 +557,7 @@ const styles = StyleSheet.create({
   },
   recentLabel: {
     ...TYPE.bodySmall,
-    color: COLORS.textBase,
+    color: COLORS.textStrong,
     flexShrink: 1,
   },
   recentPillRemove: {
@@ -524,30 +573,33 @@ const styles = StyleSheet.create({
   resultRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     backgroundColor: COLORS.card,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 16,
+    borderWidth: 1,
     borderColor: COLORS.strokeWeaker,
-    gap: 8,
-    marginBottom: 4,
+    gap: 12,
+    marginBottom: 8,
   },
   resultContent: {
     flex: 1,
-    gap: 3,
+    gap: 4,
   },
   resultTitle: {
-    ...TYPE.label,
+    ...TYPE.uiTitle,
     color: COLORS.textStrong,
   },
   resultBody: {
-    ...TYPE.metadata,
-    color: COLORS.textWeak,
+    ...TYPE.bodySmall,
+    color: '#555555',
+    lineHeight: 18,
   },
   resultDate: {
-    ...TYPE.metadata,
+    ...TYPE.eyebrow,
     color: COLORS.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
     marginTop: 2,
   },
 
@@ -557,7 +609,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     gap: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1,
     borderBottomColor: COLORS.strokeWeaker,
   },
 
@@ -566,15 +618,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 48,
-    gap: 8,
+    gap: 10,
   },
   emptyTitle: {
-    ...TYPE.uiTitle,
+    ...TYPE.sectionTitle,
     color: COLORS.textStrong,
     marginTop: 8,
   },
   emptyBody: {
-    ...TYPE.label,
+    ...TYPE.bodySmall,
     color: COLORS.textWeak,
     textAlign: 'center',
     maxWidth: 260,

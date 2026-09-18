@@ -20,10 +20,11 @@ export function useCreateMemory() {
       const serializedPayload = serializeMemoryMutationPayload(payload);
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
-        await enqueueMutation('create_memory', serializedPayload);
+        const offlineId = `offline-${Date.now()}`;
+        await enqueueMutation('create_memory', { ...serializedPayload, _offlineId: offlineId });
         return {
           data: {
-            _id: `offline-${Date.now()}`,
+            _id: offlineId,
             title: payload.title,
             body: payload.body,
             tags: payload.tags || [],
@@ -35,7 +36,26 @@ export function useCreateMemory() {
       }
       return post<IMemory>(endpoint.memories, serializedPayload);
     },
-    onSuccess: (_res, variables) => {
+    onSuccess: (res, variables) => {
+      const createdMemory = (res as any)?.data;
+      if (createdMemory) {
+        const injector = (old: any) => {
+          if (!old?.pages || old.pages.length === 0) return old;
+          const firstPage = old.pages[0];
+          return {
+            ...old,
+            pages: [
+              {
+                ...firstPage,
+                docs: [createdMemory, ...(firstPage.docs ?? [])],
+              },
+              ...old.pages.slice(1),
+            ],
+          };
+        };
+        queryClient.setQueriesData({ queryKey: [queryKeys.stories()[0]] }, injector);
+        queryClient.setQueriesData({ queryKey: [queryKeys.memories()[0]] }, injector);
+      }
       invalidateMemoryQueries(queryClient, {
         promptId: variables.daily_prompt?.prompt_id,
         promptText: variables.daily_prompt?.pinned_text,
@@ -104,9 +124,17 @@ export function useUpdateMemory(id: string) {
 
 export function useDeleteMemory() {
   const queryClient = useQueryClient();
+  const enqueueMutation = useOfflineQueueStore((s) => s.enqueueMutation);
+
   return useMutation({
-    mutationFn: (id: string) =>
-      del(endpoint.memory.replace(':id', id)),
+    mutationFn: async (id: string) => {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        await enqueueMutation('delete_memory', { id });
+        return { data: { success: true, id } };
+      }
+      return del(endpoint.memory.replace(':id', id));
+    },
     onSuccess: (_res, id) => {
       // Instantly remove the deleted item from all list caches — no refetch needed.
       const remover = (old: any) => {

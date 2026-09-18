@@ -11,6 +11,7 @@ const acquisitionSurfaces = [
   'app/(auth)/two-factor.tsx',
   'app/(onboard)/preferences.tsx',
   'app/(onboard)/nickname.tsx',
+  'app/(onboard)/summary.tsx',
   'app/(onboard)/beneficiary.tsx',
   'app/(onboard)/index.tsx',
   'app/accept-invite/[id].tsx',

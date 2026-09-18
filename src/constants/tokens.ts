@@ -18,7 +18,8 @@ export const COLORS = {
   linkPreview: '#22C661',
 
   // Brand
-  brand: '#FF5E00',
+  // brand: '#FF5E00',
+  brand: "#E98246",
   brandWeak: 'rgba(255,94,0,0.8)',
   brandTint: 'rgba(255,94,0,0.2)',
   brandSubtle: 'rgba(255,94,0,0.05)',
@@ -183,4 +184,8 @@ export const FONTS = {
   serifMedium: 'EBGaramond_500Medium',
   serifBold: 'EBGaramond_700Bold',
   mono: 'AzeretMono_400Regular',
+  geist: 'Geist_400Regular',
+  geistMedium: 'Geist_500Medium',
+  geistSemi: 'Geist_600SemiBold',
+  geistBold: 'Geist_700Bold',
 };

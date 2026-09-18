@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import Svg, { Defs, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -61,13 +61,17 @@ const CHIP_COLORS: Record<CinematicSplashCard['tone'], string> = {
 const SOFT = Easing.bezierFn(0.4, 0, 0.2, 1);
 
 interface AnimatedSplashProps {
-  onDone: () => void;
-  onReady: () => Promise<void>;
+  onDone?: () => void;
+  onReady?: () => Promise<void>;
   /**
    * Speed multiplier for the clock. 1 = full 8s cinematic (first launch),
    * 2 = 4s compressed replay (returning user).
    */
   replaySpeed?: number;
+  /** Keep the splash on-screen without disappearing after the animation completes */
+  persistOnDone?: boolean;
+  /** Automatically loop the animation continuously */
+  loop?: boolean;
 }
 
 function phase(value: number, start: number, duration: number) {
@@ -87,31 +91,13 @@ interface ClockProps {
 }
 
 const CinematicBackdrop = memo(function CinematicBackdrop({ clock }: ClockProps) {
-  const veilStyle = useAnimatedStyle(() => {
-    const t = phase(clock.value, 0, CINEMATIC_SPLASH.veilDuration);
-    return { opacity: 1 - t, transform: [{ translateY: `${-16 * t}%` }] };
-  });
-  const soilStyle = useAnimatedStyle(() => {
-    const t = phase(clock.value, 0, CINEMATIC_SPLASH.soilDuration);
-    return { opacity: 1 - t, transform: [{ translateY: `${72 * t}%` }] };
-  });
-  const bloomStyle = useAnimatedStyle(() => {
-    const t = phase(clock.value, 0, CINEMATIC_SPLASH.bloomDuration);
-    return {
-      opacity: t,
-      transform: [{ translateY: `${24 * (1 - t)}%` }, { scale: 0.7 + 0.3 * t }],
-    };
-  });
-  const crackStyle = useAnimatedStyle(() => {
-    const t = phase(clock.value, 0, CINEMATIC_SPLASH.crackDuration);
-    return {
-      opacity: interpolate(t, [0, 0.4, 1], [0.9, 1, 0], Extrapolation.CLAMP),
-      transform: [{ scale: 0.72 + 0.46 * t }],
-    };
+  const animatedStyle = useAnimatedStyle(() => {
+    const t = phase(clock.value, 0, 600);
+    return { opacity: t };
   });
 
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, animatedStyle]}>
       <LinearGradient
         colors={[COLORS.splashSky, COLORS.splashPeach, COLORS.splashPaper]}
         locations={[0, 0.52, 1]}
@@ -122,56 +108,7 @@ const CinematicBackdrop = memo(function CinematicBackdrop({ clock }: ClockProps)
         locations={[0, 0.18, 1]}
         style={styles.paper}
       />
-      <Animated.View style={[styles.bloom, bloomStyle]}>
-        <Svg width="100%" height="100%">
-          <Defs>
-            <RadialGradient id="bloom" cx="50%" cy="50%" rx="50%" ry="50%">
-              <Stop offset="0" stopColor={COLORS.splashEmber} stopOpacity="0.42" />
-              <Stop offset="0.68" stopColor={COLORS.splashEmber} stopOpacity="0" />
-            </RadialGradient>
-          </Defs>
-          <Rect width="100%" height="100%" fill="url(#bloom)" />
-        </Svg>
-      </Animated.View>
-      <Animated.View style={[styles.soil, soilStyle]}>
-        <LinearGradient
-          colors={[
-            COLORS.splashTransparent,
-            COLORS.splashSoilLight,
-            COLORS.splashSoil,
-            COLORS.splashSoilDeep,
-          ]}
-          locations={[0, 0.28, 0.7, 1]}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-      <Animated.View style={[StyleSheet.absoluteFill, styles.veil, veilStyle]}>
-        <LinearGradient
-          colors={[
-            COLORS.splashVeilDeep,
-            COLORS.splashVeil,
-            COLORS.splashVeilAmber,
-            COLORS.splashVeilGold,
-            COLORS.splashVeilLight,
-            COLORS.splashTransparent,
-          ]}
-          locations={[0, 0.2, 0.46, 0.68, 0.86, 1]}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-      <Animated.View style={[styles.crack, crackStyle]}>
-        <Svg width="100%" height="100%">
-          <Defs>
-            <RadialGradient id="crack" cx="50%" cy="50%" rx="50%" ry="50%">
-              <Stop offset="0" stopColor={COLORS.splashEmber} stopOpacity="0.72" />
-              <Stop offset="0.32" stopColor={COLORS.splashGlow} stopOpacity="0.38" />
-              <Stop offset="0.68" stopColor={COLORS.splashGlow} stopOpacity="0" />
-            </RadialGradient>
-          </Defs>
-          <Rect width="100%" height="100%" fill="url(#crack)" />
-        </Svg>
-      </Animated.View>
-    </View>
+    </Animated.View>
   );
 });
 
@@ -247,7 +184,7 @@ const CinematicMemoryCard = memo(function CinematicMemoryCard({
         animatedStyle,
       ]}
     >
-      <View style={[styles.memoryPhoto, { height: width }]}>
+      <View style={[styles.memoryPhoto, { height: Math.round(width * 0.714) }]}>
         <Animated.Image source={CARD_IMAGES[card.id]} resizeMode="cover" style={StyleSheet.absoluteFill} />
         <Animated.View style={[StyleSheet.absoluteFill, styles.development, developmentStyle]} />
       </View>
@@ -302,9 +239,9 @@ const PromptCard = memo(function PromptCard({ clock, stageWidth, stageHeight }: 
     return {
       opacity: t,
       transform: [
-        { translateX: stageWidth * 0.58 * 0.18 * (1 - t) },
-        { translateY: -stageHeight * 0.24 * (1 - t) },
-        { rotate: `${8 - 10 * t}deg` },
+        { translateX: stageWidth * 0.28 * (1 - t) },
+        { translateY: -stageHeight * 0.18 * (1 - t) },
+        { rotate: `${6 - 13 * t}deg` },
         { scale: 0.92 + 0.08 * t },
       ],
     };
@@ -314,7 +251,7 @@ const PromptCard = memo(function PromptCard({ clock, stageWidth, stageHeight }: 
       pointerEvents="none"
       style={[
         styles.prompt,
-        { top: stageHeight * 0.062, right: -stageWidth * 0.06, width: stageWidth * 0.58 },
+        { top: stageHeight * 0.05, right: -stageWidth * 0.18, width: stageWidth * 0.72 },
         animatedStyle,
       ]}
     >
@@ -411,12 +348,18 @@ const BrandPromise = memo(function BrandPromise({ clock, stageHeight }: ClockPro
 });
 
 
-export function AnimatedSplash({ onDone, onReady, replaySpeed = 1 }: AnimatedSplashProps) {
+export function AnimatedSplash({
+  onDone,
+  onReady,
+  replaySpeed = 1,
+  persistOnDone = false,
+  loop = false,
+}: AnimatedSplashProps) {
   const { width, height } = useWindowDimensions();
   const clock = useSharedValue(0);
   const dismiss = useSharedValue(0);
-  const [reduceMotion, setReduceMotion] = useState<boolean | null>(null);
-  const [nativeSplashHidden, setNativeSplashHidden] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState<boolean | null>(false);
+  const [nativeSplashHidden, setNativeSplashHidden] = useState(true);
   const [visible, setVisible] = useState(true);
   const finishedRef = useRef(false);
   const mountedRef = useRef(true);
@@ -434,17 +377,19 @@ export function AnimatedSplash({ onDone, onReady, replaySpeed = 1 }: AnimatedSpl
 
   const finish = useCallback(() => {
     if (finishedRef.current || !mountedRef.current) return;
-    finishedRef.current = true;
-    setVisible(false);
-    onDoneRef.current();
-  }, []);
+    if (!persistOnDone) {
+      finishedRef.current = true;
+      setVisible(false);
+    }
+    onDoneRef.current?.();
+  }, [persistOnDone]);
 
   const handleLayout = useCallback(() => {
     if (readyStartedRef.current) return;
     readyStartedRef.current = true;
-    void onReadyRef.current().finally(() => {
-      if (mountedRef.current) setNativeSplashHidden(true);
-    });
+    if (onReadyRef.current) {
+      void onReadyRef.current();
+    }
   }, []);
 
   useEffect(() => {
@@ -476,16 +421,34 @@ export function AnimatedSplash({ onDone, onReady, replaySpeed = 1 }: AnimatedSpl
       return;
     }
     const playDuration = Math.round(CINEMATIC_SPLASH.duration / replaySpeed);
-    clock.value = withTiming(
-      CINEMATIC_SPLASH.duration,
-      { duration: playDuration, easing: Easing.linear },
-      (complete) => {
-        if (complete) runOnJS(finish)();
-      },
-    );
-  }, [clock, dismiss, finish, nativeSplashHidden, reduceMotion, replaySpeed]);
+    const startAnim = () => {
+      clock.value = 0;
+      clock.value = withTiming(
+        CINEMATIC_SPLASH.duration,
+        { duration: playDuration, easing: Easing.linear },
+        (complete) => {
+          if (complete) {
+            if (loop && mountedRef.current) {
+              runOnJS(startAnim)();
+            } else {
+              runOnJS(finish)();
+            }
+          }
+        },
+      );
+    };
+
+    startAnim();
+
+    return () => {
+      cancelAnimation(clock);
+    };
+  }, [clock, dismiss, finish, loop, nativeSplashHidden, reduceMotion, replaySpeed]);
 
   const containerStyle = useAnimatedStyle(() => {
+    if (persistOnDone) {
+      return { opacity: 1 };
+    }
     const timedExit = softPhase(
       clock.value,
       CINEMATIC_SPLASH.exitStart,
@@ -539,17 +502,13 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     zIndex: 9999,
     overflow: 'hidden',
-    backgroundColor: COLORS.splashPaper,
+    backgroundColor: '#ffffff',
   },
   sky: { position: 'absolute', top: 0, left: 0, right: 0, height: '46%' },
   paper: { position: 'absolute', top: '40%', left: 0, right: 0, bottom: 0 },
-  bloom: { position: 'absolute', left: '-30%', bottom: '-8%', width: '160%', height: '48%' },
-  soil: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '62%', zIndex: 8 },
-  veil: { zIndex: 9 },
-  crack: { position: 'absolute', left: '-25%', bottom: '-18%', width: '150%', height: '58%', zIndex: 11 },
   particle: { position: 'absolute', bottom: '-4%', zIndex: 10, backgroundColor: COLORS.splashDust },
   sparkle: { position: 'absolute', zIndex: 6, width: 36, height: 36 },
-  memoryCard: { position: 'absolute', zIndex: 5, alignItems: 'flex-start', gap: 6 },
+  memoryCard: { position: 'absolute', zIndex: 5, alignItems: 'flex-start' },
   memoryPhoto: {
     position: 'relative',
     width: '100%',
@@ -562,7 +521,19 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   development: { backgroundColor: COLORS.splashDevelop },
-  memoryChip: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
+  memoryChip: {
+    zIndex: 2,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: -10,
+    marginLeft: 8,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   memoryChipText: { ...TYPE.eyebrow, color: COLORS.splashInk },
   prompt: {
     position: 'absolute',
@@ -596,7 +567,7 @@ const styles = StyleSheet.create({
     height: 90,
     marginLeft: -45,
     zIndex: 12,
-    shadowColor: COLORS.splashEmber,
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.28,
     shadowRadius: 22,

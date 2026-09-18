@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, ImageBackground, TouchableOpacity } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { Zap } from 'lucide-react-native';
+import { Search } from 'lucide-react-native';
 import { Avatar } from './Avatar';
 import { useUserStore, useUiStore } from '@/store';
 import { useProfile } from '@/hooks/queries/use-profile';
@@ -9,18 +9,29 @@ import { useRouter } from 'expo-router';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import * as Haptics from 'expo-haptics';
+import { ZapIconWarm } from './icons/CapsuleStatIcons';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 
 interface DashboardHeaderProps {
   title: string;
   showStreak?: boolean;
+  showSearch?: boolean;
   rightElement?: React.ReactNode;
   /** Optional override — if not provided, DashboardHeader opens the streak sheet itself. */
   onStreakPress?: () => void;
+  /** Optional override — if not provided, DashboardHeader opens the search-memory sheet itself. */
+  onSearchPress?: () => void;
 }
 
-export function DashboardHeader({ title, showStreak = true, rightElement, onStreakPress }: DashboardHeaderProps) {
+export function DashboardHeader({
+  title,
+  showStreak = true,
+  showSearch = true,
+  rightElement,
+  onStreakPress,
+  onSearchPress,
+}: DashboardHeaderProps) {
   const router = useRouter();
   const user = useUserStore((s) => s.user);
   const { data: profile } = useProfile();
@@ -37,6 +48,15 @@ export function DashboardHeader({ title, showStreak = true, rightElement, onStre
     }
   }, [onStreakPress, openSheet]);
 
+  const handleSearchPress = useCallback(() => {
+    Haptics.selectionAsync();
+    if (onSearchPress) {
+      onSearchPress();
+    } else {
+      openSheet('search-memory');
+    }
+  }, [onSearchPress, openSheet]);
+
   return (
     <View className="relative bg-background overflow-hidden">
       <ImageBackground source={PATTERN} className="absolute inset-0 opacity-20" />
@@ -47,25 +67,43 @@ export function DashboardHeader({ title, showStreak = true, rightElement, onStre
         >
           {title}
         </Animated.Text>
-        <View className="flex-row items-center gap-3">
+        <View className="flex-row items-center gap-2">
           {rightElement}
+          {showSearch && (
+            <TouchableOpacity
+              onPress={handleSearchPress}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Search memories"
+              hitSlop={8}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: COLORS.fillWeaker,
+              }}
+            >
+              <Search size={19} color={COLORS.textStrong} strokeWidth={2} />
+            </TouchableOpacity>
+          )}
           {showStreak && (
             <TouchableOpacity
               onPress={handleStreakPress}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`Current streak: ${streakCount} days`}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 6,
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-                // backgroundColor: COLORS.fillWeaker,
-                // backgroundColor: `${COLORS.brand}50`,
-                backgroundColor: COLORS.brandSubtle,
+                gap: 5,
+                paddingHorizontal: 10,
+                paddingVertical: 7,
                 borderRadius: 8,
               }}
             >
-              <Zap size={16} color={COLORS.brand} fill={COLORS.brand} />
+              <ZapIconWarm size={20} />
               <Animated.Text style={{ ...TYPE.label, color: COLORS.textStrong }}>
                 {streakCount}
               </Animated.Text>
@@ -78,12 +116,14 @@ export function DashboardHeader({ title, showStreak = true, rightElement, onStre
             }}
             activeOpacity={0.8}
             hitSlop={4}
-            className="border-2 border-transparent focus:border-brand/20 rounded-full ml-1"
+            accessibilityRole="button"
+            accessibilityLabel="Account"
+            className="border-2 border-transparent focus:border-brand/20 rounded-full ml-0.5"
           >
             <Avatar
               uri={activeUser?.picture_url || activeUser?.picture}
               name={activeUser?.fullname || activeUser?.first_name || activeUser?.email}
-              size="md"
+              size="lg"
             />
           </TouchableOpacity>
         </View>

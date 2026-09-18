@@ -100,7 +100,7 @@ export default function VerifyEmailScreen() {
               onChange={setCode}
               onComplete={(completedCode) => handleVerify(completedCode)}
               disabled={isVerifying}
-              hasError={Boolean(errorMessage)}
+              error={Boolean(errorMessage)}
               autoFocus
             />
 

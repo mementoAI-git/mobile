@@ -133,6 +133,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
             onPressIn={() => { cardScale.value = withSpring(0.98); }}
             onPressOut={() => { cardScale.value = withSpring(1); }}
             activeOpacity={0.95}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={`Time capsule: ${capsule.title || 'Untitled Capsule'}, status ${statusLabels[capsule.status] ?? capsule.status}`}
             className="bg-white rounded-[22px] overflow-hidden border border-stroke-weaker"
           >
             <View className="p-3 flex-row gap-3">
@@ -183,6 +186,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                       useUiStore.getState().openSheet('capsule-actions', { capsule });
                     }}
                     hitSlop={15}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Options for capsule ${capsule.title || 'Untitled Capsule'}`}
                     className="items-center justify-center"
                     style={{ width: scale(24), height: scale(24) }}
                   >
@@ -269,6 +275,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
           onPressIn={() => { cardScale.value = withSpring(0.98); }}
           onPressOut={() => { cardScale.value = withSpring(1); }}
           activeOpacity={0.95}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`Time capsule: ${capsule.title || 'Untitled Capsule'}, status ${statusLabels[capsule.status] ?? capsule.status}`}
           className="bg-white rounded-[22px] overflow-hidden border border-stroke-weaker shadow-sm"
         >
           <View className="p-4 gap-3">
@@ -285,6 +294,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                   useUiStore.getState().openSheet('capsule-actions', { capsule });
                 }}
                 hitSlop={15}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={`Options for capsule ${capsule.title || 'Untitled Capsule'}`}
                 className="size-7 items-center justify-center"
               >
                 <MoreVertical size={16} color={COLORS.textWeak} />

@@ -202,7 +202,7 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
             {
               _id: createMessageId(),
               role: 'ai',
-              text: 'Sorry, something went wrong. Please try again.',
+              text: 'We lost connection for a moment. Please check your network and try again.',
               created_at: new Date().toISOString(),
             },
           ]);

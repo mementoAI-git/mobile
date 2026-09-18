@@ -6,11 +6,21 @@ import { useRegister } from '@/hooks/mutations/use-auth-mutations';
 import * as Haptics from 'expo-haptics';
 import { normalizeAuthCompletion } from '@/api/contract-adapter';
 
+import { validateRegistrationPassword } from '@/features/auth/registration-policy';
+
 const schema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   email: z.string().email('Enter a valid email'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z.string().superRefine((val, ctx) => {
+    const res = validateRegistrationPassword(val);
+    if (!res.valid) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: res.message ?? 'Password does not meet requirements',
+      });
+    }
+  }),
 });
 
 export type RegisterFormData = z.infer<typeof schema>;

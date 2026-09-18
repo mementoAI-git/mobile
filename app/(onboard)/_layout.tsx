@@ -11,9 +11,14 @@ export default function OnboardLayout() {
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
-          contentStyle: { backgroundColor: COLORS.onboardingCream },
+          contentStyle: { backgroundColor: COLORS.background },
         }}
-      />
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="nickname" />
+        <Stack.Screen name="preferences" />
+        <Stack.Screen name="summary" />
+      </Stack>
     </>
   );
 }
