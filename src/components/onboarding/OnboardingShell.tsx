@@ -19,6 +19,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { Button, Logo } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { cn } from '@/lib/utils';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 
@@ -27,6 +28,8 @@ export interface OnboardingAction {
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
+  rounded?: 'full' | 'xl' | 'lg' | '2xl';
+  className?: string;
   testID?: string;
 }
 
@@ -34,6 +37,8 @@ export interface OnboardingShellProps {
   step?: number;
   totalSteps?: number;
   stepLabel?: string;
+  indicatorVariant?: 'bars' | 'dots';
+  skipButtonVariant?: 'text' | 'pill';
   title?: string;
   subtitle?: string;
   onBack?: () => void;
@@ -54,6 +59,8 @@ export function OnboardingShell({
   step,
   totalSteps = 4,
   stepLabel,
+  indicatorVariant = 'bars',
+  skipButtonVariant = 'text',
   title,
   subtitle,
   onBack,
@@ -71,6 +78,9 @@ export function OnboardingShell({
 }: OnboardingShellProps) {
   const hasHeader = showLogo || onBack || onSkip || step !== undefined;
   const hasFooter = Boolean(primaryAction || secondaryAction || footer || errorMessage);
+
+  const isDots = indicatorVariant === 'dots';
+  const isPillSkip = skipButtonVariant === 'pill' || isDots;
 
   const content = (
     <Animated.View
@@ -128,22 +138,36 @@ export function OnboardingShell({
 
             {step !== undefined ? (
               <View className="items-center justify-center gap-1.5">
-                <View className="flex-row items-center gap-1.5">
-                  {Array.from({ length: totalSteps }).map((_, index) => (
-                    <Animated.View
-                      key={index}
-                      layout={LinearTransition}
-                      className={`rounded-full ${
-                        index < step ? 'bg-brand' : 'bg-brand/15'
-                      }`}
-                      style={{
-                        width: index === step - 1 ? 20 : 6,
-                        height: 6,
-                      }}
-                    />
-                  ))}
-                </View>
-                {stepLabel ? (
+                {isDots ? (
+                  <View className="flex-row items-center gap-2">
+                    {Array.from({ length: totalSteps }).map((_, index) => (
+                      <Animated.View
+                        key={index}
+                        layout={LinearTransition}
+                        className={`size-2 rounded-full ${
+                          index < step ? 'bg-brand' : 'bg-fill-weak'
+                        }`}
+                      />
+                    ))}
+                  </View>
+                ) : (
+                  <View className="flex-row items-center gap-1.5">
+                    {Array.from({ length: totalSteps }).map((_, index) => (
+                      <Animated.View
+                        key={index}
+                        layout={LinearTransition}
+                        className={`rounded-full ${
+                          index < step ? 'bg-brand' : 'bg-brand/15'
+                        }`}
+                        style={{
+                          width: index === step - 1 ? 20 : 6,
+                          height: 6,
+                        }}
+                      />
+                    ))}
+                  </View>
+                )}
+                {stepLabel && !isDots ? (
                   <Text
                     className="text-text-weak tracking-widest uppercase"
                     style={TYPE.eyebrow}
@@ -154,7 +178,7 @@ export function OnboardingShell({
               </View>
             ) : null}
 
-            <View className="w-16 items-end justify-center">
+            <View className="w-20 items-end justify-center">
               {onSkip ? (
                 <Button
                   variant="ghost"
@@ -162,8 +186,12 @@ export function OnboardingShell({
                   disabled={isSkipping}
                   loading={isSkipping}
                   accessibilityLabel={skipLabel}
-                  rightIcon={<ChevronRight size={14} color={COLORS.textWeak} />}
-                  className="min-h-[44px] px-0 gap-1"
+                  rightIcon={isPillSkip ? undefined : <ChevronRight size={14} color={COLORS.textWeak} />}
+                  className={
+                    isPillSkip
+                      ? 'min-h-[44px] px-3.5 py-1 rounded-full bg-fill-weaker border border-stroke-weaker'
+                      : 'min-h-[44px] px-0 gap-1'
+                  }
                 >
                   {skipLabel}
                 </Button>
@@ -210,13 +238,18 @@ export function OnboardingShell({
               <View className="flex-row items-center gap-3">
                 {secondaryAction ? (
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     size="lg"
+                    rounded={secondaryAction.rounded ?? 'full'}
                     onPress={secondaryAction.onPress}
                     loading={secondaryAction.loading}
                     disabled={secondaryAction.disabled}
                     accessibilityLabel={secondaryAction.label}
-                    className="flex-1 h-14 rounded-full"
+                    className={cn(
+                      'flex-1 bg-card border border-stroke-weak',
+                      secondaryAction.rounded === 'xl' ? '!h-[52px]' : 'h-14',
+                      secondaryAction.className,
+                    )}
                   >
                     {secondaryAction.label}
                   </Button>
@@ -225,11 +258,16 @@ export function OnboardingShell({
                 {primaryAction ? (
                   <Button
                     size="lg"
+                    rounded={primaryAction.rounded ?? 'full'}
                     onPress={primaryAction.onPress}
                     loading={primaryAction.loading}
                     disabled={primaryAction.disabled}
                     accessibilityLabel={primaryAction.label}
-                    className="flex-1 h-14 bg-brand rounded-full"
+                    className={cn(
+                      'flex-1 bg-brand',
+                      primaryAction.rounded === 'xl' ? '!h-[52px]' : 'h-14',
+                      primaryAction.className,
+                    )}
                   >
                     {primaryAction.label}
                   </Button>

@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { TextInput } from '@/components/ui';
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { useFirstRunOnboarding } from '@/hooks/use-first-run-onboarding';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-
-const NICKNAME_IMG = require('../../assets/images/onboarding/quill-ink.png');
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 export default function NicknameScreen() {
   const router = useRouter();
@@ -40,67 +39,82 @@ export default function NicknameScreen() {
     router.push('/(onboard)/preferences');
   };
 
-  const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    }
-  };
-
   return (
     <OnboardingShell
       step={1}
       totalSteps={4}
-      stepLabel="Step 1 of 4 · Preferred Name"
-      onBack={handleBack}
+      indicatorVariant="dots"
       onSkip={handleSkip}
       isSkipping={isSkipping}
+      skipLabel="Skip →"
       errorMessage={error}
       primaryAction={{
         label: 'Continue',
         onPress: handleContinue,
         disabled: !value.trim(),
+        rounded: 'xl',
       }}
     >
-      <View className="items-center justify-center my-6">
-        <Animated.View
-          entering={FadeInUp.duration(600)}
-          className="size-36 rounded-full bg-fill-weak border border-stroke-weaker items-center justify-center shadow-sm"
-        >
-          <Image
-            source={NICKNAME_IMG}
-            style={{ width: 100, height: 100 }}
-            resizeMode="contain"
-          />
-        </Animated.View>
-      </View>
+      {/* Bouquet Visual */}
+      <Animated.View entering={FadeInDown.duration(400)} style={styles.emojiContainer}>
+        <Text style={TYPE.displayTitle}>💐</Text>
+      </Animated.View>
 
-      <Animated.View entering={FadeInDown.delay(200)} className="mb-6">
-        <Text className="text-text-strong text-center mb-2" style={TYPE.displayTitle}>
-          How should we{"\n"}address you?
+      {/* Heading */}
+      <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.headingContainer}>
+        <Text style={styles.titleText}>
+          How should we{'\n'}address{' '}
+          <Text style={styles.brandItalic}>you?</Text>
         </Text>
-        <Text className="text-text-base text-center leading-relaxed" style={TYPE.body}>
-          We’ll use this name to personalize how Memento talks with you.
+        <Text style={styles.subtitleText}>
+          We’ll use your name to personalize your experience and how Memento AI talks to you.
         </Text>
       </Animated.View>
 
-      <Animated.View entering={FadeInDown.delay(300)} className="gap-2">
-        <Text className="text-text-base ml-1" style={TYPE.label}>
-          Preferred Name
-        </Text>
+      {/* Form Field */}
+      <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.fieldContainer}>
         <TextInput
+          label="Preferred name"
           value={value}
           onChangeText={(text) => {
             setValue(text);
             if (error) setError(null);
           }}
-          placeholder="e.g. Janie, Dad, Chef Mike"
+          placeholder="Eg: Jane"
+          variant="rounded"
+          hint="This could be a nickname"
           error={error ?? undefined}
           autoFocus
         />
-        <Text className="text-text-weak ml-1 mt-1" style={TYPE.metadata}>
-          This is the name your AI companion will use.
-        </Text>
       </Animated.View>
     </OnboardingShell>
   );
 }
+
+const styles = StyleSheet.create({
+  emojiContainer: {
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+  headingContainer: {
+    marginBottom: 24,
+  },
+  titleText: {
+    ...TYPE.displayTitle,
+    color: COLORS.textStrong,
+    marginBottom: 8,
+  },
+  brandItalic: {
+    color: COLORS.brand,
+    fontStyle: 'italic',
+  },
+  subtitleText: {
+    ...TYPE.body,
+    color: COLORS.textStrong,
+    lineHeight: 22,
+  },
+  fieldContainer: {
+    gap: 8,
+  },
+});
+
