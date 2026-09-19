@@ -1,6 +1,6 @@
 export interface ComingSoonBenefit {
   description: string;
-  icon: 'headphones' | 'sparkles' | 'sliders';
+  icon: 'headphones' | 'sparkles' | 'sliders' | 'timer' | 'heart';
   title: string;
 }
 
@@ -8,7 +8,7 @@ export interface ComingSoonFeature {
   benefits: ComingSoonBenefit[];
   description: string;
   eyebrow: string;
-  key: 'generic' | 'narration';
+  key: 'generic' | 'narration' | 'capsules';
   title: string;
 }
 
@@ -44,8 +44,32 @@ const FEATURES: Record<string, ComingSoonFeature> = {
       },
     ],
   },
+  capsules: {
+    key: 'capsules',
+    eyebrow: 'TIME CAPSULES · COMING SOON',
+    title: 'Deliver memories to the future',
+    description: 'Seal conversations, letters, and voice notes into digital time capsules that unseal on significant dates.',
+    benefits: [
+      {
+        icon: 'timer',
+        title: 'Scheduled milestones',
+        description: 'Choose a birthday, anniversary, or future milestone for your capsule to be revealed.',
+      },
+      {
+        icon: 'sparkles',
+        title: 'Curated stories & media',
+        description: 'Combine reflections, photos, and voice notes into a beautifully styled legacy artifact.',
+      },
+      {
+        icon: 'heart',
+        title: 'Direct to loved ones',
+        description: 'Designate trusted recipients who will receive an unsealing invitation when the moment arrives.',
+      },
+    ],
+  },
 };
 
 export function resolveComingSoonFeature(featureKey?: string) {
   return (featureKey && FEATURES[featureKey]) || GENERIC_FEATURE;
 }
+

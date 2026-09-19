@@ -4,26 +4,18 @@ import { completeAuthResponse } from './auth-completion';
 import type { AuthCompletion } from '@/api/contract-adapter';
 import type { IAuth, IUser } from '@/types';
 
-export interface UnsupportedRegistrationEmailCapability {
-  kind: 'unsupported';
-  capability: 'code-verification' | 'code-resend';
-  requestedDelivery: 'code';
-  supportedDelivery: 'link';
-  reason: string;
+export interface RegistrationCodeSentResult {
+  kind: 'sent';
+  delivery: 'code' | 'link';
+  email: string;
 }
 
 export type VerifyRegistrationEmailResult =
-  | (AuthCompletion & { delivery: 'link' })
-  | UnsupportedRegistrationEmailCapability;
+  | (AuthCompletion & { delivery: 'link' | 'code' });
 
-export type ResendRegistrationCodeResult =
-  UnsupportedRegistrationEmailCapability;
+export type ResendRegistrationCodeResult = RegistrationCodeSentResult;
 
-export interface RegistrationLinkSentResult {
-  kind: 'sent';
-  delivery: 'link';
-  email: string;
-}
+export type RegistrationLinkSentResult = RegistrationCodeSentResult;
 
 type VerificationRequest = (
   url: string,
@@ -40,43 +32,82 @@ interface ResendDependencies {
   request: VerificationRequest;
 }
 
+export interface VerifyRegistrationEmailOptions {
+  email?: string;
+  type?: 'verify' | 'reset';
+}
+
 export async function verifyRegistrationEmail(
   token: string,
   dependencies: VerificationDependencies,
+  options?: VerifyRegistrationEmailOptions,
 ): Promise<VerifyRegistrationEmailResult> {
   const value = token.trim();
-  if (/^\d{6}$/.test(value)) {
-    return {
-      kind: 'unsupported',
-      capability: 'code-verification',
-      requestedDelivery: 'code',
-      supportedDelivery: 'link',
-      reason: 'The deployed API verifies email links, not six-digit codes.',
-    };
+  const isCode = /^\d{6}$/.test(value);
+
+  const payload: Record<string, string> = { token: value };
+  if (options?.email) {
+    payload.email = options.email.trim().toLowerCase();
+  }
+  if (options?.type) {
+    payload.type = options.type;
   }
 
   const response = await dependencies.request(
     endpoint.verifyEmail,
-    { token: value },
+    payload,
     { skipAuth: true },
   );
+
+  if (
+    response.success !== true ||
+    (response.status !== undefined && (response.status < 200 || response.status >= 300))
+  ) {
+    const message =
+      (response as any)?.message ||
+      (response.data as any)?.message ||
+      'Invalid or expired verification code.';
+    throw new Error(message);
+  }
+
+  if (options?.type === 'reset') {
+    return {
+      kind: 'redirect',
+      delivery: isCode ? 'code' : 'link',
+      href: '/(auth)/set-password',
+    } as any;
+  }
+
   const completion = await completeAuthResponse(
     response,
     dependencies.establishSession,
   );
-  return { ...completion, delivery: 'link' };
+  return { ...completion, delivery: isCode ? 'code' : 'link' };
 }
 
 export async function resendRegistrationCode(
-  _email: string,
-  _dependencies: ResendDependencies,
+  email: string,
+  dependencies: ResendDependencies,
 ): Promise<ResendRegistrationCodeResult> {
+  const response = await dependencies.request(
+    endpoint.resendVerificationLink,
+    { email, type: 'verify', delivery: 'code' },
+    { skipAuth: true },
+  );
+
+  if (
+    response.success !== true ||
+    (response.status !== undefined &&
+      (response.status < 200 || response.status >= 300))
+  ) {
+    throw new Error('The server did not acknowledge the verification code request.');
+  }
+
+  const responseEmail = (response.data as { email?: unknown } | null)?.email;
   return {
-    kind: 'unsupported',
-    capability: 'code-resend',
-    requestedDelivery: 'code',
-    supportedDelivery: 'link',
-    reason: 'The deployed API can resend a verification link, not a six-digit code.',
+    kind: 'sent',
+    delivery: 'code',
+    email: typeof responseEmail === 'string' ? responseEmail : email,
   };
 }
 

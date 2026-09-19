@@ -15,6 +15,10 @@ describe('coming soon feature catalog', () => {
       key: 'narration',
       title: 'Listen to your memories',
     });
+    expect(catalog!.resolveComingSoonFeature('capsules')).toMatchObject({
+      key: 'capsules',
+      title: 'Deliver memories to the future',
+    });
     expect(catalog!.resolveComingSoonFeature('not-a-real-feature')).toMatchObject({
       key: 'generic',
       title: 'Something thoughtful is on the way',
