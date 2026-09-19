@@ -108,6 +108,18 @@ export const COLORS = {
   onboardingTextSecondary: '#7A6A5E',
   onboardingTextMuted: '#B0A098',
   onboardingGreenSoft: '#8BAF8B',
+  onboardingUserLime: '#8CB843',
+
+  // Summary card thematic pastel surfaces
+  summaryBlueBg: '#F1F6FD',
+  summaryBlueBorder: '#C9DEF7',
+  summaryBlueText: '#3B82F6',
+  summaryPurpleBg: '#FAF5FF',
+  summaryPurpleBorder: '#E9D5FF',
+  summaryPurpleText: '#8B5CF6',
+  summaryPeachBg: '#FFF7F0',
+  summaryPeachBorder: '#FCD8BC',
+  summaryPeachText: '#E98246',
 
   // ── Blue ramp — mirrors web's --color-blue-* (steps 5 and 8/9 intentionally absent) ──
   blue1: '#f1f6fd',
@@ -183,6 +195,7 @@ export const FONTS = {
   serif: 'EBGaramond_400Regular',
   serifMedium: 'EBGaramond_500Medium',
   serifBold: 'EBGaramond_700Bold',
+  serifItalic: 'EBGaramond_400Regular_Italic',
   mono: 'AzeretMono_400Regular',
   geist: 'Geist_400Regular',
   geistMedium: 'Geist_500Medium',

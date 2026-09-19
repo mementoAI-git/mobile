@@ -15,6 +15,8 @@ interface InputProps extends TextInputProps {
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode;
   InputComponent?: any;
+  variant?: 'pill' | 'rounded';
+  rounded?: 'full' | 'xl' | 'lg' | number;
 }
 
 export function TextInput({
@@ -22,6 +24,8 @@ export function TextInput({
   error,
   hint,
   size = 'default',
+  variant = 'pill',
+  rounded,
   containerClassName,
   inputClassName,
   rightElement,
@@ -32,6 +36,7 @@ export function TextInput({
   ...props
 }: InputProps) {
   const [focused, setFocused] = useState(false);
+  const isRounded = variant === 'rounded';
 
   // Animate from 0 (rest) to 1 (focused)
   const focusAnim = useRef(new Animated.Value(0)).current;
@@ -44,32 +49,39 @@ export function TextInput({
     }).start();
   }, [focused, focusAnim]);
 
-  // Border color: strokeWeaker at rest → brand on focus; always error when invalid
+  // Border color: strokeWeaker/strokeWeak at rest → brand on focus; always error when invalid
   const borderColor = error
     ? COLORS.error
     : focusAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [COLORS.strokeWeaker, COLORS.brand],
+        outputRange: [isRounded ? COLORS.strokeWeak : COLORS.strokeWeaker, COLORS.brand],
       });
 
-  // Border width: 0 at rest (invisible) → 1.5 on focus / always visible for errors
+  // Border width: 1 at rest for rounded → 1.5 on focus / always visible for errors
   const borderWidth = error
     ? 1.5
     : focusAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [0, 1.5],
+        outputRange: [isRounded ? 1 : 0, 1.5],
       });
 
-  const inputHeight = size === 'compact' ? 48 : 56;
+  const inputHeight = isRounded
+    ? (size === 'compact' ? 46 : 50)
+    : (size === 'compact' ? 48 : 56);
+
+  const radius = rounded
+    ? (typeof rounded === 'number' ? rounded : rounded === 'xl' ? 12 : rounded === 'lg' ? 10 : 999)
+    : (isRounded ? 12 : (props.multiline ? 20 : 999));
 
   return (
     <View className={cn('gap-1.5', containerClassName)}>
       {label && (
         <Text
           style={{
-            ...TYPE.bodySmall,
-            color: focused ? COLORS.brand : COLORS.textBase,
-            marginLeft: 4,
+            ...(isRounded ? TYPE.label : TYPE.bodySmall),
+            color: isRounded ? COLORS.textStrong : (focused ? COLORS.brand : COLORS.textBase),
+            marginLeft: 2,
+            marginBottom: isRounded ? 2 : 0,
           }}
         >
           {label}
@@ -81,10 +93,10 @@ export function TextInput({
           {
             flexDirection: 'row',
             alignItems: props.multiline ? 'flex-start' : 'center',
-            backgroundColor: COLORS.fillWeaker,
+            backgroundColor: isRounded ? '#ffffff' : COLORS.fillWeaker,
             borderWidth,
             borderColor,
-            borderRadius: props.multiline ? 20 : 999,
+            borderRadius: radius,
             paddingHorizontal: 16,
             minHeight: props.multiline ? undefined : inputHeight,
             height: props.multiline ? undefined : inputHeight,

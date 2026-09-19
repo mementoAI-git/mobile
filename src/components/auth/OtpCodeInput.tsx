@@ -68,23 +68,23 @@ export function OtpCodeInput({
           const char = value[index] ?? '';
           const isCellActive = isFocused && !disabled && index === activeIndex;
 
-          let borderClass = 'border-stroke-weaker';
+          let borderClass = 'border-brand/20';
           if (error) {
             borderClass = 'border-error';
           } else if (isCellActive) {
             borderClass = 'border-brand border-2';
           } else if (char) {
-            borderClass = 'border-stroke-weak';
+            borderClass = 'border-brand/40';
           }
 
           return (
             <View
               key={index}
-              className={`flex-1 h-14 sm:h-16 items-center justify-center rounded-2xl bg-fill-weaker border ${borderClass}`}
+              className={`flex-1 h-14 sm:h-16 items-center justify-center rounded-2xl bg-brand/5 border ${borderClass}`}
             >
               <Text
-                className="text-text-strong text-center"
-                style={TYPE.uiTitle}
+                className="text-brand text-center"
+                style={TYPE.stat}
               >
                 {char}
               </Text>
