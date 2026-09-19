@@ -7,6 +7,7 @@ import { useUiStore } from '@/store';
 import { usePersona, useMemoryInsightsSummary, useUserContext } from '@/hooks/queries/use-persona';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/utils';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -178,7 +179,19 @@ export function MemoryInsightsSheet() {
           </View>
         ) : (
           <View className="gap-3">
-            {filtered.length === 0 ? (
+            {personaLoading && !persona && !context ? (
+              <View className="gap-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <View key={i} className="flex-row items-start gap-3 bg-fill-weaker p-4 rounded-xl border border-stroke-weaker">
+                    <Skeleton className="size-8 rounded-lg" />
+                    <View className="flex-1 gap-2 mt-0.5">
+                      <Skeleton className="h-4 w-full rounded-md" />
+                      <Skeleton className="h-4 w-3/4 rounded-md" />
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : filtered.length === 0 ? (
               <View className="py-12 items-center justify-center gap-3">
                 <View className="size-12 rounded-full bg-white flex items-center justify-center shadow-sm">
                   <Sparkles size={20} color={COLORS.textWeak} />

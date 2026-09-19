@@ -4,7 +4,7 @@ import { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomShee
 import { X, Search, Check } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { Button } from '@/components/ui';
+import { Button, Skeleton } from '@/components/ui';
 import { useMemories } from '@/hooks/queries/use-memories';
 import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,7 +23,7 @@ export const SelectFromMemoryModal = React.memo(
     const [localSelected, setLocalSelected] = useState<string[]>([]);
     const [query, setQuery] = useState('');
 
-    const { data } = useMemories();
+    const { data, isLoading } = useMemories();
     const memories = useMemo(() => data?.pages.flatMap((p) => p.docs) ?? [], [data?.pages]);
     const selectedSet = useMemo(() => new Set(localSelected), [localSelected]);
 
@@ -127,15 +127,28 @@ export const SelectFromMemoryModal = React.memo(
           </View>
 
           {/* List */}
-          <BottomSheetFlatList
-            data={results}
-            keyExtractor={(item) => item._id}
-            renderItem={renderItem}
-            numColumns={2}
-            columnWrapperStyle={{ justifyContent: 'space-between' }}
-            contentContainerStyle={{ paddingBottom: 80 }}
-            showsVerticalScrollIndicator={false}
-          />
+          {isLoading && !memories.length ? (
+            <View className="flex-row gap-4">
+              <View className="flex-1 gap-4">
+                <Skeleton className="h-[180px] w-full rounded-2xl" />
+                <Skeleton className="h-[140px] w-full rounded-2xl" />
+              </View>
+              <View className="flex-1 gap-4">
+                <Skeleton className="h-[140px] w-full rounded-2xl" />
+                <Skeleton className="h-[180px] w-full rounded-2xl" />
+              </View>
+            </View>
+          ) : (
+            <BottomSheetFlatList
+              data={results}
+              keyExtractor={(item) => item._id}
+              renderItem={renderItem}
+              numColumns={2}
+              columnWrapperStyle={{ justifyContent: 'space-between' }}
+              contentContainerStyle={{ paddingBottom: 80 }}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
 
           {/* Footer Actions */}
           <View className="absolute bottom-5 left-5 right-5 flex-row gap-4 bg-background pt-4 border-t border-stroke-weaker">
