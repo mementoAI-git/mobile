@@ -35,8 +35,8 @@ export function Skeleton({ className, style, ...props }: SkeletonProps) {
 
   return (
     <Animated.View
-      style={[{ opacity, backgroundColor: COLORS.fillWeak }, style]}
-      className={cn('rounded-md', className)}
+      style={[{ opacity, backgroundColor: 'rgba(23,11,0,0.065)' }, style]}
+      className={cn('rounded-2xl', className)}
       {...props}
     />
   );

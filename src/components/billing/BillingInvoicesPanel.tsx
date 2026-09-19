@@ -1,8 +1,9 @@
 import React, {useCallback} from 'react';
-import {ActivityIndicator, Pressable, Text, View} from 'react-native';
+import {Pressable, Text, View} from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
 
+import {Skeleton} from '@/components/ui';
 import {CARD_PASTEL_SURFACES, COLORS} from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import type {BillingInvoice} from '@/features/settings/billing-adapters';
@@ -68,7 +69,24 @@ const InvoiceRow = React.memo(function InvoiceRow({invoice}: {invoice: BillingIn
 });
 
 export const BillingInvoicesPanel = React.memo(function BillingInvoicesPanel({invoices, loading}: {invoices: BillingInvoice[]; loading: boolean}) {
-  if (loading) return <ActivityIndicator color={COLORS.brand} style={{marginTop: 80}}/>;
+  if (loading) {
+    return (
+      <View style={{paddingTop: 10, paddingBottom: 24, paddingHorizontal: 20, gap: 16}}>
+        {[1, 2, 3, 4].map((i) => (
+          <View key={i} className="flex-row items-center justify-between py-2">
+            <View className="flex-1 gap-2 pr-4">
+              <View className="flex-row items-center gap-2.5">
+                <Skeleton className="h-5 w-32 rounded-md" />
+                <Skeleton className="h-5 w-14 rounded-md" />
+              </View>
+              <Skeleton className="h-4 w-24 rounded-md" />
+            </View>
+            <Skeleton className="h-5 w-16 rounded-md" />
+          </View>
+        ))}
+      </View>
+    );
+  }
   if (!invoices.length) {
     return (
       <View className="px-8 pt-20 items-center">

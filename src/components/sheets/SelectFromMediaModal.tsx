@@ -4,7 +4,7 @@ import { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomShee
 import { X, Search, Check, Play, Music, FileText } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { Button, Spinner } from '@/components/ui';
+import { Button, Spinner, Skeleton } from '@/components/ui';
 import { useFiles } from '@/hooks/queries/use-files';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSheetTopInset } from '@/features/layout/sheet-safe-area';
@@ -162,8 +162,14 @@ export const SelectFromMediaModal = React.memo(
 
           {/* List */}
           {isLoading ? (
-            <View className="flex-1 items-center justify-center">
-              <Spinner size="large" />
+            <View className="flex-row flex-wrap justify-between">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Skeleton
+                  key={i}
+                  style={{ width: itemWidth, height: itemWidth, marginBottom: 16 }}
+                  className="rounded-2xl"
+                />
+              ))}
             </View>
           ) : (
             <BottomSheetFlatList

@@ -6,42 +6,45 @@ export function StoriesSkeleton() {
   return (
     <ScrollView 
       showsVerticalScrollIndicator={false} 
-      contentContainerClassName="px-5 pt-3 pb-8 gap-6"
+      contentContainerClassName="px-5 pt-4 pb-24 gap-6"
     >
-      <Skeleton className="h-4 w-40" />
-      
-      {/* Action Buttons Row */}
-      <View className="flex-row items-center gap-2">
-        <Skeleton className="h-10 flex-1 rounded-full" />
-        <Skeleton className="h-10 flex-1 rounded-full" />
-        <Skeleton className="h-10 flex-1 rounded-full" />
+      {/* Editorial Intro Paragraph */}
+      <View className="gap-2">
+        <Skeleton className="h-4 w-full rounded-md" />
+        <Skeleton className="h-4 w-3/4 rounded-md" />
       </View>
 
-      {/* Stat cards */}
-      <View className="gap-3">
-        <Skeleton className="h-[99px] rounded-2xl" />
-        <Skeleton className="h-[99px] rounded-2xl" />
-        <Skeleton className="h-[99px] rounded-2xl" />
+      {/* Stat Cards: 1 row with 2 side-by-side cards */}
+      <View className="flex-row gap-4">
+        <Skeleton className="h-[104px] flex-1 rounded-[24px]" />
+        <Skeleton className="h-[104px] flex-1 rounded-[24px]" />
       </View>
 
-      {/* Filter chips & search */}
+      {/* Search Input then Filter Pills */}
       <View className="gap-4">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row gap-2">
-            <Skeleton className="h-8 w-16 rounded-full" />
-            <Skeleton className="h-8 w-24 rounded-full" />
-            <Skeleton className="h-8 w-20 rounded-full" />
-          </View>
-          <Skeleton className="h-8 w-16 rounded-lg" />
+        <Skeleton className="h-12 w-full rounded-full" />
+        <View className="flex-row gap-2.5">
+          <Skeleton className="h-9 w-20 rounded-full" />
+          <Skeleton className="h-9 w-28 rounded-full" />
+          <Skeleton className="h-9 w-24 rounded-full" />
+          <Skeleton className="h-9 w-24 rounded-full" />
         </View>
-        <Skeleton className="h-11 rounded-xl" />
       </View>
 
-      {/* Memory List Items */}
-      <View className="gap-4">
-        <Skeleton className="h-48 rounded-2xl" />
-        <Skeleton className="h-48 rounded-2xl" />
-        <Skeleton className="h-48 rounded-2xl" />
+      {/* 2-Column Masonry Grid Skeletons */}
+      <View className="flex-row gap-4">
+        {/* Left Column */}
+        <View className="flex-1 gap-4">
+          <Skeleton className="h-[210px] w-full rounded-[20px]" />
+          <Skeleton className="h-[160px] w-full rounded-[20px]" />
+          <Skeleton className="h-[230px] w-full rounded-[20px]" />
+        </View>
+        {/* Right Column */}
+        <View className="flex-1 gap-4">
+          <Skeleton className="h-[170px] w-full rounded-[20px]" />
+          <Skeleton className="h-[240px] w-full rounded-[20px]" />
+          <Skeleton className="h-[180px] w-full rounded-[20px]" />
+        </View>
       </View>
     </ScrollView>
   );

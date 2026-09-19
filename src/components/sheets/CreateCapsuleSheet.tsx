@@ -20,7 +20,7 @@ import {
   Plus,
   Check
 } from 'lucide-react-native';
-import { Button, Spinner } from '@/components/ui';
+import { Button, Spinner, Skeleton } from '@/components/ui';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useCreateCapsule, useUpdateCapsule } from '@/hooks/mutations/use-capsule-mutations';
 
@@ -260,7 +260,14 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
           <View className="bg-fill-weaker rounded-2xl p-4 mt-1">
             <Text className="text-text-weak mb-3" style={TYPE.metadata}>Recent</Text>
             {loadingBeneficiaries ? (
-              <Spinner />
+              <View className="flex-row items-center gap-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <View key={i} className="items-center w-16 gap-2">
+                    <Skeleton className="size-12 rounded-full" />
+                    <Skeleton className="h-3 w-10 rounded-full" />
+                  </View>
+                ))}
+              </View>
             ) : beneficiaries.length === 0 ? (
               <Text className="text-text-weak" style={TYPE.label}>No beneficiaries added yet.</Text>
             ) : (
@@ -332,7 +339,11 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
               </TouchableOpacity>
             </View>
             {loadingMedia ? (
-              <Spinner />
+              <View className="flex-row items-center gap-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="size-16 rounded-xl" />
+                ))}
+              </View>
             ) : !recentMedia?.length ? (
               <Text className="text-text-weak" style={TYPE.label}>No recent media found.</Text>
             ) : (

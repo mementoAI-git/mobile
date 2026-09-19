@@ -21,6 +21,7 @@ import {
 
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { Skeleton } from '@/components/ui';
 import { calculateMilestones } from '@/features/insights/milestone-celebrations';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useUserStats, useCapsuleStats, useMemoriesStats } from '@/hooks/queries/use-overview';
@@ -41,12 +42,21 @@ const TABS: { key: InsightsTab; label: string }[] = [
   { key: 'preferences', label: 'Preferences' },
 ];
 
+function InsightsSkeleton() {
+  return (
+    <View style={{ paddingHorizontal: 16, marginTop: 24, gap: 18 }}>
+      <Skeleton className="h-[280px] w-full rounded-[24px]" />
+      <Skeleton className="h-[300px] w-full rounded-[24px]" />
+    </View>
+  );
+}
+
 export default function InsightsScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<InsightsTab>('enrichment');
   const user = useUserStore((s) => s.user);
   const { data: profile } = useProfile();
-  const { data: stats } = useUserStats();
+  const { data: stats, isLoading: statsLoading } = useUserStats();
   const { data: memoriesStats } = useMemoriesStats();
   const { data: capsuleStats } = useCapsuleStats();
   const { data: beneficiariesRaw } = useBeneficiaries();
@@ -209,15 +219,18 @@ export default function InsightsScreen() {
             })}
           </ScrollView>
 
-          <View style={{ paddingHorizontal: 16, marginTop: 24, gap: 18 }}>
-            <InsightsContentCard
-              activeTab={activeTab}
-              score={Number(stats?.enrichment_score) || 0}
-              categoryScores={stats?.category_scores}
-              insights={sanitizedInsights}
-              notes={sanitizedNotes}
-              preferences={sanitizedPreferences}
-            />
+          {statsLoading && !stats ? (
+            <InsightsSkeleton />
+          ) : (
+            <View style={{ paddingHorizontal: 16, marginTop: 24, gap: 18 }}>
+              <InsightsContentCard
+                activeTab={activeTab}
+                score={Number(stats?.enrichment_score) || 0}
+                categoryScores={stats?.category_scores}
+                insights={sanitizedInsights}
+                notes={sanitizedNotes}
+                preferences={sanitizedPreferences}
+              />
 
             {/* Milestones & Achievements */}
             <View
@@ -341,6 +354,7 @@ export default function InsightsScreen() {
               </ImageBackground>
             </View>
           </View>
+          )}
         </ScrollView>
       </ImageBackground>
     </SafeAreaView>

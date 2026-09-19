@@ -14,6 +14,7 @@ import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useGroups } from '@/hooks/queries/use-groups';
 import type { IBeneficiary, IGroup } from '@/types';
 
+import { Skeleton } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { normalizeCollection } from '@/features/beneficiaries/collections';
@@ -379,9 +380,18 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
             style={{ marginTop: 12, paddingHorizontal: 20 }}
           >
             {isLoadingRecipients && (
-              <Text style={{ paddingVertical: 24, textAlign: 'center', ...TYPE.label, color: COLORS.textWeak }}>
-                Loading your trusted people…
-              </Text>
+              <View style={{ paddingVertical: 8, gap: 12 }}>
+                {[1, 2, 3].map((i) => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 46 }}>
+                    <Skeleton className="size-5 rounded-full" />
+                    <Skeleton className="size-8 rounded-full" />
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Skeleton className="h-4 w-32 rounded-md" />
+                      <Skeleton className="h-3 w-20 rounded-md" />
+                    </View>
+                  </View>
+                ))}
+              </View>
             )}
 
             {!isLoadingRecipients && hasRecipientError && (

@@ -150,12 +150,45 @@ export default function ActivitiesScreen() {
         <ImageBackground source={PATTERN} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} imageStyle={{ opacity: 0.03 }} resizeMode="repeat" />
 
         {isLoading && displayDocs.length === 0 ? (
-          <View style={{ paddingHorizontal: 20, paddingTop: 12, gap: 12 }}>
-            <Skeleton className="h-20 rounded-[24px] mb-2" />
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} className="h-16 rounded-2xl" />
-            ))}
-          </View>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 48, paddingTop: 4 }}
+          >
+            {/* Editorial hero card skeleton */}
+            <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
+              <Skeleton className="h-[140px] w-full rounded-[32px]" />
+            </View>
+
+            {/* Stats banner skeleton */}
+            <View style={{ marginHorizontal: 20, marginBottom: 20, flexDirection: 'row', gap: 8 }}>
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-16 flex-1 rounded-2xl" />
+              ))}
+            </View>
+
+            {/* Activity items card skeleton */}
+            <View
+              style={{
+                marginHorizontal: 20,
+                backgroundColor: COLORS.card,
+                borderRadius: 24,
+                padding: 16,
+                gap: 16,
+                borderWidth: 1,
+                borderColor: COLORS.strokeWeaker,
+              }}
+            >
+              {[1, 2, 3, 4].map((i) => (
+                <View key={i} className="flex-row items-center gap-3">
+                  <Skeleton className="size-10 rounded-full" />
+                  <View className="flex-1 gap-2">
+                    <Skeleton className="h-4 w-3/4 rounded-md" />
+                    <Skeleton className="h-3 w-1/3 rounded-md" />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
         ) : displayDocs.length === 0 ? (
           <EmptyState
             image={EMPTY_MEMORIES_IMG}
