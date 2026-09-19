@@ -8,8 +8,10 @@ import {
   ArrowLeft,
   AudioWaveform,
   Headphones,
+  Heart,
   SlidersHorizontal,
   Sparkles,
+  Timer,
   Volume2,
 } from 'lucide-react-native';
 import { Button } from '@/components/ui';
@@ -26,6 +28,8 @@ const BENEFIT_ICONS = {
   headphones: Headphones,
   sliders: SlidersHorizontal,
   sparkles: Sparkles,
+  timer: Timer,
+  heart: Heart,
 } as const;
 
 function BenefitRow({ benefit }: { benefit: ComingSoonBenefit }) {
@@ -96,9 +100,17 @@ function ComingSoonContent() {
           <View style={styles.heroHaloLarge} />
           <View style={styles.heroHaloSmall} />
           <View style={styles.heroSpeaker}>
-            <Volume2 size={54} color={COLORS.onboardingBrown} strokeWidth={1.7} />
+            {content.key === 'capsules' ? (
+              <Timer size={54} color={COLORS.onboardingBrown} strokeWidth={1.7} />
+            ) : (
+              <Volume2 size={54} color={COLORS.onboardingBrown} strokeWidth={1.7} />
+            )}
           </View>
-          <AudioWaveform size={88} color={COLORS.onboardingAmber} strokeWidth={1.4} />
+          {content.key === 'capsules' ? (
+            <Sparkles size={88} color={COLORS.onboardingAmber} strokeWidth={1.4} />
+          ) : (
+            <AudioWaveform size={88} color={COLORS.onboardingAmber} strokeWidth={1.4} />
+          )}
         </View>
 
         <Text style={styles.eyebrow}>{content.eyebrow}</Text>

@@ -62,11 +62,12 @@ export function useVerifyEmailLogic() {
     getResendSecondsRemaining(sentAtMs, Date.now()),
   );
 
+  const verificationType = mode === 'reset-password' ? ('reset' as const) : ('verify' as const);
   const {
     mutate: verify,
     isPending: isVerifying,
     isSuccess,
-  } = useVerifyRegistrationEmail();
+  } = useVerifyRegistrationEmail({ email, type: verificationType });
 
   const {
     mutate: resend,

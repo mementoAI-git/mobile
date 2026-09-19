@@ -10,10 +10,10 @@ import {
 
 export type { ResendRegistrationCodeResult };
 
-export function useVerifyRegistrationEmail() {
+export function useVerifyRegistrationEmail(options?: { email?: string; type?: 'verify' | 'reset' }) {
   return useMutation({
     mutationFn: (token: string) =>
-      verifyRegistrationEmail(token, { request: post, establishSession }),
+      verifyRegistrationEmail(token, { request: post, establishSession }, options),
   });
 }
 

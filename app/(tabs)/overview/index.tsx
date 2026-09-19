@@ -173,6 +173,10 @@ export default function OverviewScreen() {
 
   const handleGoToStories = useCallback(() => router.push('/(tabs)/stories'), [router]);
   const handleGoToSettings = useCallback(() => router.push('/settings'), [router]);
+  const handleTimeCapsulesPress = useCallback(() => {
+    Haptics.selectionAsync();
+    router.push({ pathname: '/coming-soon', params: { feature: 'capsules' } });
+  }, [router]);
   const handleAddStory = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({ pathname: '/editor', params: { mode: 'story' } });
@@ -554,6 +558,7 @@ export default function OverviewScreen() {
                 }
                 icon={<JourneyStatIcon type="capsules" />}
                 bgImage={CAPSULE_BG}
+                onPress={handleTimeCapsulesPress}
               />
 
               <OverviewJourneyCard
