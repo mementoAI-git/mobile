@@ -41,6 +41,7 @@ import {
   EBGaramond_400Regular,
   EBGaramond_500Medium,
   EBGaramond_700Bold,
+  EBGaramond_400Regular_Italic,
 } from '@expo-google-fonts/eb-garamond';
 import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono';
 import { PatrickHandSC_400Regular } from '@expo-google-fonts/patrick-hand-sc';
@@ -311,6 +312,7 @@ function RootLayout() {
     EBGaramond_400Regular,
     EBGaramond_500Medium,
     EBGaramond_700Bold,
+    EBGaramond_400Regular_Italic,
     AzeretMono_400Regular,
 
     PatrickHandSC_400Regular,

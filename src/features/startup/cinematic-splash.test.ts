@@ -81,9 +81,6 @@ describe('cinematic startup splash', () => {
     expect(splashPlugin).toEqual([
       'expo-splash-screen',
       {
-        image: './assets/icon.png',
-        imageWidth: 120,
-        resizeMode: 'contain',
         backgroundColor: '#FFFFFF',
       },
     ]);

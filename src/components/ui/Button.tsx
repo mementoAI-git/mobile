@@ -19,6 +19,7 @@ interface ButtonProps {
   loading?: boolean;
   variant?: Variant;
   size?: Size;
+  rounded?: 'full' | 'xl' | 'lg' | '2xl';
   className?: string;
   textClassName?: string;
   children: React.ReactNode;
@@ -56,12 +57,12 @@ const variantStyles: Record<Variant, { container: string; text: string }> = {
   }
 };
 
-// All sizes use rounded-full (web rounded-4xl = 32px pill)
+// All sizes use rounded-full by default
 const sizeStyles: Record<Size, { container: string; text: string }> = {
-  xs: { container: 'h-6 px-2.5 gap-1 rounded-full', text: '' },
-  sm: { container: 'h-8 px-3 gap-1 rounded-full', text: '' },
-  md: { container: 'h-10 px-4 gap-1.5 rounded-full', text: '' }, // compact button (40px)
-  lg: { container: 'h-14 px-6 gap-2 rounded-full', text: '' }, // standard button (56px)
+  xs: { container: 'h-6 px-2.5 gap-1', text: '' },
+  sm: { container: 'h-8 px-3 gap-1', text: '' },
+  md: { container: 'h-10 px-4 gap-1.5', text: '' }, // compact button (40px)
+  lg: { container: 'h-14 px-6 gap-2', text: '' }, // standard button (56px)
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -72,6 +73,7 @@ export function Button({
   loading,
   variant = 'primary',
   size = 'md',
+  rounded = 'full',
   className,
   textClassName,
   children,
@@ -118,6 +120,13 @@ export function Button({
         'flex-row items-center justify-center',
         v.container,
         s.container,
+        rounded === 'xl'
+          ? 'rounded-xl'
+          : rounded === '2xl'
+            ? 'rounded-2xl'
+            : rounded === 'lg'
+              ? 'rounded-lg'
+              : 'rounded-full',
         fullWidth && 'w-full',
         isDisabled && 'opacity-50',
         className,

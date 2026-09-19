@@ -23,5 +23,7 @@ export function syncCurrentPushDevice(token: string) {
 
 export async function disableCurrentPushDevice() {
   const installationId = await installationIds.getInstallationId();
-  return del(`${endpoint.pushDevices}/${encodeURIComponent(installationId)}`);
+  return del(`${endpoint.pushDevices}/${encodeURIComponent(installationId)}`, {
+    timeout: 2000,
+  });
 }

@@ -6,11 +6,13 @@ import {
   Platform,
   ActivityIndicator,
   ImageBackground,
+  Image,
   TouchableOpacity,
   Keyboard,
   LayoutAnimation,
   Linking,
   Text,
+  StyleSheet,
 } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,7 +23,7 @@ import Animated, {
   withDelay,
   Easing,
 } from 'react-native-reanimated';
-import { Button, TextInput, PasswordInput, Logo } from '@/components/ui';
+import { Button, TextInput, PasswordInput } from '@/components/ui';
 import { useRegisterLogic } from '@/hooks/use-register-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -34,12 +36,13 @@ import { PRIVACY_URL, TERMS_URL } from '@/lib/env';
 import { AUTH_SESSION_RETURN_URL, oauthCallbackUrl } from '@/lib/navigation';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
+const APP_ICON = require('../../assets/icon.png');
 
 // ─── Easing presets ───────────────────────────────────────────────────────────
 const EASE_OUT = Easing.out(Easing.cubic);
 const EASE_IN = Easing.in(Easing.cubic);
 
-export function GoogleSvgIcon({ size = 18 }: { size?: number }) {
+export function GoogleSvgIcon({ size = 20 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.69c-.29 1.5-1.14 2.77-2.4 3.61v3h3.86c2.26-2.09 3.59-5.17 3.59-8.46z" />
@@ -50,7 +53,7 @@ export function GoogleSvgIcon({ size = 18 }: { size?: number }) {
   );
 }
 
-export function AppleSvgIcon({ size = 18 }: { size?: number }) {
+export function AppleSvgIcon({ size = 20 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="#000000">
       <Path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.21.67-2.93 1.49-.62.69-1.16 1.84-1.01 2.96 1.12.09 2.27-.58 2.95-1.39z" />
@@ -73,8 +76,6 @@ export default function RegisterScreen() {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   // ─── Cascade animation values ────────────────────────────────────────────
-  // Each section has its own opacity + translateY shared value.
-  // translateY > 0 = resting below (for fade-in), < 0 = exits upward (on hide).
   const logoOpacity = useSharedValue(1);
   const logoY = useSharedValue(0);
   const headingOpacity = useSharedValue(1);
@@ -123,8 +124,6 @@ export default function RegisterScreen() {
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
-
-
   const handleGoogleSignup = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setGoogleLoading(true);
@@ -158,7 +157,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ImageBackground source={PATTERN} style={{ flex: 1, backgroundColor: COLORS.background }} imageStyle={{ opacity: 0.4 }}>
+    <ImageBackground source={PATTERN} style={styles.screenBg} imageStyle={{ opacity: 0.03 }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -167,16 +166,17 @@ export default function RegisterScreen() {
           <ScrollView
             ref={scrollViewRef}
             style={{ flex: 1 }}
-            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 40, paddingBottom: 32 }}
+            contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="on-drag"
           >
-            {/* Top Navigation Row */}
-            <View className="flex-row items-center justify-between mb-8">
-              <Logo size="md" />
+            {/* Top Navigation Row: App Icon & Close Button */}
+            <Animated.View style={[logoStyle, styles.topNavRow]}>
+              <Image source={APP_ICON} style={styles.appIcon} resizeMode="cover" />
               <TouchableOpacity
                 onPress={() => {
+                  Haptics.selectionAsync();
                   if (router.canGoBack()) {
                     router.back();
                   } else {
@@ -186,57 +186,55 @@ export default function RegisterScreen() {
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel="Close and return to sign in"
-                className="w-10 h-10 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
+                style={styles.closeBtn}
               >
-                <X size={18} color={COLORS.textStrong} />
+                <X size={18} color={COLORS.textStrong} strokeWidth={2} />
               </TouchableOpacity>
-            </View>
+            </Animated.View>
 
-            {/* Heading — collapses second */}
-            <Animated.View style={[headingStyle, { marginBottom: isKeyboardVisible ? 16 : 32 }]}>
-              <Animated.Text className="text-text-strong mb-2" style={TYPE.displayTitle}>
-                Create an account
-              </Animated.Text>
-              <Animated.Text className="text-text-base leading-relaxed" style={TYPE.body}>
-                Start preserving your memories
+            {/* Editorial Heading: "Create an account" */}
+            <Animated.View style={[headingStyle, { marginBottom: isKeyboardVisible ? 16 : 28 }]}>
+              <Animated.Text style={styles.titleText}>
+                Create an <Animated.Text style={{ fontStyle: 'italic' }}>account</Animated.Text>
               </Animated.Text>
             </Animated.View>
 
-            <View className="gap-4">
-              {/* Full OAuth pills — only shown when keyboard is hidden */}
+            <View style={styles.formContainer}>
+              {/* Full OAuth Buttons */}
               {!isKeyboardVisible && (
-                <Animated.View style={oauthStyle} className="gap-3">
+                <Animated.View style={[oauthStyle, styles.oauthContainer]}>
                   <TouchableOpacity
                     onPress={handleGoogleSignup}
                     disabled={googleLoading || appleLoading || isPending}
                     activeOpacity={0.8}
-                    className="flex-row items-center justify-center gap-3 rounded-full min-h-[52px] px-4 border border-stroke-weak bg-fill-weaker"
+                    style={styles.socialBtn}
                   >
-                    {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={18} />}
-                    <Animated.Text className="text-text-strong" style={TYPE.button}>Continue with Google</Animated.Text>
+                    {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={20} />}
+                    <Text style={styles.socialBtnText}>Sign up with Google</Text>
                   </TouchableOpacity>
+
                   <TouchableOpacity
                     onPress={handleAppleSignup}
                     disabled={googleLoading || appleLoading || isPending}
                     activeOpacity={0.8}
-                    className="flex-row items-center justify-center gap-3 rounded-full min-h-[52px] px-4 border border-stroke-weak bg-fill-weaker"
+                    style={styles.socialBtn}
                   >
-                    {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={18} />}
-                    <Animated.Text className="text-text-strong" style={TYPE.button}>Continue with Apple</Animated.Text>
+                    {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={20} />}
+                    <Text style={styles.socialBtnText}>Sign up with Apple</Text>
                   </TouchableOpacity>
                 </Animated.View>
               )}
 
-              {/* Divider — fades out last before fields */}
-              <Animated.View style={dividerStyle} className="flex-row items-center gap-4 my-3">
-                <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
-                <Animated.Text className="text-text-disabled lowercase" style={TYPE.metadata}>or</Animated.Text>
-                <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
+              {/* Divider: "Or" */}
+              <Animated.View style={[dividerStyle, styles.dividerRow]}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>Or</Text>
+                <View style={styles.dividerLine} />
               </Animated.View>
 
-              {/* Name row */}
-              <View className="flex-row gap-3">
-                <View className="flex-1">
+              {/* Name Row: Side-by-side First name & Last name */}
+              <View style={styles.nameRow}>
+                <View style={{ flex: 1 }}>
                   <Controller
                     control={control}
                     name="first_name"
@@ -248,11 +246,13 @@ export default function RegisterScreen() {
                         onBlur={onBlur}
                         error={errors.first_name?.message}
                         placeholder="Jane"
+                        variant="rounded"
+                        autoCapitalize="words"
                       />
                     )}
                   />
                 </View>
-                <View className="flex-1">
+                <View style={{ flex: 1 }}>
                   <Controller
                     control={control}
                     name="last_name"
@@ -264,12 +264,15 @@ export default function RegisterScreen() {
                         onBlur={onBlur}
                         error={errors.last_name?.message}
                         placeholder="Doe"
+                        variant="rounded"
+                        autoCapitalize="words"
                       />
                     )}
                   />
                 </View>
               </View>
 
+              {/* Email */}
               <Controller
                 control={control}
                 name="email"
@@ -282,76 +285,208 @@ export default function RegisterScreen() {
                     keyboardType="email-address"
                     autoCapitalize="none"
                     error={errors.email?.message}
-                    placeholder="you@example.com"
+                    placeholder="janedoe@mail.com"
+                    variant="rounded"
                   />
                 )}
               />
 
+              {/* Create Password */}
               <Controller
                 control={control}
                 name="password"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <PasswordInput
-                    label="Password"
+                    label="Create Password"
                     value={value}
                     onChangeText={onChange}
                     onBlur={onBlur}
                     error={errors.password?.message}
-                    placeholder="At least 8 characters"
+                    hint="A least 8 characters containing a number, Capitalized letter and a symbol."
+                    placeholder="••••••••"
+                    variant="rounded"
                   />
                 )}
               />
 
               {error && (
-                <View className="bg-error-weak border border-error-weak rounded-2xl px-4 py-3">
-                  <Animated.Text className="text-error-strong text-center" style={TYPE.label}>
+                <View style={styles.errorBanner}>
+                  <Text style={styles.errorBannerText}>
                     {(error as any).message ?? 'Registration failed. Please try again.'}
-                  </Animated.Text>
+                  </Text>
                 </View>
               )}
 
-              <Button onPress={onSubmit} loading={isPending} fullWidth size="lg" className="mt-2">
-                Create Account
+              {/* Primary CTA Button */}
+              <Button
+                onPress={onSubmit}
+                loading={isPending}
+                fullWidth
+                size="lg"
+                rounded="xl"
+                className="mt-2 !h-[52px]"
+              >
+                Create account
               </Button>
             </View>
 
-            <View className="items-center justify-center px-4 mt-6">
-              <Text className="text-text-weak text-center leading-normal" style={TYPE.metadata}>
-                By creating an account, you agree to our{' '}
+            {/* "I already have an account" */}
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.selectionAsync();
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(auth)/login');
+                }
+              }}
+              activeOpacity={0.7}
+              style={styles.loginLinkContainer}
+            >
+              <Text style={styles.loginLinkText}>
+                I already have an account
+              </Text>
+            </TouchableOpacity>
+
+            {/* Legal Disclaimer */}
+            <View style={styles.legalContainer}>
+              <Text style={styles.legalText}>
+                By Creating an account, you agree to our{'\n'}
                 <Text
-                  className="text-brand underline"
-                  style={TYPE.metadata}
+                  style={styles.legalLink}
                   onPress={() => Linking.openURL(TERMS_URL)}
                 >
-                  Terms of Service
+                  Terms of Use
                 </Text>
-                {' '}and{' '}
+                {' and '}
                 <Text
-                  className="text-brand underline"
-                  style={TYPE.metadata}
+                  style={styles.legalLink}
                   onPress={() => Linking.openURL(PRIVACY_URL)}
                 >
-                  Privacy Policy
+                  Privacy Policy.
                 </Text>
-                .
               </Text>
-            </View>
-
-            <View className="flex-row items-center justify-center gap-2 mt-8">
-              <Animated.Text className="text-text-weak" style={TYPE.body}>
-                Already have an account?
-              </Animated.Text>
-              <TouchableOpacity onPress={() => { if (router.canGoBack()) { router.back(); } else { router.replace('/(auth)/login'); } }}>
-                <Animated.Text className="text-brand" style={TYPE.body}>
-                  Sign in
-                </Animated.Text>
-              </TouchableOpacity>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-
-
     </ImageBackground>
   );
 }
+
+const styles = StyleSheet.create({
+  screenBg: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 32,
+  },
+  topNavRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  appIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+  },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.fillWeaker,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleText: {
+    ...TYPE.displayTitle,
+    color: COLORS.textStrong,
+  },
+  formContainer: {
+    gap: 16,
+  },
+  oauthContainer: {
+    gap: 12,
+  },
+  socialBtn: {
+    height: 52,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeak,
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  socialBtnText: {
+    ...TYPE.button,
+    color: COLORS.textStrong,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginVertical: 4,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.strokeWeaker,
+  },
+  dividerText: {
+    ...TYPE.bodySmall,
+    color: COLORS.textWeak,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  errorBanner: {
+    backgroundColor: COLORS.fillWeak,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  errorBannerText: {
+    ...TYPE.label,
+    color: COLORS.error,
+    textAlign: 'center',
+  },
+  loginLinkContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  loginLinkText: {
+    ...TYPE.button,
+    color: COLORS.textStrong,
+  },
+  legalContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    marginTop: 20,
+    paddingBottom: 8,
+  },
+  legalText: {
+    ...TYPE.bodySmall,
+    color: COLORS.textWeak,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  legalLink: {
+    ...TYPE.bodySmall,
+    color: COLORS.brand,
+  },
+});
+

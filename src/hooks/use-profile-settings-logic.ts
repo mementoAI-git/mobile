@@ -9,12 +9,16 @@ export function useProfileSettingsLogic() {
   const router = useRouter();
   const { data: profile } = useProfile();
   const { data: stats } = useUserStats();
-  const { mutate: logout, isPending } = useLogout();
+  const { mutateAsync: logout, isPending } = useLogout();
   const openSheet = useUiStore((s) => s.openSheet);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    logout();
+    try {
+      await logout();
+    } catch {
+      // Session termination is safely handled in onSettled
+    }
   };
 
   const enrichmentScore = Number(stats?.enrichment_score) || 0;

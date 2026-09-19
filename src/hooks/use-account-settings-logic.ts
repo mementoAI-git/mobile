@@ -21,7 +21,7 @@ export function useAccountSettingsLogic() {
   const router = useRouter();
   const openSheet = useUiStore((s) => s.openSheet);
   const { mutate: changePassword, isPending, error, isSuccess } = useChangePassword();
-  const { mutate: deleteAccount, isPending: deleting } = useDeleteAccount();
+  const { mutateAsync: deleteAccount, isPending: deleting } = useDeleteAccount();
 
   const form = useForm<AccountFormData>({
     resolver: zodResolver(schema),

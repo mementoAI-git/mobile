@@ -6,7 +6,6 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Check } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 
@@ -19,6 +18,7 @@ export interface MotivationChoiceProps {
   selected: boolean;
   onPress: () => boolean | void;
   disabled?: boolean;
+  hideRadio?: boolean;
   testID?: string;
 }
 
@@ -29,6 +29,7 @@ export function MotivationChoice({
   selected,
   onPress,
   disabled = false,
+  hideRadio = false,
   testID,
 }: MotivationChoiceProps) {
   const scale = useSharedValue(1);
@@ -67,14 +68,14 @@ export function MotivationChoice({
       accessibilityState={{ checked: selected, disabled }}
       accessibilityLabel={label}
       style={animatedStyle}
-      className={`min-h-[44px] flex-row items-center gap-3 px-4 py-3.5 rounded-2xl border ${
+      className={`min-h-[44px] flex-row items-center gap-3 px-4 py-3.5 rounded-xl border ${
         selected
           ? 'bg-brand/[0.06] border-brand'
-          : 'bg-card border-stroke-weaker'
+          : 'bg-card border-stroke-weak'
       }`}
     >
       {icon ? (
-        <View className="w-8 h-8 rounded-full bg-fill-weak items-center justify-center">
+        <View className="w-7 items-center justify-center shrink-0">
           {icon}
         </View>
       ) : null}
@@ -93,15 +94,17 @@ export function MotivationChoice({
         ) : null}
       </View>
 
-      <View
-        className={`size-5 rounded-full border-2 items-center justify-center shrink-0 ${
-          selected ? 'bg-brand border-brand' : 'bg-transparent border-stroke-weak'
-        }`}
-      >
-        {selected ? (
-          <View className="size-2 rounded-full bg-white" />
-        ) : null}
-      </View>
+      {!hideRadio && (
+        <View
+          className={`size-5 rounded-full border-2 items-center justify-center shrink-0 ${
+            selected ? 'bg-brand border-brand' : 'bg-transparent border-stroke-weak'
+          }`}
+        >
+          {selected ? (
+            <View className="size-2 rounded-full bg-white" />
+          ) : null}
+        </View>
+      )}
     </AnimatedPressable>
   );
 }
@@ -161,20 +164,17 @@ export function LifeAreaChoice({
       style={animatedStyle}
       className={`min-h-[44px] flex-row items-center gap-2 px-4 py-2.5 rounded-full border ${
         selected
-          ? 'bg-brand/[0.08] border-brand'
-          : 'bg-card border-stroke-weaker'
+          ? 'bg-card border-brand'
+          : 'bg-card border-stroke-weak'
       }`}
     >
       {icon}
       <Text
-        className={selected ? 'text-brand' : 'text-text-strong'}
+        className="text-text-strong"
         style={TYPE.buttonSmall}
       >
         {label}
       </Text>
-      {selected ? (
-        <Check size={14} color={COLORS.brand} strokeWidth={2.5} />
-      ) : null}
     </AnimatedPressable>
   );
 }

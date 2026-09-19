@@ -36,7 +36,7 @@ export function useLoginLogic() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
-  const [securityLoginLabel, setSecurityLoginLabel] = useState('Sign in securely');
+  const [securityLoginLabel, setSecurityLoginLabel] = useState('Sign in with Passkey');
   const [isSecurityLoginAvailable, setIsSecurityLoginAvailable] = useState(false);
 
   const form = useForm<LoginFormData>({
@@ -61,10 +61,10 @@ export function useLoginLogic() {
       setIsSecurityLoginAvailable(method !== 'unenrolled');
       setSecurityLoginLabel(
         method === 'passkey'
-          ? 'Sign in with a passkey'
+          ? 'Sign in with Passkey'
           : method === 'biometric-fallback'
             ? 'Sign in with Face ID / Touch ID'
-            : 'Sign in securely',
+            : 'Sign in with Passkey',
       );
     });
     return () => {
