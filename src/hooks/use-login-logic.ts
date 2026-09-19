@@ -20,6 +20,8 @@ import {
 } from '@/features/security/security-flow';
 import { normalizeAuthCompletion } from '@/api/contract-adapter';
 import { completeAuthResponse } from '@/features/auth/auth-completion';
+import { signInWithGoogleNative } from '@/features/auth/google-auth';
+import { signInWithAppleNative } from '@/features/auth/apple-auth';
 
 const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
@@ -109,6 +111,25 @@ export function useLoginLogic() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setGoogleLoading(true);
     try {
+      const nativeResult = await signInWithGoogleNative();
+      if (nativeResult.cancelled) {
+        return;
+      }
+      if (nativeResult.success && nativeResult.idToken) {
+        const res = await client.post(`${endpoint.oauth}google`, {
+          id_token: nativeResult.idToken,
+        });
+        const completion = await completeAuthResponse(res.data, establishSession);
+        if (completion.kind === 'session') {
+          return;
+        }
+      }
+
+      if (nativeResult.error) {
+        toast(nativeResult.error, 'error');
+        return;
+      }
+
       const res = await client.get(`${endpoint.oauth}google`, {
         params: { redirect_uri: oauthCallbackUrl('google') },
       });
@@ -117,8 +138,9 @@ export function useLoginLogic() {
 
       const { openAuthSessionAsync } = await import('expo-web-browser');
       await openAuthSessionAsync(url, AUTH_SESSION_RETURN_URL);
-    } catch {
-      // silent
+    } catch (err: any) {
+      const message = err?.message || 'Google sign-in failed. Please try again.';
+      toast(message, 'error');
     } finally {
       setGoogleLoading(false);
     }
@@ -128,6 +150,26 @@ export function useLoginLogic() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setAppleLoading(true);
     try {
+      const nativeResult = await signInWithAppleNative();
+      if (nativeResult.cancelled) {
+        return;
+      }
+      if (nativeResult.success && nativeResult.identityToken) {
+        const res = await client.post(`${endpoint.oauth}apple`, {
+          id_token: nativeResult.identityToken,
+          ...(nativeResult.user ? { user: nativeResult.user } : {}),
+        });
+        const completion = await completeAuthResponse(res.data, establishSession);
+        if (completion.kind === 'session') {
+          return;
+        }
+      }
+
+      if (nativeResult.error) {
+        toast(nativeResult.error, 'error');
+        return;
+      }
+
       const res = await client.get(`${endpoint.oauth}apple`, {
         params: { redirect_uri: oauthCallbackUrl('apple') },
       });
@@ -136,8 +178,9 @@ export function useLoginLogic() {
 
       const { openAuthSessionAsync } = await import('expo-web-browser');
       await openAuthSessionAsync(url, AUTH_SESSION_RETURN_URL);
-    } catch {
-      // silent
+    } catch (err: any) {
+      const message = err?.message || 'Apple sign-in failed. Please try again.';
+      toast(message, 'error');
     } finally {
       setAppleLoading(false);
     }
