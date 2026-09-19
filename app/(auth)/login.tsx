@@ -1,38 +1,29 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
+  Text,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   ImageBackground,
   TouchableOpacity,
-  Keyboard,
-  LayoutAnimation,
+  Image,
+  StyleSheet,
 } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  Easing,
-} from 'react-native-reanimated';
-import { Button, TextInput, PasswordInput, Logo } from '@/components/ui';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Button, TextInput, PasswordInput } from '@/components/ui';
 import { useLoginLogic } from '@/hooks/use-login-logic';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { Fingerprint } from 'lucide-react-native';
+import { Fingerprint, X } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
-// ─── Easing presets ───────────────────────────────────────────────────────────
-const EASE_OUT = Easing.out(Easing.cubic);
-const EASE_IN = Easing.in(Easing.cubic);
-
-export function GoogleSvgIcon({ size = 18 }: { size?: number }) {
+export function GoogleSvgIcon({ size = 20 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Path
@@ -55,7 +46,7 @@ export function GoogleSvgIcon({ size = 18 }: { size?: number }) {
   );
 }
 
-export function AppleSvgIcon({ size = 18 }: { size?: number }) {
+export function AppleSvgIcon({ size = 20 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="#000000">
       <Path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.21.67-2.93 1.49-.62.69-1.16 1.84-1.01 2.96 1.12.09 2.27-.58 2.95-1.39z" />
@@ -79,141 +70,124 @@ export default function LoginScreen() {
     router,
   } = useLoginLogic();
 
-  const scrollViewRef = useRef<ScrollView>(null);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  // ─── Cascade animation values ────────────────────────────────────────────
-  const logoOpacity = useSharedValue(1);
-  const logoY = useSharedValue(0);
-  const headingOpacity = useSharedValue(1);
-  const headingY = useSharedValue(0);
-  const oauthOpacity = useSharedValue(1);
-  const dividerOpacity = useSharedValue(1);
-
-  const logoStyle = useAnimatedStyle(() => ({ opacity: logoOpacity.value, transform: [{ translateY: logoY.value }] }));
-  const headingStyle = useAnimatedStyle(() => ({ opacity: headingOpacity.value, transform: [{ translateY: headingY.value }] }));
-  const oauthStyle = useAnimatedStyle(() => ({ opacity: oauthOpacity.value }));
-  const dividerStyle = useAnimatedStyle(() => ({ opacity: dividerOpacity.value }));
-
-  const animateIn = () => {
-    logoOpacity.value = withDelay(0, withTiming(0, { duration: 140, easing: EASE_IN }));
-    logoY.value = withDelay(0, withTiming(-6, { duration: 140, easing: EASE_IN }));
-    headingOpacity.value = withDelay(40, withTiming(0, { duration: 170, easing: EASE_IN }));
-    headingY.value = withDelay(40, withTiming(-4, { duration: 170, easing: EASE_IN }));
-    oauthOpacity.value = withDelay(90, withTiming(0, { duration: 150, easing: EASE_IN }));
-    dividerOpacity.value = withDelay(130, withTiming(0, { duration: 110, easing: EASE_IN }));
+  const handleFormSubmit = () => {
+    setAuthError(null);
+    onSubmit();
   };
-
-  const animateOut = () => {
-    dividerOpacity.value = withDelay(0, withTiming(1, { duration: 180, easing: EASE_OUT }));
-    oauthOpacity.value = withDelay(30, withTiming(1, { duration: 200, easing: EASE_OUT }));
-    headingOpacity.value = withDelay(80, withTiming(1, { duration: 230, easing: EASE_OUT }));
-    headingY.value = withDelay(80, withTiming(0, { duration: 230, easing: EASE_OUT }));
-    logoOpacity.value = withDelay(140, withTiming(1, { duration: 260, easing: EASE_OUT }));
-    logoY.value = withDelay(140, withTiming(0, { duration: 260, easing: EASE_OUT }));
-  };
-
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvent, () => {
-      animateIn();
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setIsKeyboardVisible(true);
-      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: false }), 150);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      animateOut();
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setIsKeyboardVisible(false);
-    });
-    return () => { showSub.remove(); hideSub.remove(); };
-  }, []);
 
   return (
-    <ImageBackground source={PATTERN} style={{ flex: 1, backgroundColor: COLORS.background }} imageStyle={{ opacity: 0.4 }}>
+    <ImageBackground
+      source={PATTERN}
+      style={{ flex: 1, backgroundColor: COLORS.background }}
+      imageStyle={{ opacity: 0.03 }}
+      resizeMode="repeat"
+    >
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <ScrollView
-            ref={scrollViewRef}
             style={{ flex: 1 }}
-            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 40, paddingBottom: 32 }}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            keyboardDismissMode="on-drag"
           >
-            {/* Logo — collapses away first */}
-            {!isKeyboardVisible && (
-              <Animated.View style={logoStyle} className="mb-10">
-                <Logo size="md" />
-              </Animated.View>
-            )}
-
-            {/* Heading — collapses second */}
-            <Animated.View style={[headingStyle, { marginBottom: isKeyboardVisible ? 16 : 40 }]}>
-              <Animated.Text
-                className=" text-text-strong mb-2" style={TYPE.displayTitle}
+            {/* Top Navigation */}
+            <View className="flex-row items-center justify-between mb-8">
+              <Image
+                source={require('../../assets/icon.png')}
+                style={styles.logoIcon}
+                resizeMode="contain"
+              />
+              <TouchableOpacity
+                onPress={() => {
+                  if (router.canGoBack()) {
+                    router.back();
+                  } else {
+                    router.replace('/(onboard)');
+                  }
+                }}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+                className="size-10 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
               >
-                Welcome back
-              </Animated.Text>
-              <Animated.Text
-                className="text-text-base leading-relaxed"
-                style={TYPE.body}>
-                Sign in to continue
-              </Animated.Text>
+                <X size={18} color={COLORS.textStrong} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Heading & Subtitle */}
+            <Animated.View entering={FadeInDown.duration(400)} className="mb-6">
+              <Text style={styles.titleText}>
+                Welcome <Text style={styles.serifItalic}>back</Text>
+              </Text>
+              <Text style={styles.subtitleText}>
+                Please sign in to continue
+              </Text>
             </Animated.View>
 
-            <View className="gap-4">
-              {/* Full OAuth pills — only shown when keyboard is hidden */}
-              {!isKeyboardVisible && (
-                <Animated.View style={oauthStyle} className="gap-4">
-                  {isSecurityLoginAvailable && (
-                    <TouchableOpacity
-                      onPress={handlePasskeyLogin}
-                      disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                      activeOpacity={0.8}
-                      className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
-                    >
-                      {passkeyLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <Fingerprint size={18} color={COLORS.textStrong} strokeWidth={2} />}
-                      <Animated.Text className="text-text-strong" style={TYPE.body}>{securityLoginLabel}</Animated.Text>
-                    </TouchableOpacity>
+            {/* Auth options */}
+            <Animated.View entering={FadeInDown.delay(100).duration(400)} className="gap-3">
+              {/* Passkey button */}
+              {isSecurityLoginAvailable && (
+                <TouchableOpacity
+                  onPress={handlePasskeyLogin}
+                  disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                  activeOpacity={0.8}
+                  className="flex-row items-center justify-center gap-3 rounded-xl min-h-[52px] px-4 bg-card border border-stroke-weak"
+                >
+                  {passkeyLoading ? (
+                    <ActivityIndicator size="small" color={COLORS.brand} />
+                  ) : (
+                    <Fingerprint size={20} color={COLORS.textStrong} strokeWidth={2} />
                   )}
-                  <TouchableOpacity
-                    onPress={handleGoogleLogin}
-                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                    activeOpacity={0.8}
-                    className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
-                  >
-                    {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={18} />}
-                    <Animated.Text className="text-text-strong" style={TYPE.body}>Continue with Google</Animated.Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleAppleLogin}
-                    disabled={googleLoading || appleLoading || passkeyLoading || isPending}
-                    activeOpacity={0.8}
-                    className="flex-row items-center justify-center gap-3 rounded-full min-h-[50px] px-4 bg-fill-weaker"
-                  >
-                    {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={18} />}
-                    <Animated.Text className="text-text-strong" style={TYPE.body}>Continue with Apple</Animated.Text>
-                  </TouchableOpacity>
-                </Animated.View>
+                  <Text style={styles.authButtonText}>{securityLoginLabel}</Text>
+                </TouchableOpacity>
               )}
 
-              {/* Divider */}
-              <Animated.View style={dividerStyle} className="flex-row items-center gap-4 my-3">
-                <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
-                <Animated.Text
-                  className="text-text-disabled lowercase"
-                  style={TYPE.metadata}>
-                  or
-                </Animated.Text>
-                <View className="flex-1 h-[0.5px] bg-stroke-weaker" />
-              </Animated.View>
+              {/* Google button */}
+              <TouchableOpacity
+                onPress={handleGoogleLogin}
+                disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                activeOpacity={0.8}
+                className="flex-row items-center justify-center gap-3 rounded-xl min-h-[52px] px-4 bg-card border border-stroke-weak"
+              >
+                {googleLoading ? (
+                  <ActivityIndicator size="small" color={COLORS.brand} />
+                ) : (
+                  <GoogleSvgIcon size={20} />
+                )}
+                <Text style={styles.authButtonText}>Sign in with Google</Text>
+              </TouchableOpacity>
 
+              {/* Apple button */}
+              <TouchableOpacity
+                onPress={handleAppleLogin}
+                disabled={googleLoading || appleLoading || passkeyLoading || isPending}
+                activeOpacity={0.8}
+                className="flex-row items-center justify-center gap-3 rounded-xl min-h-[52px] px-4 bg-card border border-stroke-weak"
+              >
+                {appleLoading ? (
+                  <ActivityIndicator size="small" color={COLORS.brand} />
+                ) : (
+                  <AppleSvgIcon size={20} />
+                )}
+                <Text style={styles.authButtonText}>Sign in with Apple</Text>
+              </TouchableOpacity>
+            </Animated.View>
+
+            {/* Divider */}
+            <Animated.View entering={FadeInDown.delay(200).duration(400)} className="flex-row items-center gap-4 my-6">
+              <View className="flex-1 h-[1px] bg-stroke-weaker" />
+              <Text style={styles.dividerText}>Or</Text>
+              <View className="flex-1 h-[1px] bg-stroke-weaker" />
+            </Animated.View>
+
+            {/* Form Fields */}
+            <Animated.View entering={FadeInDown.delay(300).duration(400)} className="gap-4">
               {/* Email Field */}
               <Controller
                 control={control}
@@ -222,13 +196,17 @@ export default function LoginScreen() {
                   <TextInput
                     label="Email"
                     value={value}
-                    onChangeText={onChange}
+                    onChangeText={(text) => {
+                      if (authError) setAuthError(null);
+                      onChange(text);
+                    }}
                     onBlur={onBlur}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoComplete="email"
                     error={errors.email?.message}
-                    placeholder="you@example.com"
+                    placeholder="janedoe@mail.com"
+                    variant="rounded"
                   />
                 )}
               />
@@ -241,77 +219,95 @@ export default function LoginScreen() {
                   <PasswordInput
                     label="Password"
                     value={value}
-                    onChangeText={onChange}
+                    onChangeText={(text) => {
+                      if (authError) setAuthError(null);
+                      onChange(text);
+                    }}
                     onBlur={onBlur}
                     autoComplete="current-password"
-                    error={errors.password?.message}
+                    error={errors.password?.message || (authError ?? undefined)}
                     placeholder="••••••••"
+                    variant="rounded"
                   />
                 )}
               />
 
-              {/* Remember for 30 days & Forgot Password Row */}
-              <View className="flex-row items-center justify-between mt-1 mb-2">
-                <TouchableOpacity
-                  onPress={() => setRememberMe(!rememberMe)}
-                  activeOpacity={0.8}
-                  className="flex-row items-center gap-2"
-                >
-                  <View
-                    className={`size-4 rounded-full border items-center justify-center ${rememberMe ? 'border-brand bg-brand' : 'border-stroke-weak bg-white'
-                      }`}
-                  >
-                    {rememberMe && <View className="size-1.5 rounded-full bg-white" />}
-                  </View>
-                  <Animated.Text
-                    className="text-text-base"
-                    style={TYPE.metadata}>
-                    Remember for 30 days
-                  </Animated.Text>
-                </TouchableOpacity>
-
+              {/* Forgot Password Link */}
+              <View className="items-end -mt-1 mb-1">
                 <TouchableOpacity
                   onPress={() => router.push('/(auth)/forgot-password')}
                   className="py-1"
                 >
-                  <Animated.Text
-                    className="text-brand underline"
-                    style={TYPE.metadata}>
-                    Forgot password?
-                  </Animated.Text>
+                  <Text style={styles.forgotPasswordText}>
+                    Forgot Password?
+                  </Text>
                 </TouchableOpacity>
               </View>
 
               {/* Submit Button */}
               <Button
-                onPress={onSubmit}
+                onPress={handleFormSubmit}
                 loading={isPending}
                 fullWidth
                 size="lg"
-                className="mt-2"
+                rounded="xl"
+                className="!h-[52px] bg-brand mt-1"
               >
                 Sign in
               </Button>
-            </View>
+            </Animated.View>
 
-            {/* Footer */}
-            <View className="flex-row items-center justify-center gap-2 mt-10">
-              <Animated.Text
-                className="text-text-weak"
-                style={TYPE.body}>
-                Don't have an account?
-              </Animated.Text>
-              <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-                <Animated.Text
-                  className="text-brand"
-                  style={TYPE.body}>
-                  Sign up
-                </Animated.Text>
+            {/* Footer Link */}
+            <Animated.View entering={FadeInDown.delay(400).duration(400)} className="items-center mt-8">
+              <TouchableOpacity
+                onPress={() => router.push('/(auth)/register')}
+                className="py-2"
+              >
+                <Text style={styles.footerLinkText}>
+                  I don’t have an account
+                </Text>
               </TouchableOpacity>
-            </View>
+            </Animated.View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </ImageBackground>
   );
 }
+
+const styles = StyleSheet.create({
+  logoIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+  },
+  titleText: {
+    ...TYPE.displayTitle,
+    color: COLORS.textStrong,
+    marginBottom: 8,
+  },
+  serifItalic: {
+    fontStyle: 'italic',
+  },
+  subtitleText: {
+    ...TYPE.body,
+    color: COLORS.textStrong,
+    lineHeight: 22,
+  },
+  authButtonText: {
+    ...TYPE.bodyStrong,
+    color: COLORS.textStrong,
+  },
+  dividerText: {
+    ...TYPE.bodySmall,
+    color: COLORS.textWeak,
+  },
+  forgotPasswordText: {
+    ...TYPE.bodyStrong,
+    color: COLORS.brand,
+  },
+  footerLinkText: {
+    ...TYPE.bodyStrong,
+    color: COLORS.textStrong,
+  },
+});

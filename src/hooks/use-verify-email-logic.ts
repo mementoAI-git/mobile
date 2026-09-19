@@ -36,9 +36,10 @@ export async function openMailApp(): Promise<boolean> {
 
 export function useVerifyEmailLogic() {
   const router = useRouter();
-  const { email = '', token: initialToken = '' } = useLocalSearchParams<{
+  const { email = '', token: initialToken = '', mode = '' } = useLocalSearchParams<{
     email?: string;
     token?: string;
+    mode?: string;
   }>();
 
   const [code, setCode] = useState(() => normalizeOtpInput(initialToken));
@@ -101,6 +102,13 @@ export function useVerifyEmailLogic() {
       verify(targetCode, {
         onSuccess: (completion) => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          if (mode === 'reset-password') {
+            router.push({
+              pathname: '/(auth)/set-password',
+              params: { token: targetCode, email },
+            });
+            return;
+          }
           // If the API response did not automatically establish a session, fallback to login
           if (completion.kind !== 'session') {
             router.replace('/(auth)/login');
@@ -158,6 +166,7 @@ export function useVerifyEmailLogic() {
     handleVerify,
     handleResend,
     handleOpenMailbox,
+    mode,
     router,
   };
 }

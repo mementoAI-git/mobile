@@ -16,6 +16,10 @@ export function useForgotPasswordLogic() {
       onSuccess: () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setSent(true);
+        router.push({
+          pathname: '/(auth)/verify-email',
+          params: { email: email.trim(), mode: 'reset-password' },
+        });
       },
       onError: () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

@@ -3,20 +3,24 @@ import {
   View,
   Text,
   ImageBackground,
+  Image,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Mail } from 'lucide-react-native';
-import { Button, Logo } from '@/components/ui';
+import { X } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import { Button } from '@/components/ui';
 import { OtpCodeInput } from '@/components/auth/OtpCodeInput';
 import { useVerifyEmailLogic } from '@/hooks/use-verify-email-logic';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
+const APP_ICON = require('../../assets/icon.png');
 
 export default function VerifyEmailScreen() {
   const {
@@ -30,152 +34,238 @@ export default function VerifyEmailScreen() {
     secondsRemaining,
     handleVerify,
     handleResend,
-    handleOpenMailbox,
+    mode,
     router,
   } = useVerifyEmailLogic();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top', 'bottom']}>
-      <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            justifyContent: 'space-between',
-            paddingHorizontal: 24,
-            paddingTop: 16,
-            paddingBottom: 24,
-          }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+    <ImageBackground source={PATTERN} style={styles.screenBg} imageStyle={{ opacity: 0.03 }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
         >
-          {/* Top Bar */}
-          <View>
-            <TouchableOpacity
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(auth)/login');
-                }
-              }}
-              className="self-start -ml-2 p-2 mb-6"
-              accessibilityRole="button"
-              accessibilityLabel="Back to sign in"
-            >
-              <Text className="text-brand" style={TYPE.buttonSmall}>
-                ← Back to sign in
-              </Text>
-            </TouchableOpacity>
-
-            <View className="items-center mb-8">
-              <Logo size="lg" />
-            </View>
-
-            {/* Heading & Subtitle */}
-            <View className="mb-8">
-              <Text
-                className="text-text-strong text-center mb-2"
-                style={TYPE.screenTitle}
-              >
-                Verify your email
-              </Text>
-              <Text
-                className="text-text-weak text-center leading-relaxed"
-                style={TYPE.body}
-              >
-                {email
-                  ? `We’ve sent a 6-digit verification code to\n${email}`
-                  : 'Enter the 6-digit verification code sent to your email.'}
-              </Text>
-            </View>
-
-            {/* 6-Digit OTP Code Input */}
-            <OtpCodeInput
-              value={code}
-              onChange={setCode}
-              onComplete={(completedCode) => handleVerify(completedCode)}
-              disabled={isVerifying}
-              error={Boolean(errorMessage)}
-              autoFocus
-            />
-
-            {/* Error Message */}
-            {errorMessage ? (
-              <View className="bg-error-tint border border-error-weak rounded-xl px-4 py-3 my-3">
-                <Text
-                  className="text-error-strong text-center"
-                  style={TYPE.label}
-                >
-                  {errorMessage}
-                </Text>
-              </View>
-            ) : null}
-
-            {/* Resend Notice */}
-            {resendNotice ? (
-              <View className="bg-fill-weaker border border-stroke-weaker rounded-xl px-4 py-3 my-3">
-                <Text
-                  className="text-text-base text-center"
-                  style={TYPE.label}
-                >
-                  {resendNotice}
-                </Text>
-              </View>
-            ) : null}
-
-            {/* Resend Code Section */}
-            <View className="flex-row items-center justify-center my-4">
-              <Text className="text-text-weak mr-1.5" style={TYPE.bodySmall}>
-                Didn’t receive a code?
-              </Text>
-              {secondsRemaining > 0 ? (
-                <Text className="text-text-muted" style={TYPE.buttonSmall}>
-                  Resend in 0:{secondsRemaining < 10 ? `0${secondsRemaining}` : secondsRemaining}
-                </Text>
-              ) : (
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Top Container */}
+            <View>
+              {/* Top Navigation Row: App Icon & Close Button */}
+              <View style={styles.topNavRow}>
+                <Image source={APP_ICON} style={styles.appIcon} resizeMode="cover" />
                 <TouchableOpacity
-                  onPress={handleResend}
-                  disabled={isResending}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    if (router.canGoBack()) {
+                      router.back();
+                    } else {
+                      router.replace('/(auth)/login');
+                    }
+                  }}
+                  activeOpacity={0.7}
                   accessibilityRole="button"
-                  accessibilityLabel="Resend verification code"
+                  accessibilityLabel="Close and return to sign in"
+                  style={styles.closeBtn}
                 >
-                  <Text className="text-brand" style={TYPE.buttonSmall}>
-                    {isResending ? 'Sending...' : 'Resend code'}
-                  </Text>
+                  <X size={18} color={COLORS.textStrong} strokeWidth={2} />
                 </TouchableOpacity>
-              )}
+              </View>
+
+              {/* Editorial Title: "Check your inbox" */}
+              <View style={styles.titleContainer}>
+                <Text style={styles.titleText}>
+                  Check <Text style={{ fontStyle: 'italic' }}>your</Text> inbox
+                </Text>
+              </View>
+
+              {/* Subtitle with email */}
+              <View style={styles.subtitleContainer}>
+                <Text style={styles.subtitleText}>
+                  We’ve sent an OTP code to{' '}
+                  <Text style={{ ...TYPE.bodyStrong, color: COLORS.textStrong }}>
+                    {email || 'janedoe@mail.com'}
+                  </Text>
+                  .{'\n'}
+                  Haven’t received an email? Try searching in the spam or social folder.
+                </Text>
+              </View>
+
+              {/* 6-Digit OTP Code Input */}
+              <View style={styles.otpWrapper}>
+                <OtpCodeInput
+                  value={code}
+                  onChange={setCode}
+                  onComplete={(completedCode) => handleVerify(completedCode)}
+                  disabled={isVerifying}
+                  error={Boolean(errorMessage)}
+                  autoFocus
+                />
+              </View>
+
+              {/* Error Message */}
+              {errorMessage ? (
+                <View style={styles.errorBanner}>
+                  <Text style={styles.errorBannerText}>
+                    {errorMessage}
+                  </Text>
+                </View>
+              ) : null}
+
+              {/* Resend Notice */}
+              {resendNotice ? (
+                <View style={styles.noticeBanner}>
+                  <Text style={styles.noticeBannerText}>
+                    {resendNotice}
+                  </Text>
+                </View>
+              ) : null}
+
+              {/* Resend Code Prompt */}
+              <View style={styles.resendRow}>
+                <Text style={styles.resendPromptText}>
+                  Didn’t get a code?{' '}
+                </Text>
+                {secondsRemaining > 0 ? (
+                  <Text style={styles.resendTimerText}>
+                    Resend in 0:{secondsRemaining < 10 ? `0${secondsRemaining}` : secondsRemaining}
+                  </Text>
+                ) : (
+                  <TouchableOpacity
+                    onPress={handleResend}
+                    disabled={isResending}
+                    accessibilityRole="button"
+                    accessibilityLabel="Resend verification code"
+                  >
+                    <Text style={styles.resendActionText}>
+                      {isResending ? 'Sending...' : 'Click to Resend'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-          </View>
 
-          {/* Bottom Actions */}
-          <View className="mt-8 gap-3">
-            <Button
-              onPress={() => handleVerify()}
-              loading={isVerifying}
-              disabled={code.length !== 6 || isVerifying}
-              fullWidth
-              size="lg"
-            >
-              Verify Code
-            </Button>
-
-            <Button
-              variant="outline"
-              onPress={handleOpenMailbox}
-              fullWidth
-              size="md"
-              leftIcon={<Mail size={16} color={COLORS.textStrong} />}
-            >
-              Open mail app
-            </Button>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            {/* Bottom Primary CTA */}
+            <View style={styles.bottomCtaContainer}>
+              <Button
+                onPress={() => handleVerify()}
+                loading={isVerifying}
+                disabled={code.length !== 6 || isVerifying}
+                fullWidth
+                size="lg"
+                rounded="xl"
+                className="!h-[52px]"
+              >
+                {mode === 'reset-password' ? 'Reset password' : 'Confirm code'}
+              </Button>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
+
+const styles = StyleSheet.create({
+  screenBg: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 32,
+  },
+  topNavRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  appIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+  },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.fillWeaker,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleContainer: {
+    marginBottom: 12,
+  },
+  titleText: {
+    ...TYPE.displayTitle,
+    color: COLORS.textStrong,
+  },
+  subtitleContainer: {
+    marginBottom: 28,
+  },
+  subtitleText: {
+    ...TYPE.body,
+    color: COLORS.textStrong,
+    lineHeight: 22,
+  },
+  otpWrapper: {
+    marginVertical: 8,
+  },
+  errorBanner: {
+    backgroundColor: COLORS.fillWeak,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginTop: 12,
+  },
+  errorBannerText: {
+    ...TYPE.label,
+    color: COLORS.error,
+    textAlign: 'center',
+  },
+  noticeBanner: {
+    backgroundColor: COLORS.fillWeaker,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginTop: 12,
+  },
+  noticeBannerText: {
+    ...TYPE.label,
+    color: COLORS.textStrong,
+    textAlign: 'center',
+  },
+  resendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  resendPromptText: {
+    ...TYPE.bodyStrong,
+    color: COLORS.textStrong,
+  },
+  resendTimerText: {
+    ...TYPE.bodyStrong,
+    color: COLORS.textWeak,
+  },
+  resendActionText: {
+    ...TYPE.bodyStrong,
+    color: COLORS.brand,
+  },
+  bottomCtaContainer: {
+    marginTop: 'auto',
+    paddingTop: 32,
+  },
+});
+
