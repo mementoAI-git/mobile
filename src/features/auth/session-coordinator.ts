@@ -59,6 +59,7 @@ export function terminateSession(reason: TerminationReason): Promise<void> {
   // now only observe a terminating/anonymous session, never stale credentials.
   useAuthStore.getState().beginTermination(reason);
   useUserStore.getState().clearUser();
+  useUiStore.getState().closeSheet();
   if (reason !== 'expired') useUiStore.getState().setPendingDeepLink(null);
 
   terminationPromise = (async () => {

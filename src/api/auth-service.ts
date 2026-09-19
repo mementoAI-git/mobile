@@ -63,6 +63,7 @@ class AuthService {
       const response = await Axios.post(`${API_BASE_URL}${endpoint.refreshToken}`, {
         refresh_token: authData.refresh_token,
       }, {
+        timeout: 10000,
         headers: getMementoClientHeaders(),
       });
 
@@ -82,6 +83,7 @@ class AuthService {
       const authData = await this.getAuthData();
       if (authData) {
         await Axios.delete(`${API_BASE_URL}${endpoint.logout}`, {
+          timeout: 2000,
           headers: {
             ...getMementoClientHeaders(),
             Authorization: `Bearer ${authData.access_token}`,

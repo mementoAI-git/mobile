@@ -65,16 +65,26 @@ export function useSetPassword() {
 export function useLogout() {
   return useMutation({
     mutationFn: async () => {
-      try {
-        const { disableCurrentPushDevice } = await import(
-          '@/features/notifications/push-device-runtime'
-        );
-        await disableCurrentPushDevice();
-      } catch {
-        // Device cleanup is best-effort; server logout still revokes the session.
-      }
-      const { authService } = await import('@/api/auth-service');
-      await authService.logout();
+      const runCleanup = async () => {
+        const cleanupTasks: Promise<unknown>[] = [];
+
+        try {
+          const { disableCurrentPushDevice } = await import(
+            '@/features/notifications/push-device-runtime'
+          );
+          cleanupTasks.push(disableCurrentPushDevice().catch(() => {}));
+        } catch {}
+
+        try {
+          const { authService } = await import('@/api/auth-service');
+          cleanupTasks.push(authService.logout().catch(() => {}));
+        } catch {}
+
+        await Promise.allSettled(cleanupTasks);
+      };
+
+      const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 2000));
+      await Promise.race([runCleanup(), timeoutPromise]);
     },
     onSettled: async () => {
       await terminateSession('logout');

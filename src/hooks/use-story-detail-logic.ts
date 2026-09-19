@@ -25,6 +25,7 @@ export function useStoryDetailLogic() {
         await new Promise<void>((resolve, reject) => {
           deleteMemory(memory._id, {
             onSuccess: () => {
+              useUiStore.getState().closeSheet();
               // After delete, back stack may be empty if opened via deep link
               if (from === 'overview') {
                 router.replace('/(tabs)/overview');
