@@ -36,7 +36,7 @@ export default function TabsLayout() {
           name="explore"
           options={{ popToTopOnBlur: shouldPopTabToTopOnBlur('explore') }}
         />
-        <Tabs.Screen name="capsule" />
+        <Tabs.Screen name="capsule" options={{ href: null }} />
       </Tabs>
 
     </View>

@@ -67,10 +67,11 @@ export function terminateSession(reason: TerminationReason): Promise<void> {
       const deletions = [
         deleteSessionCredentials(secureStorage),
         secureStorage.deleteItem(storageKeys.syncedPushToken),
+        secureStorage.deleteItem(storageKeys.onboardingState),
         useOfflineQueueStore.getState().clearQueue(),
         clearPersistedQueryCache(),
       ];
-      if (reason === 'deleted' || reason === 'restore-failed') {
+      if (reason === 'deleted') {
         deletions.push(
           ...IDENTITY_KEYS_ON_HARD_RESET.map((key) => secureStorage.deleteItem(key)),
         );

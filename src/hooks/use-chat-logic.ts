@@ -11,6 +11,7 @@ import { useStreamChat } from '@/hooks/use-stream-chat';
 import { useEnrichmentStats } from '@/hooks/use-enrichment-stats';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useUiStore, useAuthStore, useUserStore } from '@/store';
+import { useToast } from '@/components/ui/Toast';
 import { queryKeys } from '@/constants/query-keys';
 import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import type { ChatReplyQuote } from '@/lib/utils';
@@ -34,6 +35,10 @@ export function useChatLogic() {
   // ── Chat mode (open vs deep_dive) ────────────────────────────────────────
   const [chatMode, setChatMode] = useState<ChatMode>('open');
   const [deepDiveDimension, setDeepDiveDimension] = useState<LifeDimension | null>(null);
+  const { toast } = useToast();
+  const [isStartingConversation, setIsStartingConversation] = useState(false);
+  const isCreatingConversationRef = useRef(false);
+  const isSendingRef = useRef(false);
 
   const isPromptType = type === 'prompt';
   const { data: promptMemoryRes, isLoading: isLoadingPromptMemory } = useMemoryByPrompt(
@@ -152,70 +157,96 @@ export function useChatLogic() {
       attachments?: string[],
       attachmentPreviews?: IMessageAttachment[],
     ) => {
-      let targetChatId = activeChatId;
+      if (isSendingRef.current || streaming) return;
+      isSendingRef.current = true;
 
-      // If no host conversation exists yet for host chat, initialize it on the backend
-      if (!targetChatId && !isPromptType) {
-        try {
-          const res = await startConversationMutation({});
-          const createdMemory = res?.data ?? res;
-          const newId = (createdMemory as any)?.memory_id || createdMemory?._id || (createdMemory as any)?.id;
-          if (newId) {
-            targetChatId = newId;
-            queryClient.invalidateQueries({ queryKey: queryKeys.profile });
-            const currentUser = useUserStore.getState().user ?? useAuthStore.getState().user;
-            if (currentUser) {
-              const next = { ...currentUser, primary_conversation_id: newId };
-              useUserStore.getState().setUser(next);
-              useAuthStore.getState().updateUser(next);
+      try {
+        let targetChatId = activeChatId;
+
+        // If no host conversation exists yet for host chat, initialize it on the backend
+        if (!targetChatId && !isPromptType) {
+          if (isCreatingConversationRef.current) return;
+          isCreatingConversationRef.current = true;
+          setIsStartingConversation(true);
+          try {
+            const res = await startConversationMutation({});
+            const createdMemory = res?.data ?? res;
+            const newId = (createdMemory as any)?.memory_id || createdMemory?._id || (createdMemory as any)?.id;
+            if (newId) {
+              targetChatId = newId;
+              queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+              const currentUser = useUserStore.getState().user ?? useAuthStore.getState().user;
+              if (currentUser) {
+                const next = { ...currentUser, primary_conversation_id: newId };
+                useUserStore.getState().setUser(next);
+                useAuthStore.getState().updateUser(next);
+              }
             }
+          } catch (err: any) {
+            toast(err?.message || 'Failed to initialize conversation. Please try again.', 'error');
+            return;
+          } finally {
+            isCreatingConversationRef.current = false;
+            setIsStartingConversation(false);
           }
-        } catch {
-          // fallback
         }
-      }
 
-      // If no conversation exists yet for a prompt reflection, initialize it on the backend
-      if (!targetChatId && isPromptType) {
-        try {
-          const isStaticPromptId = Boolean(id && id !== 'new' && /^[0-9a-fA-F]{24}$/.test(id));
-          const res = await createMemoryMutation({
-            title: promptTitle || 'Daily reflection',
-            body: '',
-            type: 'conversation',
-            status: 'save',
-            ...(isStaticPromptId
-              ? {
-                  prompt_type: 'static',
-                  prompt_id: id,
-                  reflection_day_key: dayjs().format('YYYY-MM-DD'),
-                }
-              : {
-                  prompt_type: 'ai-generated',
-                  prompt_text: promptTitle || '',
-                  reflection_day_key: dayjs().format('YYYY-MM-DD'),
-                }),
-          } as any);
-          const created = (res as any)?.data ?? res;
-          const newId = created?._id || created?.id;
-          if (newId) {
-            targetChatId = newId;
-            queryClient.invalidateQueries({ queryKey: [queryKeys.conversations()[0]] });
-            queryClient.invalidateQueries({ queryKey: [queryKeys.dailyPrompts('')[0]] });
+        // If no conversation exists yet for a prompt reflection, initialize it on the backend
+        if (!targetChatId && isPromptType) {
+          if (isCreatingConversationRef.current) return;
+          isCreatingConversationRef.current = true;
+          setIsStartingConversation(true);
+          try {
+            const isStaticPromptId = Boolean(id && id !== 'new' && /^[0-9a-fA-F]{24}$/.test(id));
+            const res = await createMemoryMutation({
+              title: promptTitle || 'Daily reflection',
+              body: '',
+              type: 'conversation',
+              status: 'save',
+              ...(isStaticPromptId
+                ? {
+                    prompt_type: 'static',
+                    prompt_id: id,
+                    reflection_day_key: dayjs().format('YYYY-MM-DD'),
+                  }
+                : {
+                    prompt_type: 'ai-generated',
+                    prompt_text: promptTitle || '',
+                    reflection_day_key: dayjs().format('YYYY-MM-DD'),
+                  }),
+            } as any);
+            const created = (res as any)?.data ?? res;
+            const newId = created?._id || created?.id;
+            if (newId) {
+              targetChatId = newId;
+              queryClient.invalidateQueries({ queryKey: [queryKeys.conversations()[0]] });
+              queryClient.invalidateQueries({ queryKey: [queryKeys.dailyPrompts('')[0]] });
+            }
+          } catch (err: any) {
+            toast(err?.message || 'Failed to initialize reflection. Please try again.', 'error');
+            return;
+          } finally {
+            isCreatingConversationRef.current = false;
+            setIsStartingConversation(false);
           }
-        } catch {
-          // fallback
         }
-      }
 
-      await streamSend(text, {
-        replyTo,
-        chatMode,
-        deepDiveDimension,
-        attachments,
-        attachmentPreviews,
-        memoryId: targetChatId ?? undefined,
-      });
+        if (!targetChatId) {
+          toast('Conversation could not be started. Please try again.', 'error');
+          return;
+        }
+
+        await streamSend(text, {
+          replyTo,
+          chatMode,
+          deepDiveDimension,
+          attachments,
+          attachmentPreviews,
+          memoryId: targetChatId,
+        });
+      } finally {
+        isSendingRef.current = false;
+      }
     },
     [
       activeChatId,
@@ -228,6 +259,8 @@ export function useChatLogic() {
       streamSend,
       chatMode,
       deepDiveDimension,
+      streaming,
+      toast,
     ],
   );
 
@@ -275,7 +308,7 @@ export function useChatLogic() {
       promptMemory,
       /** Prompt question text passed via URL param — available immediately before API resolves */
       promptTitle: promptTitle ?? promptMemory?.title ?? null,
-      isStartingConversation: false,
+      isStartingConversation,
       router,
       flatListRef,
       serverMessages,
@@ -304,6 +337,7 @@ export function useChatLogic() {
       isPromptType,
       promptMemory,
       promptTitle,
+      isStartingConversation,
       router,
       serverMessages,
       isLoading,

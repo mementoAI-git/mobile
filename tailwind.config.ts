@@ -20,13 +20,13 @@ const config: Config = {
         'fill-strong':  'rgba(23,11,0,0.9)',
 
         // ── Brand (Orange) ─────────────────────────────────────────
-        // web: --orange-1000: #FF5E00 (the true brand accent)
+        // Canonical brand color: #E98246 (rgb 233, 130, 70)
         brand: {
-          DEFAULT: '#FF5E00',
-          strong:  '#FF5E00',
-          weak:    'rgba(255,94,0,0.8)',
-          tint:    'rgba(255,94,0,0.2)',
-          subtle:  'rgba(255,94,0,0.05)',
+          DEFAULT: '#E98246',
+          strong:  '#E98246',
+          weak:    'rgba(233,130,70,0.8)',
+          tint:    'rgba(233,130,70,0.2)',
+          subtle:  'rgba(233,130,70,0.05)',
         },
 
         // ── Text ───────────────────────────────────────────────────
@@ -39,7 +39,7 @@ const config: Config = {
           muted:    'rgba(23,11,0,0.3)',
           disabled: 'rgba(23,11,0,0.1)',    // --text-neutral-disabled
           inverse:  '#FFFFFF',
-          brand:    '#FF5E00',              // --text-brand-strong
+          brand:    '#E98246',              // --text-brand-strong
           success:  '#067A57',              // --green-1000
           error:    '#C73A3A',              // brick red — aligned with web
           warning:  '#8F6C1A',             // --amber-1000
@@ -52,7 +52,7 @@ const config: Config = {
           strong:  'rgba(23,11,0,0.45)',   // --stroke-neutral-strong
           weak:    'rgba(23,11,0,0.1)',    // --stroke-neutral-weak
           weaker:  'rgba(23,11,0,0.04)',   // --stroke-neutral-weaker
-          brand:   '#FF5E00',              // --stroke-brand-strong
+          brand:   '#E98246',              // --stroke-brand-strong
         },
 
         // ── Status ─────────────────────────────────────────────────

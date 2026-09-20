@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { TYPE } from '@/constants/typography';
 
 // Matches web badge.tsx variants (badge.tsx HEAD):
-//   default     → bg-fill-brand-strong = orange #FF5E00 text-white
+//   default     → bg-fill-brand-strong = orange #E98246 text-white
 //   secondary   → bg-fill-weak text-text-base
 //   outline     → border border-stroke-weak bg-fill-weaker text-text-base
 //   success     → bg-success-weak text-success-strong

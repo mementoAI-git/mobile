@@ -36,9 +36,9 @@ All colors come from `COLORS` in `src/constants/tokens.ts` and the Tailwind conf
 #### Brand
 | Use | Token | Value | Tailwind |
 |-----|-------|-------|----------|
-| Primary CTA, active states | `COLORS.brand` | `#FF5E00` | `bg-brand`, `text-brand`, `border-brand` |
-| Button hover/press tint | `COLORS.brandTint` | `rgba(255,94,0,0.2)` | `bg-brand/20` |
-| Very subtle brand wash | `COLORS.brandSubtle` | `rgba(255,94,0,0.05)` | `bg-brand/5` |
+| Primary CTA, active states | `COLORS.brand` | `#E98246` | `bg-brand`, `text-brand`, `border-brand` |
+| Button hover/press tint | `COLORS.brandTint` | `rgba(233,130,70,0.2)` | `bg-brand/20` |
+| Very subtle brand wash | `COLORS.brandSubtle` | `rgba(233,130,70,0.05)` | `bg-brand/5` |
 
 #### Text — Always Warm Brown, Never Cool Grey
 The text system is built on `rgba(23, 11, 0, *)` — a warm, almost-black brown. This is what makes Memento feel editorial and grounded, not clinical.
@@ -88,7 +88,7 @@ The web (`web/src/index.css`) uses a v3 semantic token system built on `rgba(23,
 | `COLORS.textBase` | `rgba(23,11,0,0.65)` | `--text-neutral-weak` / `--brown-700` |
 | `COLORS.textWeak` | `rgba(23,11,0,0.45)` | `--text-neutral-weaker` / `--brown-500` |
 | `COLORS.textDisabled` | `rgba(23,11,0,0.1)` | `--text-neutral-disabled` / `--brown-100` |
-| `COLORS.brand` | `#FF5E00` | `--v3-brand-strong` / `--orange-1000` |
+| `COLORS.brand` | `#E98246` | `--v3-brand-strong` / `--orange-1000` |
 | `COLORS.success` | `#067A57` | `--text-success-strong` / `--green-1000` |
 | `COLORS.error` | `#C73A3A` | `--text-error-strong` / `--red-1000` |
 | `COLORS.warning` | `#8F6C1A` | `--text-warning-strong` / `--amber-1000` |

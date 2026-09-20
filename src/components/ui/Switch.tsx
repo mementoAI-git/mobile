@@ -16,7 +16,7 @@ interface SwitchProps extends Omit<RNSwitchProps, 'onValueChange'> {
 
 /**
  * Switch — themed wrapper around React Native's native Switch.
- * - Active track: brand orange (#FF5E00)
+ * - Active track: brand orange (#E98246)
  * - Inactive track: strokeWeak (rgba(23,11,0,0.1))
  * - Thumb: white
  * - Triggers `Haptics.selectionAsync()` on change (per AGENTS.md)

@@ -165,6 +165,12 @@ export function useFirstRunOnboarding() {
 
   const handleSkip = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const currentUser = useAuthStore.getState().user ?? useUserStore.getState().user;
+    if (currentUser) {
+      const skippedUser = { ...currentUser, onboarding_status: 'skipped' as const };
+      useAuthStore.getState().updateUser(skippedUser);
+      useUserStore.getState().setUser(skippedUser);
+    }
     try {
       await skipMutation.mutateAsync();
     } catch {

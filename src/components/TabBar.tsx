@@ -250,14 +250,24 @@ export function TabBar({ state, navigation }: TabBarProps) {
       onMoveShouldSetPanResponder: (_, { dx, dy }) =>
         Math.abs(dx) > 15 && Math.abs(dy) < 12,
       onPanResponderRelease: (_, { dx }) => {
+        const visibleRoutes = stateRef.current.routes.filter(
+          (r) => Boolean(TAB_LABELS[r.name.split('/')[0]]),
+        );
+        const currentRoute = stateRef.current.routes[stateRef.current.index];
+        const currentVisibleIndex = visibleRoutes.findIndex(
+          (r) => r.key === currentRoute?.key,
+        );
+
+        if (currentVisibleIndex === -1) return;
+
         const target = resolveTabSwipeTarget(
-          stateRef.current.index,
-          stateRef.current.routes.length,
+          currentVisibleIndex,
+          visibleRoutes.length,
           dx,
         );
-        if (target !== null) {
+        if (target !== null && visibleRoutes[target]) {
           Haptics.selectionAsync();
-          navRef.current.navigate(stateRef.current.routes[target].name);
+          navRef.current.navigate(visibleRoutes[target].name);
         }
       },
     }),
