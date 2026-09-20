@@ -150,7 +150,7 @@ export const StoryRichEditor = forwardRef<StoryRichEditorRef, Props>(
         .tiptap em, .ProseMirror em { color: rgba(23,11,0,0.65); }
         .tiptap s, .ProseMirror s { text-decoration: line-through; color: rgba(23,11,0,0.4); }
         .tiptap ul, .ProseMirror ul, .tiptap ol, .ProseMirror ol { padding-left: 20px; margin: 0 0 8px 0; }
-        .tiptap blockquote, .ProseMirror blockquote { border-left: 3px solid #FF5E00; padding-left: 12px; margin: 0 0 8px 0; color: rgba(23,11,0,0.45); font-style: italic; }
+        .tiptap blockquote, .ProseMirror blockquote { border-left: 3px solid #E98246; padding-left: 12px; margin: 0 0 8px 0; color: rgba(23,11,0,0.45); font-style: italic; }
         .tiptap .ProseMirror-focused { outline: none; }
         .ProseMirror-placeholder { color: rgba(23,11,0,0.2); pointer-events: none; }
       `,

@@ -22,6 +22,8 @@ export interface AuthState {
   phase: SessionPhase;
   hydrated: boolean;
   terminationReason: TerminationReason | null;
+  twoFactorPendingToken: string | null;
+  setTwoFactorPendingToken: (token: string | null) => void;
   beginAuthentication: () => void;
   commitSession: (auth: IAuth, user: IUser) => void;
   updateCredentials: (auth: IAuth) => void;
@@ -41,7 +43,9 @@ export function createAuthState(storage: AuthStorage): StateCreator<AuthState> {
     phase: 'hydrating',
     hydrated: false,
     terminationReason: null,
+    twoFactorPendingToken: null,
 
+    setTwoFactorPendingToken: (twoFactorPendingToken) => set({ twoFactorPendingToken }),
     beginAuthentication: () => set({ phase: 'authenticating', hydrated: true }),
     commitSession: (token, user) => set({
       token,
@@ -62,6 +66,7 @@ export function createAuthState(storage: AuthStorage): StateCreator<AuthState> {
       phase: 'terminating',
       hydrated: true,
       terminationReason: reason || null,
+      twoFactorPendingToken: null,
     }),
     finishAnonymous: () => set((state) => ({
       token: null,
@@ -69,6 +74,7 @@ export function createAuthState(storage: AuthStorage): StateCreator<AuthState> {
       phase: 'anonymous',
       hydrated: true,
       terminationReason: state.terminationReason,
+      twoFactorPendingToken: null,
     })),
 
     hydrateCredentials: async () => {

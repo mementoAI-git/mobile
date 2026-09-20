@@ -1,6 +1,7 @@
 import React, { useCallback, useState, useMemo } from 'react';
 import { FlatList, RefreshControl, View, ScrollView, ImageBackground, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Redirect } from 'expo-router';
 import { Plus, Search, Grid, List, X } from 'lucide-react-native';
 import { CapsuleCard } from '@/components/capsule/CapsuleCard';
 import { StatCard, DashboardHeader, CapsuleSkeleton, EmptyState, Spinner, Button, TextInput, TimerFillIcon, ZapIcon, UnpdfIcon, PauseIcon } from '@/components/ui';
@@ -27,6 +28,10 @@ const FILTERS = [
 ];
 
 export default function CapsuleScreen() {
+  return <Redirect href={{ pathname: '/coming-soon', params: { feature: 'capsules' } }} />;
+}
+
+export function CapsuleContent() {
   const {
     filter,
     setFilter,

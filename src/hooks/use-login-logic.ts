@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLogin } from '@/hooks/mutations/use-auth-mutations';
 import { useToast } from '@/components/ui/Toast';
-import { useUiStore } from '@/store';
+import { useUiStore, useAuthStore } from '@/store';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import * as Haptics from 'expo-haptics';
@@ -85,10 +85,10 @@ export function useLoginLogic() {
       onSuccess: (res) => {
         const completion = normalizeAuthCompletion(res);
         if (completion.kind === 'two-factor-required') {
+          useAuthStore.getState().setTwoFactorPendingToken(completion.token);
           router.push({
             pathname: '/(auth)/two-factor',
             params: {
-              token: completion.token,
               ...(getPreferredPostAuthHref() ? { redirect: getPreferredPostAuthHref() as string } : {}),
             },
           });
@@ -116,9 +116,11 @@ export function useLoginLogic() {
         return;
       }
       if (nativeResult.success && nativeResult.idToken) {
-        const res = await client.post(`${endpoint.oauth}google`, {
-          id_token: nativeResult.idToken,
-        });
+        const res = await client.post(
+          `${endpoint.oauth}google`,
+          { id_token: nativeResult.idToken },
+          { skipAuth: true } as never,
+        );
         const completion = await completeAuthResponse(res.data, establishSession);
         if (completion.kind === 'session') {
           return;
@@ -132,7 +134,8 @@ export function useLoginLogic() {
 
       const res = await client.get(`${endpoint.oauth}google`, {
         params: { redirect_uri: oauthCallbackUrl('google') },
-      });
+        skipAuth: true,
+      } as never);
       const url: string | undefined = res.data?.data?.url;
       if (!url) return;
 
@@ -155,10 +158,14 @@ export function useLoginLogic() {
         return;
       }
       if (nativeResult.success && nativeResult.identityToken) {
-        const res = await client.post(`${endpoint.oauth}apple`, {
-          id_token: nativeResult.identityToken,
-          ...(nativeResult.user ? { user: nativeResult.user } : {}),
-        });
+        const res = await client.post(
+          `${endpoint.oauth}apple`,
+          {
+            id_token: nativeResult.identityToken,
+            ...(nativeResult.user ? { user: nativeResult.user } : {}),
+          },
+          { skipAuth: true } as never,
+        );
         const completion = await completeAuthResponse(res.data, establishSession);
         if (completion.kind === 'session') {
           return;
@@ -172,7 +179,8 @@ export function useLoginLogic() {
 
       const res = await client.get(`${endpoint.oauth}apple`, {
         params: { redirect_uri: oauthCallbackUrl('apple') },
-      });
+        skipAuth: true,
+      } as never);
       const url: string | undefined = res.data?.data?.url;
       if (!url) return;
 

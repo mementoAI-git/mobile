@@ -8,6 +8,7 @@ import * as Haptics from 'expo-haptics';
 import { get, post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { isPermissionGranted } from '@/lib/permission-recovery';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { logger } from '@/lib/logger';
 import {
   getVoiceConnectionFailure,
@@ -80,8 +81,12 @@ export function useVoiceMode({
     const messages = Object.entries(transcriptRef.current)
       .filter(([, text]) => text.trim())
       .map(([role, text]) => ({ role, text, is_voice: true }));
+    if (!messages.length) return;
+    if (!memoryId) {
+      // Retain transcripts in ref if memoryId is pending so spoken thoughts are not dropped
+      return;
+    }
     transcriptRef.current = { user: '', ai: '' };
-    if (!messages.length || !memoryId) return;
 
     try {
       await post(endpoint.addMessageToMemory, {
@@ -91,6 +96,11 @@ export function useVoiceMode({
       });
     } catch (error) {
       logger.error('Failed to save voice transcript', error);
+      // Restore unsaved text into ref for subsequent retry
+      transcriptRef.current = {
+        user: messages.find((m) => m.role === 'user')?.text || '',
+        ai: messages.find((m) => m.role === 'ai')?.text || '',
+      };
     }
   }, [memoryId]);
 
@@ -192,6 +202,12 @@ export function useVoiceMode({
       const permission = await AudioModule.requestRecordingPermissionsAsync();
       if (!isPermissionGranted(permission)) {
         setIsConnecting(false);
+        showPermissionRecoveryAlert({
+          permission,
+          title: 'Microphone access needed',
+          description: 'Memento needs microphone access to start voice mode.',
+          settingsDescription: 'Enable microphone permissions in Settings to talk with Memento.',
+        });
         return;
       }
 
@@ -212,6 +228,12 @@ export function useVoiceMode({
           onmessage: handleLiveMessage,
           onerror: (error) => {
             logger.error('Live voice session failed', error);
+            if (isMountedRef.current) {
+              setConnectionFailure({
+                kind: 'connection-error',
+                message: 'Voice session was disconnected. Tap to reconnect.',
+              });
+            }
             void disconnect();
           },
           onclose: () => {

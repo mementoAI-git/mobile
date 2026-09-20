@@ -60,7 +60,7 @@ import {
   ShareIntentProvider,
 } from 'expo-share-intent';
 
-import { useAuthStore, useUiStore } from '@/store';
+import { useAuthStore, useUiStore, useUserStore } from '@/store';
 import { ToastProvider } from '@/components/ui/Toast';
 import { OfflineNotice } from '@/components/ui/OfflineNotice';
 import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
@@ -223,11 +223,19 @@ function SessionBootstrap() {
         staleTime: 0,
       })
       .then((user) => establishSession(token, user))
-      .catch(() => {
+      .catch((err: any) => {
         if (
           useAuthStore.getState().phase ===
           'authenticating'
         ) {
+          const status = err?.status ?? err?.response?.status;
+          if (status === 401) {
+            return terminateSession('expired');
+          }
+          const existingUser = useUserStore.getState().user;
+          if (existingUser) {
+            return establishSession(token, existingUser);
+          }
           return terminateSession('restore-failed');
         }
       })

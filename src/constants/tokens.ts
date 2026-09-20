@@ -18,11 +18,10 @@ export const COLORS = {
   linkPreview: '#22C661',
 
   // Brand
-  // brand: '#FF5E00',
-  brand: "#E98246",
-  brandWeak: 'rgba(255,94,0,0.8)',
-  brandTint: 'rgba(255,94,0,0.2)',
-  brandSubtle: 'rgba(255,94,0,0.05)',
+  brand: '#E98246',
+  brandWeak: 'rgba(233,130,70,0.8)',
+  brandTint: 'rgba(233,130,70,0.2)',
+  brandSubtle: 'rgba(233,130,70,0.05)',
 
   // Cinematic startup splash — ported from the approved Memento motion study.
   splashPaper: '#FFFDF9',

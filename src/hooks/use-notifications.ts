@@ -81,7 +81,7 @@ export function useNotifications() {
 
       // Priority 2: Typed data
       if (type === 'capsule') {
-        navigate('/(tabs)/capsule');
+        navigate({ pathname: '/coming-soon', params: { feature: 'capsules' } });
       } else if (type === 'memory' && id) {
         navigate({ pathname: '/(tabs)/stories/[id]', params: { id } });
       } else if (type === 'chat' && id) {

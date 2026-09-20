@@ -4,11 +4,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVerify2FA } from '@/hooks/mutations/use-auth-mutations';
 import * as Haptics from 'expo-haptics';
 import { normalizeAppHref } from '@/lib/navigation';
-import { useUiStore } from '@/store';
+import { useUiStore, useAuthStore } from '@/store';
 
 export function useTwoFactorLogic() {
   const router = useRouter();
-  const { token, redirect } = useLocalSearchParams<{ token: string; redirect?: string | string[] }>();
+  const { token: routeToken, redirect } = useLocalSearchParams<{ token?: string; redirect?: string | string[] }>();
+  const storeToken = useAuthStore((s) => s.twoFactorPendingToken);
+  const activeToken = storeToken || routeToken;
   const { mutate, isPending } = useVerify2FA();
 
   const [code, setCode] = useState(['', '', '', '', '', '']);
@@ -16,12 +18,12 @@ export function useTwoFactorLogic() {
   const inputRefs = useRef<(RNTextInput | null)[]>([]);
 
   useEffect(() => {
-    if (!token) {
+    if (!activeToken) {
       router.replace('/(auth)/login');
       return;
     }
     setTimeout(() => inputRefs.current[0]?.focus(), 300);
-  }, [token]);
+  }, [activeToken]);
 
   function handleDigit(index: number, value: string) {
     const digit = value.replace(/\D/g, '').slice(-1);
@@ -46,8 +48,9 @@ export function useTwoFactorLogic() {
     setError('');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
-    mutate({ two_fa_token: token!, code: fullCode }, {
+    mutate({ two_fa_token: activeToken!, code: fullCode }, {
       onSuccess: () => {
+        useAuthStore.getState().setTwoFactorPendingToken(null);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         const redirectValue = Array.isArray(redirect) ? redirect[0] : redirect;
         const preferredHref = normalizeAppHref(redirectValue);
