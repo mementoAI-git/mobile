@@ -6,11 +6,12 @@ import * as Haptics from 'expo-haptics';
 import { normalizeAppHref } from '@/lib/navigation';
 import { useUiStore, useAuthStore } from '@/store';
 
+import { toast } from '@/components/ui/Toast';
+
 export function useTwoFactorLogic() {
   const router = useRouter();
-  const { token: routeToken, redirect } = useLocalSearchParams<{ token?: string; redirect?: string | string[] }>();
-  const storeToken = useAuthStore((s) => s.twoFactorPendingToken);
-  const activeToken = storeToken || routeToken;
+  const { redirect } = useLocalSearchParams<{ redirect?: string | string[] }>();
+  const activeToken = useAuthStore((s) => s.twoFactorPendingToken);
   const { mutate, isPending } = useVerify2FA();
 
   const [code, setCode] = useState(['', '', '', '', '', '']);
@@ -19,11 +20,12 @@ export function useTwoFactorLogic() {
 
   useEffect(() => {
     if (!activeToken) {
+      toast('Authentication session expired. Please sign in again.', 'error');
       router.replace('/(auth)/login');
       return;
     }
     setTimeout(() => inputRefs.current[0]?.focus(), 300);
-  }, [activeToken]);
+  }, [activeToken, router]);
 
   function handleDigit(index: number, value: string) {
     const digit = value.replace(/\D/g, '').slice(-1);

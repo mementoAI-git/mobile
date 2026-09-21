@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import { Sparkles, Target, Heart, ListChecks, UserRound, Plus } from 'lucide-react-native';
+import { Sparkles, Target, Heart, ListChecks, UserRound, Plus, X } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useUiStore } from '@/store';
 import { usePersona, useMemoryInsightsSummary, useUserContext } from '@/hooks/queries/use-persona';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
@@ -85,9 +86,28 @@ export function MemoryInsightsSheet() {
   return (
     <View className="px-5 pt-2" style={{ flex: 1 }}>
       <View className="flex-row items-center justify-between mb-4 border-b border-stroke-weaker pb-3">
-        <Text className="text-text-strong" style={TYPE.uiTitle}>
+        <Text className="text-text-strong" style={TYPE.sectionTitle}>
           Memory Insights
         </Text>
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.selectionAsync();
+            closeSheet();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Close insights"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: COLORS.fillWeak,
+          }}
+          activeOpacity={0.7}
+        >
+          <X size={20} color={COLORS.textStrong} />
+        </TouchableOpacity>
       </View>
 
       <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 24, paddingBottom: getSheetBottomPadding(insets.bottom, 24) }}>

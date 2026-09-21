@@ -13,6 +13,12 @@ import {
 
 export type { BillingInvoice, BillingUsage } from '@/features/settings/billing-adapters';
 
+/**
+ * @todo billing-v2
+ * In-app billing profile editing is deferred until the backend implements
+ * a dedicated endpoint.billingProfile. In the interim, billing details and
+ * payment methods are securely managed via the Polar customer portal (openBillingPortal).
+ */
 export function useBillingProfile() {
   return useQuery<BillingProfile | null>({
     queryKey: queryKeys.billingProfile,

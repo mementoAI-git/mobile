@@ -35,7 +35,13 @@ export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: Vo
     <View className="pb-2 pt-2">
       <View className="mb-5 flex-row items-center justify-between">
         <Text className="text-text-strong" style={TYPE.sectionTitle}>Settings</Text>
-        <Pressable onPress={onClose} className="size-11 items-center justify-center rounded-full bg-fill-weaker">
+        <Pressable
+          onPress={() => {
+            void Haptics.selectionAsync();
+            onClose();
+          }}
+          className="size-11 items-center justify-center rounded-full bg-fill-weaker"
+        >
           <X size={20} color={COLORS.textBase} />
         </Pressable>
       </View>

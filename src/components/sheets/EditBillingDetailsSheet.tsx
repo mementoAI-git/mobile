@@ -14,9 +14,6 @@ import {getSheetBottomPadding} from '@/features/layout/sheet-safe-area';
 export interface BillingDetailsForm {
   email: string;
   name: string;
-  relationship: string;
-  about: string;
-  originalAbout: string;
   line1: string;
   line2: string;
   city: string;
@@ -66,7 +63,7 @@ export function EditBillingDetailsSheet({
   onSave,
   onClose,
   expandSheet,
-  canManage = true,
+  canManage,
   onUpgrade,
 }: {
   profile: BillingProfile;
@@ -78,13 +75,9 @@ export function EditBillingDetailsSheet({
 }) {
   const insets = useSafeAreaInsets();
   const address = profile.address;
-  const originalAbout = [address?.line1, address?.line2, address?.city, address?.state, address?.postalCode].filter(Boolean).join(', ');
   const [values, setValues] = useState<BillingDetailsForm>({
     email: profile.email ?? '',
     name: profile.name ?? '',
-    relationship: '',
-    about: originalAbout,
-    originalAbout,
     line1: address?.line1 ?? '',
     line2: address?.line2 ?? '',
     city: address?.city ?? '',
@@ -119,10 +112,13 @@ export function EditBillingDetailsSheet({
         <TouchableOpacity
           accessibilityRole="button"
           accessibilityLabel="Close billing details"
-          onPress={onClose}
-          style={{width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak}}
+          onPress={() => {
+            Haptics.selectionAsync();
+            onClose();
+          }}
+          style={{width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak}}
         >
-          <X size={18} color={COLORS.textStrong}/>
+          <X size={20} color={COLORS.textStrong}/>
         </TouchableOpacity>
       </View>
       <BottomSheetScrollView
@@ -133,9 +129,10 @@ export function EditBillingDetailsSheet({
         contentContainerStyle={{paddingHorizontal: 20, paddingTop: 4, paddingBottom: 48, gap: 16}}
       >
         <Field label="Billing email address" value={values.email} onChangeText={value => set('email', value)}/>
-        <Field label="Name" value={values.name} onChangeText={value => set('name', value)}/>
-        <Field label="Relationship" value={values.relationship} onChangeText={value => set('relationship', value)}/>
-        <Field label="About" value={values.about} onChangeText={value => set('about', value)} multiline/>
+        <Field label="Full name" value={values.name} onChangeText={value => set('name', value)}/>
+        <Field label="Street address" value={values.line1} onChangeText={value => set('line1', value)}/>
+        <Field label="City" value={values.city} onChangeText={value => set('city', value)}/>
+        <Field label="Postal code" value={values.postalCode} onChangeText={value => set('postalCode', value)}/>
         <Field label="Country" value={values.country} onChangeText={value => set('country', value)} select/>
       </BottomSheetScrollView>
       <View style={{flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(getSheetBottomPadding(insets.bottom, 12), 16), backgroundColor: COLORS.background}}>

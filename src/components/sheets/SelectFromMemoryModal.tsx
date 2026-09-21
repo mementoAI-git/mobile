@@ -2,6 +2,7 @@ import React, { forwardRef, useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { X, Search, Check } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { Button, Skeleton } from '@/components/ui';
@@ -108,8 +109,17 @@ export const SelectFromMemoryModal = React.memo(
           {/* Header */}
           <View className="flex-row justify-between items-center mb-4">
             <Text className="text-text-strong" style={TYPE.sectionTitle}>Link Memory</Text>
-            <TouchableOpacity onPress={handleClose}>
-              <X size={20} color={COLORS.textWeak} />
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.selectionAsync();
+                handleClose();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Close link memory"
+              className="size-11 items-center justify-center rounded-full bg-fill-weaker"
+              activeOpacity={0.7}
+            >
+              <X size={20} color={COLORS.textStrong} />
             </TouchableOpacity>
           </View>
 

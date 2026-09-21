@@ -84,6 +84,9 @@ export function useLoginLogic() {
     mutate(data, {
       onSuccess: (res) => {
         const completion = normalizeAuthCompletion(res);
+        if (completion.kind === 'session') {
+          return;
+        }
         if (completion.kind === 'two-factor-required') {
           useAuthStore.getState().setTwoFactorPendingToken(completion.token);
           router.push({
@@ -94,6 +97,7 @@ export function useLoginLogic() {
           });
           return;
         }
+        toast('Could not complete sign in. Please try again.', 'error');
       },
       onError: (err: any) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -123,6 +127,11 @@ export function useLoginLogic() {
         );
         const completion = await completeAuthResponse(res.data, establishSession);
         if (completion.kind === 'session') {
+          return;
+        }
+        if (completion.kind === 'two-factor-required') {
+          useAuthStore.getState().setTwoFactorPendingToken(completion.token);
+          router.push('/(auth)/two-factor');
           return;
         }
       }
@@ -168,6 +177,11 @@ export function useLoginLogic() {
         );
         const completion = await completeAuthResponse(res.data, establishSession);
         if (completion.kind === 'session') {
+          return;
+        }
+        if (completion.kind === 'two-factor-required') {
+          useAuthStore.getState().setTwoFactorPendingToken(completion.token);
+          router.push('/(auth)/two-factor');
           return;
         }
       }

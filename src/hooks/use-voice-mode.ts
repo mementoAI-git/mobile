@@ -77,12 +77,16 @@ export function useVoiceMode({
     onBuffer: handleAudioBuffer,
   });
 
+  const memoryIdRef = useRef(memoryId);
+  memoryIdRef.current = memoryId;
+
   const flushTranscripts = useCallback(async () => {
     const messages = Object.entries(transcriptRef.current)
       .filter(([, text]) => text.trim())
       .map(([role, text]) => ({ role, text, is_voice: true }));
     if (!messages.length) return;
-    if (!memoryId) {
+    const targetMemoryId = memoryId || memoryIdRef.current;
+    if (!targetMemoryId) {
       // Retain transcripts in ref if memoryId is pending so spoken thoughts are not dropped
       return;
     }
@@ -90,7 +94,7 @@ export function useVoiceMode({
 
     try {
       await post(endpoint.addMessageToMemory, {
-        memory_id: memoryId,
+        memory_id: targetMemoryId,
         session_id: sessionIdRef.current,
         messages,
       });
@@ -103,6 +107,13 @@ export function useVoiceMode({
       };
     }
   }, [memoryId]);
+
+  // Flush buffered voice transcripts as soon as a conversation ID is assigned
+  useEffect(() => {
+    if (memoryId && (transcriptRef.current.user || transcriptRef.current.ai)) {
+      void flushTranscripts();
+    }
+  }, [memoryId, flushTranscripts]);
 
   const playPcmChunk = useCallback(async (base64Pcm: string) => {
     const context = audioContextRef.current;
@@ -280,15 +291,18 @@ export function useVoiceMode({
     setIsMuted(isMutedRef.current);
   }, []);
 
+  const disconnectRef = useRef(disconnect);
+  disconnectRef.current = disconnect;
+
   useEffect(() => {
     isMountedRef.current = true;
     audioContextRef.current = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE });
     return () => {
       isMountedRef.current = false;
-      void disconnect();
+      void disconnectRef.current();
       audioContextRef.current?.close().catch(() => undefined);
     };
-  }, [disconnect]);
+  }, []);
 
   return useMemo(
     () => ({

@@ -24,6 +24,7 @@ import {
 import type { EnrichmentCategory } from '@/constants/enrichment';
 import type { OnboardingMotivation } from '@/constants/onboarding';
 import { useAuthStore, useUserStore } from '@/store';
+import { persistSessionUser } from '@/features/auth/session-credentials';
 
 interface OnboardingStoreState {
   draft: FirstRunOnboardingDraft;
@@ -170,6 +171,7 @@ export function useFirstRunOnboarding() {
       const skippedUser = { ...currentUser, onboarding_status: 'skipped' as const };
       useAuthStore.getState().updateUser(skippedUser);
       useUserStore.getState().setUser(skippedUser);
+      void persistSessionUser(skippedUser, secureStorage);
     }
     try {
       await skipMutation.mutateAsync();

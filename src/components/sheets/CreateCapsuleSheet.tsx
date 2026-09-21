@@ -11,6 +11,7 @@ import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal, BottomSh
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
 import { useEffect } from 'react';
+import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   X,
@@ -215,11 +216,27 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
     <>
       {/* Header */}
       <View className="px-5 pt-4 pb-4 border-b border-stroke-weaker flex-row items-center justify-between">
-        <Text className="text-text-strong" style={TYPE.uiTitle}>
+        <Text className="text-text-strong" style={TYPE.sectionTitle}>
           {isEdit ? 'Edit Capsule' : 'Create Capsule'}
         </Text>
-        <TouchableOpacity onPress={onClose} className="p-1.5 bg-fill-weaker rounded-full">
-          <X size={16} color={COLORS.textWeak} />
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.selectionAsync();
+            onClose();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Close capsule"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: COLORS.fillWeak,
+          }}
+          activeOpacity={0.7}
+        >
+          <X size={20} color={COLORS.textStrong} />
         </TouchableOpacity>
       </View>
 

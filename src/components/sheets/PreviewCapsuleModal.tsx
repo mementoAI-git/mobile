@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { StylePicker } from '@/components/capsule/StylePicker';
 import { getThemeById } from '@/constants/themes';
@@ -84,8 +85,17 @@ export const PreviewCapsuleModal = forwardRef<BottomSheetModal, PreviewCapsuleMo
           <Text className="text-text-strong" style={TYPE.sectionTitle}>
             Preview Capsule
           </Text>
-          <TouchableOpacity onPress={handleClose} className="p-1.5 bg-fill-weaker rounded-full">
-            <X size={16} color={COLORS.textWeak} />
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.selectionAsync();
+              handleClose();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Close preview"
+            className="size-11 items-center justify-center rounded-full bg-fill-weaker"
+            activeOpacity={0.7}
+          >
+            <X size={20} color={COLORS.textStrong} />
           </TouchableOpacity>
         </View>
 

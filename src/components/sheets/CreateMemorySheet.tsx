@@ -202,7 +202,14 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
           <Text className="text-text-strong" style={TYPE.sectionTitle}>
             {editData ? 'Edit Memory' : 'New Memory'}
           </Text>
-          <TouchableOpacity onPress={onClose} hitSlop={6} className="size-8 rounded-full bg-fill-weaker items-center justify-center">
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.selectionAsync();
+              onClose();
+            }}
+            hitSlop={8}
+            className="size-11 rounded-full bg-fill-weaker items-center justify-center"
+          >
             <X size={18} color={COLORS.textWeak} />
           </TouchableOpacity>
         </View>

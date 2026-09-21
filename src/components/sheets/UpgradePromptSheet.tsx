@@ -24,7 +24,7 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
       const opened = await launchBillingCheckout({
         tier: 'pro',
         interval: 'monthly',
-        returnPath: '/(tabs)/capsule',
+        returnPath: '/(tabs)/overview',
         queryClient,
       });
 

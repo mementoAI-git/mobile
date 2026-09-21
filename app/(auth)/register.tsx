@@ -38,6 +38,7 @@ import { signInWithGoogleNative } from '@/features/auth/google-auth';
 import { signInWithAppleNative } from '@/features/auth/apple-auth';
 import { establishSession } from '@/features/auth/session-coordinator';
 import { completeAuthResponse } from '@/features/auth/auth-completion';
+import { useAuthStore } from '@/store';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 const APP_ICON = require('../../assets/icon.png');
@@ -137,11 +138,18 @@ export default function RegisterScreen() {
         return;
       }
       if (nativeResult.success && nativeResult.idToken) {
-        const res = await client.post(`${endpoint.oauth}google`, {
-          id_token: nativeResult.idToken,
-        });
+        const res = await client.post(
+          `${endpoint.oauth}google`,
+          { id_token: nativeResult.idToken },
+          { skipAuth: true } as never,
+        );
         const completion = await completeAuthResponse(res.data, establishSession);
         if (completion.kind === 'session') {
+          return;
+        }
+        if (completion.kind === 'two-factor-required') {
+          useAuthStore.getState().setTwoFactorPendingToken(completion.token);
+          router.push('/(auth)/two-factor');
           return;
         }
       }
@@ -152,7 +160,8 @@ export default function RegisterScreen() {
 
       const res = await client.get(`${endpoint.oauth}google`, {
         params: { redirect_uri: oauthCallbackUrl('google') },
-      });
+        skipAuth: true,
+      } as never);
       const url: string | undefined = res.data?.data?.url;
       if (!url) return;
       const { openAuthSessionAsync } = await import('expo-web-browser');
@@ -171,12 +180,21 @@ export default function RegisterScreen() {
         return;
       }
       if (nativeResult.success && nativeResult.identityToken) {
-        const res = await client.post(`${endpoint.oauth}apple`, {
-          id_token: nativeResult.identityToken,
-          ...(nativeResult.user ? { user: nativeResult.user } : {}),
-        });
+        const res = await client.post(
+          `${endpoint.oauth}apple`,
+          {
+            id_token: nativeResult.identityToken,
+            ...(nativeResult.user ? { user: nativeResult.user } : {}),
+          },
+          { skipAuth: true } as never,
+        );
         const completion = await completeAuthResponse(res.data, establishSession);
         if (completion.kind === 'session') {
+          return;
+        }
+        if (completion.kind === 'two-factor-required') {
+          useAuthStore.getState().setTwoFactorPendingToken(completion.token);
+          router.push('/(auth)/two-factor');
           return;
         }
       }
@@ -187,7 +205,8 @@ export default function RegisterScreen() {
 
       const res = await client.get(`${endpoint.oauth}apple`, {
         params: { redirect_uri: oauthCallbackUrl('apple') },
-      });
+        skipAuth: true,
+      } as never);
       const url: string | undefined = res.data?.data?.url;
       if (!url) return;
       const { openAuthSessionAsync } = await import('expo-web-browser');

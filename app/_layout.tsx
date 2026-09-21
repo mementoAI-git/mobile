@@ -223,20 +223,30 @@ function SessionBootstrap() {
         staleTime: 0,
       })
       .then((user) => establishSession(token, user))
-      .catch((err: any) => {
-        if (
-          useAuthStore.getState().phase ===
-          'authenticating'
-        ) {
+      .catch(async (err: any) => {
+        const currentPhase = useAuthStore.getState().phase;
+        if (currentPhase === 'authenticating' || currentPhase === 'authenticated') {
           const status = err?.status ?? err?.response?.status;
           if (status === 401) {
             return terminateSession('expired');
           }
-          const existingUser = useUserStore.getState().user;
+          // Non-401 failure (offline, timeout, 5xx): check for in-memory or persisted user
+          const existingUser = useUserStore.getState().user ?? useAuthStore.getState().user;
           if (existingUser) {
             return establishSession(token, existingUser);
           }
-          return terminateSession('restore-failed');
+          try {
+            const { readSessionUser } = await import('@/features/auth/session-credentials');
+            const { secureStorage } = await import('@/lib/secure-storage');
+            const cachedUser = await readSessionUser(secureStorage);
+            if (cachedUser) {
+              return establishSession(token, cachedUser);
+            }
+          } catch {
+            // ignore read error
+          }
+          // Retain authenticated session in offline state rather than wiping user credentials
+          useAuthStore.getState().updateCredentials(token);
         }
       })
       .finally(() => {
