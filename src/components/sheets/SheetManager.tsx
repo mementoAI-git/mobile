@@ -30,6 +30,9 @@ import { SetupTwoFactorSheet } from './SetupTwoFactorSheet';
 import { SecurityConfirmationSheet } from './SecurityConfirmationSheet';
 import { VoiceCallSettingsSheet } from './VoiceCallSettingsSheet';
 import { EndVoiceSessionSheet } from './EndVoiceSessionSheet';
+import { UpgradeSuccessSheet } from './UpgradeSuccessSheet';
+import { CapsuleSealedSheet } from './CapsuleSealedSheet';
+import { FirstStoryMilestoneSheet } from './FirstStoryMilestoneSheet';
 import { AddMemberToGroupSheet } from './AddMemberToGroupSheet';
 import { EditBillingDetailsSheet } from './EditBillingDetailsSheet';
 import { AddPaymentMethodSheet } from './AddPaymentMethodSheet';
@@ -61,6 +64,9 @@ const SHEET_CONFIGS: Record<string, {
   'feedback': { component: FeedbackSheet, snapPoints: ['90%'], dynamic: true, keyboardBehavior: 'fillParent' },
   'capsule-detail': { component: CapsuleDetailSheet, snapPoints: ['92%'] },
   'upgrade-prompt': { component: UpgradePromptSheet, dynamic: true },
+  'upgrade-success': { component: UpgradeSuccessSheet, dynamic: true },
+  'capsule-sealed': { component: CapsuleSealedSheet, dynamic: true },
+  'first-story-milestone': { component: FirstStoryMilestoneSheet, dynamic: true },
   'select': { component: SelectSheet, dynamic: true },
   'streak': { component: StreakSheet, dynamic: true },
   'story-drafts': { component: DraftsSheet, snapPoints: ['75%'], keyboardBehavior: 'interactive' },

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Info } from 'lucide-react-native';
+import { Info, Check, ShieldCheck } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
 import { TYPE } from '@/constants/typography';
@@ -59,6 +59,19 @@ export default function SummaryScreen() {
       ? draft.lifeAreas
       : (['identity_self', 'passions_interests', 'lessons_wisdom'] as const);
 
+  const [vaultStage, setVaultStage] = useState<number | null>(null);
+
+  const onStartJourney = async () => {
+    try {
+      setVaultStage(1);
+      setTimeout(() => setVaultStage(2), 600);
+      setTimeout(() => setVaultStage(3), 1200);
+      await handleComplete();
+    } catch {
+      setVaultStage(null);
+    }
+  };
+
   return (
     <OnboardingShell
       step={4}
@@ -69,11 +82,97 @@ export default function SummaryScreen() {
       }
       primaryAction={{
         label: 'Start using Memento AI',
-        onPress: handleComplete,
-        loading: isCompleting,
+        onPress: onStartJourney,
+        loading: isCompleting || vaultStage !== null,
         rounded: 'xl',
       }}
     >
+      {vaultStage !== null && (
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: 'rgba(254, 251, 248, 0.98)',
+              zIndex: 100,
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingHorizontal: 24,
+            },
+          ]}
+        >
+          <Animated.View entering={FadeInDown.duration(350)} style={{ width: '100%', alignItems: 'center' }}>
+            <View
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 24,
+                backgroundColor: COLORS.brandTint,
+                borderWidth: 1,
+                borderColor: 'rgba(233,130,70,0.3)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 24,
+              }}
+            >
+              <ShieldCheck size={42} color={COLORS.brand} />
+            </View>
+            <Text style={[TYPE.sectionTitle, { textAlign: 'center', color: COLORS.textStrong, marginBottom: 8 }]}>
+              Forging Your Personal Vault
+            </Text>
+            <Text style={[TYPE.body, { textAlign: 'center', color: COLORS.textWeak, marginBottom: 32 }]}>
+              Preparing your private archive, {preferredName || 'friend'}...
+            </Text>
+
+            <View
+              style={{
+                width: '100%',
+                backgroundColor: COLORS.fillWeaker,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: COLORS.strokeWeaker,
+                padding: 20,
+                gap: 16,
+              }}
+            >
+              {[
+                { label: 'Personal encryption keys set', minStage: 1 },
+                { label: 'Life dimensions calibrated', minStage: 2 },
+                { label: 'AI memory companion ready', minStage: 3 },
+              ].map((item, idx) => {
+                const done = vaultStage >= item.minStage;
+                return (
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                        backgroundColor: done ? 'rgba(6, 122, 87, 0.15)' : COLORS.fillWeak,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {done ? (
+                        <Check size={14} color={COLORS.success} strokeWidth={2.5} />
+                      ) : (
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.textWeak }} />
+                      )}
+                    </View>
+                    <Text
+                      style={[
+                        TYPE.label,
+                        { color: done ? COLORS.textStrong : COLORS.textWeak },
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </Animated.View>
+        </View>
+      )}
       <Animated.View entering={FadeInDown.duration(400)} style={styles.container}>
         {/* Visual: Beach umbrella */}
         <Animated.View entering={FadeInDown.duration(400)} style={styles.visualContainer}>

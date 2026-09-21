@@ -42,11 +42,14 @@ export async function launchBillingCheckout({
   returnPath,
   queryClient,
 }: LaunchBillingCheckoutOptions) {
-  const redirectUrl = Linking.createURL(returnPath);
+  const successUrl = Linking.createURL('/(tabs)/overview', {
+    queryParams: { checkout: 'success' },
+  });
+  const cancelUrl = Linking.createURL(returnPath);
   try {
     const res = await post(endpoint.billingCheckout, {
-      success_url: redirectUrl,
-      cancel_url: redirectUrl,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       tier,
       interval,
     });

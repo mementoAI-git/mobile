@@ -9,7 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Plus, Zap, Trophy, ChevronRight } from 'lucide-react-native';
 import { useUiStore } from '@/store';
 import { useUserStats, useMemoriesStats, useCapsuleStats } from '@/hooks/queries/use-overview';
@@ -217,6 +217,16 @@ export default function OverviewScreen() {
 
   // Data fetching
   const queryClient = useQueryClient();
+  const { checkout } = useLocalSearchParams<{ checkout?: string }>();
+
+  useEffect(() => {
+    if (checkout === 'success') {
+      openSheet('upgrade-success');
+      router.setParams({ checkout: undefined });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.subscription });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.userStats });
+    }
+  }, [checkout, openSheet, queryClient, router]);
 
   // Data fetching
   const { data: profile } = useProfile();

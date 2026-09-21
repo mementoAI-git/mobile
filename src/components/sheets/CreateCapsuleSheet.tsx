@@ -33,6 +33,7 @@ import { useFiles } from '@/hooks/queries/use-files';
 import { useFileUpload } from '@/hooks/use-file-upload';
 import type { IBeneficiary, ICapsule } from '@/types';
 import { getThemeById } from '@/constants/themes';
+import { useUiStore } from '@/store';
 import { PreviewCapsuleModal } from './PreviewCapsuleModal';
 import { SelectFromMemoryModal } from './SelectFromMemoryModal';
 import { SelectFromMediaModal } from './SelectFromMediaModal';
@@ -202,8 +203,19 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
     } else {
       createCapsule(payload, {
         onSuccess: () => {
-          toast('Capsule scheduled.', 'success');
           onClose();
+          const recipientNames = recipientIds.map((id) => {
+            const match = (beneficiariesData ?? []).find((b: any) => b._id === id || b.email === id);
+            return match?.name || match?.email || id;
+          });
+          setTimeout(() => {
+            useUiStore.getState().openSheet('capsule-sealed', {
+              title: title.trim() || 'Untitled Capsule',
+              unlockDate: scheduleDate ? scheduleDate.toISOString() : undefined,
+              recipientNames,
+              themeId,
+            });
+          }, 350);
         }
       });
     }
