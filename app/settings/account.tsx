@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,6 +29,7 @@ import {
 import { useLogoutOtherDevices } from '@/hooks/mutations/use-auth-mutations';
 import { usePasskeys } from '@/hooks/queries/use-passkeys';
 import { useTwoFactorSettingsLogic } from '@/hooks/use-two-factor-settings-logic';
+import { useVaultLockStore } from '@/features/security/vault-lock.store';
 import { useAuthStore, useUiStore, useUserStore } from '@/store';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
@@ -42,6 +44,8 @@ export default function SecuritySettingsScreen() {
   const deletePasskey = useDeletePasskey();
   const logoutOtherDevices = useLogoutOtherDevices();
   const twoFactor = useTwoFactorSettingsLogic();
+  const lockTimeoutMinutes = useVaultLockStore((state) => state.lockTimeoutMinutes);
+  const setLockTimeout = useVaultLockStore((state) => state.setLockTimeout);
   const [fallbackOffered, setFallbackOffered] = useState(false);
   const [fallbackEnabled, setFallbackEnabled] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -171,6 +175,50 @@ export default function SecuritySettingsScreen() {
                 />
               </View>
             )}
+          </View>
+
+          <View style={[styles.card, { marginTop: 16 }]}>
+            <Text style={{ ...TYPE.body, color: COLORS.textStrong, marginBottom: 4 }}>
+              Vault Lock (Face ID / Passcode)
+            </Text>
+            <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak, lineHeight: 20 }}>
+              Require biometric authentication when resuming the app after inactivity.
+            </Text>
+
+            <View className="flex-row flex-wrap gap-2 mt-4">
+              {[
+                { label: 'Off', minutes: -1 },
+                { label: 'Immediate', minutes: 0 },
+                { label: '1 min', minutes: 1 },
+                { label: '5 mins', minutes: 5 },
+                { label: '15 mins', minutes: 15 },
+              ].map((option) => {
+                const active = lockTimeoutMinutes === option.minutes;
+                return (
+                  <TouchableOpacity
+                    key={option.minutes}
+                    onPress={() => {
+                      void Haptics.selectionAsync();
+                      void setLockTimeout(option.minutes);
+                    }}
+                    className={`px-3.5 py-2 rounded-full border ${
+                      active
+                        ? 'bg-brand/15 border-brand'
+                        : 'bg-fill-weaker border-stroke-weaker'
+                    }`}
+                  >
+                    <Text
+                      style={{
+                        ...TYPE.buttonSmall,
+                        color: active ? COLORS.brand : COLORS.textBase,
+                      }}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
 
           <View style={[styles.card, { marginTop: 16 }]}>

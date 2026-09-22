@@ -19,4 +19,6 @@ export const storageKeys = {
   biometricsRefreshToken: 'memento.biometrics_refresh_token',
   passkeyCredentialId: 'memento.passkey_credential_id',
   passkeyEmail: 'memento.passkey_email',
+  vaultLockTimeout: 'memento.vault_lock_timeout',
+  vaultLockSecret: 'memento.vault_lock_secret',
 } as const;

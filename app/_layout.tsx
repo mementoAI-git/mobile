@@ -67,6 +67,8 @@ import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
 import { AuthenticatedNotificationManager } from '@/components/system/AuthenticatedNotificationManager';
 import { AnimatedSplash } from '@/components/system/AnimatedSplash';
 import { SheetManager } from '@/components/sheets/SheetManager';
+import { AppSwitcherPrivacyBlur } from '@/components/security/AppSwitcherPrivacyBlur';
+import { VaultLockoutScreen } from '@/components/security/VaultLockoutScreen';
 import { BackgroundMusicProvider } from '@/hooks/use-background-music';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { storageKeys } from '@/constants/storage-keys';
@@ -655,6 +657,8 @@ function RootLayout() {
                       </Stack>
 
                       <SheetManager />
+                      <AppSwitcherPrivacyBlur />
+                      <VaultLockoutScreen />
                     </BackgroundMusicProvider>
                   </ToastProvider>
                 </ShareIntentProvider>
