@@ -25,6 +25,7 @@ import { queryKeys } from '@/constants/query-keys';
 import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 import { DailyPromptSection } from '@/components/overview/DailyPromptSection';
 import { RecentActivitiesSection } from '@/components/overview/RecentActivitiesSection';
+import { MemorySpotlightCard } from '@/components/overview/MemorySpotlightCard';
 import { BrowseTopicsSection } from '@/components/overview/BrowseTopicsSection';
 import * as Haptics from 'expo-haptics';
 import Animated, {
@@ -271,6 +272,14 @@ export default function OverviewScreen() {
       const createdAt = new Date(s.created_at);
       return createdAt >= startOfWeek;
     }).length;
+  }, [recentStoriesData]);
+
+  const fallbackStory = useMemo(() => {
+    const stories = recentStoriesData?.pages?.flatMap((p) => p?.docs ?? []) ?? [];
+    if (stories.length > 1) {
+      return stories[Math.min(stories.length - 1, 3)];
+    }
+    return stories[0] ?? null;
   }, [recentStoriesData]);
 
   const stats = statsData ?? {};
@@ -626,6 +635,12 @@ export default function OverviewScreen() {
                 </View>
               </ImageBackground>
             </Animated.View>
+
+            {/* ── Memory Spotlight ─────────────────────────────────── */}
+            <MemorySpotlightCard
+              spotlight={statsData?.spotlight}
+              fallbackStory={fallbackStory}
+            />
 
             {/* ── Recent Activities ─────────────────────────────────── */}
             <RecentActivitiesSection />

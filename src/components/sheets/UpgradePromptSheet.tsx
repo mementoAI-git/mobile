@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Sparkles, Crown, CheckCircle2, Zap } from 'lucide-react-native';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { Button } from '@/components/ui';
 import * as Haptics from 'expo-haptics';
 import { useQueryClient } from '@tanstack/react-query';
 import { launchBillingCheckout } from '@/features/settings/billing-flow';
+
+const STREAK_FLAME = require('../../../assets/images/illustrations/streak_flame.webp');
 
 interface UpgradePromptSheetProps {
   onClose?: () => void;
@@ -46,11 +47,13 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
 
   return (
     <View className="flex-grow px-4 pb-6">
-      {/* Crown Banner */}
+      {/* Hero Illustration */}
       <View className="items-center justify-center pt-2 pb-6 relative">
-        <View className="size-16 rounded-3xl bg-brand/10 border border-brand/20 items-center justify-center shadow-sm mb-4">
-          <Crown size={32} color={COLORS.brand} strokeWidth={2} />
-        </View>
+        <Image
+          source={STREAK_FLAME}
+          style={{ width: 84, height: 84, marginBottom: 16 }}
+          resizeMode="contain"
+        />
         <Text
           className="text-center text-text-strong mb-2"
           style={TYPE.sectionTitle}>
@@ -66,10 +69,8 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
       {/* Features List */}
       <View className="bg-fill-weaker rounded-3xl border border-stroke-weaker p-5 gap-4 mb-8">
         {premiumFeatures.map((f, i) => (
-          <View key={i} className="flex-row gap-3">
-            <View className="pt-0.5">
-              <CheckCircle2 size={18} color={COLORS.brand} />
-            </View>
+          <View key={i} className="flex-row items-start gap-3">
+            <View className="size-2 rounded-full bg-brand mt-2" />
             <View className="flex-1">
               <Text className="text-text-strong" style={TYPE.label}>
                 {f.title}
@@ -90,7 +91,6 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
         <View>
           <View className="flex-row items-center gap-1.5 mb-1">
             <Text className="text-brand uppercase tracking-wider" style={TYPE.label}>Memento Pro</Text>
-            <Sparkles size={12} color={COLORS.brand} />
           </View>
           <Text className="text-text-strong" style={TYPE.sectionTitle}>
             $9.99<Text className="text-text-weak" style={TYPE.metadata}> / month</Text>
@@ -107,7 +107,7 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
           onPress={handleUpgrade}
           loading={loading}
           size="lg"
-          leftIcon={<Zap size={18} color={COLORS.textInverse} />}
+          className="h-14 w-full"
         >
           Upgrade Now
         </Button>

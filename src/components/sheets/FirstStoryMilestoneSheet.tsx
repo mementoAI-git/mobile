@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { BookOpen, Sparkles, X, Share2 } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { Button } from '@/components/ui';
 import { useUiStore } from '@/store';
+
+const QUILL_INK = require('../../../assets/images/onboarding/quill-ink.png');
 
 interface FirstStoryMilestoneSheetProps {
   memoryId: string;
@@ -50,16 +52,13 @@ export function FirstStoryMilestoneSheet({
         </TouchableOpacity>
       </View>
 
-      {/* Hero Icon */}
+      {/* Hero Illustration */}
       <View className="items-center justify-center pt-1 pb-6">
-        <View className="relative mb-5">
-          <View className="size-20 rounded-3xl bg-brand/10 border border-brand/20 items-center justify-center shadow-sm">
-            <BookOpen size={36} color={COLORS.brand} strokeWidth={2} />
-          </View>
-          <View className="absolute -top-1 -right-1 size-7 rounded-full bg-brand items-center justify-center">
-            <Sparkles size={14} color="#FFFFFF" />
-          </View>
-        </View>
+        <Image
+          source={QUILL_INK}
+          style={{ width: 104, height: 104, marginBottom: 16 }}
+          resizeMode="contain"
+        />
 
         <Text
           className="text-center text-text-strong mb-2.5"

@@ -1,9 +1,10 @@
 import React from 'react';
-import { Text, View } from 'react-native';
-import { FolderHeart, UserRoundPlus } from 'lucide-react-native';
+import { Text, View, Image } from 'react-native';
 import { Button } from '@/components/ui';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+
+const EMPTY_IMG = require('../../../assets/images/illustrations/empty_memories.png');
 
 export function BeneficiaryEmptyState({
   mode,
@@ -12,11 +13,14 @@ export function BeneficiaryEmptyState({
   mode: 'people' | 'groups';
   onAction: () => void;
 }) {
-  const Icon = mode === 'people' ? UserRoundPlus : FolderHeart;
   return (
     <View className="min-h-[520px] items-center justify-center rounded-[24px] bg-fill-weaker px-6">
-      <Icon size={70} color={COLORS.textDisabled} strokeWidth={1.7} />
-      <Text className="mt-9 text-center" style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>
+      <Image
+        source={EMPTY_IMG}
+        style={{ width: 88, height: 88, marginBottom: 12 }}
+        resizeMode="contain"
+      />
+      <Text className="mt-4 text-center" style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>
         {mode === 'people' ? 'No beneficiary invited yet' : 'No group created yet'}
       </Text>
       <Text className="mt-3 max-w-[310px] text-center" style={{ ...TYPE.body, color: COLORS.textWeak }}>
@@ -27,8 +31,7 @@ export function BeneficiaryEmptyState({
       <Button
         onPress={onAction}
         size="lg"
-        className="mt-5 h-14 w-full max-w-[360px]"
-        leftIcon={<Icon size={22} color={COLORS.textInverse} />}
+        className="mt-6 h-14 w-full max-w-[360px]"
       >
         {mode === 'people' ? 'Invite Beneficiary' : 'Create Group'}
       </Button>

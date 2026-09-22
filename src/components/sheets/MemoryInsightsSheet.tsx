@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import { Sparkles, Target, Heart, ListChecks, UserRound, Plus, X } from 'lucide-react-native';
+import { Plus, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useUiStore } from '@/store';
 import { usePersona, useMemoryInsightsSummary, useUserContext } from '@/hooks/queries/use-persona';
@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
+
+const EMPTY_EXPLORE = require('../../../assets/images/illustrations/empty_explore.png');
 
 const SUMMARY_TAB_KEY = 'summary';
 
@@ -25,11 +27,11 @@ const CATEGORIES = [
   { label: 'Emotions', key: 'emotional_state_trends' },
 ];
 
-const INSIGHT_ICONS: Record<string, any> = {
-  important_notes: ListChecks,
-  key_preferences: UserRound,
-  goals_and_aspirations: Target,
-  emotional_state_trends: Heart,
+const INSIGHT_CATEGORY_LABELS: Record<string, string> = {
+  important_notes: 'Note',
+  key_preferences: 'Preference',
+  goals_and_aspirations: 'Goal',
+  emotional_state_trends: 'Emotion',
 };
 
 export function MemoryInsightsSheet() {
@@ -70,7 +72,7 @@ export function MemoryInsightsSheet() {
 
   const allInsights = useMemo(() => {
     const res: { text: string; category: string }[] = [];
-    Object.keys(INSIGHT_ICONS).forEach((cat) => {
+    Object.keys(INSIGHT_CATEGORY_LABELS).forEach((cat) => {
       const items = (insightSource as any)[cat] || [];
       items.forEach((text: string) => res.push({ text, category: cat }));
     });
@@ -185,9 +187,11 @@ export function MemoryInsightsSheet() {
               </View>
             ) : !summaryLoading && (
               <View className="flex-col items-center justify-center rounded-2xl border border-stroke-weaker bg-fill-weak py-10 px-6">
-                <View className="size-12 rounded-full bg-white flex items-center justify-center mb-3">
-                  <Sparkles size={20} color={COLORS.textWeak} />
-                </View>
+                <Image
+                  source={EMPTY_EXPLORE}
+                  style={{ width: 64, height: 64, marginBottom: 12 }}
+                  resizeMode="contain"
+                />
                 <Text className="text-text-strong text-center" style={TYPE.label}>
                   Insights are generating
                 </Text>
@@ -213,9 +217,11 @@ export function MemoryInsightsSheet() {
               </View>
             ) : filtered.length === 0 ? (
               <View className="py-12 items-center justify-center gap-3">
-                <View className="size-12 rounded-full bg-white flex items-center justify-center shadow-sm">
-                  <Sparkles size={20} color={COLORS.textWeak} />
-                </View>
+                <Image
+                  source={EMPTY_EXPLORE}
+                  style={{ width: 64, height: 64, marginBottom: 8 }}
+                  resizeMode="contain"
+                />
                 <Text className="text-text-strong" style={TYPE.label}>No insights yet</Text>
                 <Text className="text-text-weak text-center leading-relaxed max-w-[220px]" style={TYPE.metadata}>
                   Keep using Memento — your AI will learn more about you over time.
@@ -223,15 +229,18 @@ export function MemoryInsightsSheet() {
               </View>
             ) : (
               filtered.map((item, i) => {
-                const Icon = INSIGHT_ICONS[item.category] || Sparkles;
+                const categoryLabel = INSIGHT_CATEGORY_LABELS[item.category] || 'Insight';
                 return (
-                  <View key={i} className="flex-row items-start gap-3 bg-fill-weaker p-4 rounded-xl border border-stroke-weaker">
-                    <View className="size-8 rounded-lg bg-white items-center justify-center mt-0.5">
-                      <Icon size={16} color={COLORS.brand} />
+                  <View key={i} className="flex-row items-start gap-3 bg-fill-weaker p-4 rounded-2xl border border-stroke-weaker">
+                    <View className="size-2 rounded-full bg-brand mt-2 shrink-0" />
+                    <View className="flex-1 gap-1">
+                      <Text className="text-brand uppercase tracking-wider" style={TYPE.eyebrow}>
+                        {categoryLabel}
+                      </Text>
+                      <Text className="text-text-strong leading-relaxed" style={TYPE.label}>
+                        {item.text}
+                      </Text>
                     </View>
-                    <Text className="flex-1 text-text-strong leading-relaxed" style={TYPE.label}>
-                      {item.text}
-                    </Text>
                   </View>
                 );
               })

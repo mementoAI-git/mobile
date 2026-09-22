@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { Crown, Sparkles, Check, X } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { Button } from '@/components/ui';
+
+const STREAK_FLAME = require('../../../assets/images/illustrations/streak_flame.webp');
 
 interface UpgradeSuccessSheetProps {
   onClose?: () => void;
@@ -54,16 +56,13 @@ export function UpgradeSuccessSheet({ onClose }: UpgradeSuccessSheetProps) {
         </TouchableOpacity>
       </View>
 
-      {/* Hero Badge */}
+      {/* Hero Illustration */}
       <View className="items-center justify-center pt-1 pb-6">
-        <View className="relative mb-5">
-          <View className="size-20 rounded-3xl bg-brand/10 border border-brand/20 items-center justify-center shadow-sm">
-            <Crown size={38} color={COLORS.brand} strokeWidth={2} />
-          </View>
-          <View className="absolute -top-1 -right-1 size-7 rounded-full bg-brand items-center justify-center">
-            <Sparkles size={14} color="#FFFFFF" />
-          </View>
-        </View>
+        <Image
+          source={STREAK_FLAME}
+          style={{ width: 88, height: 88, marginBottom: 16 }}
+          resizeMode="contain"
+        />
 
         <Text
           className="text-center text-text-strong mb-2.5"
@@ -83,9 +82,7 @@ export function UpgradeSuccessSheet({ onClose }: UpgradeSuccessSheetProps) {
       <View className="bg-fill-weaker rounded-3xl border border-stroke-weaker p-5 gap-4 mb-8">
         {UNLOCKED_PERKS.map((perk, index) => (
           <View key={index} className="flex-row items-start gap-3.5">
-            <View className="size-6 rounded-full bg-success/15 items-center justify-center mt-0.5">
-              <Check size={14} color={COLORS.success} strokeWidth={2.5} />
-            </View>
+            <View className="size-2 rounded-full bg-brand mt-2" />
             <View className="flex-1">
               <Text className="text-text-strong" style={TYPE.label}>
                 {perk.title}

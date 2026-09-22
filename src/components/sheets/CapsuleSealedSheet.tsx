@@ -1,12 +1,14 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { Lock, Calendar, Users, X, ShieldCheck } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import dayjs from 'dayjs';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { Button } from '@/components/ui';
 import { getThemeById } from '@/constants/themes';
+
+const EMPTY_CAPSULES_IMG = require('../../../assets/images/illustrations/empty_capsules.png');
 
 interface CapsuleSealedSheetProps {
   title?: string;
@@ -65,11 +67,13 @@ export function CapsuleSealedSheet({
         >
           <Background />
 
-          {/* Stamped Wax Seal */}
+          {/* Stamped Wax Seal with Capsule Illustration */}
           <View className="items-center gap-2">
-            <View className="size-16 rounded-full bg-brand/20 border-2 border-brand items-center justify-center shadow-md">
-              <Lock size={26} color={COLORS.brand} strokeWidth={2.2} />
-            </View>
+            <Image
+              source={EMPTY_CAPSULES_IMG}
+              style={{ width: 72, height: 72 }}
+              resizeMode="contain"
+            />
             <View className="bg-black/40 rounded-full px-3 py-1">
               <Text className="text-white tracking-widest uppercase" style={TYPE.metadata}>
                 Sealed & Encrypted
@@ -98,34 +102,24 @@ export function CapsuleSealedSheet({
 
       {/* Delivery Commitment Details */}
       <View className="bg-fill-weaker rounded-2xl border border-stroke-weaker p-4 gap-3.5 mb-7">
-        <View className="flex-row items-center gap-3">
-          <View className="size-8 rounded-full bg-brand/10 items-center justify-center">
-            <Calendar size={16} color={COLORS.brand} />
-          </View>
-          <View className="flex-1">
-            <Text className="text-text-muted uppercase tracking-wider" style={TYPE.metadata}>
-              Scheduled Unlock Date
-            </Text>
-            <Text className="text-text-strong mt-0.5" style={TYPE.label}>
-              {formattedDate}
-            </Text>
-          </View>
+        <View className="flex-row items-center justify-between">
+          <Text className="text-text-muted uppercase tracking-wider" style={TYPE.metadata}>
+            Scheduled Unlock Date
+          </Text>
+          <Text className="text-text-strong" style={TYPE.label}>
+            {formattedDate}
+          </Text>
         </View>
 
         <View className="h-px bg-stroke-weaker" />
 
-        <View className="flex-row items-center gap-3">
-          <View className="size-8 rounded-full bg-brand/10 items-center justify-center">
-            <Users size={16} color={COLORS.brand} />
-          </View>
-          <View className="flex-1">
-            <Text className="text-text-muted uppercase tracking-wider" style={TYPE.metadata}>
-              Designated Recipients
-            </Text>
-            <Text className="text-text-strong mt-0.5" style={TYPE.label} numberOfLines={1}>
-              {recipientsText}
-            </Text>
-          </View>
+        <View className="flex-row items-center justify-between">
+          <Text className="text-text-muted uppercase tracking-wider" style={TYPE.metadata}>
+            Designated Recipients
+          </Text>
+          <Text className="text-text-strong" style={TYPE.label} numberOfLines={1}>
+            {recipientsText}
+          </Text>
         </View>
       </View>
 

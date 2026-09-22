@@ -1,7 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowUpCircle } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { COLORS } from '@/constants/tokens';
@@ -168,7 +167,6 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
               paddingVertical: 6,
             }}
           >
-            <ArrowUpCircle size={16} color={COLORS.textInverse} strokeWidth={2.2} />
             <Text style={{ ...TYPE.buttonSmall, color: COLORS.textInverse }}>
               {presentation.actionLabel}
             </Text>

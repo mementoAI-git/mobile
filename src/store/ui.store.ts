@@ -33,6 +33,10 @@ export type SheetName =
   | 'upgrade-success'
   | 'capsule-sealed'
   | 'first-story-milestone'
+  | 'voice-debrief'
+  | 'guardian-lens'
+  | 'export-archive'
+  | 'daily-ritual'
   | null;
 
 interface UiState {
