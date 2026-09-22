@@ -37,6 +37,10 @@ import { AddMemberToGroupSheet } from './AddMemberToGroupSheet';
 import { EditBillingDetailsSheet } from './EditBillingDetailsSheet';
 import { AddPaymentMethodSheet } from './AddPaymentMethodSheet';
 import { CancelSubscriptionConfirmationSheet } from './CancelSubscriptionConfirmationSheet';
+import { VoiceDebriefSheet } from './VoiceDebriefSheet';
+import { GuardianLensSheet } from './GuardianLensSheet';
+import { ExportArchiveSheet } from './ExportArchiveSheet';
+import { DailyRitualSheet } from './DailyRitualSheet';
 import { EmojiPickerSheet } from '@/components/chat/EmojiPickerSheet';
 import { COLORS } from '@/constants/tokens';
 import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
@@ -70,7 +74,7 @@ const SHEET_CONFIGS: Record<string, {
   'select': { component: SelectSheet, dynamic: true },
   'streak': { component: StreakSheet, dynamic: true },
   'story-drafts': { component: DraftsSheet, snapPoints: ['75%'], keyboardBehavior: 'interactive' },
-  'edit-profile': { component: EditProfileSheet, snapPoints: ['92%', '100%'], dynamic: false, keyboardBehavior: 'fillParent' },
+  'edit-profile': { component: EditProfileSheet, snapPoints: ['100%'], dynamic: false, keyboardBehavior: 'fillParent' },
   'edit-billing-details': { component: EditBillingDetailsSheet, snapPoints: ['94%', '100%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
   'add-payment-method': { component: AddPaymentMethodSheet, snapPoints: ['94%', '100%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
   'cancel-subscription-confirmation': { component: CancelSubscriptionConfirmationSheet, dynamic: true },
@@ -79,6 +83,10 @@ const SHEET_CONFIGS: Record<string, {
   'security-confirmation': { component: SecurityConfirmationSheet, dynamic: true },
   'voice-call-settings': { component: VoiceCallSettingsSheet, dynamic: true },
   'end-voice-session': { component: EndVoiceSessionSheet, dynamic: true },
+  'voice-debrief': { component: VoiceDebriefSheet, dynamic: true },
+  'guardian-lens': { component: GuardianLensSheet, dynamic: true },
+  'export-archive': { component: ExportArchiveSheet, dynamic: true },
+  'daily-ritual': { component: DailyRitualSheet, dynamic: true },
   'emoji-picker': { component: EmojiPickerSheet, dynamic: false, snapPoints: ['42%', '65%'] },
 };
 
@@ -179,37 +187,37 @@ export function SheetManager({ isModal = false }: { isModal?: boolean }) {
 
   return (
     <BottomSheetModal
-        key={activeSheet ?? 'none'}
-        ref={modalRef}
-        topInset={getSheetTopInset(insets.top)}
-        snapPoints={config?.snapPoints}
-        enableDynamicSizing={config?.dynamic ?? true}
-        enablePanDownToClose
-        onDismiss={handleDismiss}
-        backdropComponent={renderBackdrop}
-        keyboardBehavior={(config?.keyboardBehavior as any) ?? 'interactive'}
-        keyboardBlurBehavior={(config?.keyboardBlurBehavior as any) ?? 'restore'}
-        android_keyboardInputMode={config?.androidKeyboardInputMode ?? 'adjustPan'}
-        handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
-        backgroundStyle={{ backgroundColor: COLORS.background }}
-      >
-        {SheetContent && activeSheet ? (
-          SELF_MANAGED.has(activeSheet) ? (
-            <SheetContent
-              {...sheetProps}
-              onClose={animateClose}
-              expandSheet={expandSheet}
-              collapseSheet={collapseSheet}
-            />
-          ) : (
-            <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: getSheetBottomPadding(insets.bottom, 12) }}>
-              <SheetContent {...sheetProps} onClose={animateClose} />
-            </BottomSheetView>
-          )
+      key={activeSheet ?? 'none'}
+      ref={modalRef}
+      topInset={getSheetTopInset(insets.top)}
+      snapPoints={config?.snapPoints}
+      enableDynamicSizing={config?.dynamic ?? true}
+      enablePanDownToClose
+      onDismiss={handleDismiss}
+      backdropComponent={renderBackdrop}
+      keyboardBehavior={(config?.keyboardBehavior as any) ?? 'interactive'}
+      keyboardBlurBehavior={(config?.keyboardBlurBehavior as any) ?? 'restore'}
+      android_keyboardInputMode={config?.androidKeyboardInputMode ?? 'adjustPan'}
+      handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
+      backgroundStyle={{ backgroundColor: COLORS.background }}
+    >
+      {SheetContent && activeSheet ? (
+        SELF_MANAGED.has(activeSheet) ? (
+          <SheetContent
+            {...sheetProps}
+            onClose={animateClose}
+            expandSheet={expandSheet}
+            collapseSheet={collapseSheet}
+          />
         ) : (
-          // BottomSheetModal requires at least one child when mounted
-          <BottomSheetView style={{ height: 1 }}>{null}</BottomSheetView>
-        )}
+          <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: getSheetBottomPadding(insets.bottom, 12) }}>
+            <SheetContent {...sheetProps} onClose={animateClose} />
+          </BottomSheetView>
+        )
+      ) : (
+        // BottomSheetModal requires at least one child when mounted
+        <BottomSheetView style={{ height: 1 }}>{null}</BottomSheetView>
+      )}
     </BottomSheetModal>
   );
 }
