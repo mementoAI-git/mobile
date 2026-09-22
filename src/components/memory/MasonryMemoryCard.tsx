@@ -1,17 +1,24 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect } from 'react';
 
 import { View, Text, TouchableOpacity, Image, ImageBackground, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { MoreHorizontal } from 'lucide-react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withRepeat,
+  withSequence,
+  withTiming,
+  cancelAnimation,
+} from 'react-native-reanimated';
+import { MoreHorizontal, Play, Pause } from 'lucide-react-native';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
-import { useUiStore } from '@/store';
+import { useUiStore, useFeedAudioPlaybackStore } from '@/store';
 import { COLORS, CARD_PASTEL_SURFACES } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import type { IMemory } from '@/types';
-import dayjs from 'dayjs';
 import { getMediaCategory } from '@/features/media/media-type';
 import { runtimeDiagnostics, sanitizeMediaUri } from '@/lib/runtime-diagnostics';
 import { canRenderAttachmentUri } from '@/features/media/media-runtime-policy';
@@ -66,6 +73,235 @@ function pickBySeed<T>(items: readonly T[], seed: number): T {
   return items[seed % items.length];
 }
 
+function AnimatedCardWaveBar({
+  baseHeight,
+  isPlaying,
+  color,
+}: {
+  baseHeight: number;
+  isPlaying: boolean;
+  color: string;
+}) {
+  const scaleY = useSharedValue(1);
+
+  useEffect(() => {
+    if (isPlaying) {
+      const duration = 280 + Math.random() * 260;
+      scaleY.value = withRepeat(
+        withSequence(
+          withTiming(0.25 + Math.random() * 0.85, { duration }),
+          withTiming(1, { duration })
+        ),
+        -1,
+        true
+      );
+    } else {
+      cancelAnimation(scaleY);
+      scaleY.value = withTiming(1, { duration: 200 });
+    }
+  }, [isPlaying, scaleY]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleY: scaleY.value }],
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        { width: 2.5, height: baseHeight, backgroundColor: color, borderRadius: 2 },
+        animStyle,
+      ]}
+    />
+  );
+}
+
+function formatAudioSeconds(secs: number) {
+  const total = Math.max(0, Math.floor(secs));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+function MasonryAudioCardVisual({
+  memory,
+  audioMedia,
+  aspectRatio,
+  handleActions,
+}: {
+  memory: IMemory;
+  audioMedia: any;
+  aspectRatio: number;
+  handleActions: () => void;
+}) {
+  const isPlaying = useFeedAudioPlaybackStore(
+    (s) => s.activeMemoryId === memory._id && s.isPlaying
+  );
+  const currentTime = useFeedAudioPlaybackStore(
+    (s) => (s.activeMemoryId === memory._id ? s.currentTime : 0)
+  );
+  const storeDuration = useFeedAudioPlaybackStore(
+    (s) => (s.activeMemoryId === memory._id ? s.duration : 0)
+  );
+
+  const isVoiceRecording =
+    audioMedia.name?.startsWith('voice_') && audioMedia.type === 'audio/m4a';
+  const albumArt = audioMedia.thumbnail;
+  const rawFileName = audioMedia.name
+    ? audioMedia.name.replace(/\.[^.]+$/, '').replace(/_\d{12,}$/, '').replace(/_/g, ' ')
+    : 'Audio';
+  const fileName = memory.title && memory.title !== 'Untitled Memory' ? memory.title : rawFileName;
+
+  const totalSecs = storeDuration > 0 ? storeDuration : (audioMedia.duration || 0);
+  const displayDuration = isPlaying
+    ? `${formatAudioSeconds(currentTime)} / ${formatAudioSeconds(totalSecs)}`
+    : totalSecs > 0
+    ? formatAudioSeconds(totalSecs)
+    : '0:00';
+
+  const handleTogglePlay = useCallback(
+    (e: any) => {
+      e?.stopPropagation?.();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (audioMedia?.url) {
+        useFeedAudioPlaybackStore.getState().togglePlay(memory._id, audioMedia.url);
+      }
+    },
+    [audioMedia?.url, memory._id]
+  );
+
+  if (albumArt) {
+    return (
+      <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
+        <Image source={{ uri: albumArt }} className="w-full h-full" resizeMode="cover" />
+        <InProgressBadge memory={memory} overlay />
+        <View
+          className="absolute bottom-0 left-0 right-0 px-3 py-2.5 flex-row items-center gap-2.5"
+          style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+        >
+          <TouchableOpacity
+            onPress={handleTogglePlay}
+            hitSlop={8}
+            activeOpacity={0.8}
+            className="size-7 rounded-full bg-brand items-center justify-center"
+          >
+            {isPlaying ? (
+              <Pause size={12} color={COLORS.textInverse} fill={COLORS.textInverse} />
+            ) : (
+              <Play size={12} color={COLORS.textInverse} fill={COLORS.textInverse} style={{ marginLeft: 1 }} />
+            )}
+          </TouchableOpacity>
+          <View className="flex-row items-end gap-0.5" style={{ height: 16 }}>
+            {[5, 10, 14, 11, 7, 12, 8, 14, 10, 5].map((h, i) => (
+              <AnimatedCardWaveBar key={i} baseHeight={h} isPlaying={isPlaying} color={COLORS.brand} />
+            ))}
+          </View>
+          <Text style={{ ...TYPE.metadata, color: COLORS.textInverse, flex: 1 }} numberOfLines={1}>
+            {fileName}
+          </Text>
+          <Text style={{ ...TYPE.metadata, color: 'rgba(255,255,255,0.75)' }}>
+            {displayDuration}
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={handleActions}
+          hitSlop={8}
+          className="absolute top-2 right-2 size-8 rounded-full bg-white/20 items-center justify-center"
+        >
+          <MoreHorizontal size={14} color={COLORS.textInverse} />
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (isVoiceRecording) {
+    return (
+      <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
+        <ImageBackground source={RECORD_BANNER} className="absolute inset-0" resizeMode="cover" style={{ opacity: 0.9 }} />
+        <InProgressBadge memory={memory} overlay />
+        <View className="absolute inset-0 items-center justify-center px-4">
+          <View
+            className="items-center gap-2.5 rounded-[20px] px-5 py-4 w-full"
+            style={{ backgroundColor: `${COLORS.textInverse}1a`, borderWidth: 1, borderColor: `${COLORS.textInverse}33` }}
+          >
+            <TouchableOpacity
+              onPress={handleTogglePlay}
+              hitSlop={8}
+              activeOpacity={0.8}
+              className="size-11 rounded-full bg-brand items-center justify-center shadow-md"
+            >
+              {isPlaying ? (
+                <Pause size={18} color={COLORS.textInverse} fill={COLORS.textInverse} />
+              ) : (
+                <Play size={18} color={COLORS.textInverse} fill={COLORS.textInverse} style={{ marginLeft: 2 }} />
+              )}
+            </TouchableOpacity>
+            <View className="flex-row items-end gap-0.5" style={{ height: 20 }}>
+              {[6, 12, 18, 14, 8, 16, 10, 18, 12, 6].map((h, i) => (
+                <AnimatedCardWaveBar key={i} baseHeight={h} isPlaying={isPlaying} color={COLORS.textInverse} />
+              ))}
+            </View>
+            <Text style={{ ...TYPE.metadata, color: COLORS.textInverse }} className="tracking-widest">
+              {displayDuration}
+            </Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          onPress={handleActions}
+          hitSlop={8}
+          className="absolute top-2 right-2 size-8 rounded-full bg-white/20 items-center justify-center"
+        >
+          <MoreHorizontal size={14} color={COLORS.textInverse} />
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={{ aspectRatio, backgroundColor: COLORS.fillWeak }}
+      className="w-full rounded-[20px] overflow-hidden relative p-5"
+    >
+      <InProgressBadge memory={memory} overlay />
+      <View className="flex-1 items-center justify-center gap-3">
+        <TouchableOpacity
+          onPress={handleTogglePlay}
+          hitSlop={8}
+          activeOpacity={0.8}
+          className="size-11 rounded-full bg-brand items-center justify-center shadow-sm"
+        >
+          {isPlaying ? (
+            <Pause size={18} color={COLORS.textInverse} fill={COLORS.textInverse} />
+          ) : (
+            <Play size={18} color={COLORS.textInverse} fill={COLORS.textInverse} style={{ marginLeft: 2 }} />
+          )}
+        </TouchableOpacity>
+        <View className="flex-row items-end gap-1" style={{ height: 28 }}>
+          {[8, 16, 24, 20, 12, 22, 14, 24, 18, 8, 16, 24].map((h, i) => (
+            <AnimatedCardWaveBar key={i} baseHeight={h} isPlaying={isPlaying} color={COLORS.brand} />
+          ))}
+        </View>
+        <Text
+          style={{ ...TYPE.metadata, color: COLORS.textStrong, textAlign: 'center' }}
+          numberOfLines={2}
+        >
+          {fileName}
+        </Text>
+        <View className="bg-white/80 rounded-full px-3 py-1">
+          <Text style={{ ...TYPE.metadata, color: COLORS.textBase }}>
+            {displayDuration}
+          </Text>
+        </View>
+      </View>
+      <TouchableOpacity
+        onPress={handleActions}
+        hitSlop={8}
+        className="absolute top-2 right-2 size-7 rounded-full bg-fill-weak items-center justify-center"
+      >
+        <MoreHorizontal size={12} color={COLORS.textBase} />
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -201,100 +437,13 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
 
     // ── Audio card — only show when body has no actual text content ───────────
     if (audioMedia && !bodyText) {
-      const isVoiceRecording =
-        audioMedia.name?.startsWith('voice_') && audioMedia.type === 'audio/m4a';
-      const albumArt = audioMedia.thumbnail;
-      const duration = audioMedia.duration
-        ? dayjs().startOf('day').add(audioMedia.duration, 'second').format('HH:mm:ss')
-        : '00:00:00';
-      const rawFileName = audioMedia.name
-        ? audioMedia.name.replace(/\.[^.]+$/, '').replace(/_\d{12,}$/, '').replace(/_/g, ' ')
-        : 'Audio';
-      const fileName = memory.title && memory.title !== 'Untitled Memory' ? memory.title : rawFileName;
-
-      if (albumArt) {
-        return (
-          <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
-            <Image source={{ uri: albumArt }} className="w-full h-full" resizeMode="cover" />
-            <InProgressBadge memory={memory} overlay />
-            <View
-              className="absolute bottom-0 left-0 right-0 px-4 py-3 flex-row items-center gap-3"
-              style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
-            >
-              <View className="flex-row items-end gap-0.5" style={{ height: 16 }}>
-                {[5, 10, 14, 11, 7, 12, 8, 14, 10, 5].map((h, i) => (
-                  <View key={i} style={{ width: 2.5, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />
-                ))}
-              </View>
-              <Text style={{ ...TYPE.metadata, color: COLORS.textInverse, flex: 1 }} numberOfLines={1}>
-                {fileName}
-              </Text>
-              <Text style={{ ...TYPE.metadata, color: 'rgba(255,255,255,0.7)' }}>
-                {duration}
-              </Text>
-            </View>
-            <TouchableOpacity onPress={handleActions} hitSlop={8} className="absolute top-2 right-2 size-8 rounded-full bg-white/20 items-center justify-center">
-              <MoreHorizontal size={14} color={COLORS.textInverse} />
-            </TouchableOpacity>
-          </View>
-        );
-      }
-
-      if (isVoiceRecording) {
-        return (
-          <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
-            <ImageBackground source={RECORD_BANNER} className="absolute inset-0" resizeMode="cover" style={{ opacity: 0.9 }} />
-            <InProgressBadge memory={memory} overlay />
-            <View className="absolute inset-0 items-center justify-center">
-              <View
-                className="items-center gap-2 rounded-[20px] px-5 py-4"
-                style={{ backgroundColor: `${COLORS.textInverse}1a`, borderWidth: 1, borderColor: `${COLORS.textInverse}33` }}
-              >
-                <View className="flex-row items-end gap-0.5" style={{ height: 20 }}>
-                  {[6, 12, 18, 14, 8, 16, 10, 18, 12, 6].map((h, i) => (
-                    <View key={i} style={{ width: 3, height: h, backgroundColor: COLORS.textInverse, borderRadius: 2, opacity: 0.8 }} />
-                  ))}
-                </View>
-                <Text style={{ ...TYPE.metadata, color: COLORS.textInverse }} className="tracking-widest">
-                  {duration}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity onPress={handleActions} hitSlop={8} className="absolute top-2 right-2 size-8 rounded-full bg-white/20 items-center justify-center">
-              <MoreHorizontal size={14} color={COLORS.textInverse} />
-            </TouchableOpacity>
-          </View>
-        );
-      }
-
       return (
-        <View
-          style={{ aspectRatio, backgroundColor: COLORS.fillWeak }}
-          className="w-full rounded-[20px] overflow-hidden relative p-5"
-        >
-          <InProgressBadge memory={memory} overlay />
-          <View className="flex-1 items-center justify-center gap-3">
-            <View className="flex-row items-end gap-1" style={{ height: 32 }}>
-              {[8, 16, 24, 20, 12, 22, 14, 24, 18, 8, 16, 24].map((h, i) => (
-                <View key={i} style={{ width: 3, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />
-              ))}
-            </View>
-            <Text
-              style={{ ...TYPE.metadata, color: COLORS.textStrong, textAlign: 'center' }}
-              numberOfLines={2}
-            >
-              {fileName}
-            </Text>
-            <View className="bg-white/80 rounded-full px-3 py-1">
-              <Text style={{ ...TYPE.metadata, color: COLORS.textBase }}>
-                {duration}
-              </Text>
-            </View>
-          </View>
-          <TouchableOpacity onPress={handleActions} hitSlop={8} className="absolute top-2 right-2 size-7 rounded-full bg-fill-weak items-center justify-center">
-            <MoreHorizontal size={12} color={COLORS.textBase} />
-          </TouchableOpacity>
-        </View>
+        <MasonryAudioCardVisual
+          memory={memory}
+          audioMedia={audioMedia}
+          aspectRatio={aspectRatio}
+          handleActions={handleActions}
+        />
       );
     }
 
