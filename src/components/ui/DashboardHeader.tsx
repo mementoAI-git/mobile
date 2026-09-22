@@ -122,6 +122,7 @@ export function DashboardHeader({
           >
             <Avatar
               uri={activeUser?.picture_url || activeUser?.picture}
+              seed={activeUser?.email || activeUser?._id}
               name={activeUser?.fullname || activeUser?.first_name || activeUser?.email}
               size="lg"
             />

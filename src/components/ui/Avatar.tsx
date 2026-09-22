@@ -7,6 +7,7 @@ import { resolveFileUrl } from '@/features/account/profile-form';
 interface AvatarProps {
   uri?: string | null;
   name?: string;
+  seed?: string | null;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
@@ -24,10 +25,20 @@ const sizeMap = {
   xl: { container: 'w-20 h-20', text: TYPE.stat },
 };
 
-export function Avatar({ uri, name, size = 'md', className }: AvatarProps) {
+export function Avatar({ uri, name, seed, size = 'md', className }: AvatarProps) {
+  const [imageFailed, setImageFailed] = React.useState(false);
   const s = sizeMap[size];
   const initials = name ? getInitials(name) : '?';
   const resolvedUri = resolveFileUrl(uri);
+
+  const avatarSeed = (seed || name || '').trim().toLowerCase();
+
+  const fallbackUri =
+    !resolvedUri && avatarSeed
+      ? `https://api.dicebear.com/9.x/adventurer/png?seed=${encodeURIComponent(avatarSeed)}&backgroundColor=fefbf8`
+      : null;
+
+  const effectiveUri = imageFailed ? null : resolvedUri || fallbackUri;
 
   return (
     <View
@@ -38,8 +49,13 @@ export function Avatar({ uri, name, size = 'md', className }: AvatarProps) {
         className,
       )}
     >
-      {resolvedUri ? (
-        <Image source={{ uri: resolvedUri }} className="w-full h-full" resizeMode="cover" />
+      {effectiveUri ? (
+        <Image
+          source={{ uri: effectiveUri }}
+          className="w-full h-full"
+          resizeMode="cover"
+          onError={() => setImageFailed(true)}
+        />
       ) : (
         <Text
           className="text-text-base"
