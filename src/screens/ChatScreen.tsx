@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -66,6 +67,14 @@ const PROMPT_VISIBLE_CONTENT_POSITION = Object.freeze({
   startRenderingFromBottom: false,
 });
 
+const CHAT_ORB = require('../../assets/images/onboarding/chat-ai-orb.png');
+
+const STARTER_PROMPTS = [
+  "Ask me about a memory I never want to forget.",
+  "Ask me about the happiest chapter of my life.",
+  "Ask me about someone who shaped who I am.",
+] as const;
+
 function ChatDateSeparator({ label }: { label: string }) {
   return (
     <View style={styles.dateSeparator}>
@@ -101,9 +110,17 @@ const MemoMessageRow = React.memo(function MemoMessageRow({
     }
   }, [item.replyTo?.text, onScrollToOriginal]);
 
+  const hasText = ((item.text ?? item.content ?? '') as string).trim().length > 0;
+  const rawAttachments = item.attatchments ?? item.attachments ?? [];
+  const hasContent = hasText || rawAttachments.length > 0;
+
+  if (!hasContent) return null;
+
+  const timestamp = item.created_at || item.createdAt;
+
   return (
     <View>
-      {showDate && <ChatDateSeparator label={getChatDayLabel(item.created_at)} />}
+      {showDate && timestamp ? <ChatDateSeparator label={getChatDayLabel(timestamp)} /> : null}
       <MessageBubble
         message={item}
         highlighted={isHighlighted}
@@ -346,13 +363,24 @@ export default function ChatScreen() {
 
   const renderMessage = useCallback(
     ({ item, index }: { item: any; index: number }) => {
+      const itemText = ((item.text ?? item.content ?? '') as string).trim();
+      const itemAtt = item.attatchments ?? item.attachments ?? [];
+      if (!itemText && !itemAtt.length) {
+        return null;
+      }
+
       let previousTimestamp: string | undefined;
       const msgs = allMessagesRef.current;
       for (let i = index - 1; i >= 0; i -= 1) {
-        const ts = (msgs[i] as any)?.created_at || (msgs[i] as any)?.createdAt;
-        if (ts) {
-          previousTimestamp = ts;
-          break;
+        const prev = msgs[i];
+        const prevText = ((prev?.text ?? prev?.content ?? '') as string).trim();
+        const prevAtt = prev?.attatchments ?? (prev as any)?.attachments ?? [];
+        if (prevText.length > 0 || prevAtt.length > 0) {
+          const ts = (prev as any)?.created_at || (prev as any)?.createdAt;
+          if (ts) {
+            previousTimestamp = ts;
+            break;
+          }
         }
       }
       const currentTimestamp = item.created_at || item.createdAt;
@@ -410,36 +438,72 @@ export default function ChatScreen() {
     [messageBottomPadding],
   );
 
+  const handleSelectStarter = useCallback((prompt: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    send(prompt);
+  }, [send]);
+
   const listEmptyComponent = React.useMemo(() => {
     if (isPromptType) return null;
 
     return (
-      <View className="items-center justify-center py-24 gap-8">
+      <View className="items-center justify-center px-6 py-12 gap-6">
+        {/* AI Host Orb Illustration */}
         <Animated.View
           entering={FadeInUp.duration(600)}
-          className="size-24 rounded-full bg-fill-weaker items-center justify-center"
+          className="size-20 rounded-full bg-brand/10 items-center justify-center"
         >
-          <Animated.Text className="" style={TYPE.displayTitle}>🌱</Animated.Text>
+          <Image
+            source={CHAT_ORB}
+            style={{ width: 56, height: 56 }}
+            resizeMode="contain"
+          />
         </Animated.View>
-        <View className="items-center gap-3 px-10">
+
+        {/* Heading & Subtitle */}
+        <View className="items-center gap-2 px-4">
           <Animated.Text
             entering={FadeInDown.delay(200)}
             className="text-text-strong text-center"
             style={TYPE.screenTitle}
           >
-            Your story grows here
+            Your story begins here
           </Animated.Text>
           <Animated.Text
             entering={FadeInDown.delay(300)}
-            className="text-text-weak text-center"
+            className="text-text-weak text-center leading-relaxed"
             style={TYPE.body}
           >
-            Share a memory, an emotion, or just say hello. Your AI companion is here to listen and help you preserve your legacy.
+            Say hello or tap a thought below to start reflecting with your companion.
           </Animated.Text>
         </View>
+
+        {/* Actionable Conversation Starter Chips */}
+        <Animated.View
+          entering={FadeInDown.delay(400)}
+          className="w-full gap-2.5 mt-2"
+        >
+          {STARTER_PROMPTS.map((prompt) => (
+            <TouchableOpacity
+              key={prompt}
+              onPress={() => handleSelectStarter(prompt)}
+              activeOpacity={0.7}
+              className="flex-row items-center gap-3 bg-fill-weaker border border-stroke-weaker rounded-2xl px-4 py-3.5"
+            >
+              <View className="size-1.5 rounded-full bg-brand" />
+              <Text
+                className="flex-1 text-text-strong"
+                style={TYPE.label}
+                numberOfLines={2}
+              >
+                {prompt}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </Animated.View>
       </View>
     );
-  }, [isPromptType]);
+  }, [handleSelectStarter, isPromptType]);
 
   const content = (
     <View

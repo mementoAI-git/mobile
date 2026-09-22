@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import Animated, {
   FadeInDown,
   FadeOutUp,
@@ -8,9 +8,10 @@ import Animated, {
   withSpring,
   withSequence,
 } from 'react-native-reanimated';
-import { Trophy } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+
+const STREAK_FLAME = require('../../../assets/images/illustrations/streak_flame.webp');
 
 interface MilestoneCardProps {
   /** Points gained this session (0 = don't show) */
@@ -55,7 +56,11 @@ export function MilestoneCard({ enrichmentDelta, milestoneLabel }: MilestoneCard
     >
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Trophy size={18} color="#8F6C1A" strokeWidth={2} />
+          <Image
+            source={STREAK_FLAME}
+            style={{ width: 24, height: 24 }}
+            resizeMode="contain"
+          />
         </View>
         <View style={styles.textContainer}>
           <Text style={styles.titleText}>

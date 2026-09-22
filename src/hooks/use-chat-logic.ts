@@ -122,10 +122,14 @@ export function useChatLogic() {
     [serverMessagePages?.pages, baseMemoryMessages],
   );
   const serverMessages = serverMessagePages?.pages[0];
-  const allMessages = useMemo(
-    () => mergeAllConversationMessages(persistedMessages, messages),
-    [persistedMessages, messages],
-  );
+  const allMessages = useMemo(() => {
+    const merged = mergeAllConversationMessages(persistedMessages, messages);
+    return merged.filter((m) => {
+      const text = (m.text ?? m.content ?? '').trim();
+      const attachments = m.attatchments ?? (m as any).attachments ?? [];
+      return text.length > 0 || attachments.length > 0;
+    });
+  }, [persistedMessages, messages]);
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();

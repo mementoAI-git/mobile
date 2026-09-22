@@ -91,12 +91,26 @@ export default function VoiceCallRoute() {
     resumeAfterVoice();
   }, [pauseForVoice, resumeAfterVoice, stage]);
 
-  const close = useCallback(async () => {
+  const close = useCallback(async (options?: { showDebrief?: boolean }) => {
     resumeAfterVoice();
+    const duration = voice.recordingTime;
+    const userSpeechText = voice.userSpeechText;
+    const aiSpeechText = voice.aiSpeechText;
     await voice.disconnect();
     if (router.canGoBack()) router.back();
     else router.replace('/(tabs)/chat');
-  }, [resumeAfterVoice, router, voice]);
+
+    if (options?.showDebrief && duration > 5) {
+      setTimeout(() => {
+        useUiStore.getState().openSheet('voice-debrief', {
+          duration,
+          memoryId,
+          userSpeechText,
+          aiSpeechText,
+        });
+      }, 350);
+    }
+  }, [memoryId, resumeAfterVoice, router, voice]);
 
   const chooseVoice = useCallback((id: VoiceId) => {
     Haptics.selectionAsync();
@@ -134,7 +148,10 @@ export default function VoiceCallRoute() {
   const requestEnd = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (stage === 'live' || stage === 'muted') {
-      useUiStore.getState().openSheet('end-voice-session', { duration: voice.recordingTime, onEnd: close });
+      useUiStore.getState().openSheet('end-voice-session', {
+        duration: voice.recordingTime,
+        onEnd: () => close({ showDebrief: true }),
+      });
     } else {
       void close();
     }
