@@ -164,7 +164,7 @@ interface ChatInputProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const INPUT_PILL_INSET = 4;
+const INPUT_PILL_INSET = 6;
 const INPUT_PILL_GAP = 4;
 const SECONDARY_ACTION_SIZE = 36;
 const PRIMARY_ACTION_SIZE = 36;
@@ -172,7 +172,7 @@ const EXPANDED_ACTION_SIZE = 44;
 const INPUT_PILL_VERTICAL_INSET = 6;
 const INPUT_PILL_HEIGHT = PRIMARY_ACTION_SIZE + INPUT_PILL_VERTICAL_INSET * 2;
 const INPUT_PILL_RADIUS = INPUT_PILL_HEIGHT / 2;
-const COMPACT_COMPOSER_CONTENT_RADIUS = scale(24);
+const COMPACT_COMPOSER_CONTENT_RADIUS = INPUT_PILL_RADIUS;
 const PLUS_ICON_SURFACE_SIZE = 36;
 const PLUS_ICON_EMPTY_RADIUS = PLUS_ICON_SURFACE_SIZE / 2;
 const PLUS_ICON_ACTIVE_RADIUS = scale(12);
@@ -957,6 +957,7 @@ export function ChatInput({
               placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
               selectionColor={isRecording ? COLORS.brand : COLORS.textStrong}
               multiline
+              maxFontSizeMultiplier={1.3}
               style={textInputStyle}
               blurOnSubmit={false}
               editable={!disabled}
@@ -989,7 +990,7 @@ export function ChatInput({
               <View style={{ flex: 1 }} />
 
               {controls.showStop ? (
-                <Animated.View style={btnAnimStyle}>
+                <Animated.View style={[btnAnimStyle, { flexShrink: 0 }]}>
                   <TouchableOpacity
                     onPress={handleStop}
                     onPressIn={handleBtnPressIn}
@@ -1038,7 +1039,7 @@ export function ChatInput({
                     </TouchableOpacity>
                   )}
                   {controls.showSend && (
-                    <Animated.View style={btnAnimStyle}>
+                    <Animated.View style={[btnAnimStyle, { flexShrink: 0 }]}>
                       <TouchableOpacity
                         accessibilityLabel="Send message"
                         accessibilityRole="button"
@@ -1070,7 +1071,7 @@ export function ChatInput({
             </Animated.View>
           ) : (
             controls.showStop ? (
-              <Animated.View style={btnAnimStyle}>
+              <Animated.View style={[btnAnimStyle, { flexShrink: 0 }]}>
                 <TouchableOpacity
                   onPress={handleStop}
                   onPressIn={handleBtnPressIn}
@@ -1119,7 +1120,7 @@ export function ChatInput({
                   </TouchableOpacity>
                 )}
                 {controls.showSend && (
-                  <Animated.View style={btnAnimStyle}>
+                  <Animated.View style={[btnAnimStyle, { flexShrink: 0 }]}>
                     <TouchableOpacity
                       accessibilityLabel="Send message"
                       accessibilityRole="button"
@@ -1175,6 +1176,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.fillWeaker,
     borderWidth: 1,
     borderColor: COLORS.strokeWeak,
+    overflow: 'hidden',
   },
 
   // Composer shape variants
@@ -1272,6 +1274,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     minHeight: INPUT_PILL_HEIGHT,
     alignItems: 'center',
+    width: '100%',
   },
   inputRowExpanded: {
     flexDirection: 'column',
@@ -1308,6 +1311,8 @@ const styles = StyleSheet.create({
   },
   textWrapCompact: {
     flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
   },
   textWrapExpanded: {
     width: '100%',
@@ -1334,6 +1339,7 @@ const styles = StyleSheet.create({
 
   // Compact variant
   compactTextInput: {
+    width: '100%',
     paddingVertical: 0,
     minHeight: COMPACT_TEXT_MIN_HEIGHT,
     textAlignVertical: 'center',
@@ -1366,6 +1372,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: INPUT_PILL_GAP,
     alignItems: 'center',
+    flexShrink: 0,
   },
   compactMicButton: {
     backgroundColor: 'transparent',
@@ -1373,6 +1380,7 @@ const styles = StyleSheet.create({
     width: SECONDARY_ACTION_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   compactEmojiButton: {
     backgroundColor: 'transparent',
@@ -1380,6 +1388,7 @@ const styles = StyleSheet.create({
     width: SECONDARY_ACTION_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   compactSendButton: {
     width: PRIMARY_ACTION_SIZE,
@@ -1389,10 +1398,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: COLORS.brand,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.24,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+    flexShrink: 0,
   },
   compactStopButton: {
     width: PRIMARY_ACTION_SIZE,
@@ -1403,6 +1413,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.strokeWeak,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   expandedSendButton: {
     width: EXPANDED_ACTION_SIZE,
