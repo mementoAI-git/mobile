@@ -1,12 +1,19 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, ImageBackground } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Logo } from '@/components/ui';
 import { ChevronRight } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  useSharedValue,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
 import { useFirstRunOnboarding } from '@/hooks/use-first-run-onboarding';
 
 const AnimatedText = Animated.createAnimatedComponent(Text);
@@ -18,10 +25,42 @@ export default function OnboardWelcomeScreen() {
   const router = useRouter();
   const { handleSkip, isSkipping } = useFirstRunOnboarding();
 
+  const scrollY = useSharedValue(0);
+  const titleY = useSharedValue(340);
+
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  const headerLogoAnimatedStyle = useAnimatedStyle(() => {
+    // Reveal top wordmark as the hero title approaches and scrolls past the header
+    const threshold = Math.max(titleY.value - 60, 100);
+    const opacity = interpolate(
+      scrollY.value,
+      [threshold, threshold + 50],
+      [0, 1],
+      Extrapolation.CLAMP,
+    );
+    const translateY = interpolate(
+      scrollY.value,
+      [threshold, threshold + 50],
+      [8, 0],
+      Extrapolation.CLAMP,
+    );
+    return {
+      opacity,
+      transform: [{ translateY }],
+    };
+  });
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
       <View className="flex-row items-center justify-between px-6 pt-2">
-        <Logo size="md" />
+        <Animated.View style={headerLogoAnimatedStyle}>
+          <Logo size="md" />
+        </Animated.View>
         <TouchableOpacity
           onPress={handleSkip}
           disabled={isSkipping}
@@ -34,7 +73,11 @@ export default function OnboardWelcomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerClassName="pb-12">
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        contentContainerClassName="pb-12"
+      >
         <View className="relative w-full h-[320px] mb-6">
           <ImageBackground source={PATTERN} className="absolute inset-0 opacity-40" />
           <Animated.Image
@@ -46,7 +89,12 @@ export default function OnboardWelcomeScreen() {
           <View className="absolute bottom-0 left-0 right-0 h-32 bg-white/20" />
         </View>
 
-        <View className="px-6 gap-3">
+        <View
+          onLayout={(e) => {
+            titleY.value = e.nativeEvent.layout.y;
+          }}
+          className="px-6 gap-3"
+        >
           <AnimatedText
             entering={FadeInDown.delay(400).springify()}
             className=" text-text-strong leading-[44px]" style={TYPE.displayTitle}
@@ -83,13 +131,15 @@ export default function OnboardWelcomeScreen() {
           />
         </View>
 
-        <View className="pt-6 border-t border-stroke-weak gap-3">
-          <Text className="text-text-disabled uppercase tracking-widest" style={TYPE.metadata}>
-            Memento is private by design
-          </Text>
-          <Text className="text-text-weak leading-relaxed" style={TYPE.metadata}>
-            Your entries on Memento are encrypted and only visible to you. You decide what to share, when to share, and with whom.
-          </Text>
+        <View className="px-6 mt-10">
+          <View className="pt-6 border-t border-stroke-weak gap-2">
+            <Text className="text-text-muted uppercase tracking-widest" style={TYPE.eyebrow}>
+              Memento is private by design
+            </Text>
+            <Text className="text-text-weak leading-relaxed" style={TYPE.bodySmall}>
+              Your entries on Memento are encrypted and only visible to you. You decide what to share, when to share, and with whom.
+            </Text>
+          </View>
         </View>
 
         <View className="px-6 mt-10">
@@ -101,7 +151,7 @@ export default function OnboardWelcomeScreen() {
             <Text className="text-white" style={TYPE.button}>Continue</Text>
           </Button>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }
