@@ -105,7 +105,15 @@ export function useLoginLogic() {
           router.push(`/(auth)/verify-email?email=${data.email}`);
           return;
         }
-        const message = err?.message || 'Login failed. Please try again.';
+        const raw = err?.message || err?.data?.message || '';
+        let message = 'Sign in failed. Please check your credentials and try again.';
+        if (/network error/i.test(raw) || err?.code === 'ERR_NETWORK') {
+          message = 'Unable to connect to Memento. Please check your internet connection and try again.';
+        } else if (/timeout/i.test(raw) || err?.code === 'ECONNABORTED') {
+          message = 'The connection timed out. Please try again.';
+        } else if (raw && !/object Object/i.test(raw)) {
+          message = raw;
+        }
         toast(message, 'error');
       },
     });

@@ -23,7 +23,7 @@ import Animated, {
   withDelay,
   Easing,
 } from 'react-native-reanimated';
-import { Button, TextInput, PasswordInput } from '@/components/ui';
+import { Button, TextInput, PasswordInput, toast } from '@/components/ui';
 import { useRegisterLogic } from '@/hooks/use-register-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -70,7 +70,6 @@ export default function RegisterScreen() {
   const {
     form: { control, formState: { errors } },
     isPending,
-    error,
     onSubmit,
     router,
   } = useRegisterLogic();
@@ -155,6 +154,7 @@ export default function RegisterScreen() {
       }
 
       if (nativeResult.error) {
+        toast(nativeResult.error, 'error');
         return;
       }
 
@@ -166,7 +166,9 @@ export default function RegisterScreen() {
       if (!url) return;
       const { openAuthSessionAsync } = await import('expo-web-browser');
       await openAuthSessionAsync(url, AUTH_SESSION_RETURN_URL);
-    } catch { /* silent */ } finally {
+    } catch {
+      toast('Google sign up could not be completed. Please try again.', 'error');
+    } finally {
       setGoogleLoading(false);
     }
   };
@@ -200,6 +202,7 @@ export default function RegisterScreen() {
       }
 
       if (nativeResult.error) {
+        toast(nativeResult.error, 'error');
         return;
       }
 
@@ -210,8 +213,9 @@ export default function RegisterScreen() {
       const url: string | undefined = res.data?.data?.url;
       if (!url) return;
       const { openAuthSessionAsync } = await import('expo-web-browser');
-      await openAuthSessionAsync(url, AUTH_SESSION_RETURN_URL);
-    } catch { /* silent */ } finally {
+    } catch {
+      toast('Apple sign up could not be completed. Please try again.', 'error');
+    } finally {
       setAppleLoading(false);
     }
   };
@@ -362,20 +366,12 @@ export default function RegisterScreen() {
                     onChangeText={onChange}
                     onBlur={onBlur}
                     error={errors.password?.message}
-                    hint="A least 8 characters containing a number, Capitalized letter and a symbol."
+                    hint="At least 8 characters containing a number, capitalized letter and a symbol."
                     placeholder="••••••••"
                     variant="rounded"
                   />
                 )}
               />
-
-              {error && (
-                <View style={styles.errorBanner}>
-                  <Text style={styles.errorBannerText}>
-                    {(error as any).message ?? 'Registration failed. Please try again.'}
-                  </Text>
-                </View>
-              )}
 
               {/* Primary CTA Button */}
               <Button
@@ -383,8 +379,8 @@ export default function RegisterScreen() {
                 loading={isPending}
                 fullWidth
                 size="lg"
-                rounded="xl"
-                className="mt-2 !h-[52px]"
+                rounded="full"
+                className="mt-3"
               >
                 Create account
               </Button>
@@ -475,7 +471,7 @@ const styles = StyleSheet.create({
   },
   socialBtn: {
     height: 52,
-    borderRadius: 12,
+    borderRadius: 9999,
     borderWidth: 1,
     borderColor: COLORS.strokeWeak,
     backgroundColor: '#ffffff',
@@ -507,19 +503,6 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: 'row',
     gap: 12,
-  },
-  errorBanner: {
-    backgroundColor: COLORS.fillWeak,
-    borderWidth: 1,
-    borderColor: COLORS.error,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  errorBannerText: {
-    ...TYPE.label,
-    color: COLORS.error,
-    textAlign: 'center',
   },
   loginLinkContainer: {
     alignItems: 'center',

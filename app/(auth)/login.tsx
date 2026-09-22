@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -70,13 +70,6 @@ export default function LoginScreen() {
     router,
   } = useLoginLogic();
 
-  const [authError, setAuthError] = useState<string | null>(null);
-
-  const handleFormSubmit = () => {
-    setAuthError(null);
-    onSubmit();
-  };
-
   return (
     <ImageBackground
       source={PATTERN}
@@ -137,7 +130,7 @@ export default function LoginScreen() {
                   onPress={handlePasskeyLogin}
                   disabled={googleLoading || appleLoading || passkeyLoading || isPending}
                   activeOpacity={0.8}
-                  className="flex-row items-center justify-center gap-3 rounded-xl min-h-[52px] px-4 bg-card border border-stroke-weak"
+                  className="flex-row items-center justify-center gap-3 rounded-full min-h-[52px] px-4 bg-card border border-stroke-weak"
                 >
                   {passkeyLoading ? (
                     <ActivityIndicator size="small" color={COLORS.brand} />
@@ -153,7 +146,7 @@ export default function LoginScreen() {
                 onPress={handleGoogleLogin}
                 disabled={googleLoading || appleLoading || passkeyLoading || isPending}
                 activeOpacity={0.8}
-                className="flex-row items-center justify-center gap-3 rounded-xl min-h-[52px] px-4 bg-card border border-stroke-weak"
+                className="flex-row items-center justify-center gap-3 rounded-full min-h-[52px] px-4 bg-card border border-stroke-weak"
               >
                 {googleLoading ? (
                   <ActivityIndicator size="small" color={COLORS.brand} />
@@ -168,7 +161,7 @@ export default function LoginScreen() {
                 onPress={handleAppleLogin}
                 disabled={googleLoading || appleLoading || passkeyLoading || isPending}
                 activeOpacity={0.8}
-                className="flex-row items-center justify-center gap-3 rounded-xl min-h-[52px] px-4 bg-card border border-stroke-weak"
+                className="flex-row items-center justify-center gap-3 rounded-full min-h-[52px] px-4 bg-card border border-stroke-weak"
               >
                 {appleLoading ? (
                   <ActivityIndicator size="small" color={COLORS.brand} />
@@ -196,10 +189,7 @@ export default function LoginScreen() {
                   <TextInput
                     label="Email"
                     value={value}
-                    onChangeText={(text) => {
-                      if (authError) setAuthError(null);
-                      onChange(text);
-                    }}
+                    onChangeText={onChange}
                     onBlur={onBlur}
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -219,13 +209,10 @@ export default function LoginScreen() {
                   <PasswordInput
                     label="Password"
                     value={value}
-                    onChangeText={(text) => {
-                      if (authError) setAuthError(null);
-                      onChange(text);
-                    }}
+                    onChangeText={onChange}
                     onBlur={onBlur}
                     autoComplete="current-password"
-                    error={errors.password?.message || (authError ?? undefined)}
+                    error={errors.password?.message}
                     placeholder="••••••••"
                     variant="rounded"
                   />
@@ -246,12 +233,12 @@ export default function LoginScreen() {
 
               {/* Submit Button */}
               <Button
-                onPress={handleFormSubmit}
+                onPress={onSubmit}
                 loading={isPending}
                 fullWidth
                 size="lg"
-                rounded="xl"
-                className="!h-[52px] bg-brand mt-1"
+                rounded="full"
+                className="mt-2"
               >
                 Sign in
               </Button>
