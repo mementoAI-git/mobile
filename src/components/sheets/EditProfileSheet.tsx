@@ -5,9 +5,9 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { CalendarDays, Camera, X } from 'lucide-react-native';
 import { Controller, useForm } from 'react-hook-form';
@@ -20,7 +20,6 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import {
   normalizeProfileForm,
   toProfileUpdatePayload,
-  resolveFileUrl,
   type ProfileFormValues,
 } from '@/features/account/profile-form';
 import { useUpdateProfile, useUploadProfilePicture } from '@/hooks/mutations/use-profile-mutation';
@@ -41,6 +40,10 @@ export function EditProfileSheet({
   const updateProfile = useUpdateProfile();
   const uploadProfilePicture = useUploadProfilePicture();
   const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
+  const displayName = profile?.fullname?.trim()
+    || `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim()
+    || profile?.nickname
+    || 'Your account';
   const {
     control,
     handleSubmit,
@@ -123,14 +126,14 @@ export function EditProfileSheet({
           variant="secondary"
           size="lg"
           className="h-14 flex-1"
-                    onPress={onClose}
+          onPress={onClose}
         >
           Dismiss
         </Button>
         <Button
           size="lg"
           className="h-14 flex-1"
-                    loading={updateProfile.isPending}
+          loading={updateProfile.isPending}
           onPress={submitFromFooter}
         >
           Save changes
@@ -186,176 +189,170 @@ export function EditProfileSheet({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={{ flex: 1 }}>
-        <View
-          style={{
-            minHeight: 62,
-            paddingHorizontal: 20,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Text style={TYPE.sectionTitle}>
-            Edit profile
-          </Text>
-          <TouchableOpacity
-            onPress={close}
-            activeOpacity={0.78}
-            accessibilityRole="button"
-            accessibilityLabel="Close edit profile"
+          <View
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
+              minHeight: 62,
+              paddingHorizontal: 20,
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: COLORS.fillWeak,
+              justifyContent: 'space-between',
             }}
           >
-            <X size={22} color={COLORS.textStrong} />
-          </TouchableOpacity>
-        </View>
-
-        <BottomSheetScrollView
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          onScrollBeginDrag={expandSheet}
-          contentContainerStyle={{
-            paddingHorizontal: 20,
-            paddingTop: 8,
-            paddingBottom: 20,
-            gap: 16,
-          }}
-        >
-          {/* Avatar / Profile Photo Section */}
-          <View style={{ alignItems: 'center', marginVertical: 8 }}>
+            <Text style={TYPE.sectionTitle}>
+              Edit profile
+            </Text>
             <TouchableOpacity
-              onPress={handlePickAvatar}
-              activeOpacity={0.82}
-              style={{ position: 'relative' }}
-              disabled={uploadProfilePicture.isPending}
+              onPress={close}
+              activeOpacity={0.78}
+              accessibilityRole="button"
+              accessibilityLabel="Close edit profile"
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: COLORS.fillWeak,
+              }}
             >
-              <View
-                style={{
-                  width: 96,
-                  height: 96,
-                  borderRadius: 48,
-                  overflow: 'hidden',
-                  backgroundColor: COLORS.fillWeak,
-                  borderWidth: 2,
-                  borderColor: COLORS.strokeWeaker,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {localAvatarUri || resolveFileUrl(profile?.picture_url || profile?.picture) ? (
-                  <Image
-                    source={{ uri: localAvatarUri || resolveFileUrl(profile?.picture_url || profile?.picture)! }}
-                    style={{ width: '100%', height: '100%' }}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <Avatar
-                    name={profile?.first_name || profile?.nickname || profile?.email || 'User'}
-                    size="xl"
-                    className="w-full h-full border-0"
-                  />
-                )}
-                {uploadProfilePicture.isPending && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundColor: 'rgba(0,0,0,0.4)',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <ActivityIndicator color={COLORS.textInverse} size="small" />
-                  </View>
-                )}
-              </View>
-              <View
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  right: 0,
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: COLORS.brand,
-                  borderWidth: 2,
-                  borderColor: COLORS.card,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  shadowColor: COLORS.shadow,
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 4,
-                  elevation: 2,
-                }}
-              >
-                <Camera size={16} color={COLORS.textInverse} strokeWidth={2} />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handlePickAvatar}
-              activeOpacity={0.7}
-              disabled={uploadProfilePicture.isPending}
-              style={{ marginTop: 8 }}
-            >
-              <Text style={{ ...TYPE.bodySmall, color: COLORS.brand }}>
-                {uploadProfilePicture.isPending ? 'Uploading photo...' : 'Change profile photo'}
-              </Text>
+              <X size={22} color={COLORS.textStrong} />
             </TouchableOpacity>
           </View>
 
-          {field('email', 'Email address', {
-            disabled: true,
-            keyboardType: 'email-address',
-          })}
-          {field('nickname', 'Display name (Nickname)', {
-            rules: { required: 'Display name is required' },
-          })}
-          {field('firstName', 'First Name', {
-            rules: { required: 'First name is required' },
-          })}
-          {field('lastName', 'Last Name', {
-            rules: { required: 'Last name is required' },
-          })}
-          {field('birthday', 'Birthday', {
-            rightElement: <CalendarDays size={18} color={COLORS.textBase} />,
-            rules: {
-              pattern: {
-                value: /^\d{2}\/\d{2}\/\d{4}$/,
-                message: 'Use DD/MM/YYYY',
+          <BottomSheetScrollView
+            style={{ flex: 1 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            onScrollBeginDrag={expandSheet}
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+              paddingTop: 8,
+              paddingBottom: 20,
+              gap: 16,
+            }}
+          >
+            {/* Avatar / Profile Photo Section */}
+            <View style={{ alignItems: 'center', marginVertical: 8 }}>
+              <TouchableOpacity
+                onPress={handlePickAvatar}
+                activeOpacity={0.82}
+                style={{ position: 'relative' }}
+                disabled={uploadProfilePicture.isPending}
+              >
+                <View
+                  style={{
+                    width: 96,
+                    height: 96,
+                    borderRadius: 48,
+                    overflow: 'hidden',
+                    backgroundColor: COLORS.fillWeak,
+                    borderWidth: 2,
+                    borderColor: COLORS.strokeWeaker,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Avatar
+                    uri={localAvatarUri || profile?.picture_url || profile?.picture}
+                    seed={profile?.email || profile?._id}
+                    name={displayName}
+                    size="xl"
+                    className="w-full h-full border-0"
+                  />
+                  {uploadProfilePicture.isPending && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0,0,0,0.4)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <ActivityIndicator color={COLORS.textInverse} size="small" />
+                    </View>
+                  )}
+                </View>
+                <View
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    right: 0,
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: COLORS.brand,
+                    borderWidth: 2,
+                    borderColor: COLORS.card,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    shadowColor: COLORS.shadow,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 4,
+                    elevation: 2,
+                  }}
+                >
+                  <Camera size={16} color={COLORS.textInverse} strokeWidth={2} />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handlePickAvatar}
+                activeOpacity={0.7}
+                disabled={uploadProfilePicture.isPending}
+                style={{ marginTop: 8 }}
+              >
+                <Text style={{ ...TYPE.bodySmall, color: COLORS.brand }}>
+                  {uploadProfilePicture.isPending ? 'Uploading photo...' : 'Change profile photo'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {field('email', 'Email address', {
+              disabled: true,
+              keyboardType: 'email-address',
+            })}
+            {field('nickname', 'Display name (Nickname)', {
+              rules: { required: 'Display name is required' },
+            })}
+            {field('firstName', 'First Name', {
+              rules: { required: 'First name is required' },
+            })}
+            {field('lastName', 'Last Name', {
+              rules: { required: 'Last name is required' },
+            })}
+            {field('birthday', 'Birthday', {
+              rightElement: <CalendarDays size={18} color={COLORS.textBase} />,
+              rules: {
+                pattern: {
+                  value: /^\d{2}\/\d{2}\/\d{4}$/,
+                  message: 'Use DD/MM/YYYY',
+                },
               },
-            },
-          })}
-          {field('phone', 'Phone', {
-            keyboardType: 'phone-pad',
-            leftElement: (
-              <Text style={[TYPE.label, {color: COLORS.textStrong}]}>
-                🇳🇬
+            })}
+            {field('phone', 'Phone', {
+              keyboardType: 'phone-pad',
+              leftElement: (
+                <Text style={[TYPE.label, { color: COLORS.textStrong }]}>
+                  🇳🇬
+                </Text>
+              ),
+            })}
+            {field('country', 'Country')}
+            {field('location', 'City/Location')}
+            {field('bio', 'About me', { multiline: true, numberOfLines: 3 })}
+
+            {updateProfile.isError && (
+              <Text style={[TYPE.bodySmall, { color: COLORS.error }]}>
+                We couldn&apos;t save those changes. Please try again.
               </Text>
-            ),
-          })}
-          {field('country', 'Country')}
-          {field('location', 'City/Location')}
-          {field('bio', 'About me', { multiline: true, numberOfLines: 3 })}
+            )}
+          </BottomSheetScrollView>
 
-          {updateProfile.isError && (
-            <Text style={[TYPE.bodySmall, { color: COLORS.error }]}>
-              We couldn&apos;t save those changes. Please try again.
-            </Text>
-          )}
-        </BottomSheetScrollView>
-
-        {footer}
+          {footer}
         </View>
       </KeyboardAvoidingView>
     </View>
