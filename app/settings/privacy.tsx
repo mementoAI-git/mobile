@@ -120,7 +120,23 @@ export default function PrivacySettingsScreen() {
             <Text className="mb-2" style={{ ...TYPE.body, color: COLORS.textStrong }}>
               Privacy Settings
             </Text>
-            <ComingSoonRow label="Export your information" />
+            <TouchableOpacity
+              onPress={() => {
+                void Haptics.selectionAsync();
+                openSheet('export-archive');
+              }}
+              activeOpacity={0.76}
+              className="min-h-[64px] flex-row items-center justify-between gap-4"
+            >
+              <Text className="flex-1" style={{ ...TYPE.body, color: COLORS.textStrong }}>
+                Export your archive
+              </Text>
+              <View className="h-8 items-center justify-center rounded-full bg-brand/10 px-3.5">
+                <Text style={{ ...TYPE.metadata, color: COLORS.brand }}>
+                  Export
+                </Text>
+              </View>
+            </TouchableOpacity>
             <View className="h-px bg-stroke-weaker" />
             <ComingSoonRow label="Share stories" />
             <View className="h-px bg-stroke-weaker" />

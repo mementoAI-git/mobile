@@ -204,6 +204,13 @@ export const UiZapFast = ({ size = 22, color = 'currentColor', strokeWidth = 2 }
   </Svg>
 );
 
+export const UiClock01 = ({ size = 22, color = 'currentColor', strokeWidth = 2 }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth={strokeWidth} {...base} />
+    <Path d="M12 6v6l4 2" stroke={color} strokeWidth={strokeWidth} {...base} />
+  </Svg>
+);
+
 // ─── Actions / Navigation ─────────────────────────────────────────────────────
 
 export const UiLogOut01 = ({ size = 22, color = 'currentColor', strokeWidth = 2 }: IconProps) => (

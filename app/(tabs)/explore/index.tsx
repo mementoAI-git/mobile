@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, FlatList, RefreshControl, ImageBackground, ScrollView } from 'react-native';
+import { View, FlatList, RefreshControl, ImageBackground, ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoryCard } from '@/components/explore/CategoryCard';
 import { ContinueReflectingCard } from '@/components/explore/ContinueReflectingCard';
@@ -78,7 +78,10 @@ export default function ExploreScreen() {
         {staticPrompts.length > 0 && (
           <View className="mb-6">
             <Animated.Text className="text-text-strong mb-4" style={TYPE.sectionTitle}>
-              Continue reflecting
+              Continue{' '}
+              <Text style={{ fontStyle: 'italic', color: COLORS.textWeak }}>
+                reflecting
+              </Text>
             </Animated.Text>
             <ScrollView
               horizontal

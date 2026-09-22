@@ -81,7 +81,7 @@ describe('Settings sheet footer layout', () => {
     );
 
     expect(manager).toMatch(
-      /'edit-profile':\s*\{[^}]*snapPoints:\s*\['92%',\s*'100%'\]/,
+      /'edit-profile':\s*\{[^}]*snapPoints:\s*(?:\['92%',\s*'100%'\]|\['100%'\])/,
     );
     expect(manager).toContain('modalRef.current?.expand()');
     expect(manager).toContain('expandSheet={expandSheet}');

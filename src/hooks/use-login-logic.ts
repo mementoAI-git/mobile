@@ -84,6 +84,9 @@ export function useLoginLogic() {
     mutate(data, {
       onSuccess: (res) => {
         const completion = normalizeAuthCompletion(res);
+        if (completion.kind === 'session') {
+          return;
+        }
         if (completion.kind === 'two-factor-required') {
           useAuthStore.getState().setTwoFactorPendingToken(completion.token);
           router.push({
@@ -94,6 +97,7 @@ export function useLoginLogic() {
           });
           return;
         }
+        toast('Could not complete sign in. Please try again.', 'error');
       },
       onError: (err: any) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -101,7 +105,15 @@ export function useLoginLogic() {
           router.push(`/(auth)/verify-email?email=${data.email}`);
           return;
         }
-        const message = err?.message || 'Login failed. Please try again.';
+        const raw = err?.message || err?.data?.message || '';
+        let message = 'Sign in failed. Please check your credentials and try again.';
+        if (/network error/i.test(raw) || err?.code === 'ERR_NETWORK') {
+          message = 'Unable to connect to Memento. Please check your internet connection and try again.';
+        } else if (/timeout/i.test(raw) || err?.code === 'ECONNABORTED') {
+          message = 'The connection timed out. Please try again.';
+        } else if (raw && !/object Object/i.test(raw)) {
+          message = raw;
+        }
         toast(message, 'error');
       },
     });
@@ -123,6 +135,11 @@ export function useLoginLogic() {
         );
         const completion = await completeAuthResponse(res.data, establishSession);
         if (completion.kind === 'session') {
+          return;
+        }
+        if (completion.kind === 'two-factor-required') {
+          useAuthStore.getState().setTwoFactorPendingToken(completion.token);
+          router.push('/(auth)/two-factor');
           return;
         }
       }
@@ -168,6 +185,11 @@ export function useLoginLogic() {
         );
         const completion = await completeAuthResponse(res.data, establishSession);
         if (completion.kind === 'session') {
+          return;
+        }
+        if (completion.kind === 'two-factor-required') {
+          useAuthStore.getState().setTwoFactorPendingToken(completion.token);
+          router.push('/(auth)/two-factor');
           return;
         }
       }

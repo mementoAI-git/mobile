@@ -1,15 +1,17 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { X } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,
   useAnimatedProps,
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { useUserStore } from '@/store';
+import { useUserStore, useUiStore } from '@/store';
 import { useUserStats } from '@/hooks/queries/use-overview';
 
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -82,6 +84,7 @@ function StreakArc({ size = 120 }: { size?: number }) {
 
 export function StreakSheet() {
   const insets = useSafeAreaInsets();
+  const closeSheet = useUiStore((s) => s.closeSheet);
   const user = useUserStore((s) => s.user);
   const { data: statsData } = useUserStats();
   const stats = statsData ?? {} as any;
@@ -97,7 +100,30 @@ export function StreakSheet() {
   const CIRCLE_SIZE = 120;
 
   return (
-    <BottomSheetView style={{ paddingTop: 20, paddingBottom: getSheetBottomPadding(insets.bottom, 16) }}>
+    <BottomSheetView style={{ paddingTop: 8, paddingBottom: getSheetBottomPadding(insets.bottom, 16) }}>
+      {/* ── Top close button ── */}
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, marginBottom: 8 }}>
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.selectionAsync();
+            closeSheet();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Close streak"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: COLORS.fillWeak,
+          }}
+          activeOpacity={0.7}
+        >
+          <X size={20} color={COLORS.textStrong} />
+        </TouchableOpacity>
+      </View>
+
       {/* ── Animated arc + flame + overlapping day count ─────────── */}
       <View style={{ alignItems: 'center', marginBottom: 20 }}>
         <View style={{ alignItems: 'center' }} className="relative">

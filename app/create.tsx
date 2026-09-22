@@ -496,7 +496,12 @@ export default function CreateScreen() {
 
           {/* User context */}
           <Animated.View entering={FadeInDown.duration(300)} style={styles.userRow}>
-            <Avatar uri={user?.picture_url || user?.picture} name={user?.nickname || user?.first_name} size="sm" />
+            <Avatar
+              uri={user?.picture_url || user?.picture}
+              seed={user?.email || user?._id}
+              name={user?.nickname || user?.first_name}
+              size="sm"
+            />
             <Text style={styles.userName}>{user?.nickname || user?.first_name || 'You'}</Text>
           </Animated.View>
 

@@ -131,8 +131,11 @@ export function AddPaymentMethodSheet({
         <TouchableOpacity
           accessibilityRole="button"
           accessibilityLabel="Close payment method"
-          onPress={onClose}
-          style={{width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak}}
+          onPress={() => {
+            Haptics.selectionAsync();
+            onClose();
+          }}
+          style={{width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak}}
         >
           <X size={18} color={COLORS.textStrong}/>
         </TouchableOpacity>

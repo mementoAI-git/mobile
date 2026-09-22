@@ -9,7 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Plus, Zap, Trophy, ChevronRight } from 'lucide-react-native';
 import { useUiStore } from '@/store';
 import { useUserStats, useMemoriesStats, useCapsuleStats } from '@/hooks/queries/use-overview';
@@ -25,6 +25,7 @@ import { queryKeys } from '@/constants/query-keys';
 import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 import { DailyPromptSection } from '@/components/overview/DailyPromptSection';
 import { RecentActivitiesSection } from '@/components/overview/RecentActivitiesSection';
+import { MemorySpotlightCard } from '@/components/overview/MemorySpotlightCard';
 import { BrowseTopicsSection } from '@/components/overview/BrowseTopicsSection';
 import * as Haptics from 'expo-haptics';
 import Animated, {
@@ -217,6 +218,16 @@ export default function OverviewScreen() {
 
   // Data fetching
   const queryClient = useQueryClient();
+  const { checkout } = useLocalSearchParams<{ checkout?: string }>();
+
+  useEffect(() => {
+    if (checkout === 'success') {
+      openSheet('upgrade-success');
+      router.setParams({ checkout: undefined });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.subscription });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.userStats });
+    }
+  }, [checkout, openSheet, queryClient, router]);
 
   // Data fetching
   const { data: profile } = useProfile();
@@ -261,6 +272,14 @@ export default function OverviewScreen() {
       const createdAt = new Date(s.created_at);
       return createdAt >= startOfWeek;
     }).length;
+  }, [recentStoriesData]);
+
+  const fallbackStory = useMemo(() => {
+    const stories = recentStoriesData?.pages?.flatMap((p) => p?.docs ?? []) ?? [];
+    if (stories.length > 1) {
+      return stories[Math.min(stories.length - 1, 3)];
+    }
+    return stories[0] ?? null;
   }, [recentStoriesData]);
 
   const stats = statsData ?? {};
@@ -616,6 +635,12 @@ export default function OverviewScreen() {
                 </View>
               </ImageBackground>
             </Animated.View>
+
+            {/* ── Memory Spotlight ─────────────────────────────────── */}
+            <MemorySpotlightCard
+              spotlight={statsData?.spotlight}
+              fallbackStory={fallbackStory}
+            />
 
             {/* ── Recent Activities ─────────────────────────────────── */}
             <RecentActivitiesSection />

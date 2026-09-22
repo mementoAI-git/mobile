@@ -82,10 +82,32 @@ export async function readSessionCredentials(
   return legacy;
 }
 
+export async function persistSessionUser(
+  user: IUser,
+  storage: AuthStorage,
+): Promise<void> {
+  const sanitized = sanitizeUser(user);
+  await storage.setItem(storageKeys.sessionUser, JSON.stringify(sanitized));
+}
+
+export async function readSessionUser(
+  storage: AuthStorage,
+): Promise<IUser | null> {
+  const raw = await storage.getItem(storageKeys.sessionUser);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as IUser;
+    return parsed && typeof parsed === 'object' && parsed._id ? sanitizeUser(parsed) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function deleteSessionCredentials(storage: AuthStorage): Promise<void> {
   await Promise.all([
     storage.deleteItem(storageKeys.authAccessToken),
     storage.deleteItem(storageKeys.authRefreshToken),
     storage.deleteItem(storageKeys.auth),
+    storage.deleteItem(storageKeys.sessionUser),
   ]);
 }

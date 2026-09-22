@@ -4,6 +4,7 @@ import { Mail, Trash2 } from 'lucide-react-native';
 import { Avatar, Button } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { useUiStore } from '@/store';
 import type { IBeneficiary } from '@/types';
 
 export function BeneficiaryActionsSheet({
@@ -45,6 +46,19 @@ export function BeneficiaryActionsSheet({
           Resend invitation
         </Button>
       )}
+      <Button
+        variant="secondary"
+        size="lg"
+        className="mt-3 h-14"
+        onPress={() => {
+          onClose?.();
+          setTimeout(() => {
+            useUiStore.getState().openSheet('guardian-lens', { beneficiary });
+          }, 250);
+        }}
+      >
+        Preview Beneficiary Access
+      </Button>
       <Button
         variant="destructive"
         size="lg"

@@ -174,13 +174,13 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
     <View className="px-5 pb-8 pt-2">
       {/* Header */}
       <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-text-strong" style={TYPE.uiTitle}>
+        <Text className="text-text-strong" style={TYPE.sectionTitle}>
           {dailyPrompt ? "Today's Reflection" : 'Quick Capture'}
         </Text>
         <TouchableOpacity
           onPress={() => { Haptics.selectionAsync(); onClose ? onClose() : closeSheet(); }}
-          hitSlop={6}
-          className="size-8 rounded-full bg-fill-weaker items-center justify-center"
+          hitSlop={8}
+          className="size-11 rounded-full bg-fill-weaker items-center justify-center"
         >
           <X size={18} color={COLORS.textWeak} />
         </TouchableOpacity>

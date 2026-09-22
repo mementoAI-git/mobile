@@ -237,6 +237,9 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
   const abort = useCallback(() => {
     abortRef.current?.abort();
     readerRef.current?.cancel().catch(() => undefined);
+    readerRef.current = null;
+    streamingRef.current = false;
+    setStreaming(false);
   }, []);
 
   const clear = useCallback(() => {

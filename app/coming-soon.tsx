@@ -60,9 +60,13 @@ function ComingSoonContent() {
   const content = useMemo(() => resolveComingSoonFeature(feature), [feature]);
 
   const dismiss = useCallback(() => {
+    if (feature === 'capsules') {
+      router.replace('/(tabs)/overview');
+      return;
+    }
     if (router.canGoBack()) router.back();
-    else router.replace('/(tabs)/chat');
-  }, []);
+    else router.replace('/(tabs)/overview');
+  }, [feature]);
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();

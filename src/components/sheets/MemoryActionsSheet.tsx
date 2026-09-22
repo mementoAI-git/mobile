@@ -92,6 +92,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
         }
       );
     }
+    Haptics.selectionAsync();
     onClose?.();
   }, [tags, audience, originalAudience, memory.tags, updateMemory, onClose]);
 
@@ -354,9 +355,9 @@ const s = {
     justifyContent: 'space-between' as const,
     marginBottom: 20, paddingHorizontal: 2,
   },
-  headerTitle: { ...TYPE.cardTitle, color: COLORS.textStrong },
+  headerTitle: { ...TYPE.sectionTitle, color: COLORS.textStrong },
   closeBtn: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.fillWeak,
+    width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.fillWeak,
     alignItems: 'center' as const, justifyContent: 'center' as const,
   },
   actionRow: {

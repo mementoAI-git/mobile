@@ -4,6 +4,7 @@ import { Button, TextInput, Spinner, LinkPreviews } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
 import { Image as ImageIcon, FolderOpen, X, Lock, Globe, Users } from 'lucide-react-native';
 import { useCreateMemory, useUpdateMemory } from '@/hooks/mutations/use-memory-mutations';
+import { useMemoriesStats } from '@/hooks/queries/use-overview';
 import { useFileUpload } from '@/hooks/use-file-upload';
 
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -68,6 +69,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
   const { mutate: createMemory, isPending: isCreating } = useCreateMemory();
   const { mutate: updateMemory, isPending: isUpdatingMemory } = useUpdateMemory(editData?._id || '');
   const { pickAndUpload, isUploading } = useFileUpload();
+  const { data: memoriesStats } = useMemoriesStats();
 
   // ── Privacy button label ──────────────────────────────────────────────────────
   const privacyLabel = useMemo(() => formatMemoryAudienceLabel(audience), [audience]);
@@ -168,7 +170,17 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
         if (!editData && finalStatus === 'save') {
           const newId = res?.data?._id || res?._id || res?.data?.data?._id;
           if (newId) {
-            setTimeout(() => { openSheet('share-memory', { id: newId }); }, 300);
+            const isFirstStory = (memoriesStats?.stories_count ?? 0) === 0;
+            setTimeout(() => {
+              if (isFirstStory) {
+                openSheet('first-story-milestone', {
+                  memoryId: newId,
+                  title: title.trim() || 'Untitled Memory',
+                });
+              } else {
+                openSheet('share-memory', { id: newId });
+              }
+            }, 300);
           }
         }
       },
@@ -202,7 +214,14 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
           <Text className="text-text-strong" style={TYPE.sectionTitle}>
             {editData ? 'Edit Memory' : 'New Memory'}
           </Text>
-          <TouchableOpacity onPress={onClose} hitSlop={6} className="size-8 rounded-full bg-fill-weaker items-center justify-center">
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.selectionAsync();
+              onClose();
+            }}
+            hitSlop={8}
+            className="size-11 rounded-full bg-fill-weaker items-center justify-center"
+          >
             <X size={18} color={COLORS.textWeak} />
           </TouchableOpacity>
         </View>

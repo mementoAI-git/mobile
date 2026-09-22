@@ -50,8 +50,24 @@ export function ShareMemorySheet() {
         <Text className="text-text-strong" style={TYPE.sectionTitle}>
           Story added
         </Text>
-        <TouchableOpacity onPress={closeSheet} className="p-2 rounded-full bg-fill-weaker">
-          <X size={18} color={COLORS.textWeak} />
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.selectionAsync();
+            closeSheet();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Close share"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: COLORS.fillWeak,
+          }}
+          activeOpacity={0.7}
+        >
+          <X size={20} color={COLORS.textStrong} />
         </TouchableOpacity>
       </View>
 

@@ -6,6 +6,7 @@ import { Plus, Search } from 'lucide-react-native';
 import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
 import { MasonryMemoryGrid } from '@/components/memory/MasonryMemoryGrid';
 import { StatCard, DashboardHeader, TextInput, StoriesSkeleton, EmptyState, Spinner } from '@/components/ui';
+import { useGuardianLensStore } from '@/store/guardian-lens.store';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import * as Haptics from 'expo-haptics';
@@ -55,6 +56,14 @@ export default function StoriesScreen() {
     handleCreateNew,
     handleClearSearch,
   } = useStoriesLogic();
+
+  const simulatedBeneficiary = useGuardianLensStore((s) => s.simulatedBeneficiary);
+  const clearSimulation = useGuardianLensStore((s) => s.clearSimulation);
+
+  const displayedStories = useMemo(() => {
+    if (!simulatedBeneficiary) return stories;
+    return stories.filter((s) => s.visibility !== 'private');
+  }, [simulatedBeneficiary, stories]);
 
   const handleMemoryPress = useCallback(
     (id: string) => router.push({ pathname: '/(tabs)/stories/[id]', params: { id } }),
@@ -239,6 +248,33 @@ export default function StoriesScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
       <DashboardHeader title="My Stories" />
 
+      {simulatedBeneficiary && (
+        <View className="mx-4 mt-2 mb-3 px-4 py-3 bg-warning/15 border border-warning/30 rounded-2xl flex-row items-center justify-between">
+          <View className="flex-row items-center gap-2.5 flex-1 mr-2">
+            <View className="size-2.5 rounded-full bg-warning mr-1" />
+            <View className="flex-1">
+              <Animated.Text style={[TYPE.metadata, { color: COLORS.warning }]}>
+                GUARDIAN LENS ACTIVE
+              </Animated.Text>
+              <Animated.Text style={[TYPE.bodySmall, { color: COLORS.textStrong }]} numberOfLines={1}>
+                Viewing as {simulatedBeneficiary.name} ({displayedStories.length} shared)
+              </Animated.Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={() => {
+              void Haptics.selectionAsync();
+              clearSimulation();
+            }}
+            className="px-3 py-1.5 rounded-full bg-warning/25"
+          >
+            <Animated.Text style={[TYPE.buttonSmall, { color: COLORS.warning }]}>
+              Exit Lens
+            </Animated.Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View className="flex-1">
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
 
@@ -247,7 +283,7 @@ export default function StoriesScreen() {
         ) : (
           /* ── Masonry grid view (list mode commented out) ──────────── */
           <MasonryMemoryGrid
-            memories={stories}
+            memories={displayedStories}
             ListHeaderComponent={listHeader}
             ListEmptyComponent={emptyState}
             onMemoryPress={handleGridMemoryPress}

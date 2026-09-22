@@ -30,6 +30,13 @@ export type SheetName =
   | 'security-confirmation'
   | 'voice-call-settings'
   | 'end-voice-session'
+  | 'upgrade-success'
+  | 'capsule-sealed'
+  | 'first-story-milestone'
+  | 'voice-debrief'
+  | 'guardian-lens'
+  | 'export-archive'
+  | 'daily-ritual'
   | null;
 
 interface UiState {

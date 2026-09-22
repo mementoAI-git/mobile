@@ -10,6 +10,7 @@ import { useOfflineQueueStore } from '@/store/offline-queue.store';
 import {
   deleteSessionCredentials,
   persistSessionCredentials,
+  persistSessionUser,
   sanitizeUser,
 } from './session-credentials';
 
@@ -27,15 +28,27 @@ let terminationPromise: Promise<void> | null = null;
 
 export function syncAuthenticatedUser(user: IUser): IUser {
   const sanitized = sanitizeUser(user);
+  const currentUser = useAuthStore.getState().user ?? useUserStore.getState().user;
+  // Preserve local 'skipped' status if the server has not yet acknowledged the skip mutation
+  if (
+    currentUser?.onboarding_status === 'skipped' &&
+    sanitized.onboarding_status === 'never'
+  ) {
+    sanitized.onboarding_status = 'skipped';
+  }
   useUserStore.getState().setUser(sanitized);
   if (useAuthStore.getState().token) useAuthStore.getState().updateUser(sanitized);
+  void persistSessionUser(sanitized, secureStorage);
   return sanitized;
 }
 
 export async function establishSession(credentials: IAuth, user: IUser): Promise<void> {
   const sanitized = sanitizeUser(user);
   useAuthStore.getState().beginAuthentication();
-  await persistSessionCredentials(credentials, secureStorage);
+  await Promise.all([
+    persistSessionCredentials(credentials, secureStorage),
+    persistSessionUser(sanitized, secureStorage),
+  ]);
   useAuthStore.getState().commitSession(credentials, sanitized);
   useUserStore.getState().setUser(sanitized);
   queryClient.setQueryData(queryKeys.profile, sanitized);

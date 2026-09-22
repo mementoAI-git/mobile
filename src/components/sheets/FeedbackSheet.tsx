@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Button, TextInput } from '@/components/ui';
-import { Image as ImageIcon } from 'lucide-react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Button, TextInput, Spinner } from '@/components/ui';
+import { Image as ImageIcon, X } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useUiStore, useUserStore } from '@/store';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
@@ -108,12 +109,33 @@ export function FeedbackSheet() {
 
   return (
     <BottomSheetScrollView showsVerticalScrollIndicator={false} className="gap-4">
-      <Text
-        className="text-text-strong mb-2"
-        style={TYPE.sectionTitle}
-      >
-        Send feedback
-      </Text>
+      <View className="flex-row items-center justify-between mb-2">
+        <Text
+          className="text-text-strong"
+          style={TYPE.sectionTitle}
+        >
+          Send feedback
+        </Text>
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.selectionAsync();
+            closeSheet();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Close feedback"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: COLORS.fillWeak,
+          }}
+          activeOpacity={0.7}
+        >
+          <X size={20} color={COLORS.textStrong} />
+        </TouchableOpacity>
+      </View>
 
       <View className="mb-2">
         <Text className="text-text-strong mb-1.5" style={TYPE.label}>Type</Text>
@@ -174,7 +196,7 @@ export function FeedbackSheet() {
           className={`self-start flex-row items-center justify-center py-2 px-4 rounded-full border ${attachments.length > 0 ? 'bg-brand-tint border-brand-weak' : 'bg-fill-weaker border-stroke-weaker'}`}
         >
           {isUploading ? (
-             <ActivityIndicator size="small" color={COLORS.brand} />
+             <Spinner size="small" />
           ) : (
             <>
               <ImageIcon size={16} color={attachments.length > 0 ? COLORS.brand : COLORS.textBase} />

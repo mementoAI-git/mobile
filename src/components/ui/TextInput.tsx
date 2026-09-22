@@ -162,7 +162,7 @@ export function TextInput({
       )}
       {hint && !error && (
         <Text
-          style={{ ...TYPE.bodySmall, color: COLORS.textMuted, marginLeft: 4 }}
+          style={{ ...TYPE.bodySmall, color: COLORS.textWeak, marginLeft: 4 }}
         >
           {hint}
         </Text>

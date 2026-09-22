@@ -8,6 +8,7 @@ import {
   deleteSessionCredentials,
   persistSessionCredentials,
   readSessionCredentials,
+  readSessionUser,
 } from './session-credentials';
 
 export interface AuthStorage {
@@ -79,12 +80,20 @@ export function createAuthState(storage: AuthStorage): StateCreator<AuthState> {
 
     hydrateCredentials: async () => {
       try {
-        const token = await readSessionCredentials(storage);
+        const [token, cachedUser] = await Promise.all([
+          readSessionCredentials(storage),
+          readSessionUser(storage),
+        ]);
         if (!token?.access_token || !token?.refresh_token) {
           get().finishAnonymous();
           return;
         }
-        set({ token, user: null, phase: 'authenticating', hydrated: true });
+        set({
+          token,
+          user: cachedUser,
+          phase: cachedUser ? 'authenticated' : 'authenticating',
+          hydrated: true,
+        });
       } catch {
         get().finishAnonymous();
       }

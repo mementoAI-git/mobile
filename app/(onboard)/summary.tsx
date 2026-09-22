@@ -1,8 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { Info } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
+import { OnboardingCelebrationOverlay } from '@/components/onboarding/OnboardingCelebrationOverlay';
 import { TYPE } from '@/constants/typography';
 import { COLORS } from '@/constants/tokens';
 import { useFirstRunOnboarding } from '@/hooks/use-first-run-onboarding';
@@ -59,6 +60,19 @@ export default function SummaryScreen() {
       ? draft.lifeAreas
       : (['identity_self', 'passions_interests', 'lessons_wisdom'] as const);
 
+  const [vaultStage, setVaultStage] = useState<number | null>(null);
+
+  const onStartJourney = async () => {
+    try {
+      setVaultStage(1);
+      setTimeout(() => setVaultStage(2), 600);
+      setTimeout(() => setVaultStage(3), 1200);
+      await handleComplete();
+    } catch {
+      setVaultStage(null);
+    }
+  };
+
   return (
     <OnboardingShell
       step={4}
@@ -69,11 +83,16 @@ export default function SummaryScreen() {
       }
       primaryAction={{
         label: 'Start using Memento AI',
-        onPress: handleComplete,
-        loading: isCompleting,
+        onPress: onStartJourney,
+        loading: isCompleting || vaultStage !== null,
         rounded: 'xl',
       }}
     >
+      <OnboardingCelebrationOverlay
+        visible={vaultStage !== null}
+        preferredName={preferredName}
+        stage={vaultStage}
+      />
       <Animated.View entering={FadeInDown.duration(400)} style={styles.container}>
         {/* Visual: Beach umbrella */}
         <Animated.View entering={FadeInDown.duration(400)} style={styles.visualContainer}>

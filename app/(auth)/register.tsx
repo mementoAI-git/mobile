@@ -23,7 +23,7 @@ import Animated, {
   withDelay,
   Easing,
 } from 'react-native-reanimated';
-import { Button, TextInput, PasswordInput } from '@/components/ui';
+import { Button, TextInput, PasswordInput, toast } from '@/components/ui';
 import { useRegisterLogic } from '@/hooks/use-register-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -38,6 +38,7 @@ import { signInWithGoogleNative } from '@/features/auth/google-auth';
 import { signInWithAppleNative } from '@/features/auth/apple-auth';
 import { establishSession } from '@/features/auth/session-coordinator';
 import { completeAuthResponse } from '@/features/auth/auth-completion';
+import { useAuthStore } from '@/store';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 const APP_ICON = require('../../assets/icon.png');
@@ -69,7 +70,6 @@ export default function RegisterScreen() {
   const {
     form: { control, formState: { errors } },
     isPending,
-    error,
     onSubmit,
     router,
   } = useRegisterLogic();
@@ -137,27 +137,38 @@ export default function RegisterScreen() {
         return;
       }
       if (nativeResult.success && nativeResult.idToken) {
-        const res = await client.post(`${endpoint.oauth}google`, {
-          id_token: nativeResult.idToken,
-        });
+        const res = await client.post(
+          `${endpoint.oauth}google`,
+          { id_token: nativeResult.idToken },
+          { skipAuth: true } as never,
+        );
         const completion = await completeAuthResponse(res.data, establishSession);
         if (completion.kind === 'session') {
+          return;
+        }
+        if (completion.kind === 'two-factor-required') {
+          useAuthStore.getState().setTwoFactorPendingToken(completion.token);
+          router.push('/(auth)/two-factor');
           return;
         }
       }
 
       if (nativeResult.error) {
+        toast(nativeResult.error, 'error');
         return;
       }
 
       const res = await client.get(`${endpoint.oauth}google`, {
         params: { redirect_uri: oauthCallbackUrl('google') },
-      });
+        skipAuth: true,
+      } as never);
       const url: string | undefined = res.data?.data?.url;
       if (!url) return;
       const { openAuthSessionAsync } = await import('expo-web-browser');
       await openAuthSessionAsync(url, AUTH_SESSION_RETURN_URL);
-    } catch { /* silent */ } finally {
+    } catch {
+      toast('Google sign up could not be completed. Please try again.', 'error');
+    } finally {
       setGoogleLoading(false);
     }
   };
@@ -171,28 +182,40 @@ export default function RegisterScreen() {
         return;
       }
       if (nativeResult.success && nativeResult.identityToken) {
-        const res = await client.post(`${endpoint.oauth}apple`, {
-          id_token: nativeResult.identityToken,
-          ...(nativeResult.user ? { user: nativeResult.user } : {}),
-        });
+        const res = await client.post(
+          `${endpoint.oauth}apple`,
+          {
+            id_token: nativeResult.identityToken,
+            ...(nativeResult.user ? { user: nativeResult.user } : {}),
+          },
+          { skipAuth: true } as never,
+        );
         const completion = await completeAuthResponse(res.data, establishSession);
         if (completion.kind === 'session') {
+          return;
+        }
+        if (completion.kind === 'two-factor-required') {
+          useAuthStore.getState().setTwoFactorPendingToken(completion.token);
+          router.push('/(auth)/two-factor');
           return;
         }
       }
 
       if (nativeResult.error) {
+        toast(nativeResult.error, 'error');
         return;
       }
 
       const res = await client.get(`${endpoint.oauth}apple`, {
         params: { redirect_uri: oauthCallbackUrl('apple') },
-      });
+        skipAuth: true,
+      } as never);
       const url: string | undefined = res.data?.data?.url;
       if (!url) return;
       const { openAuthSessionAsync } = await import('expo-web-browser');
-      await openAuthSessionAsync(url, AUTH_SESSION_RETURN_URL);
-    } catch { /* silent */ } finally {
+    } catch {
+      toast('Apple sign up could not be completed. Please try again.', 'error');
+    } finally {
       setAppleLoading(false);
     }
   };
@@ -343,20 +366,12 @@ export default function RegisterScreen() {
                     onChangeText={onChange}
                     onBlur={onBlur}
                     error={errors.password?.message}
-                    hint="A least 8 characters containing a number, Capitalized letter and a symbol."
+                    hint="At least 8 characters containing a number, capitalized letter and a symbol."
                     placeholder="••••••••"
                     variant="rounded"
                   />
                 )}
               />
-
-              {error && (
-                <View style={styles.errorBanner}>
-                  <Text style={styles.errorBannerText}>
-                    {(error as any).message ?? 'Registration failed. Please try again.'}
-                  </Text>
-                </View>
-              )}
 
               {/* Primary CTA Button */}
               <Button
@@ -364,8 +379,8 @@ export default function RegisterScreen() {
                 loading={isPending}
                 fullWidth
                 size="lg"
-                rounded="xl"
-                className="mt-2 !h-[52px]"
+                rounded="full"
+                className="mt-3"
               >
                 Create account
               </Button>
@@ -456,7 +471,7 @@ const styles = StyleSheet.create({
   },
   socialBtn: {
     height: 52,
-    borderRadius: 12,
+    borderRadius: 9999,
     borderWidth: 1,
     borderColor: COLORS.strokeWeak,
     backgroundColor: '#ffffff',
@@ -488,19 +503,6 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: 'row',
     gap: 12,
-  },
-  errorBanner: {
-    backgroundColor: COLORS.fillWeak,
-    borderWidth: 1,
-    borderColor: COLORS.error,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  errorBannerText: {
-    ...TYPE.label,
-    color: COLORS.error,
-    textAlign: 'center',
   },
   loginLinkContainer: {
     alignItems: 'center',

@@ -13,6 +13,7 @@ import { useUiStore, useUserStore } from '@/store';
 import { StylePicker } from '../capsule/StylePicker';
 import { useState } from 'react';
 import * as WebBrowser from 'expo-web-browser';
+import * as Haptics from 'expo-haptics';
 
 
 
@@ -83,7 +84,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
       {/* Header */}
       <View className="px-6 pt-2 pb-4 flex-row items-center justify-between border-b border-stroke-weaker">
         <View>
-          <Text className="text-text-strong" style={TYPE.uiTitle}>
+          <Text className="text-text-strong" style={TYPE.sectionTitle}>
             {previewOnly ? 'View Capsule' : 'Capsule Details'}
           </Text>
           <Text className="text-text-weak" style={TYPE.metadata}>
@@ -91,8 +92,11 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
           </Text>
         </View>
         <TouchableOpacity
-          onPress={onClose}
-          className="size-10 rounded-full bg-fill-weaker items-center justify-center"
+          onPress={() => {
+            Haptics.selectionAsync();
+            onClose();
+          }}
+          className="size-11 rounded-full bg-fill-weaker items-center justify-center"
         >
           <X size={20} color={COLORS.textWeak} />
         </TouchableOpacity>

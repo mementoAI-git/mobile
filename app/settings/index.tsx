@@ -1,4 +1,5 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
+import { OnboardingCelebrationOverlay } from '@/components/onboarding/OnboardingCelebrationOverlay';
 import {
   Image,
   Linking,
@@ -13,7 +14,9 @@ import { ArrowLeft, ChevronRight, MessageCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Avatar } from '@/components/ui';
+import { useUiStore } from '@/store';
 import {
+  UiClock01,
   UiCreditCard01,
   UiEye,
   UiLogOut01,
@@ -46,6 +49,7 @@ export default function SettingsIndex() {
     handleLogout,
     openSheet,
   } = useProfileSettingsLogic();
+  const [showVaultCelebration, setShowVaultCelebration] = useState(false);
   const router = useRouter();
   const displayName = profile?.fullname?.trim()
     || `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim()
@@ -70,7 +74,7 @@ export default function SettingsIndex() {
 
   const openCommunity = useCallback((url: string) => {
     Haptics.selectionAsync();
-    Linking.openURL(url).catch(() => {});
+    Linking.openURL(url).catch(() => { });
   }, []);
 
   return (
@@ -96,6 +100,7 @@ export default function SettingsIndex() {
         >
           <Avatar
             uri={profile?.picture_url || profile?.picture}
+            seed={profile?.email || profile?._id}
             name={displayName}
             size="xl"
             className="h-14 w-14 border-0"
@@ -133,6 +138,11 @@ export default function SettingsIndex() {
             label="Billing"
             icon={<UiCreditCard01 size={24} color={COLORS.textBase} />}
             onPress={() => push('/settings/billing')}
+          />
+          <SettingsHubRow
+            label="Daily reflection ritual"
+            icon={<UiClock01 size={24} color={COLORS.textBase} />}
+            onPress={() => openSheet('daily-ritual')}
           />
           <SettingsHubRow
             label="Send feedback"
@@ -174,7 +184,106 @@ export default function SettingsIndex() {
           ))}
         </View>
         <Text style={styles.version}>Memento AI v1.0</Text>
+
+        {__DEV__ && (
+          <View className="mt-8 p-4 rounded-3xl bg-fill-weaker border border-stroke-weaker">
+            <View className="flex-row items-center gap-2 mb-3">
+              <View className="size-2 rounded-full bg-brand" />
+              <Text className="text-text-strong uppercase tracking-wider" style={TYPE.metadata}>
+                Ceremonial Experience Lab
+              </Text>
+            </View>
+            <View className="flex-row flex-wrap gap-2">
+              <TouchableOpacity
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  openSheet('first-story-milestone');
+                }}
+                className="bg-white border border-stroke-weaker px-3 py-2 rounded-full"
+              >
+                <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
+                  📖 First Story
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  openSheet('voice-debrief', {
+                    duration: 185,
+                    userSpeechText: 'Remembering walking through the old orchard with grandfather in the autumn of 2012...',
+                    aiSpeechText: 'A story of heritage, quiet resilience, and family warmth.',
+                  });
+                }}
+                className="bg-white border border-stroke-weaker px-3 py-2 rounded-full"
+              >
+                <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
+                  🎙️ Voice Debrief
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  openSheet('capsule-sealed', {
+                    title: 'Letters for Graduation',
+                    scheduledDate: '2035-10-14',
+                    recipientsCount: 2,
+                  });
+                }}
+                className="bg-white border border-stroke-weaker px-3 py-2 rounded-full"
+              >
+                <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
+                  ⏳ Capsule Sealed
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  openSheet('upgrade-success');
+                }}
+                className="bg-white border border-stroke-weaker px-3 py-2 rounded-full"
+              >
+                <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
+                  👑 Pro Upgrade
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  openSheet('daily-ritual');
+                }}
+                className="bg-white border border-stroke-weaker px-3 py-2 rounded-full"
+              >
+                <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
+                  ⏰ Reflection Window
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  setShowVaultCelebration(true);
+                }}
+                className="bg-white border border-stroke-weaker px-3 py-2 rounded-full"
+              >
+                <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
+                  🏛️ Vault Celebration
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </ScrollView>
+
+      <OnboardingCelebrationOverlay
+        visible={showVaultCelebration}
+        interactiveLabMode
+        preferredName={profile?.nickname || profile?.first_name || 'Friend'}
+        onClose={() => setShowVaultCelebration(false)}
+      />
     </SafeAreaView>
   );
 }

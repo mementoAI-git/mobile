@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { X, Sparkles } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { dimensionLabel, type LifeDimension } from '@/constants/enrichment';
+
+const CHAT_ORB = require('../../../assets/images/onboarding/chat-ai-orb.png');
 
 interface DeepDiveNudgeProps {
   dimension: LifeDimension;
@@ -29,10 +31,12 @@ export function DeepDiveNudge({ dimension, question, onDeepDive, onDismiss }: De
       className="mx-4 mb-2"
     >
       <View className="flex-row items-start gap-3 bg-white border border-stroke-weaker rounded-2xl p-3.5 shadow-sm">
-        {/* Icon */}
-        <View className="size-8 rounded-full bg-brand/10 items-center justify-center shrink-0 mt-0.5">
-          <Sparkles size={15} color={COLORS.brand} strokeWidth={2} />
-        </View>
+        {/* AI Host Orb */}
+        <Image
+          source={CHAT_ORB}
+          style={{ width: 32, height: 32, marginTop: 2 }}
+          resizeMode="contain"
+        />
 
         {/* Text */}
         <View className="flex-1 gap-1.5">

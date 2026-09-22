@@ -11,6 +11,7 @@ import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal, BottomSh
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
 import { useEffect } from 'react';
+import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   X,
@@ -32,6 +33,7 @@ import { useFiles } from '@/hooks/queries/use-files';
 import { useFileUpload } from '@/hooks/use-file-upload';
 import type { IBeneficiary, ICapsule } from '@/types';
 import { getThemeById } from '@/constants/themes';
+import { useUiStore } from '@/store';
 import { PreviewCapsuleModal } from './PreviewCapsuleModal';
 import { SelectFromMemoryModal } from './SelectFromMemoryModal';
 import { SelectFromMediaModal } from './SelectFromMediaModal';
@@ -201,8 +203,19 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
     } else {
       createCapsule(payload, {
         onSuccess: () => {
-          toast('Capsule scheduled.', 'success');
           onClose();
+          const recipientNames = recipientIds.map((id) => {
+            const match = (beneficiariesData ?? []).find((b: any) => b._id === id || b.email === id);
+            return match?.name || match?.email || id;
+          });
+          setTimeout(() => {
+            useUiStore.getState().openSheet('capsule-sealed', {
+              title: title.trim() || 'Untitled Capsule',
+              unlockDate: scheduleDate ? scheduleDate.toISOString() : undefined,
+              recipientNames,
+              themeId,
+            });
+          }, 350);
         }
       });
     }
@@ -215,11 +228,27 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
     <>
       {/* Header */}
       <View className="px-5 pt-4 pb-4 border-b border-stroke-weaker flex-row items-center justify-between">
-        <Text className="text-text-strong" style={TYPE.uiTitle}>
+        <Text className="text-text-strong" style={TYPE.sectionTitle}>
           {isEdit ? 'Edit Capsule' : 'Create Capsule'}
         </Text>
-        <TouchableOpacity onPress={onClose} className="p-1.5 bg-fill-weaker rounded-full">
-          <X size={16} color={COLORS.textWeak} />
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.selectionAsync();
+            onClose();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Close capsule"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: COLORS.fillWeak,
+          }}
+          activeOpacity={0.7}
+        >
+          <X size={20} color={COLORS.textStrong} />
         </TouchableOpacity>
       </View>
 
