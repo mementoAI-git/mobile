@@ -162,7 +162,7 @@ export default function StoriesScreen() {
         {stats && (
           <View className="gap-4">
             <View className="flex-row gap-4">
-              <StatCard label="Memories" value={stats.stories_count ?? 0} variant="blue" bg={MEMORIES_BG} onPress={() => {}} />
+              <StatCard label="Memories" value={stats.stories_count ?? 0} variant="blue" bg={MEMORIES_BG} onPress={() => setActiveFilter('All')} />
               <StatCard label="Bookmarks" value={stats.bookmark_count ?? 0} variant="orange" bg={STREAK_BG} onPress={() => setActiveFilter('Bookmarked')} />
             </View>
           </View>

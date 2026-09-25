@@ -45,21 +45,39 @@
         {
           "action": "SEND",
           "data": [
-            { "mimeType": "image/*" },
-            { "mimeType": "video/*" },
-            { "mimeType": "audio/*" },
-            { "mimeType": "application/pdf" },
-            { "mimeType": "text/plain" }
+            {
+              "mimeType": "image/*"
+            },
+            {
+              "mimeType": "video/*"
+            },
+            {
+              "mimeType": "audio/*"
+            },
+            {
+              "mimeType": "application/pdf"
+            },
+            {
+              "mimeType": "text/plain"
+            }
           ],
-          "category": ["DEFAULT"]
+          "category": [
+            "DEFAULT"
+          ]
         },
         {
           "action": "SEND_MULTIPLE",
           "data": [
-            { "mimeType": "image/*" },
-            { "mimeType": "video/*" }
+            {
+              "mimeType": "image/*"
+            },
+            {
+              "mimeType": "video/*"
+            }
           ],
-          "category": ["DEFAULT"]
+          "category": [
+            "DEFAULT"
+          ]
         }
       ],
       "permissions": [
@@ -135,6 +153,7 @@
         }
       ],
       "expo-status-bar",
+      "expo-iap",
       [
         "expo-share-intent",
         {

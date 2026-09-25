@@ -7,6 +7,7 @@ export const storageKeys = {
   recentMemories: 'memento.recent-memories',
   welcomeOnce: 'memento.welcome-once',
   onboardingState: 'memento.onboarding_state',
+  pendingOnboardingSkip: 'memento.pending_onboarding_skip',
   syncedPushToken: 'memento.synced_push_token',
   installationId: 'memento.installation_id',
   sessionUser: 'memento.auth.session_user',
