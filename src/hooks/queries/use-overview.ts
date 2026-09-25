@@ -43,18 +43,24 @@ export function useUserStats() {
 
 // Memories stats — stories_count, media_count, bookmark_count, storage, week_count
 export function useMemoriesStats() {
+  const token = useAuthStore((s) => s.token?.access_token);
+
   return useQuery({
     queryKey: queryKeys.memoriesStats,
     queryFn: () => fetchEntity<any>(endpoint.memoriesStats),
+    enabled: !!token,
     staleTime: 60_000,
   });
 }
 
 // Capsule stats — scheduled_count, draft_count, delivered_count
 export function useCapsuleStats() {
+  const token = useAuthStore((s) => s.token?.access_token);
+
   return useQuery({
     queryKey: queryKeys.capsuleStats,
     queryFn: () => fetchEntity<any>(endpoint.capsuleStats),
+    enabled: !!token,
     staleTime: 60_000,
   });
 }

@@ -36,7 +36,6 @@ export const queryKeys = {
 
   subscription: ['subscription'] as const,
   billingUsage: ['billing-usage'] as const,
-  billingProfile: ['billing-profile'] as const,
   billingInvoices: ['billing-invoices'] as const,
   passkeys: ['passkeys'] as const,
 };

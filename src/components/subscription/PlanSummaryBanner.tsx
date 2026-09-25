@@ -18,6 +18,7 @@ interface PlanSummaryBannerProps {
   tier?: SubscriptionSummary['tier'];
   status?: SubscriptionSummary['status'];
   cancelAtPeriodEnd?: boolean;
+  provider?: SubscriptionSummary['provider'];
 }
 
 function statusBadgeLabel(
@@ -41,6 +42,7 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
   tier,
   status,
   cancelAtPeriodEnd,
+  provider,
 }: PlanSummaryBannerProps) {
   const resolvedTier = tier ?? (isProOrAbove ? 'pro' : 'free');
   const presentation = getBillingTierPresentation(resolvedTier);
@@ -96,7 +98,11 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
               maxWidth: 320,
             }}
           >
-            {presentation.subtitle}
+            {provider === 'apple'
+              ? 'Billed via Apple App Store. Manage your subscription in your Apple ID settings.'
+              : provider === 'google'
+              ? 'Billed via Google Play. Manage your subscription in Google Play.'
+              : presentation.subtitle}
           </Text>
 
           {/* Bottom row: Manage plan button */}

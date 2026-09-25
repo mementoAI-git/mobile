@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import type { QueryClient } from '@tanstack/react-query';
@@ -6,11 +7,14 @@ import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import { logger } from '@/lib/logger';
 import { toast } from '@/components/ui/Toast';
+import { iapService } from '@/features/billing/iap-service';
+import { generateStoreAccountToken } from '@/features/billing/iap-constants';
 import { extractBillingUrl } from './billing-adapters';
 import type { BillingCancellationFeedback } from './subscription-cancellation';
+import type { SubscriptionSummary } from './billing-adapters';
 
 export type BillingCheckoutTier = 'pro' | 'legacy';
-export type BillingCheckoutInterval = 'monthly' | 'annual' | 'lifetime';
+export type BillingCheckoutInterval = 'monthly' | 'annual';
 
 interface LaunchBillingCheckoutOptions {
   tier: BillingCheckoutTier;
@@ -21,6 +25,7 @@ interface LaunchBillingCheckoutOptions {
 
 interface OpenBillingPortalOptions {
   returnPath: string;
+  provider?: 'polar' | 'apple' | 'google';
 }
 
 interface BillingMutationOptions {
@@ -33,6 +38,7 @@ async function invalidateBillingQueries(queryClient?: QueryClient) {
     queryClient.invalidateQueries({ queryKey: queryKeys.subscription }),
     queryClient.invalidateQueries({ queryKey: queryKeys.billingUsage }),
     queryClient.invalidateQueries({ queryKey: queryKeys.billingInvoices }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.profile }),
   ]);
 }
 
@@ -42,6 +48,44 @@ export async function launchBillingCheckout({
   returnPath,
   queryClient,
 }: LaunchBillingCheckoutOptions) {
+  // On native mobile devices (iOS / Android), use native StoreKit / Google Play Billing
+  if (Platform.OS === 'ios' || Platform.OS === 'android') {
+    try {
+      const planInterval = interval === 'annual' ? 'annual' : 'monthly';
+      let storeAccountToken = queryClient?.getQueryData<SubscriptionSummary>(
+        queryKeys.subscription,
+      )?.store_account_token;
+      if (!storeAccountToken) {
+        const refreshed = await queryClient?.fetchQuery({
+          queryKey: queryKeys.subscription,
+          queryFn: async () => {
+            const { get } = await import('@/api/mutations');
+            const { normalizeSubscriptionSummary } = await import('./billing-adapters');
+            return get<unknown>(endpoint.billingSubscription).then(normalizeSubscriptionSummary);
+          },
+        });
+        storeAccountToken = refreshed?.store_account_token;
+      }
+      if (!storeAccountToken) {
+        storeAccountToken = generateStoreAccountToken();
+      }
+      const purchased = await iapService.requestSubscriptionPurchase(
+        planInterval,
+        storeAccountToken,
+      );
+      if (purchased) {
+        await invalidateBillingQueries(queryClient);
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      logger.error('[BillingFlow] Native IAP checkout error:', err);
+      toast(err?.message || 'A purchase error occurred. Please try again.', 'error');
+      return false;
+    }
+  }
+
+  // Web fallback: Polar web checkout
   const successUrl = Linking.createURL('/(tabs)/overview', {
     queryParams: { checkout: 'success' },
   });
@@ -70,7 +114,12 @@ export async function launchBillingCheckout({
   }
 }
 
-export async function openBillingPortal({ returnPath }: OpenBillingPortalOptions) {
+export async function openBillingPortal({ returnPath, provider }: OpenBillingPortalOptions) {
+  if (provider === 'apple' || provider === 'google') {
+    await iapService.openSubscriptionManagement();
+    return true;
+  }
+
   const redirectUrl = Linking.createURL(returnPath);
   try {
     const res = await post(endpoint.billingPortal, {
@@ -88,6 +137,24 @@ export async function openBillingPortal({ returnPath }: OpenBillingPortalOptions
   } catch (err: any) {
     logger.error('Billing portal error:', err);
     toast(err?.message || 'Could not load billing portal.', 'error');
+    return false;
+  }
+}
+
+export async function restoreBillingPurchases({ queryClient }: BillingMutationOptions = {}) {
+  try {
+    const res = await iapService.restorePurchases();
+    await invalidateBillingQueries(queryClient);
+    if (res.restoredCount > 0) {
+      toast(`Restored ${res.restoredCount} purchase${res.restoredCount > 1 ? 's' : ''}.`, 'success');
+      return true;
+    } else {
+      toast('No active subscriptions found to restore.', 'info');
+      return false;
+    }
+  } catch (err: any) {
+    logger.error('Restore purchases error:', err);
+    toast(err?.message || 'Could not restore purchases.', 'error');
     return false;
   }
 }

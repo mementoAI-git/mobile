@@ -5,6 +5,7 @@ import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import type { IMemory } from '@/types';
 import { shouldEnableStoriesQuery } from '@/features/memories/query-options';
+import { useAuthStore } from '@/store';
 import {
   getConversationMessagesUrl,
   getNextConversationCursor,
@@ -16,6 +17,8 @@ interface StoriesQueryOptions {
 }
 
 export function useMemories(params?: { limit?: number }) {
+  const token = useAuthStore((s) => s.token?.access_token);
+
   return useInfiniteQuery({
     queryKey: queryKeys.memories(params),
     queryFn: ({ pageParam = 1 }) =>
@@ -24,6 +27,7 @@ export function useMemories(params?: { limit?: number }) {
       ),
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,
+    enabled: !!token,
     // 30s stale time — avoids refetch on every tab switch
     staleTime: 30_000,
   });
@@ -33,6 +37,8 @@ export function useStories(
   params?: { limit?: number; filter?: string; search?: string },
   options?: StoriesQueryOptions,
 ) {
+  const token = useAuthStore((s) => s.token?.access_token);
+
   return useInfiniteQuery({
     queryKey: queryKeys.stories(params),
     queryFn: ({ pageParam = 1 }) => {
@@ -48,7 +54,7 @@ export function useStories(
     },
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,
-    enabled: shouldEnableStoriesQuery(options?.enabled),
+    enabled: !!token && shouldEnableStoriesQuery(options?.enabled),
     placeholderData: keepPreviousData,
     // 30s stale time — avoids refetch on every tab switch
     staleTime: 30_000,
@@ -56,6 +62,8 @@ export function useStories(
 }
 
 export function useConversations(params?: { limit?: number }) {
+  const token = useAuthStore((s) => s.token?.access_token);
+
   return useInfiniteQuery({
     queryKey: queryKeys.conversations(params),
     queryFn: ({ pageParam = 1 }) =>
@@ -64,39 +72,49 @@ export function useConversations(params?: { limit?: number }) {
       ),
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,
+    enabled: !!token,
     staleTime: 30_000,
   });
 }
 
 export function useMemory(id: string) {
+  const token = useAuthStore((s) => s.token?.access_token);
+
   return useQuery({
     queryKey: queryKeys.memory(id),
     queryFn: () =>
       fetchEntity<IMemory>(endpoint.memory.replace(':id', id)),
-    enabled: !!id,
+    enabled: !!token && !!id,
     // Individual memory detail — 30s so navigating back doesn't re-fetch
     staleTime: 30_000,
   });
 }
 
 export function useMemoriesStats() {
+  const token = useAuthStore((s) => s.token?.access_token);
+
   return useQuery({
     queryKey: queryKeys.memoriesStats,
     queryFn: () => fetchEntity<any>(endpoint.memoriesStats),
+    enabled: !!token,
     staleTime: 60_000,
   });
 }
 
 export function useConversationAttachments(id: string) {
+  const token = useAuthStore((s) => s.token?.access_token);
+
   return useQuery({
     queryKey: queryKeys.conversationAttachments(id),
     queryFn: () => fetchEntity<any>(endpoint.conversationAttachments.replace(':id', id)),
-    enabled: !!id,
+    enabled: !!token && !!id,
     staleTime: 30_000,
   });
 }
 
 export function useConversationMessages(id: string) {
+  const token = useAuthStore((s) => s.token?.access_token);
+
   return useInfiniteQuery({
     queryKey: queryKeys.promptMessages(id),
     queryFn: ({ pageParam }) => {
@@ -107,7 +125,7 @@ export function useConversationMessages(id: string) {
     },
     getNextPageParam: getNextConversationCursor,
     initialPageParam: '',
-    enabled: !!id,
+    enabled: !!token && !!id,
     staleTime: 0,
   });
 }

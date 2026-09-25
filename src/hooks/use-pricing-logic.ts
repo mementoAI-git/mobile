@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useQueryClient } from '@tanstack/react-query';
-import { launchBillingCheckout } from '@/features/settings/billing-flow';
+import { launchBillingCheckout, restoreBillingPurchases } from '@/features/settings/billing-flow';
+import { useIAP } from '@/features/billing/use-iap';
 
 export type BillingInterval = 'monthly' | 'annual';
 export type Currency = 'USD' | 'NGN';
@@ -10,7 +11,7 @@ export type Currency = 'USD' | 'NGN';
 export const PRICING_TABLE = {
   USD: {
     pro: { monthly: 9.99, annual: 79 },
-    legacy: { monthly: 19.99, annual: 179, lifetime: 999 },
+    legacy: { monthly: 19.99, annual: 179 },
   },
 };
 
@@ -26,11 +27,13 @@ export const DEFERRED_FEATURES = [
 export function usePricingLogic() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { products, buySubscription, restorePurchases: iapRestore, purchasing, restoring } = useIAP();
   const [interval, setInterval] = useState<BillingInterval>('monthly');
   const [loading, setLoading] = useState(false);
   const currency: Currency = 'USD';
   const table = PRICING_TABLE[currency];
 
+  const localizedProduct = products[interval];
   const proPrice = interval === 'annual' ? table.pro.annual / 12 : table.pro.monthly;
   const legacyPrice = interval === 'annual' ? table.legacy.annual / 12 : table.legacy.monthly;
 
@@ -39,11 +42,10 @@ export function usePricingLogic() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setLoading(true);
 
-      const normalizedTier = tier === 'lifetime' ? 'legacy' : tier.toLowerCase();
-      const normalizedInterval = tier === 'lifetime' ? 'lifetime' : interval;
+      const normalizedTier = tier === 'legacy' ? 'legacy' : 'pro';
       const opened = await launchBillingCheckout({
-        tier: normalizedTier as 'pro' | 'legacy',
-        interval: normalizedInterval,
+        tier: normalizedTier,
+        interval,
         returnPath: '/settings/billing',
         queryClient,
       });
@@ -54,6 +56,10 @@ export function usePricingLogic() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRestore = async () => {
+    await restoreBillingPurchases({ queryClient });
   };
 
   const formatMoney = (amount: number) => {
@@ -72,11 +78,14 @@ export function usePricingLogic() {
   return {
     interval,
     changeInterval,
-    loading,
+    loading: loading || purchasing,
+    restoring,
     proPrice,
     legacyPrice,
     table,
+    localizedProduct,
     handleCheckout,
+    handleRestore,
     formatMoney,
     router,
   };

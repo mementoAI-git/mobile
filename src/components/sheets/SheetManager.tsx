@@ -34,8 +34,6 @@ import { UpgradeSuccessSheet } from './UpgradeSuccessSheet';
 import { CapsuleSealedSheet } from './CapsuleSealedSheet';
 import { FirstStoryMilestoneSheet } from './FirstStoryMilestoneSheet';
 import { AddMemberToGroupSheet } from './AddMemberToGroupSheet';
-import { EditBillingDetailsSheet } from './EditBillingDetailsSheet';
-import { AddPaymentMethodSheet } from './AddPaymentMethodSheet';
 import { CancelSubscriptionConfirmationSheet } from './CancelSubscriptionConfirmationSheet';
 import { VoiceDebriefSheet } from './VoiceDebriefSheet';
 import { GuardianLensSheet } from './GuardianLensSheet';
@@ -75,8 +73,6 @@ const SHEET_CONFIGS: Record<string, {
   'streak': { component: StreakSheet, dynamic: true },
   'story-drafts': { component: DraftsSheet, snapPoints: ['75%'], keyboardBehavior: 'interactive' },
   'edit-profile': { component: EditProfileSheet, snapPoints: ['100%'], dynamic: false, keyboardBehavior: 'fillParent' },
-  'edit-billing-details': { component: EditBillingDetailsSheet, snapPoints: ['94%', '100%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
-  'add-payment-method': { component: AddPaymentMethodSheet, snapPoints: ['94%', '100%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
   'cancel-subscription-confirmation': { component: CancelSubscriptionConfirmationSheet, dynamic: true },
   'change-password': { component: ChangePasswordSheet, snapPoints: ['100%'], dynamic: true, keyboardBehavior: 'interactive', keyboardBlurBehavior: 'restore', androidKeyboardInputMode: 'adjustResize' },
   'setup-two-factor': { component: SetupTwoFactorSheet, snapPoints: ['92%'], dynamic: false, keyboardBehavior: 'fillParent' },
@@ -95,7 +91,6 @@ const SELF_MANAGED = new Set([
   'create-capsule', 'capsule-detail', 'memory-insights',
   'create-memory', 'create-group', 'add-beneficiary', 'streak',
   'edit-profile', 'add-member-to-group',
-  'edit-billing-details', 'add-payment-method',
   'change-password', 'setup-two-factor',
   'emoji-picker',
 ]);

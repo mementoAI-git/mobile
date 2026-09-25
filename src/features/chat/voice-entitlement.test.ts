@@ -44,6 +44,5 @@ describe('voice entitlement handling', () => {
 
     expect(getVoiceUpgradeCheckout('monthly')).toEqual({ tier: 'pro', interval: 'monthly' });
     expect(getVoiceUpgradeCheckout('annual')).toEqual({ tier: 'pro', interval: 'annual' });
-    expect(getVoiceUpgradeCheckout('lifetime')).toEqual({ tier: 'legacy', interval: 'lifetime' });
   });
 });

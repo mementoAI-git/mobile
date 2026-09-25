@@ -3,6 +3,7 @@ import { fetchPaginated } from '@/api/domain-fetchers';
 import endpoint from '@/api/endpoint';
 import { getNextActivitiesPage } from '@/features/activities/pagination';
 import { queryKeys } from '@/constants/query-keys';
+import { useAuthStore } from '@/store';
 
 export interface Activity {
   _id: string;
@@ -29,6 +30,8 @@ export interface ActivitiesResponse {
 }
 
 export function useActivities(params?: { page?: number; limit?: number }) {
+  const token = useAuthStore((s) => s.token?.access_token);
+
   return useQuery({
     queryKey: [...queryKeys.activities, params],
     queryFn: () => {
@@ -37,11 +40,13 @@ export function useActivities(params?: { page?: number; limit?: number }) {
       qs.set('limit', String(params?.limit || 4));
       return fetchPaginated<Activity>(`${endpoint.activities}?${qs.toString()}`);
     },
+    enabled: !!token,
     staleTime: 60_000,
   });
 }
 
 export function useInfiniteActivities(params?: { limit?: number }) {
+  const token = useAuthStore((s) => s.token?.access_token);
   const limit = params?.limit ?? 20;
 
   return useInfiniteQuery({
@@ -55,6 +60,7 @@ export function useInfiniteActivities(params?: { limit?: number }) {
     },
     initialPageParam: 1,
     getNextPageParam: getNextActivitiesPage,
+    enabled: !!token,
     staleTime: 60_000,
   });
 }

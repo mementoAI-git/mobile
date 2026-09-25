@@ -4,8 +4,6 @@ import { existsSync, readFileSync } from 'node:fs';
 const files = [
   'BillingTabs.tsx',
   'BillingStorageCard.tsx',
-  'BillingDetailsSection.tsx',
-  'BillingPaymentMethodsSection.tsx',
   'BillingInvoicesPanel.tsx',
 ];
 

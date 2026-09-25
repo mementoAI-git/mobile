@@ -18,7 +18,7 @@ import { Button, Select, TextInput } from '@/components/ui';
 import type { SelectOption } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';
-import { useFeedbackMutation } from '@/hooks/mutations/use-feedback-mutation';
+import { useFeedbackMutation, type FeedbackType } from '@/hooks/mutations/use-feedback-mutation';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
@@ -28,7 +28,7 @@ import { TYPE } from '@/constants/typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
-const FEEDBACK_OPTIONS: SelectOption[] = [
+const FEEDBACK_OPTIONS: (SelectOption & { value: FeedbackType })[] = [
   { label: 'Report a bug', value: 'Bug' },
   { label: 'Request a feature', value: 'Feature Request' },
   { label: 'UI/UX issue', value: 'UI/UX Issue' },
@@ -54,7 +54,7 @@ export default function FeedbackSettingsScreen() {
   const user = useUserStore((state) => state.user);
   const uploadFile = useFileUpload();
   const submitFeedback = useFeedbackMutation();
-  const [type, setType] = useState(FEEDBACK_OPTIONS[0].value);
+  const [type, setType] = useState<FeedbackType>(FEEDBACK_OPTIONS[0].value);
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState<FeedbackAttachment[]>([]);
   const isMountedRef = useRef(true);
@@ -161,7 +161,7 @@ export default function FeedbackSettingsScreen() {
       await submitFeedback.mutateAsync({
         type,
         message: message.trim(),
-        email: user?.email,
+        email: user?.email ?? '',
         screenshots: attachments.flatMap((item) => item.fileId ? [item.fileId] : []),
       });
       toast('Thanks. Your feedback is on its way.', 'success');
@@ -228,7 +228,7 @@ export default function FeedbackSettingsScreen() {
                 label="Feedback type"
                 options={FEEDBACK_OPTIONS}
                 value={type}
-                onValueChange={setType}
+                onValueChange={(value) => setType(value as FeedbackType)}
                 className="h-14 rounded-full"
               />
 

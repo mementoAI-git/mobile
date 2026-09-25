@@ -2,45 +2,34 @@ import { useQuery } from '@tanstack/react-query';
 import { get } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
+import { useAuthStore } from '@/store';
 import {
   normalizeBillingInvoices,
-  normalizeBillingProfile,
   normalizeBillingUsage,
   type BillingInvoice,
   type BillingUsage,
-  type BillingProfile,
 } from '@/features/settings/billing-adapters';
 
 export type { BillingInvoice, BillingUsage } from '@/features/settings/billing-adapters';
 
-/**
- * @todo billing-v2
- * In-app billing profile editing is deferred until the backend implements
- * a dedicated endpoint.billingProfile. In the interim, billing details and
- * payment methods are securely managed via the Polar customer portal (openBillingPortal).
- */
-export function useBillingProfile() {
-  return useQuery<BillingProfile | null>({
-    queryKey: queryKeys.billingProfile,
-    queryFn: () => Promise.resolve(null),
-    staleTime: Infinity,
-    retry: false,
-  });
-}
-
 export function useBillingInvoices(enabled = true) {
+  const token = useAuthStore((s) => s.token?.access_token);
+
   return useQuery<BillingInvoice[]>({
     queryKey: queryKeys.billingInvoices,
     queryFn: () => get<unknown>(endpoint.billingInvoices).then(normalizeBillingInvoices),
-    enabled,
+    enabled: !!token && enabled,
     staleTime: 30_000,
   });
 }
 
 export function useBillingUsage() {
+  const token = useAuthStore((s) => s.token?.access_token);
+
   return useQuery<BillingUsage | null>({
     queryKey: queryKeys.billingUsage,
     queryFn: () => get<unknown>(endpoint.billingUsage).then(normalizeBillingUsage),
+    enabled: !!token,
     staleTime: 30_000,
   });
 }

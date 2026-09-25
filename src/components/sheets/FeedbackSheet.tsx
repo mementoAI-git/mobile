@@ -90,7 +90,8 @@ export function FeedbackSheet() {
         type,
         message: message.trim(),
         email: email || user?.email,
-        screenshots: attachments
+        screenshot: attachments[0] || undefined,
+        screenshots: attachments,
       });
 
       if (isMountedRef.current) {

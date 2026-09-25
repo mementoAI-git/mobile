@@ -20,21 +20,6 @@ import { TYPE } from '@/constants/typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
-function ComingSoonRow({ label }: { label: string }) {
-  return (
-    <View className="min-h-[64px] flex-row items-center justify-between gap-4">
-      <Text className="flex-1" style={{ ...TYPE.body, color: COLORS.textStrong }}>
-        {label}
-      </Text>
-      <View className="h-8 items-center justify-center rounded-full bg-fill-weaker px-3.5">
-        <Text style={{ ...TYPE.metadata, color: COLORS.textMuted }}>
-          Coming soon
-        </Text>
-      </View>
-    </View>
-  );
-}
-
 export default function PrivacySettingsScreen() {
   const router = useRouter();
   const openSheet = useUiStore((state) => state.openSheet);
@@ -137,8 +122,6 @@ export default function PrivacySettingsScreen() {
                 </Text>
               </View>
             </TouchableOpacity>
-            <View className="h-px bg-stroke-weaker" />
-            <ComingSoonRow label="Share stories" />
             <View className="h-px bg-stroke-weaker" />
             <View className="min-h-[64px] flex-row items-center justify-between gap-4">
               <Text className="flex-1" style={{ ...TYPE.body, color: COLORS.textStrong }}>

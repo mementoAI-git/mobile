@@ -1,3 +1,4 @@
+
 import type { IAuth, IUser } from '@/types';
 import { storageKeys } from '@/constants/storage-keys';
 import { secureStorage } from '@/lib/secure-storage';
@@ -13,6 +14,12 @@ import {
   persistSessionUser,
   sanitizeUser,
 } from './session-credentials';
+import { post } from '@/api/mutations';
+import endpoint from '@/api/endpoint';
+import {
+  reconcileOnboardingSkipMarker,
+  type PendingOnboardingSkip,
+} from './onboarding-skip-retry';
 
 export type TerminationReason = 'expired' | 'logout' | 'deleted' | 'restore-failed';
 
@@ -25,16 +32,57 @@ const IDENTITY_KEYS_ON_HARD_RESET = [
 ] as const;
 
 let terminationPromise: Promise<void> | null = null;
+let skipRetryPending = false;
+
+interface SkipRetryDependencies {
+  storage?: typeof secureStorage;
+  submitSkip?: () => Promise<unknown>;
+}
+
+function userIdentity(user: IUser): string {
+  return String(user._id ?? '');
+}
+
+async function savePendingOnboardingSkip(user: IUser): Promise<void> {
+  const marker: PendingOnboardingSkip = {
+    userId: userIdentity(user),
+    createdAt: new Date().toISOString(),
+  };
+  await secureStorage.setItem(
+    storageKeys.pendingOnboardingSkip,
+    JSON.stringify(marker),
+  );
+}
+
+export async function reconcilePendingOnboardingSkip(
+  user: IUser,
+  dependencies: SkipRetryDependencies = {},
+): Promise<void> {
+  const storage = dependencies.storage ?? secureStorage;
+  const submitSkip =
+    dependencies.submitSkip ?? (() => post(endpoint.onboardingSkip, {}));
+  await reconcileOnboardingSkipMarker(user, storage, submitSkip);
+}
 
 export function syncAuthenticatedUser(user: IUser): IUser {
   const sanitized = sanitizeUser(user);
   const currentUser = useAuthStore.getState().user ?? useUserStore.getState().user;
-  // Preserve local 'skipped' status if the server has not yet acknowledged the skip mutation
+  // If user skipped onboarding locally while offline, reconcile and sync with the server
   if (
     currentUser?.onboarding_status === 'skipped' &&
     sanitized.onboarding_status === 'never'
   ) {
     sanitized.onboarding_status = 'skipped';
+    void savePendingOnboardingSkip(currentUser);
+    if (!skipRetryPending) {
+      skipRetryPending = true;
+      post(endpoint.onboardingSkip, {})
+        .then(() => secureStorage.deleteItem(storageKeys.pendingOnboardingSkip))
+        .catch(() => { })
+        .finally(() => {
+          skipRetryPending = false;
+        });
+    }
   }
   useUserStore.getState().setUser(sanitized);
   if (useAuthStore.getState().token) useAuthStore.getState().updateUser(sanitized);
@@ -81,6 +129,7 @@ export function terminateSession(reason: TerminationReason): Promise<void> {
         deleteSessionCredentials(secureStorage),
         secureStorage.deleteItem(storageKeys.syncedPushToken),
         secureStorage.deleteItem(storageKeys.onboardingState),
+        secureStorage.deleteItem(storageKeys.pendingOnboardingSkip),
         useOfflineQueueStore.getState().clearQueue(),
         clearPersistedQueryCache(),
       ];

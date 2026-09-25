@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { get } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
+import { useAuthStore } from '@/store';
 import type { UserStatsData, LifeDimension } from '@/constants/enrichment';
 
 const BASELINE_KEY = 'memento:enrichment:baseline';
@@ -41,6 +42,7 @@ export interface UseEnrichmentStatsResult {
 
 export function useEnrichmentStats(): UseEnrichmentStatsResult {
   const queryClient = useQueryClient();
+  const token = useAuthStore((s) => s.token?.access_token);
   const [deltaToday, setDeltaToday] = useState(0);
   const [milestoneJustReached, setMilestoneJustReached] = useState(false);
   const [dismissedNudges, setDismissedNudges] = useState<string[]>([]);
@@ -51,6 +53,7 @@ export function useEnrichmentStats(): UseEnrichmentStatsResult {
   const { data, isLoading, refetch } = useQuery({
     queryKey: queryKeys.userStats,
     queryFn: () => get<UserStatsData>(endpoint.userStats).then((r) => r.data),
+    enabled: !!token,
     staleTime: 30_000,
   });
 

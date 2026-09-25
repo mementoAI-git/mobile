@@ -1,268 +1,181 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Share, Image } from 'react-native';
-import { X } from 'lucide-react-native';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {Image, Text, TouchableOpacity, View} from 'react-native';
+import {X} from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS } from '@/constants/tokens';
-import { TYPE } from '@/constants/typography';
-import { Button } from '@/components/ui';
-import { useStories } from '@/hooks/queries/use-memories';
-import { useCapsules } from '@/hooks/queries/use-capsules';
-import { useUserStore } from '@/store';
-import { generateMemoirHtml } from '@/features/export/memoir-html-generator';
-import type { IMemory, ICapsule } from '@/types';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import {COLORS} from '@/constants/tokens';
+import {TYPE} from '@/constants/typography';
+import {Button, toast} from '@/components/ui';
+import {get, post} from '@/api/mutations';
+import endpoint from '@/api/endpoint';
 
 const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.png');
+
+type ExportStatus = 'pending' | 'processing' | 'complete' | 'failed' | 'expired';
+
+interface ArchiveExportStatus {
+  id: string;
+  status: ExportStatus;
+  progress: {
+    stories_total: number;
+    stories_exported: number;
+    capsules_total: number;
+    capsules_exported: number;
+    attachments_total: number;
+    attachments_exported: number;
+  };
+  warnings: string[];
+  error?: string | null;
+}
 
 interface ExportArchiveSheetProps {
   onClose?: () => void;
 }
 
-export function ExportArchiveSheet({ onClose }: ExportArchiveSheetProps) {
-  const user = useUserStore((s) => s.user);
+const wait = (milliseconds: number) =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+export function ExportArchiveSheet({onClose}: ExportArchiveSheetProps) {
   const [isExporting, setIsExporting] = useState(false);
-  const [exported, setExported] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'memoir' | 'text'>('memoir');
+  const [status, setStatus] = useState<ArchiveExportStatus | null>(null);
+  const isMountedRef = useRef(true);
 
-  const { data: storiesData, isLoading: storiesLoading } = useStories({ limit: 100 });
-  const { data: capsulesData, isLoading: capsulesLoading } = useCapsules();
+  useEffect(() => () => {
+    isMountedRef.current = false;
+  }, []);
 
-  const stories: IMemory[] = storiesData?.pages?.flatMap((p) => p?.docs ?? []) ?? [];
-  const capsules: ICapsule[] = capsulesData?.pages?.flatMap((p) => p?.docs ?? []) ?? [];
-
-  const totalWords = useMemo(() => {
-    return stories.reduce((acc, s) => {
-      const text = s.body?.replace(/<[^>]+>/g, '').trim() || '';
-      return acc + (text ? text.split(/\s+/).length : 0);
-    }, 0);
-  }, [stories]);
-
-  const compiledDocument = useMemo(() => {
-    const lines: string[] = [];
-    const exportDate = new Date().toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
-
-    lines.push('====================================================');
-    lines.push(`MEMENTO VAULT ARCHIVE EXPORT`);
-    lines.push(`Owner: ${user?.first_name || 'Personal'} ${user?.last_name || 'Archive'}`);
-    lines.push(`Exported on: ${exportDate}`);
-    lines.push(`Stories: ${stories.length} | Words: ${totalWords}`);
-    lines.push('====================================================\n');
-
-    stories.forEach((story, idx) => {
-      lines.push(`--- STORY ${idx + 1}: ${story.title || 'Untitled'} ---`);
-      if (story.created_at) {
-        lines.push(`Date: ${new Date(story.created_at).toDateString()}`);
-      }
-      if (story.tags && story.tags.length > 0) {
-        lines.push(`Tags: #${story.tags.join(' #')}`);
-      }
-      lines.push('');
-      lines.push(story.body || '');
-      lines.push('\n');
-    });
-
-    if (capsules.length > 0) {
-      lines.push('====================================================');
-      lines.push('TIME CAPSULES RECORD');
-      lines.push('====================================================\n');
-      capsules.forEach((capsule: ICapsule, idx: number) => {
-        lines.push(`[Capsule ${idx + 1}] ${capsule.title || 'Untitled'}`);
-        lines.push(`Status: ${capsule.status}`);
-        if (capsule.schedule_date) {
-          lines.push(`Scheduled Delivery: ${new Date(capsule.schedule_date).toDateString()}`);
-        }
-        lines.push('');
-      });
-    }
-
-    return lines.join('\n');
-  }, [capsules, stories, totalWords, user]);
-
-  const handleExport = async () => {
-    try {
-      setIsExporting(true);
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      const messageToShare =
-        exportFormat === 'memoir'
-          ? generateMemoirHtml({ user, stories, capsules, totalWords })
-          : compiledDocument;
-
-      const title =
-        exportFormat === 'memoir'
-          ? `${user?.first_name || 'Memento'} Memoir Book`
-          : `${user?.first_name || 'Memento'} Vault Archive`;
-
-      const result = await Share.share({
-        title,
-        message: messageToShare,
-      });
-
-      if (result.action === Share.sharedAction) {
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setExported(true);
-      }
-    } catch {
-      // User cancelled or share failed
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleDismiss = () => {
+  const handleDismiss = useCallback(() => {
     void Haptics.selectionAsync();
     onClose?.();
-  };
+  }, [onClose]);
+
+  const pollUntilComplete = useCallback(async (exportId: string) => {
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      const response = await get<ArchiveExportStatus>(
+        endpoint.archiveExportById.replace(':id', exportId),
+      );
+      const next = response.data;
+      if (isMountedRef.current) setStatus(next);
+      if (next.status === 'complete') return next;
+      if (next.status === 'failed' || next.status === 'expired') {
+        throw new Error(next.error || 'Archive export could not be completed.');
+      }
+      await wait(2000);
+    }
+    throw new Error('Archive export is taking longer than expected. Please try again.');
+  }, []);
+
+  const handleExport = useCallback(async () => {
+    setIsExporting(true);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const created = await post<ArchiveExportStatus>(endpoint.archiveExport, {});
+      if (isMountedRef.current) setStatus(created.data);
+      const complete = await pollUntilComplete(created.data.id);
+      const download = await post<{url: string; filename: string}>(
+        endpoint.archiveExportDownload.replace(':id', complete.id),
+        {},
+      );
+      if (!FileSystem.cacheDirectory) {
+        throw new Error('Archive downloads are unavailable on this device.');
+      }
+      const destination = `${FileSystem.cacheDirectory}${download.data.filename}`;
+      const file = await FileSystem.downloadAsync(download.data.url, destination);
+      if (!(await Sharing.isAvailableAsync())) {
+        throw new Error('Sharing is unavailable on this device.');
+      }
+      await Sharing.shareAsync(file.uri, {
+        mimeType: 'application/zip',
+        dialogTitle: 'Share your Memento archive',
+        UTI: 'public.zip-archive',
+      });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (complete.warnings.length > 0) {
+        toast(
+          `Archive ready with ${complete.warnings.length} attachment warning${complete.warnings.length === 1 ? '' : 's'}.`,
+          'info',
+        );
+      } else {
+        toast('Your complete archive is ready.', 'success');
+      }
+    } catch (error) {
+      toast(
+        error instanceof Error
+          ? error.message
+          : 'Could not export your archive. Please try again.',
+        'error',
+      );
+    } finally {
+      if (isMountedRef.current) setIsExporting(false);
+    }
+  }, [pollUntilComplete]);
+
+  const progress = status?.progress;
+  const total = progress
+    ? progress.stories_total + progress.capsules_total + progress.attachments_total
+    : 0;
+  const completed = progress
+    ? progress.stories_exported + progress.capsules_exported + progress.attachments_exported
+    : 0;
 
   return (
     <View className="flex-grow px-5 pb-8 pt-2">
-      {/* Top Bar with Badge & 44x44 Close Button */}
-      <View className="flex-row items-center justify-between mb-4">
-        <View className="flex-row items-center gap-1.5 bg-brand/10 rounded-full px-3 py-1">
+      <View className="mb-4 flex-row items-center justify-between">
+        <View className="flex-row items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1">
           <View className="size-1.5 rounded-full bg-brand" />
-          <Text className="text-brand uppercase tracking-wider" style={TYPE.metadata}>
+          <Text className="uppercase tracking-wider text-brand" style={TYPE.metadata}>
             Vault Exporter
           </Text>
         </View>
-
         <TouchableOpacity
           onPress={handleDismiss}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Close export sheet"
-          className="size-11 rounded-full bg-fill-weaker items-center justify-center"
+          className="size-11 items-center justify-center rounded-full bg-fill-weaker"
         >
           <X size={18} color={COLORS.textWeak} />
         </TouchableOpacity>
       </View>
 
-      {/* Hero Illustration & Title */}
-      <View className="mb-4 items-center">
+      <View className="mb-5 items-center">
         <Image
           source={EMPTY_MEMORIES_IMG}
-          style={{ width: 88, height: 88, marginBottom: 12 }}
+          style={{width: 88, height: 88, marginBottom: 12}}
           resizeMode="contain"
         />
-        <Text className="text-center text-text-strong mb-1.5" style={TYPE.sectionTitle}>
+        <Text className="mb-1.5 text-center text-text-strong" style={TYPE.sectionTitle}>
           Export Your Personal Archive
         </Text>
-        <Text className="text-center text-text-weak px-2" style={TYPE.body}>
-          Compile your complete vault — including all written reflections, stories, and capsules — into an enduring document you own forever.
+        <Text className="px-2 text-center text-text-weak" style={TYPE.body}>
+          Create a complete ZIP with every story, capsule, and readable attachment in your vault.
         </Text>
       </View>
 
-      {/* Format Selector Pills */}
-      <View className="flex-row items-center gap-2 mb-4 bg-fill-weaker p-1 rounded-full border border-stroke-weaker">
-        <TouchableOpacity
-          onPress={() => {
-            void Haptics.selectionAsync();
-            setExportFormat('memoir');
-          }}
-          className={`flex-1 py-2 rounded-full items-center justify-center ${
-            exportFormat === 'memoir' ? 'bg-white shadow-sm' : ''
-          }`}
-        >
-          <Text
-            style={{
-              ...TYPE.buttonSmall,
-              color: exportFormat === 'memoir' ? COLORS.brand : COLORS.textWeak,
-            }}
-          >
-            Editorial Memoir (.html)
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => {
-            void Haptics.selectionAsync();
-            setExportFormat('text');
-          }}
-          className={`flex-1 py-2 rounded-full items-center justify-center ${
-            exportFormat === 'text' ? 'bg-white shadow-sm' : ''
-          }`}
-        >
-          <Text
-            style={{
-              ...TYPE.buttonSmall,
-              color: exportFormat === 'text' ? COLORS.brand : COLORS.textWeak,
-            }}
-          >
-            Plain Text (.txt)
-          </Text>
-        </TouchableOpacity>
+      <View className="mb-6 rounded-3xl border border-stroke-weaker bg-fill-weaker p-5">
+        <Text className="uppercase tracking-wider text-text-muted" style={TYPE.metadata}>
+          {status ? status.status : 'Ready to prepare'}
+        </Text>
+        <Text className="mt-2 text-text-strong" style={TYPE.bodyStrong}>
+          {status
+            ? `${completed} of ${total || '—'} archive items prepared`
+            : 'Your export runs securely in the background.'}
+        </Text>
+        <Text className="mt-2 text-text-weak" style={TYPE.bodySmall}>
+          The download link expires after 24 hours. Any unavailable attachments are listed as warnings in the export status.
+        </Text>
       </View>
 
-      {/* Vault Statistics Card */}
-      <View className="bg-fill-weaker rounded-3xl border border-stroke-weaker p-5 mb-6">
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-text-muted uppercase tracking-wider" style={TYPE.metadata}>
-            Archive Summary
-          </Text>
-          <View className="bg-success/15 px-2.5 py-0.5 rounded-full">
-            <Text className="text-success uppercase tracking-wider" style={TYPE.metadata}>
-              Encrypted Copy
-            </Text>
-          </View>
-        </View>
-
-        <View className="flex-row items-center justify-between">
-          <View className="items-center flex-1">
-            <Text className="text-text-strong mb-1" style={TYPE.stat}>
-              {stories.length}
-            </Text>
-            <Text className="text-text-weak" style={TYPE.bodySmall}>
-              Stories
-            </Text>
-          </View>
-
-          <View className="w-px h-10 bg-stroke-weaker" />
-
-          <View className="items-center flex-1">
-            <Text className="text-text-strong mb-1" style={TYPE.stat}>
-              {totalWords.toLocaleString()}
-            </Text>
-            <Text className="text-text-weak" style={TYPE.bodySmall}>
-              Words
-            </Text>
-          </View>
-
-          <View className="w-px h-10 bg-stroke-weaker" />
-
-          <View className="items-center flex-1">
-            <Text className="text-text-strong mb-1" style={TYPE.stat}>
-              {capsules.length}
-            </Text>
-            <Text className="text-text-weak" style={TYPE.bodySmall}>
-              Capsules
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Confirmation indicator if already exported */}
-      {exported && (
-        <View className="bg-success/10 border border-success/20 rounded-2xl p-4 mb-4">
-          <Text className="text-success text-center" style={TYPE.bodySmall}>
-            Archive compiled and shared successfully.
-          </Text>
-        </View>
-      )}
-
-      {/* Actions */}
-      <View className="gap-3">
-        <Button
-          variant="primary"
-          size="lg"
-          className="h-14 w-full"
-          loading={isExporting || storiesLoading || capsulesLoading}
-          onPress={handleExport}
-        >
-          {exported ? 'Export Again' : 'Export & Share Archive'}
-        </Button>
-      </View>
+      <Button
+        variant="primary"
+        size="lg"
+        className="h-14 w-full"
+        loading={isExporting}
+        onPress={handleExport}
+      >
+        {status?.status === 'complete' ? 'Export Again' : 'Create & Share Archive'}
+      </Button>
     </View>
   );
 }

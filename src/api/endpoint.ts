@@ -113,4 +113,10 @@ export default {
   billingInvoices: '/billing/invoices',
   billingCancel: '/billing/cancel',
   billingResume: '/billing/resume',
+  billingIapVerify: '/billing/iap/verify',
+
+  // exports
+  archiveExport: '/exports/archive',
+  archiveExportById: '/exports/archive/:id',
+  archiveExportDownload: '/exports/archive/:id/download',
 };

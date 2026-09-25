@@ -5,15 +5,15 @@ import dayjs from 'dayjs';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/Toast';
 import { useUiStore } from '@/store';
-import { useProfile } from '@/hooks/queries/use-profile';
 import { useSubscription } from '@/hooks/queries/use-subscription';
-import { useBillingInvoices, useBillingProfile, useBillingUsage } from '@/hooks/queries/use-billing';
-import { resolveBillingProfile } from '@/features/settings/billing-presentation';
+import { useBillingInvoices, useBillingUsage } from '@/hooks/queries/use-billing';
 import {
   openBillingPortal,
   redeemBillingPromo,
   resumeBillingSubscription,
+  restoreBillingPurchases,
 } from '@/features/settings/billing-flow';
+import { iapService } from '@/features/billing/iap-service';
 
 export function useBillingSettingsLogic() {
   const router = useRouter();
@@ -21,9 +21,6 @@ export function useBillingSettingsLogic() {
   const { summary, isLoading: subLoading, isProOrAbove, refetch: refetchSub } = useSubscription();
   const { data: invoices = [], isLoading: invoicesLoading, refetch: refetchInvoices } = useBillingInvoices(activeTab === 'invoices');
   const { data: usage, isLoading: usageLoading, refetch: refetchUsage } = useBillingUsage();
-  const { data: userProfile } = useProfile();
-  const { data: liveProfile, isLoading: profileLoading, refetch: refetchProfile } = useBillingProfile();
-  const { profile, source: profileSource } = resolveBillingProfile(liveProfile, userProfile);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const openSheet = useUiStore((state) => state.openSheet);
@@ -35,7 +32,7 @@ export function useBillingSettingsLogic() {
   const [refreshing, setRefreshing] = useState(false);
 
   const refreshAll = async () => {
-    await Promise.all([refetchSub(), refetchInvoices(), refetchUsage(), refetchProfile()]);
+    await Promise.all([refetchSub(), refetchInvoices(), refetchUsage()]);
   };
 
   const setActiveTab = (tab: 'overview' | 'invoices') => {
@@ -66,49 +63,40 @@ export function useBillingSettingsLogic() {
     return '—';
   };
 
-  const handlePortal = async () => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      setPortalBusy(true);
-      const opened = await openBillingPortal({ returnPath: '/settings/billing' });
-      if (opened) await refreshAll();
-    } finally {
-      setPortalBusy(false);
-    }
-  };
+  const [restoreBusy, setRestoreBusy] = useState(false);
 
   const handleUpgrade = () => {
     Haptics.selectionAsync();
     router.push('/pricing');
   };
 
-  const handleEditBillingDetails = () => {
-    Haptics.selectionAsync();
-    openSheet('edit-billing-details', {
-      profile,
-      canManage: isProOrAbove,
-      onUpgrade: handleUpgrade,
-      onSave: async () => {
-        if (isProOrAbove) {
-          await openBillingPortal({ returnPath: '/settings/billing' });
-        } else {
-          handleUpgrade();
-        }
-      },
-    });
+  const handlePortal = async () => {
+    if (!isProOrAbove) {
+      handleUpgrade();
+      return;
+    }
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setPortalBusy(true);
+      const opened = await openBillingPortal({
+        returnPath: '/settings/billing',
+        provider: summary?.provider,
+      });
+      if (opened) await refreshAll();
+    } finally {
+      setPortalBusy(false);
+    }
   };
 
-  const handleAddPaymentMethod = () => {
+  const handleRestore = async () => {
     Haptics.selectionAsync();
-    openSheet('add-payment-method', {
-      canManage: isProOrAbove,
-      onUpgrade: handleUpgrade,
-    });
-  };
-
-  const handleEditPaymentMethod = (_id: string) => {
-    Haptics.selectionAsync();
-    openSheet('add-payment-method', {canManage: true});
+    setRestoreBusy(true);
+    try {
+      await restoreBillingPurchases({ queryClient });
+      await refreshAll();
+    } finally {
+      setRestoreBusy(false);
+    }
   };
 
   const handlePromo = async () => {
@@ -132,6 +120,10 @@ export function useBillingSettingsLogic() {
 
   const handleCancel = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    if (summary?.provider === 'apple' || summary?.provider === 'google') {
+      void iapService.openSubscriptionManagement();
+      return;
+    }
     openSheet('cancel-subscription-confirmation');
   };
 
@@ -173,12 +165,8 @@ export function useBillingSettingsLogic() {
     isCancelled,
     activeTab,
     setActiveTab,
-    profile,
-    profileSource,
-    profileLoading,
     handleUpgrade,
-    handleEditBillingDetails,
-    handleAddPaymentMethod,
-    handleEditPaymentMethod,
+    handleRestore,
+    restoreBusy,
   };
 }

@@ -35,10 +35,9 @@ import {
   Sparkles,
   Copy,
   Check,
-  Volume2,
 } from 'lucide-react-native';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
-import { StoryNarrationPlayer } from '@/components/audio/StoryNarrationPlayer';
+import { toast } from '@/components/ui/Toast';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, SlideInUp } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -452,7 +451,6 @@ export default function ArticleScreen() {
   const [body, setBody] = useState('');
   const [savedStatus, setSavedStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [showPublish, setShowPublish] = useState(false);
-  const [showNarration, setShowNarration] = useState(false);
 
   const displayName = user?.nickname || user?.first_name || 'You';
   const avatarUri = user?.picture_url || user?.picture;
@@ -550,33 +548,6 @@ export default function ArticleScreen() {
                 : <View style={[styles.avatar, styles.avatarFallback]}><Text style={styles.avatarInitial}>{displayName.charAt(0).toUpperCase()}</Text></View>
               }
               <Text style={styles.authorLabel}>{displayName}'s Memo.</Text>
-
-              {hasContent ? (
-                <TouchableOpacity
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setShowNarration(true);
-                  }}
-                  activeOpacity={0.7}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    backgroundColor: 'rgba(255, 94, 0, 0.08)',
-                    borderColor: 'rgba(255, 94, 0, 0.2)',
-                    borderWidth: 1,
-                    borderRadius: 999,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    marginLeft: 'auto',
-                  }}
-                >
-                  <Volume2 size={13} color={COLORS.brand} />
-                  <Text style={{ ...TYPE.metadata, color: COLORS.brand }}>
-                    Listen
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
             </View>
 
             <TextInput ref={titleRef} value={title} onChangeText={handleTitleChange}
@@ -595,18 +566,6 @@ export default function ArticleScreen() {
           />
         </KeyboardAvoidingView>
         </Animated.View>
-
-        {/* Floating Story Narration Player */}
-        <StoryNarrationPlayer
-          track={{
-            id: 'article-narration',
-            title: title || 'Untitled Story',
-            author: displayName,
-            duration: Math.max(30, Math.ceil(body.split(' ').length / 2.5)),
-          }}
-          visible={showNarration}
-          onClose={() => setShowNarration(false)}
-        />
       </SafeAreaView>
 
       {/* Publish modal — local so it renders above this fullScreenModal */}

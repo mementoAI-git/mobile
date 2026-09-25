@@ -40,7 +40,6 @@ const WELCOME_BG = require('../../../assets/images/backgrounds/welcome_bg.png');
 const ENRICHMENT_BG = require('../../../assets/images/backgrounds/enrichment_bg.png');
 const MEMORIES_BG = require('../../../assets/images/backgrounds/dash_memories_card.png');
 const BENEFI_BG = require('../../../assets/images/backgrounds/dash_benefi_card.png');
-const CAPSULE_BG = require('../../../assets/images/backgrounds/dash_time_cap_card.png');
 const STREAK_BG = require('../../../assets/images/backgrounds/side_cards_for_streak.png');
 
 
@@ -174,10 +173,6 @@ export default function OverviewScreen() {
 
   const handleGoToStories = useCallback(() => router.push('/(tabs)/stories'), [router]);
   const handleGoToSettings = useCallback(() => router.push('/settings'), [router]);
-  const handleTimeCapsulesPress = useCallback(() => {
-    Haptics.selectionAsync();
-    router.push({ pathname: '/coming-soon', params: { feature: 'capsules' } });
-  }, [router]);
   const handleAddStory = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({ pathname: '/editor', params: { mode: 'story' } });
@@ -568,16 +563,6 @@ export default function OverviewScreen() {
                 icon={<JourneyStatIcon type="beneficiaries" />}
                 bgImage={BENEFI_BG}
                 onPress={handleGoToSettings}
-              />
-
-              <OverviewJourneyCard
-                label="TIME CAPSULES"
-                valueElement={
-                  <Text className="text-text-muted" style={TYPE.body}>Coming soon</Text>
-                }
-                icon={<JourneyStatIcon type="capsules" />}
-                bgImage={CAPSULE_BG}
-                onPress={handleTimeCapsulesPress}
               />
 
               <OverviewJourneyCard

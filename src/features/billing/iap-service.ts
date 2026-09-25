@@ -1,0 +1,406 @@
+/**
+ * iap-service.ts
+ * Unified StoreKit & Google Play Billing service for Memento Mobile
+ */
+
+import { Platform } from 'react-native';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
+import * as RNIap from 'expo-iap';
+import { post } from '@/api/mutations';
+import endpoint from '@/api/endpoint';
+import { logger } from '@/lib/logger';
+import {
+  FALLBACK_PRODUCTS,
+  getAllPlatformSkus,
+  getIntervalFromSku,
+  getPlatformSku,
+  getStoreManagementUrl,
+} from './iap-constants';
+import type {
+  IAPPlanInterval,
+  IAPProduct,
+  IAPVerificationPayload,
+  IAPVerificationResult,
+} from './iap-types';
+
+interface IAPListenerSubscription {
+  remove: () => void;
+}
+
+class InAppPurchaseService {
+  public isUsingFallbacks = false;
+  private isInitialized = false;
+  private isConnecting = false;
+  private updateSubscription: IAPListenerSubscription | null = null;
+  private errorSubscription: IAPListenerSubscription | null = null;
+  private cachedProducts: IAPProduct[] | null = null;
+
+  private pendingPurchaseResolver: ((result: IAPVerificationResult) => void) | null = null;
+  private pendingPurchaseRejecter: ((error: Error) => void) | null = null;
+  private purchaseTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  private clearPendingPurchase(): void {
+    if (this.purchaseTimeoutId) {
+      clearTimeout(this.purchaseTimeoutId);
+      this.purchaseTimeoutId = null;
+    }
+    this.pendingPurchaseResolver = null;
+    this.pendingPurchaseRejecter = null;
+  }
+
+  public async initialize(): Promise<boolean> {
+    if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
+      return false;
+    }
+    if (this.isInitialized) {
+      return true;
+    }
+    if (this.isConnecting) {
+      return false;
+    }
+
+    this.isConnecting = true;
+    try {
+      const available = await RNIap.initConnection();
+      this.isInitialized = Boolean(available);
+
+      if (this.isInitialized) {
+        this.setupListeners();
+        // Asynchronously reconcile any unfinished purchases from prior sessions
+        void this.reconcileUnfinishedPurchases();
+      }
+      return this.isInitialized;
+    } catch (err) {
+      logger.warn('[IAPService] initConnection error:', err);
+      this.isInitialized = false;
+      return false;
+    } finally {
+      this.isConnecting = false;
+    }
+  }
+
+  private setupListeners(): void {
+    if (this.updateSubscription || this.errorSubscription) {
+      return;
+    }
+
+    this.updateSubscription = RNIap.purchaseUpdatedListener(async (purchase: RNIap.Purchase) => {
+      logger.debug('[IAPService] purchaseUpdated:', purchase.productId, purchase.transactionId);
+      try {
+        const result = await this.verifyAndFinishPurchase(purchase);
+        if (this.pendingPurchaseResolver) {
+          const resolve = this.pendingPurchaseResolver;
+          this.clearPendingPurchase();
+          resolve(result);
+        }
+      } catch (err: any) {
+        logger.error('[IAPService] purchase verification failed:', err);
+        if (this.pendingPurchaseRejecter) {
+          const reject = this.pendingPurchaseRejecter;
+          this.clearPendingPurchase();
+          reject(err instanceof Error ? err : new Error(String(err)));
+        }
+      }
+    });
+
+    this.errorSubscription = RNIap.purchaseErrorListener((error: any) => {
+      logger.warn('[IAPService] purchaseError:', error?.code, error?.message);
+      if (this.pendingPurchaseRejecter) {
+        const reject = this.pendingPurchaseRejecter;
+        this.clearPendingPurchase();
+        const message = error?.message || 'In-app purchase failed';
+        const err = new Error(message);
+        (err as any).code = error?.code;
+        reject(err);
+      }
+    });
+  }
+
+  public async getProducts(): Promise<IAPProduct[]> {
+    if (this.cachedProducts && this.cachedProducts.length > 0) {
+      return this.cachedProducts;
+    }
+
+    const fallbacks = [FALLBACK_PRODUCTS.monthly, FALLBACK_PRODUCTS.annual];
+    if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
+      return fallbacks;
+    }
+
+    await this.initialize();
+    if (!this.isInitialized) {
+      this.isUsingFallbacks = true;
+      return fallbacks;
+    }
+
+    try {
+      const skus = getAllPlatformSkus();
+      const subscriptions = await RNIap.fetchProducts({ skus, type: 'subs' });
+
+      if (!subscriptions || subscriptions.length === 0) {
+        this.isUsingFallbacks = true;
+        return fallbacks;
+      }
+
+      const products: IAPProduct[] = subscriptions.map((sub: any) => {
+        const productId = sub.id || sub.productId;
+        const interval = getIntervalFromSku(productId);
+        const fallback = FALLBACK_PRODUCTS[interval];
+        const rawPrice = typeof sub.price === 'string' ? parseFloat(sub.price) : Number(sub.price ?? fallback.price);
+
+        return {
+          productId,
+          title: sub.title || fallback.title,
+          description: sub.description || fallback.description,
+          price: isNaN(rawPrice) ? fallback.price : rawPrice,
+          currency: sub.currency || fallback.currency,
+          localizedPrice: sub.displayPrice || sub.localizedPrice || fallback.localizedPrice,
+          interval,
+        };
+      });
+
+      this.cachedProducts = products;
+      this.isUsingFallbacks = false;
+      return products;
+    } catch (err) {
+      logger.warn('[IAPService] fetchProducts error, using fallbacks:', err);
+      this.isUsingFallbacks = true;
+      return fallbacks;
+    }
+  }
+
+  public async purchaseSubscription(
+    interval: IAPPlanInterval,
+    storeAccountToken: string,
+  ): Promise<IAPVerificationResult> {
+    if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
+      throw new Error('In-app purchases are only supported on iOS and Android devices.');
+    }
+
+    // Concurrency guard: reject if a purchase is already active
+    if (this.pendingPurchaseResolver) {
+      throw new Error('A purchase transaction is already in progress. Please complete or cancel it first.');
+    }
+
+    await this.initialize();
+    if (!this.isInitialized) {
+      throw new Error('Could not connect to the App Store. Please try again.');
+    }
+
+    const sku = getPlatformSku(interval);
+    if (!storeAccountToken) {
+      throw new Error('Your billing account is still being prepared. Please try again.');
+    }
+
+    return new Promise<IAPVerificationResult>(async (resolve, reject) => {
+      this.pendingPurchaseResolver = resolve;
+      this.pendingPurchaseRejecter = reject;
+
+      // 60-second timeout guard
+      this.purchaseTimeoutId = setTimeout(() => {
+        if (this.pendingPurchaseRejecter) {
+          const timeoutReject = this.pendingPurchaseRejecter;
+          this.clearPendingPurchase();
+          timeoutReject(new Error('Purchase confirmation timed out. If your account was charged, please tap Restore Purchases.'));
+        }
+      }, 60000);
+
+      try {
+        if (Platform.OS === 'ios') {
+          await RNIap.requestPurchase({
+            type: 'subs',
+            request: {
+              apple: { sku, appAccountToken: storeAccountToken },
+            },
+          });
+        } else {
+          await RNIap.requestPurchase({
+            type: 'subs',
+            request: {
+              google: {
+                skus: [sku],
+                obfuscatedAccountId: storeAccountToken,
+                obfuscatedProfileId: storeAccountToken,
+              },
+            },
+          });
+        }
+      } catch (err: any) {
+        this.clearPendingPurchase();
+        logger.error('[IAPService] requestPurchase error:', err);
+        reject(err);
+      }
+    });
+  }
+
+  public async requestSubscriptionPurchase(
+    interval: IAPPlanInterval,
+    storeAccountToken: string,
+  ): Promise<boolean> {
+    try {
+      const result = await this.purchaseSubscription(interval, storeAccountToken);
+      return Boolean(result.success);
+    } catch (err: any) {
+      if (err?.code === 'E_USER_CANCELLED' || err?.code === 'user-cancelled') {
+        return false;
+      }
+      throw err;
+    }
+  }
+
+  public async verifyAndFinishPurchase(purchase: RNIap.Purchase): Promise<IAPVerificationResult> {
+    const payload: IAPVerificationPayload = {
+      platform: Platform.OS === 'ios' ? 'ios' : 'android',
+      productId: purchase.productId || (purchase as any).id,
+      transactionId: purchase.transactionId ?? `tx-${Date.now()}`,
+      receiptData: purchase.purchaseToken ?? undefined,
+      purchaseToken: purchase.purchaseToken ?? undefined,
+    };
+
+    // Strictly fail-closed: verify with server before granting entitlement or finishing transaction
+    const res = await post<IAPVerificationResult>(endpoint.billingIapVerify, payload);
+    const data = res?.data;
+
+    if (!data || data.success === false) {
+      throw new Error(data?.message || 'Purchase verification failed on the server.');
+    }
+
+    const normalizedStatus =
+      data.status === 'active' || data.status === 'trialing' || data.status === 'cancelled'
+        ? data.status
+        : 'active';
+
+    const result: IAPVerificationResult = {
+      success: true,
+      tier: data.tier ?? 'pro',
+      status: normalizedStatus,
+      expiresAt: data.expiresAt,
+    };
+
+    // Only finish transaction with Apple/Google once server confirms entitlement is durable
+    // Retry up to 3 times if transient store finish error occurs
+    let finished = false;
+    let finishAttempts = 0;
+    while (!finished && finishAttempts < 3) {
+      try {
+        await RNIap.finishTransaction({ purchase, isConsumable: false });
+        finished = true;
+      } catch (finishErr) {
+        finishAttempts++;
+        logger.warn(`[IAPService] finishTransaction attempt ${finishAttempts} failed:`, finishErr);
+        if (finishAttempts < 3) {
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      }
+    }
+
+    return result;
+  }
+
+  public async reconcileUnfinishedPurchases(): Promise<void> {
+    try {
+      const purchases = await RNIap.getAvailablePurchases({
+        onlyIncludeActiveItemsIOS: true,
+      });
+
+      const allowedSkus = getAllPlatformSkus();
+      const valid = purchases.filter((p) => allowedSkus.includes(p.productId || (p as any).id));
+      for (const purchase of valid) {
+        try {
+          await this.verifyAndFinishPurchase(purchase);
+        } catch (err) {
+          logger.warn('[IAPService] Reconciling unfinished purchase failed:', err);
+        }
+      }
+    } catch (err) {
+      logger.warn('[IAPService] reconcileUnfinishedPurchases error:', err);
+    }
+  }
+
+  public async restorePurchases(): Promise<{ restoredCount: number; success: boolean }> {
+    if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
+      return { restoredCount: 0, success: false };
+    }
+
+    await this.initialize();
+    if (!this.isInitialized) {
+      throw new Error('Could not connect to the store to restore purchases.');
+    }
+
+    try {
+      const purchases = await RNIap.getAvailablePurchases({
+        onlyIncludeActiveItemsIOS: true,
+      });
+
+      const allowedSkus = getAllPlatformSkus();
+      const validPurchases = purchases.filter((p) => {
+        const pid = p.productId || (p as any).id;
+        return allowedSkus.includes(pid);
+      });
+
+      let restoredCount = 0;
+      for (const purchase of validPurchases) {
+        try {
+          const verified = await this.verifyAndFinishPurchase(purchase);
+          if (verified.success) {
+            restoredCount++;
+          }
+        } catch (verifyErr) {
+          logger.warn('[IAPService] restore purchase verification failed:', verifyErr);
+        }
+      }
+
+      return {
+        restoredCount,
+        success: restoredCount > 0 || validPurchases.length === 0,
+      };
+    } catch (err: any) {
+      logger.error('[IAPService] restorePurchases error:', err);
+      throw err;
+    }
+  }
+
+  public async openSubscriptionManagement(sku?: string): Promise<void> {
+    try {
+      if (Platform.OS === 'android' && typeof RNIap.deepLinkToSubscriptions === 'function') {
+        await RNIap.deepLinkToSubscriptions({
+          skuAndroid: sku,
+          packageNameAndroid: 'io.mymemento.app',
+        });
+        return;
+      }
+    } catch {
+      // fallback to linking URL
+    }
+
+    try {
+      const url = getStoreManagementUrl();
+      const canOpen = await Linking.canOpenURL(url).catch(() => false);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        await WebBrowser.openBrowserAsync(url).catch(() => {});
+      }
+    } catch (linkErr) {
+      logger.warn('[IAPService] openSubscriptionManagement failed:', linkErr);
+    }
+  }
+
+  public cleanup(): void {
+    if (this.updateSubscription) {
+      this.updateSubscription.remove();
+      this.updateSubscription = null;
+    }
+    if (this.errorSubscription) {
+      this.errorSubscription.remove();
+      this.errorSubscription = null;
+    }
+    this.clearPendingPurchase();
+    if (this.isInitialized) {
+      RNIap.endConnection().catch(() => { });
+      this.isInitialized = false;
+    }
+  }
+}
+
+export const iapService = new InAppPurchaseService();

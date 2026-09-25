@@ -12,9 +12,10 @@ describe('Pricing logic', () => {
     expect(logic).not.toContain('Alert.alert(');
   });
 
-  test('normalizes lifetime purchases to legacy tier with lifetime interval', () => {
-    expect(logic).toContain("const normalizedTier = tier === 'lifetime' ? 'legacy' : tier.toLowerCase();");
-    expect(logic).toContain("const normalizedInterval = tier === 'lifetime' ? 'lifetime' : interval;");
+  test('does not offer lifetime purchases and supports restore flow', () => {
+    expect(logic).not.toContain("lifetime: 999");
+    expect(logic).toContain('handleRestore');
+    expect(logic).toContain('restoreBillingPurchases');
   });
 
   test('keeps pricing screen wired to the centralized logic hook', () => {

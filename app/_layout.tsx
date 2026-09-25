@@ -208,7 +208,7 @@ function SessionBootstrap() {
 
   useEffect(() => {
     if (
-      phase !== 'authenticating' ||
+      (phase !== 'authenticating' && phase !== 'authenticated') ||
       !token ||
       restoringRef.current
     ) {
@@ -224,7 +224,18 @@ function SessionBootstrap() {
           (await get<IUser>(endpoint.profile)).data,
         staleTime: 0,
       })
-      .then((user) => establishSession(token, user))
+      .then(async (user) => {
+        const currentPhase = useAuthStore.getState().phase;
+        if (currentPhase === 'authenticated') {
+          const { syncAuthenticatedUser, reconcilePendingOnboardingSkip } = await import('@/features/auth/session-coordinator');
+          const syncedUser = syncAuthenticatedUser(user);
+          await reconcilePendingOnboardingSkip(syncedUser);
+        } else {
+          await establishSession(token, user);
+          const { reconcilePendingOnboardingSkip } = await import('@/features/auth/session-coordinator');
+          await reconcilePendingOnboardingSkip(user);
+        }
+      })
       .catch(async (err: any) => {
         const currentPhase = useAuthStore.getState().phase;
         if (currentPhase === 'authenticating' || currentPhase === 'authenticated') {
@@ -232,7 +243,11 @@ function SessionBootstrap() {
           if (status === 401) {
             return terminateSession('expired');
           }
-          // Non-401 failure (offline, timeout, 5xx): check for in-memory or persisted user
+          // If already authenticated with a cached user and offline, keep the existing session
+          if (currentPhase === 'authenticated') {
+            return;
+          }
+          // Non-401 failure during 'authenticating': check for in-memory or persisted user
           const existingUser = useUserStore.getState().user ?? useAuthStore.getState().user;
           if (existingUser) {
             return establishSession(token, existingUser);

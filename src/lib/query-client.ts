@@ -8,7 +8,13 @@ export const queryClient = new QueryClient({
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes (staleTime is how long queries stay fresh)
       gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days (gcTime replaces cacheTime in TanStack Query v5)
-      retry: 1,
+      retry: (failureCount, error: any) => {
+        const status = error?.status ?? error?.response?.status;
+        if (status === 401 || status === 403) {
+          return false;
+        }
+        return failureCount < 1;
+      },
       networkMode: 'offlineFirst',
     },
   },
