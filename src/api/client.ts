@@ -31,6 +31,10 @@ client.interceptors.request.use(
       const token = getAuthToken();
       if (token) {
         config.headers.authorization = `Bearer ${token}`;
+      } else {
+        return Promise.reject(
+          normalizeApiError(null, 401, 'Authentication token required'),
+        );
       }
     }
     return config;
@@ -57,6 +61,10 @@ client.interceptors.response.use(
       originalRequest._retry = true;
       try {
         const { authService } = await import('./auth-service');
+        const authData = await authService.getAuthData();
+        if (!authData?.access_token) {
+          throw new Error('No authentication data found');
+        }
         const newAuth = await authService.refreshAccessToken();
         originalRequest.headers.authorization = `Bearer ${newAuth.access_token}`;
         return client(originalRequest);
@@ -74,9 +82,10 @@ client.interceptors.response.use(
       }
     }
 
+    const rawStatus = (error as any)?.status ?? (error as any)?.httpStatus ?? error.response?.status;
     const apiError = normalizeApiError(
-      error.response?.data,
-      error.response?.status,
+      error.response?.data ?? (error as any)?.data,
+      rawStatus,
       error.message || 'An error occurred',
     );
 
