@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { useQueryClient } from '@tanstack/react-query';
 import { launchBillingCheckout, restoreBillingPurchases } from '@/features/settings/billing-flow';
 import { useIAP } from '@/features/billing/use-iap';
+import { Platform } from 'react-native';
 
 export type BillingInterval = 'monthly' | 'annual';
 export type Currency = 'USD' | 'NGN';
@@ -34,6 +35,8 @@ export function usePricingLogic() {
   const table = PRICING_TABLE[currency];
 
   const localizedProduct = products[interval];
+  const purchaseAvailable =
+    Platform.OS === 'web' || localizedProduct.storeAvailable;
   const proPrice = interval === 'annual' ? table.pro.annual / 12 : table.pro.monthly;
   const legacyPrice = interval === 'annual' ? table.legacy.annual / 12 : table.legacy.monthly;
 
@@ -84,6 +87,7 @@ export function usePricingLogic() {
     legacyPrice,
     table,
     localizedProduct,
+    purchaseAvailable,
     handleCheckout,
     handleRestore,
     formatMoney,

@@ -28,7 +28,7 @@ function FeatureList({items, inverse = false}: {items: string[]; inverse?: boole
 }
 
 export default function ManagePlanScreen() {
-  const {interval, changeInterval, handleCheckout, handleRestore, localizedProduct, router, loading, restoring} = usePricingLogic();
+  const {interval, changeInterval, handleCheckout, handleRestore, localizedProduct, purchaseAvailable, router, loading, restoring} = usePricingLogic();
   const {isProOrAbove, summary} = useSubscription();
   const isCancellationScheduled = summary?.cancel_at_period_end === true;
   const back = useCallback(() => { Haptics.selectionAsync(); safeBack(router, '/settings/billing'); }, [router]);
@@ -79,7 +79,12 @@ export default function ManagePlanScreen() {
           >
             <Text className="text-white" style={TYPE.uiTitle}>Pro</Text><Text className="text-white mt-2" style={TYPE.body}>For users who want to benefit more</Text><FeatureList items={PRO_FEATURES} inverse />
             <View className="flex-row items-end mt-8"><Text className="text-white" style={TYPE.displayTitle}>{displayPrice}</Text><Text className="text-white mb-2 ml-2" style={TYPE.body}>/ {interval === 'monthly' ? 'month' : 'year'}</Text></View>
-            <Button variant="secondary" size="lg" fullWidth className="mt-7 bg-white" loading={loading} disabled={isProOrAbove || isCancellationScheduled} onPress={() => handleCheckout('pro')}>{isProOrAbove ? 'Current plan' : 'Start 14-day trial'}</Button>
+            <Button variant="secondary" size="lg" fullWidth className="mt-7 bg-white" loading={loading} disabled={isProOrAbove || isCancellationScheduled || !purchaseAvailable} onPress={() => handleCheckout('pro')}>{isProOrAbove ? 'Current plan' : purchaseAvailable ? 'Start 14-day trial' : 'Purchases unavailable'}</Button>
+            {!isProOrAbove && !purchaseAvailable ? (
+              <Text className="mt-3 text-center text-white" style={TYPE.bodySmall}>
+                The store is still preparing this plan. Please check back shortly.
+              </Text>
+            ) : null}
           </ImageBackground>
 
           {/* Restore Purchases Button (Mandatory for App Store Review) */}

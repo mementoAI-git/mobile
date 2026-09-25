@@ -28,6 +28,13 @@ interface IAPListenerSubscription {
   remove: () => void;
 }
 
+function purchaseErrorMessage(error: {code?: string; message?: string}): string {
+  if (error.code === 'sku-not-found' || error.code === 'store-product-unavailable') {
+    return 'Purchases are temporarily unavailable. Please try again later.';
+  }
+  return error.message || 'In-app purchase failed';
+}
+
 class InAppPurchaseService {
   public isUsingFallbacks = false;
   private isInitialized = false;
@@ -109,7 +116,7 @@ class InAppPurchaseService {
       if (this.pendingPurchaseRejecter) {
         const reject = this.pendingPurchaseRejecter;
         this.clearPendingPurchase();
-        const message = error?.message || 'In-app purchase failed';
+        const message = purchaseErrorMessage(error ?? {});
         const err = new Error(message);
         (err as any).code = error?.code;
         reject(err);
@@ -117,8 +124,8 @@ class InAppPurchaseService {
     });
   }
 
-  public async getProducts(): Promise<IAPProduct[]> {
-    if (this.cachedProducts && this.cachedProducts.length > 0) {
+  public async getProducts(forceRefresh = false): Promise<IAPProduct[]> {
+    if (!forceRefresh && this.cachedProducts && this.cachedProducts.length > 0) {
       return this.cachedProducts;
     }
 
@@ -136,19 +143,32 @@ class InAppPurchaseService {
     try {
       const skus = getAllPlatformSkus();
       const subscriptions = await RNIap.fetchProducts({ skus, type: 'subs' });
+      const returnedProductIds = (subscriptions ?? [])
+        .map((subscription: any) => subscription.id || subscription.productId)
+        .filter((productId: unknown): productId is string => typeof productId === 'string');
+
+      if (__DEV__) {
+        logger.debug('[IAPService] product catalog:', {
+          requestedSkus: skus,
+          returnedProductIds,
+          platform: Platform.OS,
+        });
+      }
 
       if (!subscriptions || subscriptions.length === 0) {
+        this.cachedProducts = null;
         this.isUsingFallbacks = true;
         return fallbacks;
       }
 
-      const products: IAPProduct[] = subscriptions.map((sub: any) => {
+      const products: IAPProduct[] = subscriptions.flatMap((sub: any) => {
         const productId = sub.id || sub.productId;
+        if (!skus.includes(productId)) return [];
         const interval = getIntervalFromSku(productId);
         const fallback = FALLBACK_PRODUCTS[interval];
         const rawPrice = typeof sub.price === 'string' ? parseFloat(sub.price) : Number(sub.price ?? fallback.price);
 
-        return {
+        return [{
           productId,
           title: sub.title || fallback.title,
           description: sub.description || fallback.description,
@@ -156,11 +176,12 @@ class InAppPurchaseService {
           currency: sub.currency || fallback.currency,
           localizedPrice: sub.displayPrice || sub.localizedPrice || fallback.localizedPrice,
           interval,
-        };
+          storeAvailable: true,
+        }];
       });
 
-      this.cachedProducts = products;
-      this.isUsingFallbacks = false;
+      this.cachedProducts = products.length > 0 ? products : null;
+      this.isUsingFallbacks = products.length !== skus.length;
       return products;
     } catch (err) {
       logger.warn('[IAPService] fetchProducts error, using fallbacks:', err);
@@ -190,6 +211,27 @@ class InAppPurchaseService {
     const sku = getPlatformSku(interval);
     if (!storeAccountToken) {
       throw new Error('Your billing account is still being prepared. Please try again.');
+    }
+
+    const storeProducts = await this.getProducts(true);
+    const selectedProduct = storeProducts.find(
+      (product) => product.productId === sku && product.storeAvailable,
+    );
+    if (!selectedProduct) {
+      if (__DEV__) {
+        logger.warn('[IAPService] selected product unavailable:', {
+          selectedSku: sku,
+          returnedProductIds: storeProducts
+            .filter((product) => product.storeAvailable)
+            .map((product) => product.productId),
+          platform: Platform.OS,
+        });
+      }
+      const error = new Error(
+        'Purchases are temporarily unavailable. Please try again later.',
+      );
+      (error as Error & {code?: string}).code = 'store-product-unavailable';
+      throw error;
     }
 
     return new Promise<IAPVerificationResult>(async (resolve, reject) => {
@@ -228,7 +270,9 @@ class InAppPurchaseService {
       } catch (err: any) {
         this.clearPendingPurchase();
         logger.error('[IAPService] requestPurchase error:', err);
-        reject(err);
+        const normalized = new Error(purchaseErrorMessage(err ?? {}));
+        (normalized as Error & {code?: string}).code = err?.code;
+        reject(normalized);
       }
     });
   }

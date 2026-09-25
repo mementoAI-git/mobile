@@ -13,6 +13,8 @@ export interface IAPProduct {
   currency: string;
   localizedPrice: string;
   interval: IAPPlanInterval;
+  /** True only when the native store returned this exact product identifier. */
+  storeAvailable: boolean;
 }
 
 export interface IAPVerificationPayload {

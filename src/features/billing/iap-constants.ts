@@ -45,6 +45,7 @@ export const FALLBACK_PRODUCTS: Record<IAPPlanInterval, IAPProduct> = {
     currency: 'USD',
     localizedPrice: '$9.99',
     interval: 'monthly',
+    storeAvailable: false,
   },
   annual: {
     productId: getPlatformSku('annual'),
@@ -54,6 +55,7 @@ export const FALLBACK_PRODUCTS: Record<IAPPlanInterval, IAPProduct> = {
     currency: 'USD',
     localizedPrice: '$79.00',
     interval: 'annual',
+    storeAvailable: false,
   },
 };
 
@@ -79,14 +81,3 @@ export const IAP_DISCLOSURE_COPY =
   'Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. ' +
   'Your account will be charged for renewal within 24 hours prior to the end of the current period. ' +
   'You can manage and cancel your subscriptions anytime in your App Store or Google Play account settings.';
-
-export function generateStoreAccountToken(): string {
-  if (typeof globalThis.crypto?.randomUUID === 'function') {
-    return globalThis.crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}

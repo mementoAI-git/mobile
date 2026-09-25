@@ -8,7 +8,6 @@ import { queryKeys } from '@/constants/query-keys';
 import { logger } from '@/lib/logger';
 import { toast } from '@/components/ui/Toast';
 import { iapService } from '@/features/billing/iap-service';
-import { generateStoreAccountToken } from '@/features/billing/iap-constants';
 import { extractBillingUrl } from './billing-adapters';
 import type { BillingCancellationFeedback } from './subscription-cancellation';
 import type { SubscriptionSummary } from './billing-adapters';
@@ -67,7 +66,7 @@ export async function launchBillingCheckout({
         storeAccountToken = refreshed?.store_account_token;
       }
       if (!storeAccountToken) {
-        storeAccountToken = generateStoreAccountToken();
+        throw new Error('Your billing account is still being prepared. Please try again.');
       }
       const purchased = await iapService.requestSubscriptionPurchase(
         planInterval,
