@@ -12,11 +12,11 @@ describe('Privacy settings screen', () => {
     expect(screen).toContain('Linking.openURL');
   });
 
-  test('wires export archive action and keeps remaining future actions unavailable', () => {
+  test('wires the complete server archive without unfinished actions', () => {
     expect(screen).toContain('Export your archive');
     expect(screen).toContain("'export-archive'");
-    expect(screen).toContain('Share stories');
-    expect(screen.match(/<ComingSoonRow/g)?.length).toBe(1);
+    expect(screen).not.toContain('Share stories');
+    expect(screen).not.toContain('ComingSoonRow');
   });
 
   test('uses the real deletion mutation through a styled confirmation', () => {
