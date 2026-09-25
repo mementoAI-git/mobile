@@ -1,5 +1,5 @@
-import {describe, expect, test} from 'bun:test';
-import {readFileSync} from 'node:fs';
+import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import {
   CANCELLATION_REASONS,
   buildCancellationPayload,
@@ -9,7 +9,7 @@ const read = (path: string) => readFileSync(path, 'utf8');
 
 describe('manage-plan flow', () => {
   test('requires an explanation only for the something-else reason', () => {
-    expect(buildCancellationPayload('too_expensive', '')).toEqual({reason: 'too_expensive'});
+    expect(buildCancellationPayload('too_expensive', '')).toEqual({ reason: 'too_expensive' });
     expect(buildCancellationPayload('other', '  Moving abroad  ')).toEqual({
       reason: 'other',
       details: 'Moving abroad',
@@ -58,5 +58,11 @@ describe('manage-plan flow', () => {
     const screen = read('app/pricing.tsx');
     expect(screen).toMatch(/<ScrollView[^>]*className="[^"]*flex-1/);
     expect(screen).toMatch(/contentContainerStyle=\{\{[^}]*paddingBottom:\s*56/);
+  });
+
+  test('routes store-managed subscriptions to native management on cancellation', () => {
+    const screen = read('app/pricing.tsx');
+    expect(screen).toContain("summary?.provider === 'apple' || summary?.provider === 'google'");
+    expect(screen).toContain('iapService.openSubscriptionManagement()');
   });
 });

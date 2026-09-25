@@ -4,10 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
 import { Button } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { launchBillingCheckout } from '@/features/settings/billing-flow';
+import { useIAP } from '@/features/billing/use-iap';
+import { IAP_DISCLOSURE_COPY, IAP_LEGAL_URLS } from '@/features/billing';
 import {
   getVoiceUpgradeCheckout,
   type VoiceUpgradePlan,
@@ -20,18 +23,6 @@ const BENEFITS = [
   'Keep building without hitting free-plan limits',
 ];
 
-const PLANS: Array<{
-  id: VoiceUpgradePlan;
-  name: string;
-  price: string;
-  cadence: string;
-  badge?: string;
-}> = [
-  { id: 'monthly', name: 'Monthly', price: '$9.99', cadence: '/month' },
-  { id: 'annual', name: 'Annual', price: '$79.00', cadence: '/year', badge: 'Save 15%' },
-  { id: 'lifetime', name: 'Lifetime', price: '$999.00', cadence: 'once', badge: 'Best value' },
-];
-
 interface VoiceUpgradeScreenProps {
   onClose: () => void;
 }
@@ -40,6 +31,29 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
   const [selectedPlan, setSelectedPlan] = useState<VoiceUpgradePlan>('annual');
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
+  const { products, restorePurchases, restoring, purchasing } = useIAP();
+
+  const plans: Array<{
+    id: VoiceUpgradePlan;
+    name: string;
+    price: string;
+    cadence: string;
+    badge?: string;
+  }> = [
+    {
+      id: 'monthly',
+      name: 'Monthly',
+      price: products.monthly.localizedPrice || '$9.99',
+      cadence: '/month',
+    },
+    {
+      id: 'annual',
+      name: 'Annual',
+      price: products.annual.localizedPrice || '$79.00',
+      cadence: '/year',
+      badge: 'Save 15%',
+    },
+  ];
 
   const handleSelectPlan = useCallback((plan: VoiceUpgradePlan) => {
     void Haptics.selectionAsync();
@@ -57,11 +71,22 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
       });
       if (opened) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        onClose();
       }
     } finally {
       setLoading(false);
     }
-  }, [queryClient, selectedPlan]);
+  }, [onClose, queryClient, selectedPlan]);
+
+  const openTerms = useCallback(() => {
+    void Haptics.selectionAsync();
+    void WebBrowser.openBrowserAsync(IAP_LEGAL_URLS.terms);
+  }, []);
+
+  const openPrivacy = useCallback(() => {
+    void Haptics.selectionAsync();
+    void WebBrowser.openBrowserAsync(IAP_LEGAL_URLS.privacy);
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -82,7 +107,7 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
         <View style={styles.headingBlock}>
           <Text style={styles.title}>Voice mode is a Pro feature</Text>
           <Text style={styles.subtitle}>
-            Upgrade to talk with Memento hands-free. Pro and Legacy include voice conversations.
+            Upgrade to talk with Memento hands-free. Pro includes unlimited voice conversations.
           </Text>
         </View>
 
@@ -96,7 +121,7 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
         </View>
 
         <View style={styles.plans}>
-          {PLANS.map((plan) => {
+          {plans.map((plan) => {
             const selected = plan.id === selectedPlan;
             return (
               <TouchableOpacity
@@ -129,26 +154,50 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
         <View style={styles.actions}>
           <Button
             fullWidth
-            loading={loading}
+            loading={loading || purchasing}
             onPress={() => { void handleUpgrade(); }}
             className="h-14"
-                      >
+          >
             Upgrade to Pro
           </Button>
+
           <Button
             fullWidth
-            disabled={loading}
+            variant="ghost"
+            loading={restoring}
+            onPress={restorePurchases}
+            className="h-11"
+            textClassName="text-text-base"
+          >
+            Restore Purchases
+          </Button>
+
+          <Button
+            fullWidth
+            disabled={loading || purchasing}
             onPress={onClose}
             variant="outline"
             className="h-14 bg-card"
-                      >
+          >
             Let me think about it
           </Button>
         </View>
 
-        <Text style={styles.footer}>
-          Terms of Service &amp; Privacy Policy | Have a question? Contact us
-        </Text>
+        {/* Legal disclosures & links */}
+        <View style={styles.legalSection}>
+          <Text style={styles.disclosureText}>
+            {IAP_DISCLOSURE_COPY}
+          </Text>
+          <View style={styles.legalLinksRow}>
+            <TouchableOpacity onPress={openTerms} accessibilityRole="link">
+              <Text style={styles.legalLink}>Terms of Use</Text>
+            </TouchableOpacity>
+            <Text style={styles.legalDot}>•</Text>
+            <TouchableOpacity onPress={openPrivacy} accessibilityRole="link">
+              <Text style={styles.legalLink}>Privacy Policy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -232,10 +281,33 @@ const styles = StyleSheet.create({
     ...TYPE.label,
   },
   actions: { gap: 12, marginTop: 24 },
-  footer: {
-    color: COLORS.textBase,
-    ...TYPE.bodySmall,
-    marginTop: 20,
+  legalSection: {
+    alignItems: 'center',
+    borderTopColor: COLORS.strokeWeaker,
+    borderTopWidth: 1,
+    marginTop: 24,
+    paddingTop: 16,
+  },
+  disclosureText: {
+    color: COLORS.textWeak,
+    ...TYPE.metadata,
+    lineHeight: 18,
     textAlign: 'center',
+  },
+  legalLinksRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  legalLink: {
+    color: COLORS.textBase,
+    ...TYPE.metadata,
+    textDecorationLine: 'underline',
+  },
+  legalDot: {
+    color: COLORS.textWeak,
+    ...TYPE.metadata,
   },
 });

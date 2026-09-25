@@ -3,7 +3,7 @@ import type {
   BillingCheckoutTier,
 } from '@/features/settings/billing-flow';
 
-export type VoiceUpgradePlan = 'monthly' | 'annual' | 'lifetime';
+export type VoiceUpgradePlan = 'monthly' | 'annual';
 
 export type VoiceConnectionFailure =
   | { kind: 'upgrade-required' }
@@ -39,7 +39,5 @@ export function getVoiceUpgradeCheckout(plan: VoiceUpgradePlan): {
   tier: BillingCheckoutTier;
   interval: BillingCheckoutInterval;
 } {
-  return plan === 'lifetime'
-    ? { tier: 'legacy', interval: 'lifetime' }
-    : { tier: 'pro', interval: plan };
+  return { tier: 'pro', interval: plan };
 }

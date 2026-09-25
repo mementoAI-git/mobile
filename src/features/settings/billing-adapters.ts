@@ -23,9 +23,10 @@ export interface SubscriptionSummary {
   trial_ends_at?: string | null;
   current_period_end?: string | null;
   cancel_at_period_end?: boolean;
-  provider?: 'polar';
+  provider?: 'polar' | 'apple' | 'google';
   currency?: 'USD' | 'NGN';
   country?: string;
+  store_account_token?: string;
 }
 
 export interface BillingInvoice {
@@ -160,9 +161,16 @@ export function normalizeSubscriptionSummary(payload: unknown): SubscriptionSumm
     cancel_at_period_end: typeof raw.cancel_at_period_end === 'boolean'
       ? raw.cancel_at_period_end
       : undefined,
-    provider: raw.provider === 'polar' || raw.payment_provider === 'polar' ? 'polar' : undefined,
+    provider: (
+      raw.provider === 'apple' || raw.payment_provider === 'apple' || raw.provider === 'storekit' ? 'apple' :
+      raw.provider === 'google' || raw.payment_provider === 'google' || raw.provider === 'play_billing' ? 'google' :
+      raw.provider === 'polar' || raw.payment_provider === 'polar' ? 'polar' : undefined
+    ),
     currency: raw.currency === 'USD' || raw.currency === 'NGN' ? raw.currency : undefined,
     country: typeof raw.country === 'string' ? raw.country : undefined,
+    store_account_token: typeof raw.store_account_token === 'string'
+      ? raw.store_account_token
+      : undefined,
   };
 }
 

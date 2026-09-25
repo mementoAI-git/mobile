@@ -23,13 +23,13 @@ describe('billing reference interactions', () => {
     expect(source).not.toContain('variant="outline" size="lg" fullWidth');
   });
 
-  test('registers dedicated edit-details and payment-method sheets', () => {
+  test('does not register fake edit-details and payment-method sheets', () => {
     const manager = read('src/components/sheets/SheetManager.tsx');
     const store = read('src/store/ui.store.ts');
-    expect(manager).toContain("'edit-billing-details'");
-    expect(manager).toContain("'add-payment-method'");
-    expect(store).toContain("| 'edit-billing-details'");
-    expect(store).toContain("| 'add-payment-method'");
+    expect(manager).not.toContain("'edit-billing-details'");
+    expect(manager).not.toContain("'add-payment-method'");
+    expect(store).not.toContain("| 'edit-billing-details'");
+    expect(store).not.toContain("| 'add-payment-method'");
   });
 
   test('keeps billing sheet footers inside the fixed-height sheet viewport', () => {
@@ -43,13 +43,13 @@ describe('billing reference interactions', () => {
     expect(payment).toContain('getSheetBottomPadding');
   });
 
-  test('routes billing actions to the reference sheets', () => {
+  test('routes billing actions to the real provider', () => {
     const screen = read('app/settings/billing.tsx');
     const logic = read('src/hooks/use-billing-settings-logic.ts');
-    expect(screen).toContain('handleEditBillingDetails');
-    expect(screen).toContain('handleAddPaymentMethod');
-    expect(logic).toContain("openSheet('edit-billing-details'");
-    expect(logic).toContain("openSheet('add-payment-method'");
+    expect(screen).toContain('Manage billing');
+    expect(screen).toContain('handlePortal');
+    expect(logic).not.toContain("openSheet('edit-billing-details'");
+    expect(logic).not.toContain("openSheet('add-payment-method'");
   });
 
   test('never posts raw card details through the Memento API', () => {
