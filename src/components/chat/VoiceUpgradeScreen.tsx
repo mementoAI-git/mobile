@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
@@ -10,6 +10,7 @@ import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { launchBillingCheckout } from '@/features/settings/billing-flow';
 import { useIAP } from '@/features/billing/use-iap';
+import { useSubscription } from '@/hooks/queries/use-subscription';
 import { IAP_DISCLOSURE_COPY, IAP_LEGAL_URLS } from '@/features/billing';
 import {
   getVoiceUpgradeCheckout,
@@ -32,6 +33,14 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
   const { products, restorePurchases, restoring, purchasing } = useIAP();
+  const { isProOrAbove } = useSubscription();
+  const closedForEntitlementRef = useRef(false);
+
+  useEffect(() => {
+    if (!isProOrAbove || closedForEntitlementRef.current) return;
+    closedForEntitlementRef.current = true;
+    onClose();
+  }, [isProOrAbove, onClose]);
 
   const plans: Array<{
     id: VoiceUpgradePlan;
@@ -77,6 +86,13 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
       setLoading(false);
     }
   }, [onClose, queryClient, selectedPlan]);
+
+  const handleRestore = useCallback(async () => {
+    const restored = await restorePurchases();
+    if (restored) {
+      onClose();
+    }
+  }, [onClose, restorePurchases]);
 
   const openTerms = useCallback(() => {
     void Haptics.selectionAsync();
@@ -165,7 +181,7 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
             fullWidth
             variant="ghost"
             loading={restoring}
-            onPress={restorePurchases}
+            onPress={() => { void handleRestore(); }}
             className="h-11"
             textClassName="text-text-base"
           >
