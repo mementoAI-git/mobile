@@ -71,5 +71,19 @@ describe('IAP Service and Hook contracts', () => {
     expect(useIapSource).toContain('Your billing account is still being prepared');
     expect(billingFlowSource).toContain('Your billing account is still being prepared');
   });
-});
 
+  test('handled purchase verification failures do not trigger development LogBox overlays', () => {
+    expect(iapServiceSource).toContain(
+      "logger.warn('[IAPService] purchase verification failed:', err)",
+    );
+    expect(billingFlowSource).toContain(
+      "logger.warn('[BillingFlow] Native IAP checkout error:', err)",
+    );
+    expect(iapServiceSource).not.toContain(
+      "logger.error('[IAPService] purchase verification failed:', err)",
+    );
+    expect(billingFlowSource).not.toContain(
+      "logger.error('[BillingFlow] Native IAP checkout error:', err)",
+    );
+  });
+});

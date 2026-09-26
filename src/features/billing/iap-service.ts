@@ -102,7 +102,7 @@ class InAppPurchaseService {
           resolve(result);
         }
       } catch (err: any) {
-        logger.error('[IAPService] purchase verification failed:', err);
+        logger.warn('[IAPService] purchase verification failed:', err);
         if (this.pendingPurchaseRejecter) {
           const reject = this.pendingPurchaseRejecter;
           this.clearPendingPurchase();

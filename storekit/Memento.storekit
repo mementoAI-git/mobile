@@ -1,0 +1,74 @@
+{
+  "identifier" : "D98C0F0A",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : {
+    "_applicationInternalID" : "io.mymemento.app",
+    "_developerTeamID" : "9546K7Z2VT",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "en_US",
+    "_storefront" : "USA"
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "A33B4BE8",
+      "localizations" : [
+        {
+          "description" : "Unlock the complete Memento experience.",
+          "displayName" : "Memento Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "Memento Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "41C35F31",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Memento Pro billed monthly.",
+              "displayName" : "Memento Pro Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "io.mymemento.app.pro.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Memento Pro Monthly",
+          "subscriptionGroupID" : "A33B4BE8",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "79.00",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "F22238A0",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Memento Pro billed annually.",
+              "displayName" : "Memento Pro Annual",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "io.mymemento.app.pro.annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Memento Pro Annual",
+          "subscriptionGroupID" : "A33B4BE8",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 2,
+    "minor" : 0
+  }
+}

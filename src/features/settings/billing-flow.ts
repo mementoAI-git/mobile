@@ -78,7 +78,7 @@ export async function launchBillingCheckout({
       }
       return false;
     } catch (err: any) {
-      logger.error('[BillingFlow] Native IAP checkout error:', err);
+      logger.warn('[BillingFlow] Native IAP checkout error:', err);
       toast(err?.message || 'A purchase error occurred. Please try again.', 'error');
       return false;
     }

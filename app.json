@@ -94,6 +94,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/with-storekit-config",
       "expo-router",
       "expo-secure-store",
       "expo-font",
