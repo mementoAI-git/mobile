@@ -25,6 +25,7 @@ export interface SubscriptionSummary {
   cancel_at_period_end?: boolean;
   provider?: 'polar' | 'apple' | 'google';
   currency?: 'USD' | 'NGN';
+  interval?: 'monthly' | 'annual';
   country?: string;
   store_account_token?: string;
 }
@@ -167,6 +168,13 @@ export function normalizeSubscriptionSummary(payload: unknown): SubscriptionSumm
       raw.provider === 'polar' || raw.payment_provider === 'polar' ? 'polar' : undefined
     ),
     currency: raw.currency === 'USD' || raw.currency === 'NGN' ? raw.currency : undefined,
+    interval: (
+      raw.interval === 'annual' || raw.billing_cycle === 'annual' || raw.period === 'annual' || raw.interval === 'year' || raw.billing_cycle === 'year'
+        ? 'annual'
+        : raw.interval === 'monthly' || raw.billing_cycle === 'monthly' || raw.period === 'monthly' || raw.interval === 'month' || raw.billing_cycle === 'month'
+        ? 'monthly'
+        : undefined
+    ),
     country: typeof raw.country === 'string' ? raw.country : undefined,
     store_account_token: typeof raw.store_account_token === 'string'
       ? raw.store_account_token

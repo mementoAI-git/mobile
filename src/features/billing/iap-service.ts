@@ -404,9 +404,16 @@ class InAppPurchaseService {
     }
   }
 
-  public async openSubscriptionManagement(sku?: string): Promise<void> {
+  public async openSubscriptionManagement(
+    sku?: string,
+    provider?: 'apple' | 'google',
+  ): Promise<void> {
     try {
-      if (Platform.OS === 'android' && typeof RNIap.deepLinkToSubscriptions === 'function') {
+      if (
+        (!provider || provider === 'google') &&
+        Platform.OS === 'android' &&
+        typeof RNIap.deepLinkToSubscriptions === 'function'
+      ) {
         await RNIap.deepLinkToSubscriptions({
           skuAndroid: sku,
           packageNameAndroid: 'io.mymemento.app',
@@ -418,7 +425,20 @@ class InAppPurchaseService {
     }
 
     try {
-      const url = getStoreManagementUrl();
+      let resolvedProvider = provider;
+      if (!resolvedProvider) {
+        try {
+          const { queryClient } = await import('@/lib/query-client');
+          const { queryKeys } = await import('@/constants/query-keys');
+          const sub = queryClient.getQueryData<any>(queryKeys.subscription);
+          if (sub?.provider === 'apple' || sub?.provider === 'google') {
+            resolvedProvider = sub.provider;
+          }
+        } catch {
+          // fallback to platform
+        }
+      }
+      const url = getStoreManagementUrl(resolvedProvider);
       const canOpen = await Linking.canOpenURL(url).catch(() => false);
       if (canOpen) {
         await Linking.openURL(url);
