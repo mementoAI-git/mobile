@@ -33,8 +33,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useChatLogic } from '@/hooks/use-chat-logic';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
-import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useBackHandler } from '@/hooks/use-back-handler';
+import { queryClient } from '@/lib/query-client';
+import { queryKeys } from '@/constants/query-keys';
 import * as Haptics from 'expo-haptics';
 import type { ChatReplyQuote } from '@/lib/utils';
 import { verticalScale } from 'react-native-size-matters';
@@ -189,6 +191,31 @@ export default function ChatScreen() {
   const { mutateAsync: uploadFile } = useFileUpload();
 
   const isActuallyStreaming = streaming || isStartingConversation;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (activeChatId) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.promptMessages(activeChatId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.memory(activeChatId) });
+      }
+      void queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.memories() });
+    }, [activeChatId])
+  );
+
+  const prevMessageCountRef = useRef(allMessages.length);
+  React.useEffect(() => {
+    if (allMessages.length > prevMessageCountRef.current) {
+      requestAnimationFrame(() => {
+        try {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        } catch {
+          // Ignore if list is not layout-ready
+        }
+      });
+    }
+    prevMessageCountRef.current = allMessages.length;
+  }, [allMessages.length, flatListRef]);
 
   React.useEffect(() => {
     if (!replyQuote) setReplyQuoteHeight(0);
