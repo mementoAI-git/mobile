@@ -30,6 +30,7 @@ export class VoicePlaybackController {
     private readonly runtime: VoicePlaybackRuntime,
     private readonly scheduler: VoiceTimerScheduler = defaultScheduler,
     private readonly metrics: VoiceSessionMetrics = new VoiceSessionMetrics(),
+    private readonly onStateChange?: (state: VoicePlaybackState) => void,
   ) {
     this.createQueue();
   }
@@ -47,7 +48,7 @@ export class VoicePlaybackController {
     this.activeTurn = true;
 
     if (this.state !== 'playing') {
-      this.state = 'prebuffering';
+      this.setState('prebuffering');
       if (this.queueDepthMs >= VOICE_PREBUFFER_MS) {
         this.beginPlayback();
       } else {
@@ -67,7 +68,7 @@ export class VoicePlaybackController {
     this.runtime.stop();
     this.epoch = epoch;
     this.resetQueueState();
-    this.state = 'idle';
+    this.setState('idle');
     this.createQueue();
     this.metrics.markSilence();
   }
@@ -79,7 +80,7 @@ export class VoicePlaybackController {
     if (this.queueDepthMs > 0 && this.state === 'prebuffering') {
       this.beginPlayback();
     } else if (this.queueDepthMs === 0) {
-      this.state = 'idle';
+      this.setState('idle');
     }
   }
 
@@ -89,7 +90,7 @@ export class VoicePlaybackController {
     this.runtime.clear();
     this.runtime.stop();
     this.resetQueueState();
-    this.state = 'stopped';
+    this.setState('stopped');
   }
 
   getQueueDepthMs(): number {
@@ -113,9 +114,9 @@ export class VoicePlaybackController {
 
     if (this.activeTurn && this.state === 'playing') {
       this.metrics.markUnderrun();
-      this.state = 'prebuffering';
+      this.setState('prebuffering');
     } else if (!this.activeTurn) {
-      this.state = 'idle';
+      this.setState('idle');
     }
   }
 
@@ -143,7 +144,7 @@ export class VoicePlaybackController {
       this.queueStarted = true;
     }
     this.metrics.markPlaybackStart();
-    this.state = 'playing';
+    this.setState('playing');
   }
 
   private resetQueueState(): void {
@@ -151,5 +152,11 @@ export class VoicePlaybackController {
     this.activeTurn = false;
     this.queueStarted = false;
     this.queuedBuffers.clear();
+  }
+
+  private setState(state: VoicePlaybackState): void {
+    if (this.state === state) return;
+    this.state = state;
+    this.onStateChange?.(state);
   }
 }

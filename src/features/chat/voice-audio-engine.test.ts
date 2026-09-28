@@ -107,6 +107,9 @@ class FakeNative implements VoiceAudioNativeAdapter {
   async hasInput(): Promise<boolean> {
     return this.hasInputDevice;
   }
+  async requestRecordingPermission(): Promise<'Granted'> {
+    return 'Granted';
+  }
 }
 
 describe('VoiceAudioEngine', () => {

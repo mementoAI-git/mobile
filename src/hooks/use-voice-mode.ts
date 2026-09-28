@@ -1,39 +1,53 @@
-import { useAudioStream, AudioModule } from 'expo-audio';
-import type { AudioStreamBuffer } from 'expo-audio';
-import { GoogleGenAI, Modality } from '@google/genai';
-import type { LiveServerMessage, Session } from '@google/genai';
-import { AudioContext } from 'react-native-audio-api';
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { GoogleGenAI } from '@google/genai/web';
+import type { LiveServerMessage, Session } from '@google/genai/web';
 import * as Haptics from 'expo-haptics';
-import { get, post } from '@/api/mutations';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import endpoint from '@/api/endpoint';
-import { isPermissionGranted } from '@/lib/permission-recovery';
-import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
-import { logger } from '@/lib/logger';
+import { get, post } from '@/api/mutations';
+import { VoiceAudioEngine } from '@/features/chat/voice-audio-engine';
 import {
   getVoiceConnectionFailure,
   type VoiceConnectionFailure,
 } from '@/features/chat/voice-entitlement';
+import {
+  buildGeminiLiveConfig,
+  parseVoiceLiveToken,
+} from '@/features/chat/voice-live-config';
+import { VoiceMessageHandler } from '@/features/chat/voice-message-handler';
+import { isPermissionGranted } from '@/lib/permission-recovery';
+import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
+import { logger } from '@/lib/logger';
 
-const INPUT_SAMPLE_RATE = 16_000;
-const OUTPUT_SAMPLE_RATE = 24_000;
+type SetupReady = {
+  promise: Promise<void>;
+  resolve: () => void;
+  reject: (error: Error) => void;
+};
 
-function bytesToBase64(bytes: Uint8Array) {
-  let binary = '';
-  const chunkSize = 0x8000;
-  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
-  }
-  return btoa(binary);
-}
+function createSetupReady(): SetupReady {
+  let settled = false;
+  let resolvePromise!: () => void;
+  let rejectPromise!: (error: Error) => void;
+  const promise = new Promise<void>((resolve, reject) => {
+    resolvePromise = resolve;
+    rejectPromise = reject;
+  });
+  void promise.catch(() => undefined);
 
-function base64ToBytes(value: string) {
-  const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes;
+  return {
+    promise,
+    resolve: () => {
+      if (settled) return;
+      settled = true;
+      resolvePromise();
+    },
+    reject: (error) => {
+      if (settled) return;
+      settled = true;
+      rejectPromise(error);
+    },
+  };
 }
 
 export function useVoiceMode({
@@ -50,33 +64,15 @@ export function useVoiceMode({
   const [connectionFailure, setConnectionFailure] = useState<VoiceConnectionFailure | null>(null);
 
   const sessionRef = useRef<Session | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const nextPlaybackTimeRef = useRef(0);
+  const engineRef = useRef<VoiceAudioEngine | null>(null);
+  const messageHandlerRef = useRef(new VoiceMessageHandler());
+  const setupReadyRef = useRef<SetupReady | null>(null);
   const isMutedRef = useRef(false);
   const isMountedRef = useRef(true);
   const isDisconnectingRef = useRef(false);
   const sessionIdRef = useRef<string | null>(null);
   const transcriptRef = useRef({ user: '', ai: '' });
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const playbackSourcesRef = useRef<Array<{ stop: () => void }>>([]);
-
-  const handleAudioBuffer = useCallback((buffer: AudioStreamBuffer) => {
-    if (isMutedRef.current || !sessionRef.current) return;
-    sessionRef.current.sendRealtimeInput({
-      media: {
-        data: bytesToBase64(new Uint8Array(buffer.data)),
-        mimeType: `audio/pcm;rate=${buffer.sampleRate}`,
-      },
-    });
-  }, []);
-
-  const { stream } = useAudioStream({
-    sampleRate: INPUT_SAMPLE_RATE,
-    channels: 1,
-    encoding: 'int16',
-    onBuffer: handleAudioBuffer,
-  });
-
   const memoryIdRef = useRef(memoryId);
   memoryIdRef.current = memoryId;
 
@@ -85,11 +81,8 @@ export function useVoiceMode({
       .filter(([, text]) => text.trim())
       .map(([role, text]) => ({ role, text, is_voice: true }));
     if (!messages.length) return;
-    const targetMemoryId = memoryId || memoryIdRef.current;
-    if (!targetMemoryId) {
-      // Retain transcripts in ref if memoryId is pending so spoken thoughts are not dropped
-      return;
-    }
+    const targetMemoryId = memoryIdRef.current;
+    if (!targetMemoryId) return;
     transcriptRef.current = { user: '', ai: '' };
 
     try {
@@ -100,105 +93,82 @@ export function useVoiceMode({
       });
     } catch (error) {
       logger.error('Failed to save voice transcript', error);
-      // Restore unsaved text into ref for subsequent retry
       transcriptRef.current = {
-        user: messages.find((m) => m.role === 'user')?.text || '',
-        ai: messages.find((m) => m.role === 'ai')?.text || '',
+        user: messages.find((message) => message.role === 'user')?.text || '',
+        ai: messages.find((message) => message.role === 'ai')?.text || '',
       };
     }
-  }, [memoryId]);
+  }, []);
 
-  // Flush buffered voice transcripts as soon as a conversation ID is assigned
   useEffect(() => {
     if (memoryId && (transcriptRef.current.user || transcriptRef.current.ai)) {
       void flushTranscripts();
     }
   }, [memoryId, flushTranscripts]);
 
-  const playPcmChunk = useCallback(async (base64Pcm: string) => {
-    const context = audioContextRef.current;
-    if (!context) return;
-
-    const bytes = base64ToBytes(base64Pcm);
-    const samples = new Int16Array(
-      bytes.buffer,
-      bytes.byteOffset,
-      Math.floor(bytes.byteLength / 2),
-    );
-    const floats = new Float32Array(samples.length);
-    for (let index = 0; index < samples.length; index += 1) {
-      floats[index] = samples[index] / 32768;
-    }
-
-    const audioBuffer = context.createBuffer(1, floats.length, OUTPUT_SAMPLE_RATE);
-    audioBuffer.copyToChannel(floats, 0);
-    const source = context.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(context.destination);
-    nextPlaybackTimeRef.current = Math.max(nextPlaybackTimeRef.current, context.currentTime);
-    source.start(nextPlaybackTimeRef.current);
-    nextPlaybackTimeRef.current += audioBuffer.duration;
-    playbackSourcesRef.current.push(source);
-  }, []);
-
-  const handleLiveMessage = useCallback((message: LiveServerMessage) => {
-    const serverContent = message.serverContent;
-    const outputAudio = serverContent?.modelTurn?.parts
-      ?.map((part) => part.inlineData?.data)
-      .filter((data): data is string => Boolean(data));
-    outputAudio?.forEach((chunk) => { void playPcmChunk(chunk); });
-
-    const aiText = serverContent?.outputTranscription?.text;
-    const userText = serverContent?.inputTranscription?.text;
-    if (aiText) {
-      transcriptRef.current.ai += aiText;
-      setAiSpeechText(transcriptRef.current.ai);
-      setIsAiSpeaking(true);
-    }
-    if (userText) {
-      transcriptRef.current.user += userText;
-      setUserSpeechText(transcriptRef.current.user);
-      setIsAiSpeaking(false);
-    }
-    if (serverContent?.turnComplete) void flushTranscripts();
-  }, [flushTranscripts, playPcmChunk]);
+  const handleLiveMessage = useCallback(
+    (message: LiveServerMessage) => {
+      const engine = engineRef.current;
+      for (const effect of messageHandlerRef.current.handle(message)) {
+        if (effect.type === 'setup-complete') {
+          engine?.markSetupComplete();
+          setupReadyRef.current?.resolve();
+        } else if (effect.type === 'interrupted') {
+          engine?.interruptOutput(effect.epoch);
+          if (isMountedRef.current) setIsAiSpeaking(false);
+        } else if (effect.type === 'output-audio') {
+          if (engine?.enqueueOutput(effect.data, effect.epoch) && isMountedRef.current) {
+            setIsAiSpeaking(true);
+          }
+        } else if (effect.type === 'input-transcript') {
+          transcriptRef.current.user += effect.text;
+          if (isMountedRef.current) setUserSpeechText(transcriptRef.current.user);
+        } else if (effect.type === 'output-transcript') {
+          transcriptRef.current.ai += effect.text;
+          if (isMountedRef.current) setAiSpeechText(transcriptRef.current.ai);
+        } else if (effect.type === 'turn-complete') {
+          engine?.finishOutputTurn();
+          void flushTranscripts();
+        }
+      }
+    },
+    [flushTranscripts],
+  );
 
   const disconnect = useCallback(async () => {
     if (isDisconnectingRef.current) return;
     isDisconnectingRef.current = true;
     isMutedRef.current = true;
-    try {
-      stream.stop();
-    } catch {
-      // The native stream may already be released during unmount.
-    }
-    playbackSourcesRef.current.forEach((source) => {
-      try {
-        source.stop();
-      } catch {
-        // Already finished.
-      }
-    });
-    playbackSourcesRef.current = [];
-    nextPlaybackTimeRef.current = 0;
+    setupReadyRef.current?.reject(new Error('Voice session closed before setup completed.'));
+    setupReadyRef.current = null;
+
+    const engine = engineRef.current;
+    engineRef.current = null;
+    await engine?.stop().catch((error) => logger.warn('Voice audio cleanup failed', error));
+    if (engine) logger.runtime('[VoiceMode] session metrics', engine.snapshot());
+
     const session = sessionRef.current;
     sessionRef.current = null;
     session?.close();
     await flushTranscripts();
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     if (isMountedRef.current) {
       setIsConnected(false);
       setIsConnecting(false);
       setIsAiSpeaking(false);
     }
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
     isDisconnectingRef.current = false;
-  }, [flushTranscripts, stream]);
+  }, [flushTranscripts]);
+
+  const disconnectRef = useRef(disconnect);
+  disconnectRef.current = disconnect;
 
   const connect = useCallback(async () => {
-    if (isConnecting || isConnected || !audioContextRef.current) return;
+    if (isConnecting || isConnected || isDisconnectingRef.current) return;
     setIsConnecting(true);
     isMutedRef.current = false;
     setIsMuted(false);
@@ -208,10 +178,33 @@ export function useVoiceMode({
     setConnectionFailure(null);
     transcriptRef.current = { user: '', ai: '' };
     sessionIdRef.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    messageHandlerRef.current = new VoiceMessageHandler();
+    const setupReady = createSetupReady();
+    setupReadyRef.current = setupReady;
+
+    const engine = new VoiceAudioEngine({
+      onFatalError: (error) => {
+        logger.error('Native voice audio failed', error);
+        if (isMountedRef.current) {
+          setConnectionFailure({
+            kind: 'connection-error',
+            message: 'Voice audio was interrupted. Tap to reconnect.',
+          });
+        }
+        void disconnectRef.current();
+      },
+      onPlaybackStateChange: (state) => {
+        if (!isMountedRef.current) return;
+        if (state === 'playing') setIsAiSpeaking(true);
+        if (state === 'idle' || state === 'stopped') setIsAiSpeaking(false);
+      },
+    });
+    engineRef.current = engine;
 
     try {
-      const permission = await AudioModule.requestRecordingPermissionsAsync();
+      const permission = await engine.requestRecordingPermission();
       if (!isPermissionGranted(permission)) {
+        engineRef.current = null;
         setIsConnecting(false);
         showPermissionRecoveryAlert({
           permission,
@@ -222,54 +215,57 @@ export function useVoiceMode({
         return;
       }
 
-      const tokenResponse = await get<{ token: string }>(endpoint.ephemeralToken);
-      const token = tokenResponse.data?.token;
-      if (!token) throw new Error('Voice session token was not returned');
-
+      const tokenResponse = await get<unknown>(endpoint.ephemeralToken);
+      const liveToken = parseVoiceLiveToken(tokenResponse.data, voiceName ?? 'Fenrir');
       const client = new GoogleGenAI({
-        apiKey: token,
+        apiKey: liveToken.token,
         httpOptions: { apiVersion: 'v1alpha' },
       });
       sessionRef.current = await client.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+        model: liveToken.model,
         callbacks: {
-          onopen: () => {
-            if (isMountedRef.current) setIsConnected(true);
-          },
+          onopen: () => engine.markConnectionOpen(),
           onmessage: handleLiveMessage,
           onerror: (error) => {
             logger.error('Live voice session failed', error);
+            setupReady.reject(new Error('Voice session failed during setup.'));
             if (isMountedRef.current) {
               setConnectionFailure({
                 kind: 'connection-error',
                 message: 'Voice session was disconnected. Tap to reconnect.',
               });
             }
-            void disconnect();
+            void disconnectRef.current();
           },
           onclose: () => {
-            if (isMountedRef.current) void disconnect();
+            setupReady.reject(new Error('Voice session closed during setup.'));
+            void disconnectRef.current();
           },
         },
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            languageCode: 'en-US',
-            voiceConfig: {
-              prebuiltVoiceConfig: {
-                voiceName: voiceName ?? 'Fenrir',
-              },
-            },
-          },
-          inputAudioTranscription: { languageCodes: ['en-US'] },
-          outputAudioTranscription: { languageCodes: ['en-US'] },
-        },
+        config: buildGeminiLiveConfig(liveToken.voiceName),
       });
 
-      await audioContextRef.current.resume();
-      nextPlaybackTimeRef.current = audioContextRef.current.currentTime;
-      await stream.start();
-      timerRef.current = setInterval(() => setRecordingTime((time) => time + 1), 1000);
+      await engine.start((data) => {
+        if (isMutedRef.current) return;
+        sessionRef.current?.sendRealtimeInput({
+          audio: { data, mimeType: 'audio/pcm;rate=16000' },
+        });
+      });
+      await setupReady.promise;
+      sessionRef.current.sendClientContent({
+        turns: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: 'Start with a brief, warm greeting. Then invite me to share what is on my mind.',
+              },
+            ],
+          },
+        ],
+        turnComplete: true,
+      });
+      timerRef.current = setInterval(() => setRecordingTime((time) => time + 1), 1_000);
       if (isMountedRef.current) {
         setIsConnected(true);
         setIsConnecting(false);
@@ -280,27 +276,21 @@ export function useVoiceMode({
         logger.error('Failed to connect voice session', error);
       }
       if (isMountedRef.current) setConnectionFailure(failure);
-      setIsConnecting(false);
       await disconnect();
     }
-  }, [disconnect, handleLiveMessage, isConnected, isConnecting, stream, voiceName]);
+  }, [disconnect, handleLiveMessage, isConnected, isConnecting, voiceName]);
 
   const toggleMute = useCallback(() => {
-    Haptics.selectionAsync();
+    void Haptics.selectionAsync();
     isMutedRef.current = !isMutedRef.current;
     setIsMuted(isMutedRef.current);
   }, []);
 
-  const disconnectRef = useRef(disconnect);
-  disconnectRef.current = disconnect;
-
   useEffect(() => {
     isMountedRef.current = true;
-    audioContextRef.current = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE });
     return () => {
       isMountedRef.current = false;
       void disconnectRef.current();
-      audioContextRef.current?.close().catch(() => undefined);
     };
   }, []);
 

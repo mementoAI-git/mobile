@@ -64,6 +64,7 @@ export interface VoiceAudioNativeAdapter {
   addRouteChangeListener(listener: () => void): VoiceNativeSubscription;
   addAppStateListener(listener: (state: string) => void): VoiceNativeSubscription;
   hasInput(): Promise<boolean>;
+  requestRecordingPermission(): Promise<'Undetermined' | 'Denied' | 'Granted'>;
 }
 
 export type VoiceAudioEngineSnapshot = VoiceMetricSnapshot & {
@@ -114,15 +115,41 @@ export class VoiceAudioEngine {
   private started = false;
   private fatalReported = false;
   private captureDurationAnomalies = 0;
+  private readonly onPlaybackStateChange?: (state: 'idle' | 'prebuffering' | 'playing' | 'stopped') => void;
 
   constructor(options: {
     native?: VoiceAudioNativeAdapter;
     metrics?: VoiceSessionMetrics;
     onFatalError?: (error: Error) => void;
+    onPlaybackStateChange?: (
+      state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
+    ) => void;
   } = {}) {
     this.native = options.native ?? createNativeVoiceAudioAdapter();
     this.metrics = options.metrics ?? new VoiceSessionMetrics();
     this.onFatalError = options.onFatalError;
+    this.onPlaybackStateChange = options.onPlaybackStateChange;
+  }
+
+  async requestRecordingPermission(): Promise<{
+    granted: boolean;
+    status: string;
+    canAskAgain: boolean;
+  }> {
+    const status = await this.native.requestRecordingPermission();
+    return {
+      granted: status === 'Granted',
+      status: status.toLowerCase(),
+      canAskAgain: status === 'Undetermined',
+    };
+  }
+
+  markConnectionOpen(): void {
+    this.metrics.markOpen();
+  }
+
+  markSetupComplete(): void {
+    this.metrics.markSetup();
   }
 
   async start(onInput: (base64Pcm: string) => void): Promise<void> {
@@ -142,6 +169,7 @@ export class VoiceAudioEngine {
         new QueuePlaybackRuntime(this.context),
         undefined,
         this.metrics,
+        this.onPlaybackStateChange,
       );
 
       this.subscriptions = [
@@ -351,5 +379,6 @@ export function createNativeVoiceAudioAdapter(): VoiceAudioNativeAdapter {
       const devices = await audioApi.AudioManager.getDevicesInfo();
       return devices.availableInputs.length > 0 || devices.currentInputs.length > 0;
     },
+    requestRecordingPermission: () => audioApi.AudioManager.requestRecordingPermissions(),
   };
 }
