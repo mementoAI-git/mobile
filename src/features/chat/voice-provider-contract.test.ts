@@ -45,4 +45,23 @@ describe('Gemini voice provider contract', () => {
     expect(source).not.toContain("activeVoice.id === 'deep-masculine'");
     expect(source).not.toContain('VOICE_OPTIONS');
   });
+
+  test('disconnects on background and makes native close callbacks idempotent', async () => {
+    const hook = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+    const engine = await Bun.file(new URL('./voice-audio-engine.ts', import.meta.url)).text();
+
+    expect(engine).toContain("if (state === 'background')");
+    expect(engine).not.toContain("state === 'active'");
+    expect(hook).toContain('if (isDisconnectingRef.current) return');
+    expect(hook).toContain('onclose: () =>');
+    expect(hook).toContain('void disconnectRef.current()');
+  });
+
+  test('turns recorder failures into the reconnectable connection state', async () => {
+    const source = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+
+    expect(source).toContain('onFatalError: (error) =>');
+    expect(source).toContain("kind: 'connection-error'");
+    expect(source).toContain('Voice audio was interrupted. Tap to reconnect.');
+  });
 });

@@ -15,6 +15,10 @@ import {
   parseVoiceLiveToken,
 } from '@/features/chat/voice-live-config';
 import { VoiceMessageHandler } from '@/features/chat/voice-message-handler';
+import {
+  VoiceTranscriptTurns,
+  type VoiceTranscriptTurn,
+} from '@/features/chat/voice-transcript-turns';
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { logger } from '@/lib/logger';
@@ -50,6 +54,12 @@ function createSetupReady(): SetupReady {
   };
 }
 
+function restoreTurns(accumulator: VoiceTranscriptTurns, turns: VoiceTranscriptTurn[]): void {
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    accumulator.restoreFailedTurn(turns[index]);
+  }
+}
+
 export function useVoiceMode({
   memoryId,
   voiceName,
@@ -71,39 +81,39 @@ export function useVoiceMode({
   const isMountedRef = useRef(true);
   const isDisconnectingRef = useRef(false);
   const sessionIdRef = useRef<string | null>(null);
-  const transcriptRef = useRef({ user: '', ai: '' });
+  const transcriptRef = useRef(new VoiceTranscriptTurns());
+  const transcriptFlushRef = useRef(Promise.resolve());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const memoryIdRef = useRef(memoryId);
   memoryIdRef.current = memoryId;
 
-  const flushTranscripts = useCallback(async () => {
-    const messages = Object.entries(transcriptRef.current)
-      .filter(([, text]) => text.trim())
-      .map(([role, text]) => ({ role, text, is_voice: true }));
-    if (!messages.length) return;
-    const targetMemoryId = memoryIdRef.current;
-    if (!targetMemoryId) return;
-    transcriptRef.current = { user: '', ai: '' };
+  const flushTranscripts = useCallback(() => {
+    const persist = async () => {
+      const turns = transcriptRef.current.drainCompleted();
+      if (!turns.length) return;
+      const targetMemoryId = memoryIdRef.current;
+      if (!targetMemoryId) {
+        restoreTurns(transcriptRef.current, turns);
+        return;
+      }
 
-    try {
-      await post(endpoint.addMessageToMemory, {
-        memory_id: targetMemoryId,
-        session_id: sessionIdRef.current,
-        messages,
-      });
-    } catch (error) {
-      logger.error('Failed to save voice transcript', error);
-      transcriptRef.current = {
-        user: messages.find((message) => message.role === 'user')?.text || '',
-        ai: messages.find((message) => message.role === 'ai')?.text || '',
-      };
-    }
+      try {
+        await post(endpoint.addMessageToMemory, {
+          memory_id: targetMemoryId,
+          session_id: sessionIdRef.current,
+          messages: turns.flatMap((turn) => turn.messages),
+        });
+      } catch (error) {
+        logger.error('Failed to save voice transcript', error);
+        restoreTurns(transcriptRef.current, turns);
+      }
+    };
+    transcriptFlushRef.current = transcriptFlushRef.current.then(persist, persist);
+    return transcriptFlushRef.current;
   }, []);
 
   useEffect(() => {
-    if (memoryId && (transcriptRef.current.user || transcriptRef.current.ai)) {
-      void flushTranscripts();
-    }
+    if (memoryId) void flushTranscripts();
   }, [memoryId, flushTranscripts]);
 
   const handleLiveMessage = useCallback(
@@ -115,19 +125,22 @@ export function useVoiceMode({
           setupReadyRef.current?.resolve();
         } else if (effect.type === 'interrupted') {
           engine?.interruptOutput(effect.epoch);
+          transcriptRef.current.completeTurn();
+          void flushTranscripts();
           if (isMountedRef.current) setIsAiSpeaking(false);
         } else if (effect.type === 'output-audio') {
           if (engine?.enqueueOutput(effect.data, effect.epoch) && isMountedRef.current) {
             setIsAiSpeaking(true);
           }
         } else if (effect.type === 'input-transcript') {
-          transcriptRef.current.user += effect.text;
-          if (isMountedRef.current) setUserSpeechText(transcriptRef.current.user);
+          const text = transcriptRef.current.appendUser(effect.text);
+          if (isMountedRef.current) setUserSpeechText(text);
         } else if (effect.type === 'output-transcript') {
-          transcriptRef.current.ai += effect.text;
-          if (isMountedRef.current) setAiSpeechText(transcriptRef.current.ai);
+          const text = transcriptRef.current.appendModel(effect.text);
+          if (isMountedRef.current) setAiSpeechText(text);
         } else if (effect.type === 'turn-complete') {
           engine?.finishOutputTurn();
+          transcriptRef.current.completeTurn();
           void flushTranscripts();
         }
       }
@@ -150,6 +163,7 @@ export function useVoiceMode({
     const session = sessionRef.current;
     sessionRef.current = null;
     session?.close();
+    transcriptRef.current.completeTurn();
     await flushTranscripts();
 
     if (timerRef.current) {
@@ -176,7 +190,7 @@ export function useVoiceMode({
     setAiSpeechText('Connecting secure voice link...');
     setUserSpeechText('');
     setConnectionFailure(null);
-    transcriptRef.current = { user: '', ai: '' };
+    transcriptRef.current = new VoiceTranscriptTurns();
     sessionIdRef.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     messageHandlerRef.current = new VoiceMessageHandler();
     const setupReady = createSetupReady();
