@@ -25,7 +25,9 @@ describe('Gemini voice provider contract', () => {
     expect(source).toContain('parseVoiceLiveToken');
     expect(source).toContain('buildGeminiLiveConfig');
     expect(source).toContain("effect.type === 'interrupted'");
-    expect(source).toContain('interruptOutput(effect.epoch)');
+    // Engine is the sole epoch owner — nextEpoch() is called, then interruptOutput(newEpoch)
+    expect(source).toContain('engine?.nextEpoch()');
+    expect(source).toContain('engine?.interruptOutput(newEpoch)');
   });
 
   test('waits for setup before starting the conversation', async () => {
@@ -63,5 +65,19 @@ describe('Gemini voice provider contract', () => {
     expect(source).toContain('onFatalError: (error) =>');
     expect(source).toContain("kind: 'connection-error'");
     expect(source).toContain('Voice audio was interrupted. Tap to reconnect.');
+  });
+
+  test('persists voice transcripts to memory and invalidates chat query cache', async () => {
+    const hook = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+    const chatScreen = await Bun.file(new URL('../../screens/ChatScreen.tsx', import.meta.url)).text();
+    const bubble = await Bun.file(new URL('../../components/chat/MessageBubble.tsx', import.meta.url)).text();
+
+    expect(hook).toContain('endpoint.addMessageToMemory');
+    expect(hook).toContain('queryKeys.promptMessages');
+    expect(hook).toContain('primary_conversation_id');
+    expect(chatScreen).toContain('useFocusEffect(');
+    expect(chatScreen).toContain('queryKeys.promptMessages');
+    expect(bubble).toContain('isVoice');
+    expect(bubble).toContain('Spoken');
   });
 });

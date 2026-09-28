@@ -46,4 +46,17 @@ describe('native voice runtime contract', () => {
     expect(optionsDeclaration).toContain('androidInputPreset?: AndroidInputPreset');
     expect(optionsDeclaration).toContain("'voiceCommunication'");
   });
+
+  test('accounts for native playback buffers in Hermes memory pressure', async () => {
+    const installerSource = await Bun.file(
+      repoFile(
+        'node_modules/react-native-audio-api/common/cpp/audioapi/AudioAPIModuleInstaller.h',
+      ),
+    ).text();
+    const createBufferFunction = installerSource.slice(
+      installerSource.indexOf('static jsi::Function getCreateAudioBufferFunction'),
+    );
+
+    expect(createBufferFunction).toContain('setExternalMemoryPressure');
+  });
 });

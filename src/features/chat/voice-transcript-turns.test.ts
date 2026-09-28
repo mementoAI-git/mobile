@@ -67,4 +67,15 @@ describe('VoiceTranscriptTurns', () => {
       { messages: [{ role: 'user', text: 'later', is_voice: true }] },
     ]);
   });
+
+  test('reports hasTurns accurately', () => {
+    const turns = new VoiceTranscriptTurns();
+    expect(turns.hasTurns()).toBe(false);
+    turns.appendUser('hello');
+    expect(turns.hasTurns()).toBe(false);
+    turns.completeTurn();
+    expect(turns.hasTurns()).toBe(true);
+    turns.drainCompleted();
+    expect(turns.hasTurns()).toBe(false);
+  });
 });

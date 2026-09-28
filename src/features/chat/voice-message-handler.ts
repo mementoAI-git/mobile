@@ -5,15 +5,13 @@ export type VoiceMessageEffect =
   | { type: 'output-audio'; data: string; epoch: number }
   | { type: 'input-transcript'; text: string }
   | { type: 'output-transcript'; text: string }
-  | { type: 'interrupted'; epoch: number }
+  | { type: 'interrupted' }
   | { type: 'turn-complete' };
 
 type VoiceServerMessage = Pick<LiveServerMessage, 'serverContent' | 'setupComplete'>;
 
 export class VoiceMessageHandler {
-  private epoch = 1;
-
-  handle(message: VoiceServerMessage): VoiceMessageEffect[] {
+  handle(message: VoiceServerMessage, currentEpoch: number): VoiceMessageEffect[] {
     const effects: VoiceMessageEffect[] = [];
 
     if (message.setupComplete) effects.push({ type: 'setup-complete' });
@@ -22,18 +20,18 @@ export class VoiceMessageHandler {
     if (!content) return effects;
 
     if (content.interrupted) {
-      this.epoch += 1;
-      effects.push({ type: 'interrupted', epoch: this.epoch });
+      effects.push({ type: 'interrupted' });
     }
 
     for (const part of content.modelTurn?.parts ?? []) {
       const data = part.inlineData?.data;
       if (typeof data === 'string' && data.length > 0) {
-        effects.push({ type: 'output-audio', data, epoch: this.epoch });
+        effects.push({ type: 'output-audio', data, epoch: currentEpoch });
       }
     }
 
-    const inputText = content.inputTranscription?.text;
+    const inputText =
+      content.inputTranscription?.text ?? content.interimInputTranscription?.text;
     if (typeof inputText === 'string' && inputText.length > 0) {
       effects.push({ type: 'input-transcript', text: inputText });
     }

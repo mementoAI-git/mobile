@@ -9,6 +9,7 @@ import { VoiceSessionMetrics } from './voice-session-metrics';
 
 export const VOICE_PREBUFFER_MS = 120;
 export const VOICE_STARTUP_DEADLINE_MS = 180;
+export const VOICE_MAX_QUEUE_MS = 5_000;
 
 const defaultScheduler: VoiceTimerScheduler = {
   setTimeout: (callback, delayMs) => globalThis.setTimeout(callback, delayMs),
@@ -24,6 +25,7 @@ export class VoicePlaybackController {
   private activeTurn = false;
   private queueStarted = false;
   private startupTimer?: unknown;
+  private lastPlaybackEndTime = 0;
   private readonly queuedBuffers = new Map<string, VoiceQueuedBuffer>();
 
   constructor(
@@ -37,6 +39,7 @@ export class VoicePlaybackController {
 
   enqueue(base64Pcm: string, epoch = this.epoch): boolean {
     if (this.state === 'stopped' || epoch !== this.epoch) return false;
+    if (this.queueDepthMs >= VOICE_MAX_QUEUE_MS) return false;
 
     const buffer = this.runtime.enqueue(base64Pcm);
     if (!Number.isFinite(buffer.durationMs) || buffer.durationMs <= 0) return false;
@@ -69,6 +72,7 @@ export class VoicePlaybackController {
     this.epoch = epoch;
     this.resetQueueState();
     this.setState('idle');
+    this.lastPlaybackEndTime = 0;
     this.createQueue();
     this.metrics.markSilence();
   }
@@ -91,11 +95,34 @@ export class VoicePlaybackController {
     this.runtime.stop();
     this.resetQueueState();
     this.setState('stopped');
+    this.lastPlaybackEndTime = 0;
   }
 
   getQueueDepthMs(): number {
     return this.queueDepthMs;
   }
+
+  isPlaying(): boolean {
+    return this.state === 'playing';
+  }
+
+  isAudible(hangoverMs = 350): boolean {
+    if (this.state === 'playing' || this.state === 'prebuffering' || this.activeTurn) {
+      return true;
+    }
+    if (
+      this.lastPlaybackEndTime > 0 &&
+      Date.now() - this.lastPlaybackEndTime < hangoverMs
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  getEpoch(): number {
+    return this.epoch;
+  }
+
 
   private createQueue(): void {
     this.runtime.createQueue((event) => this.handleBufferEnded(event));
@@ -156,6 +183,9 @@ export class VoicePlaybackController {
 
   private setState(state: VoicePlaybackState): void {
     if (this.state === state) return;
+    if (this.state === 'playing' && (state === 'idle' || state === 'stopped')) {
+      this.lastPlaybackEndTime = Date.now();
+    }
     this.state = state;
     this.onStateChange?.(state);
   }

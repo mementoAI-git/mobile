@@ -18,10 +18,16 @@ import { VoiceMessageHandler } from '@/features/chat/voice-message-handler';
 import {
   VoiceTranscriptTurns,
   type VoiceTranscriptTurn,
+  type VoiceTranscriptMessage,
 } from '@/features/chat/voice-transcript-turns';
+import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
+import { getConversationMessagesUrl } from '@/features/chat/conversation-pagination';
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { logger } from '@/lib/logger';
+import { queryClient } from '@/lib/query-client';
+import { queryKeys } from '@/constants/query-keys';
+import { useAuthStore, useUserStore } from '@/store';
 
 type SetupReady = {
   promise: Promise<void>;
@@ -78,31 +84,74 @@ export function useVoiceMode({
   const messageHandlerRef = useRef(new VoiceMessageHandler());
   const setupReadyRef = useRef<SetupReady | null>(null);
   const isMutedRef = useRef(false);
+  const isGreetingActiveRef = useRef(false);
+  const isAiSpeakingRef = useRef(false);
   const isMountedRef = useRef(true);
   const isDisconnectingRef = useRef(false);
-  const sessionIdRef = useRef<string | null>(null);
+  const sessionIdRef = useRef<string>(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const transcriptRef = useRef(new VoiceTranscriptTurns());
   const transcriptFlushRef = useRef(Promise.resolve());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingTimeRef = useRef(0);
+  const userSpeechTextRef = useRef('');
+  const aiSpeechTextRef = useRef('');
   const memoryIdRef = useRef(memoryId);
-  memoryIdRef.current = memoryId;
+  if (memoryId && /^[0-9a-fA-F]{24}$/.test(memoryId)) {
+    memoryIdRef.current = memoryId;
+  }
 
   const flushTranscripts = useCallback(() => {
     const persist = async () => {
       const turns = transcriptRef.current.drainCompleted();
       if (!turns.length) return;
-      const targetMemoryId = memoryIdRef.current;
-      if (!targetMemoryId) {
-        restoreTurns(transcriptRef.current, turns);
-        return;
+
+      const cachedProfile = queryClient.getQueryData<any>(queryKeys.profile);
+      const userPrimaryId =
+        useUserStore.getState().user?.primary_conversation_id ??
+        useAuthStore.getState().user?.primary_conversation_id ??
+        cachedProfile?.primary_conversation_id;
+      const rawTargetId = memoryIdRef.current || userPrimaryId;
+      const targetMemoryId =
+        rawTargetId && /^[0-9a-fA-F]{24}$/.test(rawTargetId) ? rawTargetId : undefined;
+
+      const payload: {
+        session_id: string;
+        messages: VoiceTranscriptMessage[];
+        memory_id?: string;
+      } = {
+        session_id: sessionIdRef.current,
+        messages: turns.flatMap((turn) => turn.messages),
+      };
+      if (targetMemoryId) {
+        payload.memory_id = targetMemoryId;
       }
 
       try {
-        await post(endpoint.addMessageToMemory, {
-          memory_id: targetMemoryId,
-          session_id: sessionIdRef.current,
-          messages: turns.flatMap((turn) => turn.messages),
-        });
+        const res = await post(endpoint.addMessageToMemory, payload);
+        const data = (res as any)?.data;
+        const createdList = Array.isArray(data) ? data : (Array.isArray(res) ? res : []);
+        const createdMemoryId =
+          createdList[0]?.memory || (data as any)?.memory || targetMemoryId;
+
+        if (createdMemoryId) {
+          memoryIdRef.current = createdMemoryId;
+          const currentUser = useUserStore.getState().user;
+          if (currentUser && !currentUser.primary_conversation_id) {
+            useUserStore.getState().setUser({
+              ...currentUser,
+              primary_conversation_id: createdMemoryId,
+            });
+          }
+
+          void queryClient.invalidateQueries({
+            queryKey: queryKeys.promptMessages(createdMemoryId),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: queryKeys.memory(createdMemoryId),
+          });
+        }
+        void queryClient.invalidateQueries({ queryKey: queryKeys.memories() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.stories() });
       } catch (error) {
         logger.error('Failed to save voice transcript', error);
         restoreTurns(transcriptRef.current, turns);
@@ -113,32 +162,46 @@ export function useVoiceMode({
   }, []);
 
   useEffect(() => {
-    if (memoryId) void flushTranscripts();
+    if (memoryId && /^[0-9a-fA-F]{24}$/.test(memoryId)) {
+      memoryIdRef.current = memoryId;
+      void flushTranscripts();
+    }
   }, [memoryId, flushTranscripts]);
 
   const handleLiveMessage = useCallback(
     (message: LiveServerMessage) => {
       const engine = engineRef.current;
-      for (const effect of messageHandlerRef.current.handle(message)) {
+      const currentEpoch = engine?.getEpoch() ?? 1;
+      for (const effect of messageHandlerRef.current.handle(message, currentEpoch)) {
         if (effect.type === 'setup-complete') {
           engine?.markSetupComplete();
           setupReadyRef.current?.resolve();
         } else if (effect.type === 'interrupted') {
-          engine?.interruptOutput(effect.epoch);
+          // Server confirmed interruption — engine owns the new epoch
+          const newEpoch = engine?.nextEpoch() ?? 1;
+          engine?.interruptOutput(newEpoch);
+          isGreetingActiveRef.current = false;
+          isAiSpeakingRef.current = false;
           transcriptRef.current.completeTurn();
           void flushTranscripts();
           if (isMountedRef.current) setIsAiSpeaking(false);
         } else if (effect.type === 'output-audio') {
           if (engine?.enqueueOutput(effect.data, effect.epoch) && isMountedRef.current) {
+            isAiSpeakingRef.current = true;
             setIsAiSpeaking(true);
           }
         } else if (effect.type === 'input-transcript') {
           const text = transcriptRef.current.appendUser(effect.text);
+          userSpeechTextRef.current = text;
           if (isMountedRef.current) setUserSpeechText(text);
         } else if (effect.type === 'output-transcript') {
           const text = transcriptRef.current.appendModel(effect.text);
+          aiSpeechTextRef.current = text;
           if (isMountedRef.current) setAiSpeechText(text);
         } else if (effect.type === 'turn-complete') {
+          // Signal the playback controller that no more buffers are coming for this turn.
+          // Do NOT disarm isGreetingActiveRef here — playback may still be draining.
+          // onPlaybackStateChange→idle is the sole authority for disarming the greeting shield.
           engine?.finishOutputTurn();
           transcriptRef.current.completeTurn();
           void flushTranscripts();
@@ -152,6 +215,7 @@ export function useVoiceMode({
     if (isDisconnectingRef.current) return;
     isDisconnectingRef.current = true;
     isMutedRef.current = true;
+    isGreetingActiveRef.current = false;
     setupReadyRef.current?.reject(new Error('Voice session closed before setup completed.'));
     setupReadyRef.current = null;
 
@@ -164,6 +228,21 @@ export function useVoiceMode({
     sessionRef.current = null;
     session?.close();
     transcriptRef.current.completeTurn();
+
+    // If no turns were captured but the session was active, ensure a voice session entry is recorded
+    if (!transcriptRef.current.hasTurns() && recordingTimeRef.current >= 3) {
+      const userText = userSpeechTextRef.current.trim() || 'Spoken conversation with Memento';
+      const aiText =
+        aiSpeechTextRef.current.trim() &&
+        !aiSpeechTextRef.current.includes('Ready to connect') &&
+        !aiSpeechTextRef.current.includes('Connecting')
+          ? aiSpeechTextRef.current.trim()
+          : `Voice call completed (${formatVoiceCallDuration(recordingTimeRef.current)})`;
+      transcriptRef.current.appendUser(userText);
+      transcriptRef.current.appendModel(aiText);
+      transcriptRef.current.completeTurn();
+    }
+
     await flushTranscripts();
 
     if (timerRef.current) {
@@ -173,6 +252,7 @@ export function useVoiceMode({
     if (isMountedRef.current) {
       setIsConnected(false);
       setIsConnecting(false);
+      isAiSpeakingRef.current = false;
       setIsAiSpeaking(false);
     }
     isDisconnectingRef.current = false;
@@ -185,8 +265,13 @@ export function useVoiceMode({
     if (isConnecting || isConnected || isDisconnectingRef.current) return;
     setIsConnecting(true);
     isMutedRef.current = false;
+    isGreetingActiveRef.current = true;
+    isAiSpeakingRef.current = false;
     setIsMuted(false);
     setRecordingTime(0);
+    recordingTimeRef.current = 0;
+    userSpeechTextRef.current = '';
+    aiSpeechTextRef.current = '';
     setAiSpeechText('Connecting secure voice link...');
     setUserSpeechText('');
     setConnectionFailure(null);
@@ -209,11 +294,17 @@ export function useVoiceMode({
       },
       onPlaybackStateChange: (state) => {
         if (!isMountedRef.current) return;
-        if (state === 'playing') setIsAiSpeaking(true);
-        if (state === 'idle' || state === 'stopped') setIsAiSpeaking(false);
+        const playing = state === 'playing';
+        isAiSpeakingRef.current = playing;
+        setIsAiSpeaking(playing);
+        if (state === 'idle' || state === 'stopped') {
+          // Greeting shield disarms here — sole authority for opening the uplink
+          isGreetingActiveRef.current = false;
+        }
       },
     });
     engineRef.current = engine;
+
 
     try {
       const permission = await engine.requestRecordingPermission();
@@ -229,8 +320,72 @@ export function useVoiceMode({
         return;
       }
 
-      const tokenResponse = await get<unknown>(endpoint.ephemeralToken);
+      const url = memoryId
+        ? `${endpoint.ephemeralToken}?memory_id=${encodeURIComponent(memoryId)}`
+        : endpoint.ephemeralToken;
+      const tokenResponse = await get<unknown>(url);
       const liveToken = parseVoiceLiveToken(tokenResponse.data, voiceName ?? 'Fenrir');
+
+      const user = useUserStore.getState().user;
+      const targetMemoryId = memoryIdRef.current;
+
+      // 1. Gather recent conversation messages from query cache or network
+      let recentChatLines: string[] = [];
+      if (targetMemoryId) {
+        const cachedMessages = queryClient.getQueryData<any>(queryKeys.promptMessages(targetMemoryId));
+        let messages = cachedMessages?.pages?.flatMap((p: any) => p.messages ?? []) ?? [];
+        if (!messages.length) {
+          try {
+            const fetched = await get<any>(getConversationMessagesUrl(endpoint.aiPromptMessage, targetMemoryId));
+            messages = fetched.data?.messages ?? [];
+          } catch {
+            // Non-blocking fallback
+          }
+        }
+        recentChatLines = messages
+          .slice(-12)
+          .map((m: any) => {
+            const role = m.role === 'user' ? (user?.nickname || 'User') : 'Memento';
+            const body = (m.text || m.content || '').trim();
+            return body ? `${role}: ${body}` : '';
+          })
+          .filter(Boolean);
+      }
+
+      // 2. Gather memory reflection topic & notes
+      let memoryTitle = '';
+      let memoryBody = '';
+      if (targetMemoryId) {
+        let mem = queryClient.getQueryData<any>(queryKeys.memory(targetMemoryId));
+        if (!mem) {
+          try {
+            const fetchedMem = await get<any>(endpoint.memory.replace(':id', targetMemoryId));
+            mem = fetchedMem.data;
+          } catch {
+            // Non-blocking fallback
+          }
+        }
+        if (mem) {
+          memoryTitle = (mem.title || mem.prompt_text || '').trim();
+          memoryBody = (mem.body || '').trim();
+        }
+      }
+
+      // 3. User insights summary
+      const insights = queryClient.getQueryData<any>(queryKeys.personaMemoryInsightsSummary);
+      const userInsights = insights?.summary ? `User Persona Insights: ${insights.summary}` : '';
+
+      // 4. Assemble the grounded context block
+      const contextBlocks = [
+        liveToken.systemInstruction,
+        userInsights,
+        memoryTitle ? `REFLECTION TOPIC:\n"${memoryTitle}"` : '',
+        memoryBody ? `MEMORY NOTES / DRAFT:\n"${memoryBody.slice(0, 400)}"` : '',
+        recentChatLines.length > 0 ? `RECENT CONVERSATION HISTORY (Last ${recentChatLines.length} turns):\n${recentChatLines.join('\n')}` : '',
+      ].filter(Boolean);
+
+      const assembledContext = contextBlocks.join('\n\n');
+
       const client = new GoogleGenAI({
         apiKey: liveToken.token,
         httpOptions: { apiVersion: 'v1alpha' },
@@ -256,30 +411,48 @@ export function useVoiceMode({
             void disconnectRef.current();
           },
         },
-        config: buildGeminiLiveConfig(liveToken.voiceName),
+        config: buildGeminiLiveConfig(
+          liveToken.voiceName,
+          user,
+          assembledContext,
+        ),
       });
 
+      // Arm the greeting shield BEFORE awaiting setup-complete so that
+      // microphone audio captured during the WebSocket handshake cannot
+      // escape to the server and trigger false VAD interruptions.
       await engine.start((data) => {
-        if (isMutedRef.current) return;
+        if (isMutedRef.current || isGreetingActiveRef.current) return;
         sessionRef.current?.sendRealtimeInput({
           audio: { data, mimeType: 'audio/pcm;rate=16000' },
         });
       });
+      engine.armGreetingShield();
       await setupReady.promise;
+      const userGreetingName = user?.nickname || user?.first_name || '';
+      const greetingPrompt = memoryTitle
+        ? `Start with a brief, warm greeting in English${userGreetingName ? ` to ${userGreetingName}` : ''}. You may briefly reference our reflection on "${memoryTitle}" and ask what they would like to explore or share today. Maintain English exclusively and never fabricate or assume past events.`
+        : recentChatLines.length > 0
+          ? `Start with a brief, warm greeting in English${userGreetingName ? ` to ${userGreetingName}` : ''}. Welcome them back and ask how they would like to continue our conversation today. Maintain English exclusively and do not invent past conversations.`
+          : `Start with a brief, warm greeting in English${userGreetingName ? ` to ${userGreetingName}` : ''}. Then warmly invite them to share what is on their mind today. Maintain English exclusively.`;
+
       sessionRef.current.sendClientContent({
         turns: [
           {
             role: 'user',
             parts: [
               {
-                text: 'Start with a brief, warm greeting. Then invite me to share what is on my mind.',
+                text: greetingPrompt,
               },
             ],
           },
         ],
         turnComplete: true,
       });
-      timerRef.current = setInterval(() => setRecordingTime((time) => time + 1), 1_000);
+      timerRef.current = setInterval(() => {
+        recordingTimeRef.current += 1;
+        setRecordingTime((time) => time + 1);
+      }, 1_000);
       if (isMountedRef.current) {
         setIsConnected(true);
         setIsConnecting(false);
@@ -299,6 +472,20 @@ export function useVoiceMode({
     isMutedRef.current = !isMutedRef.current;
     setIsMuted(isMutedRef.current);
   }, []);
+
+  const interrupt = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const engine = engineRef.current;
+    if (!engine) return;
+    const newEpoch = engine.nextEpoch();
+    engine.interruptOutput(newEpoch);
+    isAiSpeakingRef.current = false;
+    transcriptRef.current.completeTurn();
+    void flushTranscripts();
+    if (isMountedRef.current) {
+      setIsAiSpeaking(false);
+    }
+  }, [flushTranscripts]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -321,6 +508,7 @@ export function useVoiceMode({
       connect,
       disconnect,
       toggleMute,
+      interrupt,
     }),
     [
       isConnected,
@@ -334,6 +522,7 @@ export function useVoiceMode({
       connect,
       disconnect,
       toggleMute,
+      interrupt,
     ],
   );
 }

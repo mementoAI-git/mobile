@@ -4,7 +4,10 @@ import type {
   VoiceQueuedBuffer,
 } from './voice-audio-types';
 import { VoicePlaybackController } from './voice-playback-controller';
-import { float32ToPcm16Base64, pcm16Base64ToFloat32 } from './voice-pcm';
+import {
+  float32ToPcm16Base64,
+  pcm16Base64ToFloat32,
+} from './voice-pcm';
 import { VoiceSessionMetrics, type VoiceMetricSnapshot } from './voice-session-metrics';
 
 const INPUT_SAMPLE_RATE = 16_000;
@@ -16,6 +19,32 @@ export const VOICE_SESSION_OPTIONS = {
   iosMode: 'voiceChat' as const,
   iosOptions: ['defaultToSpeaker', 'allowBluetoothHFP'] as const,
 };
+
+export function isHeadphonesRoute(
+  outputs?: Array<{ name?: string; category?: string }>,
+): boolean {
+  if (!outputs || outputs.length === 0) return false;
+  return outputs.some((output) => {
+    const category = (output.category ?? '').toLowerCase();
+    const name = (output.name ?? '').toLowerCase();
+    const isHeadphoneCategory =
+      category.includes('headphone') ||
+      category.includes('headset') ||
+      category.includes('bluetooth') ||
+      category.includes('airplay') ||
+      category.includes('lineout') ||
+      category.includes('usb') ||
+      category.includes('hearingaid');
+    const isHeadphoneName =
+      name.includes('headphone') ||
+      name.includes('headset') ||
+      name.includes('airpods') ||
+      name.includes('earbuds') ||
+      name.includes('buds') ||
+      name.includes('bluetooth');
+    return isHeadphoneCategory || isHeadphoneName;
+  });
+}
 
 export type VoiceCaptureEvent = {
   buffer: { getChannelData(channel: number): Float32Array };
@@ -64,11 +93,21 @@ export interface VoiceAudioNativeAdapter {
   addRouteChangeListener(listener: () => void): VoiceNativeSubscription;
   addAppStateListener(listener: (state: string) => void): VoiceNativeSubscription;
   hasInput(): Promise<boolean>;
+  isHeadphonesConnected?(): Promise<boolean>;
   requestRecordingPermission(): Promise<'Undetermined' | 'Denied' | 'Granted'>;
 }
 
 export type VoiceAudioEngineSnapshot = VoiceMetricSnapshot & {
   captureDurationAnomalies: number;
+};
+
+export type VoiceAudioEngineOptions = {
+  native?: VoiceAudioNativeAdapter;
+  metrics?: VoiceSessionMetrics;
+  onFatalError?: (error: Error) => void;
+  onPlaybackStateChange?: (
+    state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
+  ) => void;
 };
 
 class QueuePlaybackRuntime implements VoicePlaybackRuntime {
@@ -107,6 +146,9 @@ export class VoiceAudioEngine {
   private readonly native: VoiceAudioNativeAdapter;
   private readonly metrics: VoiceSessionMetrics;
   private readonly onFatalError?: (error: Error) => void;
+  private readonly onPlaybackStateChange?: (
+    state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
+  ) => void;
   private context?: VoiceAudioContextAdapter;
   private recorder?: VoiceAudioRecorderAdapter;
   private playback?: VoicePlaybackController;
@@ -115,16 +157,11 @@ export class VoiceAudioEngine {
   private started = false;
   private fatalReported = false;
   private captureDurationAnomalies = 0;
-  private readonly onPlaybackStateChange?: (state: 'idle' | 'prebuffering' | 'playing' | 'stopped') => void;
+  private epoch = 1;
+  private isHeadphones = false;
+  private greetingShieldActive = false;
 
-  constructor(options: {
-    native?: VoiceAudioNativeAdapter;
-    metrics?: VoiceSessionMetrics;
-    onFatalError?: (error: Error) => void;
-    onPlaybackStateChange?: (
-      state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
-    ) => void;
-  } = {}) {
+  constructor(options: VoiceAudioEngineOptions = {}) {
     this.native = options.native ?? createNativeVoiceAudioAdapter();
     this.metrics = options.metrics ?? new VoiceSessionMetrics();
     this.onFatalError = options.onFatalError;
@@ -152,6 +189,27 @@ export class VoiceAudioEngine {
     this.metrics.markSetup();
   }
 
+  isHeadphonesActive(): boolean {
+    return this.isHeadphones;
+  }
+
+  isPlaying(): boolean {
+    return this.playback?.isPlaying() ?? false;
+  }
+
+  isAudible(hangoverMs?: number): boolean {
+    return this.playback?.isAudible(hangoverMs) ?? false;
+  }
+
+  getEpoch(): number {
+    return this.epoch;
+  }
+
+  nextEpoch(): number {
+    this.epoch += 1;
+    return this.epoch;
+  }
+
   async start(onInput: (base64Pcm: string) => void): Promise<void> {
     if (this.started) return;
 
@@ -159,23 +217,30 @@ export class VoiceAudioEngine {
     await this.native.setSessionActive(true);
 
     try {
-      this.context = this.native.createContext(OUTPUT_SAMPLE_RATE);
-      await this.context.resume();
       this.recorder = this.native.createRecorder({
         iosVoiceProcessing: true,
         androidInputPreset: 'voiceCommunication',
       });
+      this.context = this.native.createContext(OUTPUT_SAMPLE_RATE);
+      await this.context.resume();
       this.playback = new VoicePlaybackController(
         new QueuePlaybackRuntime(this.context),
         undefined,
         this.metrics,
-        this.onPlaybackStateChange,
+        (state) => {
+          if (state === 'idle' || state === 'stopped') {
+            this.greetingShieldActive = false;
+          }
+          this.onPlaybackStateChange?.(state);
+        },
       );
 
       this.subscriptions = [
         this.native.addRouteChangeListener(() => void this.handleRouteChange()),
         this.native.addAppStateListener((state) => void this.handleAppState(state)),
       ];
+
+      await this.updateAudioRoute();
 
       this.recorder.onAudioReady(
         {
@@ -184,6 +249,17 @@ export class VoiceAudioEngine {
           channelCount: 1,
         },
         (event) => {
+          // Protect the initial greeting window: the model is speaking and the mic
+          // would capture its own echo. Once playback goes idle the shield disarms
+          // and we stream all frames unconditionally — server-side VAD handles the rest.
+          if (this.greetingShieldActive) return;
+
+          // When audio is outputting through the device loudspeaker (no headphones connected),
+          // suppress mic uplink while playback is active/audible to eliminate acoustic echo feedback
+          // that causes the server VAD to falsely detect user speech and cut the AI response.
+          // When headphones are connected, full duplex is safe (no acoustic speaker feedback).
+          if (!this.isHeadphones && this.isAudible(200)) return;
+
           const channel = event.buffer.getChannelData(0);
           const actualFrames = Math.min(event.numFrames, channel.length);
           if (actualFrames !== INPUT_BUFFER_FRAMES) this.captureDurationAnomalies += 1;
@@ -201,16 +277,28 @@ export class VoiceAudioEngine {
     }
   }
 
+  armGreetingShield(): void {
+    this.greetingShieldActive = true;
+  }
+
+  disarmGreetingShield(): void {
+    this.greetingShieldActive = false;
+  }
+
   enqueueOutput(base64Pcm: string, epoch: number): boolean {
     return this.playback?.enqueue(base64Pcm, epoch) ?? false;
   }
 
   interruptOutput(epoch: number): void {
-    this.playback?.interrupt(epoch);
+    this.epoch = Math.max(this.epoch, epoch);
+    this.playback?.interrupt(this.epoch);
   }
 
-  finishOutputTurn(): void {
+  finishOutputTurn(options?: { forceDisarm?: boolean }): void {
     this.playback?.finishTurn();
+    if (options?.forceDisarm || !this.playback?.isPlaying()) {
+      this.greetingShieldActive = false;
+    }
   }
 
   async handleAppState(state: string): Promise<void> {
@@ -230,8 +318,19 @@ export class VoiceAudioEngine {
     };
   }
 
+  private async updateAudioRoute(): Promise<void> {
+    if (this.native.isHeadphonesConnected) {
+      try {
+        this.isHeadphones = await this.native.isHeadphonesConnected();
+      } catch {
+        this.isHeadphones = false;
+      }
+    }
+  }
+
   private async handleRouteChange(): Promise<void> {
     this.metrics.markRouteChange();
+    await this.updateAudioRoute();
     try {
       if (!(await this.native.hasInput())) {
         await this.fail(new Error('Voice mode lost its audio input route.'));
@@ -312,9 +411,7 @@ export function createNativeVoiceAudioAdapter(): VoiceAudioNativeAdapter {
 
     enqueue(samples: Float32Array, sampleRate: number): VoiceQueuedBuffer {
       const buffer = this.context.createBuffer(1, samples.length, sampleRate);
-      const ownedSamples = new Float32Array(samples.length);
-      ownedSamples.set(samples);
-      buffer.copyToChannel(ownedSamples, 0);
+      buffer.copyToChannel(samples as unknown as Float32Array<ArrayBuffer>, 0);
       const id = this.node.enqueueBuffer(buffer);
       const durationMs = (samples.length / sampleRate) * 1_000;
       this.durations.set(id, durationMs);
@@ -378,6 +475,14 @@ export function createNativeVoiceAudioAdapter(): VoiceAudioNativeAdapter {
     hasInput: async () => {
       const devices = await audioApi.AudioManager.getDevicesInfo();
       return devices.availableInputs.length > 0 || devices.currentInputs.length > 0;
+    },
+    isHeadphonesConnected: async () => {
+      try {
+        const devices = await audioApi.AudioManager.getDevicesInfo();
+        return isHeadphonesRoute(devices.currentOutputs);
+      } catch {
+        return false;
+      }
     },
     requestRecordingPermission: () => audioApi.AudioManager.requestRecordingPermissions(),
   };

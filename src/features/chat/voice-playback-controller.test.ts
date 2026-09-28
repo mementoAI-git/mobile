@@ -5,7 +5,10 @@ import type {
   VoicePlaybackRuntime,
   VoiceTimerScheduler,
 } from './voice-audio-types';
-import { VoicePlaybackController } from './voice-playback-controller';
+import {
+  VOICE_MAX_QUEUE_MS,
+  VoicePlaybackController,
+} from './voice-playback-controller';
 import { VoiceSessionMetrics } from './voice-session-metrics';
 
 class FakeScheduler implements VoiceTimerScheduler {
@@ -146,5 +149,14 @@ describe('VoicePlaybackController', () => {
     controller.stop();
     expect(controller.state).toBe('stopped');
     expect(scheduler.size).toBe(0);
+  });
+
+  test('rejects native allocations after playback backlog reaches its memory bound', () => {
+    const { runtime, controller } = setup();
+    runtime.nextDurationMs = VOICE_MAX_QUEUE_MS;
+
+    expect(controller.enqueue('first', 1)).toBe(true);
+    expect(controller.enqueue('overflow', 1)).toBe(false);
+    expect(runtime.calls.filter((call) => call.startsWith('enqueue:'))).toHaveLength(1);
   });
 });

@@ -37,6 +37,10 @@ export class VoiceTranscriptTurns {
     return turn;
   }
 
+  hasTurns(): boolean {
+    return this.completed.length > 0;
+  }
+
   restoreFailedTurn(turn: VoiceTranscriptTurn): void {
     this.completed.unshift(turn);
   }

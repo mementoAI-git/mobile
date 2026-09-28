@@ -51,3 +51,50 @@ export function pcm16Base64ToFloat32(value: string): Pcm16DecodeResult {
 
   return { ok: true, samples };
 }
+
+export function calculateRmsEnergy(samples: Float32Array): number {
+  if (samples.length === 0) return 0;
+  let sumSquares = 0;
+  for (let index = 0; index < samples.length; index += 1) {
+    const sample = samples[index];
+    sumSquares += sample * sample;
+  }
+  return Math.sqrt(sumSquares / samples.length);
+}
+
+export function calculatePeakAmplitude(samples: Float32Array): number {
+  let peak = 0;
+  for (let index = 0; index < samples.length; index += 1) {
+    const abs = Math.abs(samples[index]);
+    if (abs > peak) peak = abs;
+  }
+  return peak;
+}
+
+export const BARGE_IN_THRESHOLDS = {
+  minRmsEnergy: 0.055,
+  minPeakAmplitude: 0.12,
+  confidentRmsEnergy: 0.075,
+  instantRmsEnergy: 0.14,
+} as const;
+
+export function isBargeInSpeech(
+  samples: Float32Array,
+  thresholds: {
+    minRmsEnergy?: number;
+    minPeakAmplitude?: number;
+    confidentRmsEnergy?: number;
+  } = {},
+): boolean {
+  if (samples.length === 0) return false;
+  const minRms = thresholds.minRmsEnergy ?? BARGE_IN_THRESHOLDS.minRmsEnergy;
+  const minPeak = thresholds.minPeakAmplitude ?? BARGE_IN_THRESHOLDS.minPeakAmplitude;
+  const confidentRms =
+    thresholds.confidentRmsEnergy ?? BARGE_IN_THRESHOLDS.confidentRmsEnergy;
+
+  const rms = calculateRmsEnergy(samples);
+  if (rms >= confidentRms) return true;
+  const peak = calculatePeakAmplitude(samples);
+  return rms >= minRms && peak >= minPeak;
+}
+

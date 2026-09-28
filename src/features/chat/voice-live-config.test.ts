@@ -33,15 +33,50 @@ describe('voice Live configuration', () => {
     );
   });
 
-  test('configures conservative automatic turn detection', () => {
+  test('configures responsive automatic turn detection', () => {
     expect(buildGeminiLiveConfig('Fenrir')).toMatchObject({
       realtimeInputConfig: {
         automaticActivityDetection: {
           disabled: false,
-          prefixPaddingMs: 40,
-          silenceDurationMs: 650,
+          prefixPaddingMs: 20,
+          silenceDurationMs: 800,
         },
       },
     });
+  });
+
+  test('locks the conversation exclusively to English via structured systemInstruction', () => {
+    const config = buildGeminiLiveConfig('Fenrir');
+    const instruction = (config.systemInstruction as { parts?: Array<{ text?: string }> })?.parts?.[0]?.text ?? '';
+
+    expect(instruction).toContain('LANGUAGE DIRECTIVE: YOU MUST COMMUNICATE EXCLUSIVELY AND UNMISTAKABLY IN ENGLISH AT ALL TIMES.');
+    expect(instruction).toContain('Under NO circumstances should you switch to or speak any other language');
+    expect(config.speechConfig?.languageCode).toBe('en-US');
+    expect(config.inputAudioTranscription?.languageCodes).toEqual(['en-US', 'en']);
+    expect(config.outputAudioTranscription?.languageCodes).toEqual(['en-US', 'en']);
+  });
+
+  test('incorporates the user nickname into the personalized companion instruction', () => {
+    const config = buildGeminiLiveConfig('Fenrir', { nickname: 'Avery' });
+    const instruction = (config.systemInstruction as { parts?: Array<{ text?: string }> })?.parts?.[0]?.text ?? '';
+
+    expect(instruction).toContain('speaking with Avery');
+  });
+
+  test('parses systemInstruction from ephemeral token payload', () => {
+    const parsed = parseVoiceLiveToken({
+      token: 'ephemeral',
+      systemInstruction: 'HOST CONTEXT: Avery likes classical music and coffee.',
+    }, 'Aoede');
+
+    expect(parsed.systemInstruction).toBe('HOST CONTEXT: Avery likes classical music and coffee.');
+  });
+
+  test('appends rich user and memory context to live connect system instruction', () => {
+    const config = buildGeminiLiveConfig('Fenrir', { nickname: 'Avery' }, 'STORED CONTEXT: Visited Tokyo in 2024.');
+    const instruction = (config.systemInstruction as { parts?: Array<{ text?: string }> })?.parts?.[0]?.text ?? '';
+
+    expect(instruction).toContain('speaking with Avery');
+    expect(instruction).toContain('STORED CONTEXT: Visited Tokyo in 2024.');
   });
 });

@@ -17,26 +17,31 @@ describe('VoiceMessageHandler', () => {
             ],
           },
         },
-      }),
+      }, 1),
     ).toEqual([
       { type: 'output-audio', data: 'first', epoch: 1 },
       { type: 'output-audio', data: 'second', epoch: 1 },
     ]);
   });
 
-  test('increments the epoch on interruption before later audio is accepted', () => {
+  test('returns interrupted effect without epoch (engine owns epoch)', () => {
     const handler = new VoiceMessageHandler();
 
-    expect(handler.handle({ serverContent: { interrupted: true } })).toEqual([
-      { type: 'interrupted', epoch: 2 },
+    expect(handler.handle({ serverContent: { interrupted: true } }, 1)).toEqual([
+      { type: 'interrupted' },
     ]);
+  });
+
+  test('uses caller-supplied epoch for output audio', () => {
+    const handler = new VoiceMessageHandler();
+
     expect(
       handler.handle({
         serverContent: {
           modelTurn: { parts: [{ inlineData: { data: 'new', mimeType: 'audio/pcm' } }] },
         },
-      }),
-    ).toEqual([{ type: 'output-audio', data: 'new', epoch: 2 }]);
+      }, 7),
+    ).toEqual([{ type: 'output-audio', data: 'new', epoch: 7 }]);
   });
 
   test('dispatches setup, transcripts, and completed turns', () => {
@@ -50,7 +55,7 @@ describe('VoiceMessageHandler', () => {
           outputTranscription: { text: 'hi' },
           turnComplete: true,
         },
-      }),
+      }, 1),
     ).toEqual([
       { type: 'setup-complete' },
       { type: 'input-transcript', text: 'hello' },

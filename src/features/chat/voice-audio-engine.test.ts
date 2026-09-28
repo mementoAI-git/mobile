@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import type { VoiceBufferEndedEvent, VoiceQueuedBuffer } from './voice-audio-types';
 import {
   VoiceAudioEngine,
+  isHeadphonesRoute,
   type VoiceAudioContextAdapter,
   type VoiceAudioNativeAdapter,
   type VoiceAudioQueueAdapter,
@@ -81,6 +82,7 @@ class FakeNative implements VoiceAudioNativeAdapter {
   routeListener?: () => void;
   appStateListener?: (state: string) => void;
   hasInputDevice = true;
+  isHeadphonesDevice = false;
 
   setSessionOptions(options: object): void {
     this.calls.push(`session.options:${JSON.stringify(options)}`);
@@ -107,6 +109,9 @@ class FakeNative implements VoiceAudioNativeAdapter {
   async hasInput(): Promise<boolean> {
     return this.hasInputDevice;
   }
+  async isHeadphonesConnected(): Promise<boolean> {
+    return this.isHeadphonesDevice;
+  }
   async requestRecordingPermission(): Promise<'Granted'> {
     return 'Granted';
   }
@@ -122,9 +127,9 @@ describe('VoiceAudioEngine', () => {
     expect(native.calls.slice(0, 7)).toEqual([
       'session.options:{"iosCategory":"playAndRecord","iosMode":"voiceChat","iosOptions":["defaultToSpeaker","allowBluetoothHFP"]}',
       'session.active:true',
+      'recorder.create:{"iosVoiceProcessing":true,"androidInputPreset":"voiceCommunication"}',
       'context.create:24000',
       'context.resume',
-      'recorder.create:{"iosVoiceProcessing":true,"androidInputPreset":"voiceCommunication"}',
       'context.createQueue',
       'queue.connect',
     ]);
@@ -133,6 +138,7 @@ describe('VoiceAudioEngine', () => {
     );
     expect(native.calls.at(-1)).toBe('recorder.start');
   });
+
 
   test('forwards actual mono frames as PCM16 and counts duration anomalies', async () => {
     const native = new FakeNative();
@@ -187,4 +193,133 @@ describe('VoiceAudioEngine', () => {
     expect(engine.snapshot().routeChanges).toBe(1);
     expect(failures[0]?.message).toContain('audio input');
   });
+
+  test('classifies headphone and speaker output routes correctly', () => {
+    expect(isHeadphonesRoute([])).toBe(false);
+    expect(isHeadphonesRoute(undefined)).toBe(false);
+    expect(isHeadphonesRoute([{ name: 'Speaker', category: 'Speaker' }])).toBe(false);
+    expect(isHeadphonesRoute([{ name: 'Receiver', category: 'Receiver' }])).toBe(false);
+    expect(isHeadphonesRoute([{ name: 'AirPods Pro', category: 'BluetoothA2DPOutput' }])).toBe(true);
+    expect(isHeadphonesRoute([{ name: 'Headphones', category: 'Headphones' }])).toBe(true);
+    expect(isHeadphonesRoute([{ name: 'Bose QC', category: 'BluetoothHFP' }])).toBe(true);
+  });
+
+  test('shields initial greeting from transmitting mic chunks and streams freely after disarm', async () => {
+    const native = new FakeNative();
+    const chunks: string[] = [];
+    const engine = new VoiceAudioEngine({ native });
+
+    await engine.start((chunk) => chunks.push(chunk));
+
+    // Play greeting and arm greeting shield
+    const pcmSamples = new Float32Array(4800).fill(0.1);
+    const pcmBase64 = btoa(String.fromCharCode(...new Uint8Array(pcmSamples.length * 2)));
+    engine.enqueueOutput(pcmBase64, 1);
+    engine.armGreetingShield();
+
+    // Input arrives while greeting shield is active (e.g. echo or user background noise)
+    const micData = new Float32Array(1_600).fill(0.05);
+    native.recorder.input?.({
+      buffer: { getChannelData: () => micData },
+      numFrames: 1_600,
+    });
+
+    // Greeting shield blocks transmission
+    expect(chunks).toHaveLength(0);
+    expect(engine.isPlaying()).toBe(true);
+
+    // Finish greeting turn and clear playback
+    engine.finishOutputTurn({ forceDisarm: true });
+    engine.interruptOutput(2);
+
+    // After shield is disarmed and output ends, mic data is transmitted continuously
+    native.recorder.input?.({
+      buffer: { getChannelData: () => micData },
+      numFrames: 1_600,
+    });
+    expect(chunks).toHaveLength(1);
+  });
+
+  test('interruptOutput stops playback and increments epoch cleanly', async () => {
+    const native = new FakeNative();
+    const engine = new VoiceAudioEngine({ native });
+
+    await engine.start(() => {});
+
+    // Start playback
+    const pcmSamples = new Float32Array(4800).fill(0.1);
+    const pcmBase64 = btoa(String.fromCharCode(...new Uint8Array(pcmSamples.length * 2)));
+    engine.enqueueOutput(pcmBase64, 1);
+    expect(engine.isPlaying()).toBe(true);
+
+    // Server sends interruption signal -> engine interrupts output
+    engine.interruptOutput(2);
+    expect(engine.isPlaying()).toBe(false);
+    expect(engine.getEpoch()).toBe(2);
+  });
+
+  test('suppresses mic uplink while audio is playing through device loudspeaker to prevent acoustic echo', async () => {
+    const native = new FakeNative();
+    native.isHeadphonesDevice = false;
+    const chunks: string[] = [];
+    const engine = new VoiceAudioEngine({ native });
+
+    await engine.start((chunk) => chunks.push(chunk));
+    expect(engine.isHeadphonesActive()).toBe(false);
+
+    // AI begins speaking
+    const pcmSamples = new Float32Array(4800).fill(0.1);
+    const pcmBase64 = btoa(String.fromCharCode(...new Uint8Array(pcmSamples.length * 2)));
+    engine.enqueueOutput(pcmBase64, 1);
+    expect(engine.isPlaying()).toBe(true);
+
+    // Speaker echo enters the microphone while AI is speaking
+    const echoFrame = new Float32Array(1_600).fill(0.05);
+    native.recorder.input?.({
+      buffer: { getChannelData: () => echoFrame },
+      numFrames: 1_600,
+    });
+
+    // Suppressed! No echo chunk is dispatched to Gemini Live
+    expect(chunks).toHaveLength(0);
+
+    // Finish turn and clear playback
+    engine.finishOutputTurn({ forceDisarm: true });
+    engine.interruptOutput(2);
+
+    // Now that output is no longer audible, user speech flows through
+    const userVoice = new Float32Array(1_600).fill(0.1);
+    native.recorder.input?.({
+      buffer: { getChannelData: () => userVoice },
+      numFrames: 1_600,
+    });
+    expect(chunks).toHaveLength(1);
+  });
+
+  test('allows full duplex mic streaming during playback when headphones are connected', async () => {
+    const native = new FakeNative();
+    native.isHeadphonesDevice = true;
+    const chunks: string[] = [];
+    const engine = new VoiceAudioEngine({ native });
+
+    await engine.start((chunk) => chunks.push(chunk));
+    expect(engine.isHeadphonesActive()).toBe(true);
+
+    // AI begins speaking
+    const pcmSamples = new Float32Array(4800).fill(0.1);
+    const pcmBase64 = btoa(String.fromCharCode(...new Uint8Array(pcmSamples.length * 2)));
+    engine.enqueueOutput(pcmBase64, 1);
+    expect(engine.isPlaying()).toBe(true);
+
+    // User speaks into mic while listening through headphones
+    const userVoice = new Float32Array(1_600).fill(0.1);
+    native.recorder.input?.({
+      buffer: { getChannelData: () => userVoice },
+      numFrames: 1_600,
+    });
+
+    // Passthrough! Full duplex allows natural vocal interruption
+    expect(chunks).toHaveLength(1);
+  });
 });
+
