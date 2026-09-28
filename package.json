@@ -116,5 +116,8 @@
   "overrides": {
     "react-dom": "19.2.3"
   },
-  "private": true
+  "private": true,
+  "patchedDependencies": {
+    "react-native-audio-api@1.0.0-nightly-3310950-20260927": "patches/react-native-audio-api@1.0.0-nightly-3310950-20260927.patch"
+  }
 }

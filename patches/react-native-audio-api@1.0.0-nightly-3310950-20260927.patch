@@ -1,0 +1,15 @@
+diff --git a/common/cpp/audioapi/AudioAPIModuleInstaller.h b/common/cpp/audioapi/AudioAPIModuleInstaller.h
+index ba15c738b00b47a4950d1bed4caa2961c0eacdb8..141b63615cfb0b152f5fd6ff7f366028547caa08 100644
+--- a/common/cpp/audioapi/AudioAPIModuleInstaller.h
++++ b/common/cpp/audioapi/AudioAPIModuleInstaller.h
+@@ -224,7 +224,9 @@ class AudioAPIModuleInstaller {
+ 
+           auto audioBuffer = std::make_shared<AudioBuffer>(length, numberOfChannels, sampleRate);
+           auto audioBufferHostObject = std::make_shared<AudioBufferHostObject>(audioBuffer);
+-          return jsi::Object::createFromHostObject(runtime, audioBufferHostObject);
++          auto audioBufferObject = jsi::Object::createFromHostObject(runtime, audioBufferHostObject);
++          audioBufferObject.setExternalMemoryPressure(runtime, audioBufferHostObject->getSizeInBytes());
++          return audioBufferObject;
+         });
+   }
+ };
