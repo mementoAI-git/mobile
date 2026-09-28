@@ -54,5 +54,36 @@ describe('IAP Service and Hook contracts', () => {
     expect(iapServiceSource).toContain('purchaseTimeoutId');
     expect(iapServiceSource).toContain('isUsingFallbacks');
   });
-});
 
+  test('preflights exact store catalog availability before requesting purchase', () => {
+    expect(iapServiceSource).toContain('storeAvailable: true');
+    expect(iapServiceSource).toContain('await this.getProducts(true)');
+    expect(iapServiceSource).toContain('Purchases are temporarily unavailable');
+    expect(iapServiceSource).toContain("error.code === 'sku-not-found'");
+    const availabilityIndex = iapServiceSource.indexOf('await this.getProducts(true)');
+    const requestIndex = iapServiceSource.indexOf('RNIap.requestPurchase', availabilityIndex);
+    expect(requestIndex).toBeGreaterThan(availabilityIndex);
+  });
+
+  test('never invents a local store account token', () => {
+    expect(useIapSource).not.toContain('generateStoreAccountToken');
+    expect(billingFlowSource).not.toContain('generateStoreAccountToken');
+    expect(useIapSource).toContain('Your billing account is still being prepared');
+    expect(billingFlowSource).toContain('Your billing account is still being prepared');
+  });
+
+  test('handled purchase verification failures do not trigger development LogBox overlays', () => {
+    expect(iapServiceSource).toContain(
+      "logger.warn('[IAPService] purchase verification failed:', err)",
+    );
+    expect(billingFlowSource).toContain(
+      "logger.warn('[BillingFlow] Native IAP checkout error:', err)",
+    );
+    expect(iapServiceSource).not.toContain(
+      "logger.error('[IAPService] purchase verification failed:', err)",
+    );
+    expect(billingFlowSource).not.toContain(
+      "logger.error('[BillingFlow] Native IAP checkout error:', err)",
+    );
+  });
+});

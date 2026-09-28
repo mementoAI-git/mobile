@@ -6,6 +6,7 @@ import {
   IAP_SKUS,
   IAP_STORE_MANAGEMENT_URLS,
   getAllPlatformSkus,
+  getIapDisclosureCopy,
   getIntervalFromSku,
   getPlatformSku,
   getStoreManagementUrl,
@@ -41,10 +42,12 @@ describe('IAP Constants and SKUs', () => {
     expect(FALLBACK_PRODUCTS.monthly.price).toBe(9.99);
     expect(FALLBACK_PRODUCTS.monthly.localizedPrice).toBe('$9.99');
     expect(FALLBACK_PRODUCTS.monthly.interval).toBe('monthly');
+    expect(FALLBACK_PRODUCTS.monthly.storeAvailable).toBe(false);
 
     expect(FALLBACK_PRODUCTS.annual.price).toBe(79.0);
     expect(FALLBACK_PRODUCTS.annual.localizedPrice).toBe('$79.00');
     expect(FALLBACK_PRODUCTS.annual.interval).toBe('annual');
+    expect(FALLBACK_PRODUCTS.annual.storeAvailable).toBe(false);
   });
 
   test('contains mandatory App Store legal URLs', () => {
@@ -61,9 +64,19 @@ describe('IAP Constants and SKUs', () => {
     expect(getStoreManagementUrl()).toBeTruthy();
   });
 
-  test('disclosure copy includes Apple and Google auto-renewal notice', () => {
+  test('disclosure copy adapts specifically to iOS and Android', () => {
     expect(IAP_DISCLOSURE_COPY).toContain('Payment will be charged');
     expect(IAP_DISCLOSURE_COPY).toContain('Subscription automatically renews');
     expect(IAP_DISCLOSURE_COPY).toContain('at least 24 hours before the end of the current period');
+
+    const iosCopy = getIapDisclosureCopy('ios');
+    expect(iosCopy).toContain('Apple');
+    expect(iosCopy).toContain('App Store');
+    expect(iosCopy).not.toContain('Google Play');
+
+    const androidCopy = getIapDisclosureCopy('android');
+    expect(androidCopy).toContain('Google Play');
+    expect(androidCopy).toContain('Play Store');
+    expect(androidCopy).not.toContain('Apple');
   });
 });

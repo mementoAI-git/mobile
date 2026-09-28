@@ -25,4 +25,11 @@ describe('Pricing logic', () => {
     expect(screen).toContain("openSheet('cancel-subscription-confirmation')");
     expect(screen).not.toContain("handleCheckout('legacy')");
   });
+
+  test('disables checkout when the selected native store product is unavailable', () => {
+    expect(logic).toContain('purchaseAvailable');
+    expect(logic).toContain('localizedProduct.storeAvailable');
+    expect(screen).toContain('Purchases unavailable');
+    expect(screen).toContain('purchaseAvailable');
+  });
 });

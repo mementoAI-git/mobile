@@ -8,6 +8,7 @@ export interface ChatListMessage {
   created_at?: string;
   replyTo?: { role: string; text: string } | null;
   attatchments?: IMessageAttachment[];
+  is_voice?: boolean;
 }
 
 let sessionCounter = 0;

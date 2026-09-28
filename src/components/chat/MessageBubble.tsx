@@ -5,9 +5,10 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import type { IMessage } from '@/types';
 import dayjs from 'dayjs';
-import { COLORS } from '@/constants/tokens';
+import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { CornerDownRight, FileText, Music, Play, ExternalLink, Copy } from 'lucide-react-native';
+import { tokenizeMessageMarkdown } from '@/features/chat/message-markdown';
+import { CornerDownRight, FileText, Music, Play, ExternalLink, Copy, Mic } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import type { PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
@@ -187,51 +188,90 @@ function isMessageOnlyUrl(text: string): boolean {
   return regex.test(trimmed);
 }
 
-function parseTextWithLinks(text: string, isUser: boolean) {
-  const regex = /https?:\/\/[^\s]+/gi;
-  const matches = text.match(regex);
-  if (!matches) {
-    return text;
+export function parseFormattedMessage(text: string, _isUser?: boolean): React.ReactNode[] {
+  const tokens = tokenizeMessageMarkdown(text);
+  if (tokens.length === 0) {
+    return [text];
   }
 
-  const parts = [];
-  let lastIndex = 0;
-  let match;
-  
-  regex.lastIndex = 0;
-  while ((match = regex.exec(text)) !== null) {
-    let url = match[0];
-    // Strip trailing sentence punctuation
-    url = url.replace(/[.,!?;:)]+$/, '');
-    const index = match.index;
-    
-    if (index > lastIndex) {
-      parts.push(text.slice(lastIndex, index));
+  return tokens.map((token, index) => {
+    switch (token.type) {
+      case 'text':
+        return token.text;
+
+      case 'italic':
+        return (
+          <Text key={index} style={styles.markdownItalic}>
+            {token.text}
+          </Text>
+        );
+
+      case 'bold':
+        return (
+          <Text key={index} style={styles.markdownBold}>
+            {token.text}
+          </Text>
+        );
+
+      case 'bold_italic':
+        return (
+          <Text key={index} style={styles.markdownBoldItalic}>
+            {token.text}
+          </Text>
+        );
+
+      case 'code':
+        return (
+          <Text key={index} style={styles.markdownCode}>
+            {token.text}
+          </Text>
+        );
+
+      case 'strikethrough':
+        return (
+          <Text key={index} style={styles.markdownStrikethrough}>
+            {token.text}
+          </Text>
+        );
+
+      case 'highlight':
+        return (
+          <Text key={index} style={styles.markdownHighlight}>
+            {token.text}
+          </Text>
+        );
+
+      case 'link':
+        return (
+          <Text
+            key={index}
+            style={styles.markdownLink}
+            onPress={() => Linking.openURL(token.url).catch(() => {})}
+          >
+            {token.label}
+          </Text>
+        );
+
+      case 'url': {
+        const shortened = shortenUrl(token.url);
+        return (
+          <Text
+            key={index}
+            style={styles.markdownLink}
+            onPress={() => Linking.openURL(token.url).catch(() => {})}
+          >
+            {shortened}
+          </Text>
+        );
+      }
+
+      default:
+        return null;
     }
-    
-    const shortened = shortenUrl(url);
-    parts.push(
-      <Text
-        key={index}
-        style={{
-          color: COLORS.linkPreview,
-          textDecorationLine: 'underline',
-        }}
-        onPress={() => Linking.openURL(url).catch(() => {})}
-      >
-        {shortened}
-      </Text>
-    );
-    
-    lastIndex = index + match[0].length; // Move index past the full matched URL including stripped punctuation
-  }
-  
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-  
-  return parts;
+  });
 }
+
+const parseTextWithLinks = parseFormattedMessage;
 
 function LinkPreviewChip({ preview }: { preview: LinkPreviewData }) {
   const handlePress = useCallback(() => {
@@ -500,6 +540,7 @@ export const MessageBubble = React.memo(function MessageBubble({
   const responseTime = 'created_at' in message && message.created_at
     ? dayjs(message.created_at).format('h:mma')
     : null;
+  const isVoice = Boolean((message as any).is_voice);
 
   const previewAttachments: PreviewAttachment[] = useMemo(
     () => rawAttachments.map(toPreviewAttachment),
@@ -564,7 +605,7 @@ export const MessageBubble = React.memo(function MessageBubble({
               style={[styles.messageText, { marginTop: rawAttachments.length > 0 ? 4 : 0 }]}
               numberOfLines={isMessageOnlyUrl(content) ? 1 : undefined}
             >
-              {parseTextWithLinks(content, isUser)}
+              {parseFormattedMessage(content, isUser)}
             </Text>
           )}
 
@@ -574,6 +615,12 @@ export const MessageBubble = React.memo(function MessageBubble({
 
         {/* Meta row */}
         <View style={[styles.metaRow, isUser ? styles.metaRowUser : styles.metaRowAssistant]}>
+          {isVoice && (
+            <View style={styles.voiceIndicator}>
+              <Mic size={12} color={COLORS.textWeak} strokeWidth={2} />
+              <Text style={styles.voiceLabel}>Spoken</Text>
+            </View>
+          )}
           {responseTime && <Text style={styles.timeLabel}>{responseTime}</Text>}
           {content.trim().length > 0 && (
             <TouchableOpacity
@@ -631,6 +678,31 @@ const styles = StyleSheet.create({
     ...TYPE.body,
     lineHeight: 20,
   },
+  markdownItalic: {
+    fontStyle: 'italic',
+  },
+  markdownBold: {
+    ...TYPE.bodyStrong,
+  },
+  markdownBoldItalic: {
+    ...TYPE.bodyStrong,
+    fontStyle: 'italic',
+  },
+  markdownCode: {
+    ...TYPE.mono,
+    backgroundColor: COLORS.fillWeak,
+    color: COLORS.brand,
+  },
+  markdownStrikethrough: {
+    textDecorationLine: 'line-through',
+  },
+  markdownHighlight: {
+    backgroundColor: 'rgba(233, 130, 70, 0.18)',
+  },
+  markdownLink: {
+    color: COLORS.linkPreview,
+    textDecorationLine: 'underline',
+  },
   replyQuote: {
     backgroundColor: COLORS.strokeWeaker,
     borderLeftColor: COLORS.info,
@@ -675,5 +747,15 @@ const styles = StyleSheet.create({
     color: COLORS.textStrong,
     ...TYPE.bodySmall,
     lineHeight: 18,
+  },
+  voiceIndicator: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 3,
+  },
+  voiceLabel: {
+    color: COLORS.textWeak,
+    ...TYPE.metadata,
+    lineHeight: 14,
   },
 });

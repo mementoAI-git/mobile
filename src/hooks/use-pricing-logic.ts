@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useQueryClient } from '@tanstack/react-query';
 import { launchBillingCheckout, restoreBillingPurchases } from '@/features/settings/billing-flow';
 import { useIAP } from '@/features/billing/use-iap';
+import { useSubscription } from '@/hooks/queries/use-subscription';
+import { Platform } from 'react-native';
 
 export type BillingInterval = 'monthly' | 'annual';
 export type Currency = 'USD' | 'NGN';
@@ -28,12 +30,22 @@ export function usePricingLogic() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { products, buySubscription, restorePurchases: iapRestore, purchasing, restoring } = useIAP();
-  const [interval, setInterval] = useState<BillingInterval>('monthly');
+  const { summary } = useSubscription();
+  const [interval, setInterval] = useState<BillingInterval>(() => summary?.interval === 'annual' ? 'annual' : 'monthly');
+
+  useEffect(() => {
+    if (summary?.interval) {
+      setInterval(summary.interval);
+    }
+  }, [summary?.interval]);
+
   const [loading, setLoading] = useState(false);
   const currency: Currency = 'USD';
   const table = PRICING_TABLE[currency];
 
   const localizedProduct = products[interval];
+  const purchaseAvailable =
+    Platform.OS === 'web' || localizedProduct.storeAvailable;
   const proPrice = interval === 'annual' ? table.pro.annual / 12 : table.pro.monthly;
   const legacyPrice = interval === 'annual' ? table.legacy.annual / 12 : table.legacy.monthly;
 
@@ -83,7 +95,9 @@ export function usePricingLogic() {
     proPrice,
     legacyPrice,
     table,
+    products,
     localizedProduct,
+    purchaseAvailable,
     handleCheckout,
     handleRestore,
     formatMoney,

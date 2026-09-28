@@ -94,6 +94,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/with-storekit-config",
       "expo-router",
       "expo-secure-store",
       "expo-font",
@@ -144,7 +145,16 @@
         }
       ],
       "expo-dev-client",
-      "react-native-audio-api",
+      [
+        "react-native-audio-api",
+        {
+          "iosMicrophonePermission": "Allow Memento to access your microphone for voice conversations.",
+          "androidPermissions": [
+            "android.permission.RECORD_AUDIO",
+            "android.permission.MODIFY_AUDIO_SETTINGS"
+          ]
+        }
+      ],
       "expo-image",
       [
         "expo-splash-screen",

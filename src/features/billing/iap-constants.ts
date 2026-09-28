@@ -45,6 +45,7 @@ export const FALLBACK_PRODUCTS: Record<IAPPlanInterval, IAPProduct> = {
     currency: 'USD',
     localizedPrice: '$9.99',
     interval: 'monthly',
+    storeAvailable: false,
   },
   annual: {
     productId: getPlatformSku('annual'),
@@ -54,6 +55,7 @@ export const FALLBACK_PRODUCTS: Record<IAPPlanInterval, IAPProduct> = {
     currency: 'USD',
     localizedPrice: '$79.00',
     interval: 'annual',
+    storeAvailable: false,
   },
 };
 
@@ -68,25 +70,28 @@ export const IAP_STORE_MANAGEMENT_URLS = {
   android: 'https://play.google.com/store/account/subscriptions?package=io.mymemento.app',
 };
 
-export function getStoreManagementUrl(): string {
+export function getStoreManagementUrl(provider?: 'apple' | 'google'): string {
+  if (provider === 'apple') return IAP_STORE_MANAGEMENT_URLS.ios;
+  if (provider === 'google') return IAP_STORE_MANAGEMENT_URLS.android;
   return Platform.OS === 'ios'
     ? IAP_STORE_MANAGEMENT_URLS.ios
     : IAP_STORE_MANAGEMENT_URLS.android;
 }
 
-export const IAP_DISCLOSURE_COPY =
-  'Payment will be charged to your Apple ID or Google Play account upon confirmation of purchase. ' +
+export const IAP_DISCLOSURE_COPY_IOS =
+  'Payment will be charged to your Apple ID upon confirmation of purchase. ' +
   'Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. ' +
   'Your account will be charged for renewal within 24 hours prior to the end of the current period. ' +
-  'You can manage and cancel your subscriptions anytime in your App Store or Google Play account settings.';
+  'You can manage and cancel your subscriptions anytime in your App Store account settings.';
 
-export function generateStoreAccountToken(): string {
-  if (typeof globalThis.crypto?.randomUUID === 'function') {
-    return globalThis.crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+export const IAP_DISCLOSURE_COPY_ANDROID =
+  'Payment will be charged to your Google Play account upon confirmation of purchase. ' +
+  'Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. ' +
+  'Your account will be charged for renewal within 24 hours prior to the end of the current period. ' +
+  'You can manage and cancel your subscriptions anytime in your Play Store account settings.';
+
+export function getIapDisclosureCopy(os: typeof Platform.OS = Platform.OS): string {
+  return os === 'android' ? IAP_DISCLOSURE_COPY_ANDROID : IAP_DISCLOSURE_COPY_IOS;
 }
+
+export const IAP_DISCLOSURE_COPY = getIapDisclosureCopy();

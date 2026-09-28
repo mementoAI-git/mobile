@@ -8,7 +8,7 @@ import { queryKeys } from '@/constants/query-keys';
 import { logger } from '@/lib/logger';
 import { toast } from '@/components/ui/Toast';
 import { iapService } from '@/features/billing/iap-service';
-import { generateStoreAccountToken } from '@/features/billing/iap-constants';
+import { isAlreadyOwnedPurchaseError } from '@/features/billing/iap-errors';
 import { extractBillingUrl } from './billing-adapters';
 import type { BillingCancellationFeedback } from './subscription-cancellation';
 import type { SubscriptionSummary } from './billing-adapters';
@@ -67,7 +67,7 @@ export async function launchBillingCheckout({
         storeAccountToken = refreshed?.store_account_token;
       }
       if (!storeAccountToken) {
-        storeAccountToken = generateStoreAccountToken();
+        throw new Error('Your billing account is still being prepared. Please try again.');
       }
       const purchased = await iapService.requestSubscriptionPurchase(
         planInterval,
@@ -79,7 +79,26 @@ export async function launchBillingCheckout({
       }
       return false;
     } catch (err: any) {
-      logger.error('[BillingFlow] Native IAP checkout error:', err);
+      logger.warn('[BillingFlow] Native IAP checkout error:', err);
+      if (isAlreadyOwnedPurchaseError(err)) {
+        try {
+          const restored = await iapService.restorePurchases();
+          await invalidateBillingQueries(queryClient);
+          if (restored.restoredCount > 0) {
+            toast('Your existing subscription has been restored.', 'success');
+            return true;
+          }
+          toast(
+            'Apple recognizes this subscription, but Memento could not verify it yet. Please try Restore Purchases.',
+            'error',
+          );
+          return false;
+        } catch (restoreError) {
+          logger.warn('[BillingFlow] Existing subscription restore failed:', restoreError);
+          toast('Could not restore your existing subscription. Please try again.', 'error');
+          return false;
+        }
+      }
       toast(err?.message || 'A purchase error occurred. Please try again.', 'error');
       return false;
     }

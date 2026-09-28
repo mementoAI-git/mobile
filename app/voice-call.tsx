@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Mic, MicOff, PhoneOff, Settings } from 'lucide-react-native';
+import { Mic, MicOff, PhoneOff, Settings, Square } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
 import { Button } from '@/components/ui/Button';
@@ -15,7 +15,9 @@ import { VOICE_CATALOG, getVoiceById, type VoiceId } from '@/features/chat/voice
 import { formatVoiceCallDuration, getVoiceCallTransition, type VoiceCallStage } from '@/features/chat/voice-call-flow';
 import { useVoiceMode } from '@/hooks/use-voice-mode';
 import { useBackgroundMusic } from '@/hooks/use-background-music';
-import { useAuthStore, useUiStore, useVoicePreferenceStore } from '@/store';
+import { queryClient } from '@/lib/query-client';
+import { queryKeys } from '@/constants/query-keys';
+import { useAuthStore, useUiStore, useUserStore, useVoicePreferenceStore } from '@/store';
 
 function VoiceDots({ selectedId, onSelect }: { selectedId: VoiceId; onSelect: (id: VoiceId) => void }) {
   return (
@@ -40,12 +42,23 @@ export default function VoiceCallRoute() {
   const router = useRouter();
   const { memoryId } = useLocalSearchParams<{ memoryId?: string }>();
   const user = useAuthStore((state) => state.user);
+  const userStoreUser = useUserStore((state) => state.user);
   const selectedVoiceId = useVoicePreferenceStore((state) => state.selectedVoiceId);
   const hydratedForUser = useVoicePreferenceStore((state) => state.hydratedForUser);
   const isHydrating = useVoicePreferenceStore((state) => state.isHydrating);
   const hydrate = useVoicePreferenceStore((state) => state.hydrate);
   const selectVoice = useVoicePreferenceStore((state) => state.selectVoice);
   const userKey = user?._id ?? user?.email ?? 'anonymous';
+  const cachedProfile = queryClient.getQueryData<any>(queryKeys.profile);
+  const primaryConvId =
+    user?.primary_conversation_id ??
+    userStoreUser?.primary_conversation_id ??
+    cachedProfile?.primary_conversation_id;
+  const rawMemoryId = Array.isArray(memoryId) ? memoryId[0] : memoryId;
+  const effectiveMemoryId =
+    rawMemoryId && /^[0-9a-fA-F]{24}$/.test(rawMemoryId)
+      ? rawMemoryId
+      : primaryConvId;
   const [draftVoiceId, setDraftVoiceId] = useState<VoiceId>('denver');
   const [stage, setStage] = useState<VoiceCallStage>('choosing');
   const initializedRef = useRef(false);
@@ -53,7 +66,7 @@ export default function VoiceCallRoute() {
     () => getVoiceById(selectedVoiceId ?? draftVoiceId) ?? VOICE_CATALOG[0],
     [draftVoiceId, selectedVoiceId],
   );
-  const voice = useVoiceMode({ memoryId, voiceName: selectedVoice.providerVoiceName });
+  const voice = useVoiceMode({ memoryId: effectiveMemoryId, voiceName: selectedVoice.providerVoiceName });
   const { pauseForVoice, resumeAfterVoice } = useBackgroundMusic();
 
   useEffect(() => {
@@ -104,13 +117,13 @@ export default function VoiceCallRoute() {
       setTimeout(() => {
         useUiStore.getState().openSheet('voice-debrief', {
           duration,
-          memoryId,
+          memoryId: effectiveMemoryId ?? memoryId,
           userSpeechText,
           aiSpeechText,
         });
       }, 350);
     }
-  }, [memoryId, resumeAfterVoice, router, voice]);
+  }, [effectiveMemoryId, memoryId, resumeAfterVoice, router, voice]);
 
   const chooseVoice = useCallback((id: VoiceId) => {
     Haptics.selectionAsync();
@@ -122,9 +135,16 @@ export default function VoiceCallRoute() {
     setStage(getVoiceCallTransition(stage, 'choose'));
   }, [draftVoiceId, selectVoice, stage]);
 
+  const startingRef = useRef(false);
   const startCall = useCallback(async () => {
+    if (startingRef.current) return;
+    startingRef.current = true;
     setStage(getVoiceCallTransition(stage, 'start'));
-    await voice.connect();
+    try {
+      await voice.connect();
+    } finally {
+      startingRef.current = false;
+    }
   }, [stage, voice]);
 
   const toggleMute = useCallback(() => {
@@ -217,28 +237,69 @@ export default function VoiceCallRoute() {
           </Pressable>
         </View>
         <View className="flex-1 items-center justify-center pb-28">
-          <VoiceArtwork voice={selectedVoice} size={132} />
+          <Pressable
+            disabled={!voice.isAiSpeaking}
+            onPress={voice.isAiSpeaking ? voice.interrupt : undefined}
+            accessibilityLabel={voice.isAiSpeaking ? 'Tap to interrupt' : undefined}
+          >
+            <VoiceArtwork voice={selectedVoice} size={132} />
+          </Pressable>
           <Text className="mt-5 text-text-strong" style={TYPE.stat}>
             {formatVoiceCallDuration(voice.recordingTime)}
           </Text>
           <View className="mt-1 flex-row items-center gap-2">
-            {live ? <View className="size-2 rounded-full" style={{ backgroundColor: stage === 'muted' ? COLORS.error : COLORS.success }} /> : null}
+            {live ? (
+              <View
+                className="size-2 rounded-full"
+                style={{
+                  backgroundColor:
+                    stage === 'muted'
+                      ? COLORS.error
+                      : voice.isAiSpeaking
+                        ? COLORS.brand
+                        : COLORS.success,
+                }}
+              />
+            ) : null}
             <Text className="text-text-base" style={TYPE.label}>
-              {voice.isConnecting ? 'Connecting…' : live ? 'Live session' : 'Ready when you are'}
+              {voice.isConnecting
+                ? 'Connecting…'
+                : live
+                  ? voice.isAiSpeaking
+                    ? 'Memento is speaking…'
+                    : stage === 'muted'
+                      ? 'Microphone muted'
+                      : 'Listening…'
+                  : 'Ready when you are'}
             </Text>
           </View>
           {live ? (
             <>
-              <Button
-                variant="outline"
-                className="mt-12 h-14 w-44"
-                onPress={toggleMute}
-                leftIcon={stage === 'muted' ? <MicOff size={26} color={COLORS.error} /> : <Mic size={26} color={COLORS.textBase} />}
-              >
-                {stage === 'muted' ? 'Unmute' : 'Mute'}
-              </Button>
+              {voice.isAiSpeaking ? (
+                <Button
+                  variant="outline"
+                  className="mt-12 h-14 w-44"
+                  onPress={voice.interrupt}
+                  leftIcon={<Square size={18} color={COLORS.textStrong} fill={COLORS.textStrong} strokeWidth={0} />}
+                >
+                  Interrupt
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="mt-12 h-14 w-44"
+                  onPress={toggleMute}
+                  leftIcon={stage === 'muted' ? <MicOff size={22} color={COLORS.error} /> : <Mic size={22} color={COLORS.textStrong} />}
+                >
+                  {stage === 'muted' ? 'Unmute' : 'Mute'}
+                </Button>
+              )}
               <Text className="mt-3 text-text-base" style={TYPE.label}>
-                {stage === 'muted' ? 'You’re muted' : 'Tap to mute'}
+                {voice.isAiSpeaking
+                  ? 'Tap to speak'
+                  : stage === 'muted'
+                    ? 'You’re muted'
+                    : 'Tap to mute'}
               </Text>
             </>
           ) : (

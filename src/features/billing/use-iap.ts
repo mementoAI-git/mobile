@@ -10,7 +10,7 @@ import { queryKeys } from '@/constants/query-keys';
 import { toast } from '@/components/ui/Toast';
 import { logger } from '@/lib/logger';
 import { iapService } from './iap-service';
-import { FALLBACK_PRODUCTS, generateStoreAccountToken } from './iap-constants';
+import { FALLBACK_PRODUCTS } from './iap-constants';
 import type { IAPPlanInterval, IAPProduct } from './iap-types';
 import { useSubscription } from '@/hooks/queries/use-subscription';
 
@@ -61,7 +61,7 @@ export function useIAP() {
           storeAccountToken = refreshed.data?.store_account_token;
         }
         if (!storeAccountToken) {
-          storeAccountToken = generateStoreAccountToken();
+          throw new Error('Your billing account is still being prepared. Please try again.');
         }
         const started = await iapService.requestSubscriptionPurchase(
           interval,

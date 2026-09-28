@@ -1,21 +1,27 @@
 import React, { useCallback, useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Image,
+  type ImageSourcePropType,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import {
   ArrowLeft,
-  AudioWaveform,
   Headphones,
   Heart,
   SlidersHorizontal,
   Sparkles,
   Timer,
-  Volume2,
 } from 'lucide-react-native';
 import { Button } from '@/components/ui';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import {
   resolveComingSoonFeature,
@@ -23,6 +29,12 @@ import {
 } from '@/features/coming-soon/feature-catalog';
 import { getBoundedModalScrollStyle } from '@/features/layout/modal-safe-area';
 import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
+
+const FEATURE_ILLUSTRATIONS: Record<string, ImageSourcePropType> = {
+  narration: require('../assets/images/onboarding/accordion.png'),
+  capsules: require('../assets/images/onboarding/quill-ink.png'),
+  generic: require('../assets/images/onboarding/phon-call.png'),
+};
 
 const BENEFIT_ICONS = {
   headphones: Headphones,
@@ -58,6 +70,7 @@ export default function ComingSoonScreen() {
 function ComingSoonContent() {
   const { feature } = useLocalSearchParams<{ feature?: string }>();
   const content = useMemo(() => resolveComingSoonFeature(feature), [feature]);
+  const illustration = FEATURE_ILLUSTRATIONS[content.key] ?? FEATURE_ILLUSTRATIONS.generic;
 
   const dismiss = useCallback(() => {
     if (feature === 'capsules') {
@@ -104,17 +117,12 @@ function ComingSoonContent() {
           <View style={styles.heroHaloLarge} />
           <View style={styles.heroHaloSmall} />
           <View style={styles.heroSpeaker}>
-            {content.key === 'capsules' ? (
-              <Timer size={54} color={COLORS.onboardingBrown} strokeWidth={1.7} />
-            ) : (
-              <Volume2 size={54} color={COLORS.onboardingBrown} strokeWidth={1.7} />
-            )}
+            <Image
+              source={illustration}
+              style={styles.heroIllustration}
+              resizeMode="contain"
+            />
           </View>
-          {content.key === 'capsules' ? (
-            <Sparkles size={88} color={COLORS.onboardingAmber} strokeWidth={1.4} />
-          ) : (
-            <AudioWaveform size={88} color={COLORS.onboardingAmber} strokeWidth={1.4} />
-          )}
         </View>
 
         <Text style={styles.eyebrow}>{content.eyebrow}</Text>
@@ -134,7 +142,7 @@ function ComingSoonContent() {
           fullWidth
           onPress={dismiss}
           size="lg"
-                  >
+        >
           Got it
         </Button>
       </View>
@@ -193,12 +201,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.card,
     borderColor: COLORS.strokeWeaker,
-    borderRadius: 48,
+    borderRadius: 54,
     borderWidth: 1,
-    height: 96,
+    height: 108,
     justifyContent: 'center',
     position: 'absolute',
-    width: 96,
+    width: 108,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  heroIllustration: {
+    height: 72,
+    width: 72,
   },
   eyebrow: {
     color: COLORS.brand,
