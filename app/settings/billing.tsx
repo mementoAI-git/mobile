@@ -37,10 +37,10 @@ export default function BillingSettingsScreen() {
     if (router.canGoBack()) router.back();
     else router.replace('/settings');
   }, [router]);
-  const handlePlanAction = isProOrAbove ? handlePortal : handleUpgrade;
+  const handlePlanAction = handleUpgrade;
 
   return (
-    <SafeAreaView style={{flex: 1, backgroundColor: COLORS.background}} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
       <SettingsSubpageHeader title="Billing" onBack={handleBack} />
 
       <BillingTabs active={activeTab} onChange={setActiveTab} />
@@ -50,9 +50,9 @@ export default function BillingSettingsScreen() {
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.brand} />}
-        contentContainerStyle={{paddingTop: 20, paddingBottom: 48}}
+        contentContainerStyle={{ paddingTop: 20, paddingBottom: 48 }}
       >
-        <ImageBackground source={PATTERN} className="absolute inset-0" style={{opacity: 0.02}} resizeMode="repeat" />
+        <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.02 }} resizeMode="repeat" />
         {activeTab === 'overview' ? (
           <View className="px-5 pb-6">
             <PlanSummaryBanner
@@ -69,7 +69,7 @@ export default function BillingSettingsScreen() {
               <BillingStorageCard storage={storage} />
             </View>
 
-            <View className="h-px bg-stroke-weak my-6" />
+            {/* <View className="h-px bg-stroke-weak my-6" />
             <View className="rounded-[24px] bg-fill-weaker p-5">
               <Text style={{...TYPE.bodyStrong, color: COLORS.textStrong}}>
                 Billing is managed securely by {summary?.provider === 'apple' ? 'Apple' : summary?.provider === 'google' ? 'Google Play' : 'Polar'}.
@@ -80,7 +80,7 @@ export default function BillingSettingsScreen() {
               <Button variant="outline" size="lg" className="mt-4" onPress={handlePortal} loading={portalBusy}>
                 Manage billing
               </Button>
-            </View>
+            </View> */}
 
             {isProOrAbove && (
               <View className="pt-6 pb-2 items-center">

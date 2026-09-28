@@ -26,6 +26,8 @@ import {
   UiUsers01,
 } from '@/components/ui/icons/SettingsIcons';
 import { SettingsHubRow } from '@/components/settings/SettingsHubRow';
+import { PlanSummaryBanner } from '@/components/subscription/PlanSummaryBanner';
+import { useSubscription } from '@/hooks/queries/use-subscription';
 import { TYPE } from '@/constants/typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useProfileSettingsLogic } from '@/hooks/use-profile-settings-logic';
@@ -49,6 +51,11 @@ export default function SettingsIndex() {
     handleLogout,
     openSheet,
   } = useProfileSettingsLogic();
+  const {
+    isProOrAbove,
+    summary,
+    isLoading: subscriptionLoading,
+  } = useSubscription();
   const [showVaultCelebration, setShowVaultCelebration] = useState(false);
   const router = useRouter();
   const displayName = profile?.fullname?.trim()
@@ -72,6 +79,11 @@ export default function SettingsIndex() {
     router.push(href as never);
   }, [router]);
 
+  const handleManagePlan = useCallback(() => {
+    Haptics.selectionAsync();
+    router.push('/pricing');
+  }, [router]);
+
   const openCommunity = useCallback((url: string) => {
     Haptics.selectionAsync();
     Linking.openURL(url).catch(() => { });
@@ -93,6 +105,18 @@ export default function SettingsIndex() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <View style={{ marginBottom: 16 }}>
+          <PlanSummaryBanner
+            isProOrAbove={isProOrAbove}
+            subscriptionKnown={Boolean(summary) && !subscriptionLoading}
+            onPress={handleManagePlan}
+            tier={summary?.tier}
+            status={summary?.status}
+            cancelAtPeriodEnd={summary?.cancel_at_period_end}
+            provider={summary?.provider}
+          />
+        </View>
+
         <TouchableOpacity
           onPress={() => push('/settings/profile')}
           activeOpacity={0.8}
