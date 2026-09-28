@@ -1,12 +1,13 @@
 import React, {useCallback} from 'react';
-import {ImageBackground, ScrollView, Text, TouchableOpacity, View} from 'react-native';
+import {ImageBackground, Platform, ScrollView, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Check} from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
+import dayjs from 'dayjs';
 import {Button} from '@/components/ui';
 import {TYPE} from '@/constants/typography';
-import {COLORS} from '@/constants/tokens';
+import {COLORS, FONTS} from '@/constants/tokens';
 import {safeBack} from '@/lib/utils';
 import {usePricingLogic} from '@/hooks/use-pricing-logic';
 import {useSubscription} from '@/hooks/queries/use-subscription';
@@ -16,7 +17,7 @@ import {
   getManagePlanProCardImageStyle,
   getManagePlanProCardStyle,
 } from '@/features/settings/manage-plan-layout';
-import {IAP_DISCLOSURE_COPY, IAP_LEGAL_URLS, iapService} from '@/features/billing';
+import {getIapDisclosureCopy, IAP_DISCLOSURE_COPY, IAP_LEGAL_URLS, iapService} from '@/features/billing';
 
 const PRO_PLAN_GRADIENT = require('../assets/images/backgrounds/pro-plan-gradient.webp');
 
@@ -27,8 +28,32 @@ function FeatureList({items, inverse = false}: {items: string[]; inverse?: boole
   return <View className="gap-4 mt-7">{items.map(item => <View key={item} className="flex-row items-start gap-3"><Check size={21} color={inverse ? COLORS.textInverse : COLORS.textBase} strokeWidth={2} /><Text className="flex-1" style={{...TYPE.body, color: inverse ? COLORS.textInverse : COLORS.textBase}}>{item}</Text></View>)}</View>;
 }
 
+function getProviderDisplayName(provider?: 'apple' | 'google' | 'polar') {
+  if (provider === 'apple') return 'Apple App Store';
+  if (provider === 'google') return 'Google Play';
+  if (provider === 'polar') return 'Web';
+  return 'Web';
+}
+
+function formatPeriodEndDate(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  const d = dayjs(dateStr);
+  return d.isValid() ? d.format('MMM D, YYYY') : '';
+}
+
 export default function ManagePlanScreen() {
-  const {interval, changeInterval, handleCheckout, handleRestore, localizedProduct, purchaseAvailable, router, loading, restoring} = usePricingLogic();
+  const {
+    interval,
+    changeInterval,
+    handleCheckout,
+    handleRestore,
+    products,
+    localizedProduct,
+    purchaseAvailable,
+    router,
+    loading,
+    restoring,
+  } = usePricingLogic();
   const {isProOrAbove, summary} = useSubscription();
   const isCancellationScheduled = summary?.cancel_at_period_end === true;
   const back = useCallback(() => { Haptics.selectionAsync(); safeBack(router, '/settings/billing'); }, [router]);
@@ -41,6 +66,20 @@ export default function ManagePlanScreen() {
     useUiStore.getState().openSheet('cancel-subscription-confirmation');
   }, [summary?.provider]);
 
+  const handleManageSubscription = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (summary?.provider === 'apple' || summary?.provider === 'google') {
+      void iapService.openSubscriptionManagement(undefined, summary?.provider);
+      return;
+    }
+    try {
+      const { openBillingPortal } = await import('@/features/settings/billing-flow');
+      await openBillingPortal({ returnPath: '/settings/billing', provider: 'polar' });
+    } catch {
+      useUiStore.getState().openSheet('cancel-subscription-confirmation');
+    }
+  }, [summary?.provider]);
+
   const openTerms = useCallback(() => {
     void Haptics.selectionAsync();
     void WebBrowser.openBrowserAsync(IAP_LEGAL_URLS.terms);
@@ -51,7 +90,15 @@ export default function ManagePlanScreen() {
     void WebBrowser.openBrowserAsync(IAP_LEGAL_URLS.privacy);
   }, []);
 
-  const displayPrice = localizedProduct?.localizedPrice || (interval === 'monthly' ? '$9.99' : '$79');
+  const monthlyPrice = products?.monthly?.localizedPrice || '$9.99';
+  const annualPrice = products?.annual?.localizedPrice || '$79.00';
+  const displayPrice = localizedProduct?.localizedPrice || (interval === 'monthly' ? monthlyPrice : annualPrice);
+  const currentPlanInterval = isProOrAbove ? (summary?.interval || 'monthly') : null;
+  const nativeStoreName = Platform.OS === 'ios' ? 'Apple' : 'Google Play';
+  const isBilledOnNativeStore =
+    (Platform.OS === 'ios' && summary?.provider === 'apple') ||
+    (Platform.OS === 'android' && summary?.provider === 'google');
+  const canSwitchToNativeStore = isProOrAbove && !isBilledOnNativeStore && isCancellationScheduled;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} className="flex-1 bg-background" edges={['top']}>
@@ -65,11 +112,38 @@ export default function ManagePlanScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 56 }}
       >
-          <View className="flex-row self-center bg-fill-weak rounded-full p-1 w-[280px] mt-4 mb-6">{(['monthly', 'annual'] as const).map(value => <TouchableOpacity key={value} accessibilityRole="button" onPress={() => changeInterval(value)} className={`h-11 flex-1 items-center justify-center rounded-full ${interval === value ? 'bg-text-strong' : ''}`}><Text className={interval === value ? 'text-white' : 'text-text-strong'} style={TYPE.buttonSmall}>{value === 'monthly' ? 'Monthly' : 'Annual'}</Text></TouchableOpacity>)}</View>
+          <View className="flex-row self-center bg-fill-weak rounded-full p-1 w-[280px] mt-4 mb-6">
+            {(['monthly', 'annual'] as const).map(value => (
+              <TouchableOpacity
+                key={value}
+                accessibilityRole="button"
+                onPress={() => changeInterval(value)}
+                className={`h-11 flex-1 items-center justify-center rounded-full ${interval === value ? 'bg-text-strong' : ''}`}
+              >
+                <Text className={interval === value ? 'text-white' : 'text-text-strong'} style={TYPE.buttonSmall}>
+                  {value === 'monthly' ? 'Monthly' : 'Annual'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
           <View className="rounded-[32px] bg-fill-weak px-6 py-7">
-            <Text className="text-text-strong" style={TYPE.uiTitle}>Free</Text><Text className="text-text-base mt-2" style={TYPE.body}>Capture and reflect at your own pace</Text><FeatureList items={FREE_FEATURES} />
-            <View className="flex-row items-end mt-8"><Text className="text-brand" style={TYPE.displayTitle}>$0</Text><Text className="text-text-weak mb-2 ml-2" style={TYPE.body}>/ month</Text></View>
-            <Button variant="secondary" size="lg" fullWidth className="mt-7 bg-white" disabled={!isProOrAbove} onPress={requestCancellation}>{isProOrAbove ? 'Downgrade to Free' : 'Current plan'}</Button>
+            <Text className="text-text-strong" style={TYPE.uiTitle}>Free</Text>
+            <Text className="text-text-base mt-2" style={TYPE.body}>Capture and reflect at your own pace</Text>
+            <FeatureList items={FREE_FEATURES} />
+            <View className="flex-row items-end mt-8">
+              <Text className="text-brand" style={TYPE.displayTitle}>$0</Text>
+              <Text className="text-text-weak mb-2 ml-2" style={TYPE.body}>/ month</Text>
+            </View>
+            <Button
+              variant="secondary"
+              size="lg"
+              fullWidth
+              className="mt-7 bg-white"
+              disabled={!isProOrAbove}
+              onPress={requestCancellation}
+            >
+              {isProOrAbove ? 'Downgrade to Free' : 'Current plan'}
+            </Button>
           </View>
           <ImageBackground
             source={PRO_PLAN_GRADIENT}
@@ -77,9 +151,150 @@ export default function ManagePlanScreen() {
             imageStyle={getManagePlanProCardImageStyle()}
             style={getManagePlanProCardStyle()}
           >
-            <Text className="text-white" style={TYPE.uiTitle}>Pro</Text><Text className="text-white mt-2" style={TYPE.body}>For users who want to benefit more</Text><FeatureList items={PRO_FEATURES} inverse />
-            <View className="flex-row items-end mt-8"><Text className="text-white" style={TYPE.displayTitle}>{displayPrice}</Text><Text className="text-white mb-2 ml-2" style={TYPE.body}>/ {interval === 'monthly' ? 'month' : 'year'}</Text></View>
-            <Button variant="secondary" size="lg" fullWidth className="mt-7 bg-white" loading={loading} disabled={isProOrAbove || isCancellationScheduled || !purchaseAvailable} onPress={() => handleCheckout('pro')}>{isProOrAbove ? 'Current plan' : purchaseAvailable ? 'Start 14-day trial' : 'Purchases unavailable'}</Button>
+            <Text className="text-white" style={TYPE.uiTitle}>Pro</Text>
+            <Text className="text-white mt-2" style={TYPE.body}>For users who want to benefit more</Text>
+            <FeatureList items={PRO_FEATURES} inverse />
+
+            {/* Plan selection: displays both Monthly and Annual pricing */}
+            <View className="mt-8 flex-row gap-3">
+              <TouchableOpacity
+                accessibilityRole="radio"
+                accessibilityState={{ checked: interval === 'monthly' }}
+                accessibilityLabel={`Monthly plan: ${monthlyPrice} per month`}
+                onPress={() => changeInterval('monthly')}
+                activeOpacity={0.8}
+                className={`relative flex-1 p-3.5 rounded-2xl border ${
+                  interval === 'monthly'
+                    ? 'bg-white/25 border-white'
+                    : 'bg-white/10 border-white/20'
+                }`}
+              >
+                {currentPlanInterval === 'monthly' && (
+                  <View
+                    pointerEvents="none"
+                    className="absolute -top-2.5 left-3.5 bg-white px-2 py-0.5 rounded-full z-10"
+                    style={{
+                      shadowColor: COLORS.shadow,
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.15,
+                      shadowRadius: 2,
+                      elevation: 2,
+                    }}
+                  >
+                    <Text style={[TYPE.eyebrow, { color: COLORS.brand }]}>
+                      Current plan
+                    </Text>
+                  </View>
+                )}
+                <Text style={[TYPE.label, { color: 'rgba(255, 255, 255, 0.85)' }]}>Monthly</Text>
+                <Text style={[TYPE.stat, { color: '#ffffff', marginTop: 4 }]}>
+                  {monthlyPrice}
+                </Text>
+                <Text style={[TYPE.metadata, { color: 'rgba(255, 255, 255, 0.7)', marginTop: 2 }]}>/ month</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                accessibilityRole="radio"
+                accessibilityState={{ checked: interval === 'annual' }}
+                accessibilityLabel={`Annual plan: ${annualPrice} per year`}
+                onPress={() => changeInterval('annual')}
+                activeOpacity={0.8}
+                className={`relative flex-1 p-3.5 rounded-2xl border ${
+                  interval === 'annual'
+                    ? 'bg-white/25 border-white'
+                    : 'bg-white/10 border-white/20'
+                }`}
+              >
+                {currentPlanInterval === 'annual' && (
+                  <View
+                    pointerEvents="none"
+                    className="absolute -top-2.5 left-3.5 bg-white px-2 py-0.5 rounded-full z-10"
+                    style={{
+                      shadowColor: COLORS.shadow,
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.15,
+                      shadowRadius: 2,
+                      elevation: 2,
+                    }}
+                  >
+                    <Text style={[TYPE.eyebrow, { color: COLORS.brand }]}>
+                      Current plan
+                    </Text>
+                  </View>
+                )}
+                <View className="flex-row items-center justify-between">
+                  <Text style={[TYPE.label, { color: 'rgba(255, 255, 255, 0.85)' }]}>Annual</Text>
+                  <View className="bg-white/30 px-1.5 py-0.5 rounded-full">
+                    <Text style={[TYPE.eyebrow, { color: '#ffffff' }]}>SAVE 15%</Text>
+                  </View>
+                </View>
+                <Text style={[TYPE.stat, { color: '#ffffff', marginTop: 4 }]}>
+                  {annualPrice}
+                </Text>
+                <Text style={[TYPE.metadata, { color: 'rgba(255, 255, 255, 0.7)', marginTop: 2 }]}>/ year</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View className="flex-row items-end mt-6">
+              <Text className="text-white" style={TYPE.displayTitle}>{displayPrice}</Text>
+              <Text className="text-white mb-2 ml-2" style={TYPE.body}>/ {interval === 'monthly' ? 'month' : 'year'}</Text>
+            </View>
+
+            {isProOrAbove && (
+              <View className="mt-2">
+                <Text style={[TYPE.metadata, { color: 'rgba(255, 255, 255, 0.85)' }]}>
+                  {`Billed via ${getProviderDisplayName(summary?.provider)}`}
+                  {isCancellationScheduled && summary?.current_period_end
+                    ? ` · Access ends ${formatPeriodEndDate(summary.current_period_end)}`
+                    : ''}
+                </Text>
+                {!isBilledOnNativeStore && !isCancellationScheduled && (
+                  <Text style={[TYPE.metadata, { color: 'rgba(255, 255, 255, 0.75)', marginTop: 4 }]}>
+                    {`To switch to ${nativeStoreName}, cancel auto-renewal in your ${getProviderDisplayName(summary?.provider)} settings.`}
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {isProOrAbove ? (
+              canSwitchToNativeStore ? (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  fullWidth
+                  className="mt-7 bg-white"
+                  loading={loading}
+                  disabled={!purchaseAvailable}
+                  onPress={() => handleCheckout('pro')}
+                >
+                  {`Switch to ${nativeStoreName}`}
+                </Button>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  fullWidth
+                  className="mt-7 bg-white"
+                  loading={loading}
+                  onPress={handleManageSubscription}
+                >
+                  Manage subscription
+                </Button>
+              )
+            ) : (
+              <Button
+                variant="secondary"
+                size="lg"
+                fullWidth
+                className="mt-7 bg-white"
+                loading={loading}
+                disabled={isCancellationScheduled || !purchaseAvailable}
+                onPress={() => handleCheckout('pro')}
+              >
+                {purchaseAvailable ? 'Start 14-day trial' : 'Purchases unavailable'}
+              </Button>
+            )}
+
             {!isProOrAbove && !purchaseAvailable ? (
               <Text className="mt-3 text-center text-white" style={TYPE.bodySmall}>
                 The store is still preparing this plan. Please check back shortly.
@@ -105,7 +320,7 @@ export default function ManagePlanScreen() {
           {/* Legal Disclosures & Terms / Privacy Links (Mandatory for App Store & Google Play) */}
           <View className="mt-8 px-2 pt-4 border-t border-stroke-weaker items-center">
             <Text className="text-center text-text-weak leading-relaxed" style={TYPE.metadata}>
-              {IAP_DISCLOSURE_COPY}
+              {getIapDisclosureCopy()}
             </Text>
             <View className="flex-row items-center justify-center gap-4 mt-4">
               <TouchableOpacity onPress={openTerms} accessibilityRole="link">
