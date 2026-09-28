@@ -42,6 +42,7 @@ export class VoicePlaybackController {
 
     this.queuedBuffers.set(buffer.id, buffer);
     this.queueDepthMs += buffer.durationMs;
+    this.metrics.markFirstOutput();
     this.metrics.observeQueueDepth(this.queueDepthMs);
     this.activeTurn = true;
 
@@ -141,6 +142,7 @@ export class VoicePlaybackController {
       this.runtime.start();
       this.queueStarted = true;
     }
+    this.metrics.markPlaybackStart();
     this.state = 'playing';
   }
 
