@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/react-native';
 import { Button } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { hs } from '@/constants/responsive';
 import { SENTRY_DSN } from '@/lib/env';
 import { logger } from '@/lib/logger';
 
@@ -80,9 +81,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   mark: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: hs(64),
+    height: hs(64),
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.brandSubtle,
