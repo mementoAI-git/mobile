@@ -8,8 +8,11 @@ import React, {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
+import * as FileSystem from 'expo-file-system/legacy';
 import { logger } from '@/lib/logger';
+import { toast } from '@/components/ui/Toast';
 import { useAuthStore } from '@/store';
+import { resolveBackgroundTrackUri } from '@/features/audio/background-music-cache';
 import {
   BACKGROUND_TRACKS,
   getBackgroundTrack,
@@ -105,13 +108,13 @@ export function BackgroundMusicProvider({ children }: { children: React.ReactNod
           playerRef.current = null;
         }
 
-        const source = track.localSource ?? (track.remoteUrl ? { uri: track.remoteUrl } : null);
-        if (!source) {
-          await stopTrack();
-          return;
-        }
+        const uri = await resolveBackgroundTrackUri(track, {
+          cacheDirectory: FileSystem.cacheDirectory,
+          getInfo: FileSystem.getInfoAsync,
+          download: FileSystem.downloadAsync,
+        });
 
-        const player = createAudioPlayer(source);
+        const player = createAudioPlayer({ uri });
         player.loop = true;
         player.volume = volume / 100;
         player.play();
@@ -121,6 +124,7 @@ export function BackgroundMusicProvider({ children }: { children: React.ReactNod
         setIsPlaying(true);
       } catch (err) {
         logger.warn('Could not start background music track', err);
+        toast('This background track needs a connection the first time you play it.', 'info');
         setIsPlaying(false);
       }
     },

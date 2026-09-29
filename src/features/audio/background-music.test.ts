@@ -17,6 +17,21 @@ describe('background music catalog and helpers', () => {
     expect(keys).toEqual(['none', 'moonlight', 'seawaves', 'arkansas', 'love']);
   });
 
+  test('keeps ambience tracks remote so MP3 files are not bundled', async () => {
+    const source = await Bun.file(new URL('./background-music.ts', import.meta.url)).text();
+    expect(source).not.toContain("require('../../../assets/audio/");
+    expect(BACKGROUND_TRACKS.filter((track) => track.key !== 'none').every(
+      (track) => track.remoteUrl?.startsWith('https://'),
+    )).toBe(true);
+  });
+
+  test('versions every playable source so CDN and device caches can be invalidated', () => {
+    for (const track of BACKGROUND_TRACKS.filter((item) => item.key !== 'none')) {
+      expect(track.cacheVersion).toBe('v1');
+      expect(track.remoteUrl).toEndWith('?v=v1');
+    }
+  });
+
   test('resolves tracks by key with safe fallback', () => {
     expect(getBackgroundTrack('moonlight').name).toBe('Moonlight');
     expect(getBackgroundTrack('seawaves').name).toBe('Sea Waves');
