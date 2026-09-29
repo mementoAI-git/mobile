@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, TouchableOpacity, type StyleProp, type ViewStyle } from 'react-native';
 import { Mic } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
+import { iconSize, minTouchTarget } from '@/constants/responsive';
 
 interface RecordingIconButtonProps {
   active?: boolean;
@@ -20,6 +21,8 @@ export function RecordingIconButton({
   children,
   style,
 }: RecordingIconButtonProps) {
+  const glyphSize = iconSize(20);
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -37,7 +40,7 @@ export function RecordingIconButton({
     >
       {children ?? (
         <Mic
-          size={20}
+          size={glyphSize}
           color={active ? COLORS.textInverse : COLORS.textBase}
           strokeWidth={2}
         />
@@ -48,9 +51,9 @@ export function RecordingIconButton({
 
 const styles = StyleSheet.create({
   button: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: minTouchTarget(44),
+    height: minTouchTarget(44),
+    borderRadius: 999,
     backgroundColor: COLORS.fillWeaker,
     alignItems: 'center',
     justifyContent: 'center',

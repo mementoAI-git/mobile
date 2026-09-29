@@ -3,6 +3,7 @@ import { TouchableOpacity, View } from 'react-native';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react-native';
 import { TextInput } from './TextInput';
 import { COLORS } from '@/constants/tokens';
+import { iconSize } from '@/constants/responsive';
 import type { TextInputProps } from 'react-native';
 
 interface PasswordInputProps extends Omit<TextInputProps, 'secureTextEntry'> {
@@ -26,6 +27,7 @@ export function PasswordInput({
   ...props
 }: PasswordInputProps) {
   const [show, setShow] = useState(false);
+  const glyphSize = iconSize(20);
 
   return (
     <TextInput
@@ -39,17 +41,19 @@ export function PasswordInput({
       rightElement={
         error ? (
           <View className="p-1">
-            <AlertCircle size={20} color={COLORS.error} strokeWidth={1.8} />
+            <AlertCircle size={glyphSize} color={COLORS.error} strokeWidth={1.8} />
           </View>
         ) : (
           <TouchableOpacity
             onPress={() => setShow(!show)}
             className="p-1"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel={show ? 'Hide password' : 'Show password'}
           >
             {show
-              ? <Eye size={20} color={COLORS.textWeak} strokeWidth={1.8} />
-              : <EyeOff size={20} color={COLORS.textWeak} strokeWidth={1.8} />
+              ? <Eye size={glyphSize} color={COLORS.textWeak} strokeWidth={1.8} />
+              : <EyeOff size={glyphSize} color={COLORS.textWeak} strokeWidth={1.8} />
             }
           </TouchableOpacity>
         )
@@ -58,4 +62,3 @@ export function PasswordInput({
     />
   );
 }
-

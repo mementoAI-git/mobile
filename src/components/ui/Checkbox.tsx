@@ -1,9 +1,10 @@
 import React from 'react';
-import { TouchableOpacity, View, type ViewProps } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Check } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { cn } from '@/lib/utils';
+import { ms, radius } from '@/constants/responsive';
 
 interface CheckboxProps {
   checked: boolean;
@@ -29,6 +30,9 @@ export function Checkbox({
   size = 20,
   className,
 }: CheckboxProps) {
+  const scaledSize = ms(size, 0.2);
+  const hitPadding = Math.max(12, Math.round((44 - scaledSize) / 2));
+
   const handlePress = () => {
     if (disabled) return;
     Haptics.selectionAsync();
@@ -40,6 +44,9 @@ export function Checkbox({
       onPress={handlePress}
       disabled={disabled}
       activeOpacity={0.7}
+      hitSlop={{ top: hitPadding, bottom: hitPadding, left: hitPadding, right: hitPadding }}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked, disabled }}
       style={{ opacity: disabled ? 0.4 : 1 }}
     >
       <View
@@ -51,14 +58,14 @@ export function Checkbox({
           className,
         )}
         style={{
-          width: size,
-          height: size,
-          borderRadius: 6, // matches web's rounded-[6px] on Checkbox
+          width: scaledSize,
+          height: scaledSize,
+          borderRadius: radius(6), // matches web's rounded-[6px] on Checkbox
         }}
       >
         {checked && (
           <Check
-            size={size * 0.65}
+            size={scaledSize * 0.65}
             color={COLORS.textInverse}
             strokeWidth={2.5}
           />

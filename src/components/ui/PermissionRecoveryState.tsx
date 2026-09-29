@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import type { LucideIcon } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, ms, responsiveSpace } from '@/constants/responsive';
 
 type PermissionRecoveryTone = 'light' | 'dark';
 
@@ -44,7 +45,7 @@ export function PermissionRecoveryState({
     <View style={styles.container}>
       <View style={[styles.iconWrap, isDark ? styles.darkIconWrap : styles.lightIconWrap]}>
         <Icon
-          size={34}
+          size={iconSize(34)}
           color={isDark ? COLORS.textInverse : COLORS.brand}
           strokeWidth={1.9}
         />
@@ -83,16 +84,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 30,
-    paddingVertical: 32,
+    paddingHorizontal: responsiveSpace(30),
+    paddingVertical: responsiveSpace(32),
   },
   iconWrap: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
+    width: ms(74, 0.25),
+    height: ms(74, 0.25),
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 18,
+    marginBottom: responsiveSpace(18),
   },
   lightIconWrap: {
     backgroundColor: COLORS.brandSubtle,
@@ -109,32 +110,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   description: {
-    marginTop: 8,
+    marginTop: responsiveSpace(8),
     ...TYPE.body,
     lineHeight: 21,
     textAlign: 'center',
   },
   actions: {
     width: '100%',
-    marginTop: 24,
-    gap: 10,
+    marginTop: responsiveSpace(24),
+    gap: responsiveSpace(10),
   },
   primaryButton: {
-    height: 52,
-    borderRadius: 26,
+    minHeight: minTouchTarget(52),
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.brand,
+    paddingHorizontal: responsiveSpace(24),
   },
   primaryText: {
     ...TYPE.button,
     color: COLORS.textInverse,
   },
   secondaryButton: {
-    height: 48,
-    borderRadius: 24,
+    minHeight: minTouchTarget(48),
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: responsiveSpace(20),
   },
   lightSecondaryButton: {
     backgroundColor: COLORS.fillWeaker,

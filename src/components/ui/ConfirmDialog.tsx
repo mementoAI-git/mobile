@@ -26,7 +26,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Platform,
 } from 'react-native';
 import {
   BottomSheetModal,
@@ -38,6 +37,7 @@ import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
+import { minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -170,8 +170,8 @@ export function ConfirmDialog({
 const styles = StyleSheet.create({
   sheetBackground: {
     backgroundColor: COLORS.background,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: radius(28),
+    borderTopRightRadius: radius(28),
   },
 
   handleIndicator: {
@@ -181,9 +181,9 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    gap: 8,
+    paddingHorizontal: responsiveSpace(20),
+    paddingTop: responsiveSpace(12),
+    gap: responsiveSpace(8),
   },
 
   title: {
@@ -200,16 +200,17 @@ const styles = StyleSheet.create({
   },
 
   buttons: {
-    gap: 10,
-    marginTop: 8,
-    marginBottom: 8,
+    gap: responsiveSpace(10),
+    marginTop: responsiveSpace(8),
+    marginBottom: responsiveSpace(8),
   },
 
   btn: {
-    height: 56,
+    minHeight: minTouchTarget(56),
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: responsiveSpace(16),
   },
 
   // Primary — brand orange filled

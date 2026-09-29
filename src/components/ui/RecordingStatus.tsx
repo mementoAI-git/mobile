@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View, type StyleProp, type ViewStyl
 import { X } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius, responsiveSpace } from '@/constants/responsive';
 
 interface RecordingStatusProps {
   seconds?: number;
@@ -38,12 +39,12 @@ export function RecordingStatus({
         <TouchableOpacity
           onPress={onCancel}
           activeOpacity={0.78}
-          hitSlop={8}
+          hitSlop={10}
           accessibilityRole="button"
           accessibilityLabel="Discard recording"
           style={styles.cancelButton}
         >
-          <X size={13} color={COLORS.textBase} strokeWidth={2.4} />
+          <X size={iconSize(13)} color={COLORS.textBase} strokeWidth={2.4} />
         </TouchableOpacity>
       ) : null}
     </View>
@@ -55,11 +56,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    gap: 8,
+    gap: responsiveSpace(8),
     minHeight: 28,
-    paddingLeft: 10,
-    paddingRight: 8,
-    borderRadius: 14,
+    paddingLeft: responsiveSpace(10),
+    paddingRight: responsiveSpace(8),
+    borderRadius: radius(14),
     backgroundColor: COLORS.brandSubtle,
     borderWidth: 1,
     borderColor: `${COLORS.brand}20`,
@@ -86,9 +87,9 @@ const styles = StyleSheet.create({
     color: COLORS.textBase,
   },
   cancelButton: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.fillWeak,

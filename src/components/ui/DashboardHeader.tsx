@@ -8,6 +8,7 @@ import { useProfile } from '@/hooks/queries/use-profile';
 import { useRouter } from 'expo-router';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 import * as Haptics from 'expo-haptics';
 import { ZapIconWarm } from './icons/CapsuleStatIcons';
 
@@ -60,14 +61,22 @@ export function DashboardHeader({
   return (
     <View className="relative bg-background overflow-hidden">
       <ImageBackground source={PATTERN} className="absolute inset-0 opacity-20" />
-      <View className="flex-row items-center justify-between px-5 pt-4 pb-3 min-h-[64px]">
+      <View
+        className="flex-row items-center justify-between"
+        style={{
+          paddingHorizontal: responsiveSpace(20),
+          paddingTop: responsiveSpace(16),
+          paddingBottom: responsiveSpace(12),
+          minHeight: minTouchTarget(64),
+        }}
+      >
         <Animated.Text
           className="text-text-strong"
           style={TYPE.screenTitle}
         >
           {title}
         </Animated.Text>
-        <View className="flex-row items-center gap-2">
+        <View className="flex-row items-center" style={{ gap: responsiveSpace(8) }}>
           {rightElement}
           {showSearch && (
             <TouchableOpacity
@@ -79,13 +88,13 @@ export function DashboardHeader({
               style={{
                 width: 38,
                 height: 38,
-                borderRadius: 19,
+                borderRadius: 999,
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: COLORS.fillWeaker,
               }}
             >
-              <Search size={19} color={COLORS.textStrong} strokeWidth={2} />
+              <Search size={iconSize(19)} color={COLORS.textStrong} strokeWidth={2} />
             </TouchableOpacity>
           )}
           {showStreak && (
@@ -97,13 +106,14 @@ export function DashboardHeader({
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 5,
-                paddingHorizontal: 10,
-                paddingVertical: 7,
-                borderRadius: 8,
+                minHeight: minTouchTarget(44),
+                gap: responsiveSpace(5),
+                paddingHorizontal: responsiveSpace(10),
+                paddingVertical: responsiveSpace(7),
+                borderRadius: radius(8),
               }}
             >
-              <ZapIconWarm size={20} />
+              <ZapIconWarm size={iconSize(20)} />
               <Animated.Text style={{ ...TYPE.label, color: COLORS.textStrong }}>
                 {streakCount}
               </Animated.Text>
@@ -115,10 +125,16 @@ export function DashboardHeader({
               router.push('/account');
             }}
             activeOpacity={0.8}
-            hitSlop={4}
+            hitSlop={6}
             accessibilityRole="button"
             accessibilityLabel="Account"
             className="border-2 border-transparent focus:border-brand/20 rounded-full ml-0.5"
+            style={{
+              minHeight: minTouchTarget(44),
+              minWidth: minTouchTarget(44),
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
             <Avatar
               uri={activeUser?.picture_url || activeUser?.picture}
