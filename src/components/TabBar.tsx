@@ -31,6 +31,7 @@ import { useRouter, usePathname } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { resolveTabSwipeTarget } from '@/lib/tab-swipe';
 import { getTabBarItemWidths } from '@/features/navigation/tab-bar-layout';
+import { iconSize, minTouchTarget, responsiveSpace } from '@/constants/responsive';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -79,7 +80,7 @@ const SPRING = { damping: 22, stiffness: 280, mass: 0.8 };
 const BASE_INACTIVE_W = Platform.OS === 'android' ? 64 : 60;
 const BASE_ACTIVE_W   = 96;  // expanded pill with label
 const PILL_H     = Platform.OS === 'android' ? 60 : 58;
-const ICON_SIZE  = 26;
+const ICON_SIZE  = iconSize(26);
 
 type TabRoute = {
   key: string;
@@ -345,7 +346,7 @@ export function TabBar({ state, navigation }: TabBarProps) {
         style={styles.searchCircle}
         android_ripple={{ color: COLORS.brandSubtle, borderless: true, radius: 28 }}
       >
-        <Settings size={22} color={COLORS.textBase} strokeWidth={1.8} />
+        <Settings size={iconSize(22)} color={COLORS.textBase} strokeWidth={1.8} />
       </Pressable>
     </Animated.View>
   );
@@ -403,7 +404,7 @@ const styles = StyleSheet.create({
     height: PILL_H - 8,
     overflow: 'hidden',
     borderRadius: 999,
-    minHeight: 52,
+    minHeight: minTouchTarget(52),
   },
 
   // Pressable inside wrapper
@@ -415,7 +416,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     gap: 3,
-    minHeight: 52,
+    minHeight: minTouchTarget(52),
   },
 
   // Active tab gets opaque nested pill bg
@@ -439,9 +440,9 @@ const styles = StyleSheet.create({
 
   // Detached search circle — 56 iOS, 56 Android (already ≥48dp Material minimum)
   searchCircle: {
-    width: Platform.OS === 'android' ? 56 : 56,
-    height: Platform.OS === 'android' ? 56 : 56,
-    borderRadius: 28,
+    width: minTouchTarget(56),
+    height: minTouchTarget(56),
+    borderRadius: 999,
     backgroundColor: GLASS_BG,
     alignItems: 'center',
     justifyContent: 'center',

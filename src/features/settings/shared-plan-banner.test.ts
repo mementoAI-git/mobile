@@ -24,8 +24,8 @@ describe('shared plan summary banner', () => {
     expect(banner).toContain('styles.badge');
     expect(banner).toContain('styles.badgeText');
     expect(banner).toContain('maxWidth: \'44%\'');
-    expect(banner).toContain("from 'react-native-size-matters'");
-    expect(banner).toContain('fontSize: moderateScale(10, 0.3)');
+    expect(banner).toContain("from '@/constants/responsive'");
+    expect(banner).not.toContain("from 'react-native-size-matters'");
     expect(banner).not.toContain('useWindowDimensions');
   });
 });

@@ -2,8 +2,9 @@ import React, { memo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { Avatar } from '@/components/ui';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 import {
   getBeneficiaryStatusBadge,
   getVaultAccessScopeLabel,
@@ -25,7 +26,13 @@ export const BeneficiaryPersonRow = memo(function BeneficiaryPersonRow({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.76}
-      className="min-h-[80px] flex-row items-center rounded-[24px] bg-card px-5 py-4"
+      style={{
+        minHeight: minTouchTarget(80),
+        borderRadius: radius(24),
+        paddingHorizontal: responsiveSpace(20),
+        paddingVertical: responsiveSpace(16),
+      }}
+      className="flex-row items-center bg-card"
     >
       <Avatar uri={picture} name={beneficiary.name} size="lg" />
       <View className="ml-4 flex-1">
@@ -74,7 +81,7 @@ export const BeneficiaryPersonRow = memo(function BeneficiaryPersonRow({
           </Text>
         </View>
       </View>
-      <ChevronRight size={20} color={COLORS.textWeak} strokeWidth={2} />
+      <ChevronRight size={iconSize(20)} color={COLORS.textWeak} strokeWidth={2} />
     </TouchableOpacity>
   );
 });

@@ -9,6 +9,7 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, responsiveSpace } from '@/constants/responsive';
 
 interface SettingsHubRowProps {
   label: string;
@@ -42,11 +43,11 @@ export const SettingsHubRow = React.memo(function SettingsHubRow({
         activeOpacity={1}
         accessibilityRole="button"
         style={{
-          minHeight: 64,
+          minHeight: minTouchTarget(64),
           flexDirection: 'row',
           alignItems: 'center',
-          paddingHorizontal: 12,
-          gap: 12,
+          paddingHorizontal: responsiveSpace(12),
+          gap: responsiveSpace(12),
         }}
       >
         <View style={{ width: 32, alignItems: 'center' }}>{icon}</View>
@@ -56,7 +57,7 @@ export const SettingsHubRow = React.memo(function SettingsHubRow({
           {label}
         </Text>
         {showChevron && (
-          <ChevronRight size={21} color={COLORS.textBase} strokeWidth={2.2} />
+          <ChevronRight size={iconSize(21)} color={COLORS.textBase} strokeWidth={2.2} />
         )}
       </TouchableOpacity>
     </Animated.View>

@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import { hs, radius, responsiveSpace, vs } from '@/constants/responsive';
 
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     color: COLORS.textInverse,
     flex: 1,
     minWidth: 0,
-    marginRight: scale(10),
+    marginRight: hs(10),
   },
   badge: {
     flexDirection: 'row',
@@ -192,13 +192,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
     maxWidth: '44%',
-    gap: scale(4),
+    gap: responsiveSpace(4),
     borderRadius: 999,
-    paddingHorizontal: scale(10),
+    paddingHorizontal: hs(10),
   },
   paidBadge: {
     backgroundColor: COLORS.textInverse,
-    paddingVertical: verticalScale(4),
+    paddingVertical: vs(4),
   },
   upgradeBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
@@ -206,8 +206,6 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     ...TYPE.eyebrow,
-    fontSize: moderateScale(10, 0.3),
-    lineHeight: moderateScale(14, 0.3),
     flexShrink: 1,
   },
 });

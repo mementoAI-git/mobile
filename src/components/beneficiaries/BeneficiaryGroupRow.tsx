@@ -1,8 +1,9 @@
 import React, { memo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 import { getGroupMemberCount } from '@/features/beneficiaries/collections';
 import { GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
 import type { IGroup } from '@/types';
@@ -25,7 +26,13 @@ export const BeneficiaryGroupRow = memo(function BeneficiaryGroupRow({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.76}
-      className="min-h-[80px] flex-row items-center rounded-[24px] bg-card px-5 py-4"
+      style={{
+        minHeight: minTouchTarget(80),
+        borderRadius: radius(24),
+        paddingHorizontal: responsiveSpace(20),
+        paddingVertical: responsiveSpace(16),
+      }}
+      className="flex-row items-center bg-card"
     >
       <View className="flex-1">
         <View className="flex-row items-center">
@@ -43,7 +50,7 @@ export const BeneficiaryGroupRow = memo(function BeneficiaryGroupRow({
       <Text className="mr-3" style={{ ...TYPE.bodySmall, color: COLORS.textWeak }}>
         {count} {count === 1 ? 'Person' : 'People'}
       </Text>
-      <ChevronRight size={20} color={COLORS.textWeak} strokeWidth={2} />
+      <ChevronRight size={iconSize(20)} color={COLORS.textWeak} strokeWidth={2} />
     </TouchableOpacity>
   );
 });
