@@ -17,6 +17,7 @@ import { Button, TextInput } from '@/components/ui';
 import { useForgotPasswordLogic } from '@/hooks/use-forgot-password-logic';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
@@ -67,9 +68,13 @@ export default function ForgotPasswordScreen() {
                   activeOpacity={0.7}
                   accessibilityRole="button"
                   accessibilityLabel="Close and return to sign in"
-                  className="size-10 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
+                  style={{
+                    minWidth: minTouchTarget(44),
+                    minHeight: minTouchTarget(44),
+                  }}
+                  className="rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
                 >
-                  <X size={18} color={COLORS.textStrong} strokeWidth={2} />
+                  <X size={iconSize(18)} color={COLORS.textStrong} strokeWidth={2} />
                 </TouchableOpacity>
               </View>
 
@@ -129,9 +134,9 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   logoIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: iconSize(44),
+    height: iconSize(44),
+    borderRadius: radius(12),
   },
   titleText: {
     ...TYPE.displayTitle,

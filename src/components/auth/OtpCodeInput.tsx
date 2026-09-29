@@ -8,6 +8,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { isCompleteOtp, normalizeOtpInput } from '@/features/auth/email-verification';
 import { TYPE } from '@/constants/typography';
+import { minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 
 export interface OtpCodeInputProps {
   value: string;
@@ -62,7 +63,8 @@ export function OtpCodeInput({
       <View
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
-        className="flex-row items-center justify-between gap-2.5"
+        className="flex-row items-center justify-between"
+        style={{ gap: responsiveSpace(8) }}
       >
         {OTP_CELLS.map((index) => {
           const char = value[index] ?? '';
@@ -80,7 +82,11 @@ export function OtpCodeInput({
           return (
             <View
               key={index}
-              className={`flex-1 h-14 sm:h-16 items-center justify-center rounded-2xl bg-brand/5 border ${borderClass}`}
+              style={{
+                minHeight: minTouchTarget(56),
+                borderRadius: radius(16),
+              }}
+              className={`flex-1 items-center justify-center bg-brand/5 border ${borderClass}`}
             >
               <Text
                 className="text-brand text-center"

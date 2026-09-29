@@ -22,6 +22,7 @@ import {
 import { useFirstRunOnboarding } from '@/hooks/use-first-run-onboarding';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 import * as Haptics from 'expo-haptics';
 
 const MOTIVATION_DISPLAY_OPTIONS: Array<{
@@ -403,8 +404,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.strokeWeak,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: radius(16),
+    padding: responsiveSpace(16),
     minHeight: 180,
     justifyContent: 'space-between',
   },
@@ -438,12 +439,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   inspirationChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: responsiveSpace(16),
+    paddingVertical: responsiveSpace(10),
+    minHeight: minTouchTarget(40),
     borderRadius: 9999,
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.strokeWeak,
+    justifyContent: 'center',
   },
   inspirationChipText: {
     ...TYPE.bodySmall,

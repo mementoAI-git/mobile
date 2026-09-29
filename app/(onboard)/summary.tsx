@@ -6,6 +6,7 @@ import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
 import { OnboardingCelebrationOverlay } from '@/components/onboarding/OnboardingCelebrationOverlay';
 import { TYPE } from '@/constants/typography';
 import { COLORS } from '@/constants/tokens';
+import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 import { useFirstRunOnboarding } from '@/hooks/use-first-run-onboarding';
 
 const MOTIVATION_SUMMARY_TEXT: Record<string, string> = {
@@ -141,7 +142,7 @@ export default function SummaryScreen() {
 
         {/* Info row */}
         <Animated.View entering={FadeInDown.delay(500).duration(400)} style={styles.infoRow}>
-          <Info size={16} color={COLORS.textWeak} />
+          <Info size={iconSize(16)} color={COLORS.textWeak} />
           <Text style={styles.infoText}>
             You can always edit or build on this later
           </Text>
@@ -182,22 +183,22 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.summaryBlueBg,
     borderColor: COLORS.summaryBlueBorder,
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: radius(16),
+    padding: responsiveSpace(16),
   },
   cardPurple: {
     backgroundColor: COLORS.summaryPurpleBg,
     borderColor: COLORS.summaryPurpleBorder,
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: radius(16),
+    padding: responsiveSpace(16),
   },
   cardPeach: {
     backgroundColor: COLORS.summaryPeachBg,
     borderColor: COLORS.summaryPeachBorder,
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: radius(16),
+    padding: responsiveSpace(16),
   },
   panelLabelBlue: {
     ...TYPE.bodyStrong,
@@ -228,8 +229,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: responsiveSpace(14),
+    paddingVertical: responsiveSpace(8),
     borderRadius: 9999,
     backgroundColor: COLORS.card,
     borderWidth: 1,
