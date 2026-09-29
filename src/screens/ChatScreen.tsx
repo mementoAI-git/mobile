@@ -39,7 +39,13 @@ import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
 import * as Haptics from 'expo-haptics';
 import type { ChatReplyQuote } from '@/lib/utils';
-import { verticalScale } from 'react-native-size-matters';
+import {
+  vs,
+  radius,
+  minTouchTarget,
+  iconSize,
+  responsiveSpace,
+} from '@/constants/responsive';
 import {
   getComposerOverlayBottomPadding,
   getComposerOverlayMaxHeight,
@@ -56,9 +62,9 @@ import {
   shouldShowChatDaySeparator,
 } from '@/features/chat/chat-timeline';
 
-const COLLAPSED_COMPOSER_HEIGHT = 58;
-const COMPOSER_OVERLAY_GAP = 8;
-const COMPOSER_OVERLAY_MIN_HEIGHT = verticalScale(180);
+const COLLAPSED_COMPOSER_HEIGHT = minTouchTarget(58);
+const COMPOSER_OVERLAY_GAP = responsiveSpace(8);
+const COMPOSER_OVERLAY_MIN_HEIGHT = vs(180);
 const DEFAULT_HEADER_HEIGHT = 70;
 const CHAT_VISIBLE_CONTENT_POSITION = Object.freeze({
   autoscrollToBottomThreshold: 0.2,
@@ -745,10 +751,10 @@ const styles = StyleSheet.create({
   headerButton: {
     alignItems: 'center',
     backgroundColor: COLORS.fillWeak,
-    borderRadius: 20,
-    height: 40,
+    borderRadius: radius(20),
+    height: minTouchTarget(40),
     justifyContent: 'center',
-    width: 40,
+    width: minTouchTarget(40),
   },
   headerTitle: {
     color: COLORS.textStrong,
@@ -778,7 +784,7 @@ const styles = StyleSheet.create({
   dateSeparatorPill: {
     backgroundColor: COLORS.fillWeak,
     borderColor: COLORS.strokeWeaker,
-    borderRadius: 10,
+    borderRadius: radius(10),
     borderWidth: 1,
     minHeight: 20,
     paddingHorizontal: 9,

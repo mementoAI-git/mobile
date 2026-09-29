@@ -6,6 +6,7 @@ import { X } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { dimensionLabel, type LifeDimension } from '@/constants/enrichment';
+import { iconSize, radius, minTouchTarget, responsiveSpace } from '@/constants/responsive';
 
 const CHAT_ORB = require('../../../assets/images/onboarding/chat-ai-orb.png');
 
@@ -30,11 +31,14 @@ export function DeepDiveNudge({ dimension, question, onDeepDive, onDismiss }: De
       exiting={FadeOutUp.duration(200)}
       className="mx-4 mb-2"
     >
-      <View className="flex-row items-start gap-3 bg-white border border-stroke-weaker rounded-2xl p-3.5 shadow-sm">
+      <View
+        className="flex-row items-start gap-3 bg-white border border-stroke-weaker rounded-2xl p-3.5 shadow-sm"
+        style={{ borderRadius: radius(16) }}
+      >
         {/* AI Host Orb */}
         <Image
           source={CHAT_ORB}
-          style={{ width: 32, height: 32, marginTop: 2 }}
+          style={{ width: iconSize(32), height: iconSize(32), marginTop: 2 }}
           resizeMode="contain"
         />
 
@@ -64,6 +68,7 @@ export function DeepDiveNudge({ dimension, question, onDeepDive, onDismiss }: De
                 onDeepDive();
               }}
               activeOpacity={0.8}
+              hitSlop={6}
               className="flex-row items-center gap-1 bg-brand rounded-full px-3 py-1.5"
             >
               <Text style={{ ...TYPE.metadata, color: '#fff' }}>
@@ -77,6 +82,7 @@ export function DeepDiveNudge({ dimension, question, onDeepDive, onDismiss }: De
                 onDismiss();
               }}
               activeOpacity={0.7}
+              hitSlop={6}
               className="flex-row items-center gap-1 border border-stroke-weaker rounded-full px-3 py-1.5"
             >
               <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>
@@ -96,7 +102,7 @@ export function DeepDiveNudge({ dimension, question, onDeepDive, onDismiss }: De
           hitSlop={10}
           className="size-6 rounded-full bg-fill-weaker items-center justify-center shrink-0"
         >
-          <X size={12} color={COLORS.textWeak} />
+          <X size={iconSize(12)} color={COLORS.textWeak} />
         </TouchableOpacity>
       </View>
     </Animated.View>

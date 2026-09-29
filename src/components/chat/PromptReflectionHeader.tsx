@@ -14,6 +14,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius, minTouchTarget, responsiveSpace } from '@/constants/responsive';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -58,7 +59,7 @@ export function PromptReflectionHeader({
               <Text style={styles.categoryText}>{formattedCategory}</Text>
             </View>
             <View style={styles.chevronButton}>
-              <ChevronUp size={16} color={COLORS.textWeak} />
+              <ChevronUp size={iconSize(16)} color={COLORS.textWeak} />
             </View>
           </View>
           <Text style={styles.expandedTitle}>{title}</Text>
@@ -72,7 +73,7 @@ export function PromptReflectionHeader({
             {title}
           </Text>
           <View style={styles.chevronButtonCompact}>
-            <ChevronDown size={14} color={COLORS.textWeak} />
+            <ChevronDown size={iconSize(14)} color={COLORS.textWeak} />
           </View>
         </View>
       )}
@@ -83,10 +84,11 @@ export function PromptReflectionHeader({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 20,
+    borderRadius: radius(20),
     marginHorizontal: 0,
     marginTop: 4,
     marginBottom: 12,
+    minHeight: minTouchTarget(44),
     borderWidth: 1,
     borderColor: COLORS.strokeWeaker,
     shadowColor: COLORS.shadow,
@@ -97,9 +99,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   } as ViewStyle,
   expandedContent: {
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    gap: 10,
+    paddingHorizontal: responsiveSpace(18),
+    paddingVertical: responsiveSpace(14),
+    gap: responsiveSpace(10),
   } as ViewStyle,
   expandedTopRow: {
     flexDirection: 'row',
@@ -120,9 +122,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   } as TextStyle,
   chevronButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: iconSize(28),
+    height: iconSize(28),
+    borderRadius: radius(14),
     backgroundColor: COLORS.fillWeaker,
     alignItems: 'center',
     justifyContent: 'center',
@@ -135,9 +137,10 @@ const styles = StyleSheet.create({
   collapsedRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
+    paddingHorizontal: responsiveSpace(14),
+    paddingVertical: responsiveSpace(10),
+    gap: responsiveSpace(8),
+    minHeight: minTouchTarget(44),
   } as ViewStyle,
   categoryPillCompact: {
     backgroundColor: COLORS.brandSubtle,
@@ -158,9 +161,9 @@ const styles = StyleSheet.create({
     color: COLORS.textStrong,
   } as TextStyle,
   chevronButtonCompact: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: iconSize(22),
+    height: iconSize(22),
+    borderRadius: radius(11),
     backgroundColor: COLORS.fillWeaker,
     alignItems: 'center',
     justifyContent: 'center',

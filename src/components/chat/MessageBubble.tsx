@@ -18,6 +18,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-type';
 import { getAttachmentPreviewKind } from '@/features/media/media-runtime-policy';
 import type { SignedMediaAccessMetadata } from '@/features/media/signed-media-access';
+import { iconSize, radius, minTouchTarget, responsiveSpace, ms } from '@/constants/responsive';
 
 // ─── Backward-compat helpers for old messages ────────────────────────────────
 
@@ -100,7 +101,7 @@ function AttachmentTile({ attachment, onPress }: {
             thumbnail: attachment.thumbnail,
             access: attachment.access,
           }}
-          style={{ width: 120, height: 120, borderRadius: 12 }}
+          style={{ width: ms(120, 0.2), height: ms(120, 0.2), borderRadius: radius(12) }}
           resizeMode="cover"
         />
       </TouchableOpacity>
@@ -110,8 +111,8 @@ function AttachmentTile({ attachment, onPress }: {
   if (previewKind === 'video') {
     return (
       <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-        <View style={{ width: 120, height: 120, borderRadius: 12, backgroundColor: COLORS.textStrong, alignItems: 'center', justifyContent: 'center' }}>
-          <Play size={28} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 4 }} />
+        <View style={{ width: ms(120, 0.2), height: ms(120, 0.2), borderRadius: radius(12), backgroundColor: COLORS.textStrong, alignItems: 'center', justifyContent: 'center' }}>
+          <Play size={iconSize(28)} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 4 }} />
           <Text style={{ ...TYPE.eyebrow, color: 'rgba(255,255,255,0.7)', marginTop: 4 }} numberOfLines={1}>{attachment.name}</Text>
         </View>
       </TouchableOpacity>
@@ -121,7 +122,7 @@ function AttachmentTile({ attachment, onPress }: {
   if (previewKind === 'placeholder') {
     return (
       <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-        <AttachmentPlaceholder name={attachment.name} width={120} height={120} borderRadius={12} />
+        <AttachmentPlaceholder name={attachment.name} width={ms(120, 0.2)} height={ms(120, 0.2)} borderRadius={radius(12)} />
       </TouchableOpacity>
     );
   }
@@ -130,9 +131,9 @@ function AttachmentTile({ attachment, onPress }: {
   const shortName = attachment.name.length > 20 ? `${attachment.name.slice(0, 18)}…` : attachment.name;
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: COLORS.fillWeak, borderWidth: 1, borderColor: COLORS.strokeWeaker, maxWidth: 200 }}>
-        <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: `${COLORS.brand}12`, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={16} color={COLORS.brand} strokeWidth={1.8} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: responsiveSpace(8), paddingHorizontal: responsiveSpace(12), paddingVertical: responsiveSpace(8), borderRadius: radius(12), backgroundColor: COLORS.fillWeak, borderWidth: 1, borderColor: COLORS.strokeWeaker, maxWidth: 200 }}>
+        <View style={{ width: ms(32, 0.2), height: ms(32, 0.2), borderRadius: radius(8), backgroundColor: `${COLORS.brand}12`, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon size={iconSize(16)} color={COLORS.brand} strokeWidth={1.8} />
         </View>
         <Text style={{ ...TYPE.metadata, color: COLORS.textStrong, flex: 1 }} numberOfLines={1}>{shortName}</Text>
       </View>
@@ -617,7 +618,7 @@ export const MessageBubble = React.memo(function MessageBubble({
         <View style={[styles.metaRow, isUser ? styles.metaRowUser : styles.metaRowAssistant]}>
           {isVoice && (
             <View style={styles.voiceIndicator}>
-              <Mic size={12} color={COLORS.textWeak} strokeWidth={2} />
+              <Mic size={iconSize(12)} color={COLORS.textWeak} strokeWidth={2} />
               <Text style={styles.voiceLabel}>Spoken</Text>
             </View>
           )}
@@ -631,9 +632,10 @@ export const MessageBubble = React.memo(function MessageBubble({
                 Clipboard.setStringAsync(content.trim()).catch(() => {});
               }}
               activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={styles.metaIconButton}
             >
-              <Copy size={17} color={COLORS.textStrong} strokeWidth={2} />
+              <Copy size={iconSize(17)} color={COLORS.textStrong} strokeWidth={2} />
             </TouchableOpacity>
           )}
           {onReply && (
@@ -642,9 +644,10 @@ export const MessageBubble = React.memo(function MessageBubble({
               accessibilityRole="button"
               onPress={onReply}
               activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
               style={styles.replyButton}
             >
-              <CornerDownRight size={18} color={COLORS.textStrong} strokeWidth={2} />
+              <CornerDownRight size={iconSize(18)} color={COLORS.textStrong} strokeWidth={2} />
               <Text style={styles.replyLabel}>Reply</Text>
             </TouchableOpacity>
           )}
@@ -658,7 +661,7 @@ const styles = StyleSheet.create({
   messageContainerHighlighted: {
     backgroundColor: COLORS.brandSubtle,
     borderColor: COLORS.brandTint,
-    borderRadius: 12,
+    borderRadius: radius(12),
     borderWidth: 1,
     padding: 6,
   },
@@ -668,7 +671,7 @@ const styles = StyleSheet.create({
   messageSurface: { overflow: 'hidden' },
   userSurface: {
     backgroundColor: COLORS.fillWeak,
-    borderRadius: 6,
+    borderRadius: radius(6),
     paddingHorizontal: 6,
     paddingVertical: 6,
   },
@@ -707,7 +710,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.strokeWeaker,
     borderLeftColor: COLORS.info,
     borderLeftWidth: 2,
-    borderRadius: 4,
+    borderRadius: radius(4),
     marginBottom: 6,
     paddingHorizontal: 5,
     paddingVertical: 3,

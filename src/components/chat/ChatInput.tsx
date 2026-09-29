@@ -34,7 +34,15 @@ import Animated, {
   LinearTransition,
   Easing,
 } from 'react-native-reanimated';
-import { scale, verticalScale } from 'react-native-size-matters';
+import {
+  hs,
+  vs,
+  ms,
+  iconSize,
+  radius,
+  responsiveSpace,
+  minTouchTarget,
+} from '@/constants/responsive';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVoiceToText } from '@/hooks/use-voice-to-text';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
@@ -110,17 +118,17 @@ const MemoAttachmentTile = React.memo(function MemoAttachmentTile({
             <Image source={{ uri: attachment.uri }} style={chatInputStyles.assetThumb} resizeMode="cover" />
             {isVideo && (
               <View style={chatInputStyles.videoAssetOverlay}>
-                <Play size={scale(18)} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
+                <Play size={iconSize(18)} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
               </View>
             )}
           </>
         ) : isAudio ? (
           <View style={chatInputStyles.assetAudioTile}>
-            <AudioLines size={scale(23)} color={COLORS.brand} strokeWidth={2.3} />
+            <AudioLines size={iconSize(23)} color={COLORS.brand} strokeWidth={2.3} />
           </View>
         ) : (
           <View style={chatInputStyles.assetFileTile}>
-            <FileText size={scale(22)} color={COLORS.brand} strokeWidth={2} />
+            <FileText size={iconSize(22)} color={COLORS.brand} strokeWidth={2} />
           </View>
         )}
         {attachment.isUploading && (
@@ -135,7 +143,7 @@ const MemoAttachmentTile = React.memo(function MemoAttachmentTile({
         hitSlop={11}
         style={chatInputStyles.assetRemoveButton}
       >
-        <X size={scale(13)} color={COLORS.textInverse} strokeWidth={2.6} />
+        <X size={iconSize(13)} color={COLORS.textInverse} strokeWidth={2.6} />
       </TouchableOpacity>
     </View>
   );
@@ -175,21 +183,21 @@ const INPUT_PILL_RADIUS = INPUT_PILL_HEIGHT / 2;
 const COMPACT_COMPOSER_CONTENT_RADIUS = INPUT_PILL_RADIUS;
 const PLUS_ICON_SURFACE_SIZE = 36;
 const PLUS_ICON_EMPTY_RADIUS = PLUS_ICON_SURFACE_SIZE / 2;
-const PLUS_ICON_ACTIVE_RADIUS = scale(12);
-const ACTION_SQUIRCLE_RADIUS = 18;
+const PLUS_ICON_ACTIVE_RADIUS = radius(12);
+const ACTION_SQUIRCLE_RADIUS = radius(18);
 const COMPACT_TEXT_MIN_HEIGHT = Platform.select({
-  ios: verticalScale(24),
-  android: verticalScale(24),
+  ios: vs(24),
+  android: vs(24),
 }) as number;
-const COMPACT_MULTILINE_VERTICAL_PADDING = scale(4);
-const EXPANDED_TEXT_MIN_HEIGHT = verticalScale(22);
-const SELECTED_ASSET_OUTER_SIZE = scale(74);
-const SELECTED_ASSET_SIZE = scale(70);
-const CHAT_HEADER_RESERVE = verticalScale(72);
+const COMPACT_MULTILINE_VERTICAL_PADDING = responsiveSpace(4);
+const EXPANDED_TEXT_MIN_HEIGHT = vs(22);
+const SELECTED_ASSET_OUTER_SIZE = hs(74);
+const SELECTED_ASSET_SIZE = hs(70);
+const CHAT_HEADER_RESERVE = vs(72);
 const MULTILINE_DETECTION_BUFFER = 4;
 const TEXT_HEIGHT_BUFFER = 0;
 const EXPANDED_TEXT_VERTICAL_PADDING = 0;
-const EXPANDED_COMPOSER_CHROME_HEIGHT = scale(20);
+const EXPANDED_COMPOSER_CHROME_HEIGHT = responsiveSpace(20);
 const COMPACT_TEXT_EXPANSION_BUFFER = 0;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -579,11 +587,11 @@ export function ChatInput({
     keyboardVisible,
     bottomInset: insets.bottom,
     parentOwnsBottomSafeArea,
-    keyboardGap: verticalScale(8),
+    keyboardGap: 8,
   });
   const fallbackComposerMaxHeight = Math.max(
-    verticalScale(180),
-    windowHeight - insets.top - Math.max(insets.bottom, verticalScale(8)) - CHAT_HEADER_RESERVE,
+    vs(180),
+    windowHeight - insets.top - Math.max(insets.bottom, 8) - CHAT_HEADER_RESERVE,
   );
   const composerMaxHeight = maxComposerHeight ?? fallbackComposerMaxHeight;
   const textOnlyTextMaxHeight = Math.max(
@@ -592,7 +600,7 @@ export function ChatInput({
   );
   const compactTextMaxHeight = hasText
     ? textOnlyTextMaxHeight
-    : Math.max(COMPACT_TEXT_MIN_HEIGHT, composerMaxHeight - scale(18));
+    : Math.max(COMPACT_TEXT_MIN_HEIGHT, composerMaxHeight - responsiveSpace(18));
   const expandedTextMaxHeight = getExpandedComposerTextMaxHeight({
     composerMaxHeight,
     assetStripHeight: SELECTED_ASSET_OUTER_SIZE,
@@ -925,13 +933,14 @@ export function ChatInput({
             <TouchableOpacity
               onPress={handleOpenAttachmentPicker}
               disabled={disabled || anyUploading}
+              hitSlop={6}
               style={styles.plusButton}
             >
               <View style={[
                 styles.plusIconSurface,
                 (hasText || hasAttachments) ? styles.plusIconSurfaceActive : styles.plusIconSurfaceEmpty,
               ]}>
-                <Plus size={scale(18)} color={COLORS.textBase} strokeWidth={1.8} />
+                <Plus size={iconSize(18)} color={COLORS.textBase} strokeWidth={1.8} />
               </View>
             </TouchableOpacity>
           )}
@@ -977,13 +986,14 @@ export function ChatInput({
               <TouchableOpacity
                 onPress={handleOpenAttachmentPicker}
                 disabled={disabled || anyUploading}
+                hitSlop={6}
                 style={styles.plusButton}
               >
                 <View style={[
                   styles.plusIconSurface,
                   (hasText || hasAttachments) ? styles.plusIconSurfaceActive : styles.plusIconSurfaceEmpty,
                 ]}>
-                  <Plus size={scale(18)} color={COLORS.textBase} strokeWidth={1.8} />
+                  <Plus size={iconSize(18)} color={COLORS.textBase} strokeWidth={1.8} />
                 </View>
               </TouchableOpacity>
 
@@ -998,7 +1008,7 @@ export function ChatInput({
                     style={styles.expandedStopButton}
                   >
                     <Square
-                      size={scale(14)}
+                      size={iconSize(14)}
                       color={COLORS.textBase}
                       fill={COLORS.textBase}
                       strokeWidth={0}
@@ -1032,7 +1042,7 @@ export function ChatInput({
                       activeOpacity={0.7}
                     >
                       <Smile
-                        size={20}
+                        size={iconSize(20)}
                         color={COLORS.textBase}
                         strokeWidth={1.8}
                       />
@@ -1058,7 +1068,7 @@ export function ChatInput({
                           <ActivityIndicator color={COLORS.textWeak} size="small" />
                         ) : (
                           <ArrowUp
-                            size={21}
+                            size={iconSize(21)}
                             color={controls.sendDisabled ? COLORS.textDisabled : COLORS.textInverse}
                             strokeWidth={2.5}
                           />
@@ -1076,10 +1086,11 @@ export function ChatInput({
                   onPress={handleStop}
                   onPressIn={handleBtnPressIn}
                   onPressOut={handleBtnPressOut}
+                  hitSlop={6}
                   style={styles.compactStopButton}
                 >
                   <Square
-                    size={scale(14)}
+                    size={iconSize(14)}
                     color={COLORS.textBase}
                     fill={COLORS.textBase}
                     strokeWidth={0}
@@ -1098,7 +1109,7 @@ export function ChatInput({
                       style={styles.compactMicButton}
                     >
                       <Mic
-                        size={18}
+                        size={iconSize(18)}
                         color={isRecording ? COLORS.textInverse : COLORS.textBase}
                         strokeWidth={2}
                       />
@@ -1109,11 +1120,12 @@ export function ChatInput({
                   <TouchableOpacity
                     onPress={handleOpenEmojiPicker}
                     disabled={disabled}
+                    hitSlop={6}
                     style={styles.compactEmojiButton}
                     activeOpacity={0.7}
                   >
                     <Smile
-                      size={20}
+                      size={iconSize(20)}
                       color={COLORS.textBase}
                       strokeWidth={1.8}
                     />
@@ -1130,6 +1142,7 @@ export function ChatInput({
                       onPress={handleSend}
                       onPressIn={handleBtnPressIn}
                       onPressOut={handleBtnPressOut}
+                      hitSlop={6}
                       style={[
                         styles.compactSendButton,
                         controls.sendDisabled && styles.sendButtonDisabled,
@@ -1139,7 +1152,7 @@ export function ChatInput({
                         <ActivityIndicator color={COLORS.textWeak} size="small" />
                       ) : (
                         <ArrowUp
-                          size={19}
+                          size={iconSize(19)}
                           color={controls.sendDisabled ? COLORS.textDisabled : COLORS.textInverse}
                           strokeWidth={2.5}
                         />
@@ -1191,11 +1204,11 @@ const styles = StyleSheet.create({
     borderRadius: COMPACT_COMPOSER_CONTENT_RADIUS,
   },
   expandedComposer: {
-    borderRadius: 24,
-    paddingTop: scale(8),
-    paddingHorizontal: scale(10),
-    paddingBottom: scale(6),
-    gap: scale(4),
+    borderRadius: radius(24),
+    paddingTop: responsiveSpace(8),
+    paddingHorizontal: responsiveSpace(10),
+    paddingBottom: responsiveSpace(6),
+    gap: responsiveSpace(4),
   },
 
   // Asset strip
@@ -1203,8 +1216,8 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   assetStripContent: {
-    gap: scale(8),
-    paddingRight: scale(8),
+    gap: responsiveSpace(8),
+    paddingRight: responsiveSpace(8),
     alignItems: 'center',
   },
   selectedAsset: {
@@ -1215,7 +1228,7 @@ const styles = StyleSheet.create({
   assetPressable: {
     width: SELECTED_ASSET_SIZE,
     height: SELECTED_ASSET_SIZE,
-    borderRadius: 10,
+    borderRadius: radius(10),
     overflow: 'hidden',
     backgroundColor: COLORS.fillWeak,
   },
@@ -1226,7 +1239,7 @@ const styles = StyleSheet.create({
   assetAudioTile: {
     width: '100%',
     height: '100%',
-    borderRadius: 10,
+    borderRadius: radius(10),
     backgroundColor: COLORS.fillWeaker,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1234,7 +1247,7 @@ const styles = StyleSheet.create({
   assetFileTile: {
     width: '100%',
     height: '100%',
-    borderRadius: 10,
+    borderRadius: radius(10),
     backgroundColor: COLORS.fillWeaker,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1244,9 +1257,9 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     zIndex: 2,
-    width: scale(22),
-    height: scale(22),
-    borderRadius: scale(11),
+    width: ms(22, 0.2),
+    height: ms(22, 0.2),
+    borderRadius: radius(11),
     backgroundColor: COLORS.textStrong,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1279,7 +1292,7 @@ const styles = StyleSheet.create({
   inputRowExpanded: {
     flexDirection: 'column',
     alignItems: 'stretch',
-    gap: scale(4),
+    gap: responsiveSpace(4),
   },
 
   // Plus button
@@ -1322,13 +1335,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    paddingTop: scale(2),
+    paddingTop: responsiveSpace(2),
   },
   recordingInputWrap: {
-    borderRadius: 18,
+    borderRadius: radius(18),
     backgroundColor: COLORS.brandSubtle,
-    paddingHorizontal: scale(8),
-    paddingVertical: scale(4),
+    paddingHorizontal: responsiveSpace(8),
+    paddingVertical: responsiveSpace(4),
   },
 
   // Shared text input base
@@ -1346,8 +1359,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   compactTextInputMultiline: {
-    paddingTop: scale(6),
-    paddingBottom: scale(6),
+    paddingTop: responsiveSpace(6),
+    paddingBottom: responsiveSpace(6),
     textAlignVertical: 'top',
   },
 
@@ -1355,7 +1368,7 @@ const styles = StyleSheet.create({
   expandedTextInput: {
     paddingTop: 0,
     paddingBottom: 0,
-    paddingHorizontal: scale(2),
+    paddingHorizontal: responsiveSpace(2),
     minHeight: EXPANDED_TEXT_MIN_HEIGHT,
     textAlignVertical: 'top',
   },
@@ -1363,8 +1376,8 @@ const styles = StyleSheet.create({
   // Recording text tint
   recordingTextInput: {
     backgroundColor: COLORS.brandSubtle,
-    borderRadius: 14,
-    paddingHorizontal: scale(8),
+    borderRadius: radius(14),
+    paddingHorizontal: responsiveSpace(8),
   },
 
   // Action button variants

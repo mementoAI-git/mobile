@@ -32,6 +32,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { minTouchTarget, iconSize, radius, responsiveSpace } from '@/constants/responsive';
 import { getChatSettingsLayout } from '@/features/chat/chat-settings-layout';
 import { VoiceArtwork } from '@/components/chat/VoiceArtwork';
 import {
@@ -559,12 +560,12 @@ const styles = StyleSheet.create({
   roundButton: {
     alignItems: 'center',
     backgroundColor: COLORS.card,
-    borderRadius: 20,
-    height: 40,
+    borderRadius: radius(22),
+    height: minTouchTarget(44),
     justifyContent: 'center',
-    width: 40,
+    width: minTouchTarget(44),
   },
-  headerSpacer: { height: 40, width: 40 },
+  headerSpacer: { height: minTouchTarget(44), width: minTouchTarget(44) },
   screenTitle: {
     color: COLORS.textStrong,
     ...TYPE.cardTitle,
