@@ -86,4 +86,25 @@ describe('cinematic startup splash', () => {
     ]);
     expect(appConfig).not.toContain('splash-icon.jpg');
   });
+
+  test('derives card positions and clamps oversized elements across compact, reference, and tablet viewports', () => {
+    const viewports = [
+      { name: 'compact', width: 320, height: 568 },
+      { name: 'reference', width: 393, height: 852 },
+      { name: 'tablet', width: 768, height: 1024 },
+    ];
+
+    for (const vp of viewports) {
+      for (const card of CINEMATIC_SPLASH_CARDS) {
+        const top = vp.height * card.top;
+        const left = vp.width * card.left;
+        const width = Math.min(vp.width * card.width, 320);
+
+        expect(top).toBeGreaterThan(0);
+        expect(top).toBeLessThan(vp.height);
+        expect(width).toBeGreaterThanOrEqual(100);
+        expect(width).toBeLessThanOrEqual(320);
+      }
+    }
+  });
 });

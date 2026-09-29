@@ -151,7 +151,7 @@ const CinematicMemoryCard = memo(function CinematicMemoryCard({
   stageWidth,
   stageHeight,
 }: MemoryCardProps) {
-  const width = stageWidth * card.width;
+  const width = Math.min(stageWidth * card.width, 320);
   const animatedStyle = useAnimatedStyle(() => {
     const t = phase(clock.value, card.start, 1_150);
     return {
