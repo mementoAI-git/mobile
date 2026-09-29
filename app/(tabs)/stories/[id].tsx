@@ -36,7 +36,7 @@ import { useConversationMessages } from '@/hooks/queries/use-memories';
 import { mergeConversationMessagePages } from '@/features/chat/conversation-pagination';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.png');
+const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.webp');
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 

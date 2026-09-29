@@ -17,7 +17,7 @@ import { X, RotateCcw } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 
-const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.png');
+const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.webp');
 const WELCOME_BG = require('../../../assets/images/backgrounds/welcome_bg.png');
 
 export interface OnboardingCelebrationOverlayProps {

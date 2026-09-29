@@ -25,7 +25,7 @@ import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const MEMORIES_BG = require('../../../assets/images/backgrounds/memories_card_bg.png');
 const STREAK_BG = require('../../../assets/images/backgrounds/streak_card_bg.png');
-const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.png');
+const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.webp');
 
 const FILTERS = ['All', 'Bookmarked', 'Deleted', 'Pending'];
 

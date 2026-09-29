@@ -10,7 +10,7 @@ import {Button, toast} from '@/components/ui';
 import {get, post} from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 
-const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.png');
+const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.webp');
 
 type ExportStatus = 'pending' | 'processing' | 'complete' | 'failed' | 'expired';
 

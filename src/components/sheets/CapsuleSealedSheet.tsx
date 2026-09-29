@@ -8,7 +8,7 @@ import { TYPE } from '@/constants/typography';
 import { Button } from '@/components/ui';
 import { getThemeById } from '@/constants/themes';
 
-const EMPTY_CAPSULES_IMG = require('../../../assets/images/illustrations/empty_capsules.png');
+const EMPTY_CAPSULES_IMG = require('../../../assets/images/illustrations/empty_capsules.webp');
 
 interface CapsuleSealedSheetProps {
   title?: string;

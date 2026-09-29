@@ -14,7 +14,7 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
-const EMPTY_MEMORIES_IMG = require('../../assets/images/illustrations/empty_memories.png');
+const EMPTY_MEMORIES_IMG = require('../../assets/images/illustrations/empty_memories.webp');
 const PAGE_SIZE = 20;
 
 // ─── Editorial hero card ───────────────────────────────────────────────────

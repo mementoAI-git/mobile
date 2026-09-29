@@ -17,7 +17,7 @@ const MEMORIES_BG = require('../../../assets/images/backgrounds/memories_card_bg
 const BENEFI_BG = require('../../../assets/images/backgrounds/benefi_card_bg.png');
 const CAPSULE_BG = require('../../../assets/images/backgrounds/time_cap_card_bg.png');
 const STREAK_BG = require('../../../assets/images/backgrounds/streak_card_bg.png');
-const EMPTY_CAPSULES_IMG = require('../../../assets/images/illustrations/empty_capsules.png');
+const EMPTY_CAPSULES_IMG = require('../../../assets/images/illustrations/empty_capsules.webp');
 
 const FILTERS = [
   { id: '', label: 'All' },

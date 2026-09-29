@@ -14,7 +14,7 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
 
-const EMPTY_EXPLORE = require('../../../assets/images/illustrations/empty_explore.png');
+const EMPTY_EXPLORE = require('../../../assets/images/illustrations/empty_explore.webp');
 
 const SUMMARY_TAB_KEY = 'summary';
 

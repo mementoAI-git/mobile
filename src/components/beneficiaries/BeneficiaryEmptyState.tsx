@@ -4,7 +4,7 @@ import { Button } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 
-const EMPTY_IMG = require('../../../assets/images/illustrations/empty_memories.png');
+const EMPTY_IMG = require('../../../assets/images/illustrations/empty_memories.webp');
 
 export function BeneficiaryEmptyState({
   mode,
