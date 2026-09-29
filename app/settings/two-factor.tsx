@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft } from 'lucide-react-native';
 import { UiShieldTick, UiShieldOff, UiPhone01, UiCopy01 } from '@/components/ui/icons/SettingsIcons';
-import { Button, TextInput } from '@/components/ui';
+import { Button, ResponsiveScreen, TextInput } from '@/components/ui';
 import { useTwoFactorSettingsLogic } from '@/hooks/use-two-factor-settings-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -33,25 +33,26 @@ export default function TwoFactorScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-      {/* Header */}
-      <View className="flex-row items-center gap-3 px-6 py-4">
-        <TouchableOpacity
-          onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
-          className="size-11 rounded-full bg-fill-weak items-center justify-center"
-        >
-          <ChevronLeft size={22} color={COLORS.textBase} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={TYPE.screenTitle}>
-            Two-Factor Auth
-          </Text>
-          <Text style={TYPE.bodySmall}>
-            Add a second layer of protection
-          </Text>
+      <ResponsiveScreen maxWidth={720}>
+        {/* Header */}
+        <View className="flex-row items-center gap-3 py-4">
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
+            className="size-11 rounded-full bg-fill-weak items-center justify-center"
+          >
+            <ChevronLeft size={22} color={COLORS.textBase} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={TYPE.screenTitle}>
+              Two-Factor Auth
+            </Text>
+            <Text style={TYPE.bodySmall}>
+              Add a second layer of protection
+            </Text>
+          </View>
         </View>
-      </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pb-16 gap-5">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-16 gap-5">
         <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
 
         {/* Status card */}
@@ -158,6 +159,7 @@ export default function TwoFactorScreen() {
           </Animated.View>
         )}
       </ScrollView>
+      </ResponsiveScreen>
     </SafeAreaView>
   );
 }

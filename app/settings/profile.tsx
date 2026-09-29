@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Button } from '@/components/ui';
+import { Button, ResponsiveScreen } from '@/components/ui';
 import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';
 import { TYPE } from '@/constants/typography';
 import { COLORS } from '@/constants/tokens';
@@ -80,7 +80,8 @@ export default function PersonalInfoScreen() {
           resizeMode="repeat"
         />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <ResponsiveScreen maxWidth={720}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <View style={styles.aboutCard}>
             <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>About me</Text>
             <Text style={{ ...TYPE.body, color: COLORS.textWeak, marginTop: 6, lineHeight: 22 }}>
@@ -131,6 +132,7 @@ export default function PersonalInfoScreen() {
             })}
           </View>
         </ScrollView>
+        </ResponsiveScreen>
       </View>
     </SafeAreaView>
   );
@@ -138,7 +140,7 @@ export default function PersonalInfoScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 48 },
+  content: { paddingTop: 16, paddingBottom: 48 },
   aboutCard: {
     borderRadius: 24,
     padding: 20,

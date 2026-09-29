@@ -13,6 +13,9 @@ mock.module('react-native', () => ({
     removeAllListeners = () => {};
     removeSubscription = () => {};
   },
+  useWindowDimensions: () => ({ width: 393, height: 852, scale: 3, fontScale: 1 }),
+  View: (props: any) => props.children,
+  Text: (props: any) => props.children,
   // Add other react-native mock implementations as needed
 }));
 

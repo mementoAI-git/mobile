@@ -42,3 +42,5 @@ export type { LinkPreviewCardProps, LinkPreviewsProps } from './LinkPreview';
 export { useLinkPreview } from '@/hooks/use-link-preview';
 export type { LinkPreviewData } from '@/hooks/use-link-preview';
 export { toast, useToast } from './Toast';
+export { ResponsiveScreen } from './ResponsiveScreen';
+export type { ResponsiveScreenProps } from './ResponsiveScreen';
