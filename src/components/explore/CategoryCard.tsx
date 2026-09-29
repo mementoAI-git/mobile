@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize } from '@/constants/responsive';
 
 interface CategoryCardProps {
   title: string;
@@ -65,7 +66,7 @@ export const CategoryCard = React.memo(function CategoryCard({
               {title}
             </Animated.Text>
             <View className="size-10 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center">
-              <ChevronRight size={18} color={COLORS.textBase} />
+              <ChevronRight size={iconSize(18)} color={COLORS.textBase} />
             </View>
           </View>
           {subtitle && (

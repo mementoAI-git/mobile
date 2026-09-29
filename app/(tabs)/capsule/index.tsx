@@ -245,7 +245,7 @@ export function CapsuleContent() {
               leftElement={<Search size={18} color={COLORS.textWeak} />}
               rightElement={
                 searchQuery.length > 0 ? (
-                  <TouchableOpacity onPress={handleClearSearch} hitSlop={10}>
+                  <TouchableOpacity onPress={handleClearSearch} hitSlop={14}>
                     <X size={16} color={COLORS.textWeak} />
                   </TouchableOpacity>
                 ) : undefined
