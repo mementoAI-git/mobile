@@ -30,29 +30,23 @@ import {
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
 
-import {
-  useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
-import {
-  EBGaramond_400Regular,
-  EBGaramond_500Medium,
-  EBGaramond_700Bold,
-  EBGaramond_400Regular_Italic,
-} from '@expo-google-fonts/eb-garamond';
-import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono';
-import { PatrickHandSC_400Regular } from '@expo-google-fonts/patrick-hand-sc';
-import { Handlee_400Regular } from '@expo-google-fonts/handlee';
-import { CutiveMono_400Regular } from '@expo-google-fonts/cutive-mono';
-import {
-  Geist_400Regular,
-  Geist_500Medium,
-  Geist_600SemiBold,
-  Geist_700Bold,
-} from '@expo-google-fonts/geist';
+import { useFonts } from 'expo-font';
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
+import { EBGaramond_400Regular } from '@expo-google-fonts/eb-garamond/400Regular';
+import { EBGaramond_500Medium } from '@expo-google-fonts/eb-garamond/500Medium';
+import { EBGaramond_700Bold } from '@expo-google-fonts/eb-garamond/700Bold';
+import { EBGaramond_400Regular_Italic } from '@expo-google-fonts/eb-garamond/400Regular_Italic';
+import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono/400Regular';
+import { PatrickHandSC_400Regular } from '@expo-google-fonts/patrick-hand-sc/400Regular';
+import { Handlee_400Regular } from '@expo-google-fonts/handlee/400Regular';
+import { CutiveMono_400Regular } from '@expo-google-fonts/cutive-mono/400Regular';
+import { Geist_400Regular } from '@expo-google-fonts/geist/400Regular';
+import { Geist_500Medium } from '@expo-google-fonts/geist/500Medium';
+import { Geist_600SemiBold } from '@expo-google-fonts/geist/600SemiBold';
+import { Geist_700Bold } from '@expo-google-fonts/geist/700Bold';
 
 import { StatusBar } from 'expo-status-bar';
 import {

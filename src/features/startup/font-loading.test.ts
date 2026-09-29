@@ -26,6 +26,25 @@ describe('startup font loading', () => {
     expect(tokens).toContain("mono: 'AzeretMono_400Regular'");
   });
 
+  test('imports only the font weights used by the app', async () => {
+    const layout = await Bun.file(new URL('../../../app/_layout.tsx', import.meta.url)).text();
+
+    for (const packageName of [
+      'inter',
+      'eb-garamond',
+      'azeret-mono',
+      'patrick-hand-sc',
+      'handlee',
+      'cutive-mono',
+      'geist',
+    ]) {
+      expect(layout).not.toContain(`from '@expo-google-fonts/${packageName}';`);
+    }
+    expect(layout).toContain("from '@expo-google-fonts/inter/400Regular'");
+    expect(layout).toContain("from '@expo-google-fonts/eb-garamond/400Regular_Italic'");
+    expect(layout).toContain("import { useFonts } from 'expo-font'");
+  });
+
   test('uses the warm journal background in JS and NativeWind tokens', async () => {
     const tokens = await Bun.file(new URL('../../constants/tokens.ts', import.meta.url)).text();
     const tailwind = await Bun.file(new URL('../../../tailwind.config.ts', import.meta.url)).text();
