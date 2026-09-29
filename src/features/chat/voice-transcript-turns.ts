@@ -11,6 +11,7 @@ export type VoiceTranscriptTurn = {
 export class VoiceTranscriptTurns {
   private active = { user: '', ai: '' };
   private completed: VoiceTranscriptTurn[] = [];
+  private sessionTurns: VoiceTranscriptTurn[] = [];
 
   appendUser(fragment: string): string {
     this.active.user += fragment;
@@ -34,11 +35,20 @@ export class VoiceTranscriptTurns {
 
     const turn = { messages };
     this.completed.push(turn);
+    this.sessionTurns.push(turn);
     return turn;
   }
 
   hasTurns(): boolean {
     return this.completed.length > 0;
+  }
+
+  hasSessionTurns(): boolean {
+    return this.sessionTurns.length > 0;
+  }
+
+  getSessionTurns(): VoiceTranscriptTurn[] {
+    return [...this.sessionTurns];
   }
 
   restoreFailedTurn(turn: VoiceTranscriptTurn): void {

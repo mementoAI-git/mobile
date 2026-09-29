@@ -78,4 +78,27 @@ describe('VoiceTranscriptTurns', () => {
     turns.drainCompleted();
     expect(turns.hasTurns()).toBe(false);
   });
+
+  test('preserves cumulative session turns even after draining completed turns', () => {
+    const turns = new VoiceTranscriptTurns();
+    expect(turns.hasSessionTurns()).toBe(false);
+    expect(turns.getSessionTurns()).toEqual([]);
+
+    turns.appendUser('hello');
+    turns.appendModel('hi there');
+    turns.completeTurn();
+
+    expect(turns.hasSessionTurns()).toBe(true);
+    expect(turns.getSessionTurns()).toHaveLength(1);
+
+    // Drain completes for network flush
+    const drained = turns.drainCompleted();
+    expect(drained).toHaveLength(1);
+    expect(turns.hasTurns()).toBe(false);
+
+    // Session turns remain preserved for final call summary
+    expect(turns.hasSessionTurns()).toBe(true);
+    expect(turns.getSessionTurns()).toHaveLength(1);
+    expect(turns.getSessionTurns()[0].messages[0].text).toBe('hello');
+  });
 });

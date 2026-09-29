@@ -19,6 +19,8 @@ import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-typ
 import { getAttachmentPreviewKind } from '@/features/media/media-runtime-policy';
 import type { SignedMediaAccessMetadata } from '@/features/media/signed-media-access';
 import { iconSize, radius, minTouchTarget, responsiveSpace, ms } from '@/constants/responsive';
+import { isVoiceCallMessage } from '@/features/chat/voice-transcript-parser';
+import { VoiceCallCard } from './VoiceCallCard';
 
 // ─── Backward-compat helpers for old messages ────────────────────────────────
 
@@ -558,6 +560,19 @@ export const MessageBubble = React.memo(function MessageBubble({
 
   if (!hasContent) return null;
 
+  if (isVoiceCallMessage(content, isVoice)) {
+    const Container = animated ? Animated.View : View;
+    const containerProps = animated ? { entering: FadeIn.duration(150) } : {};
+    return (
+      <Container {...containerProps} style={styles.voiceCallWrapper}>
+        <VoiceCallCard
+          message={message as any}
+          onReply={onReply}
+          highlighted={highlighted}
+        />
+      </Container>
+    );
+  }
 
   const Container = animated ? Animated.View : View;
   const containerProps = animated
@@ -657,6 +672,7 @@ export const MessageBubble = React.memo(function MessageBubble({
 });
 
 const styles = StyleSheet.create({
+  voiceCallWrapper: { alignSelf: 'stretch', width: '100%', marginBottom: 8 },
   messageContainer: { marginBottom: 14 },
   messageContainerHighlighted: {
     backgroundColor: COLORS.brandSubtle,

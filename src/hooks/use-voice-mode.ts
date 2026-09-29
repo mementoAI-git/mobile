@@ -21,6 +21,7 @@ import {
   type VoiceTranscriptMessage,
 } from '@/features/chat/voice-transcript-turns';
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
+import { serializeVoiceCallTranscript } from '@/features/chat/voice-transcript-parser';
 import { getConversationMessagesUrl } from '@/features/chat/conversation-pagination';
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
@@ -88,6 +89,8 @@ export function useVoiceMode({
   const isAiSpeakingRef = useRef(false);
   const isMountedRef = useRef(true);
   const isDisconnectingRef = useRef(false);
+  const isSessionActiveRef = useRef(false);
+  const hasCompletedSessionRef = useRef(false);
   const sessionIdRef = useRef<string>(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const transcriptRef = useRef(new VoiceTranscriptTurns());
   const transcriptFlushRef = useRef(Promise.resolve());
@@ -213,11 +216,21 @@ export function useVoiceMode({
 
   const disconnect = useCallback(async () => {
     if (isDisconnectingRef.current) return;
+    if (hasCompletedSessionRef.current || !isSessionActiveRef.current) return;
     isDisconnectingRef.current = true;
+    hasCompletedSessionRef.current = true;
+    isSessionActiveRef.current = false;
     isMutedRef.current = true;
     isGreetingActiveRef.current = false;
     setupReadyRef.current?.reject(new Error('Voice session closed before setup completed.'));
     setupReadyRef.current = null;
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    const finalDuration = recordingTimeRef.current;
+    recordingTimeRef.current = 0;
 
     const engine = engineRef.current;
     engineRef.current = null;
@@ -229,26 +242,32 @@ export function useVoiceMode({
     session?.close();
     transcriptRef.current.completeTurn();
 
-    // If no turns were captured but the session was active, ensure a voice session entry is recorded
-    if (!transcriptRef.current.hasTurns() && recordingTimeRef.current >= 3) {
-      const userText = userSpeechTextRef.current.trim() || 'Spoken conversation with Memento';
+    const formattedDuration = formatVoiceCallDuration(finalDuration);
+    const sessionTurns = transcriptRef.current.getSessionTurns();
+
+    if (sessionTurns.length > 0) {
+      const flattened = sessionTurns.flatMap((turn) => turn.messages);
+      const callRecordText = serializeVoiceCallTranscript(formattedDuration, flattened);
+      transcriptRef.current.appendModel(callRecordText);
+      transcriptRef.current.completeTurn();
+    } else if (finalDuration >= 3) {
+      const userText = userSpeechTextRef.current.trim();
       const aiText =
         aiSpeechTextRef.current.trim() &&
         !aiSpeechTextRef.current.includes('Ready to connect') &&
         !aiSpeechTextRef.current.includes('Connecting')
           ? aiSpeechTextRef.current.trim()
-          : `Voice call completed (${formatVoiceCallDuration(recordingTimeRef.current)})`;
-      transcriptRef.current.appendUser(userText);
+          : `Voice call completed (${formattedDuration})`;
+
+      if (userText) {
+        transcriptRef.current.appendUser(userText);
+      }
       transcriptRef.current.appendModel(aiText);
       transcriptRef.current.completeTurn();
     }
 
     await flushTranscripts();
 
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
     if (isMountedRef.current) {
       setIsConnected(false);
       setIsConnecting(false);
@@ -264,6 +283,8 @@ export function useVoiceMode({
   const connect = useCallback(async () => {
     if (isConnecting || isConnected || isDisconnectingRef.current) return;
     setIsConnecting(true);
+    isSessionActiveRef.current = true;
+    hasCompletedSessionRef.current = false;
     isMutedRef.current = false;
     isGreetingActiveRef.current = true;
     isAiSpeakingRef.current = false;
