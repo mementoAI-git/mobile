@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import {
   BottomSheetModal,
@@ -16,6 +16,7 @@ import * as Haptics from 'expo-haptics';
 import { X } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius, minTouchTarget } from '@/constants/responsive';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
 import { EMOJI_CATEGORIES, type EmojiCategory } from '@/features/chat/emoji-data';
@@ -25,13 +26,13 @@ interface EmojiPickerSheetProps {
   onClose?: () => void;
 }
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
 const NUM_COLUMNS = 7;
-const EMOJI_SIZE = Math.floor((SCREEN_WIDTH - 40) / NUM_COLUMNS);
 
 export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetProps>(
   function EmojiPickerSheet({ onSelectEmoji, onClose }, ref) {
+    const { width: windowWidth } = useWindowDimensions();
     const insets = useSafeAreaInsets();
+    const emojiSize = useMemo(() => Math.floor((windowWidth - 40) / NUM_COLUMNS), [windowWidth]);
     const snapPoints = useMemo(() => ['42%', '65%'], []);
     const [activeCategoryId, setActiveCategoryId] = useState<string>(EMOJI_CATEGORIES[0].id);
 
@@ -114,7 +115,7 @@ export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetPro
                 <TouchableOpacity
                   key={`${emoji}-${idx}`}
                   onPress={() => handleSelectEmoji(emoji)}
-                  style={[styles.emojiButton, { width: EMOJI_SIZE, height: EMOJI_SIZE }]}
+                  style={[styles.emojiButton, { width: emojiSize, height: emojiSize }]}
                   activeOpacity={0.6}
                 >
                   <Text style={styles.emojiText}>{emoji}</Text>

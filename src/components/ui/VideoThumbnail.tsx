@@ -23,6 +23,7 @@ import { getThumbnailAsync } from 'expo-video-thumbnails';
 import * as Haptics from 'expo-haptics';
 import { Play } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
+import { iconSize, radius } from '@/constants/responsive';
 import { runtimeDiagnostics, sanitizeMediaUri } from '@/lib/runtime-diagnostics';
 import { getVideoThumbnailStrategy } from '@/features/media/media-runtime-policy';
 import {
@@ -77,7 +78,7 @@ export function VideoThumbnail({
   thumbnailUrl,
   width,
   height,
-  borderRadius = 14,
+  borderRadius = radius(14),
   onPress,
 }: VideoThumbnailProps) {
   const fillParent = !width || !height;
@@ -225,7 +226,7 @@ export function VideoThumbnail({
         {loading ? (
           <ActivityIndicator size="small" color="rgba(255,255,255,0.8)" />
         ) : (
-          <Play size={22} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 3 }} />
+          <Play size={iconSize(22)} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 3 }} />
         )}
       </View>
     </TouchableOpacity>
