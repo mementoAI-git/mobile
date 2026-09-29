@@ -46,6 +46,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius, minTouchTarget } from '@/constants/responsive';
 import { MediaPickerMenu } from './MediaPickerMenu';
 import { RecordingIconButton } from './RecordingIconButton';
 import type { EditorBridge } from '@10play/tentap-editor';
@@ -88,6 +89,7 @@ function FmtBtn({
     <TouchableOpacity
       onPress={() => { Haptics.selectionAsync(); onPress(); }}
       activeOpacity={0.7}
+      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
       style={[fmtStyles.btn, active && fmtStyles.btnActive]}
     >
       {children}
@@ -97,9 +99,9 @@ function FmtBtn({
 
 const fmtStyles = StyleSheet.create({
   btn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: minTouchTarget(36),
+    height: minTouchTarget(36),
+    borderRadius: radius(8),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -115,7 +117,7 @@ function StoryFormattingTools({ editor }: { editor: EditorBridge }) {
   const s = useBridgeState(editor);
   const activeColor = COLORS.brand;
   const inactiveColor = COLORS.textBase;
-  const sz = 18;
+  const sz = iconSize(18);
   return (
     <>
       <FmtBtn active={s.headingLevel === 1} onPress={() => editor.toggleHeading(1)}>
@@ -171,10 +173,11 @@ function StoryToolbar({
       <TouchableOpacity
         onPress={onToggleUpload}
         activeOpacity={0.75}
+        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
         style={[styles.uploadBtn, uploadOpen && styles.uploadBtnActive]}
       >
         <PlusCircle
-          size={22}
+          size={iconSize(22)}
           color={uploadOpen ? COLORS.brand : COLORS.textBase}
           strokeWidth={2}
         />
@@ -391,9 +394,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   uploadBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: minTouchTarget(36),
+    height: minTouchTarget(36),
+    borderRadius: radius(18),
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -428,7 +431,7 @@ const styles = StyleSheet.create({
     left: 0,
     flexDirection: 'row',
     backgroundColor: COLORS.card,
-    borderRadius: 16,
+    borderRadius: radius(16),
     borderWidth: 1,
     borderColor: COLORS.strokeWeaker,
     paddingHorizontal: 8,
@@ -448,7 +451,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: radius(12),
     backgroundColor: COLORS.fillWeak,
     minWidth: 64,
   },
@@ -475,9 +478,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    height: 44,
+    height: minTouchTarget(44),
     paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: radius(8),
   },
   modePillQuick: {
     backgroundColor: COLORS.success,
@@ -490,9 +493,9 @@ const styles = StyleSheet.create({
     color: COLORS.textInverse,
   },
   mediaBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: minTouchTarget(44),
+    height: minTouchTarget(44),
+    borderRadius: radius(12),
     backgroundColor: COLORS.fillWeak,
     alignItems: 'center',
     justifyContent: 'center',

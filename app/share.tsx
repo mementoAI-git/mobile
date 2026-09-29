@@ -29,6 +29,7 @@ import { X, FileText, Music, Video } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { minTouchTarget, radius, iconSize } from '@/constants/responsive';
 import { Spinner, Button } from '@/components/ui';
 import { UiZapFast, UiDatabase01 } from '@/components/ui/icons/SettingsIcons';
 import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
@@ -197,9 +198,11 @@ function ShareContent() {
           </Text>
           <TouchableOpacity
             onPress={handleDismiss}
-            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.fillWeak, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+            accessibilityLabel="Dismiss share"
+            style={{ width: 36, height: 36, borderRadius: radius(18), backgroundColor: COLORS.fillWeak, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}
           >
-            <X size={16} color={COLORS.textBase} strokeWidth={2} />
+            <X size={iconSize(16)} color={COLORS.textBase} strokeWidth={2} />
           </TouchableOpacity>
         </View>
 

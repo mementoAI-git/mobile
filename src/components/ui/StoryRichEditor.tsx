@@ -22,6 +22,7 @@ import {
 } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE_METRICS } from '@/constants/typography';
+import { minTouchTarget, radius, iconSize } from '@/constants/responsive';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,7 @@ function IconBtn({
     <TouchableOpacity
       onPressIn={() => { Haptics.selectionAsync(); onPressIn(); }}
       activeOpacity={0.7}
+      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
       style={[styles.toolBtn, active && styles.toolBtnActive]}
     >
       {children}
@@ -69,7 +71,7 @@ export function FormattingToolbar({ editor }: { editor: EditorBridge }) {
   const s = useBridgeState(editor);
   const activeColor = COLORS.brand;
   const inactiveColor = COLORS.textBase;
-  const sz = 18;
+  const sz = iconSize(18);
 
   return (
     <View style={styles.toolbar}>
@@ -234,9 +236,9 @@ const styles = StyleSheet.create({
   },
 
   toolBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: minTouchTarget(36),
+    height: minTouchTarget(36),
+    borderRadius: radius(8),
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',

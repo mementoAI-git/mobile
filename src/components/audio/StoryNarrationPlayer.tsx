@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { radius, iconSize, minTouchTarget } from '@/constants/responsive';
 import {
   type NarrationTrack,
   type PlaybackSpeed,
@@ -69,7 +70,7 @@ export function StoryNarrationPlayer({
         left: 16,
         right: 16,
         backgroundColor: COLORS.card,
-        borderRadius: 24,
+        borderRadius: radius(24),
         padding: 16,
         borderWidth: 1,
         borderColor: COLORS.strokeWeak,
@@ -88,13 +89,13 @@ export function StoryNarrationPlayer({
             style={{
               width: 36,
               height: 36,
-              borderRadius: 18,
+              borderRadius: radius(18),
               backgroundColor: 'rgba(255, 94, 0, 0.1)',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Volume2 size={18} color={COLORS.brand} />
+            <Volume2 size={iconSize(18)} color={COLORS.brand} />
           </View>
           <View style={{ flex: 1 }}>
             <Text
@@ -125,13 +126,13 @@ export function StoryNarrationPlayer({
           style={{
             width: 32,
             height: 32,
-            borderRadius: 16,
+            borderRadius: radius(16),
             backgroundColor: COLORS.fillWeak,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <X size={16} color={COLORS.textBase} />
+          <X size={iconSize(16)} color={COLORS.textBase} />
         </TouchableOpacity>
       </View>
 
@@ -171,10 +172,11 @@ export function StoryNarrationPlayer({
         <TouchableOpacity
           onPress={cycleSpeed}
           activeOpacity={0.7}
+          hitSlop={8}
           style={{
             paddingHorizontal: 10,
             paddingVertical: 5,
-            borderRadius: 12,
+            borderRadius: radius(12),
             backgroundColor: COLORS.fillWeak,
           }}
         >
@@ -188,18 +190,18 @@ export function StoryNarrationPlayer({
           onPress={togglePlayPause}
           activeOpacity={0.8}
           style={{
-            width: 48,
-            height: 48,
-            borderRadius: 24,
+            width: minTouchTarget(48),
+            height: minTouchTarget(48),
+            borderRadius: radius(24),
             backgroundColor: COLORS.brand,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
           {isPlaying ? (
-            <Pause size={20} color="white" fill="white" />
+            <Pause size={iconSize(20)} color="white" fill="white" />
           ) : (
-            <Play size={20} color="white" fill="white" style={{ marginLeft: 2 }} />
+            <Play size={iconSize(20)} color="white" fill="white" style={{ marginLeft: 2 }} />
           )}
         </TouchableOpacity>
 

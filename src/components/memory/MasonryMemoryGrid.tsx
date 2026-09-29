@@ -3,6 +3,7 @@ import { View, RefreshControl, useWindowDimensions } from 'react-native';
 import { MasonryMemoryCard } from './MasonryMemoryCard';
 import type { IMemory } from '@/types';
 import { COLORS } from '@/constants/tokens';
+import { contentMaxWidth, screenGutter } from '@/constants/responsive';
 import Animated, {
   runOnJS,
   useAnimatedScrollHandler,
@@ -144,9 +145,12 @@ export function MasonryMemoryGrid({
     setHeaderHeight((prev) => (Math.abs(prev - nextHeight) > 1 ? nextHeight : prev));
   }, []);
 
+  const gutter = screenGutter(width);
+  const effectiveWidth = contentMaxWidth(width);
+
   const columnWidth = useMemo(
-    () => Math.max(1, Math.floor((width - GRID_HORIZONTAL_PADDING * 2 - COLUMN_GAP) / COLUMN_COUNT)),
-    [width],
+    () => Math.max(1, Math.floor((effectiveWidth - gutter * 2 - COLUMN_GAP) / COLUMN_COUNT)),
+    [effectiveWidth, gutter],
   );
 
   const estimateHeight = useCallback((memory: IMemory) => (
@@ -243,7 +247,7 @@ export function MasonryMemoryGrid({
     >
       {/* Header (search bar, filters, action buttons) */}
       {ListHeaderComponent ? (
-        <View onLayout={handleHeaderLayout}>
+        <View onLayout={handleHeaderLayout} style={{ maxWidth: effectiveWidth, width: '100%', alignSelf: 'center' }}>
           {ListHeaderComponent}
         </View>
       ) : null}
@@ -251,16 +255,19 @@ export function MasonryMemoryGrid({
       {/* Two-column masonry layout or empty state */}
       {memories.length === 0 ? (
         ListEmptyComponent ? (
-          <View style={{ paddingHorizontal: GRID_HORIZONTAL_PADDING, paddingTop: 32 }}>
+          <View style={{ maxWidth: effectiveWidth, width: '100%', alignSelf: 'center', paddingHorizontal: gutter, paddingTop: 32 }}>
             {ListEmptyComponent}
           </View>
         ) : null
       ) : (
         <View
           style={{
+            maxWidth: effectiveWidth,
+            width: '100%',
+            alignSelf: 'center',
             flexDirection: 'row',
             gap: COLUMN_GAP,
-            paddingHorizontal: GRID_HORIZONTAL_PADDING,
+            paddingHorizontal: gutter,
             height: masonryLayout.containerHeight,
           }}
         >
