@@ -1,26 +1,27 @@
 import {StyleSheet} from 'react-native';
+import { ms } from '@/constants/responsive';
 import {FONTS} from '@/constants/tokens';
 
 export const TYPE_METRICS = Object.freeze({
-  displayStat: Object.freeze({fontSize: 48, lineHeight: 54}),
-  displayTitle: Object.freeze({fontSize: 36, lineHeight: 42}),
-  screenTitle: Object.freeze({fontSize: 28, lineHeight: 34}),
-  greeting: Object.freeze({fontSize: 24, lineHeight: 32}),
-  sectionTitle: Object.freeze({fontSize: 22, lineHeight: 28}),
-  cardTitle: Object.freeze({fontSize: 20, lineHeight: 26}),
-  uiTitle: Object.freeze({fontSize: 20, lineHeight: 26}),
-  bodyLarge: Object.freeze({fontSize: 16, lineHeight: 24}),
-  body: Object.freeze({fontSize: 15, lineHeight: 23}),
-  bodyStrong: Object.freeze({fontSize: 15, lineHeight: 23}),
-  bodySmall: Object.freeze({fontSize: 13, lineHeight: 19}),
-  label: Object.freeze({fontSize: 14, lineHeight: 20}),
-  button: Object.freeze({fontSize: 16, lineHeight: 22}),
-  buttonSmall: Object.freeze({fontSize: 14, lineHeight: 20}),
-  metadata: Object.freeze({fontSize: 11, lineHeight: 16}),
-  eyebrow: Object.freeze({fontSize: 10, lineHeight: 14}),
-  input: Object.freeze({fontSize: 16, lineHeight: 22}),
-  stat: Object.freeze({fontSize: 20, lineHeight: 26}),
-  mono: Object.freeze({fontSize: 13, lineHeight: 19}),
+  displayStat: Object.freeze({fontSize: ms(48, 0.25), lineHeight: ms(54, 0.25)}),
+  displayTitle: Object.freeze({fontSize: ms(36, 0.25), lineHeight: ms(42, 0.25)}),
+  screenTitle: Object.freeze({fontSize: ms(28, 0.25), lineHeight: ms(34, 0.25)}),
+  greeting: Object.freeze({fontSize: ms(24, 0.25), lineHeight: ms(32, 0.25)}),
+  sectionTitle: Object.freeze({fontSize: ms(22, 0.25), lineHeight: ms(28, 0.25)}),
+  cardTitle: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(26, 0.25)}),
+  uiTitle: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(26, 0.25)}),
+  bodyLarge: Object.freeze({fontSize: ms(16, 0.2), lineHeight: ms(24, 0.2)}),
+  body: Object.freeze({fontSize: ms(15, 0.2), lineHeight: ms(23, 0.2)}),
+  bodyStrong: Object.freeze({fontSize: ms(15, 0.2), lineHeight: ms(23, 0.2)}),
+  bodySmall: Object.freeze({fontSize: ms(13, 0.2), lineHeight: ms(19, 0.2)}),
+  label: Object.freeze({fontSize: ms(14, 0.2), lineHeight: ms(20, 0.2)}),
+  button: Object.freeze({fontSize: ms(16, 0.2), lineHeight: ms(22, 0.2)}),
+  buttonSmall: Object.freeze({fontSize: ms(14, 0.2), lineHeight: ms(20, 0.2)}),
+  metadata: Object.freeze({fontSize: ms(11, 0.2), lineHeight: ms(16, 0.2)}),
+  eyebrow: Object.freeze({fontSize: ms(10, 0.2), lineHeight: ms(14, 0.2)}),
+  input: Object.freeze({fontSize: ms(16, 0.2), lineHeight: ms(22, 0.2)}),
+  stat: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(26, 0.25)}),
+  mono: Object.freeze({fontSize: ms(13, 0.2), lineHeight: ms(19, 0.2)}),
 });
 
 export const TYPE = StyleSheet.create({
