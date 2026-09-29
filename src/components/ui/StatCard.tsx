@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { scale, verticalScale } from 'react-native-size-matters';
+import { iconSize, minTouchTarget, vs } from '@/constants/responsive';
 
 interface StatCardProps {
   label: string;
@@ -59,7 +59,7 @@ export function StatCard({
         "flex-row items-center justify-between px-5 py-4 w-full",
         !hasBg && "bg-fill-weaker"
       )}
-      style={{ minHeight: verticalScale(104) }}
+      style={{ minHeight: minTouchTarget(vs(104)) }}
     >
       <View className="gap-1 flex-shrink" style={{ flex: 1 }}>
         <Animated.Text
@@ -105,7 +105,7 @@ export function StatCard({
             Icon
           ) : (
             React.createElement(Icon as any, {
-              size: hasBg ? scale(38) : scale(44),
+              size: iconSize(hasBg ? 38 : 44),
               color: hasBg ? COLORS.textBase : COLORS.textStrong,
               strokeWidth: 1.5
             })
