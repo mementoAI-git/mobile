@@ -305,7 +305,7 @@ export function SearchMemorySheet() {
           returnKeyType="search"
         />
         {query.length > 0 && (
-          <TouchableOpacity onPress={handleClear} activeOpacity={0.7} style={styles.clearBtn} hitSlop={6}>
+          <TouchableOpacity onPress={handleClear} activeOpacity={0.7} style={styles.clearBtn} hitSlop={12}>
             <X size={12} color={COLORS.textWeak} />
           </TouchableOpacity>
         )}

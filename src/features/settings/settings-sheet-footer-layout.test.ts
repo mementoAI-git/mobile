@@ -88,4 +88,25 @@ describe('Settings sheet footer layout', () => {
     expect(editProfile).toContain('expandSheet: () => void');
     expect(editProfile).toContain('onScrollBeginDrag={expandSheet}');
   });
+
+  test('uses raw safe-area insets and never passes snap points or insets through verticalScale', () => {
+    const manager = readFileSync(
+      new URL('../../components/sheets/SheetManager.tsx', import.meta.url),
+      'utf8',
+    );
+    expect(manager).not.toMatch(/verticalScale\(/);
+    expect(manager).not.toMatch(/\bvs\(/);
+    expect(manager).not.toMatch(/mvs\(/);
+    expect(manager).toContain('topInset={getSheetTopInset(insets.top)}');
+    expect(manager).toContain('getSheetBottomPadding(insets.bottom');
+  });
+
+  test('uses responsive gutter in SheetManager container', () => {
+    const manager = readFileSync(
+      new URL('../../components/sheets/SheetManager.tsx', import.meta.url),
+      'utf8',
+    );
+    expect(manager).toContain('screenGutter');
+    expect(manager).toContain('paddingHorizontal: screenGutter(windowWidth)');
+  });
 });

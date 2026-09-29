@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
+import { useWindowDimensions } from 'react-native';
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
@@ -7,6 +8,7 @@ import {
 import { useUiStore } from '@/store';
 import { useRootNavigationState, useSegments } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { screenGutter } from '@/constants/responsive';
 import { CreateMemorySheet } from './CreateMemorySheet';
 import { CreateCapsuleSheet } from './CreateCapsuleSheet';
 import { AddBeneficiarySheet } from './AddBeneficiarySheet';
@@ -117,6 +119,7 @@ export function SheetManager({ isModal = false }: { isModal?: boolean }) {
   const segments = useSegments();
   const modalRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const navigationReady = Boolean(rootNavigationState?.key);
 
   const currentSegment = segments[0] as string | undefined;
@@ -205,7 +208,7 @@ export function SheetManager({ isModal = false }: { isModal?: boolean }) {
             collapseSheet={collapseSheet}
           />
         ) : (
-          <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: getSheetBottomPadding(insets.bottom, 12) }}>
+          <BottomSheetView style={{ paddingHorizontal: screenGutter(windowWidth), paddingBottom: getSheetBottomPadding(insets.bottom, 12) }}>
             <SheetContent {...sheetProps} onClose={animateClose} />
           </BottomSheetView>
         )
