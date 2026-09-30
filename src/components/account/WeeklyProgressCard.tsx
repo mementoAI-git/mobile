@@ -9,6 +9,7 @@ import Animated, {
 
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius, responsiveSpace } from '@/constants/responsive';
 import type { AccountWeekDay } from '@/features/account/account-overview';
 import { ZapIconWarm } from '../ui';
 import { CompletedCheckmarkIcon } from '../ui/icons/CompletedCheckmarkIcon';
@@ -32,12 +33,11 @@ function WeekCell({ day }: { day: AccountWeekDay }) {
       </Text>
       {day.isCompleted ? (
         <View style={styles.completedCircle}>
-          <CompletedCheckmarkIcon containerSize={22} />
+          <CompletedCheckmarkIcon containerSize={iconSize(22)} />
         </View>
       ) : day.isToday ? (
         <View style={styles.todayValue}>
-          {/* <Zap size={17} color={COLORS.brand} fill={COLORS.brand} /> */}
-          <ZapIconWarm size={16} />
+          <ZapIconWarm size={iconSize(16)} />
           <Text style={styles.todayDate}>{day.date}</Text>
         </View>
       ) : (
@@ -72,8 +72,7 @@ export const WeeklyProgressCard = React.memo(function WeeklyProgressCard({
         accessibilityLabel={`Weekly progress. ${streakCount} day streak, ${storiesCount} stories, ${reflectionsCount} reflections.`}
       >
         <View style={styles.titleRow}>
-          {/* <Flame size={22} color={COLORS.brand} fill={COLORS.brand} /> */}
-          <Image source={STREAK_FLAME} style={{ width: 22, height: 22 }} resizeMode="contain" />
+          <Image source={STREAK_FLAME} style={{ width: iconSize(22), height: iconSize(22) }} resizeMode="contain" />
           <Text style={styles.title}>Weekly Progress</Text>
         </View>
 
@@ -101,10 +100,10 @@ export const WeeklyProgressCard = React.memo(function WeeklyProgressCard({
 const styles = StyleSheet.create({
   card: {
     minHeight: 180,
-    borderRadius: 16,
+    borderRadius: radius(16),
     backgroundColor: COLORS.backgroundInverse,
-    paddingHorizontal: 12,
-    paddingVertical: 13,
+    paddingHorizontal: responsiveSpace(12),
+    paddingVertical: responsiveSpace(13),
   },
   titleRow: {
     flexDirection: 'row',
@@ -137,9 +136,9 @@ const styles = StyleSheet.create({
     ...TYPE.eyebrow,
   },
   completedCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: iconSize(22),
+    height: iconSize(22),
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.success,
@@ -156,8 +155,8 @@ const styles = StyleSheet.create({
     ...TYPE.body,
   },
   dateCircle: {
-    width: 22,
-    height: 22,
+    width: iconSize(22),
+    height: iconSize(22),
     alignItems: 'center',
     justifyContent: 'center',
   },

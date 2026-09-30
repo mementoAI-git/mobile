@@ -1,17 +1,15 @@
 import React, { forwardRef, useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Image, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { X, Search, Check, Play, Music, FileText } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { Button, Spinner, Skeleton } from '@/components/ui';
+import { iconSize, radius, minTouchTarget } from '@/constants/responsive';
 import { useFiles } from '@/hooks/queries/use-files';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSheetTopInset } from '@/features/layout/sheet-safe-area';
-
-const { width: screenWidth } = Dimensions.get('window');
-const itemWidth = (screenWidth - 56) / 2;
 
 interface SelectFromMediaModalProps {
   selectedIds: string[];
@@ -31,6 +29,8 @@ type MediaFileItem = {
 export const SelectFromMediaModal = React.memo(
   forwardRef<BottomSheetModal, SelectFromMediaModalProps>((props, ref) => {
     const { selectedIds, onConfirm } = props;
+    const { width: screenWidth } = useWindowDimensions();
+    const itemWidth = useMemo(() => (screenWidth - 56) / 2, [screenWidth]);
     const insets = useSafeAreaInsets();
 
     const [localSelected, setLocalSelected] = useState<string[]>([]);
@@ -121,7 +121,7 @@ export const SelectFromMediaModal = React.memo(
           )}
         </TouchableOpacity>
       );
-    }, [selectedSet, toggleSelection]);
+    }, [itemWidth, selectedSet, toggleSelection]);
 
     return (
       <BottomSheetModal

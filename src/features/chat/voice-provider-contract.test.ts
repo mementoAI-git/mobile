@@ -80,4 +80,12 @@ describe('Gemini voice provider contract', () => {
     expect(bubble).toContain('isVoice');
     expect(bubble).toContain('Spoken');
   });
+
+  test('logs privacy-safe Gemini transcript delivery diagnostics', async () => {
+    const source = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+
+    expect(source).toContain('summarizeVoiceServerMessage');
+    expect(source).toContain("'[VoiceMode] Gemini event'");
+    expect(source).toContain("'[VoiceMode] transcript metrics'");
+  });
 });

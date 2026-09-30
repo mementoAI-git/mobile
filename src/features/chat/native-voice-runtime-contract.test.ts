@@ -31,6 +31,17 @@ describe('native voice runtime contract', () => {
     ]);
   });
 
+  test('disables RNAudioAPI file decoding that the live PCM pipeline does not use', async () => {
+    const appJson = await Bun.file(repoFile('app.json')).json();
+    const pluginSource = await Bun.file(
+      repoFile('plugins/with-audio-api-ffmpeg-disabled.js'),
+    ).text();
+
+    expect(appJson.expo.plugins).toContain('./plugins/with-audio-api-ffmpeg-disabled');
+    expect(pluginSource).toContain("ENV['DISABLE_AUDIOAPI_FFMPEG'] ||= '1'");
+    expect(pluginSource).toContain('withPodfile');
+  });
+
   test('exposes platform voice-processing recorder options', async () => {
     const recorderDeclaration = await Bun.file(
       repoFile(
@@ -58,5 +69,13 @@ describe('native voice runtime contract', () => {
     );
 
     expect(createBufferFunction).toContain('setExternalMemoryPressure');
+  });
+
+  test('does not peak-normalize each iOS render quantum', async () => {
+    const playerSource = await Bun.file(
+      repoFile('node_modules/react-native-audio-api/ios/audioapi/ios/core/IOSAudioPlayer.mm'),
+    ).text();
+
+    expect(playerSource).not.toContain('audioBuffer_->normalize()');
   });
 });

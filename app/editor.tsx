@@ -30,6 +30,7 @@ import Animated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { minTouchTarget, radius, iconSize } from '@/constants/responsive';
 import {
   getAutosaveStatusBadge,
   type AutosaveStatus,
@@ -878,6 +879,8 @@ export default function EditorScreen() {
               setCancelConfirmOnSave(() => saveOnPress);
               setCancelConfirmVisible(true);
             }} activeOpacity={0.7}
+              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+              accessibilityLabel="Cancel editing"
               style={{ height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ ...TYPE.label, color: COLORS.textBase }}>Cancel</Text>
             </TouchableOpacity>
@@ -930,8 +933,10 @@ export default function EditorScreen() {
                     }});
                     draftsSheetRef.current?.present();
                   }} activeOpacity={0.7}
-                    style={{ height: 34, paddingHorizontal: 12, borderRadius: 17, backgroundColor: COLORS.fillWeak, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                    <MoreHorizontal size={16} color={COLORS.textBase} strokeWidth={2} />
+                    hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                    accessibilityLabel="Story drafts"
+                    style={{ height: 34, paddingHorizontal: 12, borderRadius: radius(17), backgroundColor: COLORS.fillWeak, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <MoreHorizontal size={iconSize(16)} color={COLORS.textBase} strokeWidth={2} />
                     {draftCount > 0 && (
                       <View style={{ minWidth: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
                         <Text style={{ ...TYPE.eyebrow, color: COLORS.textInverse }}>{draftCount}</Text>
@@ -945,6 +950,8 @@ export default function EditorScreen() {
                     handleOpenPublishSheet();
                   }}
                     disabled={!storyHasContent || anyUploading} activeOpacity={0.8}
+                    hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                    accessibilityLabel="Next step"
                     style={[{ height: 34, paddingHorizontal: 18, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }, (!storyHasContent || anyUploading) && { opacity: 0.4 }]}>
                     {anyUploading && <ActivityIndicator size="small" color={COLORS.textInverse} />}
                     <Text style={{ ...TYPE.label, color: COLORS.textInverse }}>Next</Text>
@@ -960,15 +967,19 @@ export default function EditorScreen() {
                     setQcBody(savedQcBody);
                   }}
                   activeOpacity={hasQcDraft ? 0.7 : 1}
-                  style={{ height: 34, paddingHorizontal: 12, borderRadius: 17, backgroundColor: COLORS.fillWeak, flexDirection: 'row', alignItems: 'center', gap: 4, opacity: hasQcDraft ? 1 : 0.35 }}
+                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                  accessibilityLabel="Quick capture draft"
+                  style={{ height: 34, paddingHorizontal: 12, borderRadius: radius(17), backgroundColor: COLORS.fillWeak, flexDirection: 'row', alignItems: 'center', gap: 4, opacity: hasQcDraft ? 1 : 0.35 }}
                 >
-                  <MoreHorizontal size={14} color={COLORS.textBase} strokeWidth={2} />
+                  <MoreHorizontal size={iconSize(14)} color={COLORS.textBase} strokeWidth={2} />
                   <Text style={{ ...TYPE.bodySmall, color: COLORS.textBase }}>Draft</Text>
                 </TouchableOpacity>
               )}
               {!isStory && qcHasContent && (
                 <TouchableOpacity onPress={handleSave} disabled={!canSave || qcPending} activeOpacity={0.7}
-                  style={{ height: 34, paddingHorizontal: 16, borderRadius: 17, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }}>
+                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                  accessibilityLabel="Save note"
+                  style={{ height: 34, paddingHorizontal: 16, borderRadius: radius(17), backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }}>
                   {qcPending ? <ActivityIndicator size="small" color={COLORS.textInverse} /> : <Text style={{ ...TYPE.label, color: COLORS.textInverse }}>Save</Text>}
                 </TouchableOpacity>
               )}

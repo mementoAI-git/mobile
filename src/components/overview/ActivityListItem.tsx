@@ -18,6 +18,7 @@ import dayjs from 'dayjs';
 import type { Activity } from '@/hooks/queries/use-activities';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 
 // ── Deterministic color seeding ────────────────────────────────────────────
 
@@ -202,19 +203,25 @@ export const ActivityListItem = React.memo(function ActivityListItem({ activity,
         onPress={handlePress}
         disabled={!canOpenStory}
         activeOpacity={0.7}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 20 }}
+        style={{
+          minHeight: minTouchTarget(44),
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: responsiveSpace(16),
+          paddingVertical: responsiveSpace(14),
+        }}
       >
         {/* Icon container */}
         <View style={{
-          width: 40,
-          height: 40,
-          borderRadius: 12,
+          width: iconSize(40),
+          height: iconSize(40),
+          borderRadius: radius(12),
           backgroundColor: accentColor + '18',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
         }}>
-          <ActivityIcon type={activity.type} title={activity.title} id={activity._id} size={26} />
+          <ActivityIcon type={activity.type} title={activity.title} id={activity._id} size={iconSize(26)} />
         </View>
 
         {/* Text */}

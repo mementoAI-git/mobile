@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { enrichmentCategoryLabel, type JumpPill } from '@/constants/enrichment';
+import { minTouchTarget, responsiveSpace } from '@/constants/responsive';
 import type { IMessage } from '@/types';
 
 interface HostChatJumpPillsProps {
@@ -72,7 +73,9 @@ export function HostChatJumpPills({
             onJump?.(key);
           }}
           activeOpacity={0.7}
-          className="border border-stroke-weaker bg-fill-weaker rounded-full px-3 py-1.5"
+          hitSlop={6}
+          style={{ minHeight: minTouchTarget(32) }}
+          className="border border-stroke-weaker bg-fill-weaker rounded-full px-3 py-1.5 justify-center"
         >
           <Text style={{ ...TYPE.metadata, color: COLORS.textBase }}>
             {formatMonthKey(key)}
@@ -94,7 +97,9 @@ export function HostChatJumpPills({
             onCategoryPill?.(pill.starter);
           }}
           activeOpacity={0.8}
-          className="flex-row items-center gap-1.5 bg-brand/5 border border-brand/15 rounded-full px-3 py-1.5"
+          hitSlop={6}
+          style={{ minHeight: minTouchTarget(32) }}
+          className="flex-row items-center gap-1.5 bg-brand/5 border border-brand/15 rounded-full px-3 py-1.5 justify-center"
         >
           <Text style={{ ...TYPE.metadata, color: COLORS.brand }}>
             {enrichmentCategoryLabel(pill.category_key)}

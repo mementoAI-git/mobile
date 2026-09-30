@@ -10,6 +10,7 @@ import Animated, {
 
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius, responsiveSpace } from '@/constants/responsive';
 import { clampEnrichmentScore } from '@/features/account/account-overview';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -73,10 +74,10 @@ export const EnrichmentScoreCard = React.memo(function EnrichmentScoreCard({
 
         <View style={styles.insightRow}>
           <View style={styles.insightIcon}>
-            <BarChart3 size={14} color={COLORS.textInverse} strokeWidth={2.2} />
+            <BarChart3 size={iconSize(14)} color={COLORS.textInverse} strokeWidth={2.2} />
           </View>
           <Text style={styles.insightText}>Discover which areas need more context</Text>
-          <ChevronRight size={20} color={COLORS.textWeak} strokeWidth={2.3} />
+          <ChevronRight size={iconSize(20)} color={COLORS.textWeak} strokeWidth={2.3} />
         </View>
       </AnimatedPressable>
     </Animated.View>
@@ -86,10 +87,10 @@ export const EnrichmentScoreCard = React.memo(function EnrichmentScoreCard({
 const styles = StyleSheet.create({
   card: {
     minHeight: 160,
-    borderRadius: 16,
+    borderRadius: radius(16),
     backgroundColor: COLORS.fillWeak,
-    paddingHorizontal: 12,
-    paddingVertical: 13,
+    paddingHorizontal: responsiveSpace(12),
+    paddingVertical: responsiveSpace(13),
   },
   headingRow: {
     flexDirection: 'row',
@@ -128,9 +129,9 @@ const styles = StyleSheet.create({
     marginTop: 7,
   },
   insightIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
+    width: iconSize(20),
+    height: iconSize(20),
+    borderRadius: radius(5),
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.textStrong,

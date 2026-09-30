@@ -1,10 +1,12 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import { Skeleton } from './Skeleton';
+import { screenGutter } from '@/constants/responsive';
 
 export function AccountSkeleton() {
+  const { width } = useWindowDimensions();
   return (
-    <View style={{ paddingHorizontal: 20, gap: 24 }}>
+    <View style={{ paddingHorizontal: screenGutter(width), gap: 24 }}>
       <Skeleton className="h-[164px] rounded-[28px]" />
       <View className="gap-4 py-2">
         <View className="flex-row items-center justify-between">

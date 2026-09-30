@@ -13,6 +13,7 @@ import { Avatar, Skeleton, EmptyState } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
 import { TYPE } from '@/constants/typography';
+import { minTouchTarget, radius } from '@/constants/responsive';
 import { getSettingsHeaderLayout } from '@/features/settings/settings-header-layout';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
@@ -378,6 +379,7 @@ const styles = StyleSheet.create({
     backgroundColor: `${COLORS.brand}15`,
     paddingHorizontal: 16,
     paddingVertical: 10,
+    minHeight: minTouchTarget(44),
     borderRadius: 999,
   },
   sectionHeader: {
@@ -399,7 +401,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
     justifyContent: 'center',
     backgroundColor: COLORS.card,
-    borderRadius: 16,
+    borderRadius: radius(16),
     paddingHorizontal: 16,
   },
   fieldValueText: {

@@ -35,6 +35,7 @@ describe('chat message list identity', () => {
     expect(getChatMessageItemType({ role: 'user', text: '', attatchments: [{ url: 'a', name: 'a' }] })).toBe('user-attachments');
     expect(getChatMessageItemType({ role: 'ai', text: 'two' })).toBe('assistant');
     expect(getChatMessageItemType({ role: 'assistant', text: '', attatchments: [{ url: 'b', name: 'b' }] })).toBe('assistant-attachments');
+    expect(getChatMessageItemType({ role: 'ai', text: 'Voice call completed (01:16)', is_voice: true })).toBe('voice-call');
   });
 
   test('assigns generated IDs to every optimistic message path', async () => {

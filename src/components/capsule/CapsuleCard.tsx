@@ -11,7 +11,7 @@ import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { getThemeById, getThemeByColor } from '@/constants/themes';
 import { cn } from '@/lib/utils';
-import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { hs, iconSize, radius } from '@/constants/responsive';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { getCapsuleDisplayRecipients } from '@/features/capsules/recipient-display';
 
@@ -142,7 +142,7 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
               {/* Left side: Single Attachment Thumbnail */}
               <View
                 className="rounded-xl bg-fill-weaker border border-stroke-weaker overflow-hidden items-center justify-center relative shrink-0"
-                style={{ width: scale(96), height: scale(96) }}
+                style={{ width: hs(96), height: hs(96) }}
               >
                 {(() => {
                   const firstImg: any = attachments.find((attr: any) => isImage(attr.type, attr.url) && ((attr as any).thumbnail || attr.url));
@@ -190,9 +190,9 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                     accessibilityRole="button"
                     accessibilityLabel={`Options for capsule ${capsule.title || 'Untitled Capsule'}`}
                     className="items-center justify-center"
-                    style={{ width: scale(24), height: scale(24) }}
+                    style={{ width: hs(24), height: hs(24) }}
                   >
-                    <MoreVertical size={scale(14)} color={COLORS.textWeak} />
+                    <MoreVertical size={iconSize(14)} color={COLORS.textWeak} />
                   </TouchableOpacity>
                 </View>
 
@@ -324,7 +324,7 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
             {/* Attachment Strip (Parity with Web ImageThumbnail) */}
             <View
               className="flex-row items-center gap-1.5 overflow-hidden"
-              style={{ height: scale(40) }}
+              style={{ height: hs(40) }}
             >
               {attachments.length > 0 ? (
                 attachments.slice(0, 4).map((attr: any, idx) => {
@@ -335,7 +335,7 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
                     <View
                       key={attr._id || idx}
                       className="rounded-lg bg-fill-weaker border border-stroke-weaker overflow-hidden items-center justify-center relative"
-                      style={{ width: scale(40), height: scale(40) }}
+                      style={{ width: hs(40), height: hs(40) }}
                     >
                       {showImage ? (
                         <SignedAttachmentImage

@@ -21,6 +21,7 @@ import { MotiView, AnimatePresence } from 'moti';
 import { Check, AlertTriangle, Info } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius, responsiveSpace } from '@/constants/responsive';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -63,7 +64,7 @@ const BG: Record<ToastType, string> = {
 
 function ToastIcon({ type }: { type: ToastType }) {
   const color = '#ffffff';
-  const size = 18;
+  const size = iconSize(18);
   const sw = 2.5;
   if (type === 'success') return <Check size={size} color={color} strokeWidth={sw} />;
   if (type === 'error')   return <AlertTriangle size={size} color={color} strokeWidth={sw} />;
@@ -100,6 +101,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           top: insets.top + 8,
           left: 16,
           right: 16,
+          alignItems: 'center',
           gap: 8,
           pointerEvents: 'none',
           zIndex: 9999,
@@ -109,6 +111,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           {toasts.map(t => (
             <MotiView
               key={t.id}
+              style={{ width: '100%', maxWidth: 480 }}
               from={{ opacity: 0, translateY: -40, scale: 0.96 }}
               animate={{ opacity: 1, translateY: 0, scale: 1 }}
               exit={{ opacity: 0, translateY: -20, scale: 0.96 }}
@@ -118,10 +121,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  gap: 10,
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  borderRadius: 14,
+                  gap: responsiveSpace(10),
+                  paddingHorizontal: responsiveSpace(16),
+                  paddingVertical: responsiveSpace(14),
+                  borderRadius: radius(14),
                   backgroundColor: BG[t.type],
                   // subtle shadow so it lifts off the content beneath
                   shadowColor: '#000',

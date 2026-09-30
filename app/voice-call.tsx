@@ -11,6 +11,7 @@ import { VoiceArtwork } from '@/components/chat/VoiceArtwork';
 import { VoiceUpgradeScreen } from '@/components/chat/VoiceUpgradeScreen';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { minTouchTarget, iconSize, ms, radius } from '@/constants/responsive';
 import { VOICE_CATALOG, getVoiceById, type VoiceId } from '@/features/chat/voice-catalog';
 import { formatVoiceCallDuration, getVoiceCallTransition, type VoiceCallStage } from '@/features/chat/voice-call-flow';
 import { useVoiceMode } from '@/hooks/use-voice-mode';
@@ -29,7 +30,7 @@ function VoiceDots({ selectedId, onSelect }: { selectedId: VoiceId; onSelect: (i
           accessibilityRole="radio"
           accessibilityState={{ checked: voice.id === selectedId }}
           onPress={() => onSelect(voice.id)}
-          className="min-h-11 min-w-8 items-center justify-center"
+          className="min-h-11 min-w-11 items-center justify-center"
         >
           <View className="size-2.5 rounded-full" style={{ backgroundColor: voice.id === selectedId ? COLORS.brand : COLORS.strokeWeak }} />
         </Pressable>

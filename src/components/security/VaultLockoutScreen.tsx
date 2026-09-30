@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ImageBackground } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { hs, radius } from '@/constants/responsive';
 import { Button, Avatar } from '@/components/ui';
 import { useVaultLockStore } from '@/features/security/vault-lock.store';
 import { useUserStore } from '@/store';
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
   lockBadge: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: radius(18),
     backgroundColor: COLORS.brandTint,
     borderWidth: 1,
     borderColor: 'rgba(233, 130, 70, 0.3)',

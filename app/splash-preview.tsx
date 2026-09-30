@@ -8,6 +8,7 @@ import * as Haptics from 'expo-haptics';
 import { AnimatedSplash } from '@/components/system/AnimatedSplash';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, radius } from '@/constants/responsive';
 
 export default function SplashPreviewScreen() {
   const router = useRouter();
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(23, 11, 0, 0.75)',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 24,
+    borderRadius: radius(24),
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
     alignSelf: 'center',
@@ -197,15 +198,15 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: 'rgba(23, 11, 0, 0.75)',
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    minHeight: minTouchTarget(44),
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: minTouchTarget(44),
+    height: minTouchTarget(44),
+    borderRadius: 999,
     backgroundColor: 'rgba(23, 11, 0, 0.75)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -218,7 +219,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
     paddingHorizontal: 12,
-    paddingVertical: 7,
+    minHeight: minTouchTarget(44),
     borderRadius: 999,
   },
   activePill: {

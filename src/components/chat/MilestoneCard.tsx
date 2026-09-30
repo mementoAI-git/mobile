@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius, ms, responsiveSpace } from '@/constants/responsive';
 
 const STREAK_FLAME = require('../../../assets/images/illustrations/streak_flame.webp');
 
@@ -58,7 +59,7 @@ export function MilestoneCard({ enrichmentDelta, milestoneLabel }: MilestoneCard
         <View style={styles.iconContainer}>
           <Image
             source={STREAK_FLAME}
-            style={{ width: 24, height: 24 }}
+            style={{ width: iconSize(24), height: iconSize(24) }}
             resizeMode="contain"
           />
         </View>
@@ -83,7 +84,7 @@ const styles = StyleSheet.create({
     right: 16,
     zIndex: 999,
     backgroundColor: '#ffffff',
-    borderRadius: 20,
+    borderRadius: radius(20),
     borderWidth: 1,
     borderColor: 'rgba(255, 94, 0, 0.08)',
     // iOS shadow
@@ -97,14 +98,14 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
+    paddingHorizontal: responsiveSpace(16),
+    paddingVertical: responsiveSpace(14),
+    gap: responsiveSpace(12),
   },
   iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: ms(36, 0.2),
+    height: ms(36, 0.2),
+    borderRadius: radius(18),
     backgroundColor: 'rgba(143, 108, 26, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',

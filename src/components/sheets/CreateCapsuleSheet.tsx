@@ -267,7 +267,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
               return (
                 <View key={id} className="bg-fill-weaker border border-stroke-weaker rounded-full px-3 py-1.5 flex-row items-center gap-1.5">
                   <Text className="text-text-strong" style={TYPE.metadata}>{displayName}</Text>
-                  <TouchableOpacity onPress={() => toggleRecipient(id)}>
+                  <TouchableOpacity onPress={() => toggleRecipient(id)} hitSlop={12}>
                     <X size={12} color={COLORS.textWeak} />
                   </TouchableOpacity>
                 </View>
@@ -588,7 +588,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
       >
         <View className="px-5 py-4 border-b border-stroke-weaker flex-row justify-between items-center">
           <Text className="text-text-strong" style={TYPE.sectionTitle}>Delivery Date</Text>
-          <TouchableOpacity onPress={() => dateModalRef.current?.dismiss()}>
+          <TouchableOpacity onPress={() => dateModalRef.current?.dismiss()} hitSlop={12}>
             <X size={20} color={COLORS.textWeak} />
           </TouchableOpacity>
         </View>

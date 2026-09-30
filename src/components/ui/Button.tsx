@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { cn } from '@/lib/utils';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { minTouchTarget, mvs, responsiveSpace } from '@/constants/responsive';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'black';
 type Size = 'xs' | 'sm' | 'md' | 'lg';
@@ -52,17 +53,52 @@ const variantStyles: Record<Variant, { container: string; text: string }> = {
     text: 'text-white',
   },
   black: {
-    container: "bg-black",
-    text: "text-white"
-  }
+    container: 'bg-black',
+    text: 'text-white',
+  },
 };
 
-// All sizes use rounded-full by default
-const sizeStyles: Record<Size, { container: string; text: string }> = {
-  xs: { container: 'h-6 px-2.5 gap-1', text: '' },
-  sm: { container: 'h-8 px-3 gap-1', text: '' },
-  md: { container: 'h-10 px-4 gap-1.5', text: '' }, // compact button (40px)
-  lg: { container: 'h-14 px-6 gap-2', text: '' }, // standard button (56px)
+const sizeMetrics: Record<
+  Size,
+  {
+    minHeight: number;
+    paddingHorizontal: number;
+    gap: number;
+    hitSlop?: { top: number; bottom: number; left: number; right: number };
+  }
+> = {
+  xs: {
+    minHeight: mvs(24, 0.25),
+    paddingHorizontal: responsiveSpace(10),
+    gap: responsiveSpace(4),
+    hitSlop: {
+      top: Math.max(0, Math.round((44 - mvs(24, 0.25)) / 2)),
+      bottom: Math.max(0, Math.round((44 - mvs(24, 0.25)) / 2)),
+      left: Math.max(0, Math.round((44 - responsiveSpace(10) * 2) / 2)),
+      right: Math.max(0, Math.round((44 - responsiveSpace(10) * 2) / 2)),
+    },
+  },
+  sm: {
+    minHeight: mvs(32, 0.25),
+    paddingHorizontal: responsiveSpace(12),
+    gap: responsiveSpace(4),
+    hitSlop: {
+      top: Math.max(0, Math.round((44 - mvs(32, 0.25)) / 2)),
+      bottom: Math.max(0, Math.round((44 - mvs(32, 0.25)) / 2)),
+      left: Math.max(0, Math.round((44 - responsiveSpace(12) * 2) / 2)),
+      right: Math.max(0, Math.round((44 - responsiveSpace(12) * 2) / 2)),
+    },
+  },
+  md: {
+    minHeight: minTouchTarget(40),
+    paddingHorizontal: responsiveSpace(16),
+    gap: responsiveSpace(6),
+  },
+  lg: {
+    minHeight: minTouchTarget(56),
+    paddingHorizontal: responsiveSpace(24),
+    gap: responsiveSpace(8),
+  },
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -84,7 +120,7 @@ export function Button({
 }: ButtonProps) {
   const isDisabled = disabled || loading;
   const v = variantStyles[variant];
-  const s = sizeStyles[size];
+  const s = sizeMetrics[size];
 
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({
@@ -104,6 +140,7 @@ export function Button({
       accessibilityLabel={accessibilityLabel}
       onPress={handlePress}
       disabled={isDisabled}
+      hitSlop={s.hitSlop}
       onPressIn={() => {
         scale.value = withTiming(0.97, { duration: 100 });
       }}
@@ -115,11 +152,17 @@ export function Button({
           ? { color: COLORS.brandTint, borderless: false, radius: -1 }
           : undefined
       }
-      style={animStyle}
+      style={[
+        animStyle,
+        {
+          minHeight: s.minHeight,
+          paddingHorizontal: s.paddingHorizontal,
+          gap: s.gap,
+        },
+      ]}
       className={cn(
         'flex-row items-center justify-center',
         v.container,
-        s.container,
         rounded === 'xl'
           ? 'rounded-xl'
           : rounded === '2xl'
@@ -143,7 +186,7 @@ export function Button({
           <Text
             numberOfLines={1}
             maxFontSizeMultiplier={1.4}
-            className={cn(v.text, s.text, textClassName)}
+            className={cn(v.text, textClassName)}
             style={size === 'lg' ? TYPE.button : TYPE.buttonSmall}
           >
             {children}

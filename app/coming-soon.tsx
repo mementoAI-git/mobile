@@ -23,6 +23,7 @@ import {
 import { Button } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { hs, iconSize, radius } from '@/constants/responsive';
 import {
   resolveComingSoonFeature,
   type ComingSoonBenefit,
@@ -49,7 +50,7 @@ function BenefitRow({ benefit }: { benefit: ComingSoonBenefit }) {
   return (
     <View style={styles.benefitRow}>
       <View style={styles.benefitIcon}>
-        <Icon size={21} color={COLORS.brand} strokeWidth={2} />
+        <Icon size={iconSize(21)} color={COLORS.brand} strokeWidth={2} />
       </View>
       <View style={styles.benefitCopy}>
         <Text style={styles.benefitTitle}>{benefit.title}</Text>
@@ -201,12 +202,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.card,
     borderColor: COLORS.strokeWeaker,
-    borderRadius: 54,
+    borderRadius: radius(54),
     borderWidth: 1,
-    height: 108,
+    height: hs(108),
     justifyContent: 'center',
     position: 'absolute',
-    width: 108,
+    width: hs(108),
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
@@ -214,8 +215,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   heroIllustration: {
-    height: 72,
-    width: 72,
+    height: hs(72),
+    width: hs(72),
   },
   eyebrow: {
     color: COLORS.brand,

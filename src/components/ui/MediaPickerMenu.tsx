@@ -15,6 +15,7 @@ import { Image as ImageIcon, ImagePlus, AudioLines, Music } from 'lucide-react-n
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius } from '@/constants/responsive';
 
 export interface MediaPickerMenuProps {
   visible: boolean;
@@ -64,7 +65,7 @@ export function MediaPickerMenu({
           activeOpacity={0.8}
           style={styles.item}
         >
-          <ImageIcon size={18} color={COLORS.textStrong} strokeWidth={1.8} />
+          <ImageIcon size={iconSize(18)} color={COLORS.textStrong} strokeWidth={1.8} />
           <Text style={styles.label}>Gallery</Text>
         </TouchableOpacity>
 
@@ -73,7 +74,7 @@ export function MediaPickerMenu({
           activeOpacity={0.8}
           style={styles.item}
         >
-          <ImagePlus size={18} color={COLORS.textStrong} strokeWidth={1.8} />
+          <ImagePlus size={iconSize(18)} color={COLORS.textStrong} strokeWidth={1.8} />
           <Text style={styles.label}>Camera</Text>
         </TouchableOpacity>
 
@@ -82,7 +83,7 @@ export function MediaPickerMenu({
           activeOpacity={0.8}
           style={[styles.item, isRecording && styles.itemRecording]}
         >
-          <AudioLines size={18} color={isRecording ? COLORS.brand : COLORS.textStrong} strokeWidth={1.8} />
+          <AudioLines size={iconSize(18)} color={isRecording ? COLORS.brand : COLORS.textStrong} strokeWidth={1.8} />
           <Text style={[styles.label, isRecording && styles.labelRecording]}>
             {isRecording ? 'Listening' : 'Voice'}
           </Text>
@@ -93,7 +94,7 @@ export function MediaPickerMenu({
           activeOpacity={0.8}
           style={styles.item}
         >
-          <Music size={18} color={COLORS.textStrong} strokeWidth={1.8} />
+          <Music size={iconSize(18)} color={COLORS.textStrong} strokeWidth={1.8} />
           <Text style={styles.label}>File</Text>
         </TouchableOpacity>
       </View>
@@ -116,7 +117,7 @@ const styles = StyleSheet.create({
     left: 0,
     flexDirection: 'row',
     backgroundColor: COLORS.card,
-    borderRadius: 16,
+    borderRadius: radius(16),
     borderWidth: 1,
     borderColor: COLORS.strokeWeaker,
     paddingHorizontal: 8,
@@ -136,7 +137,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: radius(12),
     backgroundColor: COLORS.fillWeak,
     minWidth: 64,
   },

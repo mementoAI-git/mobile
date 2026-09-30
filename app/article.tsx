@@ -48,6 +48,7 @@ import { useRouter } from 'expo-router';
 let articleHasSlid = false;
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { minTouchTarget, radius, iconSize } from '@/constants/responsive';
 import { useUserStore } from '@/store';
 import { useCreateMemory } from '@/hooks/mutations/use-memory-mutations';
 import { useToast } from '@/components/ui/Toast';
@@ -354,8 +355,13 @@ function PublishModal({
             {/* Header */}
             <View style={pStyles.header}>
               <Text style={pStyles.headerTitle}>Publish post</Text>
-              <TouchableOpacity onPress={handleClose} style={pStyles.closeBtn}>
-                <X size={16} color={COLORS.textBase} strokeWidth={2} />
+              <TouchableOpacity
+                onPress={handleClose}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                accessibilityLabel="Close publish sheet"
+                style={pStyles.closeBtn}
+              >
+                <X size={iconSize(16)} color={COLORS.textBase} strokeWidth={2} />
               </TouchableOpacity>
             </View>
 
@@ -522,7 +528,13 @@ export default function ArticleScreen() {
 
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={handleCancel} activeOpacity={0.7} style={styles.cancelBtn}>
+            <TouchableOpacity
+              onPress={handleCancel}
+              activeOpacity={0.7}
+              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+              accessibilityLabel="Cancel article"
+              style={styles.cancelBtn}
+            >
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
             <View style={styles.savedPill}>
@@ -530,11 +542,23 @@ export default function ArticleScreen() {
               <Text style={styles.savedText}>{savedLabel}</Text>
             </View>
             <View style={styles.headerRight}>
-              <TouchableOpacity onPress={() => Haptics.selectionAsync()} activeOpacity={0.7} style={styles.moreBtn}>
-                <MoreHorizontal size={16} color={COLORS.textBase} strokeWidth={2} />
+              <TouchableOpacity
+                onPress={() => Haptics.selectionAsync()}
+                activeOpacity={0.7}
+                hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                accessibilityLabel="More options"
+                style={styles.moreBtn}
+              >
+                <MoreHorizontal size={iconSize(16)} color={COLORS.textBase} strokeWidth={2} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleNext} activeOpacity={0.8}
-                style={[styles.nextBtn, !hasContent && styles.nextBtnDisabled]} disabled={!hasContent}>
+              <TouchableOpacity
+                onPress={handleNext}
+                activeOpacity={0.8}
+                hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                accessibilityLabel="Next step"
+                style={[styles.nextBtn, !hasContent && styles.nextBtnDisabled]}
+                disabled={!hasContent}
+              >
                 <Text style={styles.nextText}>Next</Text>
               </TouchableOpacity>
             </View>

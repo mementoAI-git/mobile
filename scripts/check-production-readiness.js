@@ -79,8 +79,12 @@ assert(packageJson.scripts.test, 'package.json must expose a unit test script.')
 assert(packageJson.scripts.typecheck, 'package.json must expose a typecheck script.');
 assert(packageJson.scripts.doctor, 'package.json must expose an Expo Doctor script.');
 assert(packageJson.scripts['check:prod'], 'package.json must expose a production check script.');
+assert(packageJson.scripts['check:responsive'], 'package.json must expose a responsive check script.');
+assert(fs.existsSync(path.join(root, 'src/constants/responsive.ts')), 'Responsive metrics module src/constants/responsive.ts must exist.');
+assert(fs.existsSync(path.join(root, 'src/features/layout/responsive-compliance.test.ts')), 'Responsive compliance test must exist.');
 assert(packageJson.scripts.verify, 'package.json must expose a commit verification script.');
 assert(/bun run test/.test(packageJson.scripts.verify), 'Commit verification must run unit tests.');
+assert(/bun run check:responsive/.test(packageJson.scripts.verify), 'Commit verification must run responsive compliance check.');
 assert(packageJson.scripts.prepare === 'husky', 'package.json must install Husky hooks via prepare.');
 assert(/bun run verify/.test(preCommitHook), 'Husky pre-commit hook must run bun run verify.');
 assert(/bun-version:\s*1\.3\.6/.test(ciWorkflow), 'CI must pin the Bun version for reproducible installs.');
@@ -179,6 +183,46 @@ assert(
 assert(
   easJson.build?.preview?.env?.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE === '0.2',
   'EAS preview builds must use bounded Sentry trace sampling.',
+);
+assert(
+  easJson.build?.testflight?.distribution === 'store',
+  'EAS TestFlight builds must use App Store distribution.',
+);
+assert(
+  easJson.build?.testflight?.channel === 'staging',
+  'EAS TestFlight builds must use the staging update channel.',
+);
+assert(
+  easJson.build?.testflight?.environment === 'preview',
+  'EAS TestFlight builds must load the preview EAS environment.',
+);
+assert(
+  easJson.build?.testflight?.autoIncrement === true,
+  'EAS TestFlight builds must auto-increment their build number.',
+);
+assert(
+  easJson.build?.testflight?.env?.EXPO_PUBLIC_API_BASE_URL === 'https://dev.mymemento.io/api',
+  'EAS TestFlight builds must use dev.mymemento.io API.',
+);
+assert(
+  easJson.build?.testflight?.env?.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE === '0.2',
+  'EAS TestFlight builds must use bounded Sentry trace sampling.',
+);
+assert(
+  easJson.submit?.testflight,
+  'EAS must expose a dedicated TestFlight submission profile.',
+);
+assert(
+  easJson.build?.production?.distribution === 'store',
+  'EAS production builds must use App Store distribution.',
+);
+assert(
+  easJson.build?.production?.channel === 'production',
+  'EAS production builds must use the production update channel.',
+);
+assert(
+  easJson.build?.production?.environment === 'production',
+  'EAS production builds must load the production EAS environment.',
 );
 assert(
   easJson.build?.production?.env?.EXPO_PUBLIC_API_BASE_URL === 'https://app.mymemento.io/api',

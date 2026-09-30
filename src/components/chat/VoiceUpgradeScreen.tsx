@@ -8,6 +8,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { Button } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius, minTouchTarget, responsiveSpace, ms } from '@/constants/responsive';
 import { launchBillingCheckout } from '@/features/settings/billing-flow';
 import { useIAP } from '@/features/billing/use-iap';
 import { useSubscription } from '@/hooks/queries/use-subscription';
@@ -117,7 +118,7 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
           onPress={onClose}
           style={styles.closeButton}
         >
-          <X size={20} color={COLORS.textBase} strokeWidth={2} />
+          <X size={iconSize(20)} color={COLORS.textBase} strokeWidth={2} />
         </TouchableOpacity>
 
         <View style={styles.headingBlock}>
@@ -205,11 +206,11 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
             {IAP_DISCLOSURE_COPY}
           </Text>
           <View style={styles.legalLinksRow}>
-            <TouchableOpacity onPress={openTerms} accessibilityRole="link">
+            <TouchableOpacity onPress={openTerms} accessibilityRole="link" hitSlop={8}>
               <Text style={styles.legalLink}>Terms of Use</Text>
             </TouchableOpacity>
             <Text style={styles.legalDot}>•</Text>
-            <TouchableOpacity onPress={openPrivacy} accessibilityRole="link">
+            <TouchableOpacity onPress={openPrivacy} accessibilityRole="link" hitSlop={8}>
               <Text style={styles.legalLink}>Privacy Policy</Text>
             </TouchableOpacity>
           </View>
@@ -227,11 +228,11 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     backgroundColor: COLORS.card,
     borderColor: COLORS.strokeWeak,
-    borderRadius: 20,
+    borderRadius: radius(22),
     borderWidth: 1,
-    height: 40,
+    height: minTouchTarget(44),
     justifyContent: 'center',
-    width: 40,
+    width: minTouchTarget(44),
   },
   headingBlock: { marginTop: 10, paddingRight: 28 },
   title: {
@@ -247,7 +248,7 @@ const styles = StyleSheet.create({
   benefitRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 12 },
   benefitDot: {
     backgroundColor: COLORS.textStrong,
-    borderRadius: 5,
+    borderRadius: radius(5),
     height: 10,
     marginTop: 7,
     width: 10,
@@ -261,10 +262,10 @@ const styles = StyleSheet.create({
   planCard: {
     backgroundColor: COLORS.card,
     borderColor: COLORS.strokeWeak,
-    borderRadius: 22,
+    borderRadius: radius(22),
     borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: responsiveSpace(16),
+    paddingVertical: responsiveSpace(16),
   },
   planCardSelected: {
     backgroundColor: COLORS.fillWeaker,
@@ -277,9 +278,9 @@ const styles = StyleSheet.create({
   },
   badge: {
     backgroundColor: COLORS.fillWeak,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: radius(12),
+    paddingHorizontal: responsiveSpace(8),
+    paddingVertical: responsiveSpace(4),
   },
   badgeSelected: { backgroundColor: COLORS.textStrong },
   badgeText: {

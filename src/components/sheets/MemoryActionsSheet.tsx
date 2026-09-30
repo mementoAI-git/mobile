@@ -50,7 +50,7 @@ const MemoTagPill = React.memo(function MemoTagPill({
   return (
     <View style={s.tagPill}>
       <Text style={s.tagPillText}>{tag}</Text>
-      <TouchableOpacity onPress={handleRemove} hitSlop={8} style={{ marginLeft: 4 }}>
+      <TouchableOpacity onPress={handleRemove} hitSlop={14} style={{ marginLeft: 4 }}>
         <X size={11} color={COLORS.textBase} strokeWidth={2.5} />
       </TouchableOpacity>
     </View>

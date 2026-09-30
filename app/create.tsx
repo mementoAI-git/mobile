@@ -46,6 +46,7 @@ import Animated, { FadeInDown, SlideInUp } from 'react-native-reanimated';
 let createHasSlid = false;
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { radius, minTouchTarget, iconSize } from '@/constants/responsive';
 import { useUserStore, useUiStore } from '@/store';
 import { Avatar } from '@/components/ui/Avatar';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
@@ -473,7 +474,13 @@ export default function CreateScreen() {
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleCancel} activeOpacity={0.7} style={styles.pill}>
+          <TouchableOpacity
+            onPress={handleCancel}
+            activeOpacity={0.7}
+            hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+            style={styles.pill}
+            accessibilityLabel="Cancel memory"
+          >
             <Text style={styles.pillText}>Cancel</Text>
           </TouchableOpacity>
 
@@ -482,7 +489,14 @@ export default function CreateScreen() {
             {nearLimit && <CharRing value={body.length} max={NOTE_CHAR_MAX} />}
 
             {hasContent && (
-              <TouchableOpacity onPress={handleSave} activeOpacity={0.7} style={[styles.pill, styles.pillBrand]} disabled={!canSave || isPending}>
+              <TouchableOpacity
+                onPress={handleSave}
+                activeOpacity={0.7}
+                hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                style={[styles.pill, styles.pillBrand]}
+                disabled={!canSave || isPending}
+                accessibilityLabel="Save memory"
+              >
                 {isPending
                   ? <ActivityIndicator size="small" color={COLORS.textInverse} />
                   : <Text style={[styles.pillText, { color: COLORS.textInverse }]}>Save</Text>}
@@ -596,7 +610,7 @@ const styles = StyleSheet.create({
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   pill: {
-    height: 34, paddingHorizontal: 16, borderRadius: 17,
+    height: 34, paddingHorizontal: 16, borderRadius: radius(17),
     backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center',
     flexDirection: 'row', gap: 6,
   },

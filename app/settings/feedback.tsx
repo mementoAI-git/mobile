@@ -14,7 +14,7 @@ import { ImagePlus, RotateCcw, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { Button, Select, TextInput } from '@/components/ui';
+import { Button, ResponsiveScreen, Select, TextInput } from '@/components/ui';
 import type { SelectOption } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';
@@ -217,11 +217,12 @@ export default function FeedbackSettingsScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
         >
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 }}
-          >
+          <ResponsiveScreen maxWidth={720}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingTop: 16, paddingBottom: 28 }}
+            >
             {/* Main feedback form inside journal card */}
             <View className="rounded-[24px] bg-card p-5 gap-5">
               <Select
@@ -274,6 +275,7 @@ export default function FeedbackSettingsScreen() {
               )}
             </View>
           </ScrollView>
+          </ResponsiveScreen>
 
           <View
             className="px-5 pt-3 bg-background"

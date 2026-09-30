@@ -13,7 +13,7 @@
 import React, { useRef, useCallback, useState, useEffect, useMemo } from 'react';
 import {
   View, Text, Modal, FlatList,
-  TouchableOpacity, Dimensions, Animated as RNAnimated,
+  TouchableOpacity, useWindowDimensions, Animated as RNAnimated,
   StyleSheet, Share, ActivityIndicator, Image, ImageBackground, Platform,
 } from 'react-native';
 // Type-only import: erased at compile time, never triggers the native module
@@ -38,6 +38,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, w
 import { ChevronLeft, Share2, X, Mic, FileText, Music, Play, Pause, RotateCcw, Link2, Download, Trash2, MessageSquare } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius, minTouchTarget } from '@/constants/responsive';
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
@@ -53,14 +54,10 @@ import { useSignedMediaAccess } from '@/features/media/use-signed-media-access';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { post } from '@/api/mutations';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-
 // Horizontal padding on each side — creates the "peek" effect
 const SIDE_PAD = 24;
 // Gap between cards
 const CARD_GAP = 12;
-// Effective card width
-const CARD_W = SCREEN_W - SIDE_PAD * 2;
 
 const isExpoGo = Constants.appOwnership === 'expo';
 
@@ -806,6 +803,7 @@ function GalleryFilmstrip({
 
 function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, headerMode = 'default', presentation = 'standard', onViewMessage, onDeletePersisted }: Omit<Props, 'visible' | 'initialIndex'> & { initialIndex: number }) {
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const listRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
@@ -948,6 +946,8 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
   }, [currentItemIsVisual, handleSaveToGallery, handleShareFile]);
 
   const isGallery = presentation === 'gallery';
+  const SCREEN_W = windowWidth;
+  const CARD_W = SCREEN_W - SIDE_PAD * 2;
   const pageWidth = isGallery ? SCREEN_W : CARD_W;
   const pageGap = isGallery ? 0 : CARD_GAP;
 
@@ -988,8 +988,14 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
       <View style={styles.header}>
         {isGallery ? (
           <>
-            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.galleryHeaderButton} activeOpacity={0.8}>
-              <ChevronLeft size={22} color={COLORS.textStrong} strokeWidth={2} />
+            <TouchableOpacity
+              onPress={() => { Haptics.selectionAsync(); onClose(); }}
+              style={styles.galleryHeaderButton}
+              activeOpacity={0.8}
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              accessibilityLabel="Back"
+            >
+              <ChevronLeft size={iconSize(22)} color={COLORS.textStrong} strokeWidth={2} />
             </TouchableOpacity>
             <View style={styles.galleryHeaderActions}>
               <TouchableOpacity
@@ -997,19 +1003,29 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
                 onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); if (currentItem) setDeleteCandidate(currentItem); }}
                 style={styles.galleryHeaderButton}
                 activeOpacity={0.8}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                accessibilityLabel="Delete attachment"
               >
-                <Trash2 size={20} color={COLORS.textStrong} />
+                <Trash2 size={iconSize(20)} color={COLORS.textStrong} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => void handleSaveOrExport()} style={styles.galleryHeaderButton} activeOpacity={0.8}>
-                <Download size={21} color={COLORS.textStrong} />
+              <TouchableOpacity
+                onPress={() => void handleSaveOrExport()}
+                style={styles.galleryHeaderButton}
+                activeOpacity={0.8}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                accessibilityLabel="Save or export"
+              >
+                <Download size={iconSize(21)} color={COLORS.textStrong} />
               </TouchableOpacity>
               <TouchableOpacity
                 disabled={!currentItem?.sourceMessageId || !onViewMessage}
                 onPress={() => currentItem && onViewMessage?.(currentItem)}
                 style={styles.galleryViewMessage}
                 activeOpacity={0.8}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                accessibilityLabel="View message"
               >
-                <MessageSquare size={19} color={COLORS.textStrong} />
+                <MessageSquare size={iconSize(19)} color={COLORS.textStrong} />
                 <Text style={styles.galleryViewMessageText}>View message</Text>
               </TouchableOpacity>
             </View>
@@ -1017,17 +1033,35 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
         ) : headerMode === 'close-only' ? (
           <>
             <View style={styles.headerSpacer} />
-            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
-              <X size={20} color={COLORS.textBase} strokeWidth={2} />
+            <TouchableOpacity
+              onPress={() => { Haptics.selectionAsync(); onClose(); }}
+              style={styles.iconBtn}
+              activeOpacity={0.8}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityLabel="Close"
+            >
+              <X size={iconSize(20)} color={COLORS.textBase} strokeWidth={2} />
             </TouchableOpacity>
           </>
         ) : (
           <>
-            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} style={styles.iconBtn} activeOpacity={0.8}>
-              <ChevronLeft size={20} color={COLORS.textBase} strokeWidth={2} />
+            <TouchableOpacity
+              onPress={() => { Haptics.selectionAsync(); onClose(); }}
+              style={styles.iconBtn}
+              activeOpacity={0.8}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityLabel="Back"
+            >
+              <ChevronLeft size={iconSize(20)} color={COLORS.textBase} strokeWidth={2} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleShareButtonPress} style={styles.sharePill} activeOpacity={0.8}>
-              <Share2 size={14} color={COLORS.textBase} strokeWidth={2} />
+            <TouchableOpacity
+              onPress={handleShareButtonPress}
+              style={styles.sharePill}
+              activeOpacity={0.8}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityLabel="Share"
+            >
+              <Share2 size={iconSize(14)} color={COLORS.textBase} strokeWidth={2} />
               <Text style={styles.shareLabel}>Share</Text>
             </TouchableOpacity>
           </>
@@ -1264,7 +1298,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   iconBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 36, height: 36, borderRadius: radius(18),
     backgroundColor: COLORS.fillWeak,
     borderWidth: 1, borderColor: COLORS.strokeWeaker,
     alignItems: 'center', justifyContent: 'center',
@@ -1275,7 +1309,7 @@ const styles = StyleSheet.create({
   },
   sharePill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    height: 36, paddingHorizontal: 16, borderRadius: 18,
+    height: 36, paddingHorizontal: 16, borderRadius: radius(18),
     backgroundColor: COLORS.fillWeak,
     borderWidth: 1, borderColor: COLORS.strokeWeaker,
   },
@@ -1286,12 +1320,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
   },
   galleryHeaderButton: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 40, height: 40, borderRadius: radius(20),
     backgroundColor: COLORS.fillWeak,
     alignItems: 'center', justifyContent: 'center',
   },
   galleryViewMessage: {
-    height: 40, borderRadius: 20, paddingHorizontal: 14,
+    height: 40, borderRadius: radius(20), paddingHorizontal: 14,
     backgroundColor: COLORS.fillWeak,
     flexDirection: 'row', alignItems: 'center', gap: 7,
   },

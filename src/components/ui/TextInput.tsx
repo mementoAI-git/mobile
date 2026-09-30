@@ -3,6 +3,7 @@ import { TextInput as RNTextInput, View, Text, TextInputProps, Animated, Platfor
 import { cn } from '@/lib/utils';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { minTouchTarget, mvs, radius as responsiveRadius, responsiveSpace } from '@/constants/responsive';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -66,12 +67,18 @@ export function TextInput({
       });
 
   const inputHeight = isRounded
-    ? (size === 'compact' ? 46 : 50)
-    : (size === 'compact' ? 48 : 56);
+    ? (size === 'compact' ? minTouchTarget(46) : minTouchTarget(50))
+    : (size === 'compact' ? minTouchTarget(48) : minTouchTarget(56));
 
-  const radius = rounded
-    ? (typeof rounded === 'number' ? rounded : rounded === 'xl' ? 12 : rounded === 'lg' ? 10 : 999)
-    : (isRounded ? 12 : (props.multiline ? 20 : 999));
+  const resolvedRadius = rounded
+    ? (typeof rounded === 'number'
+        ? (rounded >= 999 ? 999 : responsiveRadius(rounded))
+        : rounded === 'xl'
+          ? responsiveRadius(12)
+          : rounded === 'lg'
+            ? responsiveRadius(10)
+            : 999)
+    : (isRounded ? responsiveRadius(12) : (props.multiline ? responsiveRadius(20) : 999));
 
   return (
     <View className={cn('gap-1.5', containerClassName)}>
@@ -96,15 +103,15 @@ export function TextInput({
             backgroundColor: isRounded ? '#ffffff' : COLORS.fillWeaker,
             borderWidth,
             borderColor,
-            borderRadius: radius,
-            paddingHorizontal: 16,
-            minHeight: props.multiline ? undefined : inputHeight,
+            borderRadius: resolvedRadius,
+            paddingHorizontal: responsiveSpace(16),
+            minHeight: props.multiline ? minTouchTarget(44) : inputHeight,
             height: props.multiline ? undefined : inputHeight,
-            paddingVertical: props.multiline ? 14 : 0,
+            paddingVertical: props.multiline ? mvs(14, 0.25) : 0,
           },
         ]}
       >
-        {leftElement && <View style={{ marginRight: 8 }}>{leftElement}</View>}
+        {leftElement && <View style={{ marginRight: responsiveSpace(8) }}>{leftElement}</View>}
 
         {InputComponent ? (
           <InputComponent
@@ -150,7 +157,7 @@ export function TextInput({
           />
         )}
 
-        {rightElement && <View style={{ marginLeft: 8 }}>{rightElement}</View>}
+        {rightElement && <View style={{ marginLeft: responsiveSpace(8) }}>{rightElement}</View>}
       </Animated.View>
 
       {error && (

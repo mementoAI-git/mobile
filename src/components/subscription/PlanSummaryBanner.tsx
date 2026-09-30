@@ -1,7 +1,8 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { hs, radius, responsiveSpace, vs } from '@/constants/responsive';
 
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -62,28 +63,17 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
           }}
         >
           {/* Top row: Title + Active Badge */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={styles.topRow}>
             <Text
-              style={{
-                ...TYPE.uiTitle,
-                color: COLORS.textInverse,
-              }}
+              style={styles.title}
             >
               {presentation.title}
             </Text>
             <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                backgroundColor: COLORS.textInverse,
-                borderRadius: 999,
-                paddingHorizontal: 12,
-                paddingVertical: 4.5,
-              }}
+              style={[styles.badge, styles.paidBadge]}
             >
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.shadow }} />
-              <Text style={{ ...TYPE.metadata, color: COLORS.shadow }}>
+              <Text style={[styles.badgeText, { color: COLORS.shadow }]}>
                 {badge}
               </Text>
             </View>
@@ -148,12 +138,9 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
         }}
       >
         {/* Top row: Title + Upgrade pill */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={styles.topRow}>
           <Text
-            style={{
-              ...TYPE.uiTitle,
-              color: COLORS.textInverse,
-            }}
+            style={styles.title}
           >
             {presentation.title}
           </Text>
@@ -163,17 +150,9 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
             onPress={onPress}
             disabled={loading}
             activeOpacity={0.8}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              backgroundColor: 'rgba(255, 255, 255, 0.25)',
-              borderRadius: 999,
-              paddingHorizontal: 13,
-              paddingVertical: 6,
-            }}
+            style={[styles.badge, styles.upgradeBadge]}
           >
-            <Text style={{ ...TYPE.buttonSmall, color: COLORS.textInverse }}>
+            <Text style={[styles.badgeText, { color: COLORS.textInverse }]}>
               {presentation.actionLabel}
             </Text>
           </TouchableOpacity>
@@ -193,4 +172,40 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
       </LinearGradient>
     </Animated.View>
   );
+});
+
+const styles = StyleSheet.create({
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  title: {
+    ...TYPE.uiTitle,
+    color: COLORS.textInverse,
+    flex: 1,
+    minWidth: 0,
+    marginRight: hs(10),
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    maxWidth: '44%',
+    gap: responsiveSpace(4),
+    borderRadius: 999,
+    paddingHorizontal: hs(10),
+  },
+  paidBadge: {
+    backgroundColor: COLORS.textInverse,
+    paddingVertical: vs(4),
+  },
+  upgradeBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    minHeight: 44,
+  },
+  badgeText: {
+    ...TYPE.eyebrow,
+    flexShrink: 1,
+  },
 });

@@ -12,6 +12,7 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { Avatar, Skeleton, EmptyState } from '@/components/ui';
 import { GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
 import { TYPE } from '@/constants/typography';
+import { radius } from '@/constants/responsive';
 import { getSettingsHeaderLayout } from '@/features/settings/settings-header-layout';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
@@ -288,14 +289,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingVertical: 32,
-    borderRadius: 24,
+    borderRadius: radius(24),
   },
   memberCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     backgroundColor: COLORS.card,
-    borderRadius: 24,
+    borderRadius: radius(24),
   },
   deleteButton: {
     width: 44,

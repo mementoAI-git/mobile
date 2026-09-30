@@ -16,8 +16,9 @@ import * as Haptics from 'expo-haptics';
 import { X, RotateCcw } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 
-const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.png');
+const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.webp');
 const WELCOME_BG = require('../../../assets/images/backgrounds/welcome_bg.png');
 
 export interface OnboardingCelebrationOverlayProps {
@@ -125,7 +126,7 @@ export function OnboardingCelebrationOverlay({
             style={styles.closeBtn}
             accessibilityLabel="Close overlay"
           >
-            <X size={18} color={COLORS.textStrong} />
+            <X size={iconSize(18)} color={COLORS.textStrong} />
           </TouchableOpacity>
         )}
 
@@ -311,9 +312,9 @@ const styles = StyleSheet.create({
     top: 54,
     right: 24,
     zIndex: 10,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    minWidth: minTouchTarget(44),
+    minHeight: minTouchTarget(44),
+    borderRadius: 999,
     backgroundColor: COLORS.fillWeak,
     borderWidth: 1,
     borderColor: COLORS.strokeWeaker,
@@ -328,8 +329,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   graphic: {
-    width: 90,
-    height: 90,
+    width: iconSize(90),
+    height: iconSize(90),
   },
   titleText: {
     textAlign: 'center',

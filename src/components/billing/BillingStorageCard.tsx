@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { TYPE } from '@/constants/typography';
 import { COLORS } from '@/constants/tokens';
+import { radius, responsiveSpace } from '@/constants/responsive';
 import type { StoragePresentation } from '@/features/settings/billing-storage';
 
 function formatBytes(bytes: number) {
@@ -13,7 +14,7 @@ function formatBytes(bytes: number) {
 
 export const BillingStorageCard = React.memo(function BillingStorageCard({storage}: {storage: StoragePresentation}) {
   return (
-    <View className="rounded-[24px] p-5" style={{ backgroundColor: COLORS.fillWeak }}>
+    <View className="rounded-[24px]" style={{ borderRadius: radius(24), padding: responsiveSpace(20), backgroundColor: COLORS.fillWeak }}>
       <View className="flex-row justify-between items-center">
         <Text style={{ ...TYPE.bodyStrong, color: COLORS.textStrong }}>Storage</Text>
         <Text style={{ ...TYPE.label, color: COLORS.textWeak }}>

@@ -15,7 +15,7 @@ import { Passkey } from 'react-native-passkey';
 import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
-import { Button } from '@/components/ui';
+import { Button, ResponsiveScreen } from '@/components/ui';
 import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';
 import { SecurityCredentialRow } from '@/components/security/SecurityCredentialRow';
 import { TYPE } from '@/constants/typography';
@@ -128,7 +128,8 @@ export default function SecuritySettingsScreen() {
 
       <View className="flex-1">
         <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <ResponsiveScreen maxWidth={720}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <View style={styles.sectionHeaderBox}>
             <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>Password</Text>
           </View>
@@ -319,6 +320,7 @@ export default function SecuritySettingsScreen() {
             </Button>
           </View>
         </ScrollView>
+        </ResponsiveScreen>
       </View>
     </SafeAreaView>
   );
@@ -326,7 +328,7 @@ export default function SecuritySettingsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 48 },
+  content: { paddingTop: 16, paddingBottom: 48 },
   sectionHeaderBox: {
     marginBottom: 10,
     paddingHorizontal: 2,

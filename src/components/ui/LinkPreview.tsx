@@ -14,6 +14,7 @@ import { ExternalLink, X, Globe } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, radius } from '@/constants/responsive';
 import { useLinkPreview, type LinkPreviewData } from '@/hooks/use-link-preview';
 
 // ─── Favicon Badge ────────────────────────────────────────────────────────────
@@ -95,7 +96,7 @@ export function LinkPreviewCard({
         <Text style={styles.chipText} numberOfLines={1}>
           {title}
         </Text>
-        <ExternalLink size={12} color={COLORS.textWeak} />
+        <ExternalLink size={iconSize(12)} color={COLORS.textWeak} />
       </TouchableOpacity>
     );
   }
@@ -142,10 +143,10 @@ export function LinkPreviewCard({
       {Boolean(onRemove) && (
         <TouchableOpacity
           onPress={handleRemove}
-          hitSlop={8}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={styles.removeBtn}
         >
-          <X size={12} color={COLORS.textWeak} strokeWidth={2.5} />
+          <X size={iconSize(12)} color={COLORS.textWeak} strokeWidth={2.5} />
         </TouchableOpacity>
       )}
     </View>
@@ -196,7 +197,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
   },
   cardOuter: {
-    borderRadius: 16,
+    borderRadius: radius(16),
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.strokeWeak,
@@ -217,7 +218,7 @@ const styles = StyleSheet.create({
   cardThumbnail: {
     width: 68,
     height: 68,
-    borderRadius: 12,
+    borderRadius: radius(12),
     backgroundColor: COLORS.fillWeak,
     flexShrink: 0,
   },
@@ -265,7 +266,8 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 12,
+    minHeight: minTouchTarget(44),
+    borderRadius: radius(12),
     backgroundColor: COLORS.fillWeak,
     borderWidth: 1,
     borderColor: COLORS.strokeWeaker,

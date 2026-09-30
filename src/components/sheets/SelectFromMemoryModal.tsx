@@ -5,6 +5,7 @@ import { X, Search, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize } from '@/constants/responsive';
 import { Button, Skeleton } from '@/components/ui';
 import { useMemories } from '@/hooks/queries/use-memories';
 import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
@@ -78,7 +79,7 @@ export const SelectFromMemoryModal = React.memo(
             </View>
             {isSelected && (
               <View className="absolute top-2 right-2 bg-brand rounded-full p-1 z-10 shadow-sm">
-                <Check size={12} color="white" strokeWidth={3} />
+                <Check size={iconSize(12)} color="white" strokeWidth={3} />
               </View>
             )}
           </TouchableOpacity>
@@ -119,13 +120,13 @@ export const SelectFromMemoryModal = React.memo(
               className="size-11 items-center justify-center rounded-full bg-fill-weaker"
               activeOpacity={0.7}
             >
-              <X size={20} color={COLORS.textStrong} />
+              <X size={iconSize(20)} color={COLORS.textStrong} />
             </TouchableOpacity>
           </View>
 
           {/* Search Input */}
           <View className="flex-row items-center bg-fill-weak border border-stroke-weaker rounded-full px-4 h-12 mb-4">
-            <Search size={18} color={COLORS.textWeak} className="mr-2" />
+            <Search size={iconSize(18)} color={COLORS.textWeak} className="mr-2" />
             <BottomSheetTextInput
               placeholder="Search memories..."
               placeholderTextColor={COLORS.textMuted}

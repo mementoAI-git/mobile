@@ -102,8 +102,8 @@ export function buildGeminiLiveConfig(
         prebuiltVoiceConfig: { voiceName },
       },
     },
-    inputAudioTranscription: { languageCodes: ['en-US', 'en'] },
-    outputAudioTranscription: { languageCodes: ['en-US', 'en'] },
+    inputAudioTranscription: {},
+    outputAudioTranscription: {},
     realtimeInputConfig: {
       automaticActivityDetection: {
         disabled: false,

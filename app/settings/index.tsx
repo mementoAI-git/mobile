@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, ChevronRight, MessageCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Avatar } from '@/components/ui';
+import { Avatar, ResponsiveScreen } from '@/components/ui';
 import { useUiStore } from '@/store';
 import {
   UiClock01,
@@ -91,20 +91,21 @@ export default function SettingsIndex() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBack}
-          activeOpacity={0.78}
-          accessibilityRole="button"
-          style={styles.backButton}
-        >
-          <ArrowLeft size={22} color={COLORS.textBase} />
-        </TouchableOpacity>
-        <Text style={TYPE.screenTitle}>Settings</Text>
-        <View style={{ width: 44 }} />
-      </View>
+      <ResponsiveScreen maxWidth={720}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={handleBack}
+            activeOpacity={0.78}
+            accessibilityRole="button"
+            style={styles.backButton}
+          >
+            <ArrowLeft size={22} color={COLORS.textBase} />
+          </TouchableOpacity>
+          <Text style={TYPE.screenTitle}>Settings</Text>
+          <View style={{ width: 44 }} />
+        </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={{ marginBottom: 16 }}>
           <PlanSummaryBanner
             isProOrAbove={isProOrAbove}
@@ -301,6 +302,7 @@ export default function SettingsIndex() {
           </View>
         )}
       </ScrollView>
+      </ResponsiveScreen>
 
       <OnboardingCelebrationOverlay
         visible={showVaultCelebration}
@@ -316,7 +318,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
   header: {
     minHeight: 62,
-    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: COLORS.fillWeak,
   },
-  content: { paddingHorizontal: 16, paddingTop: 28, paddingBottom: 24 },
+  content: { paddingTop: 28, paddingBottom: 24 },
   profileCard: {
     minHeight: 80,
     borderRadius: 16,

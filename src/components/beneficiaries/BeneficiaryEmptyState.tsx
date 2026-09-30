@@ -3,8 +3,9 @@ import { Text, View, Image } from 'react-native';
 import { Button } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { hs, radius } from '@/constants/responsive';
 
-const EMPTY_IMG = require('../../../assets/images/illustrations/empty_memories.png');
+const EMPTY_IMG = require('../../../assets/images/illustrations/empty_memories.webp');
 
 export function BeneficiaryEmptyState({
   mode,
@@ -14,10 +15,13 @@ export function BeneficiaryEmptyState({
   onAction: () => void;
 }) {
   return (
-    <View className="min-h-[520px] items-center justify-center rounded-[24px] bg-fill-weaker px-6">
+    <View
+      className="min-h-[520px] items-center justify-center bg-fill-weaker px-6"
+      style={{ borderRadius: radius(24) }}
+    >
       <Image
         source={EMPTY_IMG}
-        style={{ width: 88, height: 88, marginBottom: 12 }}
+        style={{ width: hs(88), height: hs(88), marginBottom: 12 }}
         resizeMode="contain"
       />
       <Text className="mt-4 text-center" style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>

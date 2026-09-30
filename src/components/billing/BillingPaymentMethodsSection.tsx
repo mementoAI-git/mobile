@@ -4,6 +4,7 @@ import { CreditCard, Pencil } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 import type { BillingPaymentMethod } from '@/features/settings/billing-adapters';
 
 const MASTERCARD_LOGO = require('../../../assets/images/icons/mastercard.png');
@@ -33,7 +34,7 @@ export const BillingPaymentMethodsSection = React.memo(function BillingPaymentMe
       {/* Header row */}
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-2.5">
-          <CreditCard size={18} color={COLORS.textStrong} strokeWidth={2} />
+          <CreditCard size={iconSize(18)} color={COLORS.textStrong} strokeWidth={2} />
           <Text style={{ ...TYPE.bodyStrong, color: COLORS.textStrong }}>
             Payment methods
           </Text>
@@ -47,9 +48,10 @@ export const BillingPaymentMethodsSection = React.memo(function BillingPaymentMe
             onAdd();
           }}
           style={{
-            height: 36,
-            paddingHorizontal: 14,
-            borderRadius: 10,
+            minHeight: minTouchTarget(36),
+            minWidth: minTouchTarget(44),
+            paddingHorizontal: responsiveSpace(14),
+            borderRadius: radius(10),
             borderWidth: 1,
             borderColor: COLORS.strokeWeak,
             backgroundColor: COLORS.card,
@@ -109,13 +111,20 @@ export const BillingPaymentMethodsSection = React.memo(function BillingPaymentMe
                   accessibilityRole="button"
                   accessibilityLabel={`Edit ${method.brand}`}
                   activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   onPress={() => {
                     Haptics.selectionAsync();
                     onEdit(method.id);
                   }}
-                  style={{ padding: 6 }}
+                  style={{
+                    minWidth: minTouchTarget(36),
+                    minHeight: minTouchTarget(36),
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 6,
+                  }}
                 >
-                  <Pencil size={18} color={COLORS.textBase} strokeWidth={1.8} />
+                  <Pencil size={iconSize(18)} color={COLORS.textBase} strokeWidth={1.8} />
                 </TouchableOpacity>
               </View>
             </View>

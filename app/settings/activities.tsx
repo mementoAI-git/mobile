@@ -10,11 +10,12 @@ import { useInfiniteActivities, type Activity } from '@/hooks/queries/use-activi
 import { ActivityListItem } from '@/components/overview/ActivityListItem';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ResponsiveScreen } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
-const EMPTY_MEMORIES_IMG = require('../../assets/images/illustrations/empty_memories.png');
+const EMPTY_MEMORIES_IMG = require('../../assets/images/illustrations/empty_memories.webp');
 const PAGE_SIZE = 20;
 
 // ─── Editorial hero card ───────────────────────────────────────────────────
@@ -31,7 +32,7 @@ function EditorialHeroCard({ totalDocs }: { totalDocs: number }) {
   return (
     <Animated.View
       entering={FadeInDown.duration(500)}
-      style={{ marginHorizontal: 20, marginBottom: 20, borderRadius: 32, overflow: 'hidden', backgroundColor: COLORS.card }}
+      style={{ marginBottom: 20, borderRadius: 32, overflow: 'hidden', backgroundColor: COLORS.card }}
     >
       <ImageBackground source={WELCOME_BG} style={{ padding: 24, gap: 12 }} imageStyle={{ opacity: 0.04 }} resizeMode="repeat">
         <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong, lineHeight: 28 }}>
@@ -68,7 +69,6 @@ function StatsBanner({ totalDocs, docs }: { totalDocs: number; docs: Activity[] 
       entering={FadeInDown.duration(500)}
       style={{
         flexDirection: 'row',
-        marginHorizontal: 20,
         marginBottom: 20,
         backgroundColor: COLORS.card,
         borderRadius: 24,
@@ -126,100 +126,99 @@ export default function ActivitiesScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-      {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 24, paddingVertical: 16 }}>
-        <TouchableOpacity
-          onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
-          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <ChevronLeft size={22} color={COLORS.textBase} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={TYPE.screenTitle}>
-            Activity
-          </Text>
-          <Text style={[TYPE.bodySmall, { marginTop: 1 }]}>
-            {showCount && totalDocs > 0
-              ? `${totalDocs} actions across your account`
-              : ''}
-          </Text>
+      <ResponsiveScreen maxWidth={720}>
+        {/* Header */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16 }}>
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); if (router.canGoBack()) { router.back(); } else { router.replace('/settings'); } }}
+            style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <ChevronLeft size={22} color={COLORS.textBase} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={TYPE.screenTitle}>
+              Activity
+            </Text>
+            <Text style={[TYPE.bodySmall, { marginTop: 1 }]}>
+              {showCount && totalDocs > 0
+                ? `${totalDocs} actions across your account`
+                : ''}
+            </Text>
+          </View>
         </View>
-      </View>
 
-      <View style={{ flex: 1 }}>
-        <ImageBackground source={PATTERN} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} imageStyle={{ opacity: 0.03 }} resizeMode="repeat" />
+        <View style={{ flex: 1 }}>
+          <ImageBackground source={PATTERN} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} imageStyle={{ opacity: 0.03 }} resizeMode="repeat" />
 
-        {isLoading && displayDocs.length === 0 ? (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 48, paddingTop: 4 }}
-          >
-            {/* Editorial hero card skeleton */}
-            <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
-              <Skeleton className="h-[140px] w-full rounded-[32px]" />
-            </View>
-
-            {/* Stats banner skeleton */}
-            <View style={{ marginHorizontal: 20, marginBottom: 20, flexDirection: 'row', gap: 8 }}>
-              {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-16 flex-1 rounded-2xl" />
-              ))}
-            </View>
-
-            {/* Activity items card skeleton */}
-            <View
-              style={{
-                marginHorizontal: 20,
-                backgroundColor: COLORS.card,
-                borderRadius: 24,
-                padding: 16,
-                gap: 16,
-                borderWidth: 1,
-                borderColor: COLORS.strokeWeaker,
-              }}
+          {isLoading && displayDocs.length === 0 ? (
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 48, paddingTop: 4 }}
             >
-              {[1, 2, 3, 4].map((i) => (
-                <View key={i} className="flex-row items-center gap-3">
-                  <Skeleton className="size-10 rounded-full" />
-                  <View className="flex-1 gap-2">
-                    <Skeleton className="h-4 w-3/4 rounded-md" />
-                    <Skeleton className="h-3 w-1/3 rounded-md" />
+              {/* Editorial hero card skeleton */}
+              <View style={{ marginBottom: 20 }}>
+                <Skeleton className="h-[140px] w-full rounded-[32px]" />
+              </View>
+
+              {/* Stats banner skeleton */}
+              <View style={{ marginBottom: 20, flexDirection: 'row', gap: 8 }}>
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-16 flex-1 rounded-2xl" />
+                ))}
+              </View>
+
+              {/* Activity items card skeleton */}
+              <View
+                style={{
+                  backgroundColor: COLORS.card,
+                  borderRadius: 24,
+                  padding: 16,
+                  gap: 16,
+                  borderWidth: 1,
+                  borderColor: COLORS.strokeWeaker,
+                }}
+              >
+                {[1, 2, 3, 4].map((i) => (
+                  <View key={i} className="flex-row items-center gap-3">
+                    <Skeleton className="size-10 rounded-full" />
+                    <View className="flex-1 gap-2">
+                      <Skeleton className="h-4 w-3/4 rounded-md" />
+                      <Skeleton className="h-3 w-1/3 rounded-md" />
+                    </View>
                   </View>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
-        ) : displayDocs.length === 0 ? (
-          <EmptyState
-            image={EMPTY_MEMORIES_IMG}
-            title="No activity yet"
-            description="Creating memories, editing stories, and sending capsules will all show up here."
-            actionLabel="Create a story"
-            onAction={() => router.push('/editor?mode=quick-capture')}
-          />
-        ) : (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 48, paddingTop: 4 }}
-            scrollEventThrottle={16}
-            onScroll={handleScroll}
-          >
-
-            {/* Editorial hero card */}
-            <EditorialHeroCard totalDocs={totalDocs} />
-
-            {/* Stats banner */}
-            <StatsBanner totalDocs={totalDocs} docs={displayDocs} />
-
-            {/* Activity items — unified card list */}
-            <View
-              style={{
-                marginHorizontal: 20,
-                backgroundColor: COLORS.card,
-                borderRadius: 24,
-                overflow: 'hidden',
-              }}
+                ))}
+              </View>
+            </ScrollView>
+          ) : displayDocs.length === 0 ? (
+            <EmptyState
+              image={EMPTY_MEMORIES_IMG}
+              title="No activity yet"
+              description="Creating memories, editing stories, and sending capsules will all show up here."
+              actionLabel="Create a story"
+              onAction={() => router.push('/editor?mode=quick-capture')}
+            />
+          ) : (
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 48, paddingTop: 4 }}
+              scrollEventThrottle={16}
+              onScroll={handleScroll}
             >
+
+              {/* Editorial hero card */}
+              <EditorialHeroCard totalDocs={totalDocs} />
+
+              {/* Stats banner */}
+              <StatsBanner totalDocs={totalDocs} docs={displayDocs} />
+
+              {/* Activity items — unified card list */}
+              <View
+                style={{
+                  backgroundColor: COLORS.card,
+                  borderRadius: 24,
+                  overflow: 'hidden',
+                }}
+              >
               {displayDocs.map((item, index) => (
                 <ActivityListItem
                   key={item._id}
@@ -254,6 +253,7 @@ export default function ActivitiesScreen() {
           </ScrollView>
         )}
       </View>
+      </ResponsiveScreen>
     </SafeAreaView>
   );
 }

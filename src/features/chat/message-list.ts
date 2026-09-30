@@ -1,4 +1,5 @@
 import type { IMessageAttachment } from '@/types';
+import { isVoiceCallMessage } from './voice-transcript-parser';
 
 export interface ChatListMessage {
   _id?: string;
@@ -49,6 +50,9 @@ export function getChatMessageKey(message: ChatListMessage) {
 }
 
 export function getChatMessageItemType(message: ChatListMessage) {
+  if (isVoiceCallMessage(message.text ?? message.content, message.is_voice)) {
+    return 'voice-call';
+  }
   const role = message.role === 'user' ? 'user' : 'assistant';
   return message.attatchments?.length ? `${role}-attachments` : role;
 }

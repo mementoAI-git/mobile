@@ -15,4 +15,17 @@ describe('shared plan summary banner', () => {
     expect(settings).toContain('<PlanSummaryBanner');
     expect(existsSync('src/components/billing/BillingPlanBanner.tsx')).toBe(false);
   });
+
+  test('keeps plan badges compact and constrained by their card width', () => {
+    const banner = readFileSync('src/components/subscription/PlanSummaryBanner.tsx', 'utf8');
+
+    expect(banner).toContain('styles.topRow');
+    expect(banner).toContain('styles.title');
+    expect(banner).toContain('styles.badge');
+    expect(banner).toContain('styles.badgeText');
+    expect(banner).toContain('maxWidth: \'44%\'');
+    expect(banner).toContain("from '@/constants/responsive'");
+    expect(banner).not.toContain("from 'react-native-size-matters'");
+    expect(banner).not.toContain('useWindowDimensions');
+  });
 });

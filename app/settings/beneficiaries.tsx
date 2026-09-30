@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, FolderPlus, UserRoundPlus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { Button, Skeleton } from '@/components/ui';
+import { Button, ResponsiveScreen, Skeleton } from '@/components/ui';
 import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';
 import { BeneficiaryEmptyState } from '@/components/beneficiaries/BeneficiaryEmptyState';
 import { BeneficiaryGroupRow } from '@/components/beneficiaries/BeneficiaryGroupRow';
@@ -140,38 +140,39 @@ export default function BeneficiariesSettingsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <SettingsSubpageHeader title="Beneficiaries" onBack={handleBack} />
+      <ResponsiveScreen maxWidth={720}>
+        <SettingsSubpageHeader title="Beneficiaries" onBack={handleBack} />
 
-      <View className="px-6 pb-4 pt-1">
-        <Text style={{ ...TYPE.body, color: COLORS.textWeak }}>
-          Invite the people who matter most. They’ll be able to receive your memories and interact with your Memento Agent.
-        </Text>
-        <View className="mt-5 flex-row gap-3">
-          <CountTab label="People" count={beneficiaries.length} active={tab === 'people'} onPress={() => selectTab('people')} />
-          <CountTab label="Groups" count={groups.length} active={tab === 'groups'} onPress={() => selectTab('groups')} />
-        </View>
-      </View>
-
-      <View className="flex-1">
-        <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
-        {isLoading ? (
-          <CollectionSkeleton />
-        ) : isError ? (
-          <View className="flex-1 items-center justify-center px-8">
-            <Text className="text-center" style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>
-              Your trusted circle needs a refresh
-            </Text>
-            <Text className="mt-2 text-center" style={{ ...TYPE.body, color: COLORS.textWeak }}>
-              We couldn’t load these details right now.
-            </Text>
-            <Button onPress={refresh} size="lg" className="mt-5 h-14 px-9">Try again</Button>
+        <View className="pb-4 pt-1">
+          <Text style={{ ...TYPE.body, color: COLORS.textWeak }}>
+            Invite the people who matter most. They’ll be able to receive your memories and interact with your Memento Agent.
+          </Text>
+          <View className="mt-5 flex-row gap-3">
+            <CountTab label="People" count={beneficiaries.length} active={tab === 'people'} onPress={() => selectTab('people')} />
+            <CountTab label="Groups" count={groups.length} active={tab === 'groups'} onPress={() => selectTab('groups')} />
           </View>
-        ) : (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={COLORS.brand} />}
-            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 48 }}
-          >
+        </View>
+
+        <View className="flex-1">
+          <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
+          {isLoading ? (
+            <CollectionSkeleton />
+          ) : isError ? (
+            <View className="flex-1 items-center justify-center px-8">
+              <Text className="text-center" style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>
+                Your trusted circle needs a refresh
+              </Text>
+              <Text className="mt-2 text-center" style={{ ...TYPE.body, color: COLORS.textWeak }}>
+                We couldn’t load these details right now.
+              </Text>
+              <Button onPress={refresh} size="lg" className="mt-5 h-14 px-9">Try again</Button>
+            </View>
+          ) : (
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={COLORS.brand} />}
+              contentContainerStyle={{ paddingTop: 20, paddingBottom: 48 }}
+            >
             {!hasItems ? (
               <BeneficiaryEmptyState mode={tab} onAction={tab === 'people' ? invite : createGroup} />
             ) : (
@@ -237,6 +238,7 @@ export default function BeneficiariesSettingsScreen() {
           </ScrollView>
         )}
       </View>
+      </ResponsiveScreen>
     </SafeAreaView>
   );
 }

@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import { ResponsiveScreen } from '@/components/ui';
 import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';
 import { UiShieldTick } from '@/components/ui/icons/SettingsIcons';
 import { useDeleteAccount } from '@/hooks/mutations/use-auth-mutations';
@@ -51,10 +52,11 @@ export default function PrivacySettingsScreen() {
       <View className="flex-1">
         <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 48 }}
-        >
+        <ResponsiveScreen maxWidth={720}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingTop: 16, paddingBottom: 48 }}
+          >
           <Text style={{ ...TYPE.body, color: COLORS.textWeak }}>
             Memento AI believes in transparent data practices. Learn how your information is protected when using our products, and visit our{' '}
             <Text
@@ -140,6 +142,7 @@ export default function PrivacySettingsScreen() {
             </View>
           </View>
         </ScrollView>
+        </ResponsiveScreen>
       </View>
     </SafeAreaView>
   );

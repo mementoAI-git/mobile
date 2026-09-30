@@ -36,6 +36,7 @@ import {
 } from 'lucide-react-native';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius, minTouchTarget } from '@/constants/responsive';
 import {
   getPermissionRecoveryAction,
   isPermissionGranted,
@@ -605,9 +606,9 @@ const styles = StyleSheet.create({
 
   // ── Icon buttons ─────────────────────────────────────────────────────────
   iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: minTouchTarget(44),
+    height: minTouchTarget(44),
+    borderRadius: radius(22),
     backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -659,9 +660,9 @@ const styles = StyleSheet.create({
     gap: 48,
   },
   shutter: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: minTouchTarget(76),
+    height: minTouchTarget(76),
+    borderRadius: radius(38),
     borderWidth: 4,
     borderColor: COLORS.textInverse,
     alignItems: 'center',
@@ -676,23 +677,23 @@ const styles = StyleSheet.create({
   },
   // Photo: big white filled circle inside the ring
   shutterInnerPhoto: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: minTouchTarget(60),
+    height: minTouchTarget(60),
+    borderRadius: radius(30),
     backgroundColor: COLORS.textInverse,
   },
   // Video idle: red circle
   shutterInnerRecord: {
     width: 30,
     height: 30,
-    borderRadius: 15,
+    borderRadius: radius(15),
     backgroundColor: COLORS.error,
   },
   // Video recording: red rounded square (stop)
   shutterInnerStop: {
     width: 24,
     height: 24,
-    borderRadius: 5,
+    borderRadius: radius(5),
     backgroundColor: COLORS.error,
   },
 });

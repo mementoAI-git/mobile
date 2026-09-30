@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { Trash2 } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 
 interface SecurityCredentialRowProps {
   icon: React.ReactNode;
@@ -20,13 +21,13 @@ export const SecurityCredentialRow = React.memo(function SecurityCredentialRow({
   return (
     <View
       style={{
-        minHeight: 64,
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        minHeight: minTouchTarget(64),
+        borderRadius: radius(16),
+        paddingHorizontal: responsiveSpace(16),
+        paddingVertical: responsiveSpace(12),
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: responsiveSpace(12),
         backgroundColor: COLORS.fillWeaker,
       }}
     >
@@ -53,16 +54,17 @@ export const SecurityCredentialRow = React.memo(function SecurityCredentialRow({
           accessibilityRole="button"
           accessibilityLabel={`Delete ${title}`}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
+            minWidth: minTouchTarget(36),
+            minHeight: minTouchTarget(36),
+            borderRadius: radius(18),
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: `${COLORS.error}10`,
           }}
         >
-          <Trash2 size={18} color={COLORS.error} />
+          <Trash2 size={iconSize(18)} color={COLORS.error} />
         </TouchableOpacity>
       )}
     </View>

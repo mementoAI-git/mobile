@@ -52,6 +52,41 @@ export function pcm16Base64ToFloat32(value: string): Pcm16DecodeResult {
   return { ok: true, samples };
 }
 
+export function resampleLinear(
+  samples: Float32Array,
+  sourceSampleRate: number,
+  targetSampleRate: number,
+): Float32Array {
+  if (
+    !Number.isFinite(sourceSampleRate) ||
+    !Number.isFinite(targetSampleRate) ||
+    sourceSampleRate <= 0 ||
+    targetSampleRate <= 0
+  ) {
+    throw new Error('Audio sample rates must be positive finite numbers.');
+  }
+  if (samples.length === 0) return new Float32Array();
+  if (sourceSampleRate === targetSampleRate) return samples.slice();
+
+  const outputLength = Math.max(
+    1,
+    Math.round((samples.length * targetSampleRate) / sourceSampleRate),
+  );
+  const output = new Float32Array(outputLength);
+  const sourceStep = sourceSampleRate / targetSampleRate;
+
+  for (let index = 0; index < outputLength; index += 1) {
+    const sourcePosition = index * sourceStep;
+    const lowerIndex = Math.min(Math.floor(sourcePosition), samples.length - 1);
+    const upperIndex = Math.min(lowerIndex + 1, samples.length - 1);
+    const fraction = sourcePosition - lowerIndex;
+    output[index] =
+      samples[lowerIndex] + (samples[upperIndex] - samples[lowerIndex]) * fraction;
+  }
+
+  return output;
+}
+
 export function calculateRmsEnergy(samples: Float32Array): number {
   if (samples.length === 0) return 0;
   let sumSquares = 0;

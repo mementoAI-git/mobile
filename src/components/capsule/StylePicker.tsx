@@ -6,6 +6,7 @@ import { ChevronDown, Check, X } from 'lucide-react-native';
 import { CAPSULE_THEMES, Theme } from '@/constants/themes';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize } from '@/constants/responsive';
 import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
 
 interface StylePickerProps {
@@ -55,6 +56,7 @@ export function StylePicker({
                     key={theme.id}
                     onPress={() => onThemeSelect(theme)}
                     activeOpacity={0.8}
+                    hitSlop={6}
                     style={{
                       width: 36,
                       height: 36,
@@ -68,7 +70,7 @@ export function StylePicker({
                     }}
                     className="items-center justify-center shadow-sm"
                   >
-                    {isSelected && <Check size={14} color={theme.headerColor} strokeWidth={3} />}
+                    {isSelected && <Check size={iconSize(14)} color={theme.headerColor} strokeWidth={3} />}
                   </TouchableOpacity>
                 );
               })}
@@ -88,7 +90,7 @@ export function StylePicker({
               <Text className="text-text-strong" style={TYPE.metadata}>
                 {currentTheme.name}
               </Text>
-              <ChevronDown size={14} color={COLORS.textWeak} />
+              <ChevronDown size={iconSize(14)} color={COLORS.textWeak} />
             </View>
           </TouchableOpacity>
 
@@ -120,8 +122,8 @@ export function StylePicker({
       >
         <View className="px-5 py-4 border-b border-stroke-weaker flex-row justify-between items-center">
           <Text style={TYPE.uiTitle}>Select Theme</Text>
-          <TouchableOpacity onPress={() => themeModalRef.current?.dismiss()}>
-            <X size={20} color={COLORS.textWeak} />
+          <TouchableOpacity onPress={() => themeModalRef.current?.dismiss()} hitSlop={12}>
+            <X size={iconSize(20)} color={COLORS.textWeak} />
           </TouchableOpacity>
         </View>
         <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 12 }}>
@@ -137,7 +139,7 @@ export function StylePicker({
                   <View className="size-8 rounded-full border border-stroke-weak" style={{ backgroundColor: theme.color }} />
                   <Text className={isSelected ? 'text-brand' : 'text-text-strong'} style={TYPE.label}>{theme.name}</Text>
                 </View>
-                {isSelected && <Check size={20} color={COLORS.brand} />}
+                {isSelected && <Check size={iconSize(20)} color={COLORS.brand} />}
               </TouchableOpacity>
             );
           })}
@@ -154,8 +156,8 @@ export function StylePicker({
       >
         <View className="px-5 py-4 border-b border-stroke-weaker flex-row justify-between items-center">
           <Text style={TYPE.uiTitle}>Select Size</Text>
-          <TouchableOpacity onPress={() => sizeModalRef.current?.dismiss()}>
-            <X size={20} color={COLORS.textWeak} />
+          <TouchableOpacity onPress={() => sizeModalRef.current?.dismiss()} hitSlop={12}>
+            <X size={iconSize(20)} color={COLORS.textWeak} />
           </TouchableOpacity>
         </View>
         <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 12 }}>
@@ -168,7 +170,7 @@ export function StylePicker({
                 className={`p-4 rounded-xl flex-row items-center justify-between border ${isSelected ? 'border-brand bg-brand/5' : 'border-stroke-weaker bg-white'}`}
               >
                 <Text className={isSelected ? 'text-brand' : 'text-text-strong'} style={TYPE.label}>{size}</Text>
-                {isSelected && <Check size={20} color={COLORS.brand} />}
+                {isSelected && <Check size={iconSize(20)} color={COLORS.brand} />}
               </TouchableOpacity>
             );
           })}

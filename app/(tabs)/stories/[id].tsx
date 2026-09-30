@@ -12,7 +12,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, Image,
-  TouchableOpacity, Dimensions,
+  TouchableOpacity, useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -30,13 +30,13 @@ import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius, minTouchTarget, responsiveSpace } from '@/constants/responsive';
 import { useStoryDetailLogic } from '@/hooks/use-story-detail-logic';
 import { useBackHandler } from '@/hooks/use-back-handler';
 import { useConversationMessages } from '@/hooks/queries/use-memories';
 import { mergeConversationMessagePages } from '@/features/chat/conversation-pagination';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.png');
+const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.webp');
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -116,6 +116,8 @@ const MemoAudioCard = React.memo(function MemoAudioCard({
   memoryTitle?: string;
   onPress: (item: any) => void;
 }) {
+  const { width: windowWidth } = useWindowDimensions();
+  const cardWidth = (Math.min(windowWidth, 720) - 40) / 2;
   const handlePress = useCallback(() => onPress(item), [item, onPress]);
   const isVoice = item.name?.startsWith('voice_') && item.type === 'audio/m4a';
   const albumArt = item.thumbnail;
@@ -156,7 +158,7 @@ const MemoAudioCard = React.memo(function MemoAudioCard({
       <TouchableOpacity
         onPress={handlePress}
         activeOpacity={0.88}
-        style={{ backgroundColor: COLORS.textStrong, borderRadius: 20, aspectRatio: 1, width: (SCREEN_W - 40) / 2, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
+        style={{ backgroundColor: COLORS.textStrong, borderRadius: radius(20), aspectRatio: 1, width: cardWidth, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 32 }}>
           {bars.map((barH, i) => (
@@ -179,7 +181,7 @@ const MemoAudioCard = React.memo(function MemoAudioCard({
     <TouchableOpacity
       onPress={handlePress}
       activeOpacity={0.88}
-      style={{ backgroundColor: COLORS.fillWeak, borderRadius: 20, aspectRatio: 1, width: (SCREEN_W - 40) / 2, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
+      style={{ backgroundColor: COLORS.fillWeak, borderRadius: radius(20), aspectRatio: 1, width: cardWidth, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 32 }}>
         {[8, 16, 24, 20, 12, 22, 14, 24, 18, 8, 16, 24].map((h, i) => (
@@ -203,6 +205,8 @@ const MemoDocumentCard = React.memo(function MemoDocumentCard({
   item: any;
   onPress: (url?: string) => void;
 }) {
+  const { width: windowWidth } = useWindowDimensions();
+  const cardWidth = (Math.min(windowWidth, 720) - 40) / 2;
   const handlePress = useCallback(() => onPress(item.url), [item.url, onPress]);
   const fileType = item.type?.split('/')[1]?.toUpperCase() ?? 'FILE';
   const fileSize = (item.size && Number(item.size) > 0)
@@ -212,7 +216,7 @@ const MemoDocumentCard = React.memo(function MemoDocumentCard({
     <TouchableOpacity
       onPress={handlePress}
       activeOpacity={0.88}
-      style={{ backgroundColor: COLORS.fillWeak, borderRadius: 20, aspectRatio: 1, width: (SCREEN_W - 40) / 2, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 20 }}
+      style={{ backgroundColor: COLORS.fillWeak, borderRadius: radius(20), aspectRatio: 1, width: cardWidth, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 20 }}
     >
       <View style={{ width: 48, height: 48, backgroundColor: COLORS.card, borderRadius: 14, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}>
         <FileText size={24} color={COLORS.brand} strokeWidth={1.5} />
@@ -292,6 +296,8 @@ function PromptReplySection({ memoryId }: { memoryId: string }) {
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function StoryDetailScreen() {
+  const { width: windowWidth } = useWindowDimensions();
+  const videoWidth = Math.min(windowWidth, 720) - 40;
   const {
     router,
     returnToOverview,
@@ -431,8 +437,10 @@ export default function StoryDetailScreen() {
           onPress={handleBack}
           style={styles.iconBtn}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityLabel="Go back"
         >
-          <ChevronLeft size={20} color={COLORS.textBase} strokeWidth={2} />
+          <ChevronLeft size={iconSize(20)} color={COLORS.textBase} strokeWidth={2} />
         </TouchableOpacity>
 
         <View style={{ flex: 1 }} />
@@ -442,14 +450,21 @@ export default function StoryDetailScreen() {
           onPress={handleEditPress}
           style={styles.editPill}
           activeOpacity={0.8}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
-          <Pencil size={14} color={COLORS.textBase} strokeWidth={2} />
+          <Pencil size={iconSize(14)} color={COLORS.textBase} strokeWidth={2} />
           <Text style={styles.editLabel}>Edit</Text>
         </TouchableOpacity>
 
         {/* Actions menu */}
-        <TouchableOpacity onPress={handleActionsPress} style={styles.iconBtn} activeOpacity={0.7}>
-          <MoreHorizontal size={20} color={COLORS.textBase} strokeWidth={2} />
+        <TouchableOpacity
+          onPress={handleActionsPress}
+          style={styles.iconBtn}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityLabel="Story actions"
+        >
+          <MoreHorizontal size={iconSize(20)} color={COLORS.textBase} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -542,8 +557,8 @@ export default function StoryDetailScreen() {
                 attachment={item}
                 context={{ memory_id: memory._id }}
                 thumbnailUrl={item.thumbnail}
-                width={SCREEN_W - 40}
-                height={(SCREEN_W - 40) * (9 / 16)}
+                width={videoWidth}
+                height={videoWidth * (9 / 16)}
                 onPress={() => openPreview(item)}
               />
             ))}
@@ -616,7 +631,7 @@ const styles = {
     gap: 8,
   },
   iconBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 36, height: 36, borderRadius: radius(18),
     backgroundColor: COLORS.fillWeak,
     borderWidth: 1, borderColor: COLORS.strokeWeaker,
     alignItems: 'center' as const, justifyContent: 'center' as const,
@@ -626,7 +641,7 @@ const styles = {
     alignItems: 'center' as const,
     gap: 6,
     height: 36, paddingHorizontal: 14,
-    borderRadius: 18,
+    borderRadius: radius(18),
     backgroundColor: COLORS.fillWeak,
     borderWidth: 1, borderColor: COLORS.strokeWeaker,
   },

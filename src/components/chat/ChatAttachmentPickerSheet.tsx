@@ -2,7 +2,6 @@ import React, { forwardRef, useCallback, useEffect, useMemo, useRef, useState } 
 import {
   ActivityIndicator,
   AppState,
-  Dimensions,
   Linking,
   StyleSheet,
   Text,
@@ -38,6 +37,7 @@ import { getSheetTopInset } from '@/features/layout/sheet-safe-area';
 import { PermissionRecoveryState } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius, minTouchTarget } from '@/constants/responsive';
 import { toast } from '@/components/ui/Toast';
 import {
   getPermissionRecoveryAction,
@@ -67,11 +67,9 @@ interface ChatAttachmentPickerSheetProps {
   onConfirm: (assets: ChatPickerAsset[]) => void;
 }
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_COLUMNS = 4;
 const GRID_GAP = 3;
 const SHEET_HORIZONTAL = 16;
-const TILE_SIZE = Math.floor((SCREEN_WIDTH - SHEET_HORIZONTAL * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS);
 const PAGE_SIZE = 80;
 
 // ─── Asset cache — bounded and short-lived to avoid retaining large media lists ────
@@ -440,8 +438,14 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
                 <Text style={styles.subtitle}>{selectedCount} {selectionLabel} selected</Text>
               )}
             </View>
-            <TouchableOpacity onPress={dismiss} activeOpacity={0.8} style={styles.closeButton}>
-              <X size={18} color={COLORS.textBase} strokeWidth={2.2} />
+            <TouchableOpacity
+              onPress={dismiss}
+              activeOpacity={0.8}
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              accessibilityLabel="Close attachment picker"
+              style={styles.closeButton}
+            >
+              <X size={iconSize(18)} color={COLORS.textBase} strokeWidth={2.2} />
             </TouchableOpacity>
           </View>
 
@@ -660,7 +664,7 @@ const styles = StyleSheet.create({
   closeButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: radius(18),
     backgroundColor: COLORS.fillWeak,
     alignItems: 'center',
     justifyContent: 'center',
@@ -733,9 +737,9 @@ const styles = StyleSheet.create({
     marginBottom: GRID_GAP,
   },
   assetTile: {
-    width: TILE_SIZE,
-    height: TILE_SIZE,
-    borderRadius: 8,
+    flex: 1,
+    aspectRatio: 1,
+    borderRadius: radius(8),
     overflow: 'hidden',
     backgroundColor: COLORS.fillWeak,
   },

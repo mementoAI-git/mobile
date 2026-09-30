@@ -3,6 +3,7 @@ import { AppState, View, StyleSheet, Text, ImageBackground, Image } from 'react-
 import { BlurView } from 'expo-blur';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { hs } from '@/constants/responsive';
 import { useVaultLockStore } from '@/features/security/vault-lock.store';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
@@ -41,7 +42,7 @@ export function AppSwitcherPrivacyBlur() {
       <BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} />
       <ImageBackground source={PATTERN} style={[StyleSheet.absoluteFill, { opacity: 0.04 }]} resizeMode="repeat" />
       <View style={styles.content}>
-        <Image source={LOGO} style={{ width: 64, height: 64, marginBottom: 12 }} resizeMode="contain" />
+        <Image source={LOGO} style={{ width: hs(64), height: hs(64), marginBottom: 12 }} resizeMode="contain" />
         <Text style={[TYPE.cardTitle, styles.title]}>Memento Vault</Text>
         <Text style={[TYPE.metadata, styles.subtitle]}>PROTECTED & ENCRYPTED</Text>
       </View>

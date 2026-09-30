@@ -7,8 +7,9 @@ import type {
 } from './voice-audio-types';
 import { VoiceSessionMetrics } from './voice-session-metrics';
 
-export const VOICE_PREBUFFER_MS = 120;
-export const VOICE_STARTUP_DEADLINE_MS = 180;
+export const VOICE_PREBUFFER_MS = 180;
+export const VOICE_RECOVERY_PREBUFFER_MS = 240;
+export const VOICE_STARTUP_DEADLINE_MS = 220;
 export const VOICE_MAX_QUEUE_MS = 5_000;
 
 const defaultScheduler: VoiceTimerScheduler = {
@@ -20,12 +21,14 @@ const defaultScheduler: VoiceTimerScheduler = {
 export class VoicePlaybackController {
   state: VoicePlaybackState = 'idle';
 
-  private epoch = 1;
+  private epoch: number;
   private queueDepthMs = 0;
   private activeTurn = false;
   private queueStarted = false;
+  private recoveringFromUnderrun = false;
   private startupTimer?: unknown;
   private lastPlaybackEndTime = 0;
+  private lastBufferEndedAt?: number;
   private readonly queuedBuffers = new Map<string, VoiceQueuedBuffer>();
 
   constructor(
@@ -33,7 +36,10 @@ export class VoicePlaybackController {
     private readonly scheduler: VoiceTimerScheduler = defaultScheduler,
     private readonly metrics: VoiceSessionMetrics = new VoiceSessionMetrics(),
     private readonly onStateChange?: (state: VoicePlaybackState) => void,
+    private readonly now: () => number = Date.now,
+    initialEpoch = 1,
   ) {
+    this.epoch = initialEpoch;
     this.createQueue();
   }
 
@@ -46,15 +52,16 @@ export class VoicePlaybackController {
 
     this.queuedBuffers.set(buffer.id, buffer);
     this.queueDepthMs += buffer.durationMs;
+    this.metrics.observeOutputChunkDuration(buffer.durationMs);
     this.metrics.markFirstOutput();
     this.metrics.observeQueueDepth(this.queueDepthMs);
     this.activeTurn = true;
 
     if (this.state !== 'playing') {
       this.setState('prebuffering');
-      if (this.queueDepthMs >= VOICE_PREBUFFER_MS) {
+      if (this.queueDepthMs >= this.getPrebufferTargetMs()) {
         this.beginPlayback();
-      } else {
+      } else if (!this.recoveringFromUnderrun) {
         this.scheduleStartupDeadline();
       }
     }
@@ -86,6 +93,7 @@ export class VoicePlaybackController {
     } else if (this.queueDepthMs === 0) {
       this.setState('idle');
     }
+    this.recoveringFromUnderrun = false;
   }
 
   stop(): void {
@@ -133,6 +141,14 @@ export class VoicePlaybackController {
     if (!buffer) return;
 
     this.queuedBuffers.delete(event.id);
+    const endedAt = this.now();
+    if (this.lastBufferEndedAt !== undefined) {
+      const wallDurationMs = endedAt - this.lastBufferEndedAt;
+      if (wallDurationMs > 0) {
+        this.metrics.observePlaybackPaceRatio(buffer.durationMs / wallDurationMs);
+      }
+    }
+    this.lastBufferEndedAt = endedAt;
     this.queueDepthMs = Math.max(0, this.queueDepthMs - buffer.durationMs);
     this.metrics.observeQueueDepth(this.queueDepthMs);
 
@@ -141,6 +157,11 @@ export class VoicePlaybackController {
 
     if (this.activeTurn && this.state === 'playing') {
       this.metrics.markUnderrun();
+      this.runtime.stop();
+      this.queueStarted = false;
+      this.recoveringFromUnderrun = true;
+      this.lastBufferEndedAt = undefined;
+      this.createQueue();
       this.setState('prebuffering');
     } else if (!this.activeTurn) {
       this.setState('idle');
@@ -169,15 +190,24 @@ export class VoicePlaybackController {
     if (!this.queueStarted) {
       this.runtime.start();
       this.queueStarted = true;
+      this.lastBufferEndedAt = this.now();
     }
     this.metrics.markPlaybackStart();
     this.setState('playing');
+  }
+
+  private getPrebufferTargetMs(): number {
+    return this.recoveringFromUnderrun
+      ? VOICE_RECOVERY_PREBUFFER_MS
+      : VOICE_PREBUFFER_MS;
   }
 
   private resetQueueState(): void {
     this.queueDepthMs = 0;
     this.activeTurn = false;
     this.queueStarted = false;
+    this.recoveringFromUnderrun = false;
+    this.lastBufferEndedAt = undefined;
     this.queuedBuffers.clear();
   }
 

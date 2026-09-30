@@ -18,6 +18,7 @@ import { OtpCodeInput } from '@/components/auth/OtpCodeInput';
 import { useVerifyEmailLogic } from '@/hooks/use-verify-email-logic';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 const APP_ICON = require('../../assets/icon.png');
@@ -69,7 +70,7 @@ export default function VerifyEmailScreen() {
                   accessibilityLabel="Close and return to sign in"
                   style={styles.closeBtn}
                 >
-                  <X size={18} color={COLORS.textStrong} strokeWidth={2} />
+                  <X size={iconSize(18)} color={COLORS.textStrong} strokeWidth={2} />
                 </TouchableOpacity>
               </View>
 
@@ -186,14 +187,14 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   appIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: iconSize(44),
+    height: iconSize(44),
+    borderRadius: radius(12),
   },
   closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    minWidth: minTouchTarget(44),
+    minHeight: minTouchTarget(44),
+    borderRadius: 999,
     backgroundColor: COLORS.fillWeaker,
     alignItems: 'center',
     justifyContent: 'center',

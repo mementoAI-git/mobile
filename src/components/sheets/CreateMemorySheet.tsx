@@ -34,7 +34,7 @@ const MemoTagPillItem = React.memo(function MemoTagPillItem({
   return (
     <View className="flex-row items-center bg-white border border-stroke-weaker rounded-full pl-3 pr-1 py-1 h-8 gap-1 shadow-sm">
       <Text className="text-text-strong" style={TYPE.label}>#{tag}</Text>
-      <TouchableOpacity onPress={handleRemove} className="p-1">
+      <TouchableOpacity onPress={handleRemove} className="p-1" hitSlop={12}>
         <X size={14} color={COLORS.textWeak} />
       </TouchableOpacity>
     </View>

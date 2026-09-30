@@ -13,6 +13,7 @@ import {
   Linking,
   Text,
   StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,7 @@ import { Button, TextInput, PasswordInput, toast } from '@/components/ui';
 import { useRegisterLogic } from '@/hooks/use-register-logic';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 import Svg, { Path } from 'react-native-svg';
 import { X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -67,6 +69,9 @@ export function AppleSvgIcon({ size = 20 }: { size?: number }) {
 }
 
 export default function RegisterScreen() {
+  const { width } = useWindowDimensions();
+  const isCompact = width <= 360;
+
   const {
     form: { control, formState: { errors } },
     isPending,
@@ -252,7 +257,7 @@ export default function RegisterScreen() {
                 accessibilityLabel="Close and return to sign in"
                 style={styles.closeBtn}
               >
-                <X size={18} color={COLORS.textStrong} strokeWidth={2} />
+                <X size={iconSize(18)} color={COLORS.textStrong} strokeWidth={2} />
               </TouchableOpacity>
             </Animated.View>
 
@@ -297,7 +302,7 @@ export default function RegisterScreen() {
               </Animated.View>
 
               {/* Name Row: Side-by-side First name & Last name */}
-              <View style={styles.nameRow}>
+              <View style={[styles.nameRow, isCompact && styles.nameRowCompact]}>
                 <View style={{ flex: 1 }}>
                   <Controller
                     control={control}
@@ -447,14 +452,14 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   appIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: iconSize(44),
+    height: iconSize(44),
+    borderRadius: radius(12),
   },
   closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    minWidth: minTouchTarget(44),
+    minHeight: minTouchTarget(44),
+    borderRadius: 999,
     backgroundColor: COLORS.fillWeaker,
     alignItems: 'center',
     justifyContent: 'center',
@@ -470,7 +475,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   socialBtn: {
-    height: 52,
+    minHeight: minTouchTarget(52),
     borderRadius: 9999,
     borderWidth: 1,
     borderColor: COLORS.strokeWeak,
@@ -503,6 +508,9 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: 'row',
     gap: 12,
+  },
+  nameRowCompact: {
+    flexDirection: 'column',
   },
   loginLinkContainer: {
     alignItems: 'center',

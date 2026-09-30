@@ -9,6 +9,7 @@ import { StatCard, DashboardHeader, TextInput, StoriesSkeleton, EmptyState, Spin
 import { useGuardianLensStore } from '@/store/guardian-lens.store';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { minTouchTarget, radius, iconSize } from '@/constants/responsive';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   FadeInDown,
@@ -25,7 +26,7 @@ import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const MEMORIES_BG = require('../../../assets/images/backgrounds/memories_card_bg.png');
 const STREAK_BG = require('../../../assets/images/backgrounds/streak_card_bg.png');
-const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.png');
+const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.webp');
 
 const FILTERS = ['All', 'Bookmarked', 'Deleted', 'Pending'];
 
@@ -86,11 +87,11 @@ export default function StoriesScreen() {
 
   // Floating button animations: transition from a wide pill to a compact circle
   const floatBtnStyle = useAnimatedStyle(() => {
-    // Morph width from 136px (wide pill) to 40px (compact circle)
+    // Morph width from 136px (wide pill) to 44px (compact circle)
     const width = interpolate(
       scrollY.value,
       [0, 100],
-      [136, 40],
+      [136, 44],
       Extrapolation.CLAMP
     );
 
@@ -333,8 +334,8 @@ export default function StoriesScreen() {
               position: 'absolute',
               bottom: 96,
               right: 24,
-              height: 40,
-              borderRadius: 20,
+              height: minTouchTarget(44),
+              borderRadius: radius(22),
               backgroundColor: COLORS.brand,
               shadowColor: '#170B00',
               shadowOffset: { width: 0, height: 4 },
@@ -364,7 +365,7 @@ export default function StoriesScreen() {
                 justifyContent: 'center',
               }
             ]}>
-              <Plus size={20} color="white" strokeWidth={2.5} />
+              <Plus size={iconSize(20)} color="white" strokeWidth={2.5} />
             </Animated.View>
             <Animated.Text
               style={[

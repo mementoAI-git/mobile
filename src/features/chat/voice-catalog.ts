@@ -17,7 +17,7 @@ export const VOICE_CATALOG: readonly VoiceDefinition[] = [
     name: 'Denver',
     subtitle: 'Male v1',
     providerVoiceName: 'Fenrir',
-    artworkFileName: 'voice-denver.png',
+    artworkFileName: 'voice-denver.webp',
     placeholderColors: [COLORS.beneficiaryGroupPurple, COLORS.brand, COLORS.backgroundInverse],
   },
   {
@@ -25,7 +25,7 @@ export const VOICE_CATALOG: readonly VoiceDefinition[] = [
     name: 'Sue',
     subtitle: 'Female v2',
     providerVoiceName: 'Aoede',
-    artworkFileName: 'voice-sue.png',
+    artworkFileName: 'voice-sue.webp',
     placeholderColors: [COLORS.beneficiaryGroupPink, COLORS.beneficiaryGroupMagenta, COLORS.blue1],
   },
   {
@@ -33,7 +33,7 @@ export const VOICE_CATALOG: readonly VoiceDefinition[] = [
     name: 'Josef',
     subtitle: 'Male v3',
     providerVoiceName: 'Enceladus',
-    artworkFileName: 'voice-josef.png',
+    artworkFileName: 'voice-josef.webp',
     placeholderColors: [COLORS.blue2, COLORS.beneficiaryGroupBlue, COLORS.blue7],
   },
   {
@@ -41,7 +41,7 @@ export const VOICE_CATALOG: readonly VoiceDefinition[] = [
     name: 'Hannah',
     subtitle: 'Female v4',
     providerVoiceName: 'Kore',
-    artworkFileName: 'voice-hannah.png',
+    artworkFileName: 'voice-hannah.webp',
     placeholderColors: [COLORS.info, COLORS.beneficiaryGroupBlue, COLORS.onboardingAmberLight, COLORS.beneficiaryGroupPink],
   },
   {

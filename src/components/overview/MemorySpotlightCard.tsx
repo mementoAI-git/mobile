@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { radius, responsiveSpace } from '@/constants/responsive';
 import type { MemorySpotlight } from '@/constants/enrichment';
 
 interface MemorySpotlightCardProps {
@@ -77,8 +78,10 @@ export function MemorySpotlightCard({
         activeOpacity={0.92}
         accessibilityRole="button"
         accessibilityLabel={`Revisit memory: ${title}`}
-        className="rounded-[28px] bg-white border border-stroke-weaker p-5 overflow-hidden"
+        className="bg-white border border-stroke-weaker overflow-hidden"
         style={{
+          borderRadius: radius(28),
+          padding: responsiveSpace(20),
           shadowColor: COLORS.shadow,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.05,

@@ -10,6 +10,7 @@ const BENEFI_BG = require('../../../assets/images/backgrounds/benefi_card_bg.png
 
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, radius, responsiveSpace } from '@/constants/responsive';
 import {
   clampEnrichmentScore,
   normalizeEnrichmentDimensions,
@@ -121,7 +122,7 @@ export const InsightsContentCard = React.memo(function InsightsContentCard({
           ) : (
             <View style={styles.emptyState}>
               <View style={styles.emptyIcon}>
-                <FileText size={22} color={COLORS.textWeak} strokeWidth={1.75} />
+                <FileText size={iconSize(22)} color={COLORS.textWeak} strokeWidth={1.75} />
               </View>
               <Text style={styles.emptyTitle}>
                 {activeTab === 'notes'
@@ -208,7 +209,7 @@ export const InsightsContentCard = React.memo(function InsightsContentCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 24,
+    borderRadius: radius(24),
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.strokeWeaker,
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
   },
   cardBg: {
     alignSelf: 'stretch',
-    padding: 20,
+    padding: responsiveSpace(20),
   },
   headingRow: {
     flexDirection: 'row',
@@ -255,7 +256,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.brandSubtle,
     borderWidth: 1,
     borderColor: 'rgba(255, 94, 0, 0.15)',
-    borderRadius: 16,
+    borderRadius: radius(16),
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 4,
     paddingHorizontal: 10,
-    borderRadius: 12,
+    borderRadius: radius(12),
     backgroundColor: 'rgba(255, 255, 255, 0.75)',
   },
   dimensionLeft: {
@@ -319,8 +320,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: radius(16),
+    padding: responsiveSpace(14),
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
     borderWidth: 1,
     borderColor: COLORS.strokeWeaker,
@@ -344,9 +345,9 @@ const styles = StyleSheet.create({
     paddingVertical: 36,
   },
   emptyIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: iconSize(48),
+    height: iconSize(48),
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.fillWeak,

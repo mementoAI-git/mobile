@@ -4,6 +4,7 @@ import { FileText, Pencil } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 import type { BillingProfile } from '@/features/settings/billing-adapters';
 
 export const BillingDetailsSection = React.memo(function BillingDetailsSection({profile, onEdit}: {profile: BillingProfile; onEdit: () => void}) {
@@ -15,7 +16,7 @@ export const BillingDetailsSection = React.memo(function BillingDetailsSection({
       {/* Header row */}
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-2.5">
-          <FileText size={18} color={COLORS.textStrong} strokeWidth={2} />
+          <FileText size={iconSize(18)} color={COLORS.textStrong} strokeWidth={2} />
           <Text style={{ ...TYPE.bodyStrong, color: COLORS.textStrong }}>
             Billing details
           </Text>
@@ -31,16 +32,18 @@ export const BillingDetailsSection = React.memo(function BillingDetailsSection({
           style={{
             flexDirection: 'row',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: 6,
-            height: 36,
-            paddingHorizontal: 14,
-            borderRadius: 10,
+            minHeight: minTouchTarget(36),
+            minWidth: minTouchTarget(44),
+            paddingHorizontal: responsiveSpace(14),
+            borderRadius: radius(10),
             borderWidth: 1,
             borderColor: COLORS.strokeWeak,
             backgroundColor: COLORS.card,
           }}
         >
-          <Pencil size={14} color={COLORS.textStrong} strokeWidth={2} />
+          <Pencil size={iconSize(14)} color={COLORS.textStrong} strokeWidth={2} />
           <Text style={{ ...TYPE.buttonSmall, color: COLORS.textStrong }}>
             Edit
           </Text>

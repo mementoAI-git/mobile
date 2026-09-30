@@ -16,6 +16,7 @@ import Animated, {
 import { MemoryCardArtwork } from "./MemoryCardArtwork";
 import { FONTS } from "@/constants/tokens";
 import { TYPE } from "@/constants/typography";
+import { iconSize, minTouchTarget, radius, responsiveSpace } from "@/constants/responsive";
 
 const AnimatedPressable =
     Animated.createAnimatedComponent(Pressable);
@@ -81,13 +82,12 @@ export function MemoryPromptCard({
                 ]}
             >
                 <Plus
-                    size={21}
+                    size={iconSize(21)}
                     strokeWidth={2.25}
                     color="#28231F"
                 />
 
                 <Text
-                    allowFontScaling={false}
                     style={styles.buttonText}
                 >
                     Add new story
@@ -100,10 +100,10 @@ export function MemoryPromptCard({
 const styles = StyleSheet.create({
     card: {
         width: "100%",
-        borderRadius: 18,
+        borderRadius: radius(18),
         overflow: "hidden",
 
-        paddingHorizontal: 12,
+        paddingHorizontal: responsiveSpace(12),
         paddingTop: 16,
         paddingBottom: 16,
     },
@@ -129,9 +129,9 @@ const styles = StyleSheet.create({
     },
 
     button: {
-        height: 40,
+        minHeight: minTouchTarget(44),
 
-        borderRadius: 8,
+        borderRadius: radius(8),
         backgroundColor: "#FFFFFF",
 
         flexDirection: "row",
