@@ -379,6 +379,16 @@ class MementoVoiceAudioPackage : BaseReactPackage() {
 }
 ```
 
+Create `modules/react-native-memento-voice/android/.gitignore`:
+
+```gitignore
+# Gradle and CMake build output
+build/
+.cxx/
+```
+
+Without it, the build in Step 8 writes about 300 MB of intermediates into this folder, and `git add` in Step 9 would commit them.
+
 - [ ] **Step 4: Ship the folder and set the codegen package**
 
 In `modules/react-native-memento-voice/package.json`, find:
@@ -460,7 +470,8 @@ If CMake fails to find `react-native-audio-api`, make sure `react-native-audio-a
 - [ ] **Step 9: Commit**
 
 ```bash
-git add modules/react-native-memento-voice src/features/chat/native-voice-runtime-contract.test.ts
+git add modules/react-native-memento-voice/android/.gitignore modules/react-native-memento-voice/android/build.gradle modules/react-native-memento-voice/android/CMakeLists.txt modules/react-native-memento-voice/android/src modules/react-native-memento-voice/package.json modules/react-native-memento-voice/src/index.ts src/features/chat/native-voice-runtime-contract.test.ts
+git status --short   # must show no android/build or android/.cxx paths
 git commit -m "feat(voice): native voice playback on Android"
 ```
 

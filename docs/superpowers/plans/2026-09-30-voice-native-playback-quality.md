@@ -1103,7 +1103,6 @@ In `src/features/chat/voice-audio-engine.ts`, find:
 
 ```ts
   playbackContextSampleRate?: number;
-};
 ```
 
 Replace it with:
@@ -1112,7 +1111,6 @@ Replace it with:
   playbackContextSampleRate?: number;
   adaptiveExtraMs?: number;
   concealedMs?: number;
-};
 ```
 
 In `src/features/chat/voice-audio-engine.ts`, find:
@@ -1132,8 +1130,6 @@ In `src/features/chat/voice-audio-engine.ts`, find:
 
 ```ts
       playbackContextSampleRate: this.playbackContextSampleRate,
-    };
-  }
 ```
 
 Replace it with:
@@ -1141,8 +1137,6 @@ Replace it with:
 ```ts
       playbackContextSampleRate: this.playbackContextSampleRate,
       ...this.nativeStats,
-    };
-  }
 ```
 
 In `src/features/chat/voice-audio-engine.ts`, find:
