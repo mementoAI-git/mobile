@@ -85,6 +85,7 @@ export default {
   startConversation: '/ai/conversation/new',
   ephemeralToken: '/ai/ephemeral-token',
   voiceTurns: '/ai/voice/turns',
+  voiceMemorySearch: '/ai/voice/memory-search',
   generateTags: '/ai/generate-tags',
 
   // capsule

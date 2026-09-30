@@ -31,6 +31,7 @@ import {
   VoiceCallNotification,
 } from '@/features/chat/voice-call-notification';
 import { createThrottledSetter, type ThrottledSetter } from '@/features/chat/voice-throttle';
+import { SEARCH_MEMORIES_TOOL, VoiceToolRelay } from '@/features/chat/voice-tool-relay';
 import { buildEphemeralTokenUrl } from '@/features/chat/voice-token-url';
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { serializeVoiceCallTranscript } from '@/features/chat/voice-transcript-parser';
@@ -74,6 +75,8 @@ function createSetupReady(): SetupReady {
 
 const TRANSCRIPT_SETTLE_MS = 600;
 const TRANSCRIPT_UI_INTERVAL_MS = 100;
+// Tool calls this build can relay. The API locks matching tools into the session.
+const CLIENT_CAPABILITIES = [SEARCH_MEMORIES_TOOL];
 const SPEAKER_FULL_DUPLEX = process.env.EXPO_PUBLIC_VOICE_FULL_DUPLEX === 'true';
 const RECONNECT_DELAYS_MS = [0, 500, 1_500];
 
@@ -158,6 +161,7 @@ export function useVoiceMode({
   const sessionIdRef = useRef<string>(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const transcriptRef = useRef(new VoiceTranscriptTurns());
   const turnSyncRef = useRef<VoiceTurnSync | null>(null);
+  const toolRelayRef = useRef<VoiceToolRelay | null>(null);
   const fullDuplexRef = useRef(SPEAKER_FULL_DUPLEX);
   const callNotificationRef = useRef<VoiceCallNotification | null>(null);
   if (!callNotificationRef.current) {
@@ -303,6 +307,10 @@ export function useVoiceMode({
           setupReadyRef.current?.resolve();
         } else if (effect.type === 'resumption-handle') {
           resumeHandleRef.current = effect.handle;
+        } else if (effect.type === 'tool-call') {
+          void toolRelayRef.current?.handle(effect.calls);
+        } else if (effect.type === 'tool-call-cancellation') {
+          toolRelayRef.current?.cancel(effect.ids);
         } else if (effect.type === 'go-away') {
           logger.runtime('[VoiceMode] go-away', { timeLeftMs: effect.timeLeftMs });
           void reconnectRef.current('go-away');
@@ -395,6 +403,7 @@ export function useVoiceMode({
     hasCompletedSessionRef.current = true;
     isSessionActiveRef.current = false;
     isMutedRef.current = true;
+    toolRelayRef.current = null;
     void callNotificationRef.current?.stop();
     if (greetingTimerRef.current) {
       clearTimeout(greetingTimerRef.current);
@@ -568,6 +577,7 @@ export function useVoiceMode({
                 resumeHandle: resumeHandleRef.current,
                 memoryId: memoryIdRef.current,
                 deviceModel: Device.modelName,
+                capabilities: CLIENT_CAPABILITIES,
               }),
             );
             const liveToken = parseVoiceLiveToken(
@@ -692,6 +702,7 @@ export function useVoiceMode({
         buildEphemeralTokenUrl(endpoint.ephemeralToken, {
           memoryId,
           deviceModel: Device.modelName,
+          capabilities: CLIENT_CAPABILITIES,
         }),
       );
       const liveToken = parseVoiceLiveToken(tokenResponse.data, voiceName ?? 'Fenrir');
@@ -703,6 +714,21 @@ export function useVoiceMode({
       fullDuplexRef.current = fullDuplex;
       engine.setSpeakerFullDuplex(fullDuplex);
       isGreetingActiveRef.current = !fullDuplex;
+      toolRelayRef.current = liveToken.tools?.includes(SEARCH_MEMORIES_TOOL)
+        ? new VoiceToolRelay(
+            async (query) => {
+              const response = await post(endpoint.voiceMemorySearch, { query });
+              return (response as { data?: { result?: string } })?.data?.result ?? '';
+            },
+            (functionResponses) => {
+              try {
+                sessionRef.current?.sendToolResponse({ functionResponses });
+              } catch (error) {
+                logger.warn('Failed to send voice tool response', error);
+              }
+            },
+          )
+        : null;
       turnSyncRef.current = liveToken.supportsVoiceTurns
         ? new VoiceTurnSync(
             (url, body) => post(url, body),

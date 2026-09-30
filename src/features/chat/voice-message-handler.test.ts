@@ -179,4 +179,33 @@ describe('VoiceMessageHandler', () => {
       { type: 'go-away', timeLeftMs: 0 },
     ]);
   });
+
+  test('emits tool calls and cancellations', () => {
+    const handler = new VoiceMessageHandler();
+
+    expect(
+      handler.handle(
+        {
+          toolCall: {
+            functionCalls: [
+              { id: 'c1', name: 'search_memories', args: { query: 'farm' } },
+              { id: 'c2', name: 'search_memories' },
+            ],
+          },
+        } as any,
+        1,
+      ),
+    ).toEqual([
+      {
+        type: 'tool-call',
+        calls: [
+          { id: 'c1', name: 'search_memories', args: { query: 'farm' } },
+          { id: 'c2', name: 'search_memories', args: {} },
+        ],
+      },
+    ]);
+    expect(handler.handle({ toolCallCancellation: { ids: ['c1'] } } as any, 1)).toEqual([
+      { type: 'tool-call-cancellation', ids: ['c1'] },
+    ]);
+  });
 });

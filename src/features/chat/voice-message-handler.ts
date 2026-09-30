@@ -1,5 +1,7 @@
 import type { LiveServerMessage } from '@google/genai/web';
 
+import type { VoiceToolCall } from './voice-tool-relay';
+
 export type VoiceMessageEffect =
   | { type: 'setup-complete' }
   | { type: 'output-audio'; data: string; epoch: number }
@@ -8,7 +10,9 @@ export type VoiceMessageEffect =
   | { type: 'interrupted' }
   | { type: 'turn-complete' }
   | { type: 'resumption-handle'; handle: string }
-  | { type: 'go-away'; timeLeftMs: number };
+  | { type: 'go-away'; timeLeftMs: number }
+  | { type: 'tool-call'; calls: VoiceToolCall[] }
+  | { type: 'tool-call-cancellation'; ids: string[] };
 
 export type VoiceServerMessageSummary = {
   setupComplete: boolean;
@@ -97,6 +101,29 @@ export class VoiceMessageHandler {
       effects.push({
         type: 'go-away',
         timeLeftMs: durationToMs(goAway.timeLeft ?? goAway.time_left),
+      });
+    }
+
+    const toolCall = message.toolCall ?? message.tool_call;
+    const functionCalls = toolCall?.functionCalls ?? toolCall?.function_calls;
+    if (Array.isArray(functionCalls) && functionCalls.length) {
+      effects.push({
+        type: 'tool-call',
+        calls: functionCalls
+          .filter((call: any) => call && typeof call.name === 'string')
+          .map((call: any) => ({
+            id: typeof call.id === 'string' ? call.id : undefined,
+            name: call.name,
+            args: call.args && typeof call.args === 'object' ? call.args : {},
+          })),
+      });
+    }
+
+    const cancellation = message.toolCallCancellation ?? message.tool_call_cancellation;
+    if (Array.isArray(cancellation?.ids) && cancellation.ids.length) {
+      effects.push({
+        type: 'tool-call-cancellation',
+        ids: cancellation.ids.filter((id: unknown): id is string => typeof id === 'string'),
       });
     }
 
