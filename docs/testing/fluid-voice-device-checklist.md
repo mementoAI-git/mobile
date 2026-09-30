@@ -21,6 +21,20 @@ Use a physical development device and an authenticated Pro development account. 
 - Interrupted audio never resumes from the stale response.
 - A natural pause of approximately 400 ms does not prematurely end the turn.
 
+## Phase 1b acceptance (2026-09-30 strategy)
+
+Run each on one iPhone and one mid-range Android phone, loudspeaker, no headphones.
+
+- [ ] Opened from a conversation with recent text turns, the greeting continues it without recapping
+- [ ] Replies are one to three sentences unless asked for more
+- [ ] Talking over the model stops it within about a quarter second
+- [ ] 10 minutes of normal conversation produces no more than 1 false interruption (log count)
+- [ ] No clicks at pauses, interruptions, or after a network hiccup (iOS)
+- [ ] Every turn appears as its own message in the chat after the call
+- [ ] Killing the app mid-call keeps every turn completed before the kill
+- [ ] A 15-minute call survives the Gemini goAway reconnect, and the model still remembers earlier turns
+- [ ] Switching Wi-Fi to cellular mid-call reconnects instead of ending the call
+
 ## Session record
 
 Create one row per run. Use `n/a` only when the device does not support the route.
