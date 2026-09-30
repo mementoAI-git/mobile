@@ -165,7 +165,7 @@ export class QueuePlaybackRuntime implements VoicePlaybackRuntime {
 export class VoiceAudioEngine {
   private readonly native: VoiceAudioNativeAdapter;
   private readonly metrics: VoiceSessionMetrics;
-  private readonly speakerFullDuplex: boolean;
+  private speakerFullDuplex: boolean;
   private readonly onFatalError?: (error: Error) => void;
   private readonly onPlaybackStateChange?: (
     state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
@@ -297,6 +297,12 @@ export class VoiceAudioEngine {
       await this.fail(asError(error));
       throw error;
     }
+  }
+
+  /** Apply the server's device policy once the token arrives. */
+  setSpeakerFullDuplex(enabled: boolean): void {
+    this.speakerFullDuplex = enabled;
+    if (enabled) this.greetingShieldActive = false;
   }
 
   armGreetingShield(): void {

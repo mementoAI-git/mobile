@@ -106,4 +106,15 @@ describe('voice Live configuration', () => {
     expect(instruction).toContain('speaking with Avery');
     expect(instruction).toContain('STORED CONTEXT: Visited Tokyo in 2024.');
   });
+
+  test('parses tools and the speaker duplex policy when the API sends them', () => {
+    const parsed = parseVoiceLiveToken(
+      { token: 't', tools: ['search_memories', 7], speakerFullDuplex: false },
+      'Fenrir',
+    );
+
+    expect(parsed.tools).toEqual(['search_memories']);
+    expect(parsed.speakerFullDuplex).toBe(false);
+    expect(parseVoiceLiveToken({ token: 't' }, 'Fenrir').speakerFullDuplex).toBeUndefined();
+  });
 });

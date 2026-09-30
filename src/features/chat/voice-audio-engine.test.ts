@@ -413,5 +413,24 @@ describe('VoiceAudioEngine', () => {
 
     expect(chunks).toHaveLength(1);
   });
-});
 
+  test('applies the server speaker duplex policy after construction', async () => {
+    const native = new FakeNative();
+    native.isHeadphonesDevice = false;
+    const chunks: string[] = [];
+    const engine = new VoiceAudioEngine({ native });
+
+    await engine.start((chunk) => chunks.push(chunk));
+    engine.armGreetingShield();
+    engine.setSpeakerFullDuplex(true);
+
+    const pcmSamples = new Float32Array(4800).fill(0.1);
+    engine.enqueueOutput(btoa(String.fromCharCode(...new Uint8Array(pcmSamples.length * 2))), 1);
+    native.recorder.input?.({
+      buffer: { getChannelData: () => new Float32Array(1_600).fill(0.1) },
+      numFrames: 1_600,
+    });
+
+    expect(chunks).toHaveLength(1);
+  });
+});

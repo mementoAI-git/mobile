@@ -10,6 +10,10 @@ export type VoiceLiveToken = {
   memoryId?: string;
   /** True when the API records voice turns via POST /ai/voice/turns. */
   supportsVoiceTurns: boolean;
+  /** Tools the API locked into this session, for example ['search_memories']. */
+  tools?: string[];
+  /** Server device policy. Undefined on APIs that predate it. */
+  speakerFullDuplex?: boolean;
 };
 
 export const LEGACY_LIVE_MODEL =
@@ -64,6 +68,11 @@ export function parseVoiceLiveToken(
         ? response.memoryId
         : undefined,
     supportsVoiceTurns: nonEmptyString(response.promptVersion),
+    tools: Array.isArray(response.tools)
+      ? response.tools.filter((tool): tool is string => typeof tool === 'string')
+      : undefined,
+    speakerFullDuplex:
+      typeof response.speakerFullDuplex === 'boolean' ? response.speakerFullDuplex : undefined,
   };
 }
 

@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai/web';
 import type { LiveServerMessage, Session } from '@google/genai/web';
+import * as Device from 'expo-device';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -30,6 +31,7 @@ import {
   VoiceCallNotification,
 } from '@/features/chat/voice-call-notification';
 import { createThrottledSetter, type ThrottledSetter } from '@/features/chat/voice-throttle';
+import { buildEphemeralTokenUrl } from '@/features/chat/voice-token-url';
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { serializeVoiceCallTranscript } from '@/features/chat/voice-transcript-parser';
 import { isPermissionGranted } from '@/lib/permission-recovery';
@@ -156,6 +158,7 @@ export function useVoiceMode({
   const sessionIdRef = useRef<string>(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const transcriptRef = useRef(new VoiceTranscriptTurns());
   const turnSyncRef = useRef<VoiceTurnSync | null>(null);
+  const fullDuplexRef = useRef(SPEAKER_FULL_DUPLEX);
   const callNotificationRef = useRef<VoiceCallNotification | null>(null);
   if (!callNotificationRef.current) {
     callNotificationRef.current = new VoiceCallNotification(
@@ -560,12 +563,12 @@ export function useVoiceMode({
           await wait(RECONNECT_DELAYS_MS[attempt]);
           if (!isSessionActiveRef.current) return false;
           try {
-            const params = new URLSearchParams({
-              resume_handle: resumeHandleRef.current!,
-            });
-            if (memoryIdRef.current) params.set('memory_id', memoryIdRef.current);
             const tokenResponse = await get<unknown>(
-              `${endpoint.ephemeralToken}?${params}`,
+              buildEphemeralTokenUrl(endpoint.ephemeralToken, {
+                resumeHandle: resumeHandleRef.current,
+                memoryId: memoryIdRef.current,
+                deviceModel: Device.modelName,
+              }),
             );
             const liveToken = parseVoiceLiveToken(
               tokenResponse.data,
@@ -685,14 +688,21 @@ export function useVoiceMode({
         return;
       }
 
-      const url = memoryId
-        ? `${endpoint.ephemeralToken}?memory_id=${encodeURIComponent(memoryId)}`
-        : endpoint.ephemeralToken;
-      const tokenResponse = await get<unknown>(url);
+      const tokenResponse = await get<unknown>(
+        buildEphemeralTokenUrl(endpoint.ephemeralToken, {
+          memoryId,
+          deviceModel: Device.modelName,
+        }),
+      );
       const liveToken = parseVoiceLiveToken(tokenResponse.data, voiceName ?? 'Fenrir');
 
       const user = useUserStore.getState().user;
       if (liveToken.memoryId) memoryIdRef.current = liveToken.memoryId;
+      // The server can switch specific device models back to the speaker mic gate.
+      const fullDuplex = SPEAKER_FULL_DUPLEX && liveToken.speakerFullDuplex !== false;
+      fullDuplexRef.current = fullDuplex;
+      engine.setSpeakerFullDuplex(fullDuplex);
+      isGreetingActiveRef.current = !fullDuplex;
       turnSyncRef.current = liveToken.supportsVoiceTurns
         ? new VoiceTurnSync(
             (url, body) => post(url, body),
@@ -739,7 +749,7 @@ export function useVoiceMode({
       // Safety guard: The greeting shield prevents the model's initial spoken greeting
       // from leaking into the microphone and causing self-interruption.
       // It automatically disarms after 4.5 seconds if playback state has not already disarmed it.
-      if (!SPEAKER_FULL_DUPLEX) {
+      if (!fullDuplexRef.current) {
         if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current);
         greetingTimerRef.current = setTimeout(() => {
           isGreetingActiveRef.current = false;
