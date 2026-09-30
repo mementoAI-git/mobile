@@ -38,6 +38,12 @@ import {
 import { createThrottledSetter, type ThrottledSetter } from '@/features/chat/voice-throttle';
 import { SEARCH_MEMORIES_TOOL, VoiceToolRelay } from '@/features/chat/voice-tool-relay';
 import { buildEphemeralTokenUrl } from '@/features/chat/voice-token-url';
+import {
+  CALL_ACTION_TOOLS,
+  CALL_ACTIONS_CAPABILITY,
+  createCallActionHandlers,
+} from '@/features/chat/voice-call-actions';
+import { GoodbyeTracker } from '@/features/chat/voice-goodbye';
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { serializeVoiceCallTranscript } from '@/features/chat/voice-transcript-parser';
 import { isPermissionGranted } from '@/lib/permission-recovery';
@@ -81,7 +87,7 @@ function createSetupReady(): SetupReady {
 const TRANSCRIPT_SETTLE_MS = 600;
 const TRANSCRIPT_UI_INTERVAL_MS = 100;
 // Tool calls this build can relay. The API locks matching tools into the session.
-const CLIENT_CAPABILITIES = [SEARCH_MEMORIES_TOOL];
+const CLIENT_CAPABILITIES = [SEARCH_MEMORIES_TOOL, CALL_ACTIONS_CAPABILITY];
 const SPEAKER_FULL_DUPLEX = process.env.EXPO_PUBLIC_VOICE_FULL_DUPLEX === 'true';
 // About 10 s in total, enough to ride out a tunnel or a network switch.
 const RECONNECT_DELAYS_MS = [0, 500, 1_500, 3_000, 5_000];
@@ -134,10 +140,23 @@ function syncCompletedTurnsInto(
   if (completed.length) sync.addTurns(completed);
 }
 
+/** App-level effects of call actions, supplied by the call provider. */
+export type VoiceCallActionEffects = {
+  /** Open a screen while the call keeps going. */
+  navigate(href: string): void;
+  /** The model ended the call; leave the call screen if it is open. */
+  onModelEndedCall(): void;
+};
+
 export function useVoiceMode({
   memoryId,
   voiceName,
-}: { memoryId?: string | null; voiceName?: string } = {}) {
+  callActions,
+}: {
+  memoryId?: string | null;
+  voiceName?: string;
+  callActions?: VoiceCallActionEffects;
+} = {}) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -170,6 +189,13 @@ export function useVoiceMode({
   const transcriptRef = useRef(new VoiceTranscriptTurns());
   const turnSyncRef = useRef<VoiceTurnSync | null>(null);
   const toolRelayRef = useRef<VoiceToolRelay | null>(null);
+  const callActionsRef = useRef(callActions);
+  callActionsRef.current = callActions;
+  const goodbyeRef = useRef<{
+    tracker: GoodbyeTracker;
+    timer: ReturnType<typeof setInterval>;
+    then?: () => void;
+  } | null>(null);
   const fullDuplexRef = useRef(SPEAKER_FULL_DUPLEX);
   const networkUnsubscribeRef = useRef<(() => void) | null>(null);
   const lastNetworkRef = useRef<NetworkSnapshot | undefined>(undefined);
@@ -348,6 +374,7 @@ export function useVoiceMode({
           outputTranscriptFinishedRef.current = false;
           if (isMountedRef.current) setIsAiSpeaking(false);
         } else if (effect.type === 'output-audio') {
+          goodbyeRef.current?.tracker.onModelAudio();
           if (engine?.enqueueOutput(effect.data, effect.epoch) && isMountedRef.current) {
             isAiSpeakingRef.current = true;
             setIsAiSpeaking(true);
@@ -377,6 +404,7 @@ export function useVoiceMode({
           }
         } else if (effect.type === 'turn-complete') {
           engine?.finishOutputTurn();
+          goodbyeRef.current?.tracker.onTurnComplete();
           // Transcription is explicitly independent of modelTurn ordering in
           // Gemini Live. Give a final transcription frame a bounded grace
           // period; `finished` can settle this earlier when the model sends it.
@@ -417,6 +445,10 @@ export function useVoiceMode({
     networkUnsubscribeRef.current = null;
     lastNetworkRef.current = undefined;
     toolRelayRef.current = null;
+    if (goodbyeRef.current) {
+      clearInterval(goodbyeRef.current.timer);
+      goodbyeRef.current = null;
+    }
     void callNotificationRef.current?.stop();
     if (greetingTimerRef.current) {
       clearTimeout(greetingTimerRef.current);
@@ -638,6 +670,29 @@ export function useVoiceMode({
   );
   connectionLostRef.current = handleConnectionLost;
 
+  const setMuted = useCallback((muted: boolean) => {
+    isMutedRef.current = muted;
+    setIsMuted(muted);
+  }, []);
+
+  /** Hang up once the model's goodbye has played (at most 6 s), then run `then`. */
+  const endCallAfterGoodbye = useCallback((then?: () => void) => {
+    if (goodbyeRef.current || !isSessionActiveRef.current) return;
+    const timer = setInterval(() => {
+      const pending = goodbyeRef.current;
+      if (!pending) return;
+      const playing = engineRef.current?.isAudible(150) ?? false;
+      if (!pending.tracker.shouldHangUp(Date.now(), playing)) return;
+      clearInterval(pending.timer);
+      goodbyeRef.current = null;
+      void disconnectRef.current().then(() => {
+        if (pending.then) pending.then();
+        else callActionsRef.current?.onModelEndedCall();
+      });
+    }, 100);
+    goodbyeRef.current = { tracker: new GoodbyeTracker(Date.now()), timer, then };
+  }, []);
+
   const connect = useCallback(async () => {
     if (isConnecting || isConnected || isDisconnectingRef.current) return;
     setIsConnecting(true);
@@ -647,6 +702,10 @@ export function useVoiceMode({
     isGreetingActiveRef.current = !SPEAKER_FULL_DUPLEX;
     isAiSpeakingRef.current = false;
     resumeHandleRef.current = null;
+    // The call outlives the call screen, so start each call from the current
+    // prop rather than the conversation a previous call used.
+    memoryIdRef.current =
+      memoryId && /^[0-9a-fA-F]{24}$/.test(memoryId) ? memoryId : undefined;
     setIsMuted(false);
     setRecordingTime(0);
     recordingTimeRef.current = 0;
@@ -727,21 +786,31 @@ export function useVoiceMode({
       fullDuplexRef.current = fullDuplex;
       engine.setSpeakerFullDuplex(fullDuplex);
       isGreetingActiveRef.current = !fullDuplex;
-      toolRelayRef.current = liveToken.tools?.includes(SEARCH_MEMORIES_TOOL)
-        ? new VoiceToolRelay(
-            async (query) => {
-              const response = await post(endpoint.voiceMemorySearch, { query });
-              return (response as { data?: { result?: string } })?.data?.result ?? '';
-            },
-            (functionResponses) => {
-              try {
-                sessionRef.current?.sendToolResponse({ functionResponses });
-              } catch (error) {
-                logger.warn('Failed to send voice tool response', error);
-              }
-            },
-          )
-        : null;
+      const sessionTools = liveToken.tools ?? [];
+      const callActionsEnabled = CALL_ACTION_TOOLS.some((tool) => sessionTools.includes(tool));
+      toolRelayRef.current =
+        sessionTools.includes(SEARCH_MEMORIES_TOOL) || callActionsEnabled
+          ? new VoiceToolRelay(
+              async (query) => {
+                const response = await post(endpoint.voiceMemorySearch, { query });
+                return (response as { data?: { result?: string } })?.data?.result ?? '';
+              },
+              (functionResponses) => {
+                try {
+                  sessionRef.current?.sendToolResponse({ functionResponses });
+                } catch (error) {
+                  logger.warn('Failed to send voice tool response', error);
+                }
+              },
+              callActionsEnabled
+                ? createCallActionHandlers({
+                    endAfterGoodbye: endCallAfterGoodbye,
+                    setMuted,
+                    navigate: (href) => callActionsRef.current?.navigate(href),
+                  })
+                : {},
+            )
+          : null;
       turnSyncRef.current = liveToken.supportsVoiceTurns
         ? new VoiceTurnSync(
             (url, body) => post(url, body),
@@ -826,11 +895,13 @@ export function useVoiceMode({
     }
   }, [
     disconnect,
-    handleLiveMessage,
+    endCallAfterGoodbye,
     isConnected,
     isConnecting,
+    memoryId,
     openLiveSession,
     resolveTargetMemoryId,
+    setMuted,
     voiceName,
   ]);
 
@@ -882,6 +953,8 @@ export function useVoiceMode({
       connect,
       disconnect,
       toggleMute,
+      setMuted,
+      endCallAfterGoodbye,
       interrupt,
     }),
     [
@@ -896,6 +969,8 @@ export function useVoiceMode({
       connect,
       disconnect,
       toggleMute,
+      setMuted,
+      endCallAfterGoodbye,
       interrupt,
     ],
   );
