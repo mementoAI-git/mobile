@@ -433,4 +433,13 @@ describe('VoiceAudioEngine', () => {
 
     expect(chunks).toHaveLength(1);
   });
+
+  test('reports whether native playback is active', async () => {
+    const native = new FakeNative();
+    const engine = new VoiceAudioEngine({ native });
+
+    await engine.start(() => {});
+
+    expect(engine.snapshot().nativePlayback).toBe(false);
+  });
 });

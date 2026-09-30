@@ -109,6 +109,8 @@ export type VoiceAudioEngineSnapshot = VoiceMetricSnapshot & {
   captureDurationAnomalies: number;
   modelOutputSampleRate: number;
   playbackContextSampleRate?: number;
+  /** True when the C++ renderer is in use rather than the JS buffer queue. */
+  nativePlayback: boolean;
 };
 
 export type VoiceAudioEngineOptions = {
@@ -184,6 +186,7 @@ export class VoiceAudioEngine {
   private playbackContextSampleRate?: number;
   private playbackGeneration = 0;
   private routeChangePromise: Promise<void> = Promise.resolve();
+  private nativePlayback = false;
 
   constructor(options: VoiceAudioEngineOptions = {}) {
     this.native = options.native ?? createNativeVoiceAudioAdapter();
@@ -347,6 +350,7 @@ export class VoiceAudioEngine {
       captureDurationAnomalies: this.captureDurationAnomalies,
       modelOutputSampleRate: OUTPUT_SAMPLE_RATE,
       playbackContextSampleRate: this.playbackContextSampleRate,
+      nativePlayback: this.nativePlayback,
     };
   }
 
@@ -399,6 +403,7 @@ export class VoiceAudioEngine {
     const nativeSession = context.nativeContext
       ? createNativeVoicePlaybackSession(context.nativeContext)
       : undefined;
+    this.nativePlayback = Boolean(nativeSession);
     this.playback = nativeSession
       ? new NativeVoicePlaybackController(
           nativeSession,
