@@ -30,4 +30,14 @@ describe('app-wide voice call', () => {
     expect(bar).toContain('accessibilityLabel="End call"');
     expect(bar).toContain('voice.disconnect()');
   });
+
+  test('the call screen is a view onto the provider call', async () => {
+    const screen = await read('app/voice-call.tsx');
+
+    expect(screen).toContain('useVoiceCall()');
+    expect(screen).not.toContain('useVoiceMode(');
+    expect(screen).not.toContain('useBackgroundMusic');
+    expect(screen).toContain('accessibilityLabel="Minimize call"');
+    expect(screen).toContain("return voice.isMuted ? 'muted' : 'live';");
+  });
 });

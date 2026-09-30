@@ -18,6 +18,6 @@ describe('voice call route contract', () => {
     expect(route).toContain("setStage('ready')");
     expect(route).toContain('providerVoiceName');
     expect(route).toContain("getVoiceCallTransition(stage, 'connection-failed')");
-    expect(route).toContain('pauseForVoice');
+    expect(route).toContain('useVoiceCall()');
   });
 });
