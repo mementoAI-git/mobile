@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
+    "postinstall": "node scripts/postinstall.js",
     "start": "npx expo start --clear",
     "prebuild": "npx expo prebuild --clean",
     "android:run": "npx expo start --android --port 3000",
