@@ -22,6 +22,7 @@ import {
   VoiceTranscriptTurns,
   type VoiceTranscriptMessage,
 } from '@/features/chat/voice-transcript-turns';
+import { VoiceTurnSync } from '@/features/chat/voice-turn-sync';
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { serializeVoiceCallTranscript } from '@/features/chat/voice-transcript-parser';
 import { isPermissionGranted } from '@/lib/permission-recovery';
@@ -103,6 +104,14 @@ function createVoiceTranscriptDiagnostics(): VoiceTranscriptDiagnostics {
   };
 }
 
+function syncCompletedTurnsInto(
+  sync: VoiceTurnSync,
+  transcript: VoiceTranscriptTurns,
+): void {
+  const completed = transcript.drainCompleted();
+  if (completed.length) sync.addTurns(completed);
+}
+
 export function useVoiceMode({
   memoryId,
   voiceName,
@@ -129,6 +138,7 @@ export function useVoiceMode({
   const hasCompletedSessionRef = useRef(false);
   const sessionIdRef = useRef<string>(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const transcriptRef = useRef(new VoiceTranscriptTurns());
+  const turnSyncRef = useRef<VoiceTurnSync | null>(null);
   const transcriptDiagnosticsRef = useRef(createVoiceTranscriptDiagnostics());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingTimeRef = useRef(0);
@@ -143,17 +153,20 @@ export function useVoiceMode({
     memoryIdRef.current = memoryId;
   }
 
+  const resolveTargetMemoryId = useCallback((): string | undefined => {
+    const cachedProfile = queryClient.getQueryData<any>(queryKeys.profile);
+    const userPrimaryId =
+      useUserStore.getState().user?.primary_conversation_id ??
+      useAuthStore.getState().user?.primary_conversation_id ??
+      cachedProfile?.primary_conversation_id;
+    const rawTargetId = memoryIdRef.current || userPrimaryId;
+    return rawTargetId && /^[0-9a-fA-F]{24}$/.test(rawTargetId) ? rawTargetId : undefined;
+  }, []);
+
   const persistVoiceMessages = useCallback(
     async (messages: VoiceTranscriptMessage[]): Promise<boolean> => {
       if (!messages.length) return true;
-      const cachedProfile = queryClient.getQueryData<any>(queryKeys.profile);
-      const userPrimaryId =
-        useUserStore.getState().user?.primary_conversation_id ??
-        useAuthStore.getState().user?.primary_conversation_id ??
-        cachedProfile?.primary_conversation_id;
-      const rawTargetId = memoryIdRef.current || userPrimaryId;
-      const targetMemoryId =
-        rawTargetId && /^[0-9a-fA-F]{24}$/.test(rawTargetId) ? rawTargetId : undefined;
+      const targetMemoryId = resolveTargetMemoryId();
 
       const payload: {
         session_id: string;
@@ -199,8 +212,13 @@ export function useVoiceMode({
         return false;
       }
     },
-    [],
+    [resolveTargetMemoryId],
   );
+
+  const syncCompletedTurns = useCallback((interruptedLast = false) => {
+    const completed = transcriptRef.current.drainCompleted();
+    if (completed.length) turnSyncRef.current?.addTurns(completed, { interruptedLast });
+  }, []);
 
   const handleLiveMessage = useCallback(
     (message: LiveServerMessage) => {
@@ -265,6 +283,7 @@ export function useVoiceMode({
           }
           transcriptRef.current.handleInterruption();
           transcriptRef.current.completeTurn();
+          syncCompletedTurns(true);
           outputTranscriptFinishedRef.current = false;
           if (isMountedRef.current) setIsAiSpeaking(false);
         } else if (effect.type === 'output-audio') {
@@ -291,6 +310,7 @@ export function useVoiceMode({
                 pendingTurnCompleteTimerRef.current = null;
               }
               transcriptRef.current.settlePendingTurn();
+              syncCompletedTurns();
               outputTranscriptFinishedRef.current = false;
             }
           }
@@ -304,6 +324,7 @@ export function useVoiceMode({
             outputTranscriptFinishedRef.current = false;
             pendingTurnCompleteRef.current = false;
             transcriptRef.current.settlePendingTurn();
+            syncCompletedTurns();
             continue;
           }
           pendingTurnCompleteRef.current = true;
@@ -316,11 +337,12 @@ export function useVoiceMode({
             pendingTurnCompleteTimerRef.current = null;
             outputTranscriptFinishedRef.current = false;
             transcriptRef.current.settlePendingTurn();
+            syncCompletedTurns();
           }, TRANSCRIPT_SETTLE_MS);
         }
       }
     },
-    [],
+    [syncCompletedTurns],
   );
 
   const disconnect = useCallback(async () => {
@@ -369,42 +391,52 @@ export function useVoiceMode({
       transcriptRef.current.completeTurn();
     }
     const sessionTurns = transcriptRef.current.getSessionTurns();
-    transcriptRef.current.drainCompleted();
-
     const flattenedSessionMessages = sessionTurns.flatMap((turn) => turn.messages);
-
     const formattedDuration = formatVoiceCallDuration(finalDuration);
+    const turnSync = turnSyncRef.current;
+    turnSyncRef.current = null;
 
     let callRecordText = '';
-    if (sessionTurns.length > 0) {
-      const flattened = sessionTurns.flatMap((turn) => turn.messages);
-      callRecordText = serializeVoiceCallTranscript(formattedDuration, flattened);
-    } else if (finalDuration >= 3) {
-      const userText = userSpeechTextRef.current.trim();
-      const aiText =
-        aiSpeechTextRef.current.trim() &&
-        !aiSpeechTextRef.current.includes('Ready to connect') &&
-        !aiSpeechTextRef.current.includes('Connecting')
-          ? aiSpeechTextRef.current.trim()
-          : '';
+    let transcriptPersisted = false;
 
-      const fallbackTurns: Array<{ role: 'user' | 'ai'; text: string }> = [];
-      if (userText) fallbackTurns.push({ role: 'user', text: userText });
-      if (aiText) fallbackTurns.push({ role: 'ai', text: aiText });
-
-      callRecordText = serializeVoiceCallTranscript(formattedDuration, fallbackTurns);
+    if (turnSync) {
+      syncCompletedTurnsInto(turnSync, transcriptRef.current);
+      transcriptPersisted = await turnSync.flush();
+      if (!transcriptPersisted) {
+        await wait(1_000);
+        transcriptPersisted = await turnSync.flush();
+      }
+      const savedMemoryId = turnSync.getMemoryId();
+      if (savedMemoryId) {
+        memoryIdRef.current = savedMemoryId;
+        void queryClient.invalidateQueries({ queryKey: queryKeys.promptMessages(savedMemoryId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.memory(savedMemoryId) });
+      }
+      void queryClient.invalidateQueries({ queryKey: queryKeys.memories() });
+      if (!transcriptPersisted) logger.error('Voice turns could not be saved after retry');
+    } else {
+      transcriptRef.current.drainCompleted();
+      if (sessionTurns.length > 0) {
+        callRecordText = serializeVoiceCallTranscript(formattedDuration, flattenedSessionMessages);
+      } else if (finalDuration >= 3) {
+        const userText = userSpeechTextRef.current.trim();
+        const aiText =
+          aiSpeechTextRef.current.trim() &&
+          !aiSpeechTextRef.current.includes('Ready to connect') &&
+          !aiSpeechTextRef.current.includes('Connecting')
+            ? aiSpeechTextRef.current.trim()
+            : '';
+        const fallbackTurns: Array<{ role: 'user' | 'ai'; text: string }> = [];
+        if (userText) fallbackTurns.push({ role: 'user', text: userText });
+        if (aiText) fallbackTurns.push({ role: 'ai', text: aiText });
+        callRecordText = serializeVoiceCallTranscript(formattedDuration, fallbackTurns);
+      }
+      transcriptPersisted = callRecordText
+        ? await persistVoiceMessages([
+            { role: 'ai', text: callRecordText, is_voice: true, duration: finalDuration },
+          ])
+        : false;
     }
-
-    const transcriptPersisted = callRecordText
-      ? await persistVoiceMessages([
-          {
-            role: 'ai',
-            text: callRecordText,
-            is_voice: true,
-            duration: finalDuration,
-          },
-        ])
-      : false;
 
     logger.runtime('[VoiceMode] transcript metrics', {
       ...transcriptDiagnosticsRef.current,
@@ -517,6 +549,14 @@ export function useVoiceMode({
 
       const user = useUserStore.getState().user;
       if (liveToken.memoryId) memoryIdRef.current = liveToken.memoryId;
+      turnSyncRef.current = liveToken.supportsVoiceTurns
+        ? new VoiceTurnSync(
+            (url, body) => post(url, body),
+            endpoint.voiceTurns,
+            sessionIdRef.current,
+            resolveTargetMemoryId(),
+          )
+        : null;
 
       const client = new GoogleGenAI({
         apiKey: liveToken.token,
@@ -606,7 +646,14 @@ export function useVoiceMode({
       if (isMountedRef.current) setConnectionFailure(failure);
       await disconnect();
     }
-  }, [disconnect, handleLiveMessage, isConnected, isConnecting, voiceName]);
+  }, [
+    disconnect,
+    handleLiveMessage,
+    isConnected,
+    isConnecting,
+    resolveTargetMemoryId,
+    voiceName,
+  ]);
 
   const toggleMute = useCallback(() => {
     void Haptics.selectionAsync();

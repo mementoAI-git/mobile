@@ -84,6 +84,7 @@ export default {
   transcription: '/ai/transcribe-audio',
   startConversation: '/ai/conversation/new',
   ephemeralToken: '/ai/ephemeral-token',
+  voiceTurns: '/ai/voice/turns',
   generateTags: '/ai/generate-tags',
 
   // capsule
