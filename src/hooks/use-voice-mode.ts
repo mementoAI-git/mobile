@@ -24,6 +24,10 @@ import {
   type VoiceTranscriptMessage,
 } from '@/features/chat/voice-transcript-turns';
 import { VoiceTurnSync } from '@/features/chat/voice-turn-sync';
+import {
+  createThrottledSetter,
+  type ThrottledSetter,
+} from '@/features/chat/voice-throttle';
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { serializeVoiceCallTranscript } from '@/features/chat/voice-transcript-parser';
 import { isPermissionGranted } from '@/lib/permission-recovery';
@@ -65,6 +69,7 @@ function createSetupReady(): SetupReady {
 }
 
 const TRANSCRIPT_SETTLE_MS = 600;
+const TRANSCRIPT_UI_INTERVAL_MS = 100;
 const SPEAKER_FULL_DUPLEX = process.env.EXPO_PUBLIC_VOICE_FULL_DUPLEX === 'true';
 const RECONNECT_DELAYS_MS = [0, 500, 1_500];
 
@@ -149,6 +154,18 @@ export function useVoiceMode({
   const sessionIdRef = useRef<string>(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const transcriptRef = useRef(new VoiceTranscriptTurns());
   const turnSyncRef = useRef<VoiceTurnSync | null>(null);
+  const userTextSetterRef = useRef<ThrottledSetter<string> | null>(null);
+  const aiTextSetterRef = useRef<ThrottledSetter<string> | null>(null);
+  if (!userTextSetterRef.current) {
+    userTextSetterRef.current = createThrottledSetter((text: string) => {
+      if (isMountedRef.current) setUserSpeechText(text);
+    }, TRANSCRIPT_UI_INTERVAL_MS);
+  }
+  if (!aiTextSetterRef.current) {
+    aiTextSetterRef.current = createThrottledSetter((text: string) => {
+      if (isMountedRef.current) setAiSpeechText(text);
+    }, TRANSCRIPT_UI_INTERVAL_MS);
+  }
   const transcriptDiagnosticsRef = useRef(createVoiceTranscriptDiagnostics());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingTimeRef = useRef(0);
@@ -309,13 +326,13 @@ export function useVoiceMode({
         } else if (effect.type === 'input-transcript') {
           const text = transcriptRef.current.appendUser(effect.text, effect.isInterim);
           userSpeechTextRef.current = text;
-          if (isMountedRef.current) setUserSpeechText(text);
+          userTextSetterRef.current?.set(text);
         } else if (effect.type === 'output-transcript') {
           outputTranscriptFinishedRef.current = effect.finished;
           if (effect.text) {
             const text = transcriptRef.current.appendModel(effect.text);
             aiSpeechTextRef.current = text;
-            if (isMountedRef.current) setAiSpeechText(text);
+            aiTextSetterRef.current?.set(text);
           }
           if (effect.finished) {
             if (pendingTurnCompleteRef.current) {
@@ -472,6 +489,8 @@ export function useVoiceMode({
       transcriptPersisted,
     });
 
+    userTextSetterRef.current?.flush();
+    aiTextSetterRef.current?.flush();
     if (isMountedRef.current) {
       setIsConnected(false);
       setIsConnecting(false);
@@ -604,6 +623,8 @@ export function useVoiceMode({
       clearTimeout(pendingTurnCompleteTimerRef.current);
       pendingTurnCompleteTimerRef.current = null;
     }
+    userTextSetterRef.current?.cancel();
+    aiTextSetterRef.current?.cancel();
     setAiSpeechText('Connecting secure voice link...');
     setUserSpeechText('');
     setConnectionFailure(null);
@@ -772,6 +793,8 @@ export function useVoiceMode({
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      userTextSetterRef.current?.cancel();
+      aiTextSetterRef.current?.cancel();
       void disconnectRef.current();
     };
   }, []);
