@@ -1,0 +1,62 @@
+apply plugin: "com.android.library"
+// AGP 9 registers the `kotlin` extension itself; only apply the plugin when absent.
+if (project.extensions.findByName("kotlin") == null) {
+  apply plugin: "org.jetbrains.kotlin.android"
+}
+apply plugin: "com.facebook.react"
+
+def safeExtGet(prop, fallback) {
+  return rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+}
+
+def reactNativeArchitectures() {
+  def value = rootProject.getProperties().get("reactNativeArchitectures")
+  return value ? value.split(",") : ["armeabi-v7a", "arm64-v8a", "x86_64", "x86"]
+}
+
+android {
+  namespace "io.mymemento.voice"
+  compileSdkVersion safeExtGet("compileSdkVersion", 36)
+  ndkVersion safeExtGet("ndkVersion", null)
+
+  defaultConfig {
+    minSdkVersion safeExtGet("minSdkVersion", 24)
+    externalNativeBuild {
+      cmake {
+        abiFilters(*reactNativeArchitectures())
+        arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+        cppFlags "-fexceptions", "-frtti", "-std=c++20"
+      }
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      path "CMakeLists.txt"
+    }
+  }
+
+  buildFeatures {
+    prefab true
+  }
+
+  packagingOptions {
+    excludes = [
+      "**/libc++_shared.so",
+      "**/libfbjni.so",
+      "**/libjsi.so",
+      "**/libreactnative.so",
+      "**/libreact-native-audio-api.so",
+    ]
+  }
+}
+
+repositories {
+  google()
+  mavenCentral()
+}
+
+dependencies {
+  implementation "com.facebook.react:react-android"
+  implementation project(":react-native-audio-api")
+}

@@ -8,6 +8,7 @@
   "files": [
     "src",
     "ios",
+    "android",
     "common",
     "MementoVoiceAudio.podspec"
   ],
@@ -19,6 +20,9 @@
   "codegenConfig": {
     "name": "mementovoiceaudio",
     "type": "modules",
-    "jsSrcsDir": "src/specs"
+    "jsSrcsDir": "src/specs",
+    "android": {
+      "javaPackageName": "io.mymemento.voice"
+    }
   }
 }

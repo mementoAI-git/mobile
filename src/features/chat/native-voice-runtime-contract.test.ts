@@ -100,4 +100,18 @@ describe('native voice runtime contract', () => {
     expect(blank).toBeLessThan(splash);
     expect(await Bun.file(repoFile('plugins/with-blank-splash-logo.js')).exists()).toBe(true);
   });
+
+  test('ships the native voice playback module for Android', async () => {
+    const moduleRoot = 'modules/react-native-memento-voice';
+    const index = await Bun.file(repoFile(`${moduleRoot}/src/index.ts`)).text();
+    const gradle = await Bun.file(repoFile(`${moduleRoot}/android/build.gradle`)).text();
+    const cmake = await Bun.file(repoFile(`${moduleRoot}/android/CMakeLists.txt`)).text();
+    const modulePackage = await Bun.file(repoFile(`${moduleRoot}/package.json`)).json();
+
+    expect(index).toContain("Platform.OS !== 'android'");
+    expect(gradle).toContain('implementation project(":react-native-audio-api")');
+    expect(cmake).toContain('react-native-audio-api::react-native-audio-api');
+    expect(modulePackage.codegenConfig.android.javaPackageName).toBe('io.mymemento.voice');
+    expect(modulePackage.files).toContain('android');
+  });
 });
