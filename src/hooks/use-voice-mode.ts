@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai/web';
 import type { LiveServerMessage, Session } from '@google/genai/web';
+import NetInfo from '@react-native-community/netinfo';
 import * as Device from 'expo-device';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
@@ -30,6 +31,10 @@ import {
   createCallNotificationAdapter,
   VoiceCallNotification,
 } from '@/features/chat/voice-call-notification';
+import {
+  shouldReconnectOnNetworkChange,
+  type NetworkSnapshot,
+} from '@/features/chat/voice-network';
 import { createThrottledSetter, type ThrottledSetter } from '@/features/chat/voice-throttle';
 import { SEARCH_MEMORIES_TOOL, VoiceToolRelay } from '@/features/chat/voice-tool-relay';
 import { buildEphemeralTokenUrl } from '@/features/chat/voice-token-url';
@@ -78,7 +83,10 @@ const TRANSCRIPT_UI_INTERVAL_MS = 100;
 // Tool calls this build can relay. The API locks matching tools into the session.
 const CLIENT_CAPABILITIES = [SEARCH_MEMORIES_TOOL];
 const SPEAKER_FULL_DUPLEX = process.env.EXPO_PUBLIC_VOICE_FULL_DUPLEX === 'true';
-const RECONNECT_DELAYS_MS = [0, 500, 1_500];
+// About 10 s in total, enough to ride out a tunnel or a network switch.
+const RECONNECT_DELAYS_MS = [0, 500, 1_500, 3_000, 5_000];
+
+type ReconnectReason = 'go-away' | 'connection-lost' | 'network-change';
 
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -142,7 +150,7 @@ export function useVoiceMode({
   const sessionRef = useRef<Session | null>(null);
   const resumeHandleRef = useRef<string | null>(null);
   const reconnectingRef = useRef(false);
-  const reconnectRef = useRef<(reason: 'go-away' | 'connection-lost') => Promise<boolean>>(
+  const reconnectRef = useRef<(reason: ReconnectReason) => Promise<boolean>>(
     async () => false,
   );
   const connectionLostRef = useRef<
@@ -163,6 +171,8 @@ export function useVoiceMode({
   const turnSyncRef = useRef<VoiceTurnSync | null>(null);
   const toolRelayRef = useRef<VoiceToolRelay | null>(null);
   const fullDuplexRef = useRef(SPEAKER_FULL_DUPLEX);
+  const networkUnsubscribeRef = useRef<(() => void) | null>(null);
+  const lastNetworkRef = useRef<NetworkSnapshot | undefined>(undefined);
   const callNotificationRef = useRef<VoiceCallNotification | null>(null);
   if (!callNotificationRef.current) {
     callNotificationRef.current = new VoiceCallNotification(
@@ -403,6 +413,9 @@ export function useVoiceMode({
     hasCompletedSessionRef.current = true;
     isSessionActiveRef.current = false;
     isMutedRef.current = true;
+    networkUnsubscribeRef.current?.();
+    networkUnsubscribeRef.current = null;
+    lastNetworkRef.current = undefined;
     toolRelayRef.current = null;
     void callNotificationRef.current?.stop();
     if (greetingTimerRef.current) {
@@ -561,7 +574,7 @@ export function useVoiceMode({
   );
 
   const reconnect = useCallback(
-    async (reason: 'go-away' | 'connection-lost'): Promise<boolean> => {
+    async (reason: ReconnectReason): Promise<boolean> => {
       if (reconnectingRef.current) return true;
       if (!resumeHandleRef.current || !isSessionActiveRef.current) return false;
       reconnectingRef.current = true;
@@ -789,6 +802,15 @@ export function useVoiceMode({
       }, 1_000);
       void callNotificationRef.current?.start(() => {
         void disconnectRef.current();
+      });
+      networkUnsubscribeRef.current?.();
+      lastNetworkRef.current = undefined;
+      networkUnsubscribeRef.current = NetInfo.addEventListener((state) => {
+        const next = { type: String(state.type), isConnected: state.isConnected };
+        if (shouldReconnectOnNetworkChange(lastNetworkRef.current, next)) {
+          void reconnectRef.current('network-change');
+        }
+        lastNetworkRef.current = next;
       });
       if (isMountedRef.current) {
         setIsConnected(true);
