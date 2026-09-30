@@ -64,6 +64,8 @@ import { SheetManager } from '@/components/sheets/SheetManager';
 import { AppSwitcherPrivacyBlur } from '@/components/security/AppSwitcherPrivacyBlur';
 import { VaultLockoutScreen } from '@/components/security/VaultLockoutScreen';
 import { BackgroundMusicProvider } from '@/hooks/use-background-music';
+import { VoiceCallProvider } from '@/hooks/use-voice-call';
+import { FloatingCallBar } from '@/components/chat/FloatingCallBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { storageKeys } from '@/constants/storage-keys';
 
@@ -522,6 +524,7 @@ function RootLayout() {
                 <ShareIntentProvider>
                   <ToastProvider>
                     <BackgroundMusicProvider>
+                    <VoiceCallProvider>
                       <OfflineNotice />
 
                       {shouldInitializeNotifications(
@@ -665,9 +668,12 @@ function RootLayout() {
                         <Stack.Screen name="+not-found" />
                       </Stack>
 
+                      <FloatingCallBar />
+
                       <SheetManager />
                       <AppSwitcherPrivacyBlur />
                       <VaultLockoutScreen />
+                    </VoiceCallProvider>
                     </BackgroundMusicProvider>
                   </ToastProvider>
                 </ShareIntentProvider>
