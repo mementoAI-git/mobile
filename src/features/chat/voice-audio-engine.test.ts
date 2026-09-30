@@ -191,16 +191,19 @@ describe('VoiceAudioEngine', () => {
     });
   });
 
-  test('cleans up exactly once when backgrounded and when stop repeats', async () => {
+  test('keeps running in the background and cleans up exactly once when stop repeats', async () => {
     const native = new FakeNative();
     const failures: Error[] = [];
     const engine = new VoiceAudioEngine({ native, onFatalError: (error) => failures.push(error) });
     await engine.start(() => {});
 
     await engine.handleAppState('background');
+    expect(failures).toHaveLength(0);
+    expect(native.calls).not.toContain('recorder.stop');
+    await engine.stop();
     await engine.stop();
 
-    expect(failures).toHaveLength(1);
+    expect(failures).toHaveLength(0);
     for (const call of [
       'recorder.clearCallback',
       'recorder.clearError',

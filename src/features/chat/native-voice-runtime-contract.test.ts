@@ -23,10 +23,17 @@ describe('native voice runtime contract', () => {
       {
         iosMicrophonePermission:
           'Allow Memento to access your microphone for voice conversations.',
+        iosBackgroundMode: true,
         androidPermissions: [
           'android.permission.RECORD_AUDIO',
           'android.permission.MODIFY_AUDIO_SETTINGS',
+          'android.permission.FOREGROUND_SERVICE',
+          'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
+          'android.permission.FOREGROUND_SERVICE_MICROPHONE',
+          'android.permission.POST_NOTIFICATIONS',
         ],
+        androidForegroundService: true,
+        androidFSTypes: ['mediaPlayback', 'microphone'],
       },
     ]);
   });

@@ -325,9 +325,10 @@ export class VoiceAudioEngine {
   }
 
   async handleAppState(state: string): Promise<void> {
-    if (state === 'background') {
-      await this.fail(new Error('Voice mode ended when Memento moved to the background.'));
-    }
+    // Calls continue in the background. iOS keeps the voice-chat audio session
+    // alive (UIBackgroundModes audio) and Android runs a microphone foreground
+    // service while the call notification is shown.
+    if (state === 'background') this.metrics.markBackgrounded();
   }
 
   async stop(): Promise<void> {

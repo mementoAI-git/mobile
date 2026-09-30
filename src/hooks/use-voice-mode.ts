@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai/web';
 import type { LiveServerMessage, Session } from '@google/genai/web';
 import * as Haptics from 'expo-haptics';
+import { Platform } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import endpoint from '@/api/endpoint';
@@ -25,9 +26,10 @@ import {
 } from '@/features/chat/voice-transcript-turns';
 import { VoiceTurnSync } from '@/features/chat/voice-turn-sync';
 import {
-  createThrottledSetter,
-  type ThrottledSetter,
-} from '@/features/chat/voice-throttle';
+  createCallNotificationAdapter,
+  VoiceCallNotification,
+} from '@/features/chat/voice-call-notification';
+import { createThrottledSetter, type ThrottledSetter } from '@/features/chat/voice-throttle';
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { serializeVoiceCallTranscript } from '@/features/chat/voice-transcript-parser';
 import { isPermissionGranted } from '@/lib/permission-recovery';
@@ -154,6 +156,12 @@ export function useVoiceMode({
   const sessionIdRef = useRef<string>(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const transcriptRef = useRef(new VoiceTranscriptTurns());
   const turnSyncRef = useRef<VoiceTurnSync | null>(null);
+  const callNotificationRef = useRef<VoiceCallNotification | null>(null);
+  if (!callNotificationRef.current) {
+    callNotificationRef.current = new VoiceCallNotification(
+      createCallNotificationAdapter(Platform.OS),
+    );
+  }
   const userTextSetterRef = useRef<ThrottledSetter<string> | null>(null);
   const aiTextSetterRef = useRef<ThrottledSetter<string> | null>(null);
   if (!userTextSetterRef.current) {
@@ -384,6 +392,7 @@ export function useVoiceMode({
     hasCompletedSessionRef.current = true;
     isSessionActiveRef.current = false;
     isMutedRef.current = true;
+    void callNotificationRef.current?.stop();
     if (greetingTimerRef.current) {
       clearTimeout(greetingTimerRef.current);
       greetingTimerRef.current = null;
@@ -742,6 +751,9 @@ export function useVoiceMode({
         recordingTimeRef.current += 1;
         setRecordingTime((time) => time + 1);
       }, 1_000);
+      void callNotificationRef.current?.start(() => {
+        void disconnectRef.current();
+      });
       if (isMountedRef.current) {
         setIsConnected(true);
         setIsConnecting(false);
