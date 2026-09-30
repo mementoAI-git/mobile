@@ -34,6 +34,10 @@ export type NativeVoicePlaybackSnapshot = {
   sequenceGapCount: number;
   malformedChunkCount: number;
   isAudible: boolean;
+  /** Extra buffer the adaptive jitter buffer currently adds. */
+  adaptiveExtraMs?: number;
+  /** Output frames synthesized by packet loss concealment. */
+  concealedFrames?: number;
 };
 
 type NativeAudioNode = {

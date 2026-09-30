@@ -34,6 +34,9 @@ export class NativeVoicePlaybackController {
   private pollTimer?: unknown;
   private lastUnderrunCount = 0;
   private lastPlaybackEndTime = 0;
+  private finalSnapshot?: NativeVoicePlaybackSnapshot;
+  /** Output sample rate of the native context, used to convert concealed frames to ms. */
+  targetSampleRate?: number;
 
   constructor(
     private readonly session: NativeVoicePlaybackSessionAdapter,
@@ -82,9 +85,21 @@ export class NativeVoicePlaybackController {
     this.schedulePoll();
   }
 
+  getStats(): { adaptiveExtraMs?: number; concealedMs?: number } {
+    const snapshot = this.finalSnapshot ?? this.session.getSnapshot();
+    return {
+      adaptiveExtraMs: snapshot.adaptiveExtraMs,
+      concealedMs:
+        snapshot.concealedFrames === undefined || !this.targetSampleRate
+          ? undefined
+          : Math.round((snapshot.concealedFrames / this.targetSampleRate) * 1_000),
+    };
+  }
+
   stop(): void {
     if (this.state === 'stopped') return;
     this.cancelPoll();
+    this.finalSnapshot = this.session.getSnapshot();
     this.session.stop(this.generation);
     this.setState('stopped');
     this.lastPlaybackEndTime = Date.now();
