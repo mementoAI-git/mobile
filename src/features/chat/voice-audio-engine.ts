@@ -114,6 +114,8 @@ export type VoiceAudioEngineSnapshot = VoiceMetricSnapshot & {
 export type VoiceAudioEngineOptions = {
   native?: VoiceAudioNativeAdapter;
   metrics?: VoiceSessionMetrics;
+  /** Stream the mic while model audio plays on the loudspeaker. Relies on OS echo cancellation. */
+  speakerFullDuplex?: boolean;
   onFatalError?: (error: Error) => void;
   onPlaybackStateChange?: (
     state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
@@ -163,6 +165,7 @@ export class QueuePlaybackRuntime implements VoicePlaybackRuntime {
 export class VoiceAudioEngine {
   private readonly native: VoiceAudioNativeAdapter;
   private readonly metrics: VoiceSessionMetrics;
+  private readonly speakerFullDuplex: boolean;
   private readonly onFatalError?: (error: Error) => void;
   private readonly onPlaybackStateChange?: (
     state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
@@ -185,6 +188,7 @@ export class VoiceAudioEngine {
   constructor(options: VoiceAudioEngineOptions = {}) {
     this.native = options.native ?? createNativeVoiceAudioAdapter();
     this.metrics = options.metrics ?? new VoiceSessionMetrics();
+    this.speakerFullDuplex = options.speakerFullDuplex ?? false;
     this.onFatalError = options.onFatalError;
     this.onPlaybackStateChange = options.onPlaybackStateChange;
   }
@@ -276,7 +280,7 @@ export class VoiceAudioEngine {
           // suppress mic uplink while playback is active/audible to eliminate acoustic echo feedback
           // that causes the server VAD to falsely detect user speech and cut the AI response.
           // When headphones are connected, full duplex is safe (no acoustic speaker feedback).
-          if (!this.isHeadphones && this.isAudible(200)) return;
+          if (!this.speakerFullDuplex && !this.isHeadphones && this.isAudible(200)) return;
 
           const channel = event.buffer.getChannelData(0);
           const actualFrames = Math.min(event.numFrames, channel.length);
@@ -296,6 +300,7 @@ export class VoiceAudioEngine {
   }
 
   armGreetingShield(): void {
+    if (this.speakerFullDuplex) return;
     this.greetingShieldActive = true;
   }
 

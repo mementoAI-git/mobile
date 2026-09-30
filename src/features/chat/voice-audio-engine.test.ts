@@ -387,5 +387,28 @@ describe('VoiceAudioEngine', () => {
     // Passthrough! Full duplex allows natural vocal interruption
     expect(chunks).toHaveLength(1);
   });
+
+  test('streams mic audio during loudspeaker playback when speaker full duplex is enabled', async () => {
+    const native = new FakeNative();
+    native.isHeadphonesDevice = false;
+    const chunks: string[] = [];
+    const engine = new VoiceAudioEngine({ native, speakerFullDuplex: true });
+
+    await engine.start((chunk) => chunks.push(chunk));
+    engine.armGreetingShield();
+
+    const pcmSamples = new Float32Array(4800).fill(0.1);
+    const pcmBase64 = btoa(String.fromCharCode(...new Uint8Array(pcmSamples.length * 2)));
+    engine.enqueueOutput(pcmBase64, 1);
+    expect(engine.isPlaying()).toBe(true);
+
+    const userVoice = new Float32Array(1_600).fill(0.1);
+    native.recorder.input?.({
+      buffer: { getChannelData: () => userVoice },
+      numFrames: 1_600,
+    });
+
+    expect(chunks).toHaveLength(1);
+  });
 });
 

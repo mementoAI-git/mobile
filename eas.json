@@ -9,7 +9,8 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://dev.mymemento.io/api",
-        "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "1"
+        "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "1",
+        "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "true"
       },
       "android": {
         "buildType": "apk"
@@ -22,7 +23,8 @@
         "EXPO_PUBLIC_API_BASE_URL": "https://dev.mymemento.io/api",
         "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "0.2",
         "SENTRY_ALLOW_FAILURE": "true",
-        "EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK": "true"
+        "EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK": "true",
+        "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "true"
       }
     },
     "testflight": {
@@ -34,7 +36,8 @@
         "EXPO_PUBLIC_API_BASE_URL": "https://dev.mymemento.io/api",
         "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "0.2",
         "SENTRY_ALLOW_FAILURE": "true",
-        "EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK": "true"
+        "EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK": "true",
+        "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "true"
       }
     },
     "production": {
@@ -46,7 +49,8 @@
         "EXPO_PUBLIC_API_BASE_URL": "https://app.mymemento.io/api",
         "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "0.2",
         "SENTRY_ALLOW_FAILURE": "true",
-        "EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK": "true"
+        "EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK": "true",
+        "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "false"
       }
     }
   },

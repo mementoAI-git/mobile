@@ -63,6 +63,7 @@ function createSetupReady(): SetupReady {
 }
 
 const TRANSCRIPT_SETTLE_MS = 600;
+const SPEAKER_FULL_DUPLEX = process.env.EXPO_PUBLIC_VOICE_FULL_DUPLEX === 'true';
 
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -442,7 +443,7 @@ export function useVoiceMode({
     isSessionActiveRef.current = true;
     hasCompletedSessionRef.current = false;
     isMutedRef.current = false;
-    isGreetingActiveRef.current = true;
+    isGreetingActiveRef.current = !SPEAKER_FULL_DUPLEX;
     isAiSpeakingRef.current = false;
     setIsMuted(false);
     setRecordingTime(0);
@@ -466,6 +467,7 @@ export function useVoiceMode({
     setupReadyRef.current = setupReady;
 
     const engine = new VoiceAudioEngine({
+      speakerFullDuplex: SPEAKER_FULL_DUPLEX,
       onFatalError: (error) => {
         logger.error('Native voice audio failed', error);
         if (isMountedRef.current) {
@@ -580,11 +582,13 @@ export function useVoiceMode({
       // Safety guard: The greeting shield prevents the model's initial spoken greeting
       // from leaking into the microphone and causing self-interruption.
       // It automatically disarms after 4.5 seconds if playback state has not already disarmed it.
-      if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current);
-      greetingTimerRef.current = setTimeout(() => {
-        isGreetingActiveRef.current = false;
-        engineRef.current?.disarmGreetingShield();
-      }, 4500);
+      if (!SPEAKER_FULL_DUPLEX) {
+        if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current);
+        greetingTimerRef.current = setTimeout(() => {
+          isGreetingActiveRef.current = false;
+          engineRef.current?.disarmGreetingShield();
+        }, 4500);
+      }
 
       timerRef.current = setInterval(() => {
         recordingTimeRef.current += 1;
