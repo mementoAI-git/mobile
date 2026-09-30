@@ -164,6 +164,7 @@
         }
       ],
       "expo-image",
+      "./plugins/with-blank-splash-logo",
       [
         "expo-splash-screen",
         {

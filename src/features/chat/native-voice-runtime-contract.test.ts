@@ -85,4 +85,19 @@ describe('native voice runtime contract', () => {
 
     expect(playerSource).not.toContain('audioBuffer_->normalize()');
   });
+
+  test('generates the Android splash drawable that the splash theme references', async () => {
+    const appJson = await Bun.file(repoFile('app.json')).json();
+    const plugins = appJson.expo.plugins as unknown[];
+    const blank = plugins.indexOf('./plugins/with-blank-splash-logo');
+    const splash = plugins.findIndex(
+      (entry) => Array.isArray(entry) && entry[0] === 'expo-splash-screen',
+    );
+
+    // Expo runs dangerous mods in reverse plugin order: list this plugin first so
+    // it writes the drawable after expo-splash-screen clears its images.
+    expect(blank).toBeGreaterThanOrEqual(0);
+    expect(blank).toBeLessThan(splash);
+    expect(await Bun.file(repoFile('plugins/with-blank-splash-logo.js')).exists()).toBe(true);
+  });
 });
