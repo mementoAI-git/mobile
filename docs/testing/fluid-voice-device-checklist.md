@@ -73,3 +73,14 @@ Change one variable per run. Playback prebuffer may be tuned from 80–240 ms; s
 | Date | Route/network | Variable | Before | After | Before result | After result | Keep/revert |
 |---|---|---|---:|---:|---|---|---|
 | pending | pending | pending | pending | pending | pending | pending | pending |
+
+## Phase 1c acceptance (2026-09-30 strategy)
+
+Run on one iPhone and one mid-range Android phone.
+
+- [ ] Lock the screen mid-call for 2 minutes. The conversation continues, and the transcript keeps both sides.
+- [ ] Android: the "Memento voice call" notification shows during the call and its stop button ends the call.
+- [ ] Switch Wi-Fi off mid-sentence. `[VoiceMode] reconnecting` with reason `network-change` appears, and the call resumes within 3 seconds.
+- [ ] Ask about a specific past memory not in the recent chat ("what did I tell you about my grandma's farm?"). The model answers from the memory. The API log shows one `POST /ai/voice/memory-search`.
+- [ ] Put a test device's model on `VOICE_SPEAKER_DUPLEX_DENYLIST` on staging. On the next call, speaking over the model on speaker no longer interrupts it.
+- [ ] The call screen stays smooth while the model talks. No dropped frames are visible in the transcript animation.
