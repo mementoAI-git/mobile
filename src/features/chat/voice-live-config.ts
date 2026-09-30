@@ -6,6 +6,10 @@ export type VoiceLiveToken = {
   model: string;
   voiceName: string;
   systemInstruction?: string;
+  greetingInstruction?: string;
+  memoryId?: string;
+  /** True when the API records voice turns via POST /ai/voice/turns. */
+  supportsVoiceTurns: boolean;
 };
 
 export const LEGACY_LIVE_MODEL =
@@ -52,6 +56,14 @@ export function parseVoiceLiveToken(
     systemInstruction: nonEmptyString(response.systemInstruction)
       ? (response.systemInstruction as string)
       : undefined,
+    greetingInstruction: nonEmptyString(response.greetingInstruction)
+      ? response.greetingInstruction
+      : undefined,
+    memoryId:
+      nonEmptyString(response.memoryId) && /^[0-9a-fA-F]{24}$/.test(response.memoryId)
+        ? response.memoryId
+        : undefined,
+    supportsVoiceTurns: nonEmptyString(response.promptVersion),
   };
 }
 

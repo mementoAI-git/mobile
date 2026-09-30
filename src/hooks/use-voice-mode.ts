@@ -24,7 +24,6 @@ import {
 } from '@/features/chat/voice-transcript-turns';
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { serializeVoiceCallTranscript } from '@/features/chat/voice-transcript-parser';
-import { getConversationMessagesUrl } from '@/features/chat/conversation-pagination';
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { logger } from '@/lib/logger';
@@ -515,64 +514,7 @@ export function useVoiceMode({
       const liveToken = parseVoiceLiveToken(tokenResponse.data, voiceName ?? 'Fenrir');
 
       const user = useUserStore.getState().user;
-      const targetMemoryId = memoryIdRef.current;
-
-      // 1. Gather recent conversation messages from query cache or network
-      let recentChatLines: string[] = [];
-      if (targetMemoryId) {
-        const cachedMessages = queryClient.getQueryData<any>(queryKeys.promptMessages(targetMemoryId));
-        let messages = cachedMessages?.pages?.flatMap((p: any) => p.messages ?? []) ?? [];
-        if (!messages.length) {
-          try {
-            const fetched = await get<any>(getConversationMessagesUrl(endpoint.aiPromptMessage, targetMemoryId));
-            messages = fetched.data?.messages ?? [];
-          } catch {
-            // Non-blocking fallback
-          }
-        }
-        recentChatLines = messages
-          .slice(-12)
-          .map((m: any) => {
-            const role = m.role === 'user' ? (user?.nickname || 'User') : 'Memento';
-            const body = (m.text || m.content || '').trim();
-            return body ? `${role}: ${body}` : '';
-          })
-          .filter(Boolean);
-      }
-
-      // 2. Gather memory reflection topic & notes
-      let memoryTitle = '';
-      let memoryBody = '';
-      if (targetMemoryId) {
-        let mem = queryClient.getQueryData<any>(queryKeys.memory(targetMemoryId));
-        if (!mem) {
-          try {
-            const fetchedMem = await get<any>(endpoint.memory.replace(':id', targetMemoryId));
-            mem = fetchedMem.data;
-          } catch {
-            // Non-blocking fallback
-          }
-        }
-        if (mem) {
-          memoryTitle = (mem.title || mem.prompt_text || '').trim();
-          memoryBody = (mem.body || '').trim();
-        }
-      }
-
-      // 3. User insights summary
-      const insights = queryClient.getQueryData<any>(queryKeys.personaMemoryInsightsSummary);
-      const userInsights = insights?.summary ? `User Persona Insights: ${insights.summary}` : '';
-
-      // 4. Assemble the grounded context block
-      const contextBlocks = [
-        liveToken.systemInstruction,
-        userInsights,
-        memoryTitle ? `REFLECTION TOPIC:\n"${memoryTitle}"` : '',
-        memoryBody ? `MEMORY NOTES / DRAFT:\n"${memoryBody.slice(0, 400)}"` : '',
-        recentChatLines.length > 0 ? `RECENT CONVERSATION HISTORY (Last ${recentChatLines.length} turns):\n${recentChatLines.join('\n')}` : '',
-      ].filter(Boolean);
-
-      const assembledContext = contextBlocks.join('\n\n');
+      if (liveToken.memoryId) memoryIdRef.current = liveToken.memoryId;
 
       const client = new GoogleGenAI({
         apiKey: liveToken.token,
@@ -599,11 +541,8 @@ export function useVoiceMode({
             void disconnectRef.current();
           },
         },
-        config: buildGeminiLiveConfig(
-          liveToken.voiceName,
-          user,
-          assembledContext,
-        ),
+        // The token locks the real config server-side. This only satisfies the SDK.
+        config: buildGeminiLiveConfig(liveToken.voiceName, user),
       });
 
       // Arm the greeting shield BEFORE awaiting setup-complete so that
@@ -618,11 +557,11 @@ export function useVoiceMode({
       engine.armGreetingShield();
       await setupReady.promise;
       const userGreetingName = user?.nickname || user?.first_name || '';
-      const greetingPrompt = memoryTitle
-        ? `Start with a brief, warm greeting in English${userGreetingName ? ` to ${userGreetingName}` : ''}. You may briefly reference our reflection on "${memoryTitle}" and ask what they would like to explore or share today. Maintain English exclusively and never fabricate or assume past events.`
-        : recentChatLines.length > 0
-          ? `Start with a brief, warm greeting in English${userGreetingName ? ` to ${userGreetingName}` : ''}. Welcome them back and ask how they would like to continue our conversation today. Maintain English exclusively and do not invent past conversations.`
-          : `Start with a brief, warm greeting in English${userGreetingName ? ` to ${userGreetingName}` : ''}. Then warmly invite them to share what is on their mind today. Maintain English exclusively.`;
+      const greetingPrompt =
+        liveToken.greetingInstruction ??
+        `Start with a brief, warm greeting in English${
+          userGreetingName ? ` to ${userGreetingName}` : ''
+        }. Then let them lead.`;
 
       sessionRef.current.sendClientContent({
         turns: [

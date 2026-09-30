@@ -15,6 +15,7 @@ describe('voice Live configuration', () => {
     }, 'Aoede')).toEqual({
       token: 'ephemeral',
       model: 'gemini-3.8-live',
+      supportsVoiceTurns: false,
       voiceName: 'Fenrir',
     });
   });
@@ -24,7 +25,33 @@ describe('voice Live configuration', () => {
       token: 'ephemeral',
       model: 'gemini-2.5-flash-native-audio-preview-09-2025',
       voiceName: 'Aoede',
+      supportsVoiceTurns: false,
     });
+  });
+
+  test('parses the server greeting, memory and turn support from the token payload', () => {
+    const parsed = parseVoiceLiveToken(
+      {
+        token: 'auth_tokens/abc',
+        live: { model: 'gemini-3.8-live', voice: { name: 'Kore' } },
+        greetingInstruction: 'Greet Sam in one short sentence.',
+        memoryId: '64b000000000000000000001',
+        promptVersion: 'voice-2026-09-30',
+      },
+      'Fenrir',
+    );
+
+    expect(parsed.greetingInstruction).toBe('Greet Sam in one short sentence.');
+    expect(parsed.memoryId).toBe('64b000000000000000000001');
+    expect(parsed.supportsVoiceTurns).toBe(true);
+  });
+
+  test('older API responses leave greeting unset and do not claim turn support', () => {
+    const parsed = parseVoiceLiveToken({ token: 'auth_tokens/abc', memoryId: null }, 'Fenrir');
+
+    expect(parsed.greetingInstruction).toBeUndefined();
+    expect(parsed.memoryId).toBeUndefined();
+    expect(parsed.supportsVoiceTurns).toBe(false);
   });
 
   test('rejects a missing token', () => {
