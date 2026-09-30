@@ -6,6 +6,7 @@ import {
   float32ToPcm16Base64,
   isBargeInSpeech,
   pcm16Base64ToFloat32,
+  resampleLinear,
 } from './voice-pcm';
 
 const decodeBytes = (value: string) =>
@@ -37,6 +38,24 @@ describe('voice PCM conversion', () => {
       ok: false,
       reason: 'odd-byte-length',
     });
+  });
+
+  test('resamples model PCM to the playback context rate while preserving duration', () => {
+    const source = Float32Array.from([0, 1, 0, -1]);
+    const output = resampleLinear(source, 24_000, 48_000);
+
+    expect(output).toHaveLength(8);
+    expect(Array.from(output)).toEqual([0, 0.5, 1, 0.5, 0, -0.5, -1, -1]);
+    expect(output.length / 48_000).toBe(source.length / 24_000);
+  });
+
+  test('copies matching-rate PCM and rejects invalid sample rates', () => {
+    const source = Float32Array.from([0.25, -0.25]);
+    const output = resampleLinear(source, 48_000, 48_000);
+
+    expect(output).not.toBe(source);
+    expect(Array.from(output)).toEqual(Array.from(source));
+    expect(() => resampleLinear(source, 0, 48_000)).toThrow();
   });
 
   test('calculates RMS energy and peak amplitude accurately', () => {

@@ -14,10 +14,12 @@ import {
   buildGeminiLiveConfig,
   parseVoiceLiveToken,
 } from '@/features/chat/voice-live-config';
-import { VoiceMessageHandler } from '@/features/chat/voice-message-handler';
+import {
+  summarizeVoiceServerMessage,
+  VoiceMessageHandler,
+} from '@/features/chat/voice-message-handler';
 import {
   VoiceTranscriptTurns,
-  type VoiceTranscriptTurn,
   type VoiceTranscriptMessage,
 } from '@/features/chat/voice-transcript-turns';
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
@@ -61,10 +63,44 @@ function createSetupReady(): SetupReady {
   };
 }
 
-function restoreTurns(accumulator: VoiceTranscriptTurns, turns: VoiceTranscriptTurn[]): void {
-  for (let index = turns.length - 1; index >= 0; index -= 1) {
-    accumulator.restoreFailedTurn(turns[index]);
-  }
+const TRANSCRIPT_SETTLE_MS = 600;
+
+function wait(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+type VoiceTranscriptDiagnostics = {
+  rawMessages: number;
+  setupComplete: number;
+  interrupted: number;
+  turnComplete: number;
+  outputAudioFrames: number;
+  inputTranscriptFrames: number;
+  interimInputTranscriptFrames: number;
+  outputTranscriptFrames: number;
+  outputTranscriptFinished: number;
+  inputTranscriptCharacters: number;
+  interimInputTranscriptCharacters: number;
+  outputTranscriptCharacters: number;
+  seenEventShapes: Set<string>;
+};
+
+function createVoiceTranscriptDiagnostics(): VoiceTranscriptDiagnostics {
+  return {
+    rawMessages: 0,
+    setupComplete: 0,
+    interrupted: 0,
+    turnComplete: 0,
+    outputAudioFrames: 0,
+    inputTranscriptFrames: 0,
+    interimInputTranscriptFrames: 0,
+    outputTranscriptFrames: 0,
+    outputTranscriptFinished: 0,
+    inputTranscriptCharacters: 0,
+    interimInputTranscriptCharacters: 0,
+    outputTranscriptCharacters: 0,
+    seenEventShapes: new Set<string>(),
+  };
 }
 
 export function useVoiceMode({
@@ -93,21 +129,23 @@ export function useVoiceMode({
   const hasCompletedSessionRef = useRef(false);
   const sessionIdRef = useRef<string>(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const transcriptRef = useRef(new VoiceTranscriptTurns());
-  const transcriptFlushRef = useRef(Promise.resolve());
+  const transcriptDiagnosticsRef = useRef(createVoiceTranscriptDiagnostics());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingTimeRef = useRef(0);
   const userSpeechTextRef = useRef('');
   const aiSpeechTextRef = useRef('');
+  const pendingTurnCompleteRef = useRef(false);
+  const outputTranscriptFinishedRef = useRef(false);
+  const pendingTurnCompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const greetingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const memoryIdRef = useRef(memoryId);
   if (memoryId && /^[0-9a-fA-F]{24}$/.test(memoryId)) {
     memoryIdRef.current = memoryId;
   }
 
-  const flushTranscripts = useCallback(() => {
-    const persist = async () => {
-      const turns = transcriptRef.current.drainCompleted();
-      if (!turns.length) return;
-
+  const persistVoiceMessages = useCallback(
+    async (messages: VoiceTranscriptMessage[]): Promise<boolean> => {
+      if (!messages.length) return true;
       const cachedProfile = queryClient.getQueryData<any>(queryKeys.profile);
       const userPrimaryId =
         useUserStore.getState().user?.primary_conversation_id ??
@@ -123,7 +161,7 @@ export function useVoiceMode({
         memory_id?: string;
       } = {
         session_id: sessionIdRef.current,
-        messages: turns.flatMap((turn) => turn.messages),
+        messages,
       };
       if (targetMemoryId) {
         payload.memory_id = targetMemoryId;
@@ -155,24 +193,52 @@ export function useVoiceMode({
         }
         void queryClient.invalidateQueries({ queryKey: queryKeys.memories() });
         void queryClient.invalidateQueries({ queryKey: queryKeys.stories() });
+        return true;
       } catch (error) {
         logger.error('Failed to save voice transcript', error);
-        restoreTurns(transcriptRef.current, turns);
+        return false;
       }
-    };
-    transcriptFlushRef.current = transcriptFlushRef.current.then(persist, persist);
-    return transcriptFlushRef.current;
-  }, []);
-
-  useEffect(() => {
-    if (memoryId && /^[0-9a-fA-F]{24}$/.test(memoryId)) {
-      memoryIdRef.current = memoryId;
-      void flushTranscripts();
-    }
-  }, [memoryId, flushTranscripts]);
+    },
+    [],
+  );
 
   const handleLiveMessage = useCallback(
     (message: LiveServerMessage) => {
+      const summary = summarizeVoiceServerMessage(message);
+      const diagnostics = transcriptDiagnosticsRef.current;
+      diagnostics.rawMessages += 1;
+      diagnostics.setupComplete += summary.setupComplete ? 1 : 0;
+      diagnostics.interrupted += summary.interrupted ? 1 : 0;
+      diagnostics.turnComplete += summary.turnComplete ? 1 : 0;
+      diagnostics.outputAudioFrames += summary.outputAudioFrames;
+      diagnostics.inputTranscriptFrames += summary.inputTranscriptLength > 0 ? 1 : 0;
+      diagnostics.interimInputTranscriptFrames +=
+        summary.interimInputTranscriptLength > 0 ? 1 : 0;
+      diagnostics.outputTranscriptFrames +=
+        summary.outputTranscriptLength > 0 || summary.outputTranscriptFinished ? 1 : 0;
+      diagnostics.outputTranscriptFinished += summary.outputTranscriptFinished ? 1 : 0;
+      diagnostics.inputTranscriptCharacters += summary.inputTranscriptLength;
+      diagnostics.interimInputTranscriptCharacters += summary.interimInputTranscriptLength;
+      diagnostics.outputTranscriptCharacters += summary.outputTranscriptLength;
+
+      const eventShape = summary.serverContentKeys.join(',') || 'no-server-content';
+      const isNewEventShape = !diagnostics.seenEventShapes.has(eventShape);
+      diagnostics.seenEventShapes.add(eventShape);
+      const hasTranscriptOrControlEvent =
+        summary.setupComplete ||
+        summary.interrupted ||
+        summary.turnComplete ||
+        summary.inputTranscriptLength > 0 ||
+        summary.interimInputTranscriptLength > 0 ||
+        summary.outputTranscriptLength > 0 ||
+        summary.outputTranscriptFinished;
+      if (isNewEventShape || hasTranscriptOrControlEvent) {
+        logger.runtime('[VoiceMode] Gemini event', {
+          sequence: diagnostics.rawMessages,
+          ...summary,
+        });
+      }
+
       const engine = engineRef.current;
       const currentEpoch = engine?.getEpoch() ?? 1;
       for (const effect of messageHandlerRef.current.handle(message, currentEpoch)) {
@@ -180,13 +246,26 @@ export function useVoiceMode({
           engine?.markSetupComplete();
           setupReadyRef.current?.resolve();
         } else if (effect.type === 'interrupted') {
-          // Server confirmed interruption — engine owns the new epoch
+          // Server confirmed interruption — engine owns the new epoch.
+          // handleInterruption() promotes any interim user text to final so
+          // it isn't lost when we complete the (truncated) model turn.
           const newEpoch = engine?.nextEpoch() ?? 1;
           engine?.interruptOutput(newEpoch);
+          if (greetingTimerRef.current) {
+            clearTimeout(greetingTimerRef.current);
+            greetingTimerRef.current = null;
+          }
           isGreetingActiveRef.current = false;
+          engine?.disarmGreetingShield();
           isAiSpeakingRef.current = false;
+          pendingTurnCompleteRef.current = false;
+          if (pendingTurnCompleteTimerRef.current) {
+            clearTimeout(pendingTurnCompleteTimerRef.current);
+            pendingTurnCompleteTimerRef.current = null;
+          }
+          transcriptRef.current.handleInterruption();
           transcriptRef.current.completeTurn();
-          void flushTranscripts();
+          outputTranscriptFinishedRef.current = false;
           if (isMountedRef.current) setIsAiSpeaking(false);
         } else if (effect.type === 'output-audio') {
           if (engine?.enqueueOutput(effect.data, effect.epoch) && isMountedRef.current) {
@@ -194,24 +273,54 @@ export function useVoiceMode({
             setIsAiSpeaking(true);
           }
         } else if (effect.type === 'input-transcript') {
-          const text = transcriptRef.current.appendUser(effect.text);
+          const text = transcriptRef.current.appendUser(effect.text, effect.isInterim);
           userSpeechTextRef.current = text;
           if (isMountedRef.current) setUserSpeechText(text);
         } else if (effect.type === 'output-transcript') {
-          const text = transcriptRef.current.appendModel(effect.text);
-          aiSpeechTextRef.current = text;
-          if (isMountedRef.current) setAiSpeechText(text);
+          outputTranscriptFinishedRef.current = effect.finished;
+          if (effect.text) {
+            const text = transcriptRef.current.appendModel(effect.text);
+            aiSpeechTextRef.current = text;
+            if (isMountedRef.current) setAiSpeechText(text);
+          }
+          if (effect.finished) {
+            if (pendingTurnCompleteRef.current) {
+              pendingTurnCompleteRef.current = false;
+              if (pendingTurnCompleteTimerRef.current) {
+                clearTimeout(pendingTurnCompleteTimerRef.current);
+                pendingTurnCompleteTimerRef.current = null;
+              }
+              transcriptRef.current.settlePendingTurn();
+              outputTranscriptFinishedRef.current = false;
+            }
+          }
         } else if (effect.type === 'turn-complete') {
-          // Signal the playback controller that no more buffers are coming for this turn.
-          // Do NOT disarm isGreetingActiveRef here — playback may still be draining.
-          // onPlaybackStateChange→idle is the sole authority for disarming the greeting shield.
           engine?.finishOutputTurn();
-          transcriptRef.current.completeTurn();
-          void flushTranscripts();
+          // Transcription is explicitly independent of modelTurn ordering in
+          // Gemini Live. Give a final transcription frame a bounded grace
+          // period; `finished` can settle this earlier when the model sends it.
+          transcriptRef.current.beginTurnCompletion();
+          if (outputTranscriptFinishedRef.current) {
+            outputTranscriptFinishedRef.current = false;
+            pendingTurnCompleteRef.current = false;
+            transcriptRef.current.settlePendingTurn();
+            continue;
+          }
+          pendingTurnCompleteRef.current = true;
+          if (pendingTurnCompleteTimerRef.current) {
+            clearTimeout(pendingTurnCompleteTimerRef.current);
+          }
+          pendingTurnCompleteTimerRef.current = setTimeout(() => {
+            if (!pendingTurnCompleteRef.current) return;
+            pendingTurnCompleteRef.current = false;
+            pendingTurnCompleteTimerRef.current = null;
+            outputTranscriptFinishedRef.current = false;
+            transcriptRef.current.settlePendingTurn();
+          }, TRANSCRIPT_SETTLE_MS);
         }
       }
     },
-    [flushTranscripts],
+    [],
   );
 
   const disconnect = useCallback(async () => {
@@ -221,6 +330,10 @@ export function useVoiceMode({
     hasCompletedSessionRef.current = true;
     isSessionActiveRef.current = false;
     isMutedRef.current = true;
+    if (greetingTimerRef.current) {
+      clearTimeout(greetingTimerRef.current);
+      greetingTimerRef.current = null;
+    }
     isGreetingActiveRef.current = false;
     setupReadyRef.current?.reject(new Error('Voice session closed before setup completed.'));
     setupReadyRef.current = null;
@@ -237,19 +350,35 @@ export function useVoiceMode({
     await engine?.stop().catch((error) => logger.warn('Voice audio cleanup failed', error));
     if (engine) logger.runtime('[VoiceMode] session metrics', engine.snapshot());
 
+    // Keep the socket alive for one bounded settle window after microphone
+    // shutdown. Gemini transcription frames are independent from modelTurn and
+    // can arrive after turnComplete or after the final audio chunk.
+    await wait(TRANSCRIPT_SETTLE_MS);
+    if (pendingTurnCompleteTimerRef.current) {
+      clearTimeout(pendingTurnCompleteTimerRef.current);
+      pendingTurnCompleteTimerRef.current = null;
+    }
+    pendingTurnCompleteRef.current = false;
+    outputTranscriptFinishedRef.current = false;
+    transcriptRef.current.settlePendingTurn();
+
     const session = sessionRef.current;
     sessionRef.current = null;
     session?.close();
-    transcriptRef.current.completeTurn();
+    if (transcriptRef.current.hasActiveTranscript()) {
+      transcriptRef.current.completeTurn();
+    }
+    const sessionTurns = transcriptRef.current.getSessionTurns();
+    transcriptRef.current.drainCompleted();
+
+    const flattenedSessionMessages = sessionTurns.flatMap((turn) => turn.messages);
 
     const formattedDuration = formatVoiceCallDuration(finalDuration);
-    const sessionTurns = transcriptRef.current.getSessionTurns();
 
+    let callRecordText = '';
     if (sessionTurns.length > 0) {
       const flattened = sessionTurns.flatMap((turn) => turn.messages);
-      const callRecordText = serializeVoiceCallTranscript(formattedDuration, flattened);
-      transcriptRef.current.appendModel(callRecordText);
-      transcriptRef.current.completeTurn();
+      callRecordText = serializeVoiceCallTranscript(formattedDuration, flattened);
     } else if (finalDuration >= 3) {
       const userText = userSpeechTextRef.current.trim();
       const aiText =
@@ -257,16 +386,44 @@ export function useVoiceMode({
         !aiSpeechTextRef.current.includes('Ready to connect') &&
         !aiSpeechTextRef.current.includes('Connecting')
           ? aiSpeechTextRef.current.trim()
-          : `Voice call completed (${formattedDuration})`;
+          : '';
 
-      if (userText) {
-        transcriptRef.current.appendUser(userText);
-      }
-      transcriptRef.current.appendModel(aiText);
-      transcriptRef.current.completeTurn();
+      const fallbackTurns: Array<{ role: 'user' | 'ai'; text: string }> = [];
+      if (userText) fallbackTurns.push({ role: 'user', text: userText });
+      if (aiText) fallbackTurns.push({ role: 'ai', text: aiText });
+
+      callRecordText = serializeVoiceCallTranscript(formattedDuration, fallbackTurns);
     }
 
-    await flushTranscripts();
+    const transcriptPersisted = callRecordText
+      ? await persistVoiceMessages([
+          {
+            role: 'ai',
+            text: callRecordText,
+            is_voice: true,
+            duration: finalDuration,
+          },
+        ])
+      : false;
+
+    logger.runtime('[VoiceMode] transcript metrics', {
+      ...transcriptDiagnosticsRef.current,
+      seenEventShapes: [...transcriptDiagnosticsRef.current.seenEventShapes],
+      durationSeconds: finalDuration,
+      sessionTurns: sessionTurns.length,
+      sessionMessages: flattenedSessionMessages.length,
+      userTranscriptCharacters: flattenedSessionMessages
+        .filter((message) => message.role === 'user')
+        .reduce((total, message) => total + message.text.length, 0),
+      outputTranscriptCharactersSaved: flattenedSessionMessages
+        .filter((message) => message.role === 'ai')
+        .reduce((total, message) => total + message.text.length, 0),
+      fallbackUserCharacters: userSpeechTextRef.current.trim().length,
+      fallbackOutputCharacters: aiSpeechTextRef.current.trim().length,
+      callRecordCharacters: callRecordText.length,
+      callRecordHasTranscript: callRecordText.includes('--- Transcript ---'),
+      transcriptPersisted,
+    });
 
     if (isMountedRef.current) {
       setIsConnected(false);
@@ -275,7 +432,7 @@ export function useVoiceMode({
       setIsAiSpeaking(false);
     }
     isDisconnectingRef.current = false;
-  }, [flushTranscripts]);
+  }, [persistVoiceMessages]);
 
   const disconnectRef = useRef(disconnect);
   disconnectRef.current = disconnect;
@@ -293,10 +450,17 @@ export function useVoiceMode({
     recordingTimeRef.current = 0;
     userSpeechTextRef.current = '';
     aiSpeechTextRef.current = '';
+    pendingTurnCompleteRef.current = false;
+    outputTranscriptFinishedRef.current = false;
+    if (pendingTurnCompleteTimerRef.current) {
+      clearTimeout(pendingTurnCompleteTimerRef.current);
+      pendingTurnCompleteTimerRef.current = null;
+    }
     setAiSpeechText('Connecting secure voice link...');
     setUserSpeechText('');
     setConnectionFailure(null);
     transcriptRef.current = new VoiceTranscriptTurns();
+    transcriptDiagnosticsRef.current = createVoiceTranscriptDiagnostics();
     sessionIdRef.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     messageHandlerRef.current = new VoiceMessageHandler();
     const setupReady = createSetupReady();
@@ -319,7 +483,10 @@ export function useVoiceMode({
         isAiSpeakingRef.current = playing;
         setIsAiSpeaking(playing);
         if (state === 'idle' || state === 'stopped') {
-          // Greeting shield disarms here — sole authority for opening the uplink
+          if (greetingTimerRef.current) {
+            clearTimeout(greetingTimerRef.current);
+            greetingTimerRef.current = null;
+          }
           isGreetingActiveRef.current = false;
         }
       },
@@ -470,6 +637,16 @@ export function useVoiceMode({
         ],
         turnComplete: true,
       });
+
+      // Safety guard: The greeting shield prevents the model's initial spoken greeting
+      // from leaking into the microphone and causing self-interruption.
+      // It automatically disarms after 4.5 seconds if playback state has not already disarmed it.
+      if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current);
+      greetingTimerRef.current = setTimeout(() => {
+        isGreetingActiveRef.current = false;
+        engineRef.current?.disarmGreetingShield();
+      }, 4500);
+
       timerRef.current = setInterval(() => {
         recordingTimeRef.current += 1;
         setRecordingTime((time) => time + 1);
@@ -500,13 +677,18 @@ export function useVoiceMode({
     if (!engine) return;
     const newEpoch = engine.nextEpoch();
     engine.interruptOutput(newEpoch);
+    if (greetingTimerRef.current) {
+      clearTimeout(greetingTimerRef.current);
+      greetingTimerRef.current = null;
+    }
+    isGreetingActiveRef.current = false;
+    engine.disarmGreetingShield();
     isAiSpeakingRef.current = false;
     transcriptRef.current.completeTurn();
-    void flushTranscripts();
     if (isMountedRef.current) {
       setIsAiSpeaking(false);
     }
-  }, [flushTranscripts]);
+  }, []);
 
   useEffect(() => {
     isMountedRef.current = true;

@@ -59,4 +59,12 @@ describe('native voice runtime contract', () => {
 
     expect(createBufferFunction).toContain('setExternalMemoryPressure');
   });
+
+  test('does not peak-normalize each iOS render quantum', async () => {
+    const playerSource = await Bun.file(
+      repoFile('node_modules/react-native-audio-api/ios/audioapi/ios/core/IOSAudioPlayer.mm'),
+    ).text();
+
+    expect(playerSource).not.toContain('audioBuffer_->normalize()');
+  });
 });

@@ -7,12 +7,14 @@ import { VoicePlaybackController } from './voice-playback-controller';
 import {
   float32ToPcm16Base64,
   pcm16Base64ToFloat32,
+  resampleLinear,
 } from './voice-pcm';
 import { VoiceSessionMetrics, type VoiceMetricSnapshot } from './voice-session-metrics';
 
 const INPUT_SAMPLE_RATE = 16_000;
 const INPUT_BUFFER_FRAMES = 1_600;
 const OUTPUT_SAMPLE_RATE = 24_000;
+const FALLBACK_PLAYBACK_SAMPLE_RATE = 48_000;
 
 export const VOICE_SESSION_OPTIONS = {
   iosCategory: 'playAndRecord' as const,
@@ -85,6 +87,7 @@ export interface VoiceNativeSubscription {
 export interface VoiceAudioNativeAdapter {
   setSessionOptions(options: typeof VOICE_SESSION_OPTIONS): void;
   setSessionActive(active: boolean): Promise<void>;
+  getPreferredSampleRate(): number;
   createContext(sampleRate: number): VoiceAudioContextAdapter;
   createRecorder(options: {
     iosVoiceProcessing: boolean;
@@ -99,6 +102,8 @@ export interface VoiceAudioNativeAdapter {
 
 export type VoiceAudioEngineSnapshot = VoiceMetricSnapshot & {
   captureDurationAnomalies: number;
+  modelOutputSampleRate: number;
+  playbackContextSampleRate?: number;
 };
 
 export type VoiceAudioEngineOptions = {
@@ -110,10 +115,13 @@ export type VoiceAudioEngineOptions = {
   ) => void;
 };
 
-class QueuePlaybackRuntime implements VoicePlaybackRuntime {
+export class QueuePlaybackRuntime implements VoicePlaybackRuntime {
   private queue?: VoiceAudioQueueAdapter;
 
-  constructor(private readonly context: VoiceAudioContextAdapter) {}
+  constructor(
+    private readonly context: VoiceAudioContextAdapter,
+    private readonly playbackSampleRate: number,
+  ) {}
 
   createQueue(onBufferEnded: (event: VoiceBufferEndedEvent) => void): void {
     this.queue = this.context.createQueue();
@@ -125,7 +133,12 @@ class QueuePlaybackRuntime implements VoicePlaybackRuntime {
     const decoded = pcm16Base64ToFloat32(base64Pcm);
     if (!decoded.ok) throw new Error('Received malformed PCM16 audio from voice model.');
     if (!this.queue) throw new Error('Voice playback queue is unavailable.');
-    return this.queue.enqueue(decoded.samples, OUTPUT_SAMPLE_RATE);
+    const playbackSamples = resampleLinear(
+      decoded.samples,
+      OUTPUT_SAMPLE_RATE,
+      this.playbackSampleRate,
+    );
+    return this.queue.enqueue(playbackSamples, this.playbackSampleRate);
   }
 
   start(): void {
@@ -160,6 +173,7 @@ export class VoiceAudioEngine {
   private epoch = 1;
   private isHeadphones = false;
   private greetingShieldActive = false;
+  private playbackContextSampleRate?: number;
 
   constructor(options: VoiceAudioEngineOptions = {}) {
     this.native = options.native ?? createNativeVoiceAudioAdapter();
@@ -221,19 +235,12 @@ export class VoiceAudioEngine {
         iosVoiceProcessing: true,
         androidInputPreset: 'voiceCommunication',
       });
-      this.context = this.native.createContext(OUTPUT_SAMPLE_RATE);
-      await this.context.resume();
-      this.playback = new VoicePlaybackController(
-        new QueuePlaybackRuntime(this.context),
-        undefined,
-        this.metrics,
-        (state) => {
-          if (state === 'idle' || state === 'stopped') {
-            this.greetingShieldActive = false;
-          }
-          this.onPlaybackStateChange?.(state);
-        },
-      );
+      const preferredSampleRate = this.native.getPreferredSampleRate();
+      this.playbackContextSampleRate =
+        Number.isFinite(preferredSampleRate) && preferredSampleRate > 0
+          ? preferredSampleRate
+          : FALLBACK_PLAYBACK_SAMPLE_RATE;
+      await this.createPlayback(this.playbackContextSampleRate);
 
       this.subscriptions = [
         this.native.addRouteChangeListener(() => void this.handleRouteChange()),
@@ -315,6 +322,8 @@ export class VoiceAudioEngine {
     return {
       ...this.metrics.snapshot(),
       captureDurationAnomalies: this.captureDurationAnomalies,
+      modelOutputSampleRate: OUTPUT_SAMPLE_RATE,
+      playbackContextSampleRate: this.playbackContextSampleRate,
     };
   }
 
@@ -334,10 +343,50 @@ export class VoiceAudioEngine {
     try {
       if (!(await this.native.hasInput())) {
         await this.fail(new Error('Voice mode lost its audio input route.'));
+        return;
+      }
+
+      const preferredSampleRate = this.native.getPreferredSampleRate();
+      if (
+        Number.isFinite(preferredSampleRate) &&
+        preferredSampleRate > 0 &&
+        preferredSampleRate !== this.playbackContextSampleRate
+      ) {
+        await this.rebuildPlayback(preferredSampleRate);
       }
     } catch (error) {
       await this.fail(asError(error));
     }
+  }
+
+  private async createPlayback(sampleRate: number): Promise<void> {
+    const context = this.native.createContext(sampleRate);
+    await context.resume();
+    this.context = context;
+    this.playbackContextSampleRate = sampleRate;
+    this.playback = new VoicePlaybackController(
+      new QueuePlaybackRuntime(context, sampleRate),
+      undefined,
+      this.metrics,
+      (state) => {
+        if (state === 'idle' || state === 'stopped') {
+          this.greetingShieldActive = false;
+        }
+        this.onPlaybackStateChange?.(state);
+      },
+      Date.now,
+      this.epoch,
+    );
+  }
+
+  private async rebuildPlayback(sampleRate: number): Promise<void> {
+    this.playback?.stop();
+    this.playback = undefined;
+    const previousContext = this.context;
+    this.context = undefined;
+    if (previousContext) await previousContext.close();
+    await this.createPlayback(sampleRate);
+    this.metrics.markRouteRebuild();
   }
 
   private async fail(error: Error): Promise<void> {
@@ -441,6 +490,7 @@ export function createNativeVoiceAudioAdapter(): VoiceAudioNativeAdapter {
         iosOptions: [...options.iosOptions],
       }),
     setSessionActive: (active) => audioApi.AudioManager.setAudioSessionActivity(active),
+    getPreferredSampleRate: () => audioApi.AudioManager.getDevicePreferredSampleRate(),
     createContext: (sampleRate) => {
       const context = new audioApi.AudioContext({ sampleRate });
       return {

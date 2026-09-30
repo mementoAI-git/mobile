@@ -83,12 +83,17 @@ class FakeNative implements VoiceAudioNativeAdapter {
   appStateListener?: (state: string) => void;
   hasInputDevice = true;
   isHeadphonesDevice = false;
+  preferredSampleRate = 48_000;
 
   setSessionOptions(options: object): void {
     this.calls.push(`session.options:${JSON.stringify(options)}`);
   }
   async setSessionActive(active: boolean): Promise<void> {
     this.calls.push(`session.active:${active}`);
+  }
+  getPreferredSampleRate(): number {
+    this.calls.push(`session.sampleRate:${this.preferredSampleRate}`);
+    return this.preferredSampleRate;
   }
   createContext(sampleRate: number): VoiceAudioContextAdapter {
     this.calls.push(`context.create:${sampleRate}`);
@@ -128,15 +133,39 @@ describe('VoiceAudioEngine', () => {
       'session.options:{"iosCategory":"playAndRecord","iosMode":"voiceChat","iosOptions":["defaultToSpeaker","allowBluetoothHFP"]}',
       'session.active:true',
       'recorder.create:{"iosVoiceProcessing":true,"androidInputPreset":"voiceCommunication"}',
-      'context.create:24000',
+      'session.sampleRate:48000',
+      'context.create:48000',
       'context.resume',
       'context.createQueue',
-      'queue.connect',
     ]);
+    expect(native.calls).toContain('queue.connect');
     expect(native.calls).toContain(
       'recorder.callback:{"sampleRate":16000,"bufferLength":1600,"channelCount":1}',
     );
     expect(native.calls.at(-1)).toBe('recorder.start');
+  });
+
+  test('resamples 24 kHz model output to the native playback context rate', async () => {
+    const native = new FakeNative();
+    const engine = new VoiceAudioEngine({ native });
+    await engine.start(() => {});
+
+    const pcmSamples = new Float32Array(4_800).fill(0.1);
+    const pcmBase64 = btoa(String.fromCharCode(...new Uint8Array(pcmSamples.length * 2)));
+    engine.enqueueOutput(pcmBase64, 1);
+
+    expect(native.calls).toContain('queue.enqueue:9600:48000');
+  });
+
+  test('falls back to a stable 48 kHz playback context when the native rate is invalid', async () => {
+    const native = new FakeNative();
+    native.preferredSampleRate = 0;
+    const engine = new VoiceAudioEngine({ native });
+
+    await engine.start(() => {});
+
+    expect(native.calls).toContain('context.create:48000');
+    expect(engine.snapshot().playbackContextSampleRate).toBe(48_000);
   });
 
 
@@ -156,6 +185,10 @@ describe('VoiceAudioEngine', () => {
     const shortDecoded = pcm16Base64ToFloat32(chunks[1]);
     expect(shortDecoded.ok && shortDecoded.samples.length).toBe(800);
     expect(engine.snapshot().captureDurationAnomalies).toBe(1);
+    expect(engine.snapshot()).toMatchObject({
+      modelOutputSampleRate: 24_000,
+      playbackContextSampleRate: 48_000,
+    });
   });
 
   test('cleans up exactly once when backgrounded and when stop repeats', async () => {
@@ -192,6 +225,39 @@ describe('VoiceAudioEngine', () => {
 
     expect(engine.snapshot().routeChanges).toBe(1);
     expect(failures[0]?.message).toContain('audio input');
+  });
+
+  test('rebuilds playback when an audio route changes the device sample rate', async () => {
+    const native = new FakeNative();
+    const engine = new VoiceAudioEngine({ native });
+    await engine.start(() => {});
+    native.preferredSampleRate = 44_100;
+
+    native.routeListener?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(native.calls).toContain('context.create:44100');
+    expect(native.calls).toContain('context.close');
+    expect(engine.snapshot()).toMatchObject({
+      playbackContextSampleRate: 44_100,
+      routeChanges: 1,
+      routeRebuilds: 1,
+    });
+  });
+
+  test('preserves the current interruption epoch across a route rebuild', async () => {
+    const native = new FakeNative();
+    const engine = new VoiceAudioEngine({ native });
+    await engine.start(() => {});
+    engine.interruptOutput(2);
+    native.preferredSampleRate = 44_100;
+
+    native.routeListener?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const pcmBase64 = btoa(String.fromCharCode(...new Uint8Array(4_800)));
+    expect(engine.enqueueOutput(pcmBase64, 2)).toBe(true);
+    expect(native.calls).toContain('queue.enqueue:4410:44100');
   });
 
   test('classifies headphone and speaker output routes correctly', () => {

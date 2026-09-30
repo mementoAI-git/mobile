@@ -13,3 +13,12 @@ index ba15c738b00b47a4950d1bed4caa2961c0eacdb8..141b63615cfb0b152f5fd6ff7f366028
          });
    }
  };
+diff --git a/ios/audioapi/ios/core/IOSAudioPlayer.mm b/ios/audioapi/ios/core/IOSAudioPlayer.mm
+--- a/ios/audioapi/ios/core/IOSAudioPlayer.mm
++++ b/ios/audioapi/ios/core/IOSAudioPlayer.mm
+@@ -97,5 +97,0 @@ void IOSAudioPlayer::renderAudio(AudioBufferList *outputData, int numFrames) {
+-    // Peak-normalize the rendered quantum before it reaches the hardware. This
+-    // limiting lives in the player (not the destination node) so offline
+-    // renders stay spec-accurate.
+-    audioBuffer_->normalize();
+-

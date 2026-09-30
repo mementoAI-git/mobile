@@ -19,6 +19,8 @@ describe('VoiceCallCard component contracts', () => {
     expect(source).toContain('ChevronDown');
     expect(source).toContain('ChevronUp');
     expect(source).toContain('COLORS.brand');
+    expect(source).toContain('Transcript unavailable for this call');
+    expect(source).not.toContain('No spoken dialogue was transcribed for this call.');
   });
 
   test('parses basic call completion without transcript turns', () => {

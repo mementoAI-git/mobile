@@ -4,9 +4,15 @@ export type VoiceMetricSnapshot = {
   firstOutputToPlaybackMs?: number;
   minQueueDepthMs?: number;
   maxQueueDepthMs?: number;
+  minOutputChunkDurationMs?: number;
+  maxOutputChunkDurationMs?: number;
+  minPlaybackPaceRatio?: number;
+  maxPlaybackPaceRatio?: number;
   underruns: number;
+  rebuffers: number;
   interruptionToSilenceMs?: number;
   routeChanges: number;
+  routeRebuilds: number;
   durationMs: number;
   closeCode?: number;
   closeReason?: string;
@@ -22,8 +28,14 @@ export class VoiceSessionMetrics {
   private silenceAt?: number;
   private minimumQueueDepth?: number;
   private maximumQueueDepth?: number;
+  private minimumOutputChunkDuration?: number;
+  private maximumOutputChunkDuration?: number;
+  private minimumPlaybackPaceRatio?: number;
+  private maximumPlaybackPaceRatio?: number;
   private underrunCount = 0;
+  private rebufferCount = 0;
   private routeChangeCount = 0;
+  private routeRebuildCount = 0;
   private closedAt?: number;
   private closeCode?: number;
   private closeReason?: string;
@@ -56,6 +68,25 @@ export class VoiceSessionMetrics {
 
   markUnderrun(): void {
     this.underrunCount += 1;
+    this.rebufferCount += 1;
+  }
+
+  observeOutputChunkDuration(durationMs: number): void {
+    if (!Number.isFinite(durationMs) || durationMs <= 0) return;
+    this.minimumOutputChunkDuration = Math.min(
+      this.minimumOutputChunkDuration ?? durationMs,
+      durationMs,
+    );
+    this.maximumOutputChunkDuration = Math.max(
+      this.maximumOutputChunkDuration ?? durationMs,
+      durationMs,
+    );
+  }
+
+  observePlaybackPaceRatio(ratio: number): void {
+    if (!Number.isFinite(ratio) || ratio <= 0) return;
+    this.minimumPlaybackPaceRatio = Math.min(this.minimumPlaybackPaceRatio ?? ratio, ratio);
+    this.maximumPlaybackPaceRatio = Math.max(this.maximumPlaybackPaceRatio ?? ratio, ratio);
   }
 
   markInterruption(): void {
@@ -69,6 +100,10 @@ export class VoiceSessionMetrics {
 
   markRouteChange(): void {
     this.routeChangeCount += 1;
+  }
+
+  markRouteRebuild(): void {
+    this.routeRebuildCount += 1;
   }
 
   close(code?: number, reason?: string): void {
@@ -90,12 +125,18 @@ export class VoiceSessionMetrics {
           : this.playbackStartedAt - this.firstOutputAt,
       minQueueDepthMs: this.minimumQueueDepth,
       maxQueueDepthMs: this.maximumQueueDepth,
+      minOutputChunkDurationMs: this.minimumOutputChunkDuration,
+      maxOutputChunkDurationMs: this.maximumOutputChunkDuration,
+      minPlaybackPaceRatio: this.minimumPlaybackPaceRatio,
+      maxPlaybackPaceRatio: this.maximumPlaybackPaceRatio,
       underruns: this.underrunCount,
+      rebuffers: this.rebufferCount,
       interruptionToSilenceMs:
         this.interruptionAt === undefined || this.silenceAt === undefined
           ? undefined
           : this.silenceAt - this.interruptionAt,
       routeChanges: this.routeChangeCount,
+      routeRebuilds: this.routeRebuildCount,
       durationMs: endedAt - this.startedAt,
       closeCode: this.closeCode,
       closeReason: this.closeReason,

@@ -92,7 +92,7 @@ export const VoiceCallCard = React.memo(function VoiceCallCard({
                 <Text style={styles.durationText}>{parsed.duration}</Text>
               </View>
             </View>
-            <Text style={styles.subtitleText}>{subtitle}</Text>
+            {/* <Text style={styles.subtitleText}>{subtitle}</Text> */}
           </View>
         </View>
 
@@ -100,84 +100,80 @@ export const VoiceCallCard = React.memo(function VoiceCallCard({
       </View>
 
       {/* Accordion Toggle Bar (Floor 44dp hit target) */}
-      <TouchableOpacity
-        onPress={toggleExpand}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel={isExpanded ? 'Hide call transcript' : 'View call transcript'}
-        accessibilityState={{ expanded: isExpanded }}
-        style={styles.toggleBar}
-      >
-        <Text style={styles.toggleText}>
-          {isExpanded ? 'Hide transcript' : 'View transcript'}
-        </Text>
-        {isExpanded ? (
-          <ChevronUp size={iconSize(16)} color={COLORS.brand} strokeWidth={2.2} />
-        ) : (
-          <ChevronDown size={iconSize(16)} color={COLORS.textWeak} strokeWidth={2} />
-        )}
-      </TouchableOpacity>
+      {parsed.hasTranscript ? (
+        <TouchableOpacity
+          onPress={toggleExpand}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={isExpanded ? 'Hide call transcript' : 'View call transcript'}
+          accessibilityState={{ expanded: isExpanded }}
+          style={styles.toggleBar}
+        >
+          <Text style={styles.toggleText}>
+            {isExpanded ? 'Hide transcript' : 'View transcript'}
+          </Text>
+          {isExpanded ? (
+            <ChevronUp size={iconSize(16)} color={COLORS.brand} strokeWidth={2.2} />
+          ) : (
+            <ChevronDown size={iconSize(16)} color={COLORS.textWeak} strokeWidth={2} />
+          )}
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.toggleBar} accessibilityLabel="Transcript unavailable for this call">
+          <Text style={styles.unavailableText}>Transcript unavailable for this call</Text>
+        </View>
+      )}
 
       {/* Expandable Transcript Content */}
-      {isExpanded && (
+      {isExpanded && parsed.hasTranscript && (
         <View style={styles.expandedContent}>
           <View style={styles.divider} />
 
-          {!parsed.hasTranscript ? (
-            <View style={styles.emptyTranscriptContainer}>
-              <Text style={styles.emptyTranscriptText}>
-                No spoken dialogue was transcribed for this call.
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.turnsList}>
-              {parsed.turns.map((turn, index) => {
-                const isUser = turn.speaker === 'user';
-                return (
-                  <View
-                    key={index}
+          <View style={styles.turnsList}>
+            {parsed.turns.map((turn, index) => {
+              const isUser = turn.speaker === 'user';
+              return (
+                <View
+                  key={index}
+                  style={[
+                    styles.turnRow,
+                    isUser ? styles.turnRowUser : styles.turnRowAssistant,
+                  ]}
+                >
+                  <Text
                     style={[
-                      styles.turnRow,
-                      isUser ? styles.turnRowUser : styles.turnRowAssistant,
+                      styles.turnSpeaker,
+                      isUser ? styles.turnSpeakerUser : styles.turnSpeakerAssistant,
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.turnSpeaker,
-                        isUser ? styles.turnSpeakerUser : styles.turnSpeakerAssistant,
-                      ]}
-                    >
-                      {turn.speakerName}
-                    </Text>
-                    <View
-                      style={[
-                        styles.turnBubble,
-                        isUser ? styles.turnBubbleUser : styles.turnBubbleAssistant,
-                      ]}
-                    >
-                      <Text style={styles.turnText}>{turn.text}</Text>
-                    </View>
+                    {turn.speakerName}
+                  </Text>
+                  <View
+                    style={[
+                      styles.turnBubble,
+                      isUser ? styles.turnBubbleUser : styles.turnBubbleAssistant,
+                    ]}
+                  >
+                    <Text style={styles.turnText}>{turn.text}</Text>
                   </View>
-                );
-              })}
-            </View>
-          )}
+                </View>
+              );
+            })}
+          </View>
 
           {/* Action Row */}
           <View style={styles.footerRow}>
-            {parsed.hasTranscript && (
-              <TouchableOpacity
-                onPress={handleCopyTranscript}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Copy full transcript"
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={styles.footerAction}
-              >
-                <Copy size={iconSize(14)} color={COLORS.textWeak} strokeWidth={2} />
-                <Text style={styles.footerActionText}>Copy transcript</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              onPress={handleCopyTranscript}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Copy full transcript"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.footerAction}
+            >
+              <Copy size={iconSize(14)} color={COLORS.textWeak} strokeWidth={2} />
+              <Text style={styles.footerActionText}>Copy transcript</Text>
+            </TouchableOpacity>
 
             {onReply && (
               <TouchableOpacity
@@ -209,15 +205,15 @@ const styles = StyleSheet.create({
     marginTop: 6,
     overflow: 'hidden',
     padding: responsiveSpace(14),
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    // shadowColor: COLORS.shadow,
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.05,
+    // shadowRadius: 10,
+    // elevation: 2,
   },
   cardHighlighted: {
     borderColor: COLORS.brand,
-    borderWidth: 1.5,
+    // borderWidth: 1.5,
   },
   headerRow: {
     alignItems: 'flex-start',
@@ -291,14 +287,10 @@ const styles = StyleSheet.create({
     height: 1,
     marginBottom: responsiveSpace(12),
   },
-  emptyTranscriptContainer: {
-    paddingVertical: responsiveSpace(8),
-  },
-  emptyTranscriptText: {
+  unavailableText: {
     ...TYPE.bodySmall,
     color: COLORS.textWeak,
     fontStyle: 'italic',
-    textAlign: 'center',
   },
   turnsList: {
     gap: responsiveSpace(10),

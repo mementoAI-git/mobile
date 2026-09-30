@@ -52,8 +52,8 @@ describe('voice Live configuration', () => {
     expect(instruction).toContain('LANGUAGE DIRECTIVE: YOU MUST COMMUNICATE EXCLUSIVELY AND UNMISTAKABLY IN ENGLISH AT ALL TIMES.');
     expect(instruction).toContain('Under NO circumstances should you switch to or speak any other language');
     expect(config.speechConfig?.languageCode).toBe('en-US');
-    expect(config.inputAudioTranscription?.languageCodes).toEqual(['en-US', 'en']);
-    expect(config.outputAudioTranscription?.languageCodes).toEqual(['en-US', 'en']);
+    expect(config.inputAudioTranscription).toEqual({});
+    expect(config.outputAudioTranscription).toEqual({});
   });
 
   test('incorporates the user nickname into the personalized companion instruction', () => {

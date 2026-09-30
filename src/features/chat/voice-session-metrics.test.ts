@@ -16,6 +16,10 @@ describe('VoiceSessionMetrics', () => {
     metrics.observeQueueDepth(180);
     metrics.observeQueueDepth(95);
     metrics.observeQueueDepth(260);
+    metrics.observeOutputChunkDuration(40);
+    metrics.observeOutputChunkDuration(80);
+    metrics.observePlaybackPaceRatio(0.98);
+    metrics.observePlaybackPaceRatio(2.01);
     timestamp = 1_345;
     metrics.markPlaybackStart();
     metrics.markUnderrun();
@@ -23,6 +27,7 @@ describe('VoiceSessionMetrics', () => {
     timestamp = 1_500;
     metrics.markInterruption();
     metrics.markRouteChange();
+    metrics.markRouteRebuild();
     timestamp = 1_535;
     metrics.markSilence();
     timestamp = 2_000;
@@ -34,9 +39,15 @@ describe('VoiceSessionMetrics', () => {
       firstOutputToPlaybackMs: 45,
       minQueueDepthMs: 95,
       maxQueueDepthMs: 260,
+      minOutputChunkDurationMs: 40,
+      maxOutputChunkDurationMs: 80,
+      minPlaybackPaceRatio: 0.98,
+      maxPlaybackPaceRatio: 2.01,
       underruns: 2,
+      rebuffers: 2,
       interruptionToSilenceMs: 35,
       routeChanges: 1,
+      routeRebuilds: 1,
       durationMs: 1_000,
       closeCode: 1000,
       closeReason: 'normal',
