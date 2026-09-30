@@ -154,11 +154,12 @@ size_t VoicePlaybackSession::render(
 
   auto state = state_.load(std::memory_order_acquire);
   const uint64_t available = bufferedFrames();
-  if (state == PlaybackState::Priming && available >= thresholdFrames(options_.startupBufferMs)) {
+  if (state == PlaybackState::Priming &&
+      available >= thresholdFrames(options_.startupBufferMs + adaptiveExtraMs_)) {
     state = PlaybackState::Playing;
     state_.store(state, std::memory_order_release);
   } else if (state == PlaybackState::Recovering &&
-             available >= thresholdFrames(options_.recoveryBufferMs)) {
+             available >= thresholdFrames(options_.recoveryBufferMs + adaptiveExtraMs_)) {
     state = PlaybackState::Playing;
     state_.store(state, std::memory_order_release);
   }
@@ -200,10 +201,12 @@ size_t VoicePlaybackSession::render(
     if (turnOpen_.load(std::memory_order_acquire)) {
       underrunCount_.fetch_add(1, std::memory_order_relaxed);
       state_.store(PlaybackState::Recovering, std::memory_order_release);
+      noteUnderrun();
     } else {
       state_.store(PlaybackState::Idle, std::memory_order_release);
     }
   }
+  if (written > 0) noteRenderedFrames(written);
   applyDeclick(output, written, frameCount);
   return written;
 }
@@ -251,6 +254,22 @@ void VoicePlaybackSession::applyDeclick(
   outputWasSilent_ = false;
 }
 
+void VoicePlaybackSession::noteUnderrun() noexcept {
+  adaptiveExtraMs_ = std::min(
+      options_.maxAdaptiveExtraMs, adaptiveExtraMs_ + options_.adaptiveStepMs);
+  framesSinceUnderrun_ = 0;
+  adaptiveExtraSnapshot_.store(adaptiveExtraMs_, std::memory_order_relaxed);
+}
+
+void VoicePlaybackSession::noteRenderedFrames(size_t frames) noexcept {
+  if (adaptiveExtraMs_ == 0) return;
+  framesSinceUnderrun_ += frames;
+  if (framesSinceUnderrun_ < thresholdFrames(options_.adaptiveRelaxAfterMs)) return;
+  adaptiveExtraMs_ -= std::min(adaptiveExtraMs_, options_.adaptiveRelaxStepMs);
+  framesSinceUnderrun_ = 0;
+  adaptiveExtraSnapshot_.store(adaptiveExtraMs_, std::memory_order_relaxed);
+}
+
 PlaybackSnapshot VoicePlaybackSession::snapshot() const noexcept {
   const auto frames = bufferedFrames();
   const auto state = state_.load(std::memory_order_acquire);
@@ -268,7 +287,8 @@ PlaybackSnapshot VoicePlaybackSession::snapshot() const noexcept {
       staleChunkCount_.load(std::memory_order_relaxed),
       sequenceGapCount_.load(std::memory_order_relaxed),
       malformedChunkCount_.load(std::memory_order_relaxed),
-      state == PlaybackState::Playing || state == PlaybackState::Draining};
+      state == PlaybackState::Playing || state == PlaybackState::Draining,
+      adaptiveExtraSnapshot_.load(std::memory_order_relaxed)};
 }
 
 void VoicePlaybackSession::workerLoop() {

@@ -22,6 +22,12 @@ struct PlaybackOptions {
   uint32_t startupBufferMs = 180;
   uint32_t recoveryBufferMs = 240;
   uint32_t maxBufferedMs = 5000;
+  // Adaptive jitter buffer: extra startup and recovery buffer added after each
+  // underrun, capped, and slowly relaxed after a clean stretch of playback.
+  uint32_t adaptiveStepMs = 120;
+  uint32_t maxAdaptiveExtraMs = 360;
+  uint32_t adaptiveRelaxAfterMs = 60000;
+  uint32_t adaptiveRelaxStepMs = 60;
 };
 
 struct PlaybackSnapshot {
@@ -39,6 +45,7 @@ struct PlaybackSnapshot {
   uint64_t sequenceGapCount;
   uint64_t malformedChunkCount;
   bool isAudible;
+  uint32_t adaptiveExtraMs;
 };
 
 class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSession> {
@@ -93,6 +100,8 @@ class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSe
       uint64_t sequence);
   void resetConverter() noexcept;
   void applyDeclick(float *output, size_t written, size_t frameCount) noexcept;
+  void noteUnderrun() noexcept;
+  void noteRenderedFrames(size_t frames) noexcept;
   uint64_t bufferedFrames() const noexcept;
   uint64_t thresholdFrames(uint32_t milliseconds) const noexcept;
 
@@ -117,6 +126,9 @@ class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSe
   // Render-thread-only de-click state.
   float lastOutputSample_ = 0.0f;
   bool outputWasSilent_ = true;
+  // Render-thread-only adaptive buffer state.
+  uint32_t adaptiveExtraMs_ = 0;
+  uint64_t framesSinceUnderrun_ = 0;
 
   // Worker-owned continuous linear resampler state.
   double sourcePosition_ = 0.0;
@@ -137,6 +149,7 @@ class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSe
   std::atomic<uint64_t> staleChunkCount_{0};
   std::atomic<uint64_t> sequenceGapCount_{0};
   std::atomic<uint64_t> malformedChunkCount_{0};
+  std::atomic<uint32_t> adaptiveExtraSnapshot_{0};
 };
 
 } // namespace mementovoice
