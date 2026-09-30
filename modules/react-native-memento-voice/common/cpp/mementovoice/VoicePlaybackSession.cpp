@@ -138,6 +138,13 @@ size_t VoicePlaybackSession::render(
 
   const uint64_t activeGeneration = generation_.load(std::memory_order_acquire);
   const uint64_t activeEpoch = epoch_.load(std::memory_order_acquire);
+  if (activeEpoch != historyEpoch_) {
+    // New turn after an interrupt: never conceal with the old turn's voice.
+    historyEpoch_ = activeEpoch;
+    historyCount_ = 0;
+    historyWrite_ = 0;
+    resetConcealment();
+  }
   while (true) {
     const uint64_t read = readBlock_.load(std::memory_order_relaxed);
     const uint64_t write = writeBlock_.load(std::memory_order_acquire);
@@ -164,7 +171,8 @@ size_t VoicePlaybackSession::render(
     state_.store(state, std::memory_order_release);
   }
   if (state != PlaybackState::Playing && state != PlaybackState::Draining) {
-    applyDeclick(output, 0, frameCount);
+    // While rebuffering mid-turn, keep extending the last sound.
+    finishRender(output, 0, frameCount, state == PlaybackState::Recovering);
     return 0;
   }
 
@@ -197,61 +205,158 @@ size_t VoicePlaybackSession::render(
     }
   }
 
+  bool conceal = false;
   if (written < frameCount) {
     if (turnOpen_.load(std::memory_order_acquire)) {
       underrunCount_.fetch_add(1, std::memory_order_relaxed);
       state_.store(PlaybackState::Recovering, std::memory_order_release);
       noteUnderrun();
+      conceal = true;
     } else {
       state_.store(PlaybackState::Idle, std::memory_order_release);
     }
   }
   if (written > 0) noteRenderedFrames(written);
-  applyDeclick(output, written, frameCount);
+  finishRender(output, written, frameCount, conceal);
   return written;
 }
 
-void VoicePlaybackSession::applyDeclick(
+void VoicePlaybackSession::finishRender(
     float *output,
     size_t written,
-    size_t frameCount) noexcept {
-  if (written == 0) {
-    // Nothing new to play (underrun, interrupt, idle). Decay from the last
-    // emitted sample instead of stepping straight to zero.
-    if (lastOutputSample_ != 0.0f) {
-      const size_t fade = std::min(kFadeFrames, frameCount);
+    size_t frameCount,
+    bool conceal) noexcept {
+  if (written > 0) {
+    const size_t fade = std::min(kFadeFrames, written);
+    if (concealRemaining_ > 0) {
+      // Fresh audio arrived while concealing: crossfade out of the concealment.
       for (size_t i = 0; i < fade; ++i) {
-        output[i] = lastOutputSample_ *
-            (1.0f - static_cast<float>(i + 1) / static_cast<float>(fade));
+        const float weight = static_cast<float>(i + 1) / static_cast<float>(fade + 1);
+        output[i] = output[i] * weight + nextConcealSample() * (1.0f - weight);
+      }
+    } else if (outputWasSilent_) {
+      for (size_t i = 0; i < fade; ++i) {
+        output[i] *= static_cast<float>(i) / static_cast<float>(fade);
       }
     }
-    lastOutputSample_ = 0.0f;
-    outputWasSilent_ = true;
+    resetConcealment();
+    pushHistory(output, written);
+  }
+
+  if (written == frameCount) {
+    lastOutputSample_ = output[frameCount - 1];
+    outputWasSilent_ = false;
     return;
   }
 
-  if (outputWasSilent_) {
-    const size_t fade = std::min(kFadeFrames, written);
-    for (size_t i = 0; i < fade; ++i) {
-      output[i] *= static_cast<float>(i) / static_cast<float>(fade);
+  if (conceal && (concealRemaining_ > 0 || startConcealment())) {
+    size_t index = written;
+    for (; index < frameCount && concealRemaining_ > 0; ++index) {
+      output[index] = nextConcealSample();
     }
+    concealedFrames_.fetch_add(index - written, std::memory_order_relaxed);
+    if (concealRemaining_ > 0) {
+      lastOutputSample_ = output[frameCount - 1];
+      outputWasSilent_ = false;
+    } else {
+      // The concealment faded to zero inside this quantum; the rest stays silent.
+      lastOutputSample_ = 0.0f;
+      outputWasSilent_ = true;
+    }
+    return;
   }
 
-  if (written < frameCount) {
+  if (written > 0) {
     // Ran dry inside this quantum: fade the tail we do have.
     const size_t fade = std::min(kFadeFrames, written);
     const size_t start = written - fade;
     for (size_t i = 0; i < fade; ++i) {
-      output[start + i] *=
-          1.0f - static_cast<float>(i + 1) / static_cast<float>(fade);
+      output[start + i] *= 1.0f - static_cast<float>(i + 1) / static_cast<float>(fade);
     }
-    lastOutputSample_ = 0.0f;
-    outputWasSilent_ = true;
-    return;
+  } else if (lastOutputSample_ != 0.0f) {
+    // Nothing new to play (interrupt, idle, concealment unavailable). Decay
+    // from the last emitted sample instead of stepping straight to zero.
+    const size_t fade = std::min(kFadeFrames, frameCount);
+    for (size_t i = 0; i < fade; ++i) {
+      output[i] = lastOutputSample_ *
+          (1.0f - static_cast<float>(i + 1) / static_cast<float>(fade));
+    }
   }
+  lastOutputSample_ = 0.0f;
+  outputWasSilent_ = true;
+}
 
-  lastOutputSample_ = output[frameCount - 1];
-  outputWasSilent_ = false;
+void VoicePlaybackSession::pushHistory(const float *samples, size_t count) noexcept {
+  for (size_t i = 0; i < count; ++i) {
+    history_[historyWrite_] = samples[i];
+    historyWrite_ = (historyWrite_ + 1) % kHistoryFrames;
+  }
+  historyCount_ = std::min(kHistoryFrames, historyCount_ + count);
+}
+
+bool VoicePlaybackSession::startConcealment() noexcept {
+  if (concealUsedForGap_) return false;
+  const size_t rate = options_.targetSampleRate;
+  const size_t minLag = std::max<size_t>(1, rate / 400);  // 400 Hz
+  const size_t maxLag = rate / 70;                        // 70 Hz
+  const size_t window = rate / 100;                       // 10 ms
+  const size_t span = window + maxLag;
+  if (span > kHistoryFrames || historyCount_ < span) return false;
+
+  // Newest `span` samples, oldest first.
+  std::array<float, kHistoryFrames> recent{};
+  for (size_t i = 0; i < span; ++i) {
+    recent[i] = history_[(historyWrite_ + kHistoryFrames - span + i) % kHistoryFrames];
+  }
+  const float *tail = recent.data() + maxLag;
+
+  // Pick the pitch period with the highest normalized autocorrelation.
+  size_t bestLag = 0;
+  double bestScore = -2.0;
+  for (size_t lag = minLag; lag <= maxLag; ++lag) {
+    const float *lagged = tail - lag;
+    double cross = 0.0;
+    double tailEnergy = 0.0;
+    double laggedEnergy = 0.0;
+    for (size_t n = 0; n < window; ++n) {
+      cross += static_cast<double>(tail[n]) * lagged[n];
+      tailEnergy += static_cast<double>(tail[n]) * tail[n];
+      laggedEnergy += static_cast<double>(lagged[n]) * lagged[n];
+    }
+    if (tailEnergy <= 1e-9 || laggedEnergy <= 1e-9) continue;
+    const double score = cross / std::sqrt(tailEnergy * laggedEnergy);
+    if (score > bestScore) {
+      bestScore = score;
+      bestLag = lag;
+    }
+  }
+  if (bestLag == 0) return false;  // silence: nothing to extend
+
+  // Repeat the last pitch period; its first sample follows the last real one.
+  concealPeriod_ = bestLag;
+  for (size_t i = 0; i < bestLag; ++i) {
+    concealTemplate_[i] = recent[span - bestLag + i];
+  }
+  concealPos_ = 0;
+  concealTotal_ = std::max<size_t>(1, rate * options_.concealMaxMs / 1000);
+  concealRemaining_ = concealTotal_;
+  concealUsedForGap_ = true;
+  return true;
+}
+
+float VoicePlaybackSession::nextConcealSample() noexcept {
+  if (concealRemaining_ == 0 || concealPeriod_ == 0) return 0.0f;
+  const float gain = static_cast<float>(concealRemaining_) / static_cast<float>(concealTotal_);
+  const float sample = concealTemplate_[concealPos_] * gain;
+  concealPos_ = (concealPos_ + 1) % concealPeriod_;
+  --concealRemaining_;
+  return sample;
+}
+
+void VoicePlaybackSession::resetConcealment() noexcept {
+  concealRemaining_ = 0;
+  concealPos_ = 0;
+  concealUsedForGap_ = false;
 }
 
 void VoicePlaybackSession::noteUnderrun() noexcept {
@@ -288,7 +393,8 @@ PlaybackSnapshot VoicePlaybackSession::snapshot() const noexcept {
       sequenceGapCount_.load(std::memory_order_relaxed),
       malformedChunkCount_.load(std::memory_order_relaxed),
       state == PlaybackState::Playing || state == PlaybackState::Draining,
-      adaptiveExtraSnapshot_.load(std::memory_order_relaxed)};
+      adaptiveExtraSnapshot_.load(std::memory_order_relaxed),
+      concealedFrames_.load(std::memory_order_relaxed)};
 }
 
 void VoicePlaybackSession::workerLoop() {

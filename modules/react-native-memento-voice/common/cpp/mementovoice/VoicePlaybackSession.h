@@ -28,6 +28,8 @@ struct PlaybackOptions {
   uint32_t maxAdaptiveExtraMs = 360;
   uint32_t adaptiveRelaxAfterMs = 60000;
   uint32_t adaptiveRelaxStepMs = 60;
+  // Packet loss concealment: how long to extend the last sound on an underrun.
+  uint32_t concealMaxMs = 60;
 };
 
 struct PlaybackSnapshot {
@@ -46,6 +48,7 @@ struct PlaybackSnapshot {
   uint64_t malformedChunkCount;
   bool isAudible;
   uint32_t adaptiveExtraMs;
+  uint64_t concealedFrames;
 };
 
 class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSession> {
@@ -67,6 +70,8 @@ class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSe
   static constexpr size_t kMaxIngressChunks = 128;
   // 5 ms at 48 kHz. Long enough to remove clicks, short enough to be inaudible.
   static constexpr size_t kFadeFrames = 240;
+  // Enough recent output for a 10 ms window plus a 70 Hz pitch lag at 48 kHz.
+  static constexpr size_t kHistoryFrames = 2048;
 
   struct IngressChunk {
     std::string payload;
@@ -99,7 +104,11 @@ class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSe
       uint64_t epoch,
       uint64_t sequence);
   void resetConverter() noexcept;
-  void applyDeclick(float *output, size_t written, size_t frameCount) noexcept;
+  void finishRender(float *output, size_t written, size_t frameCount, bool conceal) noexcept;
+  void pushHistory(const float *samples, size_t count) noexcept;
+  bool startConcealment() noexcept;
+  float nextConcealSample() noexcept;
+  void resetConcealment() noexcept;
   void noteUnderrun() noexcept;
   void noteRenderedFrames(size_t frames) noexcept;
   uint64_t bufferedFrames() const noexcept;
@@ -126,6 +135,17 @@ class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSe
   // Render-thread-only de-click state.
   float lastOutputSample_ = 0.0f;
   bool outputWasSilent_ = true;
+  // Render-thread-only concealment state.
+  std::array<float, kHistoryFrames> history_{};
+  size_t historyWrite_ = 0;
+  size_t historyCount_ = 0;
+  uint64_t historyEpoch_ = 0;
+  std::array<float, kHistoryFrames> concealTemplate_{};
+  size_t concealPeriod_ = 0;
+  size_t concealPos_ = 0;
+  size_t concealRemaining_ = 0;
+  size_t concealTotal_ = 0;
+  bool concealUsedForGap_ = false;
   // Render-thread-only adaptive buffer state.
   uint32_t adaptiveExtraMs_ = 0;
   uint64_t framesSinceUnderrun_ = 0;
@@ -150,6 +170,7 @@ class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSe
   std::atomic<uint64_t> sequenceGapCount_{0};
   std::atomic<uint64_t> malformedChunkCount_{0};
   std::atomic<uint32_t> adaptiveExtraSnapshot_{0};
+  std::atomic<uint64_t> concealedFrames_{0};
 };
 
 } // namespace mementovoice

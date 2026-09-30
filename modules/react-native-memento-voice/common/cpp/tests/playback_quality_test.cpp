@@ -64,6 +64,7 @@ PlaybackOptions options(uint32_t maxAdaptiveExtraMs, uint32_t relaxAfterMs = 600
   value.maxAdaptiveExtraMs = maxAdaptiveExtraMs;
   value.adaptiveRelaxAfterMs = relaxAfterMs;
   value.adaptiveRelaxStepMs = 60;
+  value.concealMaxMs = 60;
   return value;
 }
 
@@ -81,6 +82,20 @@ void render(VoicePlaybackSession &session, size_t frames, std::vector<float> &ou
   }
 }
 
+float maxStep(const std::vector<float> &s, size_t from = 1) {
+  float worst = 0.0f;
+  for (size_t i = std::max<size_t>(from, 1); i < s.size(); ++i) {
+    worst = std::max(worst, std::fabs(s[i] - s[i - 1]));
+  }
+  return worst;
+}
+
+float rms(const std::vector<float> &s, size_t from, size_t to) {
+  double sum = 0.0;
+  for (size_t i = from; i < to && i < s.size(); ++i) sum += static_cast<double>(s[i]) * s[i];
+  return static_cast<float>(std::sqrt(sum / static_cast<double>(std::max<size_t>(1, to - from))));
+}
+
 int failures = 0;
 
 void expect(bool ok, const char *name, double value) {
@@ -91,6 +106,52 @@ void expect(bool ok, const char *name, double value) {
 }  // namespace
 
 int main() {
+  // A 200 Hz sine changes by at most ~0.013 per 48 kHz sample at amplitude 0.5.
+  {
+    VoicePlaybackSession session(options(0));
+    session.start(1, 1);
+    session.pushPCM(sinePcm(200.0, 0.5f, 0, 2400), 1, 1, 0);  // 100 ms, turn open
+    waitForBuffered(session, 95.0);
+    std::vector<float> out{0.0f};
+    render(session, 4800 + 9600, out);  // 100 ms of audio, then 200 ms of gap
+    const size_t gapStart = 1 + 4800;
+    expect(maxStep(out) < 0.03f, "concealment continues the waveform without clicks", maxStep(out));
+    expect(rms(out, gapStart, gapStart + 960) > 0.15f,
+           "first 20 ms of the gap is concealed, not silent", rms(out, gapStart, gapStart + 960));
+    expect(rms(out, gapStart + 3456, out.size()) == 0.0f,
+           "silence after the 60 ms concealment budget", rms(out, gapStart + 3456, out.size()));
+    expect(session.snapshot().concealedFrames >= 2800,
+           "snapshot reports concealed frames", static_cast<double>(session.snapshot().concealedFrames));
+    session.stop(1);
+  }
+  {
+    VoicePlaybackSession session(options(0));
+    session.start(1, 1);
+    session.pushPCM(sinePcm(200.0, 0.5f, 0, 2400), 1, 1, 0);
+    waitForBuffered(session, 95.0);
+    std::vector<float> out{0.0f};
+    render(session, 4800 + 1280, out);  // into the concealment
+    session.pushPCM(sinePcm(310.0, 0.5f, 0, 2400), 1, 1, 1);  // different pitch and phase
+    waitForBuffered(session, 95.0);
+    render(session, 4800, out);
+    expect(maxStep(out) < 0.05f, "resumed audio crossfades out of the concealment", maxStep(out));
+    session.stop(1);
+  }
+  {
+    VoicePlaybackSession session(options(0));
+    session.start(1, 1);
+    session.pushPCM(sinePcm(200.0, 0.5f, 0, 4800), 1, 1, 0);
+    waitForBuffered(session, 190.0);
+    std::vector<float> out{0.0f};
+    render(session, 1280, out);
+    session.interrupt(1, 2);
+    const size_t afterInterrupt = out.size();
+    render(session, 2560, out);
+    expect(rms(out, afterInterrupt + 256, out.size()) == 0.0f,
+           "interrupt is not concealed", rms(out, afterInterrupt + 256, out.size()));
+    expect(maxStep(out) < 0.03f, "interrupt still decays smoothly", maxStep(out));
+    session.stop(1);
+  }
   {
     VoicePlaybackSession session(options(360, 1000));
     session.start(1, 1);
