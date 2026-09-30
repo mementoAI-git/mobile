@@ -4,14 +4,14 @@ import type {
 } from 'react-native-memento-voice';
 
 import type { VoicePlaybackState, VoiceTimerScheduler } from './voice-audio-types';
-import {
-  VOICE_MAX_QUEUE_MS,
-  VOICE_PREBUFFER_MS,
-  VOICE_RECOVERY_PREBUFFER_MS,
-} from './voice-playback-controller';
+import { VOICE_MAX_QUEUE_MS } from './voice-playback-controller';
 import { VoiceSessionMetrics } from './voice-session-metrics';
 
 const NATIVE_STATE_POLL_MS = 50;
+// Deeper than the JS fallback's 180/240 ms: cellular jitter otherwise turns
+// each late packet into an audible hole mid-word.
+export const NATIVE_VOICE_STARTUP_BUFFER_MS = 240;
+export const NATIVE_VOICE_RECOVERY_BUFFER_MS = 360;
 const defaultScheduler: VoiceTimerScheduler = {
   setTimeout: (callback, delayMs) => globalThis.setTimeout(callback, delayMs),
   clearTimeout: (timer) =>
@@ -160,8 +160,8 @@ export function createNativeVoicePlaybackSession(
       context as ConstructorParameters<typeof NativeVoicePlaybackSession>[0],
       {
         sourceSampleRate: 24_000,
-        startupBufferMs: VOICE_PREBUFFER_MS,
-        recoveryBufferMs: VOICE_RECOVERY_PREBUFFER_MS,
+        startupBufferMs: NATIVE_VOICE_STARTUP_BUFFER_MS,
+        recoveryBufferMs: NATIVE_VOICE_RECOVERY_BUFFER_MS,
         maxBufferedMs: VOICE_MAX_QUEUE_MS,
       },
     );
