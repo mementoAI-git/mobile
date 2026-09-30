@@ -13,6 +13,7 @@
     "web": "npx expo start --web",
     "lint": "eslint . --quiet",
     "test": "bun test",
+    "test:native-voice": "mkdir -p .native-test && clang++ -std=c++20 -O1 -pthread -Wall -I modules/react-native-memento-voice/common/cpp modules/react-native-memento-voice/common/cpp/mementovoice/VoicePlaybackSession.cpp modules/react-native-memento-voice/common/cpp/tests/declick_test.cpp -o .native-test/declick_test && ./.native-test/declick_test",
     "typecheck": "tsc --noEmit --ignoreDeprecations 6.0",
     "check:prod": "node scripts/check-production-readiness.js",
     "check:typography": "node scripts/check-typography-compliance.js",

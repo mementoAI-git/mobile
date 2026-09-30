@@ -58,6 +58,8 @@ class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSe
   static constexpr size_t kBlockFrames = 1024;
   static constexpr size_t kBlockCount = 256;
   static constexpr size_t kMaxIngressChunks = 128;
+  // 5 ms at 48 kHz. Long enough to remove clicks, short enough to be inaudible.
+  static constexpr size_t kFadeFrames = 240;
 
   struct IngressChunk {
     std::string payload;
@@ -90,6 +92,7 @@ class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSe
       uint64_t epoch,
       uint64_t sequence);
   void resetConverter() noexcept;
+  void applyDeclick(float *output, size_t written, size_t frameCount) noexcept;
   uint64_t bufferedFrames() const noexcept;
   uint64_t thresholdFrames(uint32_t milliseconds) const noexcept;
 
@@ -111,6 +114,9 @@ class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSe
   std::atomic<uint64_t> writeBlock_{0};
   std::atomic<uint64_t> readBlock_{0};
   size_t renderOffset_ = 0;
+  // Render-thread-only de-click state.
+  float lastOutputSample_ = 0.0f;
+  bool outputWasSilent_ = true;
 
   // Worker-owned continuous linear resampler state.
   double sourcePosition_ = 0.0;

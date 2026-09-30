@@ -162,7 +162,10 @@ size_t VoicePlaybackSession::render(
     state = PlaybackState::Playing;
     state_.store(state, std::memory_order_release);
   }
-  if (state != PlaybackState::Playing && state != PlaybackState::Draining) return 0;
+  if (state != PlaybackState::Playing && state != PlaybackState::Draining) {
+    applyDeclick(output, 0, frameCount);
+    return 0;
+  }
 
   size_t written = 0;
   while (written < frameCount) {
@@ -201,7 +204,51 @@ size_t VoicePlaybackSession::render(
       state_.store(PlaybackState::Idle, std::memory_order_release);
     }
   }
+  applyDeclick(output, written, frameCount);
   return written;
+}
+
+void VoicePlaybackSession::applyDeclick(
+    float *output,
+    size_t written,
+    size_t frameCount) noexcept {
+  if (written == 0) {
+    // Nothing new to play (underrun, interrupt, idle). Decay from the last
+    // emitted sample instead of stepping straight to zero.
+    if (lastOutputSample_ != 0.0f) {
+      const size_t fade = std::min(kFadeFrames, frameCount);
+      for (size_t i = 0; i < fade; ++i) {
+        output[i] = lastOutputSample_ *
+            (1.0f - static_cast<float>(i + 1) / static_cast<float>(fade));
+      }
+    }
+    lastOutputSample_ = 0.0f;
+    outputWasSilent_ = true;
+    return;
+  }
+
+  if (outputWasSilent_) {
+    const size_t fade = std::min(kFadeFrames, written);
+    for (size_t i = 0; i < fade; ++i) {
+      output[i] *= static_cast<float>(i) / static_cast<float>(fade);
+    }
+  }
+
+  if (written < frameCount) {
+    // Ran dry inside this quantum: fade the tail we do have.
+    const size_t fade = std::min(kFadeFrames, written);
+    const size_t start = written - fade;
+    for (size_t i = 0; i < fade; ++i) {
+      output[start + i] *=
+          1.0f - static_cast<float>(i + 1) / static_cast<float>(fade);
+    }
+    lastOutputSample_ = 0.0f;
+    outputWasSilent_ = true;
+    return;
+  }
+
+  lastOutputSample_ = output[frameCount - 1];
+  outputWasSilent_ = false;
 }
 
 PlaybackSnapshot VoicePlaybackSession::snapshot() const noexcept {
