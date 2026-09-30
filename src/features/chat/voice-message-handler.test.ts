@@ -162,4 +162,21 @@ describe('VoiceMessageHandler', () => {
       { type: 'turn-complete' },
     ]);
   });
+
+  test('emits resumable handles and go-away warnings', () => {
+    const handler = new VoiceMessageHandler();
+
+    expect(
+      handler.handle({ sessionResumptionUpdate: { newHandle: 'h1', resumable: true } } as any, 1),
+    ).toEqual([{ type: 'resumption-handle', handle: 'h1' }]);
+    expect(
+      handler.handle({ sessionResumptionUpdate: { newHandle: '', resumable: false } } as any, 1),
+    ).toEqual([]);
+    expect(handler.handle({ goAway: { timeLeft: '5s' } } as any, 1)).toEqual([
+      { type: 'go-away', timeLeftMs: 5000 },
+    ]);
+    expect(handler.handle({ goAway: {} } as any, 1)).toEqual([
+      { type: 'go-away', timeLeftMs: 0 },
+    ]);
+  });
 });

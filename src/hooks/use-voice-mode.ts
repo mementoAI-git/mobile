@@ -13,6 +13,7 @@ import {
 import {
   buildGeminiLiveConfig,
   parseVoiceLiveToken,
+  type VoiceLiveToken,
 } from '@/features/chat/voice-live-config';
 import {
   summarizeVoiceServerMessage,
@@ -65,6 +66,7 @@ function createSetupReady(): SetupReady {
 
 const TRANSCRIPT_SETTLE_MS = 600;
 const SPEAKER_FULL_DUPLEX = process.env.EXPO_PUBLIC_VOICE_FULL_DUPLEX === 'true';
+const RECONNECT_DELAYS_MS = [0, 500, 1_500];
 
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -126,6 +128,14 @@ export function useVoiceMode({
   const [connectionFailure, setConnectionFailure] = useState<VoiceConnectionFailure | null>(null);
 
   const sessionRef = useRef<Session | null>(null);
+  const resumeHandleRef = useRef<string | null>(null);
+  const reconnectingRef = useRef(false);
+  const reconnectRef = useRef<(reason: 'go-away' | 'connection-lost') => Promise<boolean>>(
+    async () => false,
+  );
+  const connectionLostRef = useRef<
+    (closed: Session | null, isError: boolean) => Promise<void>
+  >(async () => undefined);
   const engineRef = useRef<VoiceAudioEngine | null>(null);
   const messageHandlerRef = useRef(new VoiceMessageHandler());
   const setupReadyRef = useRef<SetupReady | null>(null);
@@ -263,6 +273,11 @@ export function useVoiceMode({
         if (effect.type === 'setup-complete') {
           engine?.markSetupComplete();
           setupReadyRef.current?.resolve();
+        } else if (effect.type === 'resumption-handle') {
+          resumeHandleRef.current = effect.handle;
+        } else if (effect.type === 'go-away') {
+          logger.runtime('[VoiceMode] go-away', { timeLeftMs: effect.timeLeftMs });
+          void reconnectRef.current('go-away');
         } else if (effect.type === 'interrupted') {
           // Server confirmed interruption — engine owns the new epoch.
           // handleInterruption() promotes any interim user text to final so
@@ -469,6 +484,106 @@ export function useVoiceMode({
   const disconnectRef = useRef(disconnect);
   disconnectRef.current = disconnect;
 
+  const openLiveSession = useCallback(
+    async (liveToken: VoiceLiveToken): Promise<Session> => {
+      const setupReady = createSetupReady();
+      setupReadyRef.current = setupReady;
+      const client = new GoogleGenAI({
+        apiKey: liveToken.token,
+        httpOptions: { apiVersion: 'v1alpha' },
+      });
+      let session: Session | null = null;
+      session = await client.live.connect({
+        model: liveToken.model,
+        callbacks: {
+          onopen: () => engineRef.current?.markConnectionOpen(),
+          onmessage: handleLiveMessage,
+          onerror: (error) => {
+            logger.error('Live voice session failed', error);
+            setupReady.reject(new Error('Voice session failed during setup.'));
+            void connectionLostRef.current(session, true);
+          },
+          onclose: () => {
+            setupReady.reject(new Error('Voice session closed during setup.'));
+            void connectionLostRef.current(session, false);
+          },
+        },
+        // The token locks the real config server-side. This only satisfies the SDK.
+        config: buildGeminiLiveConfig(
+          liveToken.voiceName,
+          useUserStore.getState().user,
+        ),
+      });
+      await setupReady.promise;
+      return session;
+    },
+    [handleLiveMessage],
+  );
+
+  const reconnect = useCallback(
+    async (reason: 'go-away' | 'connection-lost'): Promise<boolean> => {
+      if (reconnectingRef.current) return true;
+      if (!resumeHandleRef.current || !isSessionActiveRef.current) return false;
+      reconnectingRef.current = true;
+      const previous = sessionRef.current;
+      logger.runtime('[VoiceMode] reconnecting', { reason });
+      try {
+        for (let attempt = 0; attempt < RECONNECT_DELAYS_MS.length; attempt += 1) {
+          await wait(RECONNECT_DELAYS_MS[attempt]);
+          if (!isSessionActiveRef.current) return false;
+          try {
+            const params = new URLSearchParams({
+              resume_handle: resumeHandleRef.current!,
+            });
+            if (memoryIdRef.current) params.set('memory_id', memoryIdRef.current);
+            const tokenResponse = await get<unknown>(
+              `${endpoint.ephemeralToken}?${params}`,
+            );
+            const liveToken = parseVoiceLiveToken(
+              tokenResponse.data,
+              voiceName ?? 'Fenrir',
+            );
+            const next = await openLiveSession(liveToken);
+            if (!isSessionActiveRef.current) {
+              next.close();
+              return false;
+            }
+            sessionRef.current = next;
+            previous?.close();
+            logger.runtime('[VoiceMode] reconnected', { reason, attempt });
+            return true;
+          } catch (error) {
+            logger.warn('Voice reconnect attempt failed', error);
+          }
+        }
+        return false;
+      } finally {
+        reconnectingRef.current = false;
+      }
+    },
+    [openLiveSession, voiceName],
+  );
+  reconnectRef.current = reconnect;
+
+  const handleConnectionLost = useCallback(
+    async (closed: Session | null, isError: boolean): Promise<void> => {
+      // Ignore the old socket closing after a successful swap.
+      if (closed !== sessionRef.current) return;
+      if (!isSessionActiveRef.current || isDisconnectingRef.current) return;
+      if (reconnectingRef.current) return;
+      if (resumeHandleRef.current && (await reconnect('connection-lost'))) return;
+      if (isError && isMountedRef.current) {
+        setConnectionFailure({
+          kind: 'connection-error',
+          message: 'Voice session was disconnected. Tap to reconnect.',
+        });
+      }
+      await disconnectRef.current();
+    },
+    [reconnect],
+  );
+  connectionLostRef.current = handleConnectionLost;
+
   const connect = useCallback(async () => {
     if (isConnecting || isConnected || isDisconnectingRef.current) return;
     setIsConnecting(true);
@@ -477,6 +592,7 @@ export function useVoiceMode({
     isMutedRef.current = false;
     isGreetingActiveRef.current = !SPEAKER_FULL_DUPLEX;
     isAiSpeakingRef.current = false;
+    resumeHandleRef.current = null;
     setIsMuted(false);
     setRecordingTime(0);
     recordingTimeRef.current = 0;
@@ -495,8 +611,6 @@ export function useVoiceMode({
     transcriptDiagnosticsRef.current = createVoiceTranscriptDiagnostics();
     sessionIdRef.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     messageHandlerRef.current = new VoiceMessageHandler();
-    const setupReady = createSetupReady();
-    setupReadyRef.current = setupReady;
 
     const engine = new VoiceAudioEngine({
       speakerFullDuplex: SPEAKER_FULL_DUPLEX,
@@ -558,46 +672,19 @@ export function useVoiceMode({
           )
         : null;
 
-      const client = new GoogleGenAI({
-        apiKey: liveToken.token,
-        httpOptions: { apiVersion: 'v1alpha' },
-      });
-      sessionRef.current = await client.live.connect({
-        model: liveToken.model,
-        callbacks: {
-          onopen: () => engine.markConnectionOpen(),
-          onmessage: handleLiveMessage,
-          onerror: (error) => {
-            logger.error('Live voice session failed', error);
-            setupReady.reject(new Error('Voice session failed during setup.'));
-            if (isMountedRef.current) {
-              setConnectionFailure({
-                kind: 'connection-error',
-                message: 'Voice session was disconnected. Tap to reconnect.',
-              });
-            }
-            void disconnectRef.current();
-          },
-          onclose: () => {
-            setupReady.reject(new Error('Voice session closed during setup.'));
-            void disconnectRef.current();
-          },
-        },
-        // The token locks the real config server-side. This only satisfies the SDK.
-        config: buildGeminiLiveConfig(liveToken.voiceName, user),
-      });
+      sessionRef.current = await openLiveSession(liveToken);
 
-      // Arm the greeting shield BEFORE awaiting setup-complete so that
-      // microphone audio captured during the WebSocket handshake cannot
-      // escape to the server and trigger false VAD interruptions.
       await engine.start((data) => {
         if (isMutedRef.current || isGreetingActiveRef.current) return;
-        sessionRef.current?.sendRealtimeInput({
-          audio: { data, mimeType: 'audio/pcm;rate=16000' },
-        });
+        try {
+          sessionRef.current?.sendRealtimeInput({
+            audio: { data, mimeType: 'audio/pcm;rate=16000' },
+          });
+        } catch {
+          // Socket is closing during a reconnect. Drop this 100 ms frame.
+        }
       });
       engine.armGreetingShield();
-      await setupReady.promise;
       const userGreetingName = user?.nickname || user?.first_name || '';
       const greetingPrompt =
         liveToken.greetingInstruction ??
@@ -651,6 +738,7 @@ export function useVoiceMode({
     handleLiveMessage,
     isConnected,
     isConnecting,
+    openLiveSession,
     resolveTargetMemoryId,
     voiceName,
   ]);

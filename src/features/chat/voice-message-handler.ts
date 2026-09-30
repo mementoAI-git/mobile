@@ -6,7 +6,9 @@ export type VoiceMessageEffect =
   | { type: 'input-transcript'; text: string; isInterim: boolean }
   | { type: 'output-transcript'; text: string; finished: boolean }
   | { type: 'interrupted' }
-  | { type: 'turn-complete' };
+  | { type: 'turn-complete' }
+  | { type: 'resumption-handle'; handle: string }
+  | { type: 'go-away'; timeLeftMs: number };
 
 export type VoiceServerMessageSummary = {
   setupComplete: boolean;
@@ -26,6 +28,14 @@ function transcriptLength(value: unknown): number {
   if (!value || typeof value !== 'object') return 0;
   const text = (value as Record<string, unknown>).text;
   return typeof text === 'string' ? text.length : 0;
+}
+
+/** Gemini sends durations as protobuf strings such as "5s" or "0.5s". */
+function durationToMs(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value * 1_000;
+  if (typeof value !== 'string') return 0;
+  const seconds = Number.parseFloat(value);
+  return Number.isFinite(seconds) ? seconds * 1_000 : 0;
 }
 
 /**
@@ -73,6 +83,21 @@ export class VoiceMessageHandler {
 
     if (message.setupComplete || message.setup_complete) {
       effects.push({ type: 'setup-complete' });
+    }
+
+    const resumption =
+      message.sessionResumptionUpdate ?? message.session_resumption_update;
+    const newHandle = resumption?.newHandle ?? resumption?.new_handle;
+    if (resumption?.resumable && typeof newHandle === 'string' && newHandle) {
+      effects.push({ type: 'resumption-handle', handle: newHandle });
+    }
+
+    const goAway = message.goAway ?? message.go_away;
+    if (goAway && typeof goAway === 'object') {
+      effects.push({
+        type: 'go-away',
+        timeLeftMs: durationToMs(goAway.timeLeft ?? goAway.time_left),
+      });
     }
 
     const content = message.serverContent ?? message.server_content;
