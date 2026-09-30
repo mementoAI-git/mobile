@@ -31,6 +31,17 @@ describe('native voice runtime contract', () => {
     ]);
   });
 
+  test('disables RNAudioAPI file decoding that the live PCM pipeline does not use', async () => {
+    const appJson = await Bun.file(repoFile('app.json')).json();
+    const pluginSource = await Bun.file(
+      repoFile('plugins/with-audio-api-ffmpeg-disabled.js'),
+    ).text();
+
+    expect(appJson.expo.plugins).toContain('./plugins/with-audio-api-ffmpeg-disabled');
+    expect(pluginSource).toContain("ENV['DISABLE_AUDIOAPI_FFMPEG'] ||= '1'");
+    expect(pluginSource).toContain('withPodfile');
+  });
+
   test('exposes platform voice-processing recorder options', async () => {
     const recorderDeclaration = await Bun.file(
       repoFile(

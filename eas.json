@@ -16,23 +16,42 @@
       }
     },
     "preview": {
-      "distribution": "internal",
+      "distribution": "store",
+      "channel": "staging",
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://dev.mymemento.io/api",
         "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "0.2",
-        "SENTRY_ALLOW_FAILURE": "true"
+        "SENTRY_ALLOW_FAILURE": "true",
+        "EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK": "true"
+      }
+    },
+    "testflight": {
+      "distribution": "store",
+      "channel": "staging",
+      "environment": "preview",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://dev.mymemento.io/api",
+        "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "0.2",
+        "SENTRY_ALLOW_FAILURE": "true",
+        "EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK": "true"
       }
     },
     "production": {
+      "distribution": "store",
+      "channel": "production",
+      "environment": "production",
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://app.mymemento.io/api",
         "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "0.2",
-        "SENTRY_ALLOW_FAILURE": "true"
+        "SENTRY_ALLOW_FAILURE": "true",
+        "EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK": "true"
       }
     }
   },
   "submit": {
+    "testflight": {},
     "production": {}
   }
 }

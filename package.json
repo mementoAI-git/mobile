@@ -90,6 +90,7 @@
     "react-native-audio-api": "1.0.0-nightly-3310950-20260927",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-keyboard-controller": "1.21.9",
+    "react-native-memento-voice": "file:modules/react-native-memento-voice",
     "react-native-passkey": "^3.5.0",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",

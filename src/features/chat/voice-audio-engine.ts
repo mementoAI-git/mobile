@@ -3,6 +3,10 @@ import type {
   VoicePlaybackRuntime,
   VoiceQueuedBuffer,
 } from './voice-audio-types';
+import {
+  createNativeVoicePlaybackSession,
+  NativeVoicePlaybackController,
+} from './native-voice-playback-controller';
 import { VoicePlaybackController } from './voice-playback-controller';
 import {
   float32ToPcm16Base64,
@@ -75,6 +79,7 @@ export interface VoiceAudioQueueAdapter {
 }
 
 export interface VoiceAudioContextAdapter {
+  readonly nativeContext?: unknown;
   resume(): Promise<void>;
   createQueue(): VoiceAudioQueueAdapter;
   close(): Promise<void>;
@@ -164,7 +169,7 @@ export class VoiceAudioEngine {
   ) => void;
   private context?: VoiceAudioContextAdapter;
   private recorder?: VoiceAudioRecorderAdapter;
-  private playback?: VoicePlaybackController;
+  private playback?: VoicePlaybackController | NativeVoicePlaybackController;
   private subscriptions: VoiceNativeSubscription[] = [];
   private stopPromise?: Promise<void>;
   private started = false;
@@ -174,6 +179,8 @@ export class VoiceAudioEngine {
   private isHeadphones = false;
   private greetingShieldActive = false;
   private playbackContextSampleRate?: number;
+  private playbackGeneration = 0;
+  private routeChangePromise: Promise<void> = Promise.resolve();
 
   constructor(options: VoiceAudioEngineOptions = {}) {
     this.native = options.native ?? createNativeVoiceAudioAdapter();
@@ -243,7 +250,11 @@ export class VoiceAudioEngine {
       await this.createPlayback(this.playbackContextSampleRate);
 
       this.subscriptions = [
-        this.native.addRouteChangeListener(() => void this.handleRouteChange()),
+        this.native.addRouteChangeListener(() => {
+          this.routeChangePromise = this.routeChangePromise
+            .then(() => this.handleRouteChange())
+            .catch((error) => this.fail(asError(error)));
+        }),
         this.native.addAppStateListener((state) => void this.handleAppState(state)),
       ];
 
@@ -355,7 +366,7 @@ export class VoiceAudioEngine {
         await this.rebuildPlayback(preferredSampleRate);
       }
     } catch (error) {
-      await this.fail(asError(error));
+      throw asError(error);
     }
   }
 
@@ -364,19 +375,34 @@ export class VoiceAudioEngine {
     await context.resume();
     this.context = context;
     this.playbackContextSampleRate = sampleRate;
-    this.playback = new VoicePlaybackController(
-      new QueuePlaybackRuntime(context, sampleRate),
-      undefined,
-      this.metrics,
-      (state) => {
-        if (state === 'idle' || state === 'stopped') {
-          this.greetingShieldActive = false;
-        }
-        this.onPlaybackStateChange?.(state);
-      },
-      Date.now,
-      this.epoch,
-    );
+    this.playbackGeneration += 1;
+    const onStateChange = (
+      state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
+    ) => {
+      if (state === 'idle' || state === 'stopped') {
+        this.greetingShieldActive = false;
+      }
+      this.onPlaybackStateChange?.(state);
+    };
+    const nativeSession = context.nativeContext
+      ? createNativeVoicePlaybackSession(context.nativeContext)
+      : undefined;
+    this.playback = nativeSession
+      ? new NativeVoicePlaybackController(
+          nativeSession,
+          this.playbackGeneration,
+          this.epoch,
+          this.metrics,
+          onStateChange,
+        )
+      : new VoicePlaybackController(
+          new QueuePlaybackRuntime(context, sampleRate),
+          undefined,
+          this.metrics,
+          onStateChange,
+          Date.now,
+          this.epoch,
+        );
   }
 
   private async rebuildPlayback(sampleRate: number): Promise<void> {
@@ -494,6 +520,7 @@ export function createNativeVoiceAudioAdapter(): VoiceAudioNativeAdapter {
     createContext: (sampleRate) => {
       const context = new audioApi.AudioContext({ sampleRate });
       return {
+        nativeContext: context,
         resume: () => context.resume(),
         createQueue: () => new NativeQueue(context),
         close: () => context.close(),

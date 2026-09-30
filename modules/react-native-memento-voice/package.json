@@ -1,0 +1,24 @@
+{
+  "name": "react-native-memento-voice",
+  "version": "0.1.0",
+  "description": "Memento native streaming voice playback",
+  "main": "src/index.ts",
+  "react-native": "src/index.ts",
+  "types": "src/index.ts",
+  "files": [
+    "src",
+    "ios",
+    "common",
+    "MementoVoiceAudio.podspec"
+  ],
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "react-native-audio-api": "1.0.0-nightly-3310950-20260927"
+  },
+  "codegenConfig": {
+    "name": "mementovoiceaudio",
+    "type": "modules",
+    "jsSrcsDir": "src/specs"
+  }
+}

@@ -185,6 +185,46 @@ assert(
   'EAS preview builds must use bounded Sentry trace sampling.',
 );
 assert(
+  easJson.build?.testflight?.distribution === 'store',
+  'EAS TestFlight builds must use App Store distribution.',
+);
+assert(
+  easJson.build?.testflight?.channel === 'staging',
+  'EAS TestFlight builds must use the staging update channel.',
+);
+assert(
+  easJson.build?.testflight?.environment === 'preview',
+  'EAS TestFlight builds must load the preview EAS environment.',
+);
+assert(
+  easJson.build?.testflight?.autoIncrement === true,
+  'EAS TestFlight builds must auto-increment their build number.',
+);
+assert(
+  easJson.build?.testflight?.env?.EXPO_PUBLIC_API_BASE_URL === 'https://dev.mymemento.io/api',
+  'EAS TestFlight builds must use dev.mymemento.io API.',
+);
+assert(
+  easJson.build?.testflight?.env?.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE === '0.2',
+  'EAS TestFlight builds must use bounded Sentry trace sampling.',
+);
+assert(
+  easJson.submit?.testflight,
+  'EAS must expose a dedicated TestFlight submission profile.',
+);
+assert(
+  easJson.build?.production?.distribution === 'store',
+  'EAS production builds must use App Store distribution.',
+);
+assert(
+  easJson.build?.production?.channel === 'production',
+  'EAS production builds must use the production update channel.',
+);
+assert(
+  easJson.build?.production?.environment === 'production',
+  'EAS production builds must load the production EAS environment.',
+);
+assert(
   easJson.build?.production?.env?.EXPO_PUBLIC_API_BASE_URL === 'https://app.mymemento.io/api',
   'EAS production builds must use app.mymemento.io API.',
 );

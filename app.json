@@ -95,6 +95,7 @@
     },
     "plugins": [
       "./plugins/with-storekit-config",
+      "./plugins/with-audio-api-ffmpeg-disabled",
       "expo-router",
       "expo-secure-store",
       "expo-font",
