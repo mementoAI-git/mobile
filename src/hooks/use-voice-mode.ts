@@ -44,6 +44,7 @@ import {
   createCallActionHandlers,
 } from '@/features/chat/voice-call-actions';
 import { GoodbyeTracker } from '@/features/chat/voice-goodbye';
+import { saveUplinkRecording, VoiceUplinkRecorder } from '@/features/chat/voice-uplink-recorder';
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { serializeVoiceCallTranscript } from '@/features/chat/voice-transcript-parser';
 import { isPermissionGranted } from '@/lib/permission-recovery';
@@ -89,6 +90,8 @@ const TRANSCRIPT_UI_INTERVAL_MS = 100;
 // Tool calls this build can relay. The API locks matching tools into the session.
 const CLIENT_CAPABILITIES = [SEARCH_MEMORIES_TOOL, CALL_ACTIONS_CAPABILITY];
 const SPEAKER_FULL_DUPLEX = process.env.EXPO_PUBLIC_VOICE_FULL_DUPLEX === 'true';
+// Development only: save the mic audio sent to Gemini as a WAV for inspection.
+const DEBUG_RECORD_UPLINK = __DEV__ && process.env.EXPO_PUBLIC_VOICE_DEBUG_RECORD === 'true';
 // About 10 s in total, enough to ride out a tunnel or a network switch.
 const RECONNECT_DELAYS_MS = [0, 500, 1_500, 3_000, 5_000];
 
@@ -199,6 +202,7 @@ export function useVoiceMode({
   const transcriptRef = useRef(new VoiceTranscriptTurns());
   const turnSyncRef = useRef<VoiceTurnSync | null>(null);
   const toolRelayRef = useRef<VoiceToolRelay | null>(null);
+  const uplinkRecorderRef = useRef<VoiceUplinkRecorder | null>(null);
   const callActionsRef = useRef(callActions);
   callActionsRef.current = callActions;
   const goodbyeRef = useRef<{
@@ -458,6 +462,13 @@ export function useVoiceMode({
     networkUnsubscribeRef.current = null;
     lastNetworkRef.current = undefined;
     toolRelayRef.current = null;
+    const uplinkRecorder = uplinkRecorderRef.current;
+    uplinkRecorderRef.current = null;
+    if (uplinkRecorder) {
+      logger.runtime('[VoiceMode] uplink recording saved', {
+        uri: saveUplinkRecording(uplinkRecorder) ?? 'failed',
+      });
+    }
     if (goodbyeRef.current) {
       clearInterval(goodbyeRef.current.timer);
       goodbyeRef.current = null;
@@ -739,6 +750,7 @@ export function useVoiceMode({
     transcriptDiagnosticsRef.current = createVoiceTranscriptDiagnostics();
     sessionIdRef.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     messageHandlerRef.current = new VoiceMessageHandler();
+    uplinkRecorderRef.current = DEBUG_RECORD_UPLINK ? new VoiceUplinkRecorder() : null;
 
     const engine = new VoiceAudioEngine({
       speakerFullDuplex: SPEAKER_FULL_DUPLEX,
@@ -846,6 +858,7 @@ export function useVoiceMode({
           return;
         }
         diagnostics.micFramesSent += 1;
+        uplinkRecorderRef.current?.add(data);
         try {
           sessionRef.current?.sendRealtimeInput({
             audio: { data, mimeType: 'audio/pcm;rate=16000' },
