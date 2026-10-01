@@ -59,6 +59,7 @@ import type { IFile } from '@/types';
 import { PublishPrivacySheet, type PrivacyMode } from '@/components/sheets/PublishPrivacySheet';
 import { deriveMemoryAudience, formatMemoryAudienceLabel, normalizeAudienceIds, type MemoryAudienceSelection, type MemoryVisibility } from '@/features/memories/memory-audience';
 import { buildEditorPublishPayload } from '@/features/editor/editor-publish-payload';
+import { singleLineTitle } from '@/features/editor/title-input';
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
@@ -995,22 +996,27 @@ export default function EditorScreen() {
               style={{ flex: 1 }}
             >
               {/* Title */}
+              {/* Multiline so long titles wrap. Return still moves to the body
+                  instead of adding a line break, and pasted line breaks become spaces. */}
               <TextInput
                 ref={titleRef}
                 value={title}
-                 onChangeText={v => {
-                   setTitle(v);
-                   latestTitleRef.current = v;
-                   scheduleSave(v, latestBodyRef.current);
-                 }}
+                onChangeText={raw => {
+                  const v = singleLineTitle(raw);
+                  setTitle(v);
+                  latestTitleRef.current = v;
+                  scheduleSave(v, latestBodyRef.current);
+                }}
                 placeholder="Title"
                 placeholderTextColor={COLORS.textDisabled}
-                style={{ ...TYPE.displayTitle,  color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42, marginTop: 4 }}
+                style={{ ...TYPE.displayTitle,  color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42, marginTop: 4, textAlignVertical: 'top' }}
+                multiline
+                scrollEnabled={false}
+                submitBehavior="submit"
                 returnKeyType="next"
                 autoCapitalize="sentences"
                 autoCorrect
                 onSubmitEditing={() => richEditorRef.current?.focus()}
-                blurOnSubmit={false}
               />
 
               {/* ── Attachment strip ── */}
