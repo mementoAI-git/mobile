@@ -100,4 +100,15 @@ describe('Gemini voice provider contract', () => {
     expect(source).toContain("'[VoiceMode] Gemini event'");
     expect(source).toContain("'[VoiceMode] transcript metrics'");
   });
+
+  test('drops microphone audio while offline instead of queueing it', async () => {
+    const hook = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+    const guard = hook.indexOf('if (lastNetworkRef.current?.isConnected === false) {');
+    const send = hook.indexOf('sessionRef.current?.sendRealtimeInput({', guard);
+
+    expect(guard).toBeGreaterThan(-1);
+    expect(send).toBeGreaterThan(guard);
+    expect(hook).toContain('diagnostics.micFramesDroppedOffline += 1;');
+  });
 });
+

@@ -120,6 +120,7 @@ type VoiceTranscriptDiagnostics = {
   micFramesSent: number;
   micFramesDroppedMuted: number;
   micFramesDroppedGreeting: number;
+  micFramesDroppedOffline: number;
   /** Names of tool calls Gemini made, in order. */
   toolCalls: string[];
 };
@@ -142,6 +143,7 @@ function createVoiceTranscriptDiagnostics(): VoiceTranscriptDiagnostics {
     micFramesSent: 0,
     micFramesDroppedMuted: 0,
     micFramesDroppedGreeting: 0,
+    micFramesDroppedOffline: 0,
     toolCalls: [],
   };
 }
@@ -878,6 +880,13 @@ export function useVoiceMode({
         }
         if (isGreetingActiveRef.current) {
           diagnostics.micFramesDroppedGreeting += 1;
+          return;
+        }
+        // With no network the socket can't send, and the platform would queue
+        // every frame in memory until it reconnects. Drop them instead; the
+        // reconnect resumes the conversation.
+        if (lastNetworkRef.current?.isConnected === false) {
+          diagnostics.micFramesDroppedOffline += 1;
           return;
         }
         diagnostics.micFramesSent += 1;
