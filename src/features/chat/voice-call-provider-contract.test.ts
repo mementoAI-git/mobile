@@ -3,11 +3,13 @@ import { describe, expect, test } from 'bun:test';
 const read = (path: string) => Bun.file(new URL(`../../../${path}`, import.meta.url)).text();
 
 describe('app-wide voice call', () => {
-  test('the root layout owns the call and shows the floating bar', async () => {
+  test('the root layout owns the call and wraps the screens in the call strip', async () => {
     const layout = await read('app/_layout.tsx');
 
     expect(layout).toContain('<VoiceCallProvider>');
-    expect(layout).toContain('<FloatingCallBar />');
+    expect(layout).not.toContain('FloatingCallBar');
+    expect(layout.indexOf('<CallStripLayout>')).toBeLessThan(layout.indexOf('<Stack'));
+    expect(layout.indexOf('</Stack>')).toBeLessThan(layout.indexOf('</CallStripLayout>'));
     expect(layout.indexOf('<BackgroundMusicProvider>')).toBeLessThan(
       layout.indexOf('<VoiceCallProvider>'),
     );
@@ -23,12 +25,14 @@ describe('app-wide voice call', () => {
     expect(provider).toContain('onModelEndedCall: leaveCallScreen');
   });
 
-  test('the floating bar hides on the call screen and can end the call', async () => {
-    const bar = await read('src/components/chat/FloatingCallBar.tsx');
+  test('the call strip pushes screens down instead of covering them', async () => {
+    const strip = await read('src/components/chat/CallStrip.tsx');
 
-    expect(bar).toContain('pathname === VOICE_CALL_PATH');
-    expect(bar).toContain('accessibilityLabel="End call"');
-    expect(bar).toContain('voice.disconnect()');
+    expect(strip).toContain('shouldShowCallStrip({');
+    expect(strip).toContain('<SafeAreaInsetsContext.Provider value={screenInsets}>');
+    expect(strip).toContain('{ ...insets, top: 0 }');
+    expect(strip).toContain('accessibilityLabel="End call"');
+    expect(strip).toContain('voice.disconnect()');
   });
 
   test('the call screen is a view onto the provider call', async () => {
