@@ -3,6 +3,7 @@ import { router, usePathname } from 'expo-router';
 import { Platform } from 'react-native';
 
 import { CallActivityController, createCallActivityAdapter } from '@/features/chat/call-activity';
+import { isCallLive } from '@/features/chat/call-indicator';
 import { useBackgroundMusic } from '@/hooks/use-background-music';
 import { useVoiceMode, type VoiceCallActionEffects } from '@/hooks/use-voice-mode';
 import { useAuthStore } from '@/store';
@@ -82,17 +83,23 @@ export function VoiceCallProvider({ children }: { children: React.ReactNode }) {
     const adapter = createCallActivityAdapter(Platform.OS);
     return { adapter, controller: new CallActivityController(adapter) };
   }, []);
+  const callLive = isCallLive(voice);
   useEffect(() => {
     callActivity.controller.sync({
-      isConnected: voice.isConnected,
+      isConnected: callLive,
       isMuted: voice.isMuted,
       isAiSpeaking: voice.isAiSpeaking,
       recordingTime: voiceRef.current.recordingTime,
     });
-  }, [callActivity, voice.isConnected, voice.isMuted, voice.isAiSpeaking]);
+  }, [callActivity, callLive, voice.isMuted, voice.isAiSpeaking]);
   useEffect(() => {
     const subscription = callActivity.adapter?.onAction((action) => {
       const current = voiceRef.current;
+      // A button on a card with no live call behind it just clears the card.
+      if (!isCallLive(current)) {
+        callActivity.controller.endNow();
+        return;
+      }
       if (action === 'end') void current.disconnect();
       else current.setMuted(!current.isMuted);
     });

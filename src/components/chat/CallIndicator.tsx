@@ -11,6 +11,7 @@ import { TYPE } from '@/constants/typography';
 import {
   callIndicatorStatus,
   callIndicatorVariant,
+  isCallLive,
   islandCapsuleFrame,
   shouldShowCallIndicator,
 } from '@/features/chat/call-indicator';
@@ -31,7 +32,7 @@ export function CallIndicatorLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const visible = shouldShowCallIndicator({
-    isConnected: voice.isConnected,
+    isConnected: isCallLive(voice),
     pathname,
     platform: Platform.OS,
     callPath: VOICE_CALL_PATH,

@@ -26,6 +26,11 @@ export function shouldShowCallIndicator({
   return !(platform === 'ios' && IOS_FULL_SCREEN_MODAL_PATHS.has(pathname));
 }
 
+/** Live means connected and not hanging up. Call surfaces show only then. */
+export function isCallLive(voice: { isConnected: boolean; isEnding: boolean }): boolean {
+  return voice.isConnected && !voice.isEnding;
+}
+
 export type CallIndicatorVariant = 'island' | 'statusBar';
 
 /** iPhones with a Dynamic Island have a top safe-area inset of 59pt or more. */

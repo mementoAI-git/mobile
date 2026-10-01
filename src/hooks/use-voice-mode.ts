@@ -173,6 +173,11 @@ export function useVoiceMode({
 } = {}) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  /**
+   * True from the moment the call is hung up until teardown and transcript
+   * saving finish. Call surfaces hide as soon as this turns true.
+   */
+  const [isEnding, setIsEnding] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [aiSpeechText, setAiSpeechText] = useState('Ready to connect secure voice link...');
@@ -459,6 +464,7 @@ export function useVoiceMode({
     hasCompletedSessionRef.current = true;
     isSessionActiveRef.current = false;
     isMutedRef.current = true;
+    if (isMountedRef.current) setIsEnding(true);
     networkUnsubscribeRef.current?.();
     networkUnsubscribeRef.current = null;
     lastNetworkRef.current = undefined;
@@ -600,6 +606,7 @@ export function useVoiceMode({
     if (isMountedRef.current) {
       setIsConnected(false);
       setIsConnecting(false);
+      setIsEnding(false);
       isAiSpeakingRef.current = false;
       setIsAiSpeaking(false);
     }
@@ -995,6 +1002,7 @@ export function useVoiceMode({
     () => ({
       isConnected,
       isConnecting,
+      isEnding,
       isMuted,
       recordingTime,
       aiSpeechText,
@@ -1011,6 +1019,7 @@ export function useVoiceMode({
     [
       isConnected,
       isConnecting,
+      isEnding,
       isMuted,
       recordingTime,
       aiSpeechText,

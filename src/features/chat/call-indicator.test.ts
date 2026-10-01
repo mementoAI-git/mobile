@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   callIndicatorStatus,
   callIndicatorVariant,
+  isCallLive,
   islandCapsuleFrame,
   shouldShowCallIndicator,
 } from './call-indicator';
@@ -66,5 +67,13 @@ describe('callIndicatorStatus', () => {
     expect(callIndicatorStatus({ isMuted: true, isAiSpeaking: true })).toBe('Muted');
     expect(callIndicatorStatus({ isMuted: false, isAiSpeaking: true })).toBe('Memento is speaking');
     expect(callIndicatorStatus({ isMuted: false, isAiSpeaking: false })).toBe('Listening');
+  });
+});
+
+describe('isCallLive', () => {
+  test('a call stops being live the moment it is hung up', () => {
+    expect(isCallLive({ isConnected: true, isEnding: false })).toBe(true);
+    expect(isCallLive({ isConnected: true, isEnding: true })).toBe(false);
+    expect(isCallLive({ isConnected: false, isEnding: false })).toBe(false);
   });
 });

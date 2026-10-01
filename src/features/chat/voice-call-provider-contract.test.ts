@@ -52,4 +52,26 @@ describe('app-wide voice call', () => {
     expect(provider).toContain("if (action === 'end') void current.disconnect();");
     expect(provider).toContain('current.setMuted(!current.isMuted)');
   });
+
+  test('call surfaces hide the moment the call is hung up', async () => {
+    const hook = await read('src/hooks/use-voice-mode.ts');
+    const provider = await read('src/hooks/use-voice-call.tsx');
+    const indicator = await read('src/components/chat/CallIndicator.tsx');
+
+    const disconnect = hook.indexOf('const disconnect = useCallback(');
+    const ending = hook.indexOf('setIsEnding(true)', disconnect);
+    const teardown = hook.indexOf('await engine?.stop()', disconnect);
+    expect(ending).toBeGreaterThan(disconnect);
+    expect(ending).toBeLessThan(teardown);
+    expect(provider).toContain('isConnected: callLive,');
+    expect(indicator).toContain('isConnected: isCallLive(voice),');
+  });
+
+  test('a Live Activity button with no live call clears the card', async () => {
+    const provider = await read('src/hooks/use-voice-call.tsx');
+
+    expect(provider).toContain('if (!isCallLive(current)) {');
+    expect(provider).toContain('callActivity.controller.endNow();');
+  });
 });
+
