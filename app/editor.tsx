@@ -43,7 +43,7 @@ import { useGroups } from '@/hooks/queries/use-groups';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useToast } from '@/components/ui/Toast';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetModalProvider, BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { upsertDraft, loadDrafts, deleteDraft, DraftsSheet, type StoryDraft, type StoryDraftAttachment } from '@/components/sheets/DraftsSheet';
+import { upsertDraft, loadDrafts, readLocalDrafts, deleteDraft, DraftsSheet, type StoryDraft, type StoryDraftAttachment } from '@/components/sheets/DraftsSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useUiStore } from '@/store';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
@@ -310,7 +310,9 @@ function PublishModalInner({
         // Brand new story or promoted cloud draft
         if (draftId) {
           // Remove local draft slot without issuing a remote delete for the promoted memory
-          void deleteDraft(userEmail, draftId, { skipRemote: true });
+          void deleteDraft(userEmail, draftId, { skipRemote: true })
+            .then((drafts) => useUiStore.getState().setStoryDrafts(drafts))
+            .catch(() => undefined);
         }
         const id = res?.data?._id ?? res?.data?.data?._id ?? targetMemoryId ?? '';
         onPublished(publishedPostUrl(id));
@@ -572,7 +574,8 @@ export default function EditorScreen() {
       if (!t.trim() && !b.trim()) {
         // Empty — remove this draft slot silently
         if (draftIdRef.current) {
-          await deleteDraft(user?.email, draftIdRef.current).catch(() => {});
+          const drafts = await deleteDraft(user?.email, draftIdRef.current).catch(() => null);
+          if (drafts && isMountedRef.current) setStoryDrafts(drafts);
         }
         if (isMountedRef.current) setSavedStatus('saved');
         return;
@@ -594,8 +597,8 @@ export default function EditorScreen() {
             setCurrentDraftId(savedId);
           }
           setSavedStatus('saved');
-          // Refresh the badge count via unified store
-          loadDrafts(user?.email).then(d => {
+          // Refresh the badge from the device copy; no need to download the list.
+          readLocalDrafts(user?.email).then(d => {
             if (isMountedRef.current) setStoryDrafts(d);
           });
         }
@@ -863,7 +866,7 @@ export default function EditorScreen() {
                     id: draftIdRef.current, title: cancelTitle, body: cancelBody, updatedAt: Date.now(),
                     attachments: savedAttachments.length ? savedAttachments : undefined,
                   }).catch(() => {});
-                  loadDrafts(user?.email).then(d => setStoryDrafts(d)).catch(() => {});
+                  readLocalDrafts(user?.email).then(d => setStoryDrafts(d)).catch(() => {});
                 } else {
                   AsyncStorage.setItem(QC_DRAFT_KEY(user?.email), JSON.stringify({ body: qcBody.trim() })).catch(() => {});
                 }
