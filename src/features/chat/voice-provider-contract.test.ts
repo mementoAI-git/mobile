@@ -61,6 +61,16 @@ describe('Gemini voice provider contract', () => {
     expect(hook).toContain('void disconnectRef.current()');
   });
 
+  test('records the call end after the final turns are saved', async () => {
+    const hook = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+    const flush = hook.indexOf('transcriptPersisted = await turnSync.flush()');
+    const end = hook.indexOf('voiceCallEndPath(turnSync.getSessionId())');
+
+    expect(flush).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(flush);
+    expect(hook).toContain('buildVoiceCallEndBody(finalDuration, savedMemoryId)');
+  });
+
   test('turns recorder failures into the reconnectable connection state', async () => {
     const source = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
 
@@ -90,4 +100,15 @@ describe('Gemini voice provider contract', () => {
     expect(source).toContain("'[VoiceMode] Gemini event'");
     expect(source).toContain("'[VoiceMode] transcript metrics'");
   });
+
+  test('drops microphone audio while offline instead of queueing it', async () => {
+    const hook = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+    const guard = hook.indexOf('if (lastNetworkRef.current?.isConnected === false) {');
+    const send = hook.indexOf('sessionRef.current?.sendRealtimeInput({', guard);
+
+    expect(guard).toBeGreaterThan(-1);
+    expect(send).toBeGreaterThan(guard);
+    expect(hook).toContain('diagnostics.micFramesDroppedOffline += 1;');
+  });
 });
+

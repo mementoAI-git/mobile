@@ -65,4 +65,30 @@ describe('VoiceToolRelay', () => {
 
     expect(sent).toEqual([]);
   });
+
+  test('routes other tools to their handlers and survives handler failures', async () => {
+    const sent: VoiceToolResponse[][] = [];
+    const instance = new VoiceToolRelay(
+      async () => 'unused',
+      (responses) => sent.push(responses),
+      {
+        end_call: () => 'Ending.',
+        broken: () => {
+          throw new Error('boom');
+        },
+      },
+    );
+
+    await instance.handle([
+      { id: 'a', name: 'end_call', args: {} },
+      { id: 'b', name: 'broken', args: {} },
+      { id: 'c', name: 'constructor', args: {} },
+    ]);
+
+    expect(sent[0].map((response) => response.response.result)).toEqual([
+      'Ending.',
+      'broken failed. Tell the host it did not work.',
+      'Unknown tool constructor.',
+    ]);
+  });
 });

@@ -64,6 +64,10 @@ export class VoiceTurnSync {
     return this.pending.length > 0;
   }
 
+  getSessionId(): string {
+    return this.sessionId;
+  }
+
   getMemoryId(): string | undefined {
     return this.memoryId;
   }

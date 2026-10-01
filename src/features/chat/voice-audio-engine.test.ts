@@ -442,4 +442,36 @@ describe('VoiceAudioEngine', () => {
 
     expect(engine.snapshot().nativePlayback).toBe(false);
   });
+
+  test('reports where microphone frames go, and how loud the sent audio is', async () => {
+    const native = new FakeNative();
+    native.isHeadphonesDevice = false;
+    const chunks: string[] = [];
+    const engine = new VoiceAudioEngine({ native });
+    await engine.start((chunk) => chunks.push(chunk));
+    const frame = (level: number) => ({
+      buffer: { getChannelData: () => new Float32Array(1_600).fill(level) },
+      numFrames: 1_600,
+    });
+
+    engine.armGreetingShield();
+    native.recorder.input?.(frame(0.2));
+    engine.disarmGreetingShield();
+
+    const pcmSamples = new Float32Array(4800).fill(0.1);
+    engine.enqueueOutput(btoa(String.fromCharCode(...new Uint8Array(pcmSamples.length * 2))), 1);
+    native.recorder.input?.(frame(0.2));
+    engine.interruptOutput(2);
+
+    native.recorder.input?.(frame(0.25));
+    native.recorder.input?.(frame(0.01));
+
+    expect(chunks).toHaveLength(2);
+    const snapshot = engine.snapshot();
+    expect(snapshot.uplinkCaptured).toBe(4);
+    expect(snapshot.uplinkDroppedShield).toBe(1);
+    expect(snapshot.uplinkDroppedSpeakerGate).toBe(1);
+    expect(snapshot.uplinkDelivered).toBe(2);
+    expect(snapshot.uplinkPeakRms).toBeCloseTo(0.25, 5);
+  });
 });

@@ -41,6 +41,7 @@ import { useUserStore } from '@/store';
 import { useToast } from '../ui/Toast';
 import { resolveCapsuleRecipientInputs } from '@/features/capsules/capsule-contract';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
+import { useCapsuleThemeFonts } from '@/hooks/use-capsule-theme-fonts';
 
 interface Props {
   onClose: () => void;
@@ -48,6 +49,7 @@ interface Props {
 }
 
 export function CreateCapsuleSheet({ onClose, editData }: Props) {
+  useCapsuleThemeFonts();
   const isEdit = !!editData?._id;
   const insets = useSafeAreaInsets();
 

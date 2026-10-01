@@ -4,6 +4,17 @@ export type CallNotificationInfo = {
   title: string;
   contentText: string;
   showStopAction: boolean;
+  stopActionTitle: string;
+  /** Tapping the notification opens this link, which routes to the call screen. */
+  deepLinkUri: string;
+  /** Shows the running call time. */
+  usesChronometer: boolean;
+  /**
+   * Android shows it as an ongoing call, with a hang-up button. Needs the
+   * callStyle option added by patches/react-native-audio-api@*.patch.
+   */
+  callStyle: boolean;
+  callerName: string;
 };
 
 export interface CallNotificationAdapter {
@@ -12,16 +23,22 @@ export interface CallNotificationAdapter {
   onStop(listener: () => void): CallNotificationSubscription;
 }
 
-const CALL_NOTIFICATION: CallNotificationInfo = {
+export const CALL_NOTIFICATION: CallNotificationInfo = {
   title: 'Memento voice call',
   contentText: 'Tap to return to your conversation',
   showStopAction: true,
+  stopActionTitle: 'End call',
+  deepLinkUri: 'memento://voice-call',
+  usesChronometer: true,
+  callStyle: true,
+  callerName: 'Memento',
 };
 
 /**
  * Keeps an Android voice call alive in the background. Showing the
  * react-native-audio-api recording notification starts its foreground
- * service with the microphone type. iOS needs nothing: UIBackgroundModes
+ * service with the microphone type. The notification is a call-style one,
+ * so Android presents it as an ongoing call. iOS needs nothing: UIBackgroundModes
  * `audio` keeps the active voice-chat audio session running.
  */
 export class VoiceCallNotification {

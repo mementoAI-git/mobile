@@ -84,3 +84,16 @@ Run on one iPhone and one mid-range Android phone.
 - [ ] Ask about a specific past memory not in the recent chat ("what did I tell you about my grandma's farm?"). The model answers from the memory. The API log shows one `POST /ai/voice/memory-search`.
 - [ ] Put a test device's model on `VOICE_SPEAKER_DUPLEX_DENYLIST` on staging. On the next call, speaking over the model on speaker no longer interrupts it.
 - [ ] The call screen stays smooth while the model talks. No dropped frames are visible in the transcript animation.
+
+## Call actions (2026-10-01 design)
+
+Run against an API with the call actions plan deployed.
+
+- [ ] Say "okay, let's talk later". Memento says a short goodbye, the goodbye plays to the end, then the call ends and the call screen closes.
+- [ ] Say "I'm tired". Memento asks whether to wrap up and does not hang up on its own.
+- [ ] Say "hold on, stop listening". Memento says it will wait, the call screen shows muted, and tapping Unmute restores the microphone.
+- [ ] Say "show me my stories". Memento asks whether to keep talking or wrap up. Answer "keep talking": the Stories tab opens and the floating bar shows the live call. Tap the bar to return to the call screen.
+- [ ] Repeat and answer "wrap up": Memento says goodbye, the call ends, and the Stories tab opens.
+- [ ] During a call, tap the minimize arrow. The call continues in the floating bar. End it from the bar's red button.
+- [ ] Sign out during a minimized call. The call ends.
+- [ ] Background music pauses during a call, including while minimized, and resumes after it ends.
