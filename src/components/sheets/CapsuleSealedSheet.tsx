@@ -7,6 +7,7 @@ import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { Button } from '@/components/ui';
 import { getThemeById } from '@/constants/themes';
+import { useCapsuleThemeFonts } from '@/hooks/use-capsule-theme-fonts';
 
 const EMPTY_CAPSULES_IMG = require('../../../assets/images/illustrations/empty_capsules.webp');
 
@@ -25,6 +26,7 @@ export function CapsuleSealedSheet({
   themeId = 'classic',
   onClose,
 }: CapsuleSealedSheetProps) {
+  useCapsuleThemeFonts();
   useEffect(() => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
   }, []);

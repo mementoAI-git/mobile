@@ -14,6 +14,7 @@ import { StylePicker } from '../capsule/StylePicker';
 import { useState } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
+import { useCapsuleThemeFonts } from '@/hooks/use-capsule-theme-fonts';
 
 
 
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOnly }: Props) {
+  useCapsuleThemeFonts();
   const openSheet = useUiStore(s => s.openSheet);
   const insets = useSafeAreaInsets();
 

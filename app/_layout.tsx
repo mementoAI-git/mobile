@@ -40,9 +40,6 @@ import { EBGaramond_500Medium } from '@expo-google-fonts/eb-garamond/500Medium';
 import { EBGaramond_700Bold } from '@expo-google-fonts/eb-garamond/700Bold';
 import { EBGaramond_400Regular_Italic } from '@expo-google-fonts/eb-garamond/400Regular_Italic';
 import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono/400Regular';
-import { PatrickHandSC_400Regular } from '@expo-google-fonts/patrick-hand-sc/400Regular';
-import { Handlee_400Regular } from '@expo-google-fonts/handlee/400Regular';
-import { CutiveMono_400Regular } from '@expo-google-fonts/cutive-mono/400Regular';
 import { Geist_400Regular } from '@expo-google-fonts/geist/400Regular';
 import { Geist_500Medium } from '@expo-google-fonts/geist/500Medium';
 import { Geist_600SemiBold } from '@expo-google-fonts/geist/600SemiBold';
@@ -346,24 +343,13 @@ function RootLayout() {
     EBGaramond_400Regular_Italic,
     AzeretMono_400Regular,
 
-    PatrickHandSC_400Regular,
-    Handlee_400Regular,
-    CutiveMono_400Regular,
     Geist_400Regular,
     Geist_500Medium,
     Geist_600SemiBold,
     Geist_700Bold,
 
     // Map web font family names directly to RN loaded fonts.
-    'Patrick Hand SC': PatrickHandSC_400Regular,
-    Handlee: Handlee_400Regular,
-    Cutive: CutiveMono_400Regular,
     Geist: Geist_400Regular,
-
-    'Portrait Script': require(
-      '../assets/fonts/Portrait-script-regular.ttf',
-    ),
-
     Garamond: EBGaramond_400Regular,
     Sans: Inter_400Regular,
 
