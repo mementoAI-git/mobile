@@ -83,7 +83,13 @@ function IslandCapsule({ topInset }: { topInset: number }) {
           ) : (
             <AudioLines size={16} color={voice.isAiSpeaking ? COLORS.brand : COLORS.success} />
           )}
-          <Text style={{ ...TYPE.label, color: COLORS.textInverse, fontVariant: ['tabular-nums'] }}>
+          {/* The capsule has a fixed height, so large accessibility text sizes
+              are capped here. The button's accessibility label reads the time. */}
+          <Text
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.2}
+            style={{ ...TYPE.label, color: COLORS.textInverse, fontVariant: ['tabular-nums'] }}
+          >
             {time}
           </Text>
         </View>

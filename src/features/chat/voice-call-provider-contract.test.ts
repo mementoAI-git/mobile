@@ -33,6 +33,7 @@ describe('app-wide voice call', () => {
     expect(indicator).toContain('islandCapsuleFrame(topInset)');
     expect(indicator).toContain('backgroundColor: COLORS.dynamicIsland');
     expect(indicator).not.toContain('SafeAreaInsetsContext');
+    expect(indicator).toContain('maxFontSizeMultiplier={1.2}');
   });
 
   test('the call screen is a view onto the provider call', async () => {
