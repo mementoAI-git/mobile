@@ -26,16 +26,30 @@ export function callActivityStatus(snapshot: CallActivitySnapshot): CallActivity
 /**
  * Mirrors the live call into the iOS Live Activity (Dynamic Island and lock
  * screen). Starts it when the call connects, sends only real changes, and
- * ends it when the call ends. Native failures never affect the call.
+ * ends it when the call ends. Native commands run one at a time, in order,
+ * so a quick hang-up can never end the card before it has started. Native
+ * failures never affect the call or block later commands.
  */
 export class CallActivityController {
   private active = false;
   private lastKey = '';
+  private queue: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly adapter: CallActivityAdapter | null,
     private readonly now: () => number = Date.now,
   ) {}
+
+  /** Resolves once every queued native command has finished. */
+  idle(): Promise<void> {
+    return this.queue;
+  }
+
+  private run(command: (adapter: CallActivityAdapter) => Promise<void>): void {
+    const adapter = this.adapter;
+    if (!adapter) return;
+    this.queue = this.queue.then(() => command(adapter)).catch(() => undefined);
+  }
 
   sync(snapshot: CallActivitySnapshot): void {
     if (!this.adapter) return;
@@ -43,7 +57,7 @@ export class CallActivityController {
       if (!this.active) return;
       this.active = false;
       this.lastKey = '';
-      this.adapter.end().catch(() => undefined);
+      this.run((adapter) => adapter.end());
       return;
     }
 
@@ -53,12 +67,19 @@ export class CallActivityController {
       this.active = true;
       this.lastKey = key;
       const startedAtMs = this.now() - Math.max(0, snapshot.recordingTime) * 1_000;
-      this.adapter.start(startedAtMs, status, snapshot.isMuted).catch(() => undefined);
+      this.run((adapter) => adapter.start(startedAtMs, status, snapshot.isMuted));
       return;
     }
     if (key === this.lastKey) return;
     this.lastKey = key;
-    this.adapter.update(status, snapshot.isMuted).catch(() => undefined);
+    this.run((adapter) => adapter.update(status, snapshot.isMuted));
+  }
+
+  /** Ends the card even when no call is live, e.g. a card left behind. */
+  endNow(): void {
+    this.active = false;
+    this.lastKey = '';
+    this.run((adapter) => adapter.end());
   }
 }
 

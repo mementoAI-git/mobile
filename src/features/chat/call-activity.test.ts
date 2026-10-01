@@ -41,7 +41,7 @@ describe('callActivityStatus', () => {
 });
 
 describe('CallActivityController', () => {
-  test('starts once with the call start time, then sends only changes', () => {
+  test('starts once with the call start time, then sends only changes', async () => {
     const { adapter, calls } = fakeAdapter();
     const controller = new CallActivityController(adapter, () => 100_000);
 
@@ -50,6 +50,7 @@ describe('CallActivityController', () => {
     controller.sync(live({ isAiSpeaking: true }));
     controller.sync(live({ isAiSpeaking: true, recordingTime: 9 }));
     controller.sync(live({ isMuted: true }));
+    await controller.idle();
 
     expect(calls).toEqual([
       ['start', 96_000, 'listening', false],
@@ -58,7 +59,7 @@ describe('CallActivityController', () => {
     ]);
   });
 
-  test('ends when the call ends and starts fresh for the next call', () => {
+  test('ends when the call ends and starts fresh for the next call', async () => {
     const { adapter, calls } = fakeAdapter();
     const controller = new CallActivityController(adapter, () => 50_000);
 
@@ -66,6 +67,7 @@ describe('CallActivityController', () => {
     controller.sync(live({ isConnected: false }));
     controller.sync(live({ isConnected: false }));
     controller.sync(live({ isMuted: true }));
+    await controller.idle();
 
     expect(calls).toEqual([
       ['start', 50_000, 'listening', false],
@@ -95,5 +97,70 @@ describe('CallActivityController', () => {
       controller.sync(live({ isConnected: false }));
     }).not.toThrow();
     await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  test('runs native commands one at a time, in order', async () => {
+    const log: string[] = [];
+    let releaseStart: () => void = () => undefined;
+    const slow: CallActivityAdapter = {
+      start: () =>
+        new Promise<void>((resolve) => {
+          log.push('start:begin');
+          releaseStart = () => {
+            log.push('start:done');
+            resolve();
+          };
+        }),
+      update: async () => {
+        log.push('update');
+      },
+      end: async () => {
+        log.push('end');
+      },
+      onAction: () => ({ remove: () => undefined }),
+    };
+    const controller = new CallActivityController(slow);
+
+    controller.sync(live());
+    controller.sync(live({ isMuted: true }));
+    controller.sync(live({ isConnected: false }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(log).toEqual(['start:begin']);
+
+    releaseStart();
+    await controller.idle();
+    expect(log).toEqual(['start:begin', 'start:done', 'update', 'end']);
+  });
+
+  test('a failed command does not block the ones after it', async () => {
+    const log: string[] = [];
+    const flaky: CallActivityAdapter = {
+      start: async () => {
+        log.push('start');
+        throw new Error('activities disabled');
+      },
+      update: async () => {
+        log.push('update');
+      },
+      end: async () => {
+        log.push('end');
+      },
+      onAction: () => ({ remove: () => undefined }),
+    };
+    const controller = new CallActivityController(flaky);
+
+    controller.sync(live());
+    controller.sync(live({ isConnected: false }));
+    await controller.idle();
+    expect(log).toEqual(['start', 'end']);
+  });
+
+  test('endNow ends a leftover card even with no live call', async () => {
+    const { adapter, calls } = fakeAdapter();
+    const controller = new CallActivityController(adapter);
+
+    controller.endNow();
+    await controller.idle();
+    expect(calls).toEqual([['end']]);
   });
 });
