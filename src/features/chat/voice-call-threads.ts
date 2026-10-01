@@ -45,7 +45,9 @@ function buildCallMessage<T extends ChatListMessage>(sessionId: string, turns: T
   const times = ordered
     .map((turn) => Date.parse(turn.created_at ?? ''))
     .filter((time) => Number.isFinite(time));
-  const seconds = times.length ? (Math.max(...times) - Math.min(...times)) / 1_000 : 0;
+  const savedSeconds = Math.max(0, ...ordered.map((turn) => turn.duration ?? 0));
+  const estimatedSeconds = times.length ? (Math.max(...times) - Math.min(...times)) / 1_000 : 0;
+  const seconds = savedSeconds > 0 ? savedSeconds : estimatedSeconds;
   const text = serializeVoiceCallTranscript(
     formatVoiceCallDuration(seconds),
     ordered.map((turn) => ({

@@ -27,6 +27,7 @@ import {
   type VoiceTranscriptMessage,
 } from '@/features/chat/voice-transcript-turns';
 import { VoiceTurnSync } from '@/features/chat/voice-turn-sync';
+import { buildVoiceCallEndBody, voiceCallEndPath } from '@/features/chat/voice-call-records';
 import {
   createCallNotificationAdapter,
   VoiceCallNotification,
@@ -536,6 +537,21 @@ export function useVoiceMode({
       }
       void queryClient.invalidateQueries({ queryKey: queryKeys.memories() });
       if (!transcriptPersisted) logger.error('Voice turns could not be saved after retry');
+      if (transcriptPersisted) {
+        // Saves the real duration and starts server-side transcript clean-up.
+        void post(
+          voiceCallEndPath(turnSync.getSessionId()),
+          buildVoiceCallEndBody(finalDuration, savedMemoryId),
+        )
+          .then(() => {
+            if (savedMemoryId) {
+              void queryClient.invalidateQueries({
+                queryKey: queryKeys.promptMessages(savedMemoryId),
+              });
+            }
+          })
+          .catch((error) => logger.warn('Voice call end could not be recorded', error));
+      }
     } else {
       transcriptRef.current.drainCompleted();
       if (sessionTurns.length > 0) {

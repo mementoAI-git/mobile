@@ -25,6 +25,7 @@ export const queryKeys = {
   overviewPrompts: ['overview-prompts'] as const,
   memoryByPrompt: (promptId: string) => ['memory-by-prompt', promptId] as const,
   promptMessages: (id: string) => ['prompt-messages', id] as const,
+  voiceCallSummary: (sessionId: string) => ['voice-call-summary', sessionId] as const,
 
   beneficiaries: ['beneficiaries'] as const,
 

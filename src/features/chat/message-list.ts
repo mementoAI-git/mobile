@@ -13,6 +13,8 @@ export interface ChatListMessage {
   /** Voice call this turn belongs to; turns of one call share it. */
   voice_session_id?: string | null;
   voice_turn_index?: number | null;
+  /** Call length in seconds, saved on every turn when the call ends. */
+  duration?: number | null;
 }
 
 let sessionCounter = 0;

@@ -61,6 +61,16 @@ describe('Gemini voice provider contract', () => {
     expect(hook).toContain('void disconnectRef.current()');
   });
 
+  test('records the call end after the final turns are saved', async () => {
+    const hook = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+    const flush = hook.indexOf('transcriptPersisted = await turnSync.flush()');
+    const end = hook.indexOf('voiceCallEndPath(turnSync.getSessionId())');
+
+    expect(flush).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(flush);
+    expect(hook).toContain('buildVoiceCallEndBody(finalDuration, savedMemoryId)');
+  });
+
   test('turns recorder failures into the reconnectable connection state', async () => {
     const source = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
 

@@ -72,4 +72,14 @@ describe('groupVoiceCallThreads', () => {
     expect(grouped.map((m) => m._id)).toEqual(['legacy', 'voice-call-call-a', 'voice-call-call-b']);
     expect(grouped[0]).toBe(legacy);
   });
+
+  test('uses the saved call duration when the call has ended', () => {
+    const grouped = groupVoiceCallThreads<ChatListMessage>([
+      { ...turn(0, 'ai', 'Hey Saviour.', 10), duration: 312 },
+      { ...turn(1, 'user', 'Morning walk today.', 20), duration: 312 },
+    ]);
+
+    expect(parseVoiceCallMessage(grouped[0].text ?? '').duration).toBe('05:12');
+    expect(grouped[0].voice_session_id).toBe('call-1');
+  });
 });

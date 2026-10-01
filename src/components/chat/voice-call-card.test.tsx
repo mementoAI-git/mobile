@@ -23,6 +23,18 @@ describe('VoiceCallCard component contracts', () => {
     expect(source).not.toContain('No spoken dialogue was transcribed for this call.');
   });
 
+  test('offers an expandable summary for calls saved turn by turn', async () => {
+    const source = await Bun.file(new URL('./VoiceCallCard.tsx', import.meta.url)).text();
+
+    expect(source).toContain('useVoiceCallSummary(sessionId, isSummaryOpen)');
+    expect(source).toContain('sessionId && parsed.hasTranscript');
+    expect(source).toContain("accessibilityLabel={isSummaryOpen ? 'Hide call summary' : 'View call summary'}");
+    expect(source).toContain('summary.data.keyPoints');
+    expect(source).toContain('VOICE_SUMMARY_ERROR_TEXT');
+    expect(source).toContain('summary.refetch()');
+    expect(source).toContain('ActivityIndicator');
+  });
+
   test('parses basic call completion without transcript turns', () => {
     const message = {
       _id: 'call-1',
