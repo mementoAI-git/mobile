@@ -23,17 +23,29 @@ export function callActivityStatus(snapshot: CallActivitySnapshot): CallActivity
   return snapshot.isAiSpeaking ? 'speaking' : 'listening';
 }
 
+type CallActivityState = { status: CallActivityStatus; isMuted: boolean };
+
 /**
  * Mirrors the live call into the iOS Live Activity (Dynamic Island and lock
  * screen). Starts it when the call connects, sends only real changes, and
- * ends it when the call ends. Native commands run one at a time, in order,
- * so a quick hang-up can never end the card before it has started. Native
- * failures never affect the call or block later commands.
+ * ends it when the call ends.
+ *
+ * - Native commands run one at a time, in order, so a quick hang-up can never
+ *   end the card before it has started.
+ * - Status changes that pile up behind a slow command merge into the latest
+ *   one, and a hang-up drops any that haven't been sent.
+ * - A failed start is final for that call: Live Activities don't become
+ *   available mid-call, so updates are skipped until the next call.
+ * - Native failures never affect the call or block later commands.
  */
 export class CallActivityController {
   private active = false;
   private lastKey = '';
   private queue: Promise<void> = Promise.resolve();
+  /** Increments per call, so work queued for an old call can tell it is stale. */
+  private callId = 0;
+  private startFailedFor = -1;
+  private pendingUpdate: CallActivityState | null = null;
 
   constructor(
     private readonly adapter: CallActivityAdapter | null,
@@ -51,13 +63,31 @@ export class CallActivityController {
     this.queue = this.queue.then(() => command(adapter)).catch(() => undefined);
   }
 
+  private queueUpdate(state: CallActivityState): void {
+    const alreadyQueued = this.pendingUpdate !== null;
+    this.pendingUpdate = state;
+    if (alreadyQueued) return;
+    const callId = this.callId;
+    this.run(async (adapter) => {
+      const latest = this.pendingUpdate;
+      this.pendingUpdate = null;
+      if (!latest || callId !== this.callId || this.startFailedFor === callId) return;
+      await adapter.update(latest.status, latest.isMuted);
+    });
+  }
+
+  private queueEnd(): void {
+    this.active = false;
+    this.lastKey = '';
+    this.pendingUpdate = null;
+    this.callId += 1;
+    this.run((adapter) => adapter.end());
+  }
+
   sync(snapshot: CallActivitySnapshot): void {
     if (!this.adapter) return;
     if (!snapshot.isConnected) {
-      if (!this.active) return;
-      this.active = false;
-      this.lastKey = '';
-      this.run((adapter) => adapter.end());
+      if (this.active) this.queueEnd();
       return;
     }
 
@@ -66,20 +96,26 @@ export class CallActivityController {
     if (!this.active) {
       this.active = true;
       this.lastKey = key;
+      const callId = this.callId;
       const startedAtMs = this.now() - Math.max(0, snapshot.recordingTime) * 1_000;
-      this.run((adapter) => adapter.start(startedAtMs, status, snapshot.isMuted));
+      this.run(async (adapter) => {
+        try {
+          await adapter.start(startedAtMs, status, snapshot.isMuted);
+        } catch (error) {
+          this.startFailedFor = callId;
+          throw error;
+        }
+      });
       return;
     }
     if (key === this.lastKey) return;
     this.lastKey = key;
-    this.run((adapter) => adapter.update(status, snapshot.isMuted));
+    this.queueUpdate({ status, isMuted: snapshot.isMuted });
   }
 
   /** Ends the card even when no call is live, e.g. a card left behind. */
   endNow(): void {
-    this.active = false;
-    this.lastKey = '';
-    this.run((adapter) => adapter.end());
+    this.queueEnd();
   }
 }
 

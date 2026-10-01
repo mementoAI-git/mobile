@@ -47,8 +47,10 @@ describe('CallActivityController', () => {
 
     controller.sync(live({ recordingTime: 4 }));
     controller.sync(live({ recordingTime: 5 }));
+    await controller.idle();
     controller.sync(live({ isAiSpeaking: true }));
     controller.sync(live({ isAiSpeaking: true, recordingTime: 9 }));
+    await controller.idle();
     controller.sync(live({ isMuted: true }));
     await controller.idle();
 
@@ -129,7 +131,8 @@ describe('CallActivityController', () => {
 
     releaseStart();
     await controller.idle();
-    expect(log).toEqual(['start:begin', 'start:done', 'update', 'end']);
+    // The mute update was superseded by the hang-up, so it is never sent.
+    expect(log).toEqual(['start:begin', 'start:done', 'end']);
   });
 
   test('a failed command does not block the ones after it', async () => {
@@ -163,4 +166,67 @@ describe('CallActivityController', () => {
     await controller.idle();
     expect(calls).toEqual([['end']]);
   });
+
+  test('merges status changes queued behind a slow start into the latest one', async () => {
+    const log: unknown[][] = [];
+    let releaseStart: () => void = () => undefined;
+    const slow: CallActivityAdapter = {
+      start: () =>
+        new Promise<void>((resolve) => {
+          log.push(['start']);
+          releaseStart = resolve;
+        }),
+      update: async (...args) => {
+        log.push(['update', ...args]);
+      },
+      end: async () => {
+        log.push(['end']);
+      },
+      onAction: () => ({ remove: () => undefined }),
+    };
+    const controller = new CallActivityController(slow);
+
+    controller.sync(live());
+    controller.sync(live({ isAiSpeaking: true }));
+    controller.sync(live({ isAiSpeaking: false }));
+    controller.sync(live({ isMuted: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releaseStart();
+    await controller.idle();
+
+    expect(log).toEqual([['start'], ['update', 'muted', true]]);
+  });
+
+  test('a failed start is final for that call: no updates, but the next call starts again', async () => {
+    const log: string[] = [];
+    let failStart = true;
+    const adapter: CallActivityAdapter = {
+      start: async () => {
+        log.push('start');
+        if (failStart) throw new Error('Live Activities turned off');
+      },
+      update: async () => {
+        log.push('update');
+      },
+      end: async () => {
+        log.push('end');
+      },
+      onAction: () => ({ remove: () => undefined }),
+    };
+    const controller = new CallActivityController(adapter);
+
+    controller.sync(live());
+    await controller.idle();
+    controller.sync(live({ isMuted: true }));
+    controller.sync(live({ isConnected: false }));
+    await controller.idle();
+    expect(log).toEqual(['start', 'end']);
+
+    failStart = false;
+    controller.sync(live());
+    controller.sync(live({ isAiSpeaking: true }));
+    await controller.idle();
+    expect(log).toEqual(['start', 'end', 'start', 'update']);
+  });
 });
+
