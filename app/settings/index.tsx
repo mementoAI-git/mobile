@@ -234,22 +234,6 @@ export default function SettingsIndex() {
               <TouchableOpacity
                 onPress={() => {
                   void Haptics.selectionAsync();
-                  openSheet('voice-debrief', {
-                    duration: 185,
-                    userSpeechText: 'Remembering walking through the old orchard with grandfather in the autumn of 2012...',
-                    aiSpeechText: 'A story of heritage, quiet resilience, and family warmth.',
-                  });
-                }}
-                className="bg-white border border-stroke-weaker px-3 py-2 rounded-full"
-              >
-                <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
-                  🎙️ Voice Debrief
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  void Haptics.selectionAsync();
                   openSheet('capsule-sealed', {
                     title: 'Letters for Graduation',
                     scheduledDate: '2035-10-14',
