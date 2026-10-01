@@ -5,6 +5,9 @@ import ExpoModulesCore
 let mementoCallActionNotification = Notification.Name("MementoCallActivityAction")
 
 public class MementoCallActivityModule: Module {
+  /// True while JS listens for the card's buttons. Read and written on the main thread.
+  static var isJSListening = false
+
   private var actionObserver: NSObjectProtocol?
 
   public func definition() -> ModuleDefinition {
@@ -12,8 +15,9 @@ public class MementoCallActivityModule: Module {
 
     Events("onAction")
 
-    OnStartObserving {
-      self.actionObserver = NotificationCenter.default.addObserver(
+    OnStartObserving { [weak self] in
+      DispatchQueue.main.async { MementoCallActivityModule.isJSListening = true }
+      self?.actionObserver = NotificationCenter.default.addObserver(
         forName: mementoCallActionNotification,
         object: nil,
         queue: .main
@@ -24,6 +28,7 @@ public class MementoCallActivityModule: Module {
     }
 
     OnStopObserving {
+      DispatchQueue.main.async { MementoCallActivityModule.isJSListening = false }
       if let observer = self.actionObserver {
         NotificationCenter.default.removeObserver(observer)
       }
