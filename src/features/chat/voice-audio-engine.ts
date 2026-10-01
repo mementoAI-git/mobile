@@ -9,6 +9,7 @@ import {
 } from './native-voice-playback-controller';
 import { VoicePlaybackController } from './voice-playback-controller';
 import {
+  calculateRmsEnergy,
   float32ToPcm16Base64,
   pcm16Base64ToFloat32,
   resampleLinear,
@@ -107,6 +108,13 @@ export interface VoiceAudioNativeAdapter {
 
 export type VoiceAudioEngineSnapshot = VoiceMetricSnapshot & {
   captureDurationAnomalies: number;
+  /** Mic frames (100 ms each) captured, dropped by each gate, and delivered. */
+  uplinkCaptured: number;
+  uplinkDroppedShield: number;
+  uplinkDroppedSpeakerGate: number;
+  uplinkDelivered: number;
+  /** Loudest delivered frame, as RMS in 0..1. Near 0 means a silent microphone. */
+  uplinkPeakRms: number;
   modelOutputSampleRate: number;
   playbackContextSampleRate?: number;
   adaptiveExtraMs?: number;
@@ -182,6 +190,11 @@ export class VoiceAudioEngine {
   private started = false;
   private fatalReported = false;
   private captureDurationAnomalies = 0;
+  private uplinkCaptured = 0;
+  private uplinkDroppedShield = 0;
+  private uplinkDroppedSpeakerGate = 0;
+  private uplinkDelivered = 0;
+  private uplinkPeakRms = 0;
   private epoch = 1;
   private isHeadphones = false;
   private greetingShieldActive = false;
@@ -280,18 +293,28 @@ export class VoiceAudioEngine {
           // Protect the initial greeting window: the model is speaking and the mic
           // would capture its own echo. Once playback goes idle the shield disarms
           // and we stream all frames unconditionally — server-side VAD handles the rest.
-          if (this.greetingShieldActive) return;
+          this.uplinkCaptured += 1;
+          if (this.greetingShieldActive) {
+            this.uplinkDroppedShield += 1;
+            return;
+          }
 
           // When audio is outputting through the device loudspeaker (no headphones connected),
           // suppress mic uplink while playback is active/audible to eliminate acoustic echo feedback
           // that causes the server VAD to falsely detect user speech and cut the AI response.
           // When headphones are connected, full duplex is safe (no acoustic speaker feedback).
-          if (!this.speakerFullDuplex && !this.isHeadphones && this.isAudible(200)) return;
+          if (!this.speakerFullDuplex && !this.isHeadphones && this.isAudible(200)) {
+            this.uplinkDroppedSpeakerGate += 1;
+            return;
+          }
 
           const channel = event.buffer.getChannelData(0);
           const actualFrames = Math.min(event.numFrames, channel.length);
           if (actualFrames !== INPUT_BUFFER_FRAMES) this.captureDurationAnomalies += 1;
-          onInput(float32ToPcm16Base64(channel.subarray(0, actualFrames)));
+          const samples = channel.subarray(0, actualFrames);
+          this.uplinkDelivered += 1;
+          this.uplinkPeakRms = Math.max(this.uplinkPeakRms, calculateRmsEnergy(samples));
+          onInput(float32ToPcm16Base64(samples));
         },
       );
       this.recorder.onError((message) => {
@@ -351,6 +374,11 @@ export class VoiceAudioEngine {
     return {
       ...this.metrics.snapshot(),
       captureDurationAnomalies: this.captureDurationAnomalies,
+      uplinkCaptured: this.uplinkCaptured,
+      uplinkDroppedShield: this.uplinkDroppedShield,
+      uplinkDroppedSpeakerGate: this.uplinkDroppedSpeakerGate,
+      uplinkDelivered: this.uplinkDelivered,
+      uplinkPeakRms: Math.round(this.uplinkPeakRms * 10_000) / 10_000,
       modelOutputSampleRate: OUTPUT_SAMPLE_RATE,
       playbackContextSampleRate: this.playbackContextSampleRate,
       ...this.nativeStats,

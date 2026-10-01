@@ -112,6 +112,12 @@ type VoiceTranscriptDiagnostics = {
   interimInputTranscriptCharacters: number;
   outputTranscriptCharacters: number;
   seenEventShapes: Set<string>;
+  /** Mic frames (100 ms each) sent to Gemini, or dropped by this hook's gates. */
+  micFramesSent: number;
+  micFramesDroppedMuted: number;
+  micFramesDroppedGreeting: number;
+  /** Names of tool calls Gemini made, in order. */
+  toolCalls: string[];
 };
 
 function createVoiceTranscriptDiagnostics(): VoiceTranscriptDiagnostics {
@@ -129,6 +135,10 @@ function createVoiceTranscriptDiagnostics(): VoiceTranscriptDiagnostics {
     interimInputTranscriptCharacters: 0,
     outputTranscriptCharacters: 0,
     seenEventShapes: new Set<string>(),
+    micFramesSent: 0,
+    micFramesDroppedMuted: 0,
+    micFramesDroppedGreeting: 0,
+    toolCalls: [],
   };
 }
 
@@ -344,6 +354,9 @@ export function useVoiceMode({
         } else if (effect.type === 'resumption-handle') {
           resumeHandleRef.current = effect.handle;
         } else if (effect.type === 'tool-call') {
+          const names = effect.calls.map((call) => call.name);
+          transcriptDiagnosticsRef.current.toolCalls.push(...names);
+          logger.runtime('[VoiceMode] tool calls', { names });
           void toolRelayRef.current?.handle(effect.calls);
         } else if (effect.type === 'tool-call-cancellation') {
           toolRelayRef.current?.cancel(effect.ids);
@@ -823,7 +836,16 @@ export function useVoiceMode({
       sessionRef.current = await openLiveSession(liveToken);
 
       await engine.start((data) => {
-        if (isMutedRef.current || isGreetingActiveRef.current) return;
+        const diagnostics = transcriptDiagnosticsRef.current;
+        if (isMutedRef.current) {
+          diagnostics.micFramesDroppedMuted += 1;
+          return;
+        }
+        if (isGreetingActiveRef.current) {
+          diagnostics.micFramesDroppedGreeting += 1;
+          return;
+        }
+        diagnostics.micFramesSent += 1;
         try {
           sessionRef.current?.sendRealtimeInput({
             audio: { data, mimeType: 'audio/pcm;rate=16000' },
