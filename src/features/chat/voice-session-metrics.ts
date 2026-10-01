@@ -12,6 +12,7 @@ export type VoiceMetricSnapshot = {
   rebuffers: number;
   interruptionToSilenceMs?: number;
   routeChanges: number;
+  backgroundedCount: number;
   routeRebuilds: number;
   durationMs: number;
   closeCode?: number;
@@ -35,6 +36,7 @@ export class VoiceSessionMetrics {
   private underrunCount = 0;
   private rebufferCount = 0;
   private routeChangeCount = 0;
+  private backgroundedCount = 0;
   private routeRebuildCount = 0;
   private closedAt?: number;
   private closeCode?: number;
@@ -98,6 +100,10 @@ export class VoiceSessionMetrics {
     if (this.interruptionAt !== undefined) this.silenceAt = this.now();
   }
 
+  markBackgrounded(): void {
+    this.backgroundedCount += 1;
+  }
+
   markRouteChange(): void {
     this.routeChangeCount += 1;
   }
@@ -136,6 +142,7 @@ export class VoiceSessionMetrics {
           ? undefined
           : this.silenceAt - this.interruptionAt,
       routeChanges: this.routeChangeCount,
+      backgroundedCount: this.backgroundedCount,
       routeRebuilds: this.routeRebuildCount,
       durationMs: endedAt - this.startedAt,
       closeCode: this.closeCode,

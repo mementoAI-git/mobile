@@ -116,6 +116,8 @@ jsi::Value VoiceSessionHostObject::get(jsi::Runtime &runtime, const jsi::PropNam
           result.setProperty(rt, "sequenceGapCount", static_cast<double>(snapshot.sequenceGapCount));
           result.setProperty(rt, "malformedChunkCount", static_cast<double>(snapshot.malformedChunkCount));
           result.setProperty(rt, "isAudible", snapshot.isAudible);
+          result.setProperty(rt, "adaptiveExtraMs", static_cast<double>(snapshot.adaptiveExtraMs));
+          result.setProperty(rt, "concealedFrames", static_cast<double>(snapshot.concealedFrames));
           return result;
         });
   }

@@ -153,4 +153,15 @@ describe('NativeVoicePlaybackController', () => {
     expect(controller.state).toBe('stopped');
     expect(scheduler.size).toBe(0);
   });
+
+  test('keeps adaptive buffer and concealment stats after stop', () => {
+    const { session, controller } = setup();
+    controller.targetSampleRate = 48_000;
+    session.snapshot = { ...session.snapshot, adaptiveExtraMs: 240, concealedFrames: 4_800 };
+
+    controller.stop();
+    session.snapshot = { ...session.snapshot, adaptiveExtraMs: 0, concealedFrames: 0 };
+
+    expect(controller.getStats()).toEqual({ adaptiveExtraMs: 240, concealedMs: 100 });
+  });
 });

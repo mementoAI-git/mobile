@@ -34,6 +34,10 @@ export type NativeVoicePlaybackSnapshot = {
   sequenceGapCount: number;
   malformedChunkCount: number;
   isAudible: boolean;
+  /** Extra buffer the adaptive jitter buffer currently adds. */
+  adaptiveExtraMs?: number;
+  /** Output frames synthesized by packet loss concealment. */
+  concealedFrames?: number;
 };
 
 type NativeAudioNode = {
@@ -73,7 +77,7 @@ const DEFAULT_OPTIONS: Required<NativeVoicePlaybackOptions> = {
 let installationAttempted = false;
 
 function ensureInstalled(): boolean {
-  if (Platform.OS !== 'ios') return false;
+  if (Platform.OS !== 'ios' && Platform.OS !== 'android') return false;
   if (globalThis.__mementoCreateVoicePlaybackSession) return true;
   if (installationAttempted) return false;
   installationAttempted = true;

@@ -3,6 +3,7 @@
 # dependencies
 node_modules/
 .worktrees/
+.native-test/
 
 # Expo
 .expo/

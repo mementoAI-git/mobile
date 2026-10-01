@@ -47,6 +47,7 @@ describe('VoiceSessionMetrics', () => {
       rebuffers: 2,
       interruptionToSilenceMs: 35,
       routeChanges: 1,
+      backgroundedCount: 0,
       routeRebuilds: 1,
       durationMs: 1_000,
       closeCode: 1000,

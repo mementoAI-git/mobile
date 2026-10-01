@@ -4,14 +4,14 @@ import type {
 } from 'react-native-memento-voice';
 
 import type { VoicePlaybackState, VoiceTimerScheduler } from './voice-audio-types';
-import {
-  VOICE_MAX_QUEUE_MS,
-  VOICE_PREBUFFER_MS,
-  VOICE_RECOVERY_PREBUFFER_MS,
-} from './voice-playback-controller';
+import { VOICE_MAX_QUEUE_MS } from './voice-playback-controller';
 import { VoiceSessionMetrics } from './voice-session-metrics';
 
 const NATIVE_STATE_POLL_MS = 50;
+// Deeper than the JS fallback's 180/240 ms: cellular jitter otherwise turns
+// each late packet into an audible hole mid-word.
+export const NATIVE_VOICE_STARTUP_BUFFER_MS = 240;
+export const NATIVE_VOICE_RECOVERY_BUFFER_MS = 360;
 const defaultScheduler: VoiceTimerScheduler = {
   setTimeout: (callback, delayMs) => globalThis.setTimeout(callback, delayMs),
   clearTimeout: (timer) =>
@@ -34,6 +34,9 @@ export class NativeVoicePlaybackController {
   private pollTimer?: unknown;
   private lastUnderrunCount = 0;
   private lastPlaybackEndTime = 0;
+  private finalSnapshot?: NativeVoicePlaybackSnapshot;
+  /** Output sample rate of the native context, used to convert concealed frames to ms. */
+  targetSampleRate?: number;
 
   constructor(
     private readonly session: NativeVoicePlaybackSessionAdapter,
@@ -82,9 +85,21 @@ export class NativeVoicePlaybackController {
     this.schedulePoll();
   }
 
+  getStats(): { adaptiveExtraMs?: number; concealedMs?: number } {
+    const snapshot = this.finalSnapshot ?? this.session.getSnapshot();
+    return {
+      adaptiveExtraMs: snapshot.adaptiveExtraMs,
+      concealedMs:
+        snapshot.concealedFrames === undefined || !this.targetSampleRate
+          ? undefined
+          : Math.round((snapshot.concealedFrames / this.targetSampleRate) * 1_000),
+    };
+  }
+
   stop(): void {
     if (this.state === 'stopped') return;
     this.cancelPoll();
+    this.finalSnapshot = this.session.getSnapshot();
     this.session.stop(this.generation);
     this.setState('stopped');
     this.lastPlaybackEndTime = Date.now();
@@ -160,8 +175,8 @@ export function createNativeVoicePlaybackSession(
       context as ConstructorParameters<typeof NativeVoicePlaybackSession>[0],
       {
         sourceSampleRate: 24_000,
-        startupBufferMs: VOICE_PREBUFFER_MS,
-        recoveryBufferMs: VOICE_RECOVERY_PREBUFFER_MS,
+        startupBufferMs: NATIVE_VOICE_STARTUP_BUFFER_MS,
+        recoveryBufferMs: NATIVE_VOICE_RECOVERY_BUFFER_MS,
         maxBufferedMs: VOICE_MAX_QUEUE_MS,
       },
     );
