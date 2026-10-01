@@ -10,6 +10,9 @@ export interface ChatListMessage {
   replyTo?: { role: string; text: string } | null;
   attatchments?: IMessageAttachment[];
   is_voice?: boolean;
+  /** Voice call this turn belongs to; turns of one call share it. */
+  voice_session_id?: string | null;
+  voice_turn_index?: number | null;
 }
 
 let sessionCounter = 0;
