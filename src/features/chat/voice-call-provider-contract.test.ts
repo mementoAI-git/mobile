@@ -44,4 +44,12 @@ describe('app-wide voice call', () => {
     expect(screen).toContain('accessibilityLabel="Minimize call"');
     expect(screen).toContain("return voice.isMuted ? 'muted' : 'live';");
   });
+  test('the provider mirrors the call into the iOS Live Activity', async () => {
+    const provider = await read('src/hooks/use-voice-call.tsx');
+
+    expect(provider).toContain('createCallActivityAdapter(Platform.OS)');
+    expect(provider).toContain('callActivity.controller.sync({');
+    expect(provider).toContain("if (action === 'end') void current.disconnect();");
+    expect(provider).toContain('current.setMuted(!current.isMuted)');
+  });
 });

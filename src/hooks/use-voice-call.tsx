@@ -1,6 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { router, usePathname } from 'expo-router';
+import { Platform } from 'react-native';
 
+import { CallActivityController, createCallActivityAdapter } from '@/features/chat/call-activity';
 import { useBackgroundMusic } from '@/hooks/use-background-music';
 import { useVoiceMode, type VoiceCallActionEffects } from '@/hooks/use-voice-mode';
 import { useAuthStore } from '@/store';
@@ -72,6 +74,30 @@ export function VoiceCallProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!token && active) void disconnect();
   }, [active, disconnect, token]);
+
+  // iOS Live Activity: the call in the Dynamic Island and on the lock screen.
+  const voiceRef = useRef(voice);
+  voiceRef.current = voice;
+  const callActivity = useMemo(() => {
+    const adapter = createCallActivityAdapter(Platform.OS);
+    return { adapter, controller: new CallActivityController(adapter) };
+  }, []);
+  useEffect(() => {
+    callActivity.controller.sync({
+      isConnected: voice.isConnected,
+      isMuted: voice.isMuted,
+      isAiSpeaking: voice.isAiSpeaking,
+      recordingTime: voiceRef.current.recordingTime,
+    });
+  }, [callActivity, voice.isConnected, voice.isMuted, voice.isAiSpeaking]);
+  useEffect(() => {
+    const subscription = callActivity.adapter?.onAction((action) => {
+      const current = voiceRef.current;
+      if (action === 'end') void current.disconnect();
+      else current.setMuted(!current.isMuted);
+    });
+    return () => subscription?.remove();
+  }, [callActivity]);
 
   const value = useMemo(() => ({ voice, configure }), [voice, configure]);
   return <VoiceCallContext.Provider value={value}>{children}</VoiceCallContext.Provider>;
