@@ -65,7 +65,7 @@ import { AppSwitcherPrivacyBlur } from '@/components/security/AppSwitcherPrivacy
 import { VaultLockoutScreen } from '@/components/security/VaultLockoutScreen';
 import { BackgroundMusicProvider } from '@/hooks/use-background-music';
 import { VoiceCallProvider } from '@/hooks/use-voice-call';
-import { CallStripLayout } from '@/components/chat/CallStrip';
+import { CallIndicatorLayout } from '@/components/chat/CallIndicator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { storageKeys } from '@/constants/storage-keys';
 
@@ -536,7 +536,7 @@ function RootLayout() {
 
                       <ShareIntentWatcher />
 
-                      <CallStripLayout>
+                      <CallIndicatorLayout>
                         <Stack
                           screenOptions={{
                             headerShown: false,
@@ -668,7 +668,7 @@ function RootLayout() {
 
                           <Stack.Screen name="+not-found" />
                         </Stack>
-                      </CallStripLayout>
+                      </CallIndicatorLayout>
 
                       <SheetManager />
                       <AppSwitcherPrivacyBlur />

@@ -3,13 +3,13 @@ import { describe, expect, test } from 'bun:test';
 const read = (path: string) => Bun.file(new URL(`../../../${path}`, import.meta.url)).text();
 
 describe('app-wide voice call', () => {
-  test('the root layout owns the call and wraps the screens in the call strip', async () => {
+  test('the root layout owns the call and wraps the screens in the call indicator', async () => {
     const layout = await read('app/_layout.tsx');
 
     expect(layout).toContain('<VoiceCallProvider>');
     expect(layout).not.toContain('FloatingCallBar');
-    expect(layout.indexOf('<CallStripLayout>')).toBeLessThan(layout.indexOf('<Stack'));
-    expect(layout.indexOf('</Stack>')).toBeLessThan(layout.indexOf('</CallStripLayout>'));
+    expect(layout.indexOf('<CallIndicatorLayout>')).toBeLessThan(layout.indexOf('<Stack'));
+    expect(layout.indexOf('</Stack>')).toBeLessThan(layout.indexOf('</CallIndicatorLayout>'));
     expect(layout.indexOf('<BackgroundMusicProvider>')).toBeLessThan(
       layout.indexOf('<VoiceCallProvider>'),
     );
@@ -25,14 +25,14 @@ describe('app-wide voice call', () => {
     expect(provider).toContain('onModelEndedCall: leaveCallScreen');
   });
 
-  test('the call strip pushes screens down instead of covering them', async () => {
-    const strip = await read('src/components/chat/CallStrip.tsx');
+  test('the call indicator floats over screens without moving them', async () => {
+    const indicator = await read('src/components/chat/CallIndicator.tsx');
 
-    expect(strip).toContain('shouldShowCallStrip({');
-    expect(strip).toContain('<SafeAreaInsetsContext.Provider value={screenInsets}>');
-    expect(strip).toContain('{ ...insets, top: 0 }');
-    expect(strip).toContain('accessibilityLabel="End call"');
-    expect(strip).toContain('voice.disconnect()');
+    expect(indicator).toContain('shouldShowCallIndicator({');
+    expect(indicator).toContain('callIndicatorVariant(Platform.OS, insets.top)');
+    expect(indicator).toContain('islandCapsuleFrame(topInset)');
+    expect(indicator).toContain('backgroundColor: COLORS.dynamicIsland');
+    expect(indicator).not.toContain('SafeAreaInsetsContext');
   });
 
   test('the call screen is a view onto the provider call', async () => {
