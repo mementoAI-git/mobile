@@ -1,12 +1,18 @@
 import type { LiveServerMessage } from '@google/genai/web';
 
+import type { VoiceToolCall } from './voice-tool-relay';
+
 export type VoiceMessageEffect =
   | { type: 'setup-complete' }
   | { type: 'output-audio'; data: string; epoch: number }
   | { type: 'input-transcript'; text: string; isInterim: boolean }
   | { type: 'output-transcript'; text: string; finished: boolean }
   | { type: 'interrupted' }
-  | { type: 'turn-complete' };
+  | { type: 'turn-complete' }
+  | { type: 'resumption-handle'; handle: string }
+  | { type: 'go-away'; timeLeftMs: number }
+  | { type: 'tool-call'; calls: VoiceToolCall[] }
+  | { type: 'tool-call-cancellation'; ids: string[] };
 
 export type VoiceServerMessageSummary = {
   setupComplete: boolean;
@@ -26,6 +32,14 @@ function transcriptLength(value: unknown): number {
   if (!value || typeof value !== 'object') return 0;
   const text = (value as Record<string, unknown>).text;
   return typeof text === 'string' ? text.length : 0;
+}
+
+/** Gemini sends durations as protobuf strings such as "5s" or "0.5s". */
+function durationToMs(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value * 1_000;
+  if (typeof value !== 'string') return 0;
+  const seconds = Number.parseFloat(value);
+  return Number.isFinite(seconds) ? seconds * 1_000 : 0;
 }
 
 /**
@@ -73,6 +87,44 @@ export class VoiceMessageHandler {
 
     if (message.setupComplete || message.setup_complete) {
       effects.push({ type: 'setup-complete' });
+    }
+
+    const resumption =
+      message.sessionResumptionUpdate ?? message.session_resumption_update;
+    const newHandle = resumption?.newHandle ?? resumption?.new_handle;
+    if (resumption?.resumable && typeof newHandle === 'string' && newHandle) {
+      effects.push({ type: 'resumption-handle', handle: newHandle });
+    }
+
+    const goAway = message.goAway ?? message.go_away;
+    if (goAway && typeof goAway === 'object') {
+      effects.push({
+        type: 'go-away',
+        timeLeftMs: durationToMs(goAway.timeLeft ?? goAway.time_left),
+      });
+    }
+
+    const toolCall = message.toolCall ?? message.tool_call;
+    const functionCalls = toolCall?.functionCalls ?? toolCall?.function_calls;
+    if (Array.isArray(functionCalls) && functionCalls.length) {
+      effects.push({
+        type: 'tool-call',
+        calls: functionCalls
+          .filter((call: any) => call && typeof call.name === 'string')
+          .map((call: any) => ({
+            id: typeof call.id === 'string' ? call.id : undefined,
+            name: call.name,
+            args: call.args && typeof call.args === 'object' ? call.args : {},
+          })),
+      });
+    }
+
+    const cancellation = message.toolCallCancellation ?? message.tool_call_cancellation;
+    if (Array.isArray(cancellation?.ids) && cancellation.ids.length) {
+      effects.push({
+        type: 'tool-call-cancellation',
+        ids: cancellation.ids.filter((id: unknown): id is string => typeof id === 'string'),
+      });
     }
 
     const content = message.serverContent ?? message.server_content;

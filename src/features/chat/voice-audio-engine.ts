@@ -109,11 +109,17 @@ export type VoiceAudioEngineSnapshot = VoiceMetricSnapshot & {
   captureDurationAnomalies: number;
   modelOutputSampleRate: number;
   playbackContextSampleRate?: number;
+  adaptiveExtraMs?: number;
+  concealedMs?: number;
+  /** True when the C++ renderer is in use rather than the JS buffer queue. */
+  nativePlayback: boolean;
 };
 
 export type VoiceAudioEngineOptions = {
   native?: VoiceAudioNativeAdapter;
   metrics?: VoiceSessionMetrics;
+  /** Stream the mic while model audio plays on the loudspeaker. Relies on OS echo cancellation. */
+  speakerFullDuplex?: boolean;
   onFatalError?: (error: Error) => void;
   onPlaybackStateChange?: (
     state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
@@ -163,6 +169,7 @@ export class QueuePlaybackRuntime implements VoicePlaybackRuntime {
 export class VoiceAudioEngine {
   private readonly native: VoiceAudioNativeAdapter;
   private readonly metrics: VoiceSessionMetrics;
+  private speakerFullDuplex: boolean;
   private readonly onFatalError?: (error: Error) => void;
   private readonly onPlaybackStateChange?: (
     state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
@@ -181,10 +188,13 @@ export class VoiceAudioEngine {
   private playbackContextSampleRate?: number;
   private playbackGeneration = 0;
   private routeChangePromise: Promise<void> = Promise.resolve();
+  private nativeStats: { adaptiveExtraMs?: number; concealedMs?: number } = {};
+  private nativePlayback = false;
 
   constructor(options: VoiceAudioEngineOptions = {}) {
     this.native = options.native ?? createNativeVoiceAudioAdapter();
     this.metrics = options.metrics ?? new VoiceSessionMetrics();
+    this.speakerFullDuplex = options.speakerFullDuplex ?? false;
     this.onFatalError = options.onFatalError;
     this.onPlaybackStateChange = options.onPlaybackStateChange;
   }
@@ -276,7 +286,7 @@ export class VoiceAudioEngine {
           // suppress mic uplink while playback is active/audible to eliminate acoustic echo feedback
           // that causes the server VAD to falsely detect user speech and cut the AI response.
           // When headphones are connected, full duplex is safe (no acoustic speaker feedback).
-          if (!this.isHeadphones && this.isAudible(200)) return;
+          if (!this.speakerFullDuplex && !this.isHeadphones && this.isAudible(200)) return;
 
           const channel = event.buffer.getChannelData(0);
           const actualFrames = Math.min(event.numFrames, channel.length);
@@ -295,7 +305,14 @@ export class VoiceAudioEngine {
     }
   }
 
+  /** Apply the server's device policy once the token arrives. */
+  setSpeakerFullDuplex(enabled: boolean): void {
+    this.speakerFullDuplex = enabled;
+    if (enabled) this.greetingShieldActive = false;
+  }
+
   armGreetingShield(): void {
+    if (this.speakerFullDuplex) return;
     this.greetingShieldActive = true;
   }
 
@@ -320,9 +337,10 @@ export class VoiceAudioEngine {
   }
 
   async handleAppState(state: string): Promise<void> {
-    if (state === 'background') {
-      await this.fail(new Error('Voice mode ended when Memento moved to the background.'));
-    }
+    // Calls continue in the background. iOS keeps the voice-chat audio session
+    // alive (UIBackgroundModes audio) and Android runs a microphone foreground
+    // service while the call notification is shown.
+    if (state === 'background') this.metrics.markBackgrounded();
   }
 
   async stop(): Promise<void> {
@@ -335,6 +353,8 @@ export class VoiceAudioEngine {
       captureDurationAnomalies: this.captureDurationAnomalies,
       modelOutputSampleRate: OUTPUT_SAMPLE_RATE,
       playbackContextSampleRate: this.playbackContextSampleRate,
+      ...this.nativeStats,
+      nativePlayback: this.nativePlayback,
     };
   }
 
@@ -387,7 +407,8 @@ export class VoiceAudioEngine {
     const nativeSession = context.nativeContext
       ? createNativeVoicePlaybackSession(context.nativeContext)
       : undefined;
-    this.playback = nativeSession
+    this.nativePlayback = Boolean(nativeSession);
+    const nativeController = nativeSession
       ? new NativeVoicePlaybackController(
           nativeSession,
           this.playbackGeneration,
@@ -395,6 +416,10 @@ export class VoiceAudioEngine {
           this.metrics,
           onStateChange,
         )
+      : undefined;
+    if (nativeController) nativeController.targetSampleRate = sampleRate;
+    this.playback = nativeController
+      ? nativeController
       : new VoicePlaybackController(
           new QueuePlaybackRuntime(context, sampleRate),
           undefined,
@@ -438,6 +463,9 @@ export class VoiceAudioEngine {
       }
 
       this.playback?.stop();
+      if (this.playback instanceof NativeVoicePlaybackController) {
+        this.nativeStats = this.playback.getStats();
+      }
       this.playback = undefined;
 
       const context = this.context;

@@ -162,4 +162,50 @@ describe('VoiceMessageHandler', () => {
       { type: 'turn-complete' },
     ]);
   });
+
+  test('emits resumable handles and go-away warnings', () => {
+    const handler = new VoiceMessageHandler();
+
+    expect(
+      handler.handle({ sessionResumptionUpdate: { newHandle: 'h1', resumable: true } } as any, 1),
+    ).toEqual([{ type: 'resumption-handle', handle: 'h1' }]);
+    expect(
+      handler.handle({ sessionResumptionUpdate: { newHandle: '', resumable: false } } as any, 1),
+    ).toEqual([]);
+    expect(handler.handle({ goAway: { timeLeft: '5s' } } as any, 1)).toEqual([
+      { type: 'go-away', timeLeftMs: 5000 },
+    ]);
+    expect(handler.handle({ goAway: {} } as any, 1)).toEqual([
+      { type: 'go-away', timeLeftMs: 0 },
+    ]);
+  });
+
+  test('emits tool calls and cancellations', () => {
+    const handler = new VoiceMessageHandler();
+
+    expect(
+      handler.handle(
+        {
+          toolCall: {
+            functionCalls: [
+              { id: 'c1', name: 'search_memories', args: { query: 'farm' } },
+              { id: 'c2', name: 'search_memories' },
+            ],
+          },
+        } as any,
+        1,
+      ),
+    ).toEqual([
+      {
+        type: 'tool-call',
+        calls: [
+          { id: 'c1', name: 'search_memories', args: { query: 'farm' } },
+          { id: 'c2', name: 'search_memories', args: {} },
+        ],
+      },
+    ]);
+    expect(handler.handle({ toolCallCancellation: { ids: ['c1'] } } as any, 1)).toEqual([
+      { type: 'tool-call-cancellation', ids: ['c1'] },
+    ]);
+  });
 });

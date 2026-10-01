@@ -48,12 +48,14 @@ describe('Gemini voice provider contract', () => {
     expect(source).not.toContain('VOICE_OPTIONS');
   });
 
-  test('disconnects on background and makes native close callbacks idempotent', async () => {
+  test('keeps calls alive in the background and makes native close callbacks idempotent', async () => {
     const hook = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
     const engine = await Bun.file(new URL('./voice-audio-engine.ts', import.meta.url)).text();
 
     expect(engine).toContain("if (state === 'background')");
-    expect(engine).not.toContain("state === 'active'");
+    expect(engine).not.toContain('Voice mode ended when Memento moved to the background');
+    expect(hook).toContain('callNotificationRef.current?.start(');
+    expect(hook).toContain('callNotificationRef.current?.stop()');
     expect(hook).toContain('if (isDisconnectingRef.current) return');
     expect(hook).toContain('onclose: () =>');
     expect(hook).toContain('void disconnectRef.current()');

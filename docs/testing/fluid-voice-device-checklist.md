@@ -21,6 +21,20 @@ Use a physical development device and an authenticated Pro development account. 
 - Interrupted audio never resumes from the stale response.
 - A natural pause of approximately 400 ms does not prematurely end the turn.
 
+## Phase 1b acceptance (2026-09-30 strategy)
+
+Run each on one iPhone and one mid-range Android phone, loudspeaker, no headphones.
+
+- [ ] Opened from a conversation with recent text turns, the greeting continues it without recapping
+- [ ] Replies are one to three sentences unless asked for more
+- [ ] Talking over the model stops it within about a quarter second
+- [ ] 10 minutes of normal conversation produces no more than 1 false interruption (log count)
+- [ ] No clicks at pauses, interruptions, or after a network hiccup (iOS)
+- [ ] Every turn appears as its own message in the chat after the call
+- [ ] Killing the app mid-call keeps every turn completed before the kill
+- [ ] A 15-minute call survives the Gemini goAway reconnect, and the model still remembers earlier turns
+- [ ] Switching Wi-Fi to cellular mid-call reconnects instead of ending the call
+
 ## Session record
 
 Create one row per run. Use `n/a` only when the device does not support the route.
@@ -59,3 +73,14 @@ Change one variable per run. Playback prebuffer may be tuned from 80–240 ms; s
 | Date | Route/network | Variable | Before | After | Before result | After result | Keep/revert |
 |---|---|---|---:|---:|---|---|---|
 | pending | pending | pending | pending | pending | pending | pending | pending |
+
+## Phase 1c acceptance (2026-09-30 strategy)
+
+Run on one iPhone and one mid-range Android phone.
+
+- [ ] Lock the screen mid-call for 2 minutes. The conversation continues, and the transcript keeps both sides.
+- [ ] Android: the "Memento voice call" notification shows during the call and its stop button ends the call.
+- [ ] Switch Wi-Fi off mid-sentence. `[VoiceMode] reconnecting` with reason `network-change` appears, and the call resumes within 3 seconds.
+- [ ] Ask about a specific past memory not in the recent chat ("what did I tell you about my grandma's farm?"). The model answers from the memory. The API log shows one `POST /ai/voice/memory-search`.
+- [ ] Put a test device's model on `VOICE_SPEAKER_DUPLEX_DENYLIST` on staging. On the next call, speaking over the model on speaker no longer interrupts it.
+- [ ] The call screen stays smooth while the model talks. No dropped frames are visible in the transcript animation.

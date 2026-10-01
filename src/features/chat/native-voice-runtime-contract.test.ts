@@ -23,10 +23,17 @@ describe('native voice runtime contract', () => {
       {
         iosMicrophonePermission:
           'Allow Memento to access your microphone for voice conversations.',
+        iosBackgroundMode: true,
         androidPermissions: [
           'android.permission.RECORD_AUDIO',
           'android.permission.MODIFY_AUDIO_SETTINGS',
+          'android.permission.FOREGROUND_SERVICE',
+          'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
+          'android.permission.FOREGROUND_SERVICE_MICROPHONE',
+          'android.permission.POST_NOTIFICATIONS',
         ],
+        androidForegroundService: true,
+        androidFSTypes: ['mediaPlayback', 'microphone'],
       },
     ]);
   });
@@ -77,5 +84,34 @@ describe('native voice runtime contract', () => {
     ).text();
 
     expect(playerSource).not.toContain('audioBuffer_->normalize()');
+  });
+
+  test('generates the Android splash drawable that the splash theme references', async () => {
+    const appJson = await Bun.file(repoFile('app.json')).json();
+    const plugins = appJson.expo.plugins as unknown[];
+    const blank = plugins.indexOf('./plugins/with-blank-splash-logo');
+    const splash = plugins.findIndex(
+      (entry) => Array.isArray(entry) && entry[0] === 'expo-splash-screen',
+    );
+
+    // Expo runs dangerous mods in reverse plugin order: list this plugin first so
+    // it writes the drawable after expo-splash-screen clears its images.
+    expect(blank).toBeGreaterThanOrEqual(0);
+    expect(blank).toBeLessThan(splash);
+    expect(await Bun.file(repoFile('plugins/with-blank-splash-logo.js')).exists()).toBe(true);
+  });
+
+  test('ships the native voice playback module for Android', async () => {
+    const moduleRoot = 'modules/react-native-memento-voice';
+    const index = await Bun.file(repoFile(`${moduleRoot}/src/index.ts`)).text();
+    const gradle = await Bun.file(repoFile(`${moduleRoot}/android/build.gradle`)).text();
+    const cmake = await Bun.file(repoFile(`${moduleRoot}/android/CMakeLists.txt`)).text();
+    const modulePackage = await Bun.file(repoFile(`${moduleRoot}/package.json`)).json();
+
+    expect(index).toContain("Platform.OS !== 'android'");
+    expect(gradle).toContain('implementation project(":react-native-audio-api")');
+    expect(cmake).toContain('react-native-audio-api::react-native-audio-api');
+    expect(modulePackage.codegenConfig.android.javaPackageName).toBe('io.mymemento.voice');
+    expect(modulePackage.files).toContain('android');
   });
 });
