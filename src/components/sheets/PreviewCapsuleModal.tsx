@@ -11,6 +11,7 @@ import type { IBeneficiary } from '@/types';
 import { useUserStore } from '@/store';
 import {TYPE} from '@/constants/typography';
 import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
+import { useCapsuleThemeFonts } from '@/hooks/use-capsule-theme-fonts';
 
 interface PreviewCapsuleModalProps {
   title: string;
@@ -26,6 +27,7 @@ interface PreviewCapsuleModalProps {
 }
 
 export const PreviewCapsuleModal = forwardRef<BottomSheetModal, PreviewCapsuleModalProps>((props, ref) => {
+  useCapsuleThemeFonts();
   const insets = useSafeAreaInsets();
   const {
     title,

@@ -8,6 +8,7 @@ import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize } from '@/constants/responsive';
 import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
+import { useCapsuleThemeFonts } from '@/hooks/use-capsule-theme-fonts';
 
 interface StylePickerProps {
   currentThemeId?: string;
@@ -22,6 +23,7 @@ export function StylePicker({
   fontSize,
   onSizeSelect
 }: StylePickerProps) {
+  useCapsuleThemeFonts();
   const insets = useSafeAreaInsets();
   const currentTheme = CAPSULE_THEMES.find(t => t.id === currentThemeId) || CAPSULE_THEMES[0];
   const sizes = ['1x', '2x', '3x'];

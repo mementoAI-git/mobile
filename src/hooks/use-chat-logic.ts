@@ -18,6 +18,7 @@ import type { ChatReplyQuote } from '@/lib/utils';
 import type { IMessageAttachment } from '@/types';
 import { resolveChatConversationId } from '@/features/chat/navigation';
 import type { ChatListMessage } from '@/features/chat/message-list';
+import { groupVoiceCallThreads } from '@/features/chat/voice-call-threads';
 import {
   mergeConversationMessagePages,
   mergeAllConversationMessages,
@@ -124,11 +125,14 @@ export function useChatLogic() {
   const serverMessages = serverMessagePages?.pages[0];
   const allMessages = useMemo(() => {
     const merged = mergeAllConversationMessages(persistedMessages, messages);
-    return merged.filter((m) => {
-      const text = (m.text ?? m.content ?? '').trim();
-      const attachments = m.attatchments ?? (m as any).attachments ?? [];
-      return text.length > 0 || attachments.length > 0;
-    });
+    // Show each voice call as one expandable thread rather than loose turns.
+    return groupVoiceCallThreads(
+      merged.filter((m) => {
+        const text = (m.text ?? m.content ?? '').trim();
+        const attachments = m.attatchments ?? (m as any).attachments ?? [];
+        return text.length > 0 || attachments.length > 0;
+      }),
+    );
   }, [persistedMessages, messages]);
 
   const handleBack = useCallback(() => {

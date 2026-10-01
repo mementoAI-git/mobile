@@ -9,6 +9,9 @@ export type VoiceToolCall = {
   args: Record<string, unknown>;
 };
 
+/** Handles one tool call and returns the text the model receives. */
+export type VoiceToolHandler = (args: Record<string, unknown>) => Promise<string> | string;
+
 export type VoiceToolResponse = {
   id?: string;
   name: string;
@@ -25,6 +28,7 @@ export class VoiceToolRelay {
   constructor(
     private readonly searchMemories: (query: string) => Promise<string>,
     private readonly send: (responses: VoiceToolResponse[]) => void,
+    private readonly handlers: Record<string, VoiceToolHandler> = {},
   ) {}
 
   async handle(calls: VoiceToolCall[]): Promise<void> {
@@ -43,6 +47,13 @@ export class VoiceToolRelay {
       name: call.name,
       response: { result },
     });
+    if (Object.prototype.hasOwnProperty.call(this.handlers, call.name)) {
+      try {
+        return reply(await this.handlers[call.name](call.args ?? {}));
+      } catch {
+        return reply(`${call.name} failed. Tell the host it did not work.`);
+      }
+    }
     if (call.name !== SEARCH_MEMORIES_TOOL) return reply(`Unknown tool ${call.name}.`);
     const query = typeof call.args?.query === 'string' ? call.args.query.trim() : '';
     if (!query) return reply('No search query was given.');

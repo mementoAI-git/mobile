@@ -10,12 +10,14 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "io.mymemento.app",
+      "appleTeamId": "9546K7Z2VT",
       "associatedDomains": [
         "applinks:app.mymemento.io",
         "webcredentials:app.mymemento.io"
       ],
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSSupportsLiveActivities": true
       }
     },
     "android": {
@@ -199,7 +201,8 @@
           "savePhotosPermission": "Allow Memento to save photos and videos to your library.",
           "isAccessMediaLocationEnabled": false
         }
-      ]
+      ],
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true

@@ -37,7 +37,6 @@ import { CapsuleSealedSheet } from './CapsuleSealedSheet';
 import { FirstStoryMilestoneSheet } from './FirstStoryMilestoneSheet';
 import { AddMemberToGroupSheet } from './AddMemberToGroupSheet';
 import { CancelSubscriptionConfirmationSheet } from './CancelSubscriptionConfirmationSheet';
-import { VoiceDebriefSheet } from './VoiceDebriefSheet';
 import { GuardianLensSheet } from './GuardianLensSheet';
 import { ExportArchiveSheet } from './ExportArchiveSheet';
 import { DailyRitualSheet } from './DailyRitualSheet';
@@ -81,7 +80,6 @@ const SHEET_CONFIGS: Record<string, {
   'security-confirmation': { component: SecurityConfirmationSheet, dynamic: true },
   'voice-call-settings': { component: VoiceCallSettingsSheet, dynamic: true },
   'end-voice-session': { component: EndVoiceSessionSheet, dynamic: true },
-  'voice-debrief': { component: VoiceDebriefSheet, dynamic: true },
   'guardian-lens': { component: GuardianLensSheet, dynamic: true },
   'export-archive': { component: ExportArchiveSheet, dynamic: true },
   'daily-ritual': { component: DailyRitualSheet, dynamic: true },

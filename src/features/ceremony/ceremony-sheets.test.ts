@@ -15,18 +15,23 @@ describe('Ceremony & Retention Features Registration', () => {
     expect(manager).toContain('FirstStoryMilestoneSheet');
 
     // Phase 2 sheets
-    expect(store).toContain("'voice-debrief'");
     expect(store).toContain("'guardian-lens'");
     expect(store).toContain("'export-archive'");
-    expect(manager).toContain('VoiceDebriefSheet');
     expect(manager).toContain('GuardianLensSheet');
     expect(manager).toContain('ExportArchiveSheet');
   });
 
-  test('wires voice-debrief trigger into voice-call route', async () => {
+  test('voice calls end without a debrief sheet; the transcript thread replaces it', async () => {
     const voiceCall = await Bun.file(new URL('../../../app/voice-call.tsx', import.meta.url)).text();
-    expect(voiceCall).toContain("'voice-debrief'");
-    expect(voiceCall).toContain('showDebrief');
+    const store = await Bun.file(new URL('../../store/ui.store.ts', import.meta.url)).text();
+    const manager = await Bun.file(new URL('../../components/sheets/SheetManager.tsx', import.meta.url)).text();
+    const settings = await Bun.file(new URL('../../../app/settings/index.tsx', import.meta.url)).text();
+    expect(voiceCall).not.toContain('voice-debrief');
+    expect(voiceCall).not.toContain('showDebrief');
+    expect(store).not.toContain("'voice-debrief'");
+    expect(manager).not.toContain('VoiceDebriefSheet');
+    expect(settings).not.toContain('voice-debrief');
+    expect(await Bun.file(new URL('../../components/sheets/VoiceDebriefSheet.tsx', import.meta.url)).exists()).toBe(false);
   });
 
   test('wires guardian-lens trigger into BeneficiaryActionsSheet', async () => {

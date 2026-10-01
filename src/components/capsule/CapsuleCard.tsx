@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { hs, iconSize, radius } from '@/constants/responsive';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { getCapsuleDisplayRecipients } from '@/features/capsules/recipient-display';
+import { useCapsuleThemeFonts } from '@/hooks/use-capsule-theme-fonts';
 
 interface CapsuleCardProps {
   capsule: ICapsule;
@@ -38,6 +39,7 @@ const statusLabels: Record<string, string> = {
 };
 
 export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, layoutMode = 'grid' }: CapsuleCardProps) {
+  useCapsuleThemeFonts();
   const cardScale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: cardScale.value }],

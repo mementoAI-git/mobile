@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Mic, MicOff, PhoneOff, Settings, Square } from 'lucide-react-native';
+import { ChevronDown, Mic, MicOff, PhoneOff, Settings, Square } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
 import { Button } from '@/components/ui/Button';
@@ -14,8 +14,7 @@ import { TYPE } from '@/constants/typography';
 import { minTouchTarget, iconSize, ms, radius } from '@/constants/responsive';
 import { VOICE_CATALOG, getVoiceById, type VoiceId } from '@/features/chat/voice-catalog';
 import { formatVoiceCallDuration, getVoiceCallTransition, type VoiceCallStage } from '@/features/chat/voice-call-flow';
-import { useVoiceMode } from '@/hooks/use-voice-mode';
-import { useBackgroundMusic } from '@/hooks/use-background-music';
+import { useVoiceCall } from '@/hooks/use-voice-call';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
 import { useAuthStore, useUiStore, useUserStore, useVoicePreferenceStore } from '@/store';
@@ -67,8 +66,11 @@ export default function VoiceCallRoute() {
     () => getVoiceById(selectedVoiceId ?? draftVoiceId) ?? VOICE_CATALOG[0],
     [draftVoiceId, selectedVoiceId],
   );
-  const voice = useVoiceMode({ memoryId: effectiveMemoryId, voiceName: selectedVoice.providerVoiceName });
-  const { pauseForVoice, resumeAfterVoice } = useBackgroundMusic();
+  const { voice, configure } = useVoiceCall();
+
+  useEffect(() => {
+    configure({ memoryId: effectiveMemoryId, voiceName: selectedVoice.providerVoiceName });
+  }, [configure, effectiveMemoryId, selectedVoice.providerVoiceName]);
 
   useEffect(() => {
     if (hydratedForUser !== userKey) void hydrate(userKey);
@@ -97,34 +99,21 @@ export default function VoiceCallRoute() {
     }
   }, [stage, voice.connectionFailure]);
 
+  // The call lives in VoiceCallProvider. When this screen opens during a call,
+  // or the model mutes the microphone, follow the call's real state.
   useEffect(() => {
-    if (stage === 'live' || stage === 'muted' || stage === 'connecting') {
-      pauseForVoice();
-      return;
-    }
-    resumeAfterVoice();
-  }, [pauseForVoice, resumeAfterVoice, stage]);
+    if (!voice.isConnected) return;
+    setStage((current) => {
+      if (current === 'ending') return current;
+      return voice.isMuted ? 'muted' : 'live';
+    });
+  }, [voice.isConnected, voice.isMuted]);
 
-  const close = useCallback(async (options?: { showDebrief?: boolean }) => {
-    resumeAfterVoice();
-    const duration = voice.recordingTime;
-    const userSpeechText = voice.userSpeechText;
-    const aiSpeechText = voice.aiSpeechText;
+  const close = useCallback(async () => {
     await voice.disconnect();
     if (router.canGoBack()) router.back();
     else router.replace('/(tabs)/chat');
-
-    if (options?.showDebrief && duration > 5) {
-      setTimeout(() => {
-        useUiStore.getState().openSheet('voice-debrief', {
-          duration,
-          memoryId: effectiveMemoryId ?? memoryId,
-          userSpeechText,
-          aiSpeechText,
-        });
-      }, 350);
-    }
-  }, [effectiveMemoryId, memoryId, resumeAfterVoice, router, voice]);
+  }, [router, voice]);
 
   const chooseVoice = useCallback((id: VoiceId) => {
     Haptics.selectionAsync();
@@ -171,12 +160,19 @@ export default function VoiceCallRoute() {
     if (stage === 'live' || stage === 'muted') {
       useUiStore.getState().openSheet('end-voice-session', {
         duration: voice.recordingTime,
-        onEnd: () => close({ showDebrief: true }),
+        onEnd: () => close(),
       });
     } else {
       void close();
     }
   }, [close, stage, voice.recordingTime]);
+
+  // Leaving the screen keeps the call going in the floating call bar.
+  const minimize = useCallback(() => {
+    Haptics.selectionAsync();
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/chat');
+  }, [router]);
 
   if (hydratedForUser !== userKey || isHydrating) {
     return (
@@ -233,9 +229,21 @@ export default function VoiceCallRoute() {
           <Button variant="outline" className="h-11" leftIcon={<PhoneOff size={20} color={COLORS.textBase} />} onPress={requestEnd}>
             End call
           </Button>
-          <Pressable onPress={openSettings} className="size-11 items-center justify-center rounded-full border border-stroke-weak bg-fill-weaker">
-            <Settings size={22} color={COLORS.textBase} />
-          </Pressable>
+          <View className="flex-row items-center gap-2">
+            {live ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Minimize call"
+                onPress={minimize}
+                className="size-11 items-center justify-center rounded-full border border-stroke-weak bg-fill-weaker"
+              >
+                <ChevronDown size={22} color={COLORS.textBase} />
+              </Pressable>
+            ) : null}
+            <Pressable onPress={openSettings} className="size-11 items-center justify-center rounded-full border border-stroke-weak bg-fill-weaker">
+              <Settings size={22} color={COLORS.textBase} />
+            </Pressable>
+          </View>
         </View>
         <View className="flex-1 items-center justify-center pb-28">
           <Pressable

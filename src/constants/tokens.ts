@@ -12,6 +12,8 @@
 export const COLORS = {
   background: '#ffffff',
   backgroundInverse: '#12131A',
+  // Pure black, to blend with the iPhone's Dynamic Island hardware.
+  dynamicIsland: '#000000',
   card: '#ffffff',
 
   // Link preview chip

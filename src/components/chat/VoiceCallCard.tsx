@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -20,6 +21,8 @@ import { TYPE } from '@/constants/typography';
 import { iconSize, ms, radius, responsiveSpace } from '@/constants/responsive';
 import { parseVoiceCallMessage } from '@/features/chat/voice-transcript-parser';
 import { toast } from '@/components/ui/Toast';
+import { VOICE_SUMMARY_ERROR_TEXT } from '@/features/chat/voice-call-records';
+import { useVoiceCallSummary } from '@/hooks/queries/use-voice-call-summary';
 
 export interface VoiceCallCardProps {
   message: {
@@ -30,6 +33,8 @@ export interface VoiceCallCardProps {
     createdAt?: string;
     is_voice?: boolean;
     role?: string;
+    /** Present for calls saved turn by turn; enables the Summary row. */
+    voice_session_id?: string | null;
   };
   onReply?: () => void;
   highlighted?: boolean;
@@ -41,6 +46,9 @@ export const VoiceCallCard = React.memo(function VoiceCallCard({
   highlighted = false,
 }: VoiceCallCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const sessionId = message.voice_session_id ?? null;
+  const summary = useVoiceCallSummary(sessionId, isSummaryOpen);
   const rawText = message.text || message.content || '';
   const parsed = useMemo(() => parseVoiceCallMessage(rawText), [rawText]);
 
@@ -53,6 +61,16 @@ export const VoiceCallCard = React.memo(function VoiceCallCard({
     void Haptics.selectionAsync();
     setIsExpanded((prev) => !prev);
   }, []);
+
+  const toggleSummary = useCallback(() => {
+    void Haptics.selectionAsync();
+    setIsSummaryOpen((prev) => !prev);
+  }, []);
+
+  const retrySummary = useCallback(() => {
+    void Haptics.selectionAsync();
+    void summary.refetch();
+  }, [summary]);
 
   const handleCopyTranscript = useCallback(async () => {
     void Haptics.selectionAsync();
@@ -98,6 +116,64 @@ export const VoiceCallCard = React.memo(function VoiceCallCard({
 
         {timeLabel && <Text style={styles.timeText}>{timeLabel}</Text>}
       </View>
+
+      {/* Summary: generated and saved on the server on first open */}
+      {sessionId && parsed.hasTranscript ? (
+        <>
+          <TouchableOpacity
+            onPress={toggleSummary}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={isSummaryOpen ? 'Hide call summary' : 'View call summary'}
+            accessibilityState={{ expanded: isSummaryOpen }}
+            style={styles.toggleBar}
+          >
+            <Text style={styles.toggleText}>
+              {isSummaryOpen ? 'Hide summary' : 'Summary'}
+            </Text>
+            {isSummaryOpen ? (
+              <ChevronUp size={iconSize(16)} color={COLORS.brand} strokeWidth={2.2} />
+            ) : (
+              <ChevronDown size={iconSize(16)} color={COLORS.textWeak} strokeWidth={2} />
+            )}
+          </TouchableOpacity>
+
+          {isSummaryOpen && (
+            <View style={styles.summaryContent}>
+              {summary.data ? (
+                <>
+                  <Text style={styles.summaryText}>{summary.data.text}</Text>
+                  {summary.data.keyPoints.length > 0 && (
+                    <View style={styles.keyPointsList}>
+                      {summary.data.keyPoints.map((point, index) => (
+                        <View key={index} style={styles.keyPointRow}>
+                          <View style={styles.keyPointDot} />
+                          <Text style={styles.keyPointText}>{point}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </>
+              ) : summary.isError ? (
+                <TouchableOpacity
+                  onPress={retrySummary}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Try summarizing again"
+                  style={styles.summaryStatusRow}
+                >
+                  <Text style={styles.summaryErrorText}>{VOICE_SUMMARY_ERROR_TEXT}</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.summaryStatusRow} accessibilityLabel="Summarizing call">
+                  <ActivityIndicator size="small" color={COLORS.brand} />
+                  <Text style={styles.summaryStatusText}>Summarizing…</Text>
+                </View>
+              )}
+            </View>
+          )}
+        </>
+      ) : null}
 
       {/* Accordion Toggle Bar (Floor 44dp hit target) */}
       {parsed.hasTranscript ? (
@@ -278,6 +354,52 @@ const styles = StyleSheet.create({
   toggleText: {
     ...TYPE.buttonSmall,
     color: COLORS.brand,
+  },
+  summaryContent: {
+    backgroundColor: COLORS.fillWeak,
+    borderRadius: radius(14),
+    gap: responsiveSpace(8),
+    marginBottom: responsiveSpace(4),
+    paddingHorizontal: responsiveSpace(12),
+    paddingVertical: responsiveSpace(10),
+  },
+  summaryText: {
+    ...TYPE.body,
+    color: COLORS.textStrong,
+  },
+  keyPointsList: {
+    gap: responsiveSpace(4),
+  },
+  keyPointRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: responsiveSpace(8),
+  },
+  keyPointDot: {
+    backgroundColor: COLORS.brand,
+    borderRadius: radius(999),
+    height: 5,
+    marginTop: responsiveSpace(8),
+    width: 5,
+  },
+  keyPointText: {
+    ...TYPE.bodySmall,
+    color: COLORS.textStrong,
+    flex: 1,
+  },
+  summaryStatusRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: responsiveSpace(8),
+    minHeight: 36,
+  },
+  summaryStatusText: {
+    ...TYPE.bodySmall,
+    color: COLORS.textWeak,
+  },
+  summaryErrorText: {
+    ...TYPE.bodySmall,
+    color: COLORS.textWeak,
   },
   expandedContent: {
     marginTop: responsiveSpace(2),

@@ -86,6 +86,8 @@ export default {
   ephemeralToken: '/ai/ephemeral-token',
   voiceTurns: '/ai/voice/turns',
   voiceMemorySearch: '/ai/voice/memory-search',
+  voiceCallEnd: '/ai/voice/calls/:sessionId/end',
+  voiceCallSummary: '/ai/voice/calls/:sessionId/summary',
   generateTags: '/ai/generate-tags',
 
   // capsule
