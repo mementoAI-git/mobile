@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+  CALL_NOTIFICATION,
   VoiceCallNotification,
   type CallNotificationAdapter,
   type CallNotificationInfo,
@@ -57,5 +58,16 @@ describe('VoiceCallNotification', () => {
 
     await expect(notification.start(() => undefined)).resolves.toBeUndefined();
     await expect(notification.stop()).resolves.toBeUndefined();
+  });
+
+  test('shows the call time, an End call button, and returns to the call on tap', () => {
+    expect(CALL_NOTIFICATION).toMatchObject({
+      showStopAction: true,
+      stopActionTitle: 'End call',
+      deepLinkUri: 'memento://voice-call',
+      usesChronometer: true,
+      callStyle: true,
+      callerName: 'Memento',
+    });
   });
 });
