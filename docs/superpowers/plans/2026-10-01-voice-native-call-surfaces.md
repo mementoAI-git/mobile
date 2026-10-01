@@ -389,7 +389,7 @@ Expected output: `wrapped lines 539 to 669`. If the script fails an assertion, s
 
 Check the result:
 
-Run: `grep -n "CallStripLayout\|FloatingCallBar\|^                        <Stack$\|^                        </Stack>$" app/_layout.tsx`
+Run: `grep -nE "CallStripLayout|FloatingCallBar|^ {24}<Stack$|^ {24}</Stack>$" app/_layout.tsx`
 
 Expected: exactly these lines, with no `FloatingCallBar` line:
 
