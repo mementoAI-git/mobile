@@ -1,5 +1,11 @@
 # Native Call Surfaces Implementation Plan
 
+> **Status:** implemented. Tasks 1 to 5 are done. Later commits changed two things:
+> - **Indicator:** Task 1's push-down strip was replaced by the floating `CallIndicatorLayout` in commit `75bf6d9`.
+> - **Review fixes:** a review led to command ordering, an immediate hang-up state, and a cleanup safeguard, in commits `aa9953f`, `4cf4920` and `9b798fb`.
+>
+> The design spec describes the current design. Task 6's checklist below has been updated to match it.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Show a live Memento voice call the way the phone shows calls. On iOS the call appears in the Dynamic Island and on the lock screen as a Live Activity, with Mute and End buttons. On Android it appears as a call-style notification. Inside the app, a call strip pushes screens down instead of covering their headers.
@@ -1686,19 +1692,24 @@ The person who owns the device runs this task. An implementing agent must stop a
 
 **iOS: an iPhone 15 Pro or newer, or the iPhone 16 Pro simulator, on iOS 17 or later**
 
-Run the app with `bun run ios`.
+Run the app with `npx expo run:ios` after any native change, then start Metro with `bun start`.
 
-1. Start a voice call, then tap Minimize. A dark strip shows at the top. Screen headers sit below it, and none of them is covered. The status bar text is white.
-2. Open a screen with a header, such as Settings. Its back button and title are fully visible and can be tapped. Tapping the strip returns to the call.
-3. Open the new story editor during the call. The strip is hidden there, because the editor covers the whole screen. Close the editor and the strip comes back.
-4. Go to the home screen. The Dynamic Island shows a waveform icon on the left and the running call time on the right.
-5. Long-press the Dynamic Island.
+1. **No call:** with no call running, no capsule and no green bar show anywhere.
+2. **The capsule:** start a voice call, then tap Minimize. A black capsule hangs from the Dynamic Island, showing a waveform and the call timer. The island and the capsule read as one shape. Nothing on the screen moves.
+3. **Headers:** visit a few screens with headers, such as Overview, Chat and Settings. The capsule covers only empty space at the top. Every header button can still be tapped. Tapping the capsule returns to the call.
+4. **Full-screen screens:** open the new story editor during the call. The capsule is hidden there. Close the editor and it comes back.
+5. **Hang-up:** tap End on the call screen. The capsule disappears at once, not seconds later.
+6. **The Dynamic Island:** start a call and go to the home screen. The Dynamic Island shows a waveform icon on the left and the running call time on the right.
+7. **Mute from the island:** long-press the Dynamic Island.
    - It shows "Memento", the time, and "Listening" or "Memento is speaking".
    - Tap Mute. The icon turns red, the call stops hearing you, and the app shows muted when you return.
    - Tap Mute again to unmute.
-6. Lock the phone. The lock screen shows the call card with the time and the Mute and End buttons. Tap End. The call ends, and the card disappears.
-7. Start a call, go to the home screen, and force-quit Memento from the app switcher. The Dynamic Island and the lock screen card disappear.
-8. In Settings, turn off Live Activities for Memento, then start a call. The call works normally and nothing appears in the Dynamic Island.
+8. **The lock screen:** lock the phone. The lock screen shows the call card with the time and the Mute and End buttons. Tap End. The call ends, and the card disappears within a second.
+9. **Force-quit:** start a call, go to the home screen, and force-quit Memento from the app switcher.
+   - **Expected:** the Dynamic Island and the lock screen card disappear.
+   - **Acceptable:** if the card stays, opening Memento again must clear it. Note which of the two happened.
+10. **Live Activities off:** in Settings, turn off Live Activities for Memento, then start a call. The call works normally, and nothing appears in the Dynamic Island.
+11. **Older iPhones:** on an iPhone without a Dynamic Island, the status bar area turns green during a call instead, and tapping it returns to the call.
 
 **Android: Android 12 or later**
 
@@ -1709,6 +1720,6 @@ Run the app with `bun run android`.
    - Android 12 and later may also show a call chip in the status bar.
 2. Tap the notification. It opens the call screen.
 3. Tap hang-up. The call ends, and the notification disappears.
-4. In the app during a call, the strip shows above the screens. Full-screen screens, such as the editor, also show the strip on Android.
+4. In the app during a call, the status bar area turns green and nothing on screen moves. Tapping it returns to the call.
 
 **If something fails:** note the step number, what you saw, and any Xcode or Logcat output. Look for log lines that contain `MementoCallActivity` or `RecordingNotification`.
