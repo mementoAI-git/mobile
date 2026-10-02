@@ -110,5 +110,14 @@ describe('Gemini voice provider contract', () => {
     expect(send).toBeGreaterThan(guard);
     expect(hook).toContain('diagnostics.micFramesDroppedOffline += 1;');
   });
+
+  test('the hook takes both audio settings from the audio policy', async () => {
+    const hook = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+
+    expect(hook).toContain('const VOICE_AUDIO_POLICY = resolveVoiceAudioPolicy({');
+    expect(hook).toContain('const SPEAKER_FULL_DUPLEX = VOICE_AUDIO_POLICY.speakerFullDuplex;');
+    expect(hook).toContain('iosVoiceProcessing: VOICE_AUDIO_POLICY.iosVoiceProcessing,');
+    expect(hook).toContain("process.env.EXPO_PUBLIC_VOICE_IOS_VOICE_PROCESSING === 'true'");
+  });
 });
 

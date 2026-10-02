@@ -123,6 +123,17 @@ class FakeNative implements VoiceAudioNativeAdapter {
 }
 
 describe('VoiceAudioEngine', () => {
+  test('uses iOS voice processing only when asked to', async () => {
+    const native = new FakeNative();
+    const engine = new VoiceAudioEngine({ native, iosVoiceProcessing: true });
+
+    await engine.start(() => {});
+
+    expect(native.calls).toContain(
+      'recorder.create:{"iosVoiceProcessing":true,"androidInputPreset":"voiceCommunication"}',
+    );
+  });
+
   test('starts a voice-chat audio session before capture', async () => {
     const native = new FakeNative();
     const engine = new VoiceAudioEngine({ native });
@@ -132,7 +143,7 @@ describe('VoiceAudioEngine', () => {
     expect(native.calls.slice(0, 7)).toEqual([
       'session.options:{"iosCategory":"playAndRecord","iosMode":"voiceChat","iosOptions":["defaultToSpeaker","allowBluetoothHFP"]}',
       'session.active:true',
-      'recorder.create:{"iosVoiceProcessing":true,"androidInputPreset":"voiceCommunication"}',
+      'recorder.create:{"iosVoiceProcessing":false,"androidInputPreset":"voiceCommunication"}',
       'session.sampleRate:48000',
       'context.create:48000',
       'context.resume',

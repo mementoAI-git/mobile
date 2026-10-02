@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import endpoint from '@/api/endpoint';
 import { get, post } from '@/api/mutations';
 import { VoiceAudioEngine } from '@/features/chat/voice-audio-engine';
+import { resolveVoiceAudioPolicy } from '@/features/chat/voice-audio-policy';
 import {
   getVoiceConnectionFailure,
   type VoiceConnectionFailure,
@@ -89,7 +90,13 @@ const TRANSCRIPT_SETTLE_MS = 600;
 const TRANSCRIPT_UI_INTERVAL_MS = 100;
 // Tool calls this build can relay. The API locks matching tools into the session.
 const CLIENT_CAPABILITIES = [SEARCH_MEMORIES_TOOL, CALL_ACTIONS_CAPABILITY];
-const SPEAKER_FULL_DUPLEX = process.env.EXPO_PUBLIC_VOICE_FULL_DUPLEX === 'true';
+// iOS voice processing is off by default, and full duplex on iOS depends on it.
+const VOICE_AUDIO_POLICY = resolveVoiceAudioPolicy({
+  platform: Platform.OS,
+  fullDuplexRequested: process.env.EXPO_PUBLIC_VOICE_FULL_DUPLEX === 'true',
+  iosVoiceProcessingRequested: process.env.EXPO_PUBLIC_VOICE_IOS_VOICE_PROCESSING === 'true',
+});
+const SPEAKER_FULL_DUPLEX = VOICE_AUDIO_POLICY.speakerFullDuplex;
 // Development only: save the mic audio sent to Gemini as a WAV for inspection.
 const DEBUG_RECORD_UPLINK = __DEV__ && process.env.EXPO_PUBLIC_VOICE_DEBUG_RECORD === 'true';
 // About 10 s in total, enough to ride out a tunnel or a network switch.
@@ -781,6 +788,7 @@ export function useVoiceMode({
 
     const engine = new VoiceAudioEngine({
       speakerFullDuplex: SPEAKER_FULL_DUPLEX,
+      iosVoiceProcessing: VOICE_AUDIO_POLICY.iosVoiceProcessing,
       onFatalError: (error) => {
         logger.error('Native voice audio failed', error);
         if (isMountedRef.current) {
