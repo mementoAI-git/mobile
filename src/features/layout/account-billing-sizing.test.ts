@@ -18,7 +18,7 @@ describe('account, overview, and billing sizing', () => {
   });
 
   test('MemoryPromptCard preserves native font scaling and guarantees 44dp minimum touch height', () => {
-    const promptSource = readFileSync('app/(tabs)/overview/MemoryPromptCard.tsx', 'utf8');
+    const promptSource = readFileSync('src/components/overview/MemoryPromptCard.tsx', 'utf8');
 
     expect(promptSource).not.toContain('allowFontScaling={false}');
     expect(promptSource).toContain('minTouchTarget');
