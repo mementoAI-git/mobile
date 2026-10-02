@@ -25,4 +25,11 @@ describe('app routes', () => {
     expect(offenders).toEqual([]);
   });
 
+  test('nothing imports moti, which loads the deprecated SafeAreaView', () => {
+    const offenders = [...routeFiles(join(root, 'app')), ...routeFiles(join(root, 'src'))]
+      .filter((file) => /from ['"]moti['"]/.test(readFileSync(file, 'utf8')))
+      .map((file) => relative(root, file));
+
+    expect(offenders).toEqual([]);
+  });
 });
