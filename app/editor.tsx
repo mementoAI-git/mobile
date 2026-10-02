@@ -43,7 +43,7 @@ import { useGroups } from '@/hooks/queries/use-groups';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import { useToast } from '@/components/ui/Toast';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetModalProvider, BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { upsertDraft, loadDrafts, deleteDraft, DraftsSheet, type StoryDraft, type StoryDraftAttachment } from '@/components/sheets/DraftsSheet';
+import { upsertDraft, loadDrafts, readLocalDrafts, deleteDraft, DraftsSheet, type StoryDraft, type StoryDraftAttachment } from '@/components/sheets/DraftsSheet';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useUiStore } from '@/store';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
@@ -59,6 +59,7 @@ import type { IFile } from '@/types';
 import { PublishPrivacySheet, type PrivacyMode } from '@/components/sheets/PublishPrivacySheet';
 import { deriveMemoryAudience, formatMemoryAudienceLabel, normalizeAudienceIds, type MemoryAudienceSelection, type MemoryVisibility } from '@/features/memories/memory-audience';
 import { buildEditorPublishPayload } from '@/features/editor/editor-publish-payload';
+import { singleLineTitle } from '@/features/editor/title-input';
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
@@ -310,7 +311,9 @@ function PublishModalInner({
         // Brand new story or promoted cloud draft
         if (draftId) {
           // Remove local draft slot without issuing a remote delete for the promoted memory
-          void deleteDraft(userEmail, draftId, { skipRemote: true });
+          void deleteDraft(userEmail, draftId, { skipRemote: true })
+            .then((drafts) => useUiStore.getState().setStoryDrafts(drafts))
+            .catch(() => undefined);
         }
         const id = res?.data?._id ?? res?.data?.data?._id ?? targetMemoryId ?? '';
         onPublished(publishedPostUrl(id));
@@ -572,7 +575,8 @@ export default function EditorScreen() {
       if (!t.trim() && !b.trim()) {
         // Empty — remove this draft slot silently
         if (draftIdRef.current) {
-          await deleteDraft(user?.email, draftIdRef.current).catch(() => {});
+          const drafts = await deleteDraft(user?.email, draftIdRef.current).catch(() => null);
+          if (drafts && isMountedRef.current) setStoryDrafts(drafts);
         }
         if (isMountedRef.current) setSavedStatus('saved');
         return;
@@ -594,8 +598,8 @@ export default function EditorScreen() {
             setCurrentDraftId(savedId);
           }
           setSavedStatus('saved');
-          // Refresh the badge count via unified store
-          loadDrafts(user?.email).then(d => {
+          // Refresh the badge from the device copy; no need to download the list.
+          readLocalDrafts(user?.email).then(d => {
             if (isMountedRef.current) setStoryDrafts(d);
           });
         }
@@ -855,15 +859,20 @@ export default function EditorScreen() {
               editorBridge?.blur();
               Keyboard.dismiss();
 
-              const saveOnPress = async () => {
+              // Leave at once and save in the background. Waiting for the
+              // server here made Cancel look broken on slow connections.
+              const saveOnPress = () => {
                 setCancelConfirmVisible(false);
                 if (isStory) {
+                  const email = user?.email;
                   const savedAttachments = toStoryDraftAttachments(attachments);
-                  await upsertDraft(user?.email, {
+                  void upsertDraft(email, {
                     id: draftIdRef.current, title: cancelTitle, body: cancelBody, updatedAt: Date.now(),
                     attachments: savedAttachments.length ? savedAttachments : undefined,
-                  }).catch(() => {});
-                  loadDrafts(user?.email).then(d => setStoryDrafts(d)).catch(() => {});
+                  })
+                    .then(() => readLocalDrafts(email))
+                    .then((drafts) => useUiStore.getState().setStoryDrafts(drafts))
+                    .catch(() => {});
                 } else {
                   AsyncStorage.setItem(QC_DRAFT_KEY(user?.email), JSON.stringify({ body: qcBody.trim() })).catch(() => {});
                 }
@@ -992,22 +1001,27 @@ export default function EditorScreen() {
               style={{ flex: 1 }}
             >
               {/* Title */}
+              {/* Multiline so long titles wrap. Return still moves to the body
+                  instead of adding a line break, and pasted line breaks become spaces. */}
               <TextInput
                 ref={titleRef}
                 value={title}
-                 onChangeText={v => {
-                   setTitle(v);
-                   latestTitleRef.current = v;
-                   scheduleSave(v, latestBodyRef.current);
-                 }}
+                onChangeText={raw => {
+                  const v = singleLineTitle(raw);
+                  setTitle(v);
+                  latestTitleRef.current = v;
+                  scheduleSave(v, latestBodyRef.current);
+                }}
                 placeholder="Title"
                 placeholderTextColor={COLORS.textDisabled}
-                style={{ ...TYPE.displayTitle,  color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42, marginTop: 4 }}
+                style={{ ...TYPE.displayTitle,  color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42, marginTop: 4, textAlignVertical: 'top' }}
+                multiline
+                scrollEnabled={false}
+                submitBehavior="submit"
                 returnKeyType="next"
                 autoCapitalize="sentences"
                 autoCorrect
                 onSubmitEditing={() => richEditorRef.current?.focus()}
-                blurOnSubmit={false}
               />
 
               {/* ── Attachment strip ── */}
