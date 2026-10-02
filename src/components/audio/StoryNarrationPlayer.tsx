@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useAudioPlayer } from 'expo-audio';
-import { Play, Pause, X, RotateCcw, Volume2 } from 'lucide-react-native';
+import Play from 'lucide-react-native/icons/play';
+import Pause from 'lucide-react-native/icons/pause';
+import X from 'lucide-react-native/icons/x';
+import RotateCcw from 'lucide-react-native/icons/rotate-ccw';
+import Volume2 from 'lucide-react-native/icons/volume-2';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { COLORS, FONTS } from '@/constants/tokens';

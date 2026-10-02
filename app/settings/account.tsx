@@ -10,7 +10,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Fingerprint, ShieldCheck } from 'lucide-react-native';
+import Fingerprint from 'lucide-react-native/icons/fingerprint-pattern';
+import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import { Passkey } from 'react-native-passkey';
 import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleProp, Text, TextStyle, TouchableOpacity, View } from 'react-native';
-import { ArrowLeft } from 'lucide-react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { getSettingsHeaderLayout } from '@/features/settings/settings-header-layout';

@@ -23,7 +23,13 @@ import {
   PanResponder,
   useWindowDimensions,
 } from 'react-native';
-import { Timer, Settings, Search, Home, MessageCircle, BookOpen, Compass } from 'lucide-react-native';
+import Timer from 'lucide-react-native/icons/timer';
+import Settings from 'lucide-react-native/icons/settings';
+import Search from 'lucide-react-native/icons/search';
+import Home from 'lucide-react-native/icons/house';
+import MessageCircle from 'lucide-react-native/icons/message-circle';
+import BookOpen from 'lucide-react-native/icons/book-open';
+import Compass from 'lucide-react-native/icons/compass';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

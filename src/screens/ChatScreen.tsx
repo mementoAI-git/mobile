@@ -12,7 +12,11 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurTargetView, BlurView } from 'expo-blur';
-import { ArrowLeft, MoreHorizontal, PhoneCall, Volume2, X } from 'lucide-react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import MoreHorizontal from 'lucide-react-native/icons/ellipsis';
+import PhoneCall from 'lucide-react-native/icons/phone-call';
+import Volume2 from 'lucide-react-native/icons/volume-2';
+import X from 'lucide-react-native/icons/x';
 import {
   MessageBubble,
   type ChatAttachmentPreviewRequest,

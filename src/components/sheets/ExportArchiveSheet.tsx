@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Image, Text, TouchableOpacity, View} from 'react-native';
-import {X} from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';

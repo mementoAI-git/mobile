@@ -3,7 +3,7 @@ import { View, Image, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
-import { ArrowUpRight } from 'lucide-react-native';
+import ArrowUpRight from 'lucide-react-native/icons/arrow-up-right';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 

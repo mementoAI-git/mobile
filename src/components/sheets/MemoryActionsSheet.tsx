@@ -11,10 +11,14 @@ import {
   View, Text, TouchableOpacity, Share,
   ScrollView, TextInput, ActivityIndicator,
 } from 'react-native';
-import {
-  X, Share2, Bookmark, BookmarkCheck,
-  Users, ChevronDown, Trash2, AlertTriangle,
-} from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
+import Share2 from 'lucide-react-native/icons/share-2';
+import Bookmark from 'lucide-react-native/icons/bookmark';
+import BookmarkCheck from 'lucide-react-native/icons/bookmark-check';
+import Users from 'lucide-react-native/icons/users';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
+import Trash2 from 'lucide-react-native/icons/trash';
+import AlertTriangle from 'lucide-react-native/icons/triangle-alert';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import {

@@ -10,7 +10,8 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronDown, ChevronUp } from 'lucide-react-native';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
+import ChevronUp from 'lucide-react-native/icons/chevron-up';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

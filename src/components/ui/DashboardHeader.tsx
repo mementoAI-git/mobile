@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, ImageBackground, TouchableOpacity } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { Search } from 'lucide-react-native';
+import Search from 'lucide-react-native/icons/search';
 import { Avatar } from './Avatar';
 import { useUserStore, useUiStore } from '@/store';
 import { useProfile } from '@/hooks/queries/use-profile';

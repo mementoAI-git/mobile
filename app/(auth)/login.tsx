@@ -19,7 +19,7 @@ import { useLoginLogic } from '@/hooks/use-login-logic';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, radius, responsiveSpace } from '@/constants/responsive';
-import { Fingerprint } from 'lucide-react-native';
+import Fingerprint from 'lucide-react-native/icons/fingerprint-pattern';
 import Svg, { Path } from 'react-native-svg';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');

@@ -2,7 +2,12 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, RotateCcw, Repeat, PauseCircle, Eye, EyeOff } from 'lucide-react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import RotateCcw from 'lucide-react-native/icons/rotate-ccw';
+import Repeat from 'lucide-react-native/icons/repeat';
+import PauseCircle from 'lucide-react-native/icons/circle-pause';
+import Eye from 'lucide-react-native/icons/eye';
+import EyeOff from 'lucide-react-native/icons/eye-off';
 import * as Haptics from 'expo-haptics';
 
 import { AnimatedSplash } from '@/components/system/AnimatedSplash';

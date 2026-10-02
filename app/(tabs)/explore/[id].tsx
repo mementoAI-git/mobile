@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, FlatList, ImageBackground, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Inbox } from 'lucide-react-native';
+import ChevronLeft from 'lucide-react-native/icons/chevron-left';
+import Inbox from 'lucide-react-native/icons/inbox';
 import { Spinner, ExploreSkeleton, EmptyState } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

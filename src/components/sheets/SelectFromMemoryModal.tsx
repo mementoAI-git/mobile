@@ -1,7 +1,9 @@
 import React, { forwardRef, useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomSheetFlatList } from '@gorhom/bottom-sheet';
-import { X, Search, Check } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
+import Search from 'lucide-react-native/icons/search';
+import Check from 'lucide-react-native/icons/check';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

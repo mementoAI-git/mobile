@@ -13,18 +13,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
-import {
-  ArrowLeft,
-  BarChart3,
-  Check,
-  ChevronRight,
-  FileText,
-  Film,
-  Image as ImageIcon,
-  Link2,
-  Music2,
-  VolumeX,
-} from 'lucide-react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import BarChart3 from 'lucide-react-native/icons/chart-column';
+import Check from 'lucide-react-native/icons/check';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import FileText from 'lucide-react-native/icons/file-text';
+import Film from 'lucide-react-native/icons/film';
+import ImageIcon from 'lucide-react-native/icons/image';
+import Link2 from 'lucide-react-native/icons/link-2';
+import Music2 from 'lucide-react-native/icons/music-2';
+import VolumeX from 'lucide-react-native/icons/volume-x';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,

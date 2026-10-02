@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Text, View } from 'react-native';
-import { AlertTriangle } from 'lucide-react-native';
+import AlertTriangle from 'lucide-react-native/icons/triangle-alert';
 import * as Haptics from 'expo-haptics';
 import { AlertTriangleIcon, Button, ZapIcon } from '@/components/ui';
 import { TYPE } from '@/constants/typography';

@@ -17,10 +17,21 @@ import {
 import { SafeAreaView, SafeAreaInsetsContext, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
-import {
-  MoreHorizontal, Plus, X, Users, ChevronDown, Sparkles,
-  Copy, Check, Lock, FileText, Play, Camera, Mic, Video, Music,
-} from 'lucide-react-native';
+import MoreHorizontal from 'lucide-react-native/icons/ellipsis';
+import Plus from 'lucide-react-native/icons/plus';
+import X from 'lucide-react-native/icons/x';
+import Users from 'lucide-react-native/icons/users';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
+import Sparkles from 'lucide-react-native/icons/sparkles';
+import Copy from 'lucide-react-native/icons/copy';
+import Check from 'lucide-react-native/icons/check';
+import Lock from 'lucide-react-native/icons/lock';
+import FileText from 'lucide-react-native/icons/file-text';
+import Play from 'lucide-react-native/icons/play';
+import Camera from 'lucide-react-native/icons/camera';
+import Mic from 'lucide-react-native/icons/mic';
+import Video from 'lucide-react-native/icons/video';
+import Music from 'lucide-react-native/icons/music';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as ExpoCamera from 'expo-camera';

@@ -25,24 +25,22 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  BookOpen,
-  Pencil,
-  PlusCircle,
-  Image as ImageIcon,
-  ImagePlus,
-  AudioLines,
-  Music,
-  Heading1,
-  Heading2,
-  Bold,
-  Italic,
-  Underline as UnderlineIcon,
-  Strikethrough,
-  List,
-  ListOrdered,
-  Quote,
-} from 'lucide-react-native';
+import BookOpen from 'lucide-react-native/icons/book-open';
+import Pencil from 'lucide-react-native/icons/pencil';
+import PlusCircle from 'lucide-react-native/icons/circle-plus';
+import ImageIcon from 'lucide-react-native/icons/image';
+import ImagePlus from 'lucide-react-native/icons/image-plus';
+import AudioLines from 'lucide-react-native/icons/audio-lines';
+import Music from 'lucide-react-native/icons/music';
+import Heading1 from 'lucide-react-native/icons/heading-1';
+import Heading2 from 'lucide-react-native/icons/heading-2';
+import Bold from 'lucide-react-native/icons/bold';
+import Italic from 'lucide-react-native/icons/italic';
+import UnderlineIcon from 'lucide-react-native/icons/underline';
+import Strikethrough from 'lucide-react-native/icons/strikethrough';
+import List from 'lucide-react-native/icons/list';
+import ListOrdered from 'lucide-react-native/icons/list-ordered';
+import Quote from 'lucide-react-native/icons/quote';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

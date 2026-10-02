@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { ChevronRight } from 'lucide-react-native';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,

@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Layers, X } from 'lucide-react-native';
+import Layers from 'lucide-react-native/icons/layers';
+import X from 'lucide-react-native/icons/x';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 

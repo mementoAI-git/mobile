@@ -21,17 +21,15 @@ import {
 import * as MediaLibrary from 'expo-media-library/legacy';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
-import {
-  Camera,
-  Check,
-  FileText,
-  Film,
-  Image as ImageIcon,
-  ImageOff,
-  Music,
-  Play,
-  X,
-} from 'lucide-react-native';
+import Camera from 'lucide-react-native/icons/camera';
+import Check from 'lucide-react-native/icons/check';
+import FileText from 'lucide-react-native/icons/file-text';
+import Film from 'lucide-react-native/icons/film';
+import ImageIcon from 'lucide-react-native/icons/image';
+import ImageOff from 'lucide-react-native/icons/image-off';
+import Music from 'lucide-react-native/icons/music';
+import Play from 'lucide-react-native/icons/play';
+import X from 'lucide-react-native/icons/x';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSheetTopInset } from '@/features/layout/sheet-safe-area';
 import { PermissionRecoveryState } from '@/components/ui';

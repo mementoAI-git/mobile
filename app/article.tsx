@@ -26,16 +26,14 @@ import { SafeAreaView, SafeAreaProvider, initialWindowMetrics, useSafeAreaInsets
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
-import {
-  MoreHorizontal,
-  Plus,
-  X,
-  Users,
-  ChevronDown,
-  Sparkles,
-  Copy,
-  Check,
-} from 'lucide-react-native';
+import MoreHorizontal from 'lucide-react-native/icons/ellipsis';
+import Plus from 'lucide-react-native/icons/plus';
+import X from 'lucide-react-native/icons/x';
+import Users from 'lucide-react-native/icons/users';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
+import Sparkles from 'lucide-react-native/icons/sparkles';
+import Copy from 'lucide-react-native/icons/copy';
+import Check from 'lucide-react-native/icons/check';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import { toast } from '@/components/ui/Toast';
 import * as Haptics from 'expo-haptics';

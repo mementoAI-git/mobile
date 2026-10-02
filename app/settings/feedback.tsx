@@ -10,7 +10,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ImagePlus, RotateCcw, Trash2 } from 'lucide-react-native';
+import ImagePlus from 'lucide-react-native/icons/image-plus';
+import RotateCcw from 'lucide-react-native/icons/rotate-ccw';
+import Trash2 from 'lucide-react-native/icons/trash';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';

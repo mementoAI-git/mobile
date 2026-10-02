@@ -1,5 +1,12 @@
-import { Modality } from '@google/genai/web';
-import type { LiveConnectConfig } from '@google/genai/web';
+import type { LiveConnectConfig, Modality } from '@google/genai/web';
+
+/**
+ * Response modality for live sessions. Kept as a literal (instead of a
+ * `Modality` value import) so `@google/genai/web` stays out of the startup
+ * bundle — the SDK is loaded dynamically when a voice session opens.
+ * Must match `Modality.AUDIO` ("AUDIO") in the installed SDK release.
+ */
+const AUDIO_MODALITY: LiveConnectConfig['responseModalities'] = ['AUDIO' as Modality];
 
 export type VoiceLiveToken = {
   token: string;
@@ -113,7 +120,7 @@ export function buildGeminiLiveConfig(
   const systemText = systemParts.join(' ');
 
   return {
-    responseModalities: [Modality.AUDIO],
+    responseModalities: AUDIO_MODALITY,
     systemInstruction: {
       parts: [{ text: systemText }],
     },

@@ -15,10 +15,12 @@ import {
   TouchableOpacity, useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  ChevronLeft, Pencil, MoreHorizontal,
-  FileText, CalendarDays, MessageSquare,
-} from 'lucide-react-native';
+import ChevronLeft from 'lucide-react-native/icons/chevron-left';
+import Pencil from 'lucide-react-native/icons/pencil';
+import MoreHorizontal from 'lucide-react-native/icons/ellipsis';
+import FileText from 'lucide-react-native/icons/file-text';
+import CalendarDays from 'lucide-react-native/icons/calendar-days';
+import MessageSquare from 'lucide-react-native/icons/message-square';
 import dayjs from 'dayjs';
 import Animated from 'react-native-reanimated';
 import * as WebBrowser from 'expo-web-browser';

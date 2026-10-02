@@ -1,6 +1,9 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Keyboard, TextInput as RNTextInput, Platform } from 'react-native';
-import { Mic, Send, Image as ImageIcon, X } from 'lucide-react-native';
+import Mic from 'lucide-react-native/icons/mic';
+import Send from 'lucide-react-native/icons/send';
+import ImageIcon from 'lucide-react-native/icons/image';
+import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';

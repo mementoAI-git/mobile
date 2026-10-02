@@ -3,7 +3,7 @@ import { Keyboard, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import { X } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
 import { Controller, useForm } from 'react-hook-form';
 import * as Haptics from 'expo-haptics';
 import { Button, PasswordInput, TextInput } from '@/components/ui';

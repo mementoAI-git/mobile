@@ -21,7 +21,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Image, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { getThumbnailAsync } from 'expo-video-thumbnails';
 import * as Haptics from 'expo-haptics';
-import { Play } from 'lucide-react-native';
+import Play from 'lucide-react-native/icons/play';
 import { COLORS } from '@/constants/tokens';
 import { iconSize, radius } from '@/constants/responsive';
 import { runtimeDiagnostics, sanitizeMediaUri } from '@/lib/runtime-diagnostics';

@@ -1,4 +1,3 @@
-import { GoogleGenAI } from '@google/genai/web';
 import type { LiveServerMessage, Session } from '@google/genai/web';
 import NetInfo from '@react-native-community/netinfo';
 import * as Device from 'expo-device';
@@ -622,6 +621,9 @@ export function useVoiceMode({
     async (liveToken: VoiceLiveToken): Promise<Session> => {
       const setupReady = createSetupReady();
       setupReadyRef.current = setupReady;
+      // Loaded on demand so the ~1MB SDK stays out of the startup bundle.
+      // Contract: must resolve from '@google/genai/web' (see voice-provider-contract.test.ts).
+      const { GoogleGenAI } = await import('@google/genai/web');
       const client = new GoogleGenAI({
         apiKey: liveToken.token,
         httpOptions: { apiVersion: 'v1alpha' },

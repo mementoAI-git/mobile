@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
-import { Info } from 'lucide-react-native';
+import Info from 'lucide-react-native/icons/info';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
 import { OnboardingCelebrationOverlay } from '@/components/onboarding/OnboardingCelebrationOverlay';

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
-import { CreditCard, Pencil } from 'lucide-react-native';
+import CreditCard from 'lucide-react-native/icons/credit-card';
+import Pencil from 'lucide-react-native/icons/pencil';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

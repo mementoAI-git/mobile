@@ -4,7 +4,7 @@ import Animated from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { LucideIcon } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import { iconSize, minTouchTarget, ms, responsiveSpace } from '@/constants/responsive';
 
 interface EmptyStateProps {

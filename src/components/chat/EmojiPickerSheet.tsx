@@ -13,7 +13,7 @@ import {
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
-import { X } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, radius, minTouchTarget } from '@/constants/responsive';

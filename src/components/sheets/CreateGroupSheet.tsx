@@ -1,7 +1,8 @@
 import React, { useCallback, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { Check, X } from 'lucide-react-native';
+import Check from 'lucide-react-native/icons/check';
+import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';

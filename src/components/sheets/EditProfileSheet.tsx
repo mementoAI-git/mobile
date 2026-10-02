@@ -9,7 +9,9 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Text, TouchableOpaci
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { CalendarDays, Camera, X } from 'lucide-react-native';
+import CalendarDays from 'lucide-react-native/icons/calendar-days';
+import Camera from 'lucide-react-native/icons/camera';
+import X from 'lucide-react-native/icons/x';
 import { Controller, useForm } from 'react-hook-form';
 import * as Haptics from 'expo-haptics';
 import { Avatar, Button, TextInput } from '@/components/ui';

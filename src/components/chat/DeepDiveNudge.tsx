@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { X } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { dimensionLabel, type LifeDimension } from '@/constants/enrichment';

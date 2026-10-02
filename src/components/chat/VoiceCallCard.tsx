@@ -6,13 +6,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  CornerDownRight,
-  PhoneCall,
-} from 'lucide-react-native';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
+import ChevronUp from 'lucide-react-native/icons/chevron-up';
+import Copy from 'lucide-react-native/icons/copy';
+import CornerDownRight from 'lucide-react-native/icons/corner-down-right';
+import PhoneCall from 'lucide-react-native/icons/phone-call';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import dayjs from 'dayjs';

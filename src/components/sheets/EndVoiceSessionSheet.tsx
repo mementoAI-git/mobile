@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { PhoneOff } from 'lucide-react-native';
+import PhoneOff from 'lucide-react-native/icons/phone-off';
 import { Button } from '@/components/ui/Button';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

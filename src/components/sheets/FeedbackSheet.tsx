@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Button, TextInput, Spinner } from '@/components/ui';
-import { Image as ImageIcon, X } from 'lucide-react-native';
+import ImageIcon from 'lucide-react-native/icons/image';
+import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useUiStore, useUserStore } from '@/store';

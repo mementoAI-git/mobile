@@ -14,7 +14,8 @@ import React, { useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { X, FileText } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
+import FileText from 'lucide-react-native/icons/file-text';
 import * as Haptics from 'expo-haptics';
 import { useUiStore } from '@/store';
 

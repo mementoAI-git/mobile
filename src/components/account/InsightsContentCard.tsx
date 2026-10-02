@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { ImageBackground, StyleSheet, Text, View } from 'react-native';
-import { FileText } from 'lucide-react-native';
+import FileText from 'lucide-react-native/icons/file-text';
 import type { CategoryScore } from '@/constants/enrichment';
 
 const ENRICHMENT_BG = require('../../../assets/images/backgrounds/enrichment_bg.png');

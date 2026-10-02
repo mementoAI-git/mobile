@@ -12,7 +12,9 @@ import Animated, {
   withTiming,
   cancelAnimation,
 } from 'react-native-reanimated';
-import { MoreHorizontal, Play, Pause } from 'lucide-react-native';
+import MoreHorizontal from 'lucide-react-native/icons/ellipsis';
+import Play from 'lucide-react-native/icons/play';
+import Pause from 'lucide-react-native/icons/pause';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { useUiStore, useFeedAudioPlaybackStore } from '@/store';

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { X } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,

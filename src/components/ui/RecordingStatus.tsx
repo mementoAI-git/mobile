@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-native';
-import { X } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, radius, responsiveSpace } from '@/constants/responsive';

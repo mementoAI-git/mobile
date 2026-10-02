@@ -6,7 +6,7 @@ import {
   FlatList,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Check } from 'lucide-react-native';
+import Check from 'lucide-react-native/icons/check';
 
 import { FONTS, COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

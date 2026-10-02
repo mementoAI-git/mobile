@@ -13,7 +13,8 @@ import Animated, {
   FadeInDown,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { X, RotateCcw } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
+import RotateCcw from 'lucide-react-native/icons/rotate-ccw';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';

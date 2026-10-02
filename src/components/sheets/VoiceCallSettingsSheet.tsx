@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Check, X } from 'lucide-react-native';
+import Check from 'lucide-react-native/icons/check';
+import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import { Button } from '@/components/ui/Button';
 import { VoiceArtwork } from '@/components/chat/VoiceArtwork';

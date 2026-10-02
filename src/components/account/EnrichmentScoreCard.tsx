@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { BarChart3, ChevronRight } from 'lucide-react-native';
+import BarChart3 from 'lucide-react-native/icons/chart-column';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Animated, {
   FadeInDown,
   useAnimatedStyle,

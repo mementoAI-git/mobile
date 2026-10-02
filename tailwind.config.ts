@@ -136,8 +136,6 @@ const config: Config = {
         serif:          ['EBGaramond_400Regular', 'serif'],
         'serif-medium': ['EBGaramond_500Medium',  'serif'],
         mono:           ['AzeretMono_400Regular',  'monospace'],
-        averia:         ['AveriaSerifLibre_400Regular', 'serif'],
-        'averia-bold':  ['AveriaSerifLibre_700Bold',    'serif'],
         /** Geist — geometric sans used by web for UI numerics/code contexts */
         geist:          ['Geist_400Regular', 'system-ui', 'sans-serif'],
         'geist-medium': ['Geist_500Medium',  'system-ui', 'sans-serif'],

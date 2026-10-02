@@ -15,7 +15,8 @@ import Animated, {
   LinearTransition,
   ReduceMotion,
 } from 'react-native-reanimated';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import ChevronLeft from 'lucide-react-native/icons/chevron-left';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import { Button, Logo } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
