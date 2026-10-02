@@ -30,7 +30,6 @@ import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 import Svg, { Path } from 'react-native-svg';
-import { X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
@@ -243,22 +242,6 @@ export default function RegisterScreen() {
             {/* Top Navigation Row: App Icon & Close Button */}
             <Animated.View style={[logoStyle, styles.topNavRow]}>
               <Image source={APP_ICON} style={styles.appIcon} resizeMode="cover" />
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  if (router.canGoBack()) {
-                    router.back();
-                  } else {
-                    router.replace('/(auth)/login');
-                  }
-                }}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Close and return to sign in"
-                style={styles.closeBtn}
-              >
-                <X size={iconSize(18)} color={COLORS.textStrong} strokeWidth={2} />
-              </TouchableOpacity>
             </Animated.View>
 
             {/* Editorial Heading: "Create an account" */}
@@ -455,14 +438,6 @@ const styles = StyleSheet.create({
     width: iconSize(44),
     height: iconSize(44),
     borderRadius: radius(12),
-  },
-  closeBtn: {
-    minWidth: minTouchTarget(44),
-    minHeight: minTouchTarget(44),
-    borderRadius: 999,
-    backgroundColor: COLORS.fillWeaker,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   titleText: {
     ...TYPE.displayTitle,

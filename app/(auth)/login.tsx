@@ -18,8 +18,8 @@ import { Button, TextInput, PasswordInput } from '@/components/ui';
 import { useLoginLogic } from '@/hooks/use-login-logic';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
-import { Fingerprint, X } from 'lucide-react-native';
+import { iconSize, radius, responsiveSpace } from '@/constants/responsive';
+import { Fingerprint } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
@@ -96,25 +96,6 @@ export default function LoginScreen() {
                 style={styles.logoIcon}
                 resizeMode="contain"
               />
-              <TouchableOpacity
-                onPress={() => {
-                  if (router.canGoBack()) {
-                    router.back();
-                  } else {
-                    router.replace('/(onboard)');
-                  }
-                }}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Close"
-                style={{
-                  minWidth: minTouchTarget(44),
-                  minHeight: minTouchTarget(44),
-                }}
-                className="rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center"
-              >
-                <X size={iconSize(18)} color={COLORS.textStrong} strokeWidth={2} />
-              </TouchableOpacity>
             </View>
 
             {/* Heading & Subtitle */}

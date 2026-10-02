@@ -5,19 +5,20 @@
  *   email       — user email, used to build the storage key
  *   onLoadDraft — callback(draft) called when user taps a draft row
  *
- * The sheet reads/writes `article_drafts_${email}` in AsyncStorage directly
- * so it stays in sync with the autosave logic in editor.tsx.
+ * Drafts live on the device and on the server. All reads and writes go
+ * through the draft store in src/features/drafts/story-drafts.ts, shared with
+ * the editor's autosave, which keeps the two in step.
  */
 
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { X, FileText } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useUiStore, useOfflineQueueStore } from '@/store';
+import { useUiStore } from '@/store';
 
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import dayjs from 'dayjs';
 import NetInfo from '@react-native-community/netinfo';
@@ -25,174 +26,79 @@ import { get, post, put, del } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import type { IPagination, IMemory } from '@/types';
 import { logger } from '@/lib/logger';
+import {
+  createDraftStore,
+  MAX_DRAFTS,
+  STORY_DRAFTS_KEY,
+  type StoryDraft,
+  type StoryDraftAttachment,
+} from '@/features/drafts/story-drafts';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+export { MAX_DRAFTS, STORY_DRAFTS_KEY };
+export type { StoryDraft, StoryDraftAttachment };
 
-export interface StoryDraftAttachment {
-  fileId: string;
-  uri: string;
-  name: string;
-  mimeType: string;
-  isVoice?: boolean;
-  duration?: number;
+// ─── Draft store wired to the device and the API ─────────────────────────────
+
+function isNotFound(error: unknown): boolean {
+  const status =
+    (error as { status?: number })?.status ??
+    (error as { response?: { status?: number } })?.response?.status;
+  return status === 404;
 }
 
-export interface StoryDraft {
-  id: string;
-  title: string;
-  body: string;
-  updatedAt: number;
-  /** Already-uploaded attachment references — restored when the draft is loaded */
-  attachments?: StoryDraftAttachment[];
-}
-
-export const STORY_DRAFTS_KEY = (email?: string | null) =>
-  `article_drafts_${email ?? 'anon'}`;
-
-export const MAX_DRAFTS = 10;
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-export async function loadDrafts(email?: string | null): Promise<StoryDraft[]> {
-  let localDrafts: StoryDraft[] = [];
-  try {
-    const raw = await AsyncStorage.getItem(STORY_DRAFTS_KEY(email));
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) localDrafts = parsed as StoryDraft[];
-    }
-  } catch {}
-
-  const netState = await NetInfo.fetch();
-  if (netState.isConnected && email) {
+const draftStore = createDraftStore({
+  getItem: (key) => AsyncStorage.getItem(key),
+  setItem: (key, value) => AsyncStorage.setItem(key, value),
+  isOnline: async () => !!(await NetInfo.fetch()).isConnected,
+  listCloudDrafts: async () => {
+    const res = await get<IPagination<IMemory>>(`${endpoint.stories}?status=draft&limit=20`);
+    return (res.data?.docs || []).map((m) => ({
+      id: m._id,
+      title: m.title || '',
+      body: m.body || '',
+      updatedAt: m.updated_at ? new Date(m.updated_at).getTime() : Date.now(),
+      attachments: (m.attachments || []).map((att: any) => ({
+        fileId: att._id || att.id,
+        uri: att.url,
+        name: att.name || 'Attachment',
+        mimeType: att.type || 'image/jpeg',
+      })),
+    }));
+  },
+  createCloudDraft: async (payload) => {
+    const res = await post<IMemory>(endpoint.memories, payload);
+    return res.data?._id;
+  },
+  updateCloudDraft: async (id, payload) => {
+    await put<IMemory>(endpoint.memory.replace(':id', id), payload);
+  },
+  deleteCloudDraft: async (id) => {
     try {
-      const res = await get<IPagination<IMemory>>(`${endpoint.stories}?status=draft&limit=20`);
-      const cloudMemories = res.data?.docs || [];
-      const cloudDrafts: StoryDraft[] = cloudMemories.map((m) => ({
-        id: m._id,
-        title: m.title || '',
-        body: m.body || '',
-        updatedAt: m.updated_at ? new Date(m.updated_at).getTime() : Date.now(),
-        attachments: (m.attachments || []).map((att: any) => ({
-          fileId: att._id || att.id,
-          uri: att.url,
-          name: att.name || 'Attachment',
-          mimeType: att.type || 'image/jpeg',
-        })),
-      }));
-
-      const mergedMap = new Map<string, StoryDraft>();
-      cloudDrafts.forEach((d) => mergedMap.set(d.id, d));
-      localDrafts.forEach((d) => {
-        const existing = mergedMap.get(d.id);
-        if (!existing || d.updatedAt > existing.updatedAt) {
-          mergedMap.set(d.id, d);
-        }
-      });
-
-      const merged = Array.from(mergedMap.values());
-      merged.sort((a, b) => b.updatedAt - a.updatedAt);
-      const sliced = merged.slice(0, MAX_DRAFTS);
-      await AsyncStorage.setItem(STORY_DRAFTS_KEY(email), JSON.stringify(sliced));
-      return sliced;
-    } catch (err) {
-      logger.error('Failed to sync cloud drafts:', err);
+      await del(endpoint.memory.replace(':id', id));
+    } catch (error) {
+      // Already gone on the server: the delete has done its job.
+      if (!isNotFound(error)) throw error;
     }
-  }
+  },
+  log: (message, error) => logger.error(message, error),
+});
 
-  return localDrafts;
-}
+/** Syncs with the server and returns the drafts to show. Offline, the device copy. */
+export const loadDrafts = (email?: string | null) => draftStore.sync(email);
 
-export async function saveDrafts(
-  email: string | null | undefined,
-  drafts: StoryDraft[],
-): Promise<void> {
-  try {
-    await AsyncStorage.setItem(STORY_DRAFTS_KEY(email), JSON.stringify(drafts));
-  } catch {}
-}
+/** Drafts on this device, newest first, without touching the network. */
+export const readLocalDrafts = (email?: string | null) => draftStore.readLocalDrafts(email);
 
-/** Upsert a draft into the stored array. Evicts oldest when at MAX_DRAFTS. */
-export async function upsertDraft(
-  email: string | null | undefined,
-  draft: StoryDraft,
-): Promise<string> {
-  const drafts = await loadDrafts(email);
-  const originalId = draft.id;
-  
-  const netState = await NetInfo.fetch();
-  if (netState.isConnected && email) {
-    try {
-      const payload = {
-        title: draft.title?.trim() || 'Untitled',
-        body: draft.body,
-        status: 'draft' as const,
-        attachments: draft.attachments?.map((a) => a.fileId) || [],
-      };
+/** Saves one draft and returns its id, the server id once uploaded. */
+export const upsertDraft = (email: string | null | undefined, draft: StoryDraft) =>
+  draftStore.upsert(email, draft);
 
-      if (draft.id.startsWith('draft_')) {
-        const res = await post<IMemory>(endpoint.memories, payload);
-        const created = res.data;
-        if (created?._id) {
-          draft.id = created._id;
-        }
-      } else {
-        await put<IMemory>(endpoint.memory.replace(':id', draft.id), payload);
-      }
-    } catch (err) {
-      logger.error('Failed to save cloud draft:', err);
-    }
-  } else if (!netState.isConnected) {
-    const queueStore = useOfflineQueueStore.getState();
-    const payload = {
-      title: draft.title?.trim() || 'Untitled',
-      body: draft.body,
-      status: 'draft' as const,
-      attachments: draft.attachments?.map((a) => a.fileId) || [],
-    };
-    if (draft.id.startsWith('draft_')) {
-      await queueStore.enqueueMutation('create_memory', payload);
-    } else {
-      await queueStore.enqueueMutation('update_memory', { id: draft.id, ...payload });
-    }
-  }
-
-  const idx = drafts.findIndex((d) => d.id === originalId);
-  if (idx >= 0) {
-    drafts[idx] = draft;
-  } else {
-    if (drafts.length >= MAX_DRAFTS) {
-      drafts.sort((a, b) => a.updatedAt - b.updatedAt);
-      drafts.shift();
-    }
-    drafts.push(draft);
-  }
-  await saveDrafts(email, drafts);
-  return draft.id;
-}
-
-/** Remove a draft by id from the stored array. */
-export async function deleteDraft(
+/** Removes a draft from the device now and from the server now or on a later sync. */
+export const deleteDraft = (
   email: string | null | undefined,
   id: string,
   options?: { skipRemote?: boolean },
-): Promise<StoryDraft[]> {
-  const drafts = await loadDrafts(email);
-  const updated = drafts.filter((d) => d.id !== id);
-  await saveDrafts(email, updated);
-
-  if (!id.startsWith('draft_') && !options?.skipRemote) {
-    const netState = await NetInfo.fetch();
-    if (netState.isConnected && email) {
-      try {
-        await del(endpoint.memory.replace(':id', id));
-      } catch (err) {
-        logger.error('Failed to delete cloud draft:', err);
-      }
-    }
-  }
-  return updated;
-}
+) => draftStore.remove(email, id, options);
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -213,17 +119,18 @@ export function DraftsSheet() {
     [storeDrafts],
   );
 
-  // Seed from AsyncStorage on first open (editor may not have loaded yet)
-  useEffect(() => {
-    if (storeDrafts.length === 0) {
-      loadDrafts(email).then((d) => {
-        if (isMountedRef.current) setStoryDrafts(d);
-      });
-    }
-  }, [email]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const isMountedRef = useRef(true);
   useEffect(() => () => { isMountedRef.current = false; }, []);
+
+  // Show what we have at once, then sync with the server on every open, so
+  // the list and count match drafts saved, published or deleted elsewhere.
+  useEffect(() => {
+    loadDrafts(email)
+      .then((d) => {
+        if (isMountedRef.current) setStoryDrafts(d);
+      })
+      .catch(() => undefined);
+  }, [email, setStoryDrafts]);
 
   const handleLoad = useCallback(
     (draft: StoryDraft) => {
@@ -234,11 +141,13 @@ export function DraftsSheet() {
     [onLoadDraft, closeSheet],
   );
 
+  // The row goes at once. The server delete runs in the background and is
+  // retried on a later sync if it can't reach the server now.
   const handleDelete = useCallback(
-    async (id: string) => {
+    (id: string) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const updated = await deleteDraft(email, id);
-      setStoryDrafts(updated);
+      setStoryDrafts(useUiStore.getState().storyDrafts.filter((d) => d.id !== id));
+      void deleteDraft(email, id).catch(() => undefined);
     },
     [email, setStoryDrafts],
   );
