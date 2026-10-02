@@ -33,8 +33,8 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withSpring,
   useAnimatedScrollHandler, interpolate, Extrapolation,
 } from 'react-native-reanimated';
-import { MemoryPromptCard } from './MemoryPromptCard';
-import { CalendarCard } from './CalendarCard';
+import { MemoryPromptCard } from '@/components/overview/MemoryPromptCard';
+import { CalendarCard } from '@/components/overview/CalendarCard';
 
 const WELCOME_BG = require('../../../assets/images/backgrounds/welcome_bg.png');
 const ENRICHMENT_BG = require('../../../assets/images/backgrounds/enrichment_bg.png');

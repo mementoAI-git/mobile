@@ -5,7 +5,7 @@
  *  - Full solid background (brand / success / error)
  *  - Icon left (Check / AlertTriangle / Info)
  *  - White text
- *  - Slides up from bottom, above tab bar
+ *  - Slides in from the top, below the status bar
  *  - Auto-dismisses after 3.5s, no manual X button
  *
  * Singleton: call `toast()` from anywhere — portals, sheets, callbacks etc.
@@ -17,11 +17,16 @@ import React, {
 } from 'react';
 import { View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MotiView, AnimatePresence } from 'moti';
+import Animated, { FadeInDown, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 import { Check, AlertTriangle, Info } from 'lucide-react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, radius, responsiveSpace } from '@/constants/responsive';
+
+// Springs in from above and fades out upward; others slide to make room.
+const TOAST_ENTERING = FadeInDown.springify().damping(20).stiffness(300).mass(0.8);
+const TOAST_EXITING = FadeOutUp.duration(180);
+const TOAST_LAYOUT = LinearTransition.springify().damping(20).stiffness(300);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -107,48 +112,45 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           zIndex: 9999,
         }}
       >
-        <AnimatePresence>
-          {toasts.map(t => (
-            <MotiView
-              key={t.id}
-              style={{ width: '100%', maxWidth: 480 }}
-              from={{ opacity: 0, translateY: -40, scale: 0.96 }}
-              animate={{ opacity: 1, translateY: 0, scale: 1 }}
-              exit={{ opacity: 0, translateY: -20, scale: 0.96 }}
-              transition={{ type: 'spring', damping: 20, stiffness: 300, mass: 0.8 }}
+        {toasts.map(t => (
+          <Animated.View
+            key={t.id}
+            style={{ width: '100%', maxWidth: 480 }}
+            entering={TOAST_ENTERING}
+            exiting={TOAST_EXITING}
+            layout={TOAST_LAYOUT}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: responsiveSpace(10),
+                paddingHorizontal: responsiveSpace(16),
+                paddingVertical: responsiveSpace(14),
+                borderRadius: radius(14),
+                backgroundColor: BG[t.type],
+                // subtle shadow so it lifts off the content beneath
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.18,
+                shadowRadius: 12,
+                elevation: 8,
+              }}
             >
-              <View
+              <ToastIcon type={t.type} />
+              <Text
                 style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: responsiveSpace(10),
-                  paddingHorizontal: responsiveSpace(16),
-                  paddingVertical: responsiveSpace(14),
-                  borderRadius: radius(14),
-                  backgroundColor: BG[t.type],
-                  // subtle shadow so it lifts off the content beneath
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.18,
-                  shadowRadius: 12,
-                  elevation: 8,
+                  flex: 1,
+                  ...TYPE.label,
+                  color: '#ffffff',
+                  lineHeight: 20,
                 }}
               >
-                <ToastIcon type={t.type} />
-                <Text
-                  style={{
-                    flex: 1,
-                    ...TYPE.label,
-                    color: '#ffffff',
-                    lineHeight: 20,
-                  }}
-                >
-                  {t.message}
-                </Text>
-              </View>
-            </MotiView>
-          ))}
-        </AnimatePresence>
+                {t.message}
+              </Text>
+            </View>
+          </Animated.View>
+        ))}
       </View>
     </ToastContext.Provider>
   );
