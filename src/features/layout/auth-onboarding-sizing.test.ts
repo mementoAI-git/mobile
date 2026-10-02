@@ -23,14 +23,13 @@ describe('auth and onboarding sizing', () => {
     expect(registerSource).toContain('minTouchTarget');
   });
 
+  // Sign-in has no close control: a signed-out user has nowhere to close to.
   test('auth screens provide minimum 44dp touch target for close controls', () => {
-    const loginSource = readFileSync('app/(auth)/login.tsx', 'utf8');
     const registerSource = readFileSync('app/(auth)/register.tsx', 'utf8');
     const verifySource = readFileSync('app/(auth)/verify-email.tsx', 'utf8');
     const forgotSource = readFileSync('app/(auth)/forgot-password.tsx', 'utf8');
     const setPassSource = readFileSync('app/(auth)/set-password.tsx', 'utf8');
 
-    expect(loginSource).toContain('minTouchTarget');
     expect(registerSource).toContain('minTouchTarget');
     expect(verifySource).toContain('minTouchTarget');
     expect(forgotSource).toContain('minTouchTarget');
