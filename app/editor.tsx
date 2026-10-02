@@ -859,15 +859,20 @@ export default function EditorScreen() {
               editorBridge?.blur();
               Keyboard.dismiss();
 
-              const saveOnPress = async () => {
+              // Leave at once and save in the background. Waiting for the
+              // server here made Cancel look broken on slow connections.
+              const saveOnPress = () => {
                 setCancelConfirmVisible(false);
                 if (isStory) {
+                  const email = user?.email;
                   const savedAttachments = toStoryDraftAttachments(attachments);
-                  await upsertDraft(user?.email, {
+                  void upsertDraft(email, {
                     id: draftIdRef.current, title: cancelTitle, body: cancelBody, updatedAt: Date.now(),
                     attachments: savedAttachments.length ? savedAttachments : undefined,
-                  }).catch(() => {});
-                  readLocalDrafts(user?.email).then(d => setStoryDrafts(d)).catch(() => {});
+                  })
+                    .then(() => readLocalDrafts(email))
+                    .then((drafts) => useUiStore.getState().setStoryDrafts(drafts))
+                    .catch(() => {});
                 } else {
                   AsyncStorage.setItem(QC_DRAFT_KEY(user?.email), JSON.stringify({ body: qcBody.trim() })).catch(() => {});
                 }
