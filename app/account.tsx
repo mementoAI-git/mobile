@@ -8,7 +8,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Settings } from 'lucide-react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import Settings from 'lucide-react-native/icons/settings';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import dayjs from 'dayjs';
 import { useRouter } from 'expo-router';

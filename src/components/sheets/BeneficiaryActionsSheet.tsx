@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { Mail, Trash2 } from 'lucide-react-native';
+import Mail from 'lucide-react-native/icons/mail';
+import Trash2 from 'lucide-react-native/icons/trash';
 import { Avatar, Button } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

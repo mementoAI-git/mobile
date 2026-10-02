@@ -10,7 +10,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, ChevronRight, MessageCircle } from 'lucide-react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import MessageCircle from 'lucide-react-native/icons/message-circle';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Avatar, ResponsiveScreen } from '@/components/ui';

@@ -7,11 +7,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  ArrowLeft,
-  Settings,
-  Award,
-} from 'lucide-react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import Settings from 'lucide-react-native/icons/settings';
+import Award from 'lucide-react-native/icons/award';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import {

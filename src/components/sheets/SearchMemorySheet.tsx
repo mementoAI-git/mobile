@@ -16,7 +16,11 @@ import {
   Keyboard,
 } from 'react-native';
 import { BottomSheetView, BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { Search, X, Clock, ChevronRight, Compass } from 'lucide-react-native';
+import Search from 'lucide-react-native/icons/search';
+import X from 'lucide-react-native/icons/x';
+import Clock from 'lucide-react-native/icons/clock';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import Compass from 'lucide-react-native/icons/compass';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import dayjs from 'dayjs';

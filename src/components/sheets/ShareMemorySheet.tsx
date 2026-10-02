@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Share } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { X, CheckCircle2, Copy, Share as ShareIcon, Plus } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
+import CheckCircle2 from 'lucide-react-native/icons/circle-check';
+import Copy from 'lucide-react-native/icons/copy';
+import ShareIcon from 'lucide-react-native/icons/share';
+import Plus from 'lucide-react-native/icons/plus';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';

@@ -3,7 +3,9 @@ import { Image, KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } f
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import { Check, Pencil, X } from 'lucide-react-native';
+import Check from 'lucide-react-native/icons/check';
+import Pencil from 'lucide-react-native/icons/pencil';
+import X from 'lucide-react-native/icons/x';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { toast } from '@/components/ui/Toast';

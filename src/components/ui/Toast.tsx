@@ -18,7 +18,9 @@ import React, {
 import { View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeOutUp, LinearTransition } from 'react-native-reanimated';
-import { Check, AlertTriangle, Info } from 'lucide-react-native';
+import Check from 'lucide-react-native/icons/check';
+import AlertTriangle from 'lucide-react-native/icons/triangle-alert';
+import Info from 'lucide-react-native/icons/info';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, radius, responsiveSpace } from '@/constants/responsive';

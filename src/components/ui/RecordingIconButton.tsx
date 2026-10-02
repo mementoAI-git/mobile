@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, type StyleProp, type ViewStyle } from 'react-native';
-import { Mic } from 'lucide-react-native';
+import Mic from 'lucide-react-native/icons/mic';
 import { COLORS } from '@/constants/tokens';
 import { iconSize, minTouchTarget } from '@/constants/responsive';
 

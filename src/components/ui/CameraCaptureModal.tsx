@@ -31,9 +31,14 @@ import { CameraView, Camera as ExpoCamera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { PermissionRecoveryState } from '@/components/ui/PermissionRecoveryState';
-import {
-  X, RotateCcw, Camera, Video, Zap, ZapOff, ImageIcon, Mic,
-} from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
+import RotateCcw from 'lucide-react-native/icons/rotate-ccw';
+import Camera from 'lucide-react-native/icons/camera';
+import Video from 'lucide-react-native/icons/video';
+import Zap from 'lucide-react-native/icons/zap';
+import ZapOff from 'lucide-react-native/icons/zap-off';
+import ImageIcon from 'lucide-react-native/icons/image';
+import Mic from 'lucide-react-native/icons/mic';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, radius, minTouchTarget } from '@/constants/responsive';

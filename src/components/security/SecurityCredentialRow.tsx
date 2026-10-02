@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { Trash2 } from 'lucide-react-native';
+import Trash2 from 'lucide-react-native/icons/trash';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';

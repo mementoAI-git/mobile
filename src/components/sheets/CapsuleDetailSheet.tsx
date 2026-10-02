@@ -1,6 +1,15 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { X, Calendar, Users, Edit3, Trash2, Clock, CheckCircle2, FileText, Download, Bookmark } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
+import Calendar from 'lucide-react-native/icons/calendar';
+import Users from 'lucide-react-native/icons/users';
+import Edit3 from 'lucide-react-native/icons/pen-line';
+import Trash2 from 'lucide-react-native/icons/trash';
+import Clock from 'lucide-react-native/icons/clock';
+import CheckCircle2 from 'lucide-react-native/icons/circle-check';
+import FileText from 'lucide-react-native/icons/file-text';
+import Download from 'lucide-react-native/icons/download';
+import Bookmark from 'lucide-react-native/icons/bookmark';
 import dayjs from 'dayjs';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

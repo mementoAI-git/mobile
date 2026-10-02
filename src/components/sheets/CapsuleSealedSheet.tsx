@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { X } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import dayjs from 'dayjs';
 import { COLORS } from '@/constants/tokens';

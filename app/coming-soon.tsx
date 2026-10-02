@@ -12,14 +12,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import {
-  ArrowLeft,
-  Headphones,
-  Heart,
-  SlidersHorizontal,
-  Sparkles,
-  Timer,
-} from 'lucide-react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import Headphones from 'lucide-react-native/icons/headphones';
+import Heart from 'lucide-react-native/icons/heart';
+import SlidersHorizontal from 'lucide-react-native/icons/sliders-horizontal';
+import Sparkles from 'lucide-react-native/icons/sparkles';
+import Timer from 'lucide-react-native/icons/timer';
 import { Button } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

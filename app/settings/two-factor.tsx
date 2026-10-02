@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, ScrollView, TouchableOpacity, ImageBackground, Text} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft } from 'lucide-react-native';
+import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import { UiShieldTick, UiShieldOff, UiPhone01, UiCopy01 } from '@/components/ui/icons/SettingsIcons';
 import { Button, ResponsiveScreen, TextInput } from '@/components/ui';
 import { useTwoFactorSettingsLogic } from '@/hooks/use-two-factor-settings-logic';

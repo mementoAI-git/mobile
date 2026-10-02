@@ -1,7 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { X, Check } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
+import Check from 'lucide-react-native/icons/check';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUiStore } from '@/store';

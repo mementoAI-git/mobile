@@ -1,5 +1,5 @@
 import { COLORS } from "@/constants/tokens";
-import { Check } from "lucide-react-native";
+import Check from 'lucide-react-native/icons/check';
 import { View } from "react-native";
 
 type CompletedCheckmarkIconProps = {

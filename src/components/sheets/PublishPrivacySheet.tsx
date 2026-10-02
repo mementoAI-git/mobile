@@ -8,7 +8,11 @@ import {
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSheetTopInset } from '@/features/layout/sheet-safe-area';
-import { Check, Lock, Search, Users, X } from 'lucide-react-native';
+import Check from 'lucide-react-native/icons/check';
+import Lock from 'lucide-react-native/icons/lock';
+import Search from 'lucide-react-native/icons/search';
+import Users from 'lucide-react-native/icons/users';
+import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useGroups } from '@/hooks/queries/use-groups';

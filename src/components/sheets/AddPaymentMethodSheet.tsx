@@ -1,7 +1,9 @@
 import React, {useCallback, useState} from 'react';
 import {Text, TouchableOpacity, View} from 'react-native';
 import {BottomSheetScrollView} from '@gorhom/bottom-sheet';
-import {ChevronDown, CreditCard, X} from 'lucide-react-native';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
+import CreditCard from 'lucide-react-native/icons/credit-card';
+import X from 'lucide-react-native/icons/x';
 import Svg, {Path} from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';

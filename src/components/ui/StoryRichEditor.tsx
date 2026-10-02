@@ -16,10 +16,15 @@ import {
   type EditorBridge,
 } from '@10play/tentap-editor';
 import * as Haptics from 'expo-haptics';
-import {
-  Bold, Italic, Underline as UnderlineIcon, Strikethrough,
-  Heading1, Heading2, List, ListOrdered, Quote,
-} from 'lucide-react-native';
+import Bold from 'lucide-react-native/icons/bold';
+import Italic from 'lucide-react-native/icons/italic';
+import UnderlineIcon from 'lucide-react-native/icons/underline';
+import Strikethrough from 'lucide-react-native/icons/strikethrough';
+import Heading1 from 'lucide-react-native/icons/heading-1';
+import Heading2 from 'lucide-react-native/icons/heading-2';
+import List from 'lucide-react-native/icons/list';
+import ListOrdered from 'lucide-react-native/icons/list-ordered';
+import Quote from 'lucide-react-native/icons/quote';
 import { COLORS } from '@/constants/tokens';
 import { TYPE_METRICS } from '@/constants/typography';
 import { minTouchTarget, radius, iconSize } from '@/constants/responsive';

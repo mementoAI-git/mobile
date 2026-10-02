@@ -128,6 +128,8 @@ export type VoiceAudioEngineOptions = {
   metrics?: VoiceSessionMetrics;
   /** Stream the mic while model audio plays on the loudspeaker. Relies on OS echo cancellation. */
   speakerFullDuplex?: boolean;
+  /** Use Apple's voice-processing unit. Off by default; see voice-audio-policy.ts. */
+  iosVoiceProcessing?: boolean;
   onFatalError?: (error: Error) => void;
   onPlaybackStateChange?: (
     state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
@@ -178,6 +180,7 @@ export class VoiceAudioEngine {
   private readonly native: VoiceAudioNativeAdapter;
   private readonly metrics: VoiceSessionMetrics;
   private speakerFullDuplex: boolean;
+  private readonly iosVoiceProcessing: boolean;
   private readonly onFatalError?: (error: Error) => void;
   private readonly onPlaybackStateChange?: (
     state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
@@ -208,6 +211,7 @@ export class VoiceAudioEngine {
     this.native = options.native ?? createNativeVoiceAudioAdapter();
     this.metrics = options.metrics ?? new VoiceSessionMetrics();
     this.speakerFullDuplex = options.speakerFullDuplex ?? false;
+    this.iosVoiceProcessing = options.iosVoiceProcessing ?? false;
     this.onFatalError = options.onFatalError;
     this.onPlaybackStateChange = options.onPlaybackStateChange;
   }
@@ -262,7 +266,7 @@ export class VoiceAudioEngine {
 
     try {
       this.recorder = this.native.createRecorder({
-        iosVoiceProcessing: true,
+        iosVoiceProcessing: this.iosVoiceProcessing,
         androidInputPreset: 'voiceCommunication',
       });
       const preferredSampleRate = this.native.getPreferredSampleRate();

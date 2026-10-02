@@ -11,7 +11,10 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
-import { Image as ImageIcon, ImagePlus, AudioLines, Music } from 'lucide-react-native';
+import ImageIcon from 'lucide-react-native/icons/image';
+import ImagePlus from 'lucide-react-native/icons/image-plus';
+import AudioLines from 'lucide-react-native/icons/audio-lines';
+import Music from 'lucide-react-native/icons/music';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

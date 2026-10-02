@@ -1,7 +1,7 @@
 import React from 'react';
 import { ImageBackground, View, ScrollView, ImageSourcePropType, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { LucideIcon } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

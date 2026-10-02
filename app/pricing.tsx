@@ -1,7 +1,7 @@
 import React, {useCallback} from 'react';
 import {ImageBackground, Platform, ScrollView, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {Check} from 'lucide-react-native';
+import Check from 'lucide-react-native/icons/check';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import dayjs from 'dayjs';

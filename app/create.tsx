@@ -25,16 +25,14 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
-import {
-  Lock,
-  X,
-  FileText,
-  Play,
-  Camera,
-  Mic,
-  Video,
-  Music,
-} from 'lucide-react-native';
+import Lock from 'lucide-react-native/icons/lock';
+import X from 'lucide-react-native/icons/x';
+import FileText from 'lucide-react-native/icons/file-text';
+import Play from 'lucide-react-native/icons/play';
+import Camera from 'lucide-react-native/icons/camera';
+import Mic from 'lucide-react-native/icons/mic';
+import Video from 'lucide-react-native/icons/video';
+import Music from 'lucide-react-native/icons/music';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';

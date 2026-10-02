@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ImageBackground } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Logo } from '@/components/ui';
-import { ChevronRight } from 'lucide-react-native';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import Animated, {

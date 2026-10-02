@@ -1,8 +1,10 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, FlatList, RefreshControl, ScrollView, ImageBackground, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Search } from 'lucide-react-native';
-// import { LayoutGrid, List } from 'lucide-react-native'; // list mode toggled off for now
+import Plus from 'lucide-react-native/icons/plus';
+import Search from 'lucide-react-native/icons/search';
+// import LayoutGrid from 'lucide-react-native/icons/layout-grid';
+import List from 'lucide-react-native/icons/list'; // list mode toggled off for now
 import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
 import { MasonryMemoryGrid } from '@/components/memory/MasonryMemoryGrid';
 import { StatCard, DashboardHeader, TextInput, StoriesSkeleton, EmptyState, Spinner } from '@/components/ui';

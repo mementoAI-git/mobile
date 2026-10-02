@@ -11,7 +11,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import { Button } from '@/components/ui';
 import { OtpCodeInput } from '@/components/auth/OtpCodeInput';

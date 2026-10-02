@@ -5,7 +5,15 @@ import {
   Keyboard, ScrollView, Image, ActivityIndicator, AccessibilityInfo, useWindowDimensions, InteractionManager,
   UIManager, LayoutAnimation,
 } from 'react-native';
-import { ArrowUp, AudioLines, Mic, Square, Plus, X, FileText, Play, Smile } from 'lucide-react-native';
+import ArrowUp from 'lucide-react-native/icons/arrow-up';
+import AudioLines from 'lucide-react-native/icons/audio-lines';
+import Mic from 'lucide-react-native/icons/mic';
+import Square from 'lucide-react-native/icons/square';
+import Plus from 'lucide-react-native/icons/plus';
+import X from 'lucide-react-native/icons/x';
+import FileText from 'lucide-react-native/icons/file-text';
+import Play from 'lucide-react-native/icons/play';
+import Smile from 'lucide-react-native/icons/face-slightly-smiling';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';

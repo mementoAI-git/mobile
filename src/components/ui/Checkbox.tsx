@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Check } from 'lucide-react-native';
+import Check from 'lucide-react-native/icons/check';
 import { COLORS } from '@/constants/tokens';
 import { cn } from '@/lib/utils';
 import { ms, radius } from '@/constants/responsive';

@@ -8,7 +8,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, FolderPlus, UserRoundPlus } from 'lucide-react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import FolderPlus from 'lucide-react-native/icons/folder-plus';
+import UserRoundPlus from 'lucide-react-native/icons/user-round-plus';
 import * as Haptics from 'expo-haptics';
 import { Button, ResponsiveScreen, Skeleton } from '@/components/ui';
 import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';

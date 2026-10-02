@@ -10,7 +10,9 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
-import { ExternalLink, X, Globe } from 'lucide-react-native';
+import ExternalLink from 'lucide-react-native/icons/external-link';
+import X from 'lucide-react-native/icons/x';
+import Globe from 'lucide-react-native/icons/globe';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

@@ -13,7 +13,7 @@ import {
 import { Controller } from 'react-hook-form';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown, SlideInDown } from 'react-native-reanimated';
-import { X } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { Button, TextInput, PasswordInput } from '@/components/ui';
 import { useSetPasswordLogic } from '@/hooks/use-set-password-logic';

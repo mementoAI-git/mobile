@@ -1,6 +1,11 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Pencil, Eye, Pause, Play, RotateCcw, Trash2 } from 'lucide-react-native';
+import Pencil from 'lucide-react-native/icons/pencil';
+import Eye from 'lucide-react-native/icons/eye';
+import Pause from 'lucide-react-native/icons/pause';
+import Play from 'lucide-react-native/icons/play';
+import RotateCcw from 'lucide-react-native/icons/rotate-ccw';
+import Trash2 from 'lucide-react-native/icons/trash';
 import { useDeleteCapsule, useUpdateCapsule } from '@/hooks/mutations/use-capsule-mutations';
 import { ICapsule } from '@/types';
 import { useUiStore } from '@/store';

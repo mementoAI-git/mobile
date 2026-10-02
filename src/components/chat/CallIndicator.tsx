@@ -4,7 +4,8 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AudioLines, MicOff } from 'lucide-react-native';
+import AudioLines from 'lucide-react-native/icons/audio-lines';
+import MicOff from 'lucide-react-native/icons/mic-off';
 
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

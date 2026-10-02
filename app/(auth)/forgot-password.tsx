@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { X } from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
 import { Button, TextInput } from '@/components/ui';
 import { useForgotPasswordLogic } from '@/hooks/use-forgot-password-logic';
 import { COLORS } from '@/constants/tokens';

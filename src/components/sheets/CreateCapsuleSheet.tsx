@@ -13,14 +13,12 @@ import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet
 import { useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import {
-  X,
-  ChevronRight,
-  ChevronDown,
-  Image as ImageIcon,
-  Plus,
-  Check
-} from 'lucide-react-native';
+import X from 'lucide-react-native/icons/x';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
+import ImageIcon from 'lucide-react-native/icons/image';
+import Plus from 'lucide-react-native/icons/plus';
+import Check from 'lucide-react-native/icons/check';
 import { Button, Spinner, Skeleton } from '@/components/ui';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useCreateCapsule, useUpdateCapsule } from '@/hooks/mutations/use-capsule-mutations';

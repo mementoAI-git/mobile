@@ -10,7 +10,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Plus, Zap, Trophy, ChevronRight } from 'lucide-react-native';
+import Plus from 'lucide-react-native/icons/plus';
+import Zap from 'lucide-react-native/icons/zap';
+import Trophy from 'lucide-react-native/icons/trophy';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import { useUiStore } from '@/store';
 import { useUserStats, useMemoriesStats, useCapsuleStats } from '@/hooks/queries/use-overview';
 import { useStories } from '@/hooks/queries/use-memories';

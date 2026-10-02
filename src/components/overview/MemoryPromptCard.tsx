@@ -6,7 +6,7 @@ import {
     View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Plus } from "lucide-react-native";
+import Plus from 'lucide-react-native/icons/plus';
 import Animated, {
     useAnimatedStyle,
     useSharedValue,

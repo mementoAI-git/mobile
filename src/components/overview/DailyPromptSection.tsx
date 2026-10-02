@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
-import { Square } from 'lucide-react-native';
+import Square from 'lucide-react-native/icons/square';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
