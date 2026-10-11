@@ -8,6 +8,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "development",
         "EXPO_PUBLIC_API_BASE_URL": "https://dev.mymemento.io/api",
         "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "1",
         "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "true"
@@ -20,11 +21,23 @@
       "distribution": "store",
       "channel": "staging",
       "env": {
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "preview",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://8551764415ef9db1c446d9fa44571728@o4511222887022592.ingest.us.sentry.io/4511469048692736",
         "EXPO_PUBLIC_API_BASE_URL": "https://dev.mymemento.io/api",
         "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "0.2",
         "SENTRY_ALLOW_FAILURE": "true",
         "EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK": "true",
         "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "true"
+      }
+    },
+    "apk": {
+      "extends": "preview",
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "apk"
+      },
+      "android": {
+        "buildType": "apk"
       }
     },
     "testflight": {
@@ -33,11 +46,16 @@
       "environment": "preview",
       "autoIncrement": true,
       "env": {
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "testflight",
         "EXPO_PUBLIC_API_BASE_URL": "https://dev.mymemento.io/api",
         "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "0.2",
         "SENTRY_ALLOW_FAILURE": "true",
         "EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK": "true",
-        "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "true"
+        "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "true",
+        "EXPO_APPLE_TEAM_ID": "LKYKU36B7W",
+        "EXPO_APPLE_TEAM_TYPE": "INDIVIDUAL",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://8551764415ef9db1c446d9fa44571728@o4511222887022592.ingest.us.sentry.io/4511469048692736",
+        "EXPO_PUBLIC_VOICE_IOS_VOICE_PROCESSING": "true"
       }
     },
     "production": {
@@ -46,16 +64,36 @@
       "environment": "production",
       "autoIncrement": true,
       "env": {
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "production",
         "EXPO_PUBLIC_API_BASE_URL": "https://app.mymemento.io/api",
         "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "0.2",
         "SENTRY_ALLOW_FAILURE": "true",
         "EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK": "true",
-        "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "false"
+        "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "false",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://8551764415ef9db1c446d9fa44571728@o4511222887022592.ingest.us.sentry.io/4511469048692736"
       }
     }
   },
   "submit": {
-    "testflight": {},
-    "production": {}
+    "testflight": {
+      "ios": {
+        "ascAppId": "6804683183",
+        "ascApiKeyPath": "./secrets/AuthKey_BSKY495VD9.p8",
+        "ascApiKeyId": "BSKY495VD9",
+        "ascApiKeyIssuerId": "a9b89b7c-54ac-4abc-9bc4-4e01b7fed2f3"
+      }
+    },
+    "production": {
+      "ios": {
+        "appleId": "wisdomavalanche@gmail.com",
+        "ascAppId": "6804683183",
+        "language": "en-US"
+      },
+      "android": {
+        "track": "internal",
+        "releaseStatus": "completed",
+        "changesNotSentForReview": true
+      }
+    }
   }
 }
