@@ -54,6 +54,7 @@ export type VoiceCallEngineStats = Partial<
     | 'uplinkDroppedShield'
     | 'uplinkDroppedSpeakerGate'
     | 'uplinkPeakRms'
+    | 'peakEchoLevel'
   >
 >;
 
@@ -74,6 +75,8 @@ export type VoiceCallReport = {
   /** Echo cancellation and mic-open-during-playback settings for this call. */
   audioPolicy?: { iosVoiceProcessing: boolean; speakerFullDuplex: boolean };
   turnDetection?: VoiceTurnDetection;
+  /** Interruptions that looked like Memento hearing itself, and whether the call fell back. */
+  selfInterruptions?: { suspected: number; fellBack: boolean };
   engine?: VoiceCallEngineStats;
   /** The call ended on an error rather than a hang-up. */
   failed?: boolean;
@@ -136,6 +139,7 @@ function sendVoiceCall(report: VoiceCallReport, sentry: VoiceTelemetrySentry): v
       'voice.speaker_full_duplex': report.audioPolicy?.speakerFullDuplex,
       'voice.ios_voice_processing_active': engine?.voiceProcessingActive,
       'voice.turn_variant': report.turnDetection?.variant,
+      'voice.self_interrupt_fallback': report.selfInterruptions?.fellBack,
       'voice.silence_ms': report.turnDetection?.silenceDurationMs,
       'voice.prefix_padding_ms': report.turnDetection?.prefixPaddingMs,
     }),
@@ -212,6 +216,8 @@ function sendVoiceCall(report: VoiceCallReport, sentry: VoiceTelemetrySentry): v
   measure('voice_mic_frames_dropped_greeting', engine?.uplinkDroppedShield, 'none');
   measure('voice_mic_frames_dropped_speaker', engine?.uplinkDroppedSpeakerGate, 'none');
   measure('voice_mic_peak_rms', engine?.uplinkPeakRms, 'none');
+  measure('voice_echo_peak_rms', engine?.peakEchoLevel, 'none');
+  measure('voice_self_interruptions', report.selfInterruptions?.suspected, 'none');
   measure('voice_prompt_tokens_last', report.usage?.lastPromptTokens, 'none');
   measure('voice_total_tokens_max', report.usage?.maxTotalTokens, 'none');
   measure('voice_malformed_chunks', engine?.malformedChunks, 'none');

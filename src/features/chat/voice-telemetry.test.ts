@@ -86,6 +86,7 @@ describe('reportVoiceCall', () => {
         usage: { lastPromptTokens: 5400, maxTotalTokens: 6100 },
         audioPolicy: { iosVoiceProcessing: true, speakerFullDuplex: false },
         turnDetection: { variant: 'silence-800', silenceDurationMs: 800, prefixPaddingMs: 200 },
+        selfInterruptions: { suspected: 2, fellBack: true },
         engine: {
           startOutputRoute: 'speaker',
           outputRoute: 'bluetooth-call',
@@ -98,6 +99,7 @@ describe('reportVoiceCall', () => {
           uplinkDroppedShield: 20,
           uplinkDroppedSpeakerGate: 100,
           uplinkPeakRms: 0.21,
+          peakEchoLevel: 0.06,
           underruns: 2,
           routeRebuilds: 1,
           concealedMs: 40,
@@ -129,6 +131,7 @@ describe('reportVoiceCall', () => {
         'voice.speaker_full_duplex': false,
         'voice.ios_voice_processing_active': true,
         'voice.turn_variant': 'silence-800',
+        'voice.self_interrupt_fallback': true,
         'voice.silence_ms': 800,
         'voice.prefix_padding_ms': 200,
       },
@@ -174,6 +177,8 @@ describe('reportVoiceCall', () => {
     expect(measurements.voice_mic_frames_dropped_greeting).toMatchObject({ value: 20 });
     expect(measurements.voice_mic_frames_dropped_speaker).toMatchObject({ value: 100 });
     expect(measurements.voice_mic_peak_rms).toMatchObject({ value: 0.21 });
+    expect(measurements.voice_echo_peak_rms).toMatchObject({ value: 0.06 });
+    expect(measurements.voice_self_interruptions).toMatchObject({ value: 2 });
     expect(measurements.voice_prompt_tokens_last).toMatchObject({ value: 5400, unit: 'none' });
     expect(measurements.voice_total_tokens_max).toMatchObject({ value: 6100, unit: 'none' });
     expect(measurements.voice_reply_p50.span).toBeDefined();

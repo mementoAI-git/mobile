@@ -184,6 +184,8 @@ export type VoiceAudioEngineSnapshot = VoiceMetricSnapshot & {
   speakerFullDuplex: boolean;
   /** Mic frames replaced with silence as leftover echo while Memento was audible on the speaker. */
   uplinkEchoSuppressed: number;
+  /** Loudest leftover echo the speaker filter measured (RMS). */
+  peakEchoLevel: number;
   /** Times a clear voice got through the echo filter. */
   bargeIns: number;
   /** Output route when the call's audio started, and after the last route change. */
@@ -327,6 +329,11 @@ export class VoiceAudioEngine {
 
   isHeadphonesActive(): boolean {
     return this.isHeadphones;
+  }
+
+  /** The mic is open on the loudspeaker while Memento talks. */
+  isSpeakerFullDuplexActive(): boolean {
+    return this.speakerFullDuplex && !this.isHeadphones;
   }
 
   isPlaying(): boolean {
@@ -526,6 +533,7 @@ export class VoiceAudioEngine {
       voiceProcessingActive: this.voiceProcessingActive,
       speakerFullDuplex: this.speakerFullDuplex,
       uplinkEchoSuppressed: this.echoGate.suppressed,
+      peakEchoLevel: Math.round(this.echoGate.peakEchoLevel * 10_000) / 10_000,
       bargeIns: this.echoGate.bargeIns,
     };
   }

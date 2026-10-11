@@ -55,6 +55,7 @@ import { saveUplinkRecording, VoiceUplinkRecorder } from '@/features/chat/voice-
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { VoiceLatencyTracker } from '@/features/chat/voice-latency';
 import { reportVoiceCall, type VoiceCallFailure } from '@/features/chat/voice-telemetry';
+import { VoiceSelfInterruptGuard } from '@/features/chat/voice-self-interrupt-guard';
 import { VoiceTokenPrefetch } from '@/features/chat/voice-token-prefetch';
 import { VoiceResponseGate } from '@/features/chat/voice-response-gate';
 import { getVoiceCallOutbox } from '@/features/chat/voice-call-outbox-store';
@@ -312,6 +313,7 @@ export function useVoiceMode({
   }
   const transcriptDiagnosticsRef = useRef(createVoiceTranscriptDiagnostics());
   const latencyRef = useRef<VoiceLatencyTracker | null>(null);
+  const selfInterruptRef = useRef<VoiceSelfInterruptGuard | null>(null);
   const liveModelRef = useRef<string | undefined>(undefined);
   const turnDetectionRef = useRef<VoiceTurnDetection | undefined>(undefined);
   const tokenPrefetchedRef = useRef(false);
@@ -480,6 +482,7 @@ export function useVoiceMode({
           // handleInterruption() promotes any interim user text to final so
           // it isn't lost when we complete the (truncated) model turn.
           latencyRef.current?.observeModelTurnEnd({ interruptedBy: 'speech' });
+          selfInterruptRef.current?.observeInterrupted(engine?.isSpeakerFullDuplexActive() ?? false);
           const newEpoch = engine?.nextEpoch() ?? 1;
           engine?.interruptOutput(newEpoch);
           if (greetingTimerRef.current) {
@@ -502,6 +505,7 @@ export function useVoiceMode({
         } else if (effect.type === 'output-audio') {
           if (responseGateRef.current?.acceptOutput() === false) continue;
           latencyRef.current?.observeModelAudio();
+          selfInterruptRef.current?.observeModelAudio();
           goodbyeRef.current?.tracker.onModelAudio();
           if (engine?.enqueueOutput(effect.data, effect.epoch) && isMountedRef.current) {
             isAiSpeakingRef.current = true;
@@ -509,11 +513,13 @@ export function useVoiceMode({
           }
         } else if (effect.type === 'input-transcript') {
           latencyRef.current?.observeUserTranscript();
+          selfInterruptRef.current?.observeInputText(effect.text, effect.isInterim);
           const text = transcriptRef.current.appendUser(effect.text, effect.isInterim);
           userSpeechTextRef.current = text;
           userTextSetterRef.current?.set(text);
         } else if (effect.type === 'output-transcript') {
           if (responseGateRef.current?.acceptTranscript() === false) continue;
+          selfInterruptRef.current?.observeOutputText(effect.text);
           outputTranscriptFinishedRef.current = effect.finished;
           if (effect.text) {
             const text = transcriptRef.current.appendModel(effect.text);
@@ -633,6 +639,9 @@ export function useVoiceMode({
         endedDuringStep: connectStepRef.current ?? undefined,
         turnDetection: turnDetectionRef.current,
         toolCalls: transcriptDiagnosticsRef.current.toolCalls.length,
+        selfInterruptions: selfInterruptRef.current
+          ? { suspected: selfInterruptRef.current.suspected, fellBack: selfInterruptRef.current.fellBack }
+          : undefined,
         engine: engineSnapshot,
       });
     }
@@ -1024,6 +1033,17 @@ export function useVoiceMode({
     messageHandlerRef.current = new VoiceMessageHandler();
     uplinkRecorderRef.current = DEBUG_RECORD_UPLINK ? new VoiceUplinkRecorder() : null;
     latencyRef.current = new VoiceLatencyTracker();
+    // On a loud speaker, leftover echo can still get past the echo filter and
+    // Memento keeps interrupting itself. When it does, stop listening while
+    // Memento talks for the rest of this call; the Interrupt button still works.
+    selfInterruptRef.current = new VoiceSelfInterruptGuard({
+      now: Date.now,
+      onFallback: () => {
+        fullDuplexRef.current = false;
+        engineRef.current?.setSpeakerFullDuplex(false);
+        logger.runtime('[VoiceMode] Memento is hearing itself on the speaker; pausing the mic while it talks');
+      },
+    });
     liveModelRef.current = undefined;
     turnDetectionRef.current = undefined;
     tokenPrefetchedRef.current = false;
