@@ -12,6 +12,7 @@ import {
   type VoiceAudioQueueAdapter,
   type VoiceAudioRecorderAdapter,
 } from './voice-audio-engine';
+import { VOICE_ECHO_PRE_ROLL_FRAMES } from './voice-echo-gate';
 import { calculateRmsEnergy, pcm16Base64ToFloat32 } from './voice-pcm';
 
 class FakeQueue implements VoiceAudioQueueAdapter {
@@ -495,12 +496,15 @@ describe('VoiceAudioEngine', () => {
     expect(engine.isPlaying()).toBe(true);
 
     const userVoice = new Float32Array(VOICE_INPUT_FRAMES).fill(0.1);
-    native.recorder.input?.({
-      buffer: { getChannelData: () => userVoice },
-      numFrames: VOICE_INPUT_FRAMES,
-    });
+    // Two speech frames: one alone could be a click, so it is held until confirmed.
+    for (let i = 0; i < 2; i += 1) {
+      native.recorder.input?.({
+        buffer: { getChannelData: () => userVoice },
+        numFrames: VOICE_INPUT_FRAMES,
+      });
+    }
 
-    expect(chunks).toHaveLength(1);
+    expect(chunks).toHaveLength(2);
   });
 
   test('applies the server speaker duplex policy after construction', async () => {
@@ -515,12 +519,14 @@ describe('VoiceAudioEngine', () => {
 
     const pcmSamples = new Float32Array(4800).fill(0.1);
     engine.enqueueOutput(btoa(String.fromCharCode(...new Uint8Array(pcmSamples.length * 2))), 1);
-    native.recorder.input?.({
-      buffer: { getChannelData: () => new Float32Array(VOICE_INPUT_FRAMES).fill(0.1) },
-      numFrames: VOICE_INPUT_FRAMES,
-    });
+    for (let i = 0; i < 2; i += 1) {
+      native.recorder.input?.({
+        buffer: { getChannelData: () => new Float32Array(VOICE_INPUT_FRAMES).fill(0.1) },
+        numFrames: VOICE_INPUT_FRAMES,
+      });
+    }
 
-    expect(chunks).toHaveLength(1);
+    expect(chunks).toHaveLength(2);
   });
 
   test('reports whether native playback is active', async () => {
@@ -576,12 +582,14 @@ describe('VoiceAudioEngine', () => {
     await engine.start((chunk) => chunks.push(chunk));
 
     engine.armGreetingShield();
-    native.recorder.input?.({
-      buffer: { getChannelData: () => new Float32Array(VOICE_INPUT_FRAMES).fill(0.1) },
-      numFrames: VOICE_INPUT_FRAMES,
-    });
+    for (let i = 0; i < 2; i += 1) {
+      native.recorder.input?.({
+        buffer: { getChannelData: () => new Float32Array(VOICE_INPUT_FRAMES).fill(0.1) },
+        numFrames: VOICE_INPUT_FRAMES,
+      });
+    }
 
-    expect(chunks).toHaveLength(1);
+    expect(chunks).toHaveLength(2);
     expect(engine.snapshot().uplinkDroppedShield).toBe(0);
   });
 
@@ -632,7 +640,8 @@ describe('VoiceAudioEngine', () => {
       });
 
       engine.enqueueOutput(SPEAKING, 1);
-      feed(native, frame(0.03));
+      // Held as pre-roll first, in case it is the start of a word.
+      for (let i = 0; i <= VOICE_ECHO_PRE_ROLL_FRAMES; i += 1) feed(native, frame(0.03));
 
       expect(chunks).toHaveLength(1);
       expect(isSilent(chunks[0])).toBe(true);
@@ -653,7 +662,8 @@ describe('VoiceAudioEngine', () => {
       clock.now += 400;
       feed(native, frame(0.03)); // a softer word mid-sentence
       clock.now += VOICE_BARGE_IN_HOLD_MS;
-      feed(native, frame(0.03)); // back to leftover echo
+      // Back to leftover echo: held as pre-roll, then sent as silence.
+      for (let i = 0; i <= VOICE_ECHO_PRE_ROLL_FRAMES; i += 1) feed(native, frame(0.03));
 
       expect(chunks.map(isSilent)).toEqual([false, false, true]);
       expect(engine.snapshot()).toMatchObject({ bargeIns: 1, uplinkEchoSuppressed: 1 });

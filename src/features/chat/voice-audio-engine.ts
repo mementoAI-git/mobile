@@ -11,10 +11,10 @@ import { VoicePlaybackController } from './voice-playback-controller';
 import {
   calculateRmsEnergy,
   float32ToPcm16Base64,
-  isBargeInSpeech,
   pcm16Base64ToFloat32,
   resampleLinear,
 } from './voice-pcm';
+import { VoiceEchoGate } from './voice-echo-gate';
 import { VoiceSessionMetrics, type VoiceMetricSnapshot } from './voice-session-metrics';
 
 const INPUT_SAMPLE_RATE = 16_000;
@@ -288,9 +288,7 @@ export class VoiceAudioEngine {
   private voiceProcessingActive?: boolean;
   /** Echo cancellation was requested but iOS did not engage it. */
   private voiceProcessingUnavailable = false;
-  private bargeInOpenUntil = 0;
-  private uplinkEchoSuppressed = 0;
-  private bargeIns = 0;
+  private readonly echoGate: VoiceEchoGate;
 
   constructor(options: VoiceAudioEngineOptions = {}) {
     this.native = options.native ?? createNativeVoiceAudioAdapter();
@@ -298,6 +296,7 @@ export class VoiceAudioEngine {
     this.speakerFullDuplex = options.speakerFullDuplex ?? false;
     this.iosVoiceProcessing = options.iosVoiceProcessing ?? false;
     this.now = options.now ?? Date.now;
+    this.echoGate = new VoiceEchoGate({ now: this.now, holdMs: VOICE_BARGE_IN_HOLD_MS });
     this.onFatalError = options.onFatalError;
     this.onPlaybackStateChange = options.onPlaybackStateChange;
   }
@@ -408,31 +407,17 @@ export class VoiceAudioEngine {
           const channel = event.buffer.getChannelData(0);
           const actualFrames = Math.min(event.numFrames, channel.length);
           if (actualFrames !== VOICE_INPUT_FRAMES) this.captureDurationAnomalies += 1;
-          let samples = channel.subarray(0, actualFrames);
+          const samples = channel.subarray(0, actualFrames);
 
-          // Full duplex on the loudspeaker: echo cancellation removes most of
-          // Memento's voice from the mic, but some leaks through, and Gemini
-          // hears it as the user talking and cuts Memento off. While Memento
-          // is audible, pass only frames clearly louder than leftover echo;
-          // once one does, keep the mic open for the rest of the sentence.
-          // Filtered frames are sent as silence to keep the stream continuous.
-          if (this.speakerFullDuplex && !this.isHeadphones && this.isAudible(200)) {
-            const at = this.now();
-            if (at >= this.bargeInOpenUntil) {
-              if (isBargeInSpeech(samples)) {
-                this.bargeInOpenUntil = at + VOICE_BARGE_IN_HOLD_MS;
-                this.bargeIns += 1;
-              } else {
-                samples = new Float32Array(samples.length);
-                this.uplinkEchoSuppressed += 1;
-              }
-            }
+          // Full duplex on the loudspeaker: filter leftover echo while Memento
+          // is audible (see VoiceEchoGate).
+          const gating = this.speakerFullDuplex && !this.isHeadphones && this.isAudible(200);
+          for (const frame of this.echoGate.process(samples, gating)) {
+            this.uplinkDelivered += 1;
+            const rms = calculateRmsEnergy(frame);
+            this.uplinkPeakRms = Math.max(this.uplinkPeakRms, rms);
+            onInput(float32ToPcm16Base64(frame), rms);
           }
-
-          this.uplinkDelivered += 1;
-          const rms = calculateRmsEnergy(samples);
-          this.uplinkPeakRms = Math.max(this.uplinkPeakRms, rms);
-          onInput(float32ToPcm16Base64(samples), rms);
         },
       );
       this.recorder.onError((message) => {
@@ -529,8 +514,8 @@ export class VoiceAudioEngine {
       outputRoute: this.outputRoute,
       voiceProcessingActive: this.voiceProcessingActive,
       speakerFullDuplex: this.speakerFullDuplex,
-      uplinkEchoSuppressed: this.uplinkEchoSuppressed,
-      bargeIns: this.bargeIns,
+      uplinkEchoSuppressed: this.echoGate.suppressed,
+      bargeIns: this.echoGate.bargeIns,
     };
   }
 
@@ -672,6 +657,7 @@ export class VoiceAudioEngine {
         recorder.clearOnError();
         await recorder.stop();
       }
+      this.echoGate.reset();
 
       this.playback?.stop();
       if (this.playback instanceof NativeVoicePlaybackController) {

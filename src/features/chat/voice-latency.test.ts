@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { VOICE_CUTOFF_WINDOW_MS, VOICE_SPEECH_RMS, VoiceLatencyTracker } from './voice-latency';
+import { VOICE_EARLY_INTERRUPTION_WINDOW_MS, VOICE_SPEECH_RMS, VoiceLatencyTracker } from './voice-latency';
 
 const SPEECH = VOICE_SPEECH_RMS * 2;
 const SILENCE = VOICE_SPEECH_RMS / 2;
@@ -115,10 +115,11 @@ describe('VoiceLatencyTracker turns', () => {
         speechEndAt: 3_400,
         firstAudioAt: 4_600,
         responseMs: 1_200,
+        audibleAt: 4_850,
         audibleMs: 1_450,
         transcriptToAudioMs: 700,
         toolCall: false,
-        cutOff: false,
+        earlyInterruption: false,
       },
     ]);
   });
@@ -194,21 +195,25 @@ describe('VoiceLatencyTracker turns', () => {
     expect(turnStats.audible).toEqual({ count: 5, p50Ms: 1_500, p90Ms: 3_200, maxMs: 3_200 });
   });
 
-  test('counts a reply the user interrupts within the cut-off window as cutting them off', () => {
+  test('counts replies interrupted soon after they were heard as early interruptions', () => {
     const { clock, tracker } = trackerAt(0);
-    // Reply 1: interrupted right after it started, so the user was not done.
+    const W = VOICE_EARLY_INTERRUPTION_WINDOW_MS;
+    // Reply 1: spoken over right after it was heard.
     tracker.observeMicFrame(SPEECH);
     clock.now = 500;
     tracker.observeModelAudio();
-    clock.now = 500 + VOICE_CUTOFF_WINDOW_MS - 1;
-    tracker.observeModelTurnEnd({ interrupted: true });
-    // Reply 2: interrupted much later, an ordinary barge-in.
+    clock.now = 700;
+    tracker.observePlaybackStart();
+    clock.now = 700 + W - 1;
+    tracker.observeModelTurnEnd({ interruptedBy: 'speech' });
+    // Reply 2: stopped with the button much later, an ordinary interruption.
     clock.now = 5_000;
     tracker.observeMicFrame(SPEECH);
     clock.now = 5_500;
     tracker.observeModelAudio();
-    clock.now = 5_500 + VOICE_CUTOFF_WINDOW_MS + 1;
-    tracker.observeModelTurnEnd({ interrupted: true });
+    tracker.observePlaybackStart();
+    clock.now = 5_500 + W + 1;
+    tracker.observeModelTurnEnd({ interruptedBy: 'tap' });
     // Reply 3: finished normally.
     clock.now = 10_000;
     tracker.observeMicFrame(SPEECH);
@@ -218,17 +223,38 @@ describe('VoiceLatencyTracker turns', () => {
     tracker.observeModelTurnEnd();
 
     const summary = tracker.summary();
-    expect(summary.turns.map((turn) => turn.cutOff)).toEqual([true, false, false]);
-    expect(summary.turnStats.cutOffs).toBe(1);
+    expect(summary.turns.map((turn) => [turn.interruptedBy, turn.earlyInterruption])).toEqual([
+      ['speech', true],
+      ['tap', false],
+      [undefined, false],
+    ]);
+    expect(summary.turnStats.earlyInterruptions).toBe(1);
+    expect(summary.turnStats.interruptions).toEqual({ speech: 1, tap: 1 });
   });
 
-  test('does not count an interrupted greeting as a cut-off', () => {
+  // Received audio can sit in the startup buffer before anyone hears it.
+  test('starts the early-interruption window when the reply is heard, not received', () => {
+    const { clock, tracker } = trackerAt(0);
+    tracker.observeMicFrame(SPEECH);
+    clock.now = 500;
+    tracker.observeModelAudio();
+    clock.now = 1_000;
+    tracker.observePlaybackStart();
+    clock.now = 500 + VOICE_EARLY_INTERRUPTION_WINDOW_MS + 100;
+    tracker.observeModelTurnEnd({ interruptedBy: 'speech' });
+
+    expect(tracker.summary().turns[0].earlyInterruption).toBe(true);
+  });
+
+  test('does not count an interrupted greeting as a reply interruption', () => {
     const { clock, tracker } = trackerAt(0);
     tracker.observeModelAudio();
     clock.now = 300;
-    tracker.observeModelTurnEnd({ interrupted: true });
+    tracker.observeModelTurnEnd({ interruptedBy: 'speech' });
 
-    expect(tracker.summary().turnStats.cutOffs).toBe(0);
+    const { turnStats } = tracker.summary();
+    expect(turnStats.earlyInterruptions).toBe(0);
+    expect(turnStats.interruptions).toEqual({ speech: 0, tap: 0 });
   });
 
   test('reports empty stats when there were no replies', () => {

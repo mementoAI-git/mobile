@@ -67,7 +67,7 @@ function completedCall() {
   clock.now = 4_250;
   tracker.observePlaybackStart();
   clock.now = 4_600;
-  tracker.observeModelTurnEnd({ interrupted: true });
+  tracker.observeModelTurnEnd({ interruptedBy: 'speech' });
   return tracker.summary();
 }
 
@@ -145,7 +145,8 @@ describe('reportVoiceCall', () => {
     expect(children.every(({ options }) => options.parentSpan !== undefined)).toBe(true);
     expect(children[6].options.attributes).toEqual({
       'voice.tool_call': false,
-      'voice.cut_off': true,
+      'voice.interrupted_by': 'speech',
+      'voice.early_interruption': true,
       'voice.audible_ms': 1_250,
     });
 
@@ -155,7 +156,9 @@ describe('reportVoiceCall', () => {
     expect(measurements.voice_reply_p50).toMatchObject({ value: 1_000, unit: 'millisecond' });
     expect(measurements.voice_reply_audible_p50).toMatchObject({ value: 1_250 });
     expect(measurements.voice_replies).toMatchObject({ value: 1, unit: 'none' });
-    expect(measurements.voice_reply_cutoffs).toMatchObject({ value: 1, unit: 'none' });
+    expect(measurements.voice_reply_early_interruptions).toMatchObject({ value: 1, unit: 'none' });
+    expect(measurements.voice_interruptions_spoken).toMatchObject({ value: 1, unit: 'none' });
+    expect(measurements.voice_interruptions_tapped).toMatchObject({ value: 0, unit: 'none' });
     expect(measurements.voice_underruns).toMatchObject({ value: 2, unit: 'none' });
     expect(measurements.voice_concealed).toMatchObject({ value: 40, unit: 'millisecond' });
     expect(measurements.voice_route_changes).toMatchObject({ value: 3, unit: 'none' });
