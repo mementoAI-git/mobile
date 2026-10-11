@@ -17,6 +17,10 @@ class MementoVoiceAudioModule(
     return true
   }
 
+  // Android has no voice-processing switch to read back; echo cancellation
+  // comes from the voiceCommunication input preset.
+  override fun isVoiceProcessingActive(): Boolean = false
+
   private external fun nativeInstall(runtimePointer: Long)
 
   companion object {

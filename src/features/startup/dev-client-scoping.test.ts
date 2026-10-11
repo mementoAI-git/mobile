@@ -23,7 +23,7 @@ describe('expo-dev-client scoping', () => {
   });
 
   test('is stripped from store builds', () => {
-    for (const profile of ['preview', 'testflight', 'production']) {
+    for (const profile of ['preview', 'testflight', 'production', 'apk']) {
       const cfg = loadConfig(profile);
       expect(hasDevClient(cfg)).toBe(false);
       // Live Activities + other plugins untouched

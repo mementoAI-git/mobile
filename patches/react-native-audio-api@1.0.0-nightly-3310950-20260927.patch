@@ -1,3 +1,6 @@
+diff --git a/node_modules/react-native-audio-api/.bun-tag-8441ed0afb27807c b/.bun-tag-8441ed0afb27807c
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/android/src/main/java/com/swmansion/audioapi/system/notification/RecordingNotification.kt b/android/src/main/java/com/swmansion/audioapi/system/notification/RecordingNotification.kt
 index ca97de44b65d74c8f88a2f57e2fd6535ed0906ba..0dae66d0795e2ac7809101921d987576b095453d 100644
 --- a/android/src/main/java/com/swmansion/audioapi/system/notification/RecordingNotification.kt
@@ -111,3 +114,107 @@ index cfd860e3e119be8bbbd3324ec5f2b76f819f2296..e3adaa39bbcfcd3a107d53ecaded1213
      // normal rendering - take RENDER_QUANTUM_SIZE frames from the graph and copy to output
      const int stillNeed = numFrames - outPos;
      if (stillNeed >= RENDER_QUANTUM_SIZE) {
+diff --git a/ios/audioapi/ios/system/AudioEngine.h b/ios/audioapi/ios/system/AudioEngine.h
+index 02c4b38a2ef00bbe188c0e4d24193479e47e52bd..543e8e8507dedfff0fcf418af3fca12c73b26726 100644
+--- a/ios/audioapi/ios/system/AudioEngine.h
++++ b/ios/audioapi/ios/system/AudioEngine.h
+@@ -56,6 +56,11 @@ typedef NS_ENUM(NSInteger, AudioEngineState) {
+ 
+ - (void)restartAudioEngine;
+ 
++/// True briefly after voice processing was switched on or off. Switching it
++/// changes the hardware input format, so iOS posts an engine configuration
++/// change that this engine has already handled.
++- (BOOL)isSettlingVoiceProcessing;
++
+ - (void)logAudioEngineState;
+ 
+ @end
+diff --git a/ios/audioapi/ios/system/AudioEngine.mm b/ios/audioapi/ios/system/AudioEngine.mm
+index 519edfcad4aed9328c614a2201d8bd26ffcb437f..b959ce20a4f18e39f6a833f3a60ded6e1b2aaff6 100644
+--- a/ios/audioapi/ios/system/AudioEngine.mm
++++ b/ios/audioapi/ios/system/AudioEngine.mm
+@@ -1,6 +1,7 @@
+ #import <audioapi/ios/system/AudioEngine.h>
+ #import <audioapi/ios/system/AudioSessionManager.h>
+ 
++#include <atomic>
+ #include <mutex>
+ 
+ @interface AudioEngineSourceRegistration : NSObject
+@@ -31,6 +32,9 @@ @interface AudioEngine () {
+   /// Tracks whether voice processing is currently engaged on the system input
+   /// node of the live engine instance. Reset whenever the engine is recreated.
+   BOOL _voiceProcessingApplied;
++  /// System uptime until which configuration changes are treated as the echo
++  /// of our own voice-processing switch. See -isSettlingVoiceProcessing.
++  std::atomic<double> _voiceProcessingSettlesAt;
+ }
+ 
+ @property (nonatomic, strong)
+@@ -280,6 +284,17 @@ - (void)applyVoiceProcessing
+   }
+ 
+   _voiceProcessingApplied = wantsVoiceProcessing;
++  // The input format is read after this, so the configuration change iOS posts
++  // for the switch is already accounted for. Restarting for it would rebuild
++  // the engine, whose fresh input node has voice processing off, so it would
++  // switch it on again and post another change: a main-thread loop that froze
++  // calls until the watchdog killed the app (0x8BADF00D).
++  _voiceProcessingSettlesAt = [NSProcessInfo processInfo].systemUptime + 1.0;
++}
++
++- (BOOL)isSettlingVoiceProcessing
++{
++  return [NSProcessInfo processInfo].systemUptime < _voiceProcessingSettlesAt;
+ }
+ 
+ - (void)materializeTrackedNodesIfNeeded
+diff --git a/ios/audioapi/ios/system/SystemNotificationManager.mm b/ios/audioapi/ios/system/SystemNotificationManager.mm
+index e3c27a524cc70a87b12bdabe61bea21ab6eb7a16..8ad1fa1f220b082e939b2a526ade6c60ab0fc711 100644
+--- a/ios/audioapi/ios/system/SystemNotificationManager.mm
++++ b/ios/audioapi/ios/system/SystemNotificationManager.mm
+@@ -3,8 +3,13 @@
+ #import <audioapi/ios/system/AudioEngine.h>
+ #import <audioapi/ios/system/AudioSessionManager.h>
+ #import <audioapi/ios/system/SystemNotificationManager.h>
++#include <atomic>
+ 
+-@implementation SystemNotificationManager
++@implementation SystemNotificationManager {
++  /// A configuration-change restart is queued on the main queue. Notifications
++  /// arrive on background threads, so this is atomic.
++  std::atomic<bool> _configurationRestartPending;
++}
+ 
+ static NSString *NotificationManagerContext = @"SystemNotificationManagerContext";
+ 
+@@ -262,7 +267,15 @@ - (void)handleEngineConfigurationChange:(NSNotification *)notification
+   AudioEngine *audioEngine = self.audioAPIModule.audioEngine;
+   AudioSessionManager *sessionManager = self.audioAPIModule.audioSessionManager;
+ 
++  // Route and engine notifications often arrive in bursts. One queued
++  // restart covers all of them.
++  if (_configurationRestartPending.exchange(true)) {
++    return;
++  }
++
+   dispatch_async(dispatch_get_main_queue(), ^{
++    self->_configurationRestartPending = false;
++
+     // This notification is registered with object:nil, so it also fires for
+     // AVAudioEngine instances owned by other libraries in the host app. Without
+     // an engine of our own there is nothing to restart, and marking the session
+@@ -271,6 +284,12 @@ - (void)handleEngineConfigurationChange:(NSNotification *)notification
+       return;
+     }
+ 
++    // Caused by our own voice-processing switch, which the engine has already
++    // handled. Restarting here would switch it again and loop.
++    if ([audioEngine isSettlingVoiceProcessing]) {
++      return;
++    }
++
+     [sessionManager markInactive];
+     [audioEngine restartAudioEngine];
+   });

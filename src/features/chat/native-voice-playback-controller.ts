@@ -62,7 +62,10 @@ export class NativeVoicePlaybackController {
     const durationMs = estimatePcm16DurationMs(base64Pcm, 24_000);
     this.metrics.observeOutputChunkDuration(durationMs);
     this.metrics.markFirstOutput();
-    this.setState('prebuffering');
+    // Native render state is authoritative and the poll mirrors it. A chunk
+    // only starts priming from idle; mid-response chunks must not flip a
+    // playing stream back to prebuffering (that churned isAiSpeaking per chunk).
+    if (this.state === 'idle') this.setState('prebuffering');
     this.schedulePoll();
     return true;
   }
@@ -85,7 +88,7 @@ export class NativeVoicePlaybackController {
     this.schedulePoll();
   }
 
-  getStats(): { adaptiveExtraMs?: number; concealedMs?: number } {
+  getStats(): { adaptiveExtraMs?: number; concealedMs?: number; malformedChunks: number } {
     const snapshot = this.finalSnapshot ?? this.session.getSnapshot();
     return {
       adaptiveExtraMs: snapshot.adaptiveExtraMs,
@@ -93,6 +96,7 @@ export class NativeVoicePlaybackController {
         snapshot.concealedFrames === undefined || !this.targetSampleRate
           ? undefined
           : Math.round((snapshot.concealedFrames / this.targetSampleRate) * 1_000),
+      malformedChunks: snapshot.malformedChunkCount,
     };
   }
 

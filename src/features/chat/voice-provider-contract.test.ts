@@ -35,8 +35,84 @@ describe('Gemini voice provider contract', () => {
 
     expect(source).toContain("effect.type === 'setup-complete'");
     expect(source).toContain('setupReady');
-    expect(source).toContain('sessionRef.current.sendClientContent');
+    expect(source).toContain('session.sendClientContent');
     expect(source).toContain('Start with a brief, warm greeting');
+  });
+
+  test('starts audio alongside the token and stops when the user hangs up mid-connect', async () => {
+    const source = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+
+    const audio = source.indexOf('const audioReady = engine.start(');
+    const token = source.indexOf('await tokenRequest');
+    const session = source.indexOf('const { session } = await openLiveSession(liveToken, { activateNow: true })');
+    expect(audio).toBeGreaterThan(-1);
+    expect(audio).toBeLessThan(token);
+    expect(token).toBeLessThan(session);
+    expect(source).toContain('await audioReady;');
+    // Every await in connect() is followed by a hang-up check.
+    expect(source.match(/if \(callEnded\(\)\)/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(source).toContain('session.close();');
+  });
+
+  test('prefetches the session token from the call screen', async () => {
+    const screen = await Bun.file(new URL('../../../app/voice-call.tsx', import.meta.url)).text();
+    const source = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+
+    expect(screen).toContain("if (stage !== 'ready' || !voiceInSync) return;");
+    expect(screen).toContain('prefetch({ memoryId: effectiveMemoryId');
+    expect(source).toContain('tokenPrefetchRef.current?.take(');
+  });
+
+  test('the Interrupt button keeps the abandoned response from playing again', async () => {
+    const source = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+    const interrupt = source.slice(source.indexOf('const interrupt = useCallback'));
+
+    expect(interrupt).toContain('responseGateRef.current?.interruptLocally()');
+    expect(interrupt).toContain('syncCompletedTurns(true)');
+    expect(source).toContain(
+      "} else if (effect.type === 'output-audio') {\n          if (responseGateRef.current?.acceptOutput() === false) continue;",
+    );
+    expect(source).toContain(
+      "} else if (effect.type === 'output-transcript') {\n          if (responseGateRef.current?.acceptTranscript() === false) continue;",
+    );
+    expect(source).toContain('if (discarded) continue;');
+  });
+
+  test('scopes socket messages and setup to their own socket, with deadlines', async () => {
+    const source = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+
+    // Setup completion is resolved per socket, never through the shared handler.
+    expect(source).not.toContain('setupReadyRef.current?.resolve()');
+    expect(source).toContain('if (raw.setupComplete || raw.setup_complete) setupReady.resolve();');
+    expect(source).toContain('if (!transports.isActive(transport)) return;');
+    expect(source).toContain('transportsRef.current?.activate(transport);');
+    expect(source).toContain("'Voice session setup timed out.'");
+    expect(source).toContain('{ timeout: VOICE_TOKEN_TIMEOUT_MS }');
+    expect(source).toContain('nextReconnectDelay(attempt, Date.now() - startedAt)');
+    // A failed reconnect after go-away or a network change ends the call.
+    expect(source).toContain("endCallIfReconnectFailedRef.current(result, 'go-away')");
+    expect(source).toContain("endCallIfReconnectFailedRef.current(result, 'network-change')");
+    // Late tool results never reach a later call.
+    expect(source).toContain('toolRelayRef.current?.dispose();');
+  });
+
+  test('keeps unsaved transcript turns and the call end on the device until the server has them', async () => {
+    const source = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+
+    expect(source).toContain('outbox?.saveTurns(callSessionId, savedMemoryId, pending)');
+    expect(source).toContain('.markEnded(turnSync.getSessionId(), finalDuration)');
+    expect(source).toContain('.then(() => outbox.drain((url, body) => post(url, body)))');
+    expect(source).toContain('skipSessionId: isSessionActiveRef.current ? sessionIdRef.current : undefined');
+    expect(source).toContain('if (state.isConnected) drain();');
+  });
+
+  test('signals a paused microphone and lets earphone users talk over the greeting', async () => {
+    const source = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+
+    expect(source).toContain('sessionRef.current?.sendRealtimeInput({ audioStreamEnd: true });');
+    expect(source).toContain(
+      'isGreetingActiveRef.current = !fullDuplexRef.current && !engine.isHeadphonesActive();',
+    );
   });
 
   test('passes the selected catalog provider name directly into Gemini Live', async () => {
@@ -57,7 +133,7 @@ describe('Gemini voice provider contract', () => {
     expect(hook).toContain('callNotificationRef.current?.start(');
     expect(hook).toContain('callNotificationRef.current?.stop()');
     expect(hook).toContain('if (isDisconnectingRef.current) return');
-    expect(hook).toContain('onclose: () =>');
+    expect(hook).toContain('onclose: (event) =>');
     expect(hook).toContain('void disconnectRef.current()');
   });
 

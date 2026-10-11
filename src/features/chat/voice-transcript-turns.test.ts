@@ -57,6 +57,55 @@ describe('VoiceTranscriptTurns', () => {
     ]);
   });
 
+  test('replaces a corrected snapshot instead of keeping both versions', () => {
+    expect(mergeVoiceTranscript('I went to Lagos', 'I went to Abuja')).toBe('I went to Abuja');
+    expect(
+      mergeVoiceTranscript('We visited my grandmother in Ibadan', 'We visited my grandmother in Oyo'),
+    ).toBe('We visited my grandmother in Oyo');
+    // Real continuations still append.
+    expect(mergeVoiceTranscript('I went to the', 'market')).toBe('I went to the market');
+    expect(mergeVoiceTranscript('we went to the market and', 'we went home')).toBe(
+      'we went to the market and we went home',
+    );
+  });
+
+  test('a new utterance right after a turn ends starts the next turn instead of joining the last', () => {
+    const turns = new VoiceTranscriptTurns();
+    turns.appendUser('Tell me about Lagos', false);
+    turns.appendModel('Lagos is busy and bright.');
+    turns.beginTurnCompletion();
+
+    // Within the settle window, but clearly not the same line.
+    turns.appendUser('Actually I have another question', false);
+    turns.settlePendingTurn();
+    turns.completeTurn();
+
+    expect(turns.getSessionTurns()).toEqual([
+      {
+        messages: [
+          { role: 'user', text: 'Tell me about Lagos', is_voice: true },
+          { role: 'ai', text: 'Lagos is busy and bright.', is_voice: true },
+        ],
+      },
+      { messages: [{ role: 'user', text: 'Actually I have another question', is_voice: true }] },
+    ]);
+  });
+
+  test('speech right after a greeting is not attached to the greeting', () => {
+    const turns = new VoiceTranscriptTurns();
+    turns.appendModel('Hi! How are you today?');
+    turns.beginTurnCompletion();
+
+    turns.appendUser('I am good thanks', false);
+    turns.settlePendingTurn();
+    turns.completeTurn();
+
+    expect(turns.getSessionTurns()).toEqual([
+      { messages: [{ role: 'ai', text: 'Hi! How are you today?', is_voice: true }] },
+      { messages: [{ role: 'user', text: 'I am good thanks', is_voice: true }] },
+    ]);
+  });
+
   test('keeps new interim speech separate while late finals amend the pending turn', () => {
     const turns = new VoiceTranscriptTurns();
     turns.appendUser('First thought', true);

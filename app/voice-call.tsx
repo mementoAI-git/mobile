@@ -20,6 +20,9 @@ import { minTouchTarget, iconSize, ms, radius } from '@/constants/responsive';
 import { VOICE_CATALOG, getVoiceById, type VoiceId } from '@/features/chat/voice-catalog';
 import { formatVoiceCallDuration, getVoiceCallTransition, type VoiceCallStage } from '@/features/chat/voice-call-flow';
 import { useVoiceCall } from '@/hooks/use-voice-call';
+import { useUpdateProfile } from '@/hooks/mutations/use-profile-mutation';
+import { profileUsesVoice, saveCallVoice } from '@/features/chat/voice-call-voice';
+import type { VoiceDefinition } from '@/features/chat/voice-catalog';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
 import { useAuthStore, useUiStore, useUserStore, useVoicePreferenceStore } from '@/store';
@@ -72,10 +75,47 @@ export default function VoiceCallRoute() {
     [draftVoiceId, selectedVoiceId],
   );
   const { voice, configure } = useVoiceCall();
+  const { mutateAsync: updateProfileAsync } = useUpdateProfile();
+  const [savingVoice, setSavingVoice] = useState(false);
+  const [voiceSaveFailed, setVoiceSaveFailed] = useState(false);
+  // The server locks the call voice from the profile, so the choice must be
+  // saved there before a token is built for it.
+  const voiceInSync = profileUsesVoice(userStoreUser ?? user, selectedVoice);
+  const persistVoice = useCallback(
+    async (choice: VoiceDefinition) => {
+      setVoiceSaveFailed(false);
+      setSavingVoice(true);
+      try {
+        await saveCallVoice(choice, { saveProfile: updateProfileAsync, saveLocal: selectVoice });
+        return true;
+      } catch {
+        setVoiceSaveFailed(true);
+        return false;
+      } finally {
+        setSavingVoice(false);
+      }
+    },
+    [selectVoice, updateProfileAsync],
+  );
 
   useEffect(() => {
     configure({ memoryId: effectiveMemoryId, voiceName: selectedVoice.providerVoiceName });
   }, [configure, effectiveMemoryId, selectedVoice.providerVoiceName]);
+
+  // Fetch the session token while the user looks at the Start button, so the
+  // tap only has to open the connection.
+  const { prefetch } = voice;
+  useEffect(() => {
+    if (stage !== 'ready' || !voiceInSync) return;
+    prefetch({ memoryId: effectiveMemoryId, voiceName: selectedVoice.providerVoiceName });
+  }, [effectiveMemoryId, prefetch, selectedVoice.providerVoiceName, stage, voiceInSync]);
+
+  // A voice picked before choices were saved to the profile, or changed
+  // elsewhere: save it once so the call uses the voice shown here.
+  useEffect(() => {
+    if (stage !== 'ready' || voiceInSync || savingVoice || voiceSaveFailed) return;
+    void persistVoice(selectedVoice);
+  }, [persistVoice, savingVoice, selectedVoice, stage, voiceInSync, voiceSaveFailed]);
 
   useEffect(() => {
     if (hydratedForUser !== userKey) void hydrate(userKey);
@@ -126,9 +166,10 @@ export default function VoiceCallRoute() {
   }, []);
 
   const confirmVoice = useCallback(async () => {
-    await selectVoice(draftVoiceId);
+    const choice = getVoiceById(draftVoiceId);
+    if (!choice || !(await persistVoice(choice))) return;
     setStage(getVoiceCallTransition(stage, 'choose'));
-  }, [draftVoiceId, selectVoice, stage]);
+  }, [draftVoiceId, persistVoice, stage]);
 
   const startingRef = useRef(false);
   const startCall = useCallback(async () => {
@@ -136,11 +177,14 @@ export default function VoiceCallRoute() {
     startingRef.current = true;
     setStage(getVoiceCallTransition(stage, 'start'));
     try {
+      // Still out of sync (save failed or in flight): try once more. If it
+      // fails again, call anyway with the voice the server has.
+      if (!voiceInSync) await persistVoice(selectedVoice);
       await voice.connect();
     } finally {
       startingRef.current = false;
     }
-  }, [stage, voice]);
+  }, [persistVoice, selectedVoice, stage, voice, voiceInSync]);
 
   const toggleMute = useCallback(() => {
     voice.toggleMute();
@@ -217,9 +261,14 @@ export default function VoiceCallRoute() {
               </Text>
               <VoiceDots selectedId={draftVoiceId} onSelect={chooseVoice} />
             </View>
-            <Button fullWidth className="mb-2 h-14" onPress={() => void confirmVoice()}>
+            <Button fullWidth className="mb-2 h-14" loading={savingVoice} onPress={() => void confirmVoice()}>
               Open voice call
             </Button>
+            {voiceSaveFailed ? (
+              <Text className="mb-2 text-center text-error-strong" style={TYPE.bodySmall}>
+                We couldn’t save your voice. Check your connection and try again.
+              </Text>
+            ) : null}
           </SafeAreaView>
         </View>
       </NativeModalSafeAreaBoundary>
@@ -278,7 +327,9 @@ export default function VoiceCallRoute() {
             <Text className="text-text-base" style={TYPE.label}>
               {voice.isConnecting
                 ? 'Connecting…'
-                : live
+                : voice.isReconnecting
+                  ? 'Reconnecting…'
+                  : live
                   ? voice.isAiSpeaking
                     ? 'Memento is speaking…'
                     : stage === 'muted'
@@ -317,9 +368,17 @@ export default function VoiceCallRoute() {
               </Text>
             </>
           ) : (
-            <Button className="mt-12 h-14 w-44" loading={voice.isConnecting} onPress={() => void startCall()}>
-              Start call
-            </Button>
+            <>
+              <Button className="mt-12 h-14 w-44" loading={voice.isConnecting} onPress={() => void startCall()}>
+                Start call
+              </Button>
+              {/* A failed connect returns to this screen; say so. Details go to Sentry. */}
+              {voice.connectionFailure?.kind === 'connection-error' && !voice.isConnecting ? (
+                <Text className="mt-4 px-6 text-center text-error-strong" style={TYPE.bodySmall}>
+                  We couldn’t start your call. Check your connection and try again.
+                </Text>
+              ) : null}
+            </>
           )}
         </View>
       </SafeAreaView>

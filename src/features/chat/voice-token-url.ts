@@ -1,3 +1,13 @@
+import { CALL_ACTIONS_CAPABILITY } from './voice-call-actions';
+import { SEARCH_MEMORIES_TOOL } from './voice-tool-relay';
+
+/**
+ * Capabilities this build handles, sent with every token request. The API's
+ * parseVoiceClientCapabilities must accept exactly these names: its test
+ * pins the same query string as this module's test.
+ */
+export const VOICE_CLIENT_CAPABILITIES = [SEARCH_MEMORIES_TOOL, CALL_ACTIONS_CAPABILITY];
+
 export type EphemeralTokenParams = {
   memoryId?: string | null;
   resumeHandle?: string | null;

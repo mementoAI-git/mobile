@@ -11,13 +11,26 @@ import { VoicePlaybackController } from './voice-playback-controller';
 import {
   calculateRmsEnergy,
   float32ToPcm16Base64,
+  isBargeInSpeech,
   pcm16Base64ToFloat32,
   resampleLinear,
 } from './voice-pcm';
 import { VoiceSessionMetrics, type VoiceMetricSnapshot } from './voice-session-metrics';
 
 const INPUT_SAMPLE_RATE = 16_000;
-const INPUT_BUFFER_FRAMES = 1_600;
+
+/**
+ * After a clear voice gets through the leftover-echo filter, the mic stays
+ * fully open this long, so the rest of the sentence (softer words included)
+ * reaches Gemini.
+ */
+export const VOICE_BARGE_IN_HOLD_MS = 1_500;
+/**
+ * Mic frame size: 640 samples at 16 kHz = 40 ms. Smaller frames reach Gemini
+ * sooner after the user stops speaking and let the speaker gate react faster;
+ * 100 ms frames added up to 100 ms before Gemini heard the end of speech.
+ */
+export const VOICE_INPUT_FRAMES = 640;
 const OUTPUT_SAMPLE_RATE = 24_000;
 const FALLBACK_PLAYBACK_SAMPLE_RATE = 48_000;
 
@@ -51,6 +64,47 @@ export function isHeadphonesRoute(
       name.includes('bluetooth');
     return isHeadphoneCategory || isHeadphoneName;
   });
+}
+
+/**
+ * Where model audio is playing. Bluetooth call audio (HFP on iOS, SCO on
+ * Android) is narrowband and switches sample rate, so it is kept apart from
+ * Bluetooth media audio.
+ */
+export type VoiceOutputRoute =
+  | 'speaker'
+  | 'earpiece'
+  | 'wired'
+  | 'bluetooth-call'
+  | 'bluetooth-media'
+  | 'other'
+  | 'unknown';
+
+const OUTPUT_ROUTE_BY_CATEGORY: Record<string, VoiceOutputRoute> = {
+  // iOS AVAudioSession port types
+  speaker: 'speaker',
+  receiver: 'earpiece',
+  headphones: 'wired',
+  usbaudio: 'wired',
+  lineout: 'wired',
+  bluetoothhfp: 'bluetooth-call',
+  bluetootha2dpoutput: 'bluetooth-media',
+  bluetoothle: 'bluetooth-media',
+  // Android device types, as named by react-native-audio-api
+  'built-in speaker': 'speaker',
+  'built-in earpiece': 'earpiece',
+  'wired headset': 'wired',
+  'wired headphones': 'wired',
+  'bluetooth sco': 'bluetooth-call',
+  'bluetooth a2dp': 'bluetooth-media',
+};
+
+export function classifyOutputRoute(
+  outputs?: Array<{ name?: string; category?: string }>,
+): VoiceOutputRoute {
+  const category = outputs?.[0]?.category?.toLowerCase();
+  if (!category) return 'unknown';
+  return OUTPUT_ROUTE_BY_CATEGORY[category] ?? 'other';
 }
 
 export type VoiceCaptureEvent = {
@@ -103,12 +157,15 @@ export interface VoiceAudioNativeAdapter {
   addAppStateListener(listener: (state: string) => void): VoiceNativeSubscription;
   hasInput(): Promise<boolean>;
   isHeadphonesConnected?(): Promise<boolean>;
+  getOutputRoute?(): Promise<VoiceOutputRoute>;
+  /** Whether iOS really engaged voice processing. Undefined when unknown. */
+  isVoiceProcessingActive?(): boolean | undefined;
   requestRecordingPermission(): Promise<'Undetermined' | 'Denied' | 'Granted'>;
 }
 
 export type VoiceAudioEngineSnapshot = VoiceMetricSnapshot & {
   captureDurationAnomalies: number;
-  /** Mic frames (100 ms each) captured, dropped by each gate, and delivered. */
+  /** Mic frames (40 ms each) captured, dropped by each gate, and delivered. */
   uplinkCaptured: number;
   uplinkDroppedShield: number;
   uplinkDroppedSpeakerGate: number;
@@ -119,6 +176,19 @@ export type VoiceAudioEngineSnapshot = VoiceMetricSnapshot & {
   playbackContextSampleRate?: number;
   adaptiveExtraMs?: number;
   concealedMs?: number;
+  /** PCM chunks the native renderer dropped as malformed, e.g. an odd byte count. */
+  malformedChunks?: number;
+  /** Whether iOS confirmed echo cancellation; undefined when not requested or unknown. */
+  voiceProcessingActive?: boolean;
+  /** Effective: off when echo cancellation was requested but iOS did not engage it. */
+  speakerFullDuplex: boolean;
+  /** Mic frames replaced with silence as leftover echo while Memento was audible on the speaker. */
+  uplinkEchoSuppressed: number;
+  /** Times a clear voice got through the echo filter. */
+  bargeIns: number;
+  /** Output route when the call's audio started, and after the last route change. */
+  startOutputRoute?: VoiceOutputRoute;
+  outputRoute?: VoiceOutputRoute;
   /** True when the C++ renderer is in use rather than the JS buffer queue. */
   nativePlayback: boolean;
 };
@@ -130,6 +200,8 @@ export type VoiceAudioEngineOptions = {
   speakerFullDuplex?: boolean;
   /** Use Apple's voice-processing unit. Off by default; see voice-audio-policy.ts. */
   iosVoiceProcessing?: boolean;
+  /** Clock for the barge-in hold window. Defaults to Date.now. */
+  now?: () => number;
   onFatalError?: (error: Error) => void;
   onPlaybackStateChange?: (
     state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
@@ -204,14 +276,28 @@ export class VoiceAudioEngine {
   private playbackContextSampleRate?: number;
   private playbackGeneration = 0;
   private routeChangePromise: Promise<void> = Promise.resolve();
-  private nativeStats: { adaptiveExtraMs?: number; concealedMs?: number } = {};
+  private nativeStats: {
+    adaptiveExtraMs?: number;
+    concealedMs?: number;
+    malformedChunks?: number;
+  } = {};
   private nativePlayback = false;
+  private startOutputRoute?: VoiceOutputRoute;
+  private outputRoute?: VoiceOutputRoute;
+  private readonly now: () => number;
+  private voiceProcessingActive?: boolean;
+  /** Echo cancellation was requested but iOS did not engage it. */
+  private voiceProcessingUnavailable = false;
+  private bargeInOpenUntil = 0;
+  private uplinkEchoSuppressed = 0;
+  private bargeIns = 0;
 
   constructor(options: VoiceAudioEngineOptions = {}) {
     this.native = options.native ?? createNativeVoiceAudioAdapter();
     this.metrics = options.metrics ?? new VoiceSessionMetrics();
     this.speakerFullDuplex = options.speakerFullDuplex ?? false;
     this.iosVoiceProcessing = options.iosVoiceProcessing ?? false;
+    this.now = options.now ?? Date.now;
     this.onFatalError = options.onFatalError;
     this.onPlaybackStateChange = options.onPlaybackStateChange;
   }
@@ -258,11 +344,15 @@ export class VoiceAudioEngine {
     return this.epoch;
   }
 
-  async start(onInput: (base64Pcm: string) => void): Promise<void> {
+  /** `onInput` receives each delivered mic frame and its RMS level (0..1). */
+  async start(onInput: (base64Pcm: string, rms: number) => void): Promise<void> {
     if (this.started) return;
 
     this.native.setSessionOptions(VOICE_SESSION_OPTIONS);
     await this.native.setSessionActive(true);
+    // stop() can run while start() is still awaiting. Bail out quietly then,
+    // so a call hung up during connecting never turns the microphone on.
+    if (this.stopPromise) return;
 
     try {
       this.recorder = this.native.createRecorder({
@@ -275,6 +365,7 @@ export class VoiceAudioEngine {
           ? preferredSampleRate
           : FALLBACK_PLAYBACK_SAMPLE_RATE;
       await this.createPlayback(this.playbackContextSampleRate);
+      if (await this.releaseIfStopped()) return;
 
       this.subscriptions = [
         this.native.addRouteChangeListener(() => {
@@ -286,11 +377,13 @@ export class VoiceAudioEngine {
       ];
 
       await this.updateAudioRoute();
+      this.startOutputRoute = this.outputRoute;
+      if (await this.releaseIfStopped()) return;
 
       this.recorder.onAudioReady(
         {
           sampleRate: INPUT_SAMPLE_RATE,
-          bufferLength: INPUT_BUFFER_FRAMES,
+          bufferLength: VOICE_INPUT_FRAMES,
           channelCount: 1,
         },
         (event) => {
@@ -314,17 +407,40 @@ export class VoiceAudioEngine {
 
           const channel = event.buffer.getChannelData(0);
           const actualFrames = Math.min(event.numFrames, channel.length);
-          if (actualFrames !== INPUT_BUFFER_FRAMES) this.captureDurationAnomalies += 1;
-          const samples = channel.subarray(0, actualFrames);
+          if (actualFrames !== VOICE_INPUT_FRAMES) this.captureDurationAnomalies += 1;
+          let samples = channel.subarray(0, actualFrames);
+
+          // Full duplex on the loudspeaker: echo cancellation removes most of
+          // Memento's voice from the mic, but some leaks through, and Gemini
+          // hears it as the user talking and cuts Memento off. While Memento
+          // is audible, pass only frames clearly louder than leftover echo;
+          // once one does, keep the mic open for the rest of the sentence.
+          // Filtered frames are sent as silence to keep the stream continuous.
+          if (this.speakerFullDuplex && !this.isHeadphones && this.isAudible(200)) {
+            const at = this.now();
+            if (at >= this.bargeInOpenUntil) {
+              if (isBargeInSpeech(samples)) {
+                this.bargeInOpenUntil = at + VOICE_BARGE_IN_HOLD_MS;
+                this.bargeIns += 1;
+              } else {
+                samples = new Float32Array(samples.length);
+                this.uplinkEchoSuppressed += 1;
+              }
+            }
+          }
+
           this.uplinkDelivered += 1;
-          this.uplinkPeakRms = Math.max(this.uplinkPeakRms, calculateRmsEnergy(samples));
-          onInput(float32ToPcm16Base64(samples));
+          const rms = calculateRmsEnergy(samples);
+          this.uplinkPeakRms = Math.max(this.uplinkPeakRms, rms);
+          onInput(float32ToPcm16Base64(samples), rms);
         },
       );
       this.recorder.onError((message) => {
         void this.fail(new Error(message || 'The microphone stopped unexpectedly.'));
       });
       await this.recorder.start();
+      if (await this.releaseIfStopped()) return;
+      this.checkVoiceProcessing();
       this.started = true;
     } catch (error) {
       await this.fail(asError(error));
@@ -334,12 +450,34 @@ export class VoiceAudioEngine {
 
   /** Apply the server's device policy once the token arrives. */
   setSpeakerFullDuplex(enabled: boolean): void {
-    this.speakerFullDuplex = enabled;
-    if (enabled) this.greetingShieldActive = false;
+    this.speakerFullDuplex = enabled && !this.voiceProcessingUnavailable;
+    if (this.speakerFullDuplex) this.greetingShieldActive = false;
+  }
+
+  /**
+   * The app only requests voice processing; iOS may not engage it (the audio
+   * library just logs a failure). Without it, an open mic on the loudspeaker
+   * hears Memento, so fall back to the speaker gate.
+   */
+  private checkVoiceProcessing(): void {
+    if (!this.iosVoiceProcessing || !this.native.isVoiceProcessingActive) return;
+    let active: boolean | undefined;
+    try {
+      active = this.native.isVoiceProcessingActive();
+    } catch {
+      active = undefined;
+    }
+    this.voiceProcessingActive = active;
+    if (active === false) {
+      this.voiceProcessingUnavailable = true;
+      this.speakerFullDuplex = false;
+    }
   }
 
   armGreetingShield(): void {
-    if (this.speakerFullDuplex) return;
+    // The shield blocks the greeting's echo from the loudspeaker. Earphones
+    // have none, so the user can talk over or interrupt the greeting.
+    if (this.speakerFullDuplex || this.isHeadphones) return;
     this.greetingShieldActive = true;
   }
 
@@ -387,7 +525,38 @@ export class VoiceAudioEngine {
       playbackContextSampleRate: this.playbackContextSampleRate,
       ...this.nativeStats,
       nativePlayback: this.nativePlayback,
+      startOutputRoute: this.startOutputRoute,
+      outputRoute: this.outputRoute,
+      voiceProcessingActive: this.voiceProcessingActive,
+      speakerFullDuplex: this.speakerFullDuplex,
+      uplinkEchoSuppressed: this.uplinkEchoSuppressed,
+      bargeIns: this.bargeIns,
     };
+  }
+
+  /**
+   * After stop() ran mid-start, releases whatever start() created since.
+   * Returns true when the caller should stop starting.
+   */
+  private async releaseIfStopped(): Promise<boolean> {
+    if (!this.stopPromise) return false;
+    await this.stopPromise;
+    this.subscriptions.forEach((subscription) => subscription.remove());
+    this.subscriptions = [];
+    const recorder = this.recorder;
+    this.recorder = undefined;
+    if (recorder) {
+      recorder.clearOnAudioReady();
+      recorder.clearOnError();
+      await recorder.stop();
+    }
+    this.playback?.stop();
+    this.playback = undefined;
+    const context = this.context;
+    this.context = undefined;
+    if (context) await context.close();
+    await this.native.setSessionActive(false);
+    return true;
   }
 
   private async updateAudioRoute(): Promise<void> {
@@ -398,11 +567,21 @@ export class VoiceAudioEngine {
         this.isHeadphones = false;
       }
     }
+    if (this.native.getOutputRoute) {
+      try {
+        this.outputRoute = await this.native.getOutputRoute();
+      } catch {
+        this.outputRoute = 'unknown';
+      }
+    }
   }
 
   private async handleRouteChange(): Promise<void> {
     this.metrics.markRouteChange();
     await this.updateAudioRoute();
+    // The audio library re-applies voice processing when it restarts the
+    // engine for a route change; make sure it is still engaged.
+    this.checkVoiceProcessing();
     try {
       if (!(await this.native.hasInput())) {
         await this.fail(new Error('Voice mode lost its audio input route.'));
@@ -620,6 +799,14 @@ export function createNativeVoiceAudioAdapter(): VoiceAudioNativeAdapter {
       } catch {
         return false;
       }
+    },
+    getOutputRoute: async () => {
+      const devices = await audioApi.AudioManager.getDevicesInfo();
+      return classifyOutputRoute(devices.currentOutputs);
+    },
+    isVoiceProcessingActive: () => {
+      const voiceModule = require('react-native-memento-voice') as typeof import('react-native-memento-voice');
+      return voiceModule.readVoiceProcessingActive();
     },
     requestRecordingPermission: () => audioApi.AudioManager.requestRecordingPermissions(),
   };
