@@ -10,6 +10,7 @@ import { TYPE } from '@/constants/typography';
 import { VOICE_CATALOG, getVoiceById, type VoiceId } from '@/features/chat/voice-catalog';
 import { useUiStore, useVoicePreferenceStore } from '@/store';
 import { useUpdateProfile } from '@/hooks/mutations/use-profile-mutation';
+import { saveCallVoice } from '@/features/chat/voice-call-voice';
 
 interface VoiceCallSettingsSheetProps {
   selectedVoiceId: VoiceId;
@@ -20,17 +21,28 @@ interface VoiceCallSettingsSheetProps {
 export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: VoiceCallSettingsSheetProps) {
   const [draft, setDraft] = useState(selectedVoiceId);
   const selectVoice = useVoicePreferenceStore((state) => state.selectVoice);
-  const { mutate: updateProfile } = useUpdateProfile();
+  const { mutateAsync: updateProfileAsync } = useUpdateProfile();
+  const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
 
+  // The server locks the call voice from the profile, so wait for it to accept
+  // the change before the call screen fetches a new token.
   const save = useCallback(async () => {
-    await selectVoice(draft);
     const voice = getVoiceById(draft);
-    if (voice) {
-      updateProfile({ chat_voice: voice.providerVoiceName, chat_voice_provider: 'gemini' });
+    if (!voice) return;
+    setSaveFailed(false);
+    setSaving(true);
+    try {
+      await saveCallVoice(voice, { saveProfile: updateProfileAsync, saveLocal: selectVoice });
+    } catch {
+      setSaveFailed(true);
+      return;
+    } finally {
+      setSaving(false);
     }
     await onSaved?.(draft);
     useUiStore.getState().closeSheet();
-  }, [draft, onSaved, selectVoice, updateProfile]);
+  }, [draft, onSaved, selectVoice, updateProfileAsync]);
 
   return (
     <View className="pb-2 pt-2">
@@ -69,8 +81,13 @@ export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: Vo
       </View>
       <View className="mt-5 flex-row gap-3">
         <Button variant="secondary" className="h-14 flex-1" onPress={onClose}>Dismiss</Button>
-        <Button className="h-14 flex-1" onPress={() => void save()}>Save changes</Button>
+        <Button className="h-14 flex-1" loading={saving} onPress={() => void save()}>Save changes</Button>
       </View>
+      {saveFailed ? (
+        <Text className="mt-3 text-center text-error-strong" style={TYPE.bodySmall}>
+          We couldn’t save your voice. Check your connection and try again.
+        </Text>
+      ) : null}
     </View>
   );
 }

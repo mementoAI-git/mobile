@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { buildEphemeralTokenUrl } from './voice-token-url';
+import { buildEphemeralTokenUrl, VOICE_CLIENT_CAPABILITIES } from './voice-token-url';
 
 describe('buildEphemeralTokenUrl', () => {
   test('returns the bare endpoint without parameters', () => {
@@ -21,5 +21,17 @@ describe('buildEphemeralTokenUrl', () => {
     expect(params.get('resume_handle')).toBe('a/b+c=');
     expect(params.get('device_model')).toBe('Pixel 8 Pro');
     expect(params.get('capabilities')).toBe('memory_search');
+  });
+
+  // The API enables memory search and call actions from these exact names.
+  // api: test/ai/live-session-config.test.ts parses this same string.
+  test('sends the capabilities this build handles, in the form the API parses', () => {
+    const url = buildEphemeralTokenUrl('/ai/ephemeral-token', {
+      capabilities: VOICE_CLIENT_CAPABILITIES,
+    });
+
+    expect(new URL(`https://x${url}`).searchParams.get('capabilities')).toBe(
+      'search_memories,call_actions',
+    );
   });
 });

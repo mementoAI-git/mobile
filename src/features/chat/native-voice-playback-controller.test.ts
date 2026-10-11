@@ -109,6 +109,19 @@ describe('NativeVoicePlaybackController', () => {
     expect(session.calls).toEqual(['start:3:7', 'push:3:7:0', 'push:3:7:1']);
   });
 
+  test('keeps playing while more audio arrives, instead of flapping to prebuffering per chunk', () => {
+    const { session, scheduler, states, controller } = setup();
+    controller.enqueue('AAAA', 7);
+    session.snapshot = { ...session.snapshot, state: 'playing', bufferedMs: 160, isAudible: true };
+    scheduler.fireOne();
+
+    controller.enqueue('AAAA', 7);
+    controller.enqueue('AAAA', 7);
+
+    expect(controller.state).toBe('playing');
+    expect(states).toEqual(['prebuffering', 'playing']);
+  });
+
   test('tracks native state and underruns through coarse snapshot polling', () => {
     const { session, scheduler, metrics, states, controller } = setup();
     controller.enqueue('AAAA', 7);
@@ -157,11 +170,25 @@ describe('NativeVoicePlaybackController', () => {
   test('keeps adaptive buffer and concealment stats after stop', () => {
     const { session, controller } = setup();
     controller.targetSampleRate = 48_000;
-    session.snapshot = { ...session.snapshot, adaptiveExtraMs: 240, concealedFrames: 4_800 };
+    session.snapshot = {
+      ...session.snapshot,
+      adaptiveExtraMs: 240,
+      concealedFrames: 4_800,
+      malformedChunkCount: 2,
+    };
 
     controller.stop();
-    session.snapshot = { ...session.snapshot, adaptiveExtraMs: 0, concealedFrames: 0 };
+    session.snapshot = {
+      ...session.snapshot,
+      adaptiveExtraMs: 0,
+      concealedFrames: 0,
+      malformedChunkCount: 0,
+    };
 
-    expect(controller.getStats()).toEqual({ adaptiveExtraMs: 240, concealedMs: 100 });
+    expect(controller.getStats()).toEqual({
+      adaptiveExtraMs: 240,
+      concealedMs: 100,
+      malformedChunks: 2,
+    });
   });
 });
