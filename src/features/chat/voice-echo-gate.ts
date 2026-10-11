@@ -67,9 +67,20 @@ export class VoiceEchoGate {
 
   /**
    * Takes one mic frame and returns the frames to send now, in order.
-   * `gating` is whether Memento is audible on the loudspeaker.
+   * `gating` is whether Memento is audible on the loudspeaker. `learnOnly`
+   * calibrates: the mic stays closed and every frame teaches the echo level.
    */
-  process(samples: Float32Array, gating: boolean): Float32Array[] {
+  process(
+    samples: Float32Array,
+    gating: boolean,
+    options: { learnOnly?: boolean } = {},
+  ): Float32Array[] {
+    if (gating && options.learnOnly) {
+      // Calibrating (the greeting): everything is echo; learn its level.
+      const out = this.releaseHeld(false);
+      out.push(this.silence({ samples, rms: calculateRmsEnergy(samples), speech: false }));
+      return out;
+    }
     if (!gating) {
       // Held frames did not confirm speech while Memento was audible.
       const out = this.releaseHeld(false);

@@ -397,10 +397,10 @@ export class VoiceAudioEngine {
         },
         (event) => {
           // Protect the initial greeting window: the model is speaking and the mic
-          // would capture its own echo. Once playback goes idle the shield disarms
-          // and we stream all frames unconditionally — server-side VAD handles the rest.
+          // would capture its own echo. Once playback goes idle the shield disarms.
+          // In full duplex the echo filter calibrates on the greeting instead.
           this.uplinkCaptured += 1;
-          if (this.greetingShieldActive) {
+          if (this.greetingShieldActive && !this.speakerFullDuplex) {
             this.uplinkDroppedShield += 1;
             return;
           }
@@ -422,7 +422,10 @@ export class VoiceAudioEngine {
           // Full duplex on the loudspeaker: filter leftover echo while Memento
           // is audible (see VoiceEchoGate).
           const gating = this.speakerFullDuplex && !this.isHeadphones && this.isAudible(200);
-          for (const frame of this.echoGate.process(samples, gating)) {
+          // During the greeting in full duplex, nothing can barge in; the
+          // filter learns the echo level from it instead (see armGreetingShield).
+          const learnOnly = this.greetingShieldActive;
+          for (const frame of this.echoGate.process(samples, gating, { learnOnly })) {
             this.uplinkDelivered += 1;
             const rms = calculateRmsEnergy(frame);
             this.uplinkPeakRms = Math.max(this.uplinkPeakRms, rms);
@@ -451,7 +454,6 @@ export class VoiceAudioEngine {
 
   private applySpeakerFullDuplex(): void {
     this.speakerFullDuplex = this.requestedSpeakerFullDuplex && !this.voiceProcessingUnavailable;
-    if (this.speakerFullDuplex) this.greetingShieldActive = false;
   }
 
   /**
@@ -477,10 +479,15 @@ export class VoiceAudioEngine {
     this.applySpeakerFullDuplex();
   }
 
+  /**
+   * Protects the greeting from its own echo on the loudspeaker. Earphones have
+   * none, so there the user can talk over or interrupt it. With the speaker
+   * gate (half duplex) the mic is dropped; with full duplex the echo filter
+   * calibrates on the greeting instead: nothing barges in, and it learns how
+   * loud the leftover echo is at this volume before the user starts talking.
+   */
   armGreetingShield(): void {
-    // The shield blocks the greeting's echo from the loudspeaker. Earphones
-    // have none, so the user can talk over or interrupt the greeting.
-    if (this.speakerFullDuplex || this.isHeadphones) return;
+    if (this.isHeadphones) return;
     this.greetingShieldActive = true;
   }
 

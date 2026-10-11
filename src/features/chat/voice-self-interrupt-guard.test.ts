@@ -1,12 +1,24 @@
 import { describe, expect, test } from 'bun:test';
 
-import { VOICE_ECHO_MEMORY_MS, VoiceSelfInterruptGuard } from './voice-self-interrupt-guard';
+import {
+  VOICE_ECHO_MEMORY_MS,
+  VOICE_FALLBACK_MAX_MS,
+  VOICE_FALLBACK_MS,
+  VoiceSelfInterruptGuard,
+} from './voice-self-interrupt-guard';
 
 function guard() {
   const clock = { now: 0 };
   const fallbacks: number[] = [];
-  const g = new VoiceSelfInterruptGuard({ now: () => clock.now, onFallback: () => fallbacks.push(clock.now) });
-  return { clock, fallbacks, g };
+  const durations: number[] = [];
+  const g = new VoiceSelfInterruptGuard({
+    now: () => clock.now,
+    onFallback: (durationMs) => {
+      fallbacks.push(clock.now);
+      durations.push(durationMs);
+    },
+  });
+  return { clock, fallbacks, durations, g };
 }
 
 // Memento says something, gets interrupted, Gemini transcribes what it heard,
@@ -102,10 +114,32 @@ describe('VoiceSelfInterruptGuard', () => {
     expect(g.suspected).toBe(0);
   });
 
-  test('falls back once per call', () => {
+  test('falls back once, until restored', () => {
     const { g, fallbacks } = guard();
     for (let i = 0; i < 4; i += 1) interruption(g, 'Tell me more', '');
     expect(fallbacks).toHaveLength(1);
+  });
+
+  test('backs off longer each time it has to fall back again', () => {
+    const { g, durations } = guard();
+
+    interruption(g, 'Tell me more', '');
+    interruption(g, 'Go on', '');
+    g.restore();
+    interruption(g, 'Tell me more', '');
+    expect(durations).toEqual([VOICE_FALLBACK_MS]); // one suspect after restoring is not enough
+    interruption(g, 'Go on', '');
+    g.restore();
+    for (let i = 0; i < 2; i += 1) interruption(g, 'And then?', '');
+    g.restore();
+    for (let i = 0; i < 2; i += 1) interruption(g, 'And then?', '');
+
+    expect(durations).toEqual([
+      VOICE_FALLBACK_MS,
+      VOICE_FALLBACK_MS * 2,
+      VOICE_FALLBACK_MAX_MS,
+      VOICE_FALLBACK_MAX_MS,
+    ]);
   });
 
   test('waits for Memento to answer before judging, so the user can finish speaking', () => {

@@ -314,6 +314,9 @@ export function useVoiceMode({
   const transcriptDiagnosticsRef = useRef(createVoiceTranscriptDiagnostics());
   const latencyRef = useRef<VoiceLatencyTracker | null>(null);
   const selfInterruptRef = useRef<VoiceSelfInterruptGuard | null>(null);
+  const selfInterruptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Full duplex as the build and the server allow it, before any fallback. */
+  const allowedFullDuplexRef = useRef(false);
   const liveModelRef = useRef<string | undefined>(undefined);
   const turnDetectionRef = useRef<VoiceTurnDetection | undefined>(undefined);
   const tokenPrefetchedRef = useRef(false);
@@ -604,6 +607,10 @@ export function useVoiceMode({
       greetingTimerRef.current = null;
     }
     isGreetingActiveRef.current = false;
+    if (selfInterruptTimerRef.current) {
+      clearTimeout(selfInterruptTimerRef.current);
+      selfInterruptTimerRef.current = null;
+    }
     setupReadyRef.current?.reject(new Error('Voice session closed before setup completed.'));
     setupReadyRef.current = null;
 
@@ -640,7 +647,10 @@ export function useVoiceMode({
         turnDetection: turnDetectionRef.current,
         toolCalls: transcriptDiagnosticsRef.current.toolCalls.length,
         selfInterruptions: selfInterruptRef.current
-          ? { suspected: selfInterruptRef.current.suspected, fellBack: selfInterruptRef.current.fellBack }
+          ? {
+              suspected: selfInterruptRef.current.suspected,
+              fallbacks: selfInterruptRef.current.fallbacks,
+            }
           : undefined,
         engine: engineSnapshot,
       });
@@ -1035,15 +1045,28 @@ export function useVoiceMode({
     latencyRef.current = new VoiceLatencyTracker();
     // On a loud speaker, leftover echo can still get past the echo filter and
     // Memento keeps interrupting itself. When it does, stop listening while
-    // Memento talks for the rest of this call; the Interrupt button still works.
-    selfInterruptRef.current = new VoiceSelfInterruptGuard({
+    // Memento talks for a while (the Interrupt button still works), then try
+    // again; each repeat lasts longer.
+    const guard = new VoiceSelfInterruptGuard({
       now: Date.now,
-      onFallback: () => {
+      onFallback: (durationMs) => {
         fullDuplexRef.current = false;
         engineRef.current?.setSpeakerFullDuplex(false);
-        logger.runtime('[VoiceMode] Memento is hearing itself on the speaker; pausing the mic while it talks');
+        logger.runtime('[VoiceMode] Memento is hearing itself on the speaker; pausing the mic while it talks', {
+          durationMs,
+        });
+        if (selfInterruptTimerRef.current) clearTimeout(selfInterruptTimerRef.current);
+        selfInterruptTimerRef.current = setTimeout(() => {
+          selfInterruptTimerRef.current = null;
+          if (selfInterruptRef.current !== guard) return;
+          guard.restore();
+          fullDuplexRef.current = allowedFullDuplexRef.current;
+          engineRef.current?.setSpeakerFullDuplex(allowedFullDuplexRef.current);
+          logger.runtime('[VoiceMode] listening while Memento talks again');
+        }, durationMs);
       },
     });
+    selfInterruptRef.current = guard;
     liveModelRef.current = undefined;
     turnDetectionRef.current = undefined;
     tokenPrefetchedRef.current = false;
@@ -1171,6 +1194,7 @@ export function useVoiceMode({
       // The server can switch specific device models back to the speaker mic gate.
       const fullDuplex = SPEAKER_FULL_DUPLEX && liveToken.speakerFullDuplex !== false;
       fullDuplexRef.current = fullDuplex;
+      allowedFullDuplexRef.current = fullDuplex;
       engine.setSpeakerFullDuplex(fullDuplex);
       isGreetingActiveRef.current = !fullDuplex;
       const sessionTools = liveToken.tools ?? [];

@@ -144,6 +144,20 @@ describe('VoiceEchoGate', () => {
       expect(g.bargeIns).toBe(0);
     });
 
+    test('calibrating (the greeting) never opens the mic, but learns the echo for later', () => {
+      const { gate: g } = gate();
+      const sent: Float32Array[] = [];
+      for (let i = 0; i < 10; i += 1) sent.push(...g.process(frame(0.12), true, { learnOnly: true }));
+
+      expect(g.bargeIns).toBe(0);
+      expect(sent).toHaveLength(10); // nothing held back: all sent as silence at once
+      expect(sent.every((f) => f.every((s) => s === 0))).toBe(true);
+
+      // Loud echo of the next reply no longer gets through.
+      feed(g, 0.12, 3);
+      expect(g.bargeIns).toBe(0);
+    });
+
     test('does not learn the echo level from the user speaking while Memento is quiet', () => {
       const { gate: g } = gate();
       for (let i = 0; i < 20; i += 1) g.process(frame(0.2), false);

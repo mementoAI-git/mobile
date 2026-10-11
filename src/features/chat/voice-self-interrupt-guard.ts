@@ -1,7 +1,9 @@
 /**
  * Notices when Memento keeps interrupting itself on the loudspeaker, and asks
- * for the call to fall back to the speaker gate (no talking over Memento;
- * the Interrupt button still works). A degraded call beats an unusable one.
+ * for the call to fall back to the speaker gate for a while (no talking over
+ * Memento; the Interrupt button still works). A degraded call beats an
+ * unusable one, but not for the whole call: after VOICE_FALLBACK_MS the caller
+ * restores full duplex, and each further fallback lasts twice as long.
  *
  * The signal is what Gemini heard, not how loud it was. After an interruption,
  * if the words Gemini transcribed as the user are mostly Memento's own recent
@@ -16,10 +18,14 @@ export const VOICE_SELF_INTERRUPT_LIMIT = 2;
 export const VOICE_ECHO_MEMORY_MS = 15_000;
 /** Share of the heard words that must be Memento's own. */
 export const VOICE_ECHO_WORD_OVERLAP = 0.6;
+/** First fallback; each later one doubles, up to VOICE_FALLBACK_MAX_MS. */
+export const VOICE_FALLBACK_MS = 30_000;
+export const VOICE_FALLBACK_MAX_MS = 120_000;
 
 type Options = {
   now: () => number;
-  onFallback: () => void;
+  /** Fall back now; call restore() after `durationMs`. */
+  onFallback: (durationMs: number) => void;
   limit?: number;
 };
 
@@ -33,6 +39,10 @@ export class VoiceSelfInterruptGuard {
   private readonly limit: number;
   suspected = 0;
   fellBack = false;
+  /** Times this call fell back. */
+  fallbacks = 0;
+  /** Suspects since the last restore. */
+  private sinceRestore = 0;
 
   constructor(private readonly options: Options) {
     this.limit = options.limit ?? VOICE_SELF_INTERRUPT_LIMIT;
@@ -75,9 +85,20 @@ export class VoiceSelfInterruptGuard {
     if (!echo) return;
 
     this.suspected += 1;
-    if (this.suspected >= this.limit && !this.fellBack) {
+    this.sinceRestore += 1;
+    if (this.sinceRestore >= this.limit && !this.fellBack) {
       this.fellBack = true;
-      this.options.onFallback();
+      this.fallbacks += 1;
+      this.options.onFallback(
+        Math.min(VOICE_FALLBACK_MS * 2 ** (this.fallbacks - 1), VOICE_FALLBACK_MAX_MS),
+      );
     }
+  }
+
+  /** Full duplex is back on: start counting afresh. */
+  restore(): void {
+    this.fellBack = false;
+    this.sinceRestore = 0;
+    this.pending = undefined;
   }
 }
