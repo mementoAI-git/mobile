@@ -288,12 +288,15 @@ export class VoiceAudioEngine {
   private voiceProcessingActive?: boolean;
   /** Echo cancellation was requested but iOS did not engage it. */
   private voiceProcessingUnavailable = false;
+  /** What the build and server allow, before the voice-processing check. */
+  private requestedSpeakerFullDuplex: boolean;
   private readonly echoGate: VoiceEchoGate;
 
   constructor(options: VoiceAudioEngineOptions = {}) {
     this.native = options.native ?? createNativeVoiceAudioAdapter();
     this.metrics = options.metrics ?? new VoiceSessionMetrics();
     this.speakerFullDuplex = options.speakerFullDuplex ?? false;
+    this.requestedSpeakerFullDuplex = this.speakerFullDuplex;
     this.iosVoiceProcessing = options.iosVoiceProcessing ?? false;
     this.now = options.now ?? Date.now;
     this.echoGate = new VoiceEchoGate({ now: this.now, holdMs: VOICE_BARGE_IN_HOLD_MS });
@@ -435,7 +438,12 @@ export class VoiceAudioEngine {
 
   /** Apply the server's device policy once the token arrives. */
   setSpeakerFullDuplex(enabled: boolean): void {
-    this.speakerFullDuplex = enabled && !this.voiceProcessingUnavailable;
+    this.requestedSpeakerFullDuplex = enabled;
+    this.applySpeakerFullDuplex();
+  }
+
+  private applySpeakerFullDuplex(): void {
+    this.speakerFullDuplex = this.requestedSpeakerFullDuplex && !this.voiceProcessingUnavailable;
     if (this.speakerFullDuplex) this.greetingShieldActive = false;
   }
 
@@ -443,6 +451,10 @@ export class VoiceAudioEngine {
    * The app only requests voice processing; iOS may not engage it (the audio
    * library just logs a failure). Without it, an open mic on the loudspeaker
    * hears Memento, so fall back to the speaker gate.
+   *
+   * Checked again after every route change, and it can read off for a moment
+   * while audio reconfigures: full duplex follows the latest reading rather
+   * than staying off for the rest of the call.
    */
   private checkVoiceProcessing(): void {
     if (!this.iosVoiceProcessing || !this.native.isVoiceProcessingActive) return;
@@ -453,10 +465,9 @@ export class VoiceAudioEngine {
       active = undefined;
     }
     this.voiceProcessingActive = active;
-    if (active === false) {
-      this.voiceProcessingUnavailable = true;
-      this.speakerFullDuplex = false;
-    }
+    // Unknown (older native build) keeps the previous decision.
+    if (active !== undefined) this.voiceProcessingUnavailable = !active;
+    this.applySpeakerFullDuplex();
   }
 
   armGreetingShield(): void {

@@ -619,6 +619,39 @@ describe('VoiceAudioEngine', () => {
       expect(engine.snapshot()).toMatchObject({ voiceProcessingActive: false, speakerFullDuplex: false });
     });
 
+    // macOS (and iOS) can report voice processing off for a moment while a
+    // route change reconfigures audio. One such readback must not cost the
+    // rest of the call its full duplex.
+    test('restores full duplex when echo cancellation comes back after a route change', async () => {
+      const native = new FakeNative();
+      native.voiceProcessingActive = true;
+      const engine = new VoiceAudioEngine({ native, iosVoiceProcessing: true, speakerFullDuplex: true });
+      await engine.start(() => {});
+
+      native.voiceProcessingActive = false;
+      native.routeListener?.();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(engine.snapshot()).toMatchObject({ voiceProcessingActive: false, speakerFullDuplex: false });
+
+      native.voiceProcessingActive = true;
+      native.routeListener?.();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(engine.snapshot()).toMatchObject({ voiceProcessingActive: true, speakerFullDuplex: true });
+    });
+
+    test('still honours the server turning full duplex off when echo cancellation comes back', async () => {
+      const native = new FakeNative();
+      native.voiceProcessingActive = false;
+      const engine = new VoiceAudioEngine({ native, iosVoiceProcessing: true, speakerFullDuplex: true });
+      await engine.start(() => {});
+      engine.setSpeakerFullDuplex(false);
+
+      native.voiceProcessingActive = true;
+      native.routeListener?.();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(engine.snapshot()).toMatchObject({ speakerFullDuplex: false });
+    });
+
     test('keeps full duplex when echo cancellation is confirmed, or unknown on older native builds', async () => {
       for (const active of [true, undefined]) {
         const native = new FakeNative();
