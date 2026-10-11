@@ -84,6 +84,22 @@ function ensureInstalled(): boolean {
   return NativeMementoVoiceAudio?.install() === true;
 }
 
+/**
+ * Whether iOS really engaged voice processing (echo cancellation) on the live
+ * mic. Undefined off iOS, or on native builds that predate this method, so
+ * callers keep their requested policy when the answer is unknown.
+ */
+export function readVoiceProcessingActive(): boolean | undefined {
+  if (Platform.OS !== 'ios') return undefined;
+  const module = NativeMementoVoiceAudio as { isVoiceProcessingActive?: () => boolean } | null;
+  if (typeof module?.isVoiceProcessingActive !== 'function') return undefined;
+  try {
+    return module.isVoiceProcessingActive();
+  } catch {
+    return undefined;
+  }
+}
+
 export function isNativeVoicePlaybackAvailable(): boolean {
   return ensureInstalled() && typeof globalThis.__mementoCreateVoicePlaybackSession === 'function';
 }
