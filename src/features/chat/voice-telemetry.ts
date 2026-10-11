@@ -167,7 +167,8 @@ function sendVoiceCall(report: VoiceCallReport, sentry: VoiceTelemetrySentry): v
         startTime: turn.speechEndAt,
         attributes: definedOnly({
           'voice.tool_call': turn.toolCall,
-          'voice.cut_off': turn.cutOff,
+          'voice.interrupted_by': turn.interruptedBy,
+          'voice.early_interruption': turn.earlyInterruption,
           'voice.audible_ms': turn.audibleMs,
           'voice.transcript_to_audio_ms': turn.transcriptToAudioMs,
         }),
@@ -189,7 +190,9 @@ function sendVoiceCall(report: VoiceCallReport, sentry: VoiceTelemetrySentry): v
   measureStats(measure, 'voice_reply', latency.turnStats.response);
   measureStats(measure, 'voice_reply_audible', latency.turnStats.audible);
   measure('voice_replies', latency.turnStats.response.count, 'none');
-  measure('voice_reply_cutoffs', latency.turnStats.cutOffs, 'none');
+  measure('voice_reply_early_interruptions', latency.turnStats.earlyInterruptions, 'none');
+  measure('voice_interruptions_spoken', latency.turnStats.interruptions.speech, 'none');
+  measure('voice_interruptions_tapped', latency.turnStats.interruptions.tap, 'none');
   measure('voice_tool_calls', report.toolCalls, 'none');
   measure('voice_underruns', engine?.underruns, 'none');
   measure('voice_route_rebuilds', engine?.routeRebuilds, 'none');

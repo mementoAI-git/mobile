@@ -4,9 +4,12 @@
  *
  * Gemini Live does not tell the client when it decided the user stopped
  * talking, so the end of speech is the last microphone frame sent with speech
- * energy. Room noise above the threshold makes replies look slightly faster
- * than they are, never slower. The last input transcript gives a second,
- * threshold-free reference that always arrives after the user stopped.
+ * energy. That estimate is off in both directions: room noise above the
+ * threshold moves it later (replies look faster than they are), and a quiet
+ * last word below it moves it earlier (replies look slower). The last input
+ * transcript gives a second, threshold-free reference, which always arrives
+ * after the user stopped. Treat both as estimates; only labelled recordings
+ * give the true time.
  */
 
 /**
@@ -27,12 +30,16 @@ export const VOICE_MILESTONES = [
 export type VoiceMilestone = (typeof VOICE_MILESTONES)[number];
 
 /**
- * A reply the user interrupts within this long of its first audio counts as
- * Memento cutting them off: it decided they were done while they were not.
- * Only measurable when the user can barge in, i.e. on headphones or with
- * speaker full duplex; on the loudspeaker the mic is gated while Memento talks.
+ * A reply interrupted within this long of being heard is an early
+ * interruption. That is a proxy for Memento answering before the user was
+ * done, not proof of it: a quick correction or "stop" counts too. Compare
+ * across experiment arms and audio routes, not as an absolute rate. Spoken
+ * interruptions are only possible on headphones or with speaker full duplex;
+ * on the gated loudspeaker the user can only tap.
  */
-export const VOICE_CUTOFF_WINDOW_MS = 2_000;
+export const VOICE_EARLY_INTERRUPTION_WINDOW_MS = 2_000;
+
+export type VoiceInterruptionSource = 'speech' | 'tap';
 
 /** RMS of a mic frame that counts as speech rather than room noise. */
 export const VOICE_SPEECH_RMS = 0.02;
@@ -53,14 +60,18 @@ export type VoiceTurnLatency = {
   firstAudioAt: number;
   /** End of user speech to the first model audio received. */
   responseMs: number;
+  /** First sample played. */
+  audibleAt?: number;
   /** End of user speech to the first sample played. */
   audibleMs?: number;
   /** Last input transcript to the first model audio received. */
   transcriptToAudioMs?: number;
   /** A tool call ran between the user's speech and the reply. */
   toolCall: boolean;
-  /** The user interrupted this reply within VOICE_CUTOFF_WINDOW_MS. */
-  cutOff: boolean;
+  /** How the user interrupted this reply, if they did. */
+  interruptedBy?: VoiceInterruptionSource;
+  /** Interrupted within VOICE_EARLY_INTERRUPTION_WINDOW_MS of being heard. */
+  earlyInterruption: boolean;
 };
 
 export type VoiceLatencyStats = {
@@ -78,7 +89,13 @@ export type VoiceLatencySummary = {
   /** Tap to the first audible sample of the greeting. */
   timeToFirstWordMs?: number;
   turns: VoiceTurnLatency[];
-  turnStats: { response: VoiceLatencyStats; audible: VoiceLatencyStats; cutOffs: number };
+  turnStats: {
+    response: VoiceLatencyStats;
+    audible: VoiceLatencyStats;
+    earlyInterruptions: number;
+    /** Replies interrupted by voice, and by the Interrupt button. */
+    interruptions: Record<VoiceInterruptionSource, number>;
+  };
 };
 
 export class VoiceLatencyTracker {
@@ -142,7 +159,7 @@ export class VoiceLatencyTracker {
             ? at - this.lastTranscriptAt
             : undefined,
         toolCall: this.toolCallSinceTurnEnd,
-        cutOff: false,
+        earlyInterruption: false,
       };
       if (this.turns.length < MAX_TURNS) this.turns.push(turn);
       this.awaitingPlayback = turn;
@@ -155,16 +172,20 @@ export class VoiceLatencyTracker {
     this.mark('firstPlayback');
     const turn = this.awaitingPlayback;
     if (!turn) return;
-    turn.audibleMs = this.now() - turn.speechEndAt;
+    turn.audibleAt = this.now();
+    turn.audibleMs = turn.audibleAt - turn.speechEndAt;
     this.awaitingPlayback = undefined;
   }
 
-  /** Call on turn-complete, and with `interrupted` when the user barged in. */
-  observeModelTurnEnd(options: { interrupted?: boolean } = {}): void {
+  /** Call on turn-complete, and with `interruptedBy` when the user interrupted. */
+  observeModelTurnEnd(options: { interruptedBy?: VoiceInterruptionSource } = {}): void {
     const at = this.now();
     const reply = this.currentReply;
-    if (options.interrupted && reply && at - reply.firstAudioAt <= VOICE_CUTOFF_WINDOW_MS) {
-      reply.cutOff = true;
+    if (options.interruptedBy && reply) {
+      reply.interruptedBy = options.interruptedBy;
+      // From when it was heard: received audio may still be buffering.
+      const heardAt = reply.audibleAt ?? reply.firstAudioAt;
+      reply.earlyInterruption = at - heardAt <= VOICE_EARLY_INTERRUPTION_WINDOW_MS;
     }
     this.currentReply = undefined;
     this.modelTurnOpen = false;
@@ -204,7 +225,11 @@ export class VoiceLatencyTracker {
             .map((turn) => turn.audibleMs)
             .filter((value): value is number => value !== undefined),
         ),
-        cutOffs: this.turns.filter((turn) => turn.cutOff).length,
+        earlyInterruptions: this.turns.filter((turn) => turn.earlyInterruption).length,
+        interruptions: {
+          speech: this.turns.filter((turn) => turn.interruptedBy === 'speech').length,
+          tap: this.turns.filter((turn) => turn.interruptedBy === 'tap').length,
+        },
       },
     };
   }

@@ -479,7 +479,7 @@ export function useVoiceMode({
           // Server confirmed interruption — engine owns the new epoch.
           // handleInterruption() promotes any interim user text to final so
           // it isn't lost when we complete the (truncated) model turn.
-          latencyRef.current?.observeModelTurnEnd({ interrupted: true });
+          latencyRef.current?.observeModelTurnEnd({ interruptedBy: 'speech' });
           const newEpoch = engine?.nextEpoch() ?? 1;
           engine?.interruptOutput(newEpoch);
           if (greetingTimerRef.current) {
@@ -1314,7 +1314,7 @@ export function useVoiceMode({
     // Gemini has no cancel message: keep the rest of this response from
     // playing once it arrives (see VoiceResponseGate).
     responseGateRef.current?.interruptLocally();
-    latencyRef.current?.observeModelTurnEnd();
+    latencyRef.current?.observeModelTurnEnd({ interruptedBy: 'tap' });
     const newEpoch = engine.nextEpoch();
     engine.interruptOutput(newEpoch);
     if (greetingTimerRef.current) {
