@@ -93,6 +93,11 @@ describe('reportVoiceCall', () => {
           voiceProcessingActive: true,
           uplinkEchoSuppressed: 42,
           bargeIns: 2,
+          uplinkCaptured: 500,
+          uplinkDelivered: 380,
+          uplinkDroppedShield: 20,
+          uplinkDroppedSpeakerGate: 100,
+          uplinkPeakRms: 0.21,
           underruns: 2,
           routeRebuilds: 1,
           concealedMs: 40,
@@ -164,6 +169,11 @@ describe('reportVoiceCall', () => {
     expect(measurements.voice_route_changes).toMatchObject({ value: 3, unit: 'none' });
     expect(measurements.voice_echo_suppressed_frames).toMatchObject({ value: 42, unit: 'none' });
     expect(measurements.voice_barge_ins).toMatchObject({ value: 2, unit: 'none' });
+    expect(measurements.voice_mic_frames_captured).toMatchObject({ value: 500 });
+    expect(measurements.voice_mic_frames_sent).toMatchObject({ value: 380 });
+    expect(measurements.voice_mic_frames_dropped_greeting).toMatchObject({ value: 20 });
+    expect(measurements.voice_mic_frames_dropped_speaker).toMatchObject({ value: 100 });
+    expect(measurements.voice_mic_peak_rms).toMatchObject({ value: 0.21 });
     expect(measurements.voice_prompt_tokens_last).toMatchObject({ value: 5400, unit: 'none' });
     expect(measurements.voice_total_tokens_max).toMatchObject({ value: 6100, unit: 'none' });
     expect(measurements.voice_reply_p50.span).toBeDefined();
