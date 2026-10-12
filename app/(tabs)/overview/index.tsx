@@ -38,6 +38,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { MemoryPromptCard } from '@/components/overview/MemoryPromptCard';
 import { CalendarCard } from '@/components/overview/CalendarCard';
+import { useVoiceScroll } from '@/features/voice-control/hooks';
 
 const WELCOME_BG = require('../../../assets/images/backgrounds/welcome_bg.png');
 const ENRICHMENT_BG = require('../../../assets/images/backgrounds/enrichment_bg.png');
@@ -191,6 +192,8 @@ export default function OverviewScreen() {
 
   // ── Scroll tracking ───────────────────────────────────────────────────────
   const scrollY = useSharedValue(0);
+  // Lets voice scroll this screen ("scroll down", "go to the top").
+  const voiceScrollRef = useVoiceScroll<Animated.ScrollView>();
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollY.value = event.contentOffset.y;
@@ -383,6 +386,7 @@ export default function OverviewScreen() {
       ) : (
         <>
           <Animated.ScrollView
+            ref={voiceScrollRef}
             showsVerticalScrollIndicator={false}
             contentContainerClassName="px-6 pt-6 pb-32 gap-8"
             onScroll={scrollHandler}

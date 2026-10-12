@@ -57,6 +57,12 @@ import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { VoiceLatencyTracker } from '@/features/chat/voice-latency';
 import { reportVoiceCall, type VoiceCallFailure } from '@/features/chat/voice-telemetry';
 import { VoiceSelfInterruptGuard } from '@/features/chat/voice-self-interrupt-guard';
+import { voiceControl } from '@/features/voice-control/registry';
+import {
+  SCREEN_CONTROL_TOOLS,
+  createScreenControlHandlers,
+} from '@/features/voice-control/tools';
+import { router as expoRouter } from 'expo-router';
 import {
   VOICE_SERVER_TOOL_TIMEOUT_MS,
   createServerToolHandlers,
@@ -1230,9 +1236,11 @@ export function useVoiceMode({
           }
         },
       });
+      const screenControlEnabled = SCREEN_CONTROL_TOOLS.some((tool) => sessionTools.includes(tool));
       toolRelayRef.current =
         sessionTools.includes(SEARCH_MEMORIES_TOOL) ||
         callActionsEnabled ||
+        screenControlEnabled ||
         liveToken.serverTools.length > 0
           ? new VoiceToolRelay(
               async (query) => {
@@ -1252,6 +1260,13 @@ export function useVoiceMode({
               },
               {
                 ...serverToolHandlers,
+                ...(screenControlEnabled
+                  ? createScreenControlHandlers({
+                      registry: voiceControl,
+                      canGoBack: () => expoRouter.canGoBack(),
+                      goBack: () => expoRouter.back(),
+                    })
+                  : {}),
                 ...(callActionsEnabled
                   ? createCallActionHandlers({
                       endAfterGoodbye: endCallAfterGoodbye,

@@ -15,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useCapsulesLogic } from '@/hooks/use-capsules-logic';
 import { useUiStore } from '@/store';
+import { useVoiceScroll } from '@/features/voice-control/hooks';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const MEMORIES_BG = require('../../../assets/images/backgrounds/memories_card_bg.png');
@@ -62,6 +63,8 @@ export function CapsuleContent() {
   const frozen = stats ? (stats.frozen ?? stats.paused_count ?? stats.pause_count ?? 0) : 0;
 
   // Search filter
+  // Lets voice scroll this screen ("scroll down", "go to the top").
+  const voiceScrollRef = useVoiceScroll<FlatList<any>>();
   const filteredCapsules = useMemo(() => {
     if (!searchQuery) return capsules;
     const q = searchQuery.toLowerCase();
@@ -302,7 +305,8 @@ export function CapsuleContent() {
         {isLoading && !capsules.length ? (
           <CapsuleSkeleton />
         ) : (
-          <FlatList
+          <Animated.FlatList
+            ref={voiceScrollRef}
             data={filteredCapsules}
             keyExtractor={(item) => item._id ?? ''}
             initialNumToRender={6}

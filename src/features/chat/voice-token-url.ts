@@ -1,6 +1,7 @@
 import { CALL_ACTIONS_CAPABILITY } from './voice-call-actions';
 import { SEARCH_MEMORIES_TOOL } from './voice-tool-relay';
 import { SERVER_TOOLS_CAPABILITY } from './voice-server-tools';
+import { SCREEN_CONTROL_CAPABILITY } from '../voice-control/tools';
 
 /**
  * Capabilities this build handles, sent with every token request. The API's
@@ -11,6 +12,7 @@ export const VOICE_CLIENT_CAPABILITIES = [
   SEARCH_MEMORIES_TOOL,
   CALL_ACTIONS_CAPABILITY,
   SERVER_TOOLS_CAPABILITY,
+  SCREEN_CONTROL_CAPABILITY,
 ];
 
 export type EphemeralTokenParams = {
