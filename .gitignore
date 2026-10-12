@@ -51,3 +51,6 @@ logs/
 
 # Agents
 CODEBASE_MAP.md
+
+# EAS
+credentials.json

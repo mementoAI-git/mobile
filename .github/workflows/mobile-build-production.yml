@@ -1,0 +1,85 @@
+name: Mobile — Build & Submit Production
+
+# Triggered by a semver tag (e.g. v1.4.0) or manually via workflow_dispatch.
+# Builds iOS + Android under the `production` EAS profile and auto-submits:
+#   iOS  → App Store Connect (requires manual review approval)
+#   Android → Google Play internal track (promote to production manually)
+#
+# Required GitHub secrets:
+#   EXPO_TOKEN          — Expo account token
+#   SENTRY_AUTH_TOKEN   — Sentry source-map upload
+#
+# All signing credentials must be stored in the EAS vault beforehand:
+#   iOS:     eas credentials --platform ios
+#   Android: eas credentials --platform android
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'   # e.g. v1.4.0, v2.0.1
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to build
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - ios
+          - android
+
+jobs:
+  build-production:
+    name: Production build (${{ github.event.inputs.platform || 'all' }})
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.6
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Set up Expo / EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # Resolve --platform from the tag trigger (always 'all') or the manual
+      # dispatch input. EAS autoIncrement bumps the build number automatically
+      # (configured in eas.json for the production profile).
+      - name: Resolve build platform
+        id: platform
+        run: |
+          PLATFORM="${{ github.event.inputs.platform }}"
+          echo "value=${PLATFORM:-all}" >> "$GITHUB_OUTPUT"
+
+      - name: Build + submit to stores
+        run: |
+          eas build \
+            --platform ${{ steps.platform.outputs.value }} \
+            --profile production \
+            --non-interactive \
+            --auto-submit
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+      # Surface the new version number in the run summary for quick reference.
+      - name: Print build info
+        if: always()
+        run: |
+          echo "## Production build" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| ----- | ----- |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Tag | ${{ github.ref_name }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Platform | ${{ steps.platform.outputs.value }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Profile | production |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Triggered by | ${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
