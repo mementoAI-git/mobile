@@ -314,6 +314,9 @@ export function useVoiceMode({
   const transcriptDiagnosticsRef = useRef(createVoiceTranscriptDiagnostics());
   const latencyRef = useRef<VoiceLatencyTracker | null>(null);
   const selfInterruptRef = useRef<VoiceSelfInterruptGuard | null>(null);
+  // Development only: a timestamped trace of the speaker filter's view.
+  const debugTraceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const debugMicPeakRef = useRef(0);
   const selfInterruptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Full duplex as the build and the server allow it, before any fallback. */
   const allowedFullDuplexRef = useRef(false);
@@ -617,6 +620,10 @@ export function useVoiceMode({
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
+    }
+    if (debugTraceTimerRef.current) {
+      clearInterval(debugTraceTimerRef.current);
+      debugTraceTimerRef.current = null;
     }
     const finalDuration = recordingTimeRef.current;
     recordingTimeRef.current = 0;
@@ -1146,6 +1153,7 @@ export function useVoiceMode({
 
       latencyRef.current?.beginAudioStart();
       const audioReady = engine.start((data, rms) => {
+        if (__DEV__) debugMicPeakRef.current = Math.max(debugMicPeakRef.current, rms);
         // Frames captured before the Gemini session exists have nowhere to go.
         if (!sessionRef.current) return;
         const diagnostics = transcriptDiagnosticsRef.current;
@@ -1300,6 +1308,30 @@ export function useVoiceMode({
         recordingTimeRef.current += 1;
         setRecordingTime((time) => time + 1);
       }, 1_000);
+      if (__DEV__) {
+        // Logs whenever playback or filter state changes, and a heartbeat
+        // every 2 s with the loudest mic frame sent since the last line.
+        let last = '';
+        let ticks = 0;
+        debugTraceTimerRef.current = setInterval(() => {
+          const state = engineRef.current?.debugState();
+          if (!state) return;
+          const { echoLevel, bargeIns, suppressed, ...flags } = state;
+          const key = JSON.stringify(flags);
+          ticks += 1;
+          if (key === last && ticks % 8 !== 0) return;
+          last = key;
+          logger.debug('[VoiceTrace]', {
+            t: recordingTimeRef.current,
+            ...flags,
+            echoLevel,
+            micPeak: Math.round(debugMicPeakRef.current * 1_000) / 1_000,
+            bargeIns,
+            suppressed,
+          });
+          debugMicPeakRef.current = 0;
+        }, 250);
+      }
       void callNotificationRef.current?.start(() => {
         void disconnectRef.current();
       });

@@ -331,6 +331,22 @@ export class VoiceAudioEngine {
     return this.isHeadphones;
   }
 
+  /** Development diagnostics: what the speaker filter sees right now. */
+  debugState() {
+    return {
+      playback: this.playback?.state,
+      native:
+        this.playback instanceof NativeVoicePlaybackController ? this.playback.nativeState() : undefined,
+      audible: this.isAudible(200),
+      fullDuplex: this.speakerFullDuplex,
+      headphones: this.isHeadphones,
+      greeting: this.greetingShieldActive,
+      echoLevel: Math.round(this.echoGate.echoLevel * 1_000) / 1_000,
+      bargeIns: this.echoGate.bargeIns,
+      suppressed: this.echoGate.suppressed,
+    };
+  }
+
   /** The mic is open on the loudspeaker while Memento talks. */
   isSpeakerFullDuplexActive(): boolean {
     return this.speakerFullDuplex && !this.isHeadphones;
