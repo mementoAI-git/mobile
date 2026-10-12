@@ -21,8 +21,11 @@ export const VOICE_SERVER_TOOL_TIMEOUT_MS = 8_000;
 export const SERVER_TOOL_UNAVAILABLE =
   'That did not go through. Tell the host it did not work and that they can try again or do it in the app.';
 
+const REFRESHABLE = ['profile', 'memories', 'capsules', 'beneficiaries'] as const;
+export type VoiceRefreshable = (typeof REFRESHABLE)[number];
+
 export type VoiceToolEffect =
-  | { type: 'refresh'; what: 'profile' }
+  | { type: 'refresh'; what: VoiceRefreshable }
   | { type: 'open'; destination: VoiceDestination }
   | { type: 'open_story'; id: string };
 
@@ -34,8 +37,8 @@ export function parseVoiceToolEffects(raw: unknown): VoiceToolEffect[] {
   for (const item of raw) {
     const effect = item as Record<string, unknown> | null;
     if (!effect || typeof effect !== 'object') continue;
-    if (effect.type === 'refresh' && effect.what === 'profile') {
-      effects.push({ type: 'refresh', what: 'profile' });
+    if (effect.type === 'refresh' && REFRESHABLE.includes(effect.what as VoiceRefreshable)) {
+      effects.push({ type: 'refresh', what: effect.what as VoiceRefreshable });
     } else if (effect.type === 'open' && resolveVoiceDestination(effect.destination)) {
       effects.push({ type: 'open', destination: effect.destination as VoiceDestination });
     } else if (
