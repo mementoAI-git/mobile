@@ -2,6 +2,7 @@ import React, { forwardRef } from 'react';
 import {
   Pressable as RNPressable,
   TouchableOpacity as RNTouchableOpacity,
+  type AccessibilityState,
   type GestureResponderEvent,
   type PressableProps,
   type TouchableOpacityProps,
@@ -28,23 +29,36 @@ const VOICE_PRESS_EVENT = {
   persist: () => undefined,
 } as unknown as GestureResponderEvent;
 
+/** On/off for options and switches, from their accessibility state. */
+function onStateOf(state: AccessibilityState | undefined): boolean | undefined {
+  if (!state) return undefined;
+  if (typeof state.checked === 'boolean') return state.checked;
+  if (typeof state.selected === 'boolean') return state.selected;
+  return undefined;
+}
+
 function useVoicePress(
   voiceLabel: string | false | undefined,
-  accessibilityLabel: string | undefined,
-  children: unknown,
-  onPress: ((event: GestureResponderEvent) => void) | null | undefined,
-  disabled: boolean | null | undefined,
+  props: {
+    accessibilityLabel?: string;
+    accessibilityState?: AccessibilityState;
+    children?: unknown;
+    onPress?: ((event: GestureResponderEvent) => void) | null;
+    disabled?: boolean | null;
+  },
 ) {
+  const { onPress } = props;
   useVoicePressTarget(
-    voiceLabelFor(voiceLabel, accessibilityLabel, children),
+    voiceLabelFor(voiceLabel, props.accessibilityLabel, props.children),
     onPress ? () => onPress(VOICE_PRESS_EVENT) : undefined,
-    !disabled,
+    !props.disabled,
+    onStateOf(props.accessibilityState),
   );
 }
 
 export const TouchableOpacity = forwardRef<View, TouchableOpacityProps & VoiceProps>(
   function TouchableOpacity({ voiceLabel, ...props }, ref) {
-    useVoicePress(voiceLabel, props.accessibilityLabel, props.children, props.onPress, props.disabled);
+    useVoicePress(voiceLabel, props);
     return <RNTouchableOpacity ref={ref} {...props} />;
   },
 );
@@ -53,6 +67,6 @@ export const Pressable = forwardRef<View, PressableProps & VoiceProps>(function 
   { voiceLabel, ...props },
   ref,
 ) {
-  useVoicePress(voiceLabel, props.accessibilityLabel, props.children, props.onPress, props.disabled);
+  useVoicePress(voiceLabel, props);
   return <RNPressable ref={ref} {...props} />;
 });

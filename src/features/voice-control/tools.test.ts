@@ -28,6 +28,13 @@ describe('screen control tools', () => {
     expect(pressed).toEqual(['Save']);
   });
 
+  test('press_button passes turn_on through for switches and options', async () => {
+    const { registry, handlers } = setup();
+    registry.addPressTarget({ label: 'Annual', press: () => undefined, isActive: () => true, isOn: () => true });
+
+    expect(await handlers.press_button({ label: 'annual', turn_on: true })).toBe('"Annual" is already on.');
+  });
+
   test('press_button asks for a label when none was given', async () => {
     expect(await setup().handlers.press_button({})).toContain('Which button');
   });

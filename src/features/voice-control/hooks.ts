@@ -23,10 +23,12 @@ export function useVoicePressTarget(
   label: string | undefined,
   onPress: (() => void) | undefined,
   enabled: boolean,
+  /** For switches and options: whether it is on now. */
+  isOn?: boolean,
 ): void {
   const inFront = useIsScreenInFront();
-  const state = useRef({ onPress, enabled, inFront });
-  state.current = { onPress, enabled, inFront };
+  const state = useRef({ onPress, enabled, inFront, isOn });
+  state.current = { onPress, enabled, inFront, isOn };
 
   useEffect(() => {
     const name = label?.trim();
@@ -41,6 +43,7 @@ export function useVoicePressTarget(
       press: () => state.current.onPress?.(),
       isActive: () =>
         state.current.enabled && Boolean(state.current.onPress) && state.current.inFront(),
+      isOn: () => state.current.isOn,
     });
   }, [label]);
 }

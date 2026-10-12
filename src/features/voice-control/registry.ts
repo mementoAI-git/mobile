@@ -14,6 +14,8 @@ export type PressTarget = {
   press: () => void;
   /** True while this button is on the screen in front of the host and enabled. */
   isActive: () => boolean;
+  /** For switches and options: whether it is on (checked or selected) now. */
+  isOn?: () => boolean | undefined;
 };
 
 export type ScrollTarget = {
@@ -38,10 +40,17 @@ function normalise(text: string): string {
     .trim();
 }
 
+function stateOf(target: PressTarget): boolean | undefined {
+  return target.isOn?.();
+}
+
 function quoted(targets: PressTarget[]): string {
   return targets
     .slice(0, MAX_LISTED)
-    .map((target) => `"${target.label}"`)
+    .map((target) => {
+      const on = stateOf(target);
+      return on === undefined ? `"${target.label}"` : `"${target.label}" (${on ? 'on' : 'off'})`;
+    })
     .join(', ');
 }
 
@@ -98,7 +107,11 @@ export class VoiceControlRegistry {
     });
   }
 
-  press(spoken: string): string {
+  /**
+   * Presses the button the host named. For switches and options, `turnOn`
+   * says which way they want it; one already that way is left alone.
+   */
+  press(spoken: string, turnOn?: boolean): string {
     const wanted = normalise(spoken);
     const buttons = this.activeButtons();
     const exact = buttons.filter((target) => normalise(target.label) === wanted);
@@ -120,7 +133,14 @@ export class VoiceControlRegistry {
     if (NEEDS_HOST_TAP.test(target.label)) {
       return `"${target.label}" needs a tap from the host. Ask them to tap it themselves.`;
     }
+    const on = stateOf(target);
+    if (turnOn !== undefined && on === turnOn) {
+      return `"${target.label}" is already ${on ? 'on' : 'off'}.`;
+    }
     target.press();
+    if (turnOn !== undefined && on !== undefined) {
+      return `Pressed "${target.label}". It is now ${turnOn ? 'on' : 'off'}.`;
+    }
     return `Pressed "${target.label}".`;
   }
 
