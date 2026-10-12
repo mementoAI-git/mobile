@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import Check from 'lucide-react-native/icons/check';
 import X from 'lucide-react-native/icons/x';

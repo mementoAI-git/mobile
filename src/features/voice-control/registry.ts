@@ -55,6 +55,22 @@ const SCROLLED: Record<ScrollDirection, string> = {
 export class VoiceControlRegistry {
   private readonly pressTargets = new Set<PressTarget>();
   private readonly scrollTargets: ScrollTarget[] = [];
+  /** Tappable things with no label voice could use (icon-only, unlabelled). */
+  private readonly unlabelled = new Set<{ isActive: () => boolean }>();
+
+  addUnlabelledTarget(target: { isActive: () => boolean }): () => void {
+    this.unlabelled.add(target);
+    return () => {
+      this.unlabelled.delete(target);
+    };
+  }
+
+  /** How many tappable things on screen voice cannot reach for want of a label. */
+  unlabelledOnScreen(): number {
+    let count = 0;
+    for (const target of this.unlabelled) if (target.isActive()) count += 1;
+    return count;
+  }
 
   addPressTarget(target: PressTarget): () => void {
     this.pressTargets.add(target);

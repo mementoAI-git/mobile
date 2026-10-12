@@ -5,10 +5,10 @@ import {
   Linking,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
-  Platform
+  Platform,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { Image } from 'expo-image';
 import {
   BottomSheetBackdrop,

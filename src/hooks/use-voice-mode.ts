@@ -1371,6 +1371,8 @@ export function useVoiceMode({
             micPeak: Math.round(debugMicPeakRef.current * 1_000) / 1_000,
             bargeIns,
             suppressed,
+            buttonsOnScreen: voiceControl.activeButtons().length,
+            unlabelledTaps: voiceControl.unlabelledOnScreen(),
           });
           debugMicPeakRef.current = 0;
         }, 250);

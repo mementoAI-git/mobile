@@ -7,10 +7,10 @@ import {
   Platform,
   ActivityIndicator,
   ImageBackground,
-  TouchableOpacity,
   Image,
   StyleSheet,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { Controller } from 'react-hook-form';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';

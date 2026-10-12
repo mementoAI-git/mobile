@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, Image } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { Button } from '@/components/ui';

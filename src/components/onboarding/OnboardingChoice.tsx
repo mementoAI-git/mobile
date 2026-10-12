@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from '@/components/ui/Touchable';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,

@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, FlatList, RefreshControl, ScrollView, ImageBackground, TouchableOpacity } from 'react-native';
+import { View, FlatList, RefreshControl, ScrollView, ImageBackground } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Plus from 'lucide-react-native/icons/plus';
 import Search from 'lucide-react-native/icons/search';

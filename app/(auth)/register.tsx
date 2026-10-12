@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   ImageBackground,
   Image,
-  TouchableOpacity,
   Keyboard,
   LayoutAnimation,
   Linking,
@@ -15,6 +14,7 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { Controller } from 'react-hook-form';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {

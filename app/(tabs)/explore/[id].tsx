@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, FlatList, ImageBackground, TouchableOpacity, Image, RefreshControl } from 'react-native';
+import { View, FlatList, ImageBackground, Image, RefreshControl } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import Inbox from 'lucide-react-native/icons/inbox';

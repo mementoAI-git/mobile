@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Keyboard, TextInput as RNTextInput, Platform } from 'react-native';
+import { View, Text, ActivityIndicator, Keyboard, TextInput as RNTextInput, Platform } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import Mic from 'lucide-react-native/icons/mic';
 import Send from 'lucide-react-native/icons/send';
 import ImageIcon from 'lucide-react-native/icons/image';

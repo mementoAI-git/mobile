@@ -1,5 +1,6 @@
 import React, {useCallback, useState} from 'react';
-import {Text, TouchableOpacity, View} from 'react-native';
+import { Text, View } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import {BottomSheetScrollView} from '@gorhom/bottom-sheet';
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import CreditCard from 'lucide-react-native/icons/credit-card';

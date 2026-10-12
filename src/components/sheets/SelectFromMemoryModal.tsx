@@ -1,5 +1,6 @@
 import React, { forwardRef, useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import X from 'lucide-react-native/icons/x';
 import Search from 'lucide-react-native/icons/search';

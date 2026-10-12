@@ -83,6 +83,18 @@ describe('VoiceControlRegistry.press', () => {
   });
 });
 
+describe('VoiceControlRegistry.unlabelledOnScreen', () => {
+  test('counts unlabelled tappables on the screen in front, for labelling later', () => {
+    const registry = new VoiceControlRegistry();
+    registry.addUnlabelledTarget({ isActive: () => true });
+    const remove = registry.addUnlabelledTarget({ isActive: () => true });
+    registry.addUnlabelledTarget({ isActive: () => false });
+    remove();
+
+    expect(registry.unlabelledOnScreen()).toBe(1);
+  });
+});
+
 describe('VoiceControlRegistry.scroll', () => {
   test('scrolls the list on the screen in front of the host', () => {
     const registry = new VoiceControlRegistry();

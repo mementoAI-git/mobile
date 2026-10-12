@@ -11,9 +11,13 @@
  */
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, ScrollView, Image,
-  TouchableOpacity, useWindowDimensions,
+  View,
+  Text,
+  ScrollView,
+  Image,
+  useWindowDimensions,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import Pencil from 'lucide-react-native/icons/pencil';

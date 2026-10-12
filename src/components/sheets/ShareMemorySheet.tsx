@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Share } from 'react-native';
+import { View, Text, Share } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import X from 'lucide-react-native/icons/x';
 import CheckCircle2 from 'lucide-react-native/icons/circle-check';

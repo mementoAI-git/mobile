@@ -1,10 +1,10 @@
 import React, { useMemo } from "react";
 import {
-    Pressable,
     StyleSheet,
     Text,
     View,
 } from "react-native";
+import { Pressable } from "@/components/ui/Touchable";
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import * as Haptics from "expo-haptics";

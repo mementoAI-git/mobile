@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Image, Linking, StyleSheet } from 'react-native';
+import { View, Text, Image, Linking, StyleSheet } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import * as Clipboard from 'expo-clipboard';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';

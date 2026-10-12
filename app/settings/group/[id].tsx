@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ImageBackground, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, ImageBackground, StyleSheet } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';

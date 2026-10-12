@@ -1,5 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, View, Text, type ViewProps } from 'react-native';
+import { View, Text, type ViewProps } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import * as Haptics from 'expo-haptics';
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import { COLORS } from '@/constants/tokens';

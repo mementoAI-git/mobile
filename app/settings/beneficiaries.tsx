@@ -4,9 +4,9 @@ import {
   RefreshControl,
   ScrollView,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import FolderPlus from 'lucide-react-native/icons/folder-plus';

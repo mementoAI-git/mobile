@@ -1,5 +1,6 @@
 import React, { useCallback, useState, useMemo } from 'react';
-import { FlatList, RefreshControl, View, ScrollView, ImageBackground, TouchableOpacity } from 'react-native';
+import { FlatList, RefreshControl, View, ScrollView, ImageBackground } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect } from 'expo-router';
 import Plus from 'lucide-react-native/icons/plus';

@@ -11,7 +11,8 @@
  */
 
 import React, { useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import X from 'lucide-react-native/icons/x';

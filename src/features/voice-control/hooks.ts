@@ -30,7 +30,12 @@ export function useVoicePressTarget(
 
   useEffect(() => {
     const name = label?.trim();
-    if (!name) return;
+    if (!name) {
+      // Counted so unreachable (unlabelled) taps show up in development.
+      return voiceControl.addUnlabelledTarget({
+        isActive: () => Boolean(state.current.onPress) && state.current.inFront(),
+      });
+    }
     return voiceControl.addPressTarget({
       label: name,
       press: () => state.current.onPress?.(),

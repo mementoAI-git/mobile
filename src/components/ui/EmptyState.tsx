@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Image, ImageSourcePropType, TouchableOpacity } from 'react-native';
+import { View, Image, ImageSourcePropType } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import Animated from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import { COLORS } from '@/constants/tokens';

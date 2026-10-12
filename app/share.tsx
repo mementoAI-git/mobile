@@ -18,9 +18,13 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, TouchableOpacity, Image, ScrollView,
+  View,
+  Text,
+  Image,
+  ScrollView,
   ImageBackground,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useShareIntent } from 'expo-share-intent';
