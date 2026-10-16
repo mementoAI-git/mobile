@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import { getVoiceById } from './voice-catalog';
-import { profileUsesVoice, saveCallVoice, voiceProfileUpdate } from './voice-call-voice';
+import { profileUsesVoice, saveCallVoice, savedCallVoice, voiceProfileUpdate } from './voice-call-voice';
 
 const sue = getVoiceById('sue')!;
 
@@ -56,5 +56,19 @@ describe('saveCallVoice', () => {
       }),
     ).rejects.toThrow('offline');
     expect(local).toEqual([]);
+  });
+});
+
+describe('savedCallVoice', () => {
+  test('finds the saved voice by id or by Gemini name', () => {
+    expect(savedCallVoice({ chat_voice: 'denver', chat_voice_provider: 'gemini' })?.id).toBe('denver');
+    expect(savedCallVoice({ chat_voice: 'fenrir' })?.id).toBe('denver');
+  });
+
+  test('has no voice when none is saved, it is not ours, or another provider owns it', () => {
+    expect(savedCallVoice(null)).toBeUndefined();
+    expect(savedCallVoice({ chat_voice: '' })).toBeUndefined();
+    expect(savedCallVoice({ chat_voice: 'nobody' })).toBeUndefined();
+    expect(savedCallVoice({ chat_voice: 'denver', chat_voice_provider: 'elevenlabs' })).toBeUndefined();
   });
 });

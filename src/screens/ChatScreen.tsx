@@ -42,6 +42,9 @@ import { useBackHandler } from '@/hooks/use-back-handler';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
 import * as Haptics from 'expo-haptics';
+import { savedCallVoice } from '@/features/chat/voice-call-voice';
+import { useVoiceCall } from '@/hooks/use-voice-call';
+import { useAuthStore, useUserStore } from '@/store';
 import type { ChatReplyQuote } from '@/lib/utils';
 import {
   vs,
@@ -340,13 +343,26 @@ export default function ChatScreen() {
     router.push({ pathname: '/coming-soon', params: { feature: 'narration' } });
   }, [router]);
 
+  const { voice: voiceCall } = useVoiceCall();
   const handleVoiceCall = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Start preparing the call now, while the call screen opens, for the same
+    // conversation and voice it will use (see voice-warm-start.ts). Without a
+    // saved voice the user picks one first, and the call screen prepares.
+    const profile = useUserStore.getState().user ?? useAuthStore.getState().user;
+    const voice = savedCallVoice(profile);
+    if (voice) {
+      const memoryId =
+        activeChatId && /^[0-9a-fA-F]{24}$/.test(activeChatId)
+          ? activeChatId
+          : profile?.primary_conversation_id;
+      voiceCall.prefetch({ memoryId, voiceName: voice.providerVoiceName });
+    }
     router.push({
       pathname: '/voice-call',
       params: { memoryId: activeChatId ?? '' },
     });
-  }, [activeChatId, router]);
+  }, [activeChatId, router, voiceCall]);
 
   const allMessagesRef = useRef(allMessages);
   allMessagesRef.current = allMessages;
