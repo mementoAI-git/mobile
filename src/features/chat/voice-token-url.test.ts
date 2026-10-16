@@ -31,7 +31,7 @@ describe('buildEphemeralTokenUrl', () => {
     });
 
     expect(new URL(`https://x${url}`).searchParams.get('capabilities')).toBe(
-      'search_memories,call_actions',
+      'search_memories,call_actions,server_tools',
     );
   });
 });
