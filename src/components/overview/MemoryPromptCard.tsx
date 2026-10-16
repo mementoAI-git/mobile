@@ -1,10 +1,10 @@
 import React from "react";
 import {
-    Pressable,
     StyleSheet,
     Text,
     View,
 } from "react-native";
+import { Pressable } from "@/components/ui/Touchable";
 import { LinearGradient } from "expo-linear-gradient";
 import Plus from 'lucide-react-native/icons/plus';
 import Animated, {

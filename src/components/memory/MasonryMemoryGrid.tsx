@@ -17,6 +17,7 @@ import {
   type MasonryLayoutEntry,
 } from '@/features/memories/masonry-layout';
 import { handleMasonryScroll } from '@/features/memories/masonry-scroll';
+import { useVoiceScroll } from '@/features/voice-control/hooks';
 
 const COLUMN_COUNT = 2;
 const COLUMN_GAP = 10; // px between the two columns
@@ -234,6 +235,8 @@ export function MasonryMemoryGrid({
     [loadingMore, onEndReached],
   );
 
+  // Lets voice scroll this screen ("scroll down", "go to the top").
+  const voiceScrollRef = useVoiceScroll<Animated.ScrollView>();
   const animatedScrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       if (scrollY) {
@@ -259,6 +262,7 @@ export function MasonryMemoryGrid({
 
   return (
     <Animated.ScrollView
+      ref={voiceScrollRef}
       showsVerticalScrollIndicator={false}
       onScroll={animatedScrollHandler}
       scrollEventThrottle={16}

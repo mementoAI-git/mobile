@@ -49,6 +49,7 @@ import {
 import {
   CALL_ACTION_TOOLS,
   createCallActionHandlers,
+  resolveVoiceDestination,
 } from '@/features/chat/voice-call-actions';
 import { GoodbyeTracker } from '@/features/chat/voice-goodbye';
 import { saveUplinkRecording, VoiceUplinkRecorder } from '@/features/chat/voice-uplink-recorder';
@@ -56,6 +57,16 @@ import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { VoiceLatencyTracker } from '@/features/chat/voice-latency';
 import { reportVoiceCall, type VoiceCallFailure } from '@/features/chat/voice-telemetry';
 import { VoiceSelfInterruptGuard } from '@/features/chat/voice-self-interrupt-guard';
+import { voiceControl } from '@/features/voice-control/registry';
+import {
+  SCREEN_CONTROL_TOOLS,
+  createScreenControlHandlers,
+} from '@/features/voice-control/tools';
+import { router as expoRouter } from 'expo-router';
+import {
+  VOICE_SERVER_TOOL_TIMEOUT_MS,
+  createServerToolHandlers,
+} from '@/features/chat/voice-server-tools';
 import { VoiceTokenPrefetch } from '@/features/chat/voice-token-prefetch';
 import { VoiceResponseGate } from '@/features/chat/voice-response-gate';
 import { getVoiceCallOutbox } from '@/features/chat/voice-call-outbox-store';
@@ -74,6 +85,7 @@ import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-aler
 import { logger } from '@/lib/logger';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
+import { invalidateMemoryQueries } from '@/features/memories/cache';
 import { useAuthStore, useUserStore } from '@/store';
 
 type SetupReady = {
@@ -1207,8 +1219,39 @@ export function useVoiceMode({
       isGreetingActiveRef.current = !fullDuplex;
       const sessionTools = liveToken.tools ?? [];
       const callActionsEnabled = CALL_ACTION_TOOLS.some((tool) => sessionTools.includes(tool));
+      // Profile changes, opening a story, and whatever the API adds: run on
+      // the server, with effects applied here.
+      const serverToolHandlers = createServerToolHandlers(liveToken.serverTools, {
+        run: (name, args) =>
+          post(endpoint.voiceTool(name), { args }, { timeout: VOICE_SERVER_TOOL_TIMEOUT_MS }),
+        applyEffects: (effects) => {
+          for (const effect of effects) {
+            if (effect.type === 'refresh') {
+              if (effect.what === 'profile') {
+                void queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+              } else if (effect.what === 'memories') {
+                invalidateMemoryQueries(queryClient, { includeUserStats: true });
+              } else if (effect.what === 'capsules') {
+                void queryClient.invalidateQueries({ queryKey: ['capsules'] });
+                void queryClient.invalidateQueries({ queryKey: queryKeys.capsuleStats });
+              } else {
+                void queryClient.invalidateQueries({ queryKey: queryKeys.beneficiaries });
+              }
+            } else if (effect.type === 'open') {
+              const destination = resolveVoiceDestination(effect.destination);
+              if (destination) callActionsRef.current?.navigate(destination.href);
+            } else if (effect.type === 'open_story') {
+              callActionsRef.current?.navigate(`/(tabs)/stories/${effect.id}`);
+            }
+          }
+        },
+      });
+      const screenControlEnabled = SCREEN_CONTROL_TOOLS.some((tool) => sessionTools.includes(tool));
       toolRelayRef.current =
-        sessionTools.includes(SEARCH_MEMORIES_TOOL) || callActionsEnabled
+        sessionTools.includes(SEARCH_MEMORIES_TOOL) ||
+        callActionsEnabled ||
+        screenControlEnabled ||
+        liveToken.serverTools.length > 0
           ? new VoiceToolRelay(
               async (query) => {
                 const response = await post(
@@ -1225,13 +1268,23 @@ export function useVoiceMode({
                   logger.warn('Failed to send voice tool response', error);
                 }
               },
-              callActionsEnabled
-                ? createCallActionHandlers({
-                    endAfterGoodbye: endCallAfterGoodbye,
-                    setMuted,
-                    navigate: (href) => callActionsRef.current?.navigate(href),
-                  })
-                : {},
+              {
+                ...serverToolHandlers,
+                ...(screenControlEnabled
+                  ? createScreenControlHandlers({
+                      registry: voiceControl,
+                      canGoBack: () => expoRouter.canGoBack(),
+                      goBack: () => expoRouter.back(),
+                    })
+                  : {}),
+                ...(callActionsEnabled
+                  ? createCallActionHandlers({
+                      endAfterGoodbye: endCallAfterGoodbye,
+                      setMuted,
+                      navigate: (href) => callActionsRef.current?.navigate(href),
+                    })
+                  : {}),
+              },
             )
           : null;
       const outboxUserId = useUserStore.getState().user?._id;
@@ -1328,6 +1381,8 @@ export function useVoiceMode({
             micPeak: Math.round(debugMicPeakRef.current * 1_000) / 1_000,
             bargeIns,
             suppressed,
+            buttonsOnScreen: voiceControl.activeButtons().length,
+            unlabelledTaps: voiceControl.unlabelledOnScreen(),
           });
           debugMicPeakRef.current = 0;
         }, 250);

@@ -6,12 +6,15 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
+import { useVoicePressTarget } from '@/features/voice-control/hooks';
 
 interface SwitchProps extends Omit<RNSwitchProps, 'onValueChange'> {
   value: boolean;
   onValueChange: (value: boolean) => void;
   /** Disable haptic feedback. Default: false */
   disableHaptics?: boolean;
+  /** What the host calls this switch, so voice can turn it on or off. Use the row's label. */
+  voiceLabel?: string;
 }
 
 /**
@@ -28,8 +31,15 @@ export function Switch({
   onValueChange,
   disableHaptics = false,
   disabled,
+  voiceLabel,
   ...props
 }: SwitchProps) {
+  useVoicePressTarget(
+    voiceLabel ?? props.accessibilityLabel,
+    () => onValueChange(!value),
+    !disabled,
+    value,
+  );
   const handleChange = (newValue: boolean) => {
     if (!disableHaptics) {
       Haptics.selectionAsync();

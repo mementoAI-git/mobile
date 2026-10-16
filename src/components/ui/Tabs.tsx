@@ -2,10 +2,10 @@ import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   ScrollView,
   type ViewProps,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,

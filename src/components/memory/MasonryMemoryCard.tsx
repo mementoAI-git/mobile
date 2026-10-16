@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useEffect } from 'react';
 
-import { View, Text, TouchableOpacity, Image, ImageBackground, ActivityIndicator } from 'react-native';
+import { View, Text, Image, ImageBackground, ActivityIndicator } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Animated, {

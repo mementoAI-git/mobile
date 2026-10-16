@@ -16,13 +16,13 @@ import React, { useCallback, memo, useRef } from 'react';
 import {
   View,
   Text,
-  Pressable,
   Image,
   StyleSheet,
   Platform,
   PanResponder,
   useWindowDimensions,
 } from 'react-native';
+import { Pressable } from '@/components/ui/Touchable';
 import Timer from 'lucide-react-native/icons/timer';
 import Settings from 'lucide-react-native/icons/settings';
 import Search from 'lucide-react-native/icons/search';

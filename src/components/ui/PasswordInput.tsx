@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { View } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import Eye from 'lucide-react-native/icons/eye';
 import EyeOff from 'lucide-react-native/icons/eye-off';
 import AlertCircle from 'lucide-react-native/icons/circle-alert';

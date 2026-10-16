@@ -2,11 +2,11 @@ import React, { forwardRef, useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   useWindowDimensions,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,

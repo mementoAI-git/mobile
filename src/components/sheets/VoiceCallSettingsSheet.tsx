@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { Pressable } from '@/components/ui/Touchable';
 import Check from 'lucide-react-native/icons/check';
 import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';

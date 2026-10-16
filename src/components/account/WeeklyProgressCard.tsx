@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from '@/components/ui/Touchable';
 import Animated, {
   FadeInDown,
   useAnimatedStyle,

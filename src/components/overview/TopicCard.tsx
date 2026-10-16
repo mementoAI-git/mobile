@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Image, TouchableOpacity, Text } from 'react-native';
+import { View, Image, Text } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

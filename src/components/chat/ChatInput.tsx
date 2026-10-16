@@ -1,10 +1,21 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import * as Device from 'expo-device';
 import {
-  View, TextInput, TouchableOpacity, Platform, StyleSheet,
-  Keyboard, ScrollView, Image, ActivityIndicator, AccessibilityInfo, useWindowDimensions, InteractionManager,
-  UIManager, LayoutAnimation,
+  View,
+  TextInput,
+  Platform,
+  StyleSheet,
+  Keyboard,
+  ScrollView,
+  Image,
+  ActivityIndicator,
+  AccessibilityInfo,
+  useWindowDimensions,
+  InteractionManager,
+  UIManager,
+  LayoutAnimation,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import ArrowUp from 'lucide-react-native/icons/arrow-up';
 import AudioLines from 'lucide-react-native/icons/audio-lines';
 import Mic from 'lucide-react-native/icons/mic';

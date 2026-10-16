@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
+import { ScrollView, View, Text } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

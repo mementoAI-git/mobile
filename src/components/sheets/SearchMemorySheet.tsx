@@ -11,10 +11,10 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Keyboard,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetView, BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import Search from 'lucide-react-native/icons/search';
 import X from 'lucide-react-native/icons/x';

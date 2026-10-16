@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleProp, Text, TextStyle, TouchableOpacity, View } from 'react-native';
+import { StyleProp, Text, TextStyle, View } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

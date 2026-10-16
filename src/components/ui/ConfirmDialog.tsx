@@ -24,9 +24,9 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,

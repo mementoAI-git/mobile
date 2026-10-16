@@ -1,5 +1,6 @@
 import React from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
+import { Pressable } from '@/components/ui/Touchable';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

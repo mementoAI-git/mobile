@@ -14,7 +14,6 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -22,6 +21,7 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';

@@ -4,10 +4,10 @@ import {
   Text,
   StyleSheet,
   Image,
-  TouchableOpacity,
   ImageBackground,
   Modal,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import Animated, {
   FadeIn,
   FadeInDown,

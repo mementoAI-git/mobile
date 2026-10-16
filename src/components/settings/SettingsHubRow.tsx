@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, minTouchTarget, responsiveSpace } from '@/constants/responsive';
+import { useVoicePressTarget } from '@/features/voice-control/hooks';
 
 interface SettingsHubRowProps {
   label: string;
@@ -29,6 +30,8 @@ export const SettingsHubRow = React.memo(function SettingsHubRow({
     transform: [{ scale: scale.value }],
   }));
 
+  // "Open personal information", "tap Security": every settings row is reachable by voice.
+  useVoicePressTarget(label, onPress, true);
   const handlePress = useCallback(() => {
     Haptics.selectionAsync();
     onPress();

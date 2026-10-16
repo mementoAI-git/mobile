@@ -4,11 +4,11 @@ import {
   Text,
   KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   Image,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurTargetView, BlurView } from 'expo-blur';
