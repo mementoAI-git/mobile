@@ -261,7 +261,7 @@ export default function VoiceCallRoute() {
               </Text>
               <VoiceDots selectedId={draftVoiceId} onSelect={chooseVoice} />
             </View>
-            <Button fullWidth className="mb-2 h-14" loading={savingVoice} onPress={() => void confirmVoice()}>
+            <Button voiceLabel={false} fullWidth className="mb-2 h-14" loading={savingVoice} onPress={() => void confirmVoice()}>
               Open voice call
             </Button>
             {voiceSaveFailed ? (
@@ -280,7 +280,7 @@ export default function VoiceCallRoute() {
     <NativeModalSafeAreaBoundary>
       <SafeAreaView className="flex-1 bg-background px-4" edges={['top', 'bottom']}>
         <View className="mt-5 flex-row items-center justify-between">
-          <Button variant="outline" className="h-11" leftIcon={<PhoneOff size={20} color={COLORS.textBase} />} onPress={requestEnd}>
+          <Button voiceLabel={false} variant="outline" className="h-11" leftIcon={<PhoneOff size={20} color={COLORS.textBase} />} onPress={requestEnd}>
             End call
           </Button>
           <View className="flex-row items-center gap-2">
@@ -341,7 +341,7 @@ export default function VoiceCallRoute() {
           {live ? (
             <>
               {voice.isAiSpeaking ? (
-                <Button
+                <Button voiceLabel={false}
                   variant="outline"
                   className="mt-12 h-14 w-44"
                   onPress={voice.interrupt}
@@ -350,7 +350,7 @@ export default function VoiceCallRoute() {
                   Interrupt
                 </Button>
               ) : (
-                <Button
+                <Button voiceLabel={false}
                   variant="outline"
                   className="mt-12 h-14 w-44"
                   onPress={toggleMute}
@@ -369,7 +369,7 @@ export default function VoiceCallRoute() {
             </>
           ) : (
             <>
-              <Button className="mt-12 h-14 w-44" loading={voice.isConnecting} onPress={() => void startCall()}>
+              <Button voiceLabel={false} className="mt-12 h-14 w-44" loading={voice.isConnecting} onPress={() => void startCall()}>
                 Start call
               </Button>
               {/* A failed connect returns to this screen; say so. Details go to Sentry. */}

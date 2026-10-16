@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { minTouchTarget, mvs, responsiveSpace } from '@/constants/responsive';
+import { useVoicePressTarget } from '@/features/voice-control/hooks';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'black';
 type Size = 'xs' | 'sm' | 'md' | 'lg';
@@ -28,6 +29,19 @@ interface ButtonProps {
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   accessibilityLabel?: string;
+  /**
+   * What the host says to press this by voice ("tap Save"). Defaults to the
+   * accessibility label or the button text; false keeps voice away from it.
+   */
+  voiceLabel?: string | false;
+}
+
+/** The plain text inside a button, for its voice label. */
+function textOf(children: React.ReactNode): string {
+  return React.Children.toArray(children)
+    .map((child) => (typeof child === 'string' || typeof child === 'number' ? String(child) : ''))
+    .join(' ')
+    .trim();
 }
 
 // Mirrors web button.tsx variants exactly
@@ -117,8 +131,14 @@ export function Button({
   leftIcon,
   rightIcon,
   accessibilityLabel,
+  voiceLabel,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
+  useVoicePressTarget(
+    voiceLabel === false ? undefined : voiceLabel || accessibilityLabel || textOf(children),
+    onPress,
+    !isDisabled,
+  );
   const v = variantStyles[variant];
   const s = sizeMetrics[size];
 
