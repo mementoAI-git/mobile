@@ -1,4 +1,4 @@
-import type { VoiceDefinition, VoiceId } from './voice-catalog';
+import { VOICE_CATALOG, type VoiceDefinition, type VoiceId } from './voice-catalog';
 
 /**
  * The server locks the call voice from the profile's `chat_voice`, not from
@@ -20,6 +20,11 @@ export function profileUsesVoice(
   if (!saved) return false;
   if (profile?.chat_voice_provider && profile.chat_voice_provider !== 'gemini') return false;
   return saved === voice.id || saved === voice.providerVoiceName.toLowerCase();
+}
+
+/** The voice the profile already has saved for calls, if it is one we offer. */
+export function savedCallVoice(profile: ProfileVoice | null | undefined): VoiceDefinition | undefined {
+  return VOICE_CATALOG.find((voice) => profileUsesVoice(profile, voice));
 }
 
 export function voiceProfileUpdate(voice: VoiceDefinition) {

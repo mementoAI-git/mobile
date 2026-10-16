@@ -68,6 +68,12 @@ import {
   createServerToolHandlers,
 } from '@/features/chat/voice-server-tools';
 import { VoiceTokenPrefetch } from '@/features/chat/voice-token-prefetch';
+import {
+  VOICE_WARM_START_MAX_AGE_MS,
+  VoiceMessageBuffer,
+  VoiceWarmStart,
+  type WarmCall,
+} from '@/features/chat/voice-warm-start';
 import { VoiceResponseGate } from '@/features/chat/voice-response-gate';
 import { getVoiceCallOutbox } from '@/features/chat/voice-call-outbox-store';
 import type { VoiceCallOutbox } from '@/features/chat/voice-call-outbox';
@@ -130,6 +136,12 @@ const VOICE_AUDIO_POLICY = resolveVoiceAudioPolicy({
   iosVoiceProcessingRequested: process.env.EXPO_PUBLIC_VOICE_IOS_VOICE_PROCESSING === 'true',
 });
 const SPEAKER_FULL_DUPLEX = VOICE_AUDIO_POLICY.speakerFullDuplex;
+// Prepare the call (session open, greeting asked for) while the user looks at
+// the Start button, so the tap plays the greeting at once. Off with 'false'.
+const VOICE_WARM_START = process.env.EXPO_PUBLIC_VOICE_WARM_START !== 'false';
+// A prepared call is replaced before it goes stale, this many times per visit
+// to the call screen, so lingering on it does not keep spending tokens.
+const VOICE_WARM_START_REFRESHES = 3;
 // Development only: save the mic audio sent to Gemini as a WAV for inspection.
 const DEBUG_RECORD_UPLINK = __DEV__ && process.env.EXPO_PUBLIC_VOICE_DEBUG_RECORD === 'true';
 // About 10 s in total, enough to ride out a tunnel or a network switch.
@@ -223,6 +235,16 @@ function fetchVoiceToken(memoryId: string | undefined) {
       capabilities: CLIENT_CAPABILITIES,
     }),
     { timeout: VOICE_TOKEN_TIMEOUT_MS },
+  );
+}
+
+/** What Memento is asked to open the call with. */
+function greetingPromptFor(liveToken: VoiceLiveToken): string {
+  const user = useUserStore.getState().user;
+  const name = user?.nickname || user?.first_name || '';
+  return (
+    liveToken.greetingInstruction ??
+    `Start with a brief, warm greeting in English${name ? ` to ${name}` : ''}. Then let them lead.`
   );
 }
 
@@ -347,6 +369,19 @@ export function useVoiceMode({
   responseGateRef.current ??= new VoiceResponseGate();
   const tokenPrefetchRef = useRef<VoiceTokenPrefetch | null>(null);
   tokenPrefetchRef.current ??= new VoiceTokenPrefetch();
+  // The call prepared on the call screen (see voice-warm-start.ts), the one
+  // being prepared, and whether the current call started from one.
+  const warmStartRef = useRef<VoiceWarmStart<Session, VoiceLiveToken, LiveServerMessage> | null>(
+    null,
+  );
+  warmStartRef.current ??= new VoiceWarmStart();
+  // `claimed`: a call is waiting for it, so nothing else may cancel it.
+  const warmingRef = useRef<{ key: string; ready: Promise<void>; claimed: boolean } | null>(null);
+  const warmRefreshRef = useRef<{ timer: ReturnType<typeof setTimeout> | null; left: number }>({
+    timer: null,
+    left: VOICE_WARM_START_REFRESHES,
+  });
+  const warmStartedRef = useRef(false);
   // Bumped by each connect(), so an older connect that is still awaiting can
   // tell it was superseded.
   const connectAttemptRef = useRef(0);
@@ -655,6 +690,7 @@ export function useVoiceMode({
         platform: Platform.OS,
         model: liveModelRef.current,
         tokenPrefetched: tokenPrefetchedRef.current,
+        warmStart: warmStartedRef.current,
         usage: usageRef.current,
         audioPolicy: {
           iosVoiceProcessing: VOICE_AUDIO_POLICY.iosVoiceProcessing,
@@ -805,7 +841,16 @@ export function useVoiceMode({
   const openLiveSession = useCallback(
     async (
       liveToken: VoiceLiveToken,
-      options: { activateNow: boolean },
+      options: {
+        activateNow: boolean;
+        /**
+         * A call prepared before the tap: its messages wait here until the
+         * call starts and releases them (see voice-warm-start.ts).
+         */
+        buffer?: VoiceMessageBuffer<LiveServerMessage>;
+        /** The session closed or failed by itself. */
+        onClosed?: (session: Session) => void;
+      },
     ): Promise<{ session: Session; transport: number }> => {
       const transports = transportsRef.current!;
       const transport = transports.begin();
@@ -813,11 +858,14 @@ export function useVoiceMode({
       // active socket when it is swapped in.
       if (options.activateNow) transports.activate(transport);
       const setupReady = createSetupReady();
-      setupReadyRef.current = setupReady;
+      // A prepared call has no call of its own yet: leave the current call's
+      // state (and its latency tracker) alone.
+      const prepared = Boolean(options.buffer);
+      if (!prepared) setupReadyRef.current = setupReady;
       // Loaded on demand so the ~1MB SDK stays out of the startup bundle.
       // Contract: must resolve from '@google/genai/web' (see voice-provider-contract.test.ts).
       const { GoogleGenAI } = await import('@google/genai/web');
-      latencyRef.current?.mark('sdk');
+      if (!prepared) latencyRef.current?.mark('sdk');
       const client = new GoogleGenAI({
         apiKey: liveToken.token,
         httpOptions: { apiVersion: 'v1alpha' },
@@ -827,6 +875,7 @@ export function useVoiceMode({
         model: liveToken.model,
         callbacks: {
           onopen: () => {
+            if (prepared) return;
             latencyRef.current?.mark('socketOpen');
             engineRef.current?.markConnectionOpen();
           },
@@ -834,6 +883,10 @@ export function useVoiceMode({
             // Setup completion belongs to this socket, active or not.
             const raw = message as LiveServerMessage & { setup_complete?: unknown };
             if (raw.setupComplete || raw.setup_complete) setupReady.resolve();
+            if (options.buffer) {
+              options.buffer.push(message);
+              return;
+            }
             // Only the active socket may change call state: a replacement
             // still setting up, or an old socket after a swap, may not.
             if (!transports.isActive(transport)) return;
@@ -842,10 +895,12 @@ export function useVoiceMode({
           onerror: (error) => {
             logger.error('Live voice session failed', error);
             setupReady.reject(new Error('Voice session failed during setup.'));
+            if (session) options.onClosed?.(session);
             void connectionLostRef.current(session, true);
           },
           onclose: (event) => {
             setupReady.reject(new Error('Voice session closed during setup.'));
+            if (session) options.onClosed?.(session);
             void connectionLostRef.current(session, false, describeSocketClose(event));
           },
         },
@@ -1013,23 +1068,128 @@ export function useVoiceMode({
   }, []);
 
   /**
+   * Prepares a call before the tap: opens the Gemini session with the
+   * prefetched token and asks for the greeting, holding everything Gemini
+   * sends until connect() starts the call. The microphone stays off.
+   */
+  const warmUp = useCallback(
+    (key: string, id: string | undefined, name: string | undefined) => {
+      const token = tokenPrefetchRef.current?.take(key);
+      if (!token) return;
+      let session: Session | undefined;
+      // Identifies this warm-up: a newer one, or leaving the screen, replaces it.
+      const entry = { key, ready: Promise.resolve(), claimed: false };
+      warmingRef.current = entry;
+      const began = Date.now();
+      logger.runtime('[VoiceMode] preparing the call');
+      // Cancelled when replaced, or when a call starts without waiting for it.
+      const cancelled = () => !entry.claimed && (warmingRef.current !== entry || engineRef.current !== null);
+      entry.ready = (async () => {
+        try {
+          const response = (await token) as Awaited<ReturnType<typeof fetchVoiceToken>>;
+          if (cancelled()) return;
+          const liveToken = parseVoiceLiveToken(response.data, name ?? 'Fenrir');
+          const buffer = new VoiceMessageBuffer<LiveServerMessage>();
+          const opened = await openLiveSession(liveToken, {
+            activateNow: false,
+            buffer,
+            onClosed: (closed) => warmStartRef.current?.markClosed(closed),
+          });
+          session = opened.session;
+          if (cancelled()) {
+            session.close();
+            return;
+          }
+          session.sendClientContent({
+            turns: [{ role: 'user', parts: [{ text: greetingPromptFor(liveToken) }] }],
+            turnComplete: true,
+          });
+          const call: WarmCall<Session, VoiceLiveToken, LiveServerMessage> = {
+            key,
+            startedAt: Date.now(),
+            session,
+            transport: opened.transport,
+            liveToken,
+            buffer,
+          };
+          warmStartRef.current?.hold(call);
+          logger.runtime('[VoiceMode] call prepared before the tap', {
+            tookMs: Date.now() - began,
+          });
+          if (entry.claimed) return;
+          // Replace it before it goes stale, a few times per visit.
+          const refresh = warmRefreshRef.current;
+          if (refresh.timer) clearTimeout(refresh.timer);
+          refresh.timer = setTimeout(() => {
+            refresh.timer = null;
+            if (refresh.left <= 0 || engineRef.current) return;
+            if (!warmStartRef.current?.isHeldFor(key)) return;
+            refresh.left -= 1;
+            tokenPrefetchRef.current?.prefetch(key, () => fetchVoiceToken(id));
+            warmUpRef.current(key, id, name);
+          }, VOICE_WARM_START_MAX_AGE_MS - 15_000);
+        } catch (error) {
+          session?.close();
+          logger.runtime('[VoiceMode] could not prepare the call; it will start normally', {
+            message: describeVoiceError(error).message,
+          });
+        } finally {
+          if (warmingRef.current === entry) warmingRef.current = null;
+        }
+      })();
+    },
+    [openLiveSession],
+  );
+  const warmUpRef = useRef(warmUp);
+  warmUpRef.current = warmUp;
+
+  /**
    * Fetches the session token and loads the Gemini SDK before the user taps
-   * call. connect() uses the token when it was fetched for the same
-   * conversation and voice.
+   * call, and prepares the call itself (see warmUp). connect() uses them
+   * when they were made for the same conversation and voice.
    */
   const prefetch = useCallback(
     (target: { memoryId?: string | null; voiceName?: string } = {}) => {
       if (engineRef.current) return;
       const id = validMemoryId(target.memoryId ?? memoryId);
       const name = target.voiceName ?? voiceName;
-      tokenPrefetchRef.current?.prefetch(voiceTokenKey(id, name), () => fetchVoiceToken(id));
+      const key = voiceTokenKey(id, name);
+      tokenPrefetchRef.current?.prefetch(key, () => fetchVoiceToken(id));
       import('@google/genai/web').catch(() => {});
+      if (!VOICE_WARM_START) return;
+      if (warmStartRef.current?.isHeldFor(key) || warmingRef.current?.key === key) return;
+      warmUp(key, id, name);
     },
-    [memoryId, voiceName],
+    [memoryId, voiceName, warmUp],
   );
+
+  /** Leaving the call screen: close any prepared call. */
+  const cancelPrefetch = useCallback(() => {
+    if (warmingRef.current?.claimed) return;
+    warmingRef.current = null;
+    warmStartRef.current?.discard();
+    const refresh = warmRefreshRef.current;
+    if (refresh.timer) clearTimeout(refresh.timer);
+    refresh.timer = null;
+    refresh.left = VOICE_WARM_START_REFRESHES;
+  }, []);
 
   const connect = useCallback(async () => {
     if (isConnecting || isConnected || isDisconnectingRef.current) return;
+    // A call prepared on the call screen for this conversation and voice
+    // (or still being prepared). Claimed now, before anything awaits, so
+    // leaving the screen cannot close it from under this call.
+    const warmKey = voiceTokenKey(validMemoryId(memoryId), voiceName);
+    const warming = warmingRef.current?.key === warmKey ? warmingRef.current : undefined;
+    if (warming) warming.claimed = true;
+    else warmingRef.current = null;
+    const warmReady =
+      VOICE_WARM_START && (warming || warmStartRef.current?.isHeldFor(warmKey))
+        ? (warming?.ready ?? Promise.resolve()).then(() => warmStartRef.current?.take(warmKey))
+        : undefined;
+    if (!warmReady) warmStartRef.current?.discard();
+    if (warmRefreshRef.current.timer) clearTimeout(warmRefreshRef.current.timer);
+    warmRefreshRef.current.timer = null;
     setIsConnecting(true);
     isSessionActiveRef.current = true;
     hasCompletedSessionRef.current = false;
@@ -1089,6 +1249,7 @@ export function useVoiceMode({
     liveModelRef.current = undefined;
     turnDetectionRef.current = undefined;
     tokenPrefetchedRef.current = false;
+    warmStartedRef.current = false;
     failureRef.current = null;
     usageRef.current = {};
     responseGateRef.current?.reset();
@@ -1154,14 +1315,18 @@ export function useVoiceMode({
 
       // Token, Gemini connection and audio start run in parallel.
       const tokenMemoryId = memoryIdRef.current;
-      const prefetched = tokenPrefetchRef.current?.take(voiceTokenKey(tokenMemoryId, voiceName));
-      tokenPrefetchedRef.current = Boolean(prefetched);
-      const tokenRequest = prefetched
-        ? prefetched.catch(() => {
-            tokenPrefetchedRef.current = false;
-            return fetchVoiceToken(tokenMemoryId);
-          })
-        : fetchVoiceToken(tokenMemoryId);
+      const requestToken = () => {
+        const prefetched = tokenPrefetchRef.current?.take(voiceTokenKey(tokenMemoryId, voiceName));
+        tokenPrefetchedRef.current = Boolean(prefetched);
+        return prefetched
+          ? prefetched.catch(() => {
+              tokenPrefetchedRef.current = false;
+              return fetchVoiceToken(tokenMemoryId);
+            })
+          : fetchVoiceToken(tokenMemoryId);
+      };
+      // Without a prepared call, the token request starts now as before.
+      const tokenRequest = warmReady ? undefined : requestToken();
 
       latencyRef.current?.beginAudioStart();
       const audioReady = engine.start((data, rms) => {
@@ -1202,14 +1367,28 @@ export function useVoiceMode({
       );
 
       setStep('token');
-      const tokenResponse = (await tokenRequest) as Awaited<ReturnType<typeof fetchVoiceToken>>;
-      if (callEnded()) return;
-      const liveToken = parseVoiceLiveToken(tokenResponse.data, voiceName ?? 'Fenrir');
+      const waitStartedAt = Date.now();
+      const warm = warmReady ? await warmReady.catch(() => undefined) : undefined;
+      const waitedForWarmMs = Date.now() - waitStartedAt;
+      if (callEnded()) {
+        warm?.session.close();
+        return;
+      }
+      warmStartedRef.current = Boolean(warm);
+      let liveToken: VoiceLiveToken;
+      if (warm) {
+        liveToken = warm.liveToken;
+      } else {
+        const tokenResponse = (await (tokenRequest ?? requestToken())) as Awaited<
+          ReturnType<typeof fetchVoiceToken>
+        >;
+        if (callEnded()) return;
+        liveToken = parseVoiceLiveToken(tokenResponse.data, voiceName ?? 'Fenrir');
+      }
       latencyRef.current?.mark('token');
       liveModelRef.current = liveToken.model;
       turnDetectionRef.current = liveToken.turnDetection;
 
-      const user = useUserStore.getState().user;
       if (liveToken.memoryId) memoryIdRef.current = liveToken.memoryId;
       // The server can switch specific device models back to the speaker mic gate.
       const fullDuplex = SPEAKER_FULL_DUPLEX && liveToken.speakerFullDuplex !== false;
@@ -1309,7 +1488,16 @@ export function useVoiceMode({
         : null;
 
       setStep('session');
-      const { session } = await openLiveSession(liveToken, { activateNow: true });
+      let session: Session;
+      if (warm) {
+        // Open and set up before the tap; its messages are still held.
+        session = warm.session;
+        transportsRef.current?.activate(warm.transport);
+        latencyRef.current?.mark('sdk');
+        latencyRef.current?.mark('socketOpen');
+      } else {
+        ({ session } = await openLiveSession(liveToken, { activateNow: true }));
+      }
       if (callEnded()) {
         session.close();
         return;
@@ -1324,27 +1512,30 @@ export function useVoiceMode({
       isGreetingActiveRef.current = !fullDuplexRef.current && !engine.isHeadphonesActive();
       setStep('greeting');
       engine.armGreetingShield();
-      const userGreetingName = user?.nickname || user?.first_name || '';
-      const greetingPrompt =
-        liveToken.greetingInstruction ??
-        `Start with a brief, warm greeting in English${
-          userGreetingName ? ` to ${userGreetingName}` : ''
-        }. Then let them lead.`;
-
-      session.sendClientContent({
-        turns: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text: greetingPrompt,
-              },
-            ],
-          },
-        ],
-        turnComplete: true,
-      });
-      latencyRef.current?.mark('greetingSent');
+      if (warm) {
+        // The greeting was asked for before the tap. Hand everything the
+        // prepared session received (setup, greeting audio and text) to the
+        // call, in order, as if it had just arrived; then go live.
+        engine.markConnectionOpen();
+        latencyRef.current?.mark('setupComplete');
+        latencyRef.current?.mark('greetingSent');
+        const transport = warm.transport;
+        const replayed = warm.buffer.release((message) => {
+          if (transportsRef.current?.isActive(transport)) handleLiveMessage(message);
+        });
+        logger.runtime('[VoiceMode] started from the prepared call', {
+          replayed,
+          // Waited for preparation to finish, and how long it was ready before the tap.
+          waitedMs: waitedForWarmMs,
+          readyForMs: Math.max(0, waitStartedAt - warm.startedAt),
+        });
+      } else {
+        session.sendClientContent({
+          turns: [{ role: 'user', parts: [{ text: greetingPromptFor(liveToken) }] }],
+          turnComplete: true,
+        });
+        latencyRef.current?.mark('greetingSent');
+      }
 
       // Safety guard: The greeting shield prevents the model's initial spoken greeting
       // from leaking into the microphone and causing self-interruption.
@@ -1423,6 +1614,7 @@ export function useVoiceMode({
   }, [
     disconnect,
     endCallAfterGoodbye,
+    handleLiveMessage,
     isConnected,
     isConnecting,
     memoryId,
@@ -1516,6 +1708,7 @@ export function useVoiceMode({
       connectionFailure,
       connect,
       prefetch,
+      cancelPrefetch,
       disconnect,
       toggleMute,
       setMuted,
@@ -1535,6 +1728,7 @@ export function useVoiceMode({
       connectionFailure,
       connect,
       prefetch,
+      cancelPrefetch,
       disconnect,
       toggleMute,
       setMuted,
