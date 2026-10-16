@@ -102,13 +102,18 @@ export default function VoiceCallRoute() {
     configure({ memoryId: effectiveMemoryId, voiceName: selectedVoice.providerVoiceName });
   }, [configure, effectiveMemoryId, selectedVoice.providerVoiceName]);
 
-  // Fetch the session token while the user looks at the Start button, so the
-  // tap only has to open the connection.
+  // Prepare the call while the user looks at the Start button (token,
+  // Gemini session and greeting), so the tap only has to start audio.
   const { prefetch } = voice;
   useEffect(() => {
     if (stage !== 'ready' || !voiceInSync) return;
     prefetch({ memoryId: effectiveMemoryId, voiceName: selectedVoice.providerVoiceName });
   }, [effectiveMemoryId, prefetch, selectedVoice.providerVoiceName, stage, voiceInSync]);
+
+  // Leaving without calling closes the call prepared for this screen. A call
+  // already started keeps it.
+  const { cancelPrefetch } = voice;
+  useEffect(() => cancelPrefetch, [cancelPrefetch]);
 
   // A voice picked before choices were saved to the profile, or changed
   // elsewhere: save it once so the call uses the voice shown here.

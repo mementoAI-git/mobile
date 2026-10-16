@@ -66,6 +66,8 @@ export type VoiceCallReport = {
   model?: string;
   /** The token was fetched before the user tapped call. */
   tokenPrefetched?: boolean;
+  /** The call started from one prepared before the tap (voice-warm-start.ts). */
+  warmStart?: boolean;
   /**
    * Gemini's reported token usage. Whether its counts are per response or
    * running totals is not documented, so report the latest prompt size
@@ -135,6 +137,7 @@ function sendVoiceCall(report: VoiceCallReport, sentry: VoiceTelemetrySentry): v
       'voice.route': engine?.startOutputRoute,
       'voice.route_end': engine?.outputRoute,
       'voice.token_prefetched': report.tokenPrefetched,
+      'voice.warm_start': report.warmStart,
       'voice.ios_voice_processing': report.audioPolicy?.iosVoiceProcessing,
       'voice.speaker_full_duplex': report.audioPolicy?.speakerFullDuplex,
       'voice.ios_voice_processing_active': engine?.voiceProcessingActive,

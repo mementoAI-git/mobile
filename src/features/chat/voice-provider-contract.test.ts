@@ -43,8 +43,8 @@ describe('Gemini voice provider contract', () => {
     const source = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
 
     const audio = source.indexOf('const audioReady = engine.start(');
-    const token = source.indexOf('await tokenRequest');
-    const session = source.indexOf('const { session } = await openLiveSession(liveToken, { activateNow: true })');
+    const token = source.indexOf('await (tokenRequest ?? requestToken())');
+    const session = source.indexOf('({ session } = await openLiveSession(liveToken, { activateNow: true }))');
     expect(audio).toBeGreaterThan(-1);
     expect(audio).toBeLessThan(token);
     expect(token).toBeLessThan(session);
@@ -52,6 +52,24 @@ describe('Gemini voice provider contract', () => {
     // Every await in connect() is followed by a hang-up check.
     expect(source.match(/if \(callEnded\(\)\)/g)?.length).toBeGreaterThanOrEqual(5);
     expect(source).toContain('session.close();');
+  });
+
+  test('starts from a call prepared before the tap, keeping the mic off until then', async () => {
+    const source = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
+    const screen = await Bun.file(new URL('../../../app/voice-call.tsx', import.meta.url)).text();
+
+    // Prepared: session opened inactive, its messages held, greeting asked for.
+    expect(source).toContain('activateNow: false,\n            buffer,');
+    // The prepared session never touches audio: the engine starts only in connect().
+    const warmUp = source.slice(source.indexOf('const warmUp = useCallback('), source.indexOf('const warmUpRef'));
+    expect(warmUp).not.toContain('engine.start(');
+    expect(warmUp).toContain('session.sendClientContent');
+    // On the tap: claimed before anything awaits, replayed after audio is ready.
+    const connect = source.slice(source.indexOf('const connect = useCallback('));
+    expect(connect.indexOf('warming.claimed = true')).toBeLessThan(connect.indexOf('await '));
+    expect(connect.indexOf('await audioReady;')).toBeLessThan(connect.indexOf('warm.buffer.release('));
+    // Leaving the screen closes it.
+    expect(screen).toContain('useEffect(() => cancelPrefetch, [cancelPrefetch]);');
   });
 
   test('prefetches the session token from the call screen', async () => {
