@@ -184,6 +184,8 @@ export type VoiceAudioEngineSnapshot = VoiceMetricSnapshot & {
   speakerFullDuplex: boolean;
   /** Mic frames replaced with silence as leftover echo while Memento was audible on the speaker. */
   uplinkEchoSuppressed: number;
+  /** Loudest leftover echo the speaker filter measured (RMS). */
+  peakEchoLevel: number;
   /** Times a clear voice got through the echo filter. */
   bargeIns: number;
   /** Output route when the call's audio started, and after the last route change. */
@@ -288,12 +290,15 @@ export class VoiceAudioEngine {
   private voiceProcessingActive?: boolean;
   /** Echo cancellation was requested but iOS did not engage it. */
   private voiceProcessingUnavailable = false;
+  /** What the build and server allow, before the voice-processing check. */
+  private requestedSpeakerFullDuplex: boolean;
   private readonly echoGate: VoiceEchoGate;
 
   constructor(options: VoiceAudioEngineOptions = {}) {
     this.native = options.native ?? createNativeVoiceAudioAdapter();
     this.metrics = options.metrics ?? new VoiceSessionMetrics();
     this.speakerFullDuplex = options.speakerFullDuplex ?? false;
+    this.requestedSpeakerFullDuplex = this.speakerFullDuplex;
     this.iosVoiceProcessing = options.iosVoiceProcessing ?? false;
     this.now = options.now ?? Date.now;
     this.echoGate = new VoiceEchoGate({ now: this.now, holdMs: VOICE_BARGE_IN_HOLD_MS });
@@ -324,6 +329,27 @@ export class VoiceAudioEngine {
 
   isHeadphonesActive(): boolean {
     return this.isHeadphones;
+  }
+
+  /** Development diagnostics: what the speaker filter sees right now. */
+  debugState() {
+    return {
+      playback: this.playback?.state,
+      native:
+        this.playback instanceof NativeVoicePlaybackController ? this.playback.nativeState() : undefined,
+      audible: this.isAudible(200),
+      fullDuplex: this.speakerFullDuplex,
+      headphones: this.isHeadphones,
+      greeting: this.greetingShieldActive,
+      echoLevel: Math.round(this.echoGate.echoLevel * 1_000) / 1_000,
+      bargeIns: this.echoGate.bargeIns,
+      suppressed: this.echoGate.suppressed,
+    };
+  }
+
+  /** The mic is open on the loudspeaker while Memento talks. */
+  isSpeakerFullDuplexActive(): boolean {
+    return this.speakerFullDuplex && !this.isHeadphones;
   }
 
   isPlaying(): boolean {
@@ -387,10 +413,10 @@ export class VoiceAudioEngine {
         },
         (event) => {
           // Protect the initial greeting window: the model is speaking and the mic
-          // would capture its own echo. Once playback goes idle the shield disarms
-          // and we stream all frames unconditionally — server-side VAD handles the rest.
+          // would capture its own echo. Once playback goes idle the shield disarms.
+          // In full duplex the echo filter calibrates on the greeting instead.
           this.uplinkCaptured += 1;
-          if (this.greetingShieldActive) {
+          if (this.greetingShieldActive && !this.speakerFullDuplex) {
             this.uplinkDroppedShield += 1;
             return;
           }
@@ -412,7 +438,10 @@ export class VoiceAudioEngine {
           // Full duplex on the loudspeaker: filter leftover echo while Memento
           // is audible (see VoiceEchoGate).
           const gating = this.speakerFullDuplex && !this.isHeadphones && this.isAudible(200);
-          for (const frame of this.echoGate.process(samples, gating)) {
+          // During the greeting in full duplex, nothing can barge in; the
+          // filter learns the echo level from it instead (see armGreetingShield).
+          const learnOnly = this.greetingShieldActive;
+          for (const frame of this.echoGate.process(samples, gating, { learnOnly })) {
             this.uplinkDelivered += 1;
             const rms = calculateRmsEnergy(frame);
             this.uplinkPeakRms = Math.max(this.uplinkPeakRms, rms);
@@ -435,14 +464,22 @@ export class VoiceAudioEngine {
 
   /** Apply the server's device policy once the token arrives. */
   setSpeakerFullDuplex(enabled: boolean): void {
-    this.speakerFullDuplex = enabled && !this.voiceProcessingUnavailable;
-    if (this.speakerFullDuplex) this.greetingShieldActive = false;
+    this.requestedSpeakerFullDuplex = enabled;
+    this.applySpeakerFullDuplex();
+  }
+
+  private applySpeakerFullDuplex(): void {
+    this.speakerFullDuplex = this.requestedSpeakerFullDuplex && !this.voiceProcessingUnavailable;
   }
 
   /**
    * The app only requests voice processing; iOS may not engage it (the audio
    * library just logs a failure). Without it, an open mic on the loudspeaker
    * hears Memento, so fall back to the speaker gate.
+   *
+   * Checked again after every route change, and it can read off for a moment
+   * while audio reconfigures: full duplex follows the latest reading rather
+   * than staying off for the rest of the call.
    */
   private checkVoiceProcessing(): void {
     if (!this.iosVoiceProcessing || !this.native.isVoiceProcessingActive) return;
@@ -453,16 +490,20 @@ export class VoiceAudioEngine {
       active = undefined;
     }
     this.voiceProcessingActive = active;
-    if (active === false) {
-      this.voiceProcessingUnavailable = true;
-      this.speakerFullDuplex = false;
-    }
+    // Unknown (older native build) keeps the previous decision.
+    if (active !== undefined) this.voiceProcessingUnavailable = !active;
+    this.applySpeakerFullDuplex();
   }
 
+  /**
+   * Protects the greeting from its own echo on the loudspeaker. Earphones have
+   * none, so there the user can talk over or interrupt it. With the speaker
+   * gate (half duplex) the mic is dropped; with full duplex the echo filter
+   * calibrates on the greeting instead: nothing barges in, and it learns how
+   * loud the leftover echo is at this volume before the user starts talking.
+   */
   armGreetingShield(): void {
-    // The shield blocks the greeting's echo from the loudspeaker. Earphones
-    // have none, so the user can talk over or interrupt the greeting.
-    if (this.speakerFullDuplex || this.isHeadphones) return;
+    if (this.isHeadphones) return;
     this.greetingShieldActive = true;
   }
 
@@ -515,6 +556,7 @@ export class VoiceAudioEngine {
       voiceProcessingActive: this.voiceProcessingActive,
       speakerFullDuplex: this.speakerFullDuplex,
       uplinkEchoSuppressed: this.echoGate.suppressed,
+      peakEchoLevel: Math.round(this.echoGate.peakEchoLevel * 10_000) / 10_000,
       bargeIns: this.echoGate.bargeIns,
     };
   }

@@ -55,6 +55,7 @@ import { saveUplinkRecording, VoiceUplinkRecorder } from '@/features/chat/voice-
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { VoiceLatencyTracker } from '@/features/chat/voice-latency';
 import { reportVoiceCall, type VoiceCallFailure } from '@/features/chat/voice-telemetry';
+import { VoiceSelfInterruptGuard } from '@/features/chat/voice-self-interrupt-guard';
 import { VoiceTokenPrefetch } from '@/features/chat/voice-token-prefetch';
 import { VoiceResponseGate } from '@/features/chat/voice-response-gate';
 import { getVoiceCallOutbox } from '@/features/chat/voice-call-outbox-store';
@@ -312,6 +313,13 @@ export function useVoiceMode({
   }
   const transcriptDiagnosticsRef = useRef(createVoiceTranscriptDiagnostics());
   const latencyRef = useRef<VoiceLatencyTracker | null>(null);
+  const selfInterruptRef = useRef<VoiceSelfInterruptGuard | null>(null);
+  // Development only: a timestamped trace of the speaker filter's view.
+  const debugTraceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const debugMicPeakRef = useRef(0);
+  const selfInterruptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Full duplex as the build and the server allow it, before any fallback. */
+  const allowedFullDuplexRef = useRef(false);
   const liveModelRef = useRef<string | undefined>(undefined);
   const turnDetectionRef = useRef<VoiceTurnDetection | undefined>(undefined);
   const tokenPrefetchedRef = useRef(false);
@@ -480,6 +488,7 @@ export function useVoiceMode({
           // handleInterruption() promotes any interim user text to final so
           // it isn't lost when we complete the (truncated) model turn.
           latencyRef.current?.observeModelTurnEnd({ interruptedBy: 'speech' });
+          selfInterruptRef.current?.observeInterrupted(engine?.isSpeakerFullDuplexActive() ?? false);
           const newEpoch = engine?.nextEpoch() ?? 1;
           engine?.interruptOutput(newEpoch);
           if (greetingTimerRef.current) {
@@ -502,6 +511,7 @@ export function useVoiceMode({
         } else if (effect.type === 'output-audio') {
           if (responseGateRef.current?.acceptOutput() === false) continue;
           latencyRef.current?.observeModelAudio();
+          selfInterruptRef.current?.observeModelAudio();
           goodbyeRef.current?.tracker.onModelAudio();
           if (engine?.enqueueOutput(effect.data, effect.epoch) && isMountedRef.current) {
             isAiSpeakingRef.current = true;
@@ -509,11 +519,13 @@ export function useVoiceMode({
           }
         } else if (effect.type === 'input-transcript') {
           latencyRef.current?.observeUserTranscript();
+          selfInterruptRef.current?.observeInputText(effect.text, effect.isInterim);
           const text = transcriptRef.current.appendUser(effect.text, effect.isInterim);
           userSpeechTextRef.current = text;
           userTextSetterRef.current?.set(text);
         } else if (effect.type === 'output-transcript') {
           if (responseGateRef.current?.acceptTranscript() === false) continue;
+          selfInterruptRef.current?.observeOutputText(effect.text);
           outputTranscriptFinishedRef.current = effect.finished;
           if (effect.text) {
             const text = transcriptRef.current.appendModel(effect.text);
@@ -598,12 +610,20 @@ export function useVoiceMode({
       greetingTimerRef.current = null;
     }
     isGreetingActiveRef.current = false;
+    if (selfInterruptTimerRef.current) {
+      clearTimeout(selfInterruptTimerRef.current);
+      selfInterruptTimerRef.current = null;
+    }
     setupReadyRef.current?.reject(new Error('Voice session closed before setup completed.'));
     setupReadyRef.current = null;
 
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
+    }
+    if (debugTraceTimerRef.current) {
+      clearInterval(debugTraceTimerRef.current);
+      debugTraceTimerRef.current = null;
     }
     const finalDuration = recordingTimeRef.current;
     recordingTimeRef.current = 0;
@@ -633,6 +653,12 @@ export function useVoiceMode({
         endedDuringStep: connectStepRef.current ?? undefined,
         turnDetection: turnDetectionRef.current,
         toolCalls: transcriptDiagnosticsRef.current.toolCalls.length,
+        selfInterruptions: selfInterruptRef.current
+          ? {
+              suspected: selfInterruptRef.current.suspected,
+              fallbacks: selfInterruptRef.current.fallbacks,
+            }
+          : undefined,
         engine: engineSnapshot,
       });
     }
@@ -1024,6 +1050,30 @@ export function useVoiceMode({
     messageHandlerRef.current = new VoiceMessageHandler();
     uplinkRecorderRef.current = DEBUG_RECORD_UPLINK ? new VoiceUplinkRecorder() : null;
     latencyRef.current = new VoiceLatencyTracker();
+    // On a loud speaker, leftover echo can still get past the echo filter and
+    // Memento keeps interrupting itself. When it does, stop listening while
+    // Memento talks for a while (the Interrupt button still works), then try
+    // again; each repeat lasts longer.
+    const guard = new VoiceSelfInterruptGuard({
+      now: Date.now,
+      onFallback: (durationMs) => {
+        fullDuplexRef.current = false;
+        engineRef.current?.setSpeakerFullDuplex(false);
+        logger.runtime('[VoiceMode] Memento is hearing itself on the speaker; pausing the mic while it talks', {
+          durationMs,
+        });
+        if (selfInterruptTimerRef.current) clearTimeout(selfInterruptTimerRef.current);
+        selfInterruptTimerRef.current = setTimeout(() => {
+          selfInterruptTimerRef.current = null;
+          if (selfInterruptRef.current !== guard) return;
+          guard.restore();
+          fullDuplexRef.current = allowedFullDuplexRef.current;
+          engineRef.current?.setSpeakerFullDuplex(allowedFullDuplexRef.current);
+          logger.runtime('[VoiceMode] listening while Memento talks again');
+        }, durationMs);
+      },
+    });
+    selfInterruptRef.current = guard;
     liveModelRef.current = undefined;
     turnDetectionRef.current = undefined;
     tokenPrefetchedRef.current = false;
@@ -1103,6 +1153,7 @@ export function useVoiceMode({
 
       latencyRef.current?.beginAudioStart();
       const audioReady = engine.start((data, rms) => {
+        if (__DEV__) debugMicPeakRef.current = Math.max(debugMicPeakRef.current, rms);
         // Frames captured before the Gemini session exists have nowhere to go.
         if (!sessionRef.current) return;
         const diagnostics = transcriptDiagnosticsRef.current;
@@ -1151,6 +1202,7 @@ export function useVoiceMode({
       // The server can switch specific device models back to the speaker mic gate.
       const fullDuplex = SPEAKER_FULL_DUPLEX && liveToken.speakerFullDuplex !== false;
       fullDuplexRef.current = fullDuplex;
+      allowedFullDuplexRef.current = fullDuplex;
       engine.setSpeakerFullDuplex(fullDuplex);
       isGreetingActiveRef.current = !fullDuplex;
       const sessionTools = liveToken.tools ?? [];
@@ -1256,6 +1308,30 @@ export function useVoiceMode({
         recordingTimeRef.current += 1;
         setRecordingTime((time) => time + 1);
       }, 1_000);
+      if (__DEV__) {
+        // Logs whenever playback or filter state changes, and a heartbeat
+        // every 2 s with the loudest mic frame sent since the last line.
+        let last = '';
+        let ticks = 0;
+        debugTraceTimerRef.current = setInterval(() => {
+          const state = engineRef.current?.debugState();
+          if (!state) return;
+          const { echoLevel, bargeIns, suppressed, ...flags } = state;
+          const key = JSON.stringify(flags);
+          ticks += 1;
+          if (key === last && ticks % 8 !== 0) return;
+          last = key;
+          logger.debug('[VoiceTrace]', {
+            t: recordingTimeRef.current,
+            ...flags,
+            echoLevel,
+            micPeak: Math.round(debugMicPeakRef.current * 1_000) / 1_000,
+            bargeIns,
+            suppressed,
+          });
+          debugMicPeakRef.current = 0;
+        }, 250);
+      }
       void callNotificationRef.current?.start(() => {
         void disconnectRef.current();
       });

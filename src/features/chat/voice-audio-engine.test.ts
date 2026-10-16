@@ -488,7 +488,6 @@ describe('VoiceAudioEngine', () => {
     const engine = new VoiceAudioEngine({ native, speakerFullDuplex: true });
 
     await engine.start((chunk) => chunks.push(chunk));
-    engine.armGreetingShield();
 
     const pcmSamples = new Float32Array(4800).fill(0.1);
     const pcmBase64 = btoa(String.fromCharCode(...new Uint8Array(pcmSamples.length * 2)));
@@ -507,6 +506,9 @@ describe('VoiceAudioEngine', () => {
     expect(chunks).toHaveLength(2);
   });
 
+  // With the speaker gate the greeting's mic is dropped; once the server
+  // allows full duplex the greeting calibrates the echo filter instead, so
+  // frames keep flowing (as silence) rather than being dropped.
   test('applies the server speaker duplex policy after construction', async () => {
     const native = new FakeNative();
     native.isHeadphonesDevice = false;
@@ -527,6 +529,7 @@ describe('VoiceAudioEngine', () => {
     }
 
     expect(chunks).toHaveLength(2);
+    expect(engine.snapshot()).toMatchObject({ uplinkDroppedShield: 0, bargeIns: 0 });
   });
 
   test('reports whether native playback is active', async () => {
@@ -619,6 +622,39 @@ describe('VoiceAudioEngine', () => {
       expect(engine.snapshot()).toMatchObject({ voiceProcessingActive: false, speakerFullDuplex: false });
     });
 
+    // macOS (and iOS) can report voice processing off for a moment while a
+    // route change reconfigures audio. One such readback must not cost the
+    // rest of the call its full duplex.
+    test('restores full duplex when echo cancellation comes back after a route change', async () => {
+      const native = new FakeNative();
+      native.voiceProcessingActive = true;
+      const engine = new VoiceAudioEngine({ native, iosVoiceProcessing: true, speakerFullDuplex: true });
+      await engine.start(() => {});
+
+      native.voiceProcessingActive = false;
+      native.routeListener?.();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(engine.snapshot()).toMatchObject({ voiceProcessingActive: false, speakerFullDuplex: false });
+
+      native.voiceProcessingActive = true;
+      native.routeListener?.();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(engine.snapshot()).toMatchObject({ voiceProcessingActive: true, speakerFullDuplex: true });
+    });
+
+    test('still honours the server turning full duplex off when echo cancellation comes back', async () => {
+      const native = new FakeNative();
+      native.voiceProcessingActive = false;
+      const engine = new VoiceAudioEngine({ native, iosVoiceProcessing: true, speakerFullDuplex: true });
+      await engine.start(() => {});
+      engine.setSpeakerFullDuplex(false);
+
+      native.voiceProcessingActive = true;
+      native.routeListener?.();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(engine.snapshot()).toMatchObject({ speakerFullDuplex: false });
+    });
+
     test('keeps full duplex when echo cancellation is confirmed, or unknown on older native builds', async () => {
       for (const active of [true, undefined]) {
         const native = new FakeNative();
@@ -627,6 +663,25 @@ describe('VoiceAudioEngine', () => {
         await engine.start(() => {});
         expect(engine.snapshot()).toMatchObject({ voiceProcessingActive: active, speakerFullDuplex: true });
       }
+    });
+
+    test('uses the greeting to learn the echo level, so loud echo after it cannot barge in', async () => {
+      const native = new FakeNative();
+      const chunks: string[] = [];
+      const engine = new VoiceAudioEngine({ native, speakerFullDuplex: true });
+      await engine.start((chunk) => chunks.push(chunk));
+      engine.armGreetingShield();
+      engine.enqueueOutput(SPEAKING, 1);
+
+      // Loud echo of the greeting: sent as silence, never a barge-in.
+      for (let i = 0; i < 10; i += 1) feed(native, frame(0.12));
+      expect(chunks.every(isSilent)).toBe(true);
+      expect(engine.snapshot()).toMatchObject({ bargeIns: 0, peakEchoLevel: 0.12 });
+
+      // After the greeting, the same echo level is recognised as echo.
+      engine.disarmGreetingShield();
+      for (let i = 0; i < 3; i += 1) feed(native, frame(0.12));
+      expect(engine.snapshot()).toMatchObject({ bargeIns: 0 });
     });
 
     test('replaces leftover echo with silence while Memento is audible on the speaker', async () => {

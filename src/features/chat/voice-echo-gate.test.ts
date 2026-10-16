@@ -87,6 +87,87 @@ describe('VoiceEchoGate', () => {
     expect(levels(g.process(frame(0.2), true))).toEqual([0.04, 0.2]);
   });
 
+  describe('tracking the leftover echo', () => {
+    // Feeds frames while Memento is audible; returns everything sent.
+    const feed = (g: VoiceEchoGate, level: number, count: number) => {
+      const sent: Float32Array[] = [];
+      for (let i = 0; i < count; i += 1) sent.push(...g.process(frame(level), true));
+      return sent;
+    };
+
+    test('raises the bar when the leftover echo is loud, as at high speaker volume', () => {
+      const { gate: g } = gate();
+      feed(g, 0.06, 8); // loud leftover echo, below the fixed barge-in level
+
+      // Would open the mic on fixed thresholds, but is barely above the echo.
+      const sent = feed(g, 0.08, 2);
+
+      expect(g.bargeIns).toBe(0);
+      expect(sent.every((f) => f.every((s) => s === 0))).toBe(true);
+    });
+
+    test('still lets a voice clearly louder than the echo through', () => {
+      const { gate: g } = gate();
+      feed(g, 0.06, 8);
+
+      feed(g, 0.15, 1);
+
+      expect(g.bargeIns).toBe(1);
+    });
+
+    test('a loud echo burst does not open the mic, even above the fixed thresholds', () => {
+      const { gate: g } = gate();
+      feed(g, 0.07, 8);
+
+      feed(g, 0.1, 3);
+
+      expect(g.bargeIns).toBe(0);
+    });
+
+    test('lowers the bar again as the echo fades, so quiet interruptions work at low volume', () => {
+      const { gate: g } = gate();
+      feed(g, 0.06, 8);
+      feed(g, 0.01, 150); // volume turned down
+
+      feed(g, 0.08, 2);
+
+      expect(g.bargeIns).toBe(1);
+    });
+
+    test('remembers the echo level from one reply to the next', () => {
+      const { gate: g } = gate();
+      feed(g, 0.06, 8);
+      g.process(frame(0.01), false); // Memento finished; the user is quiet
+
+      feed(g, 0.08, 2); // the next reply's echo
+
+      expect(g.bargeIns).toBe(0);
+    });
+
+    test('calibrating (the greeting) never opens the mic, but learns the echo for later', () => {
+      const { gate: g } = gate();
+      const sent: Float32Array[] = [];
+      for (let i = 0; i < 10; i += 1) sent.push(...g.process(frame(0.12), true, { learnOnly: true }));
+
+      expect(g.bargeIns).toBe(0);
+      expect(sent).toHaveLength(10); // nothing held back: all sent as silence at once
+      expect(sent.every((f) => f.every((s) => s === 0))).toBe(true);
+
+      // Loud echo of the next reply no longer gets through.
+      feed(g, 0.12, 3);
+      expect(g.bargeIns).toBe(0);
+    });
+
+    test('does not learn the echo level from the user speaking while Memento is quiet', () => {
+      const { gate: g } = gate();
+      for (let i = 0; i < 20; i += 1) g.process(frame(0.2), false);
+
+      feed(g, 0.08, 2);
+
+      expect(g.bargeIns).toBe(1);
+    });
+  });
+
   test('reset drops held frames and closes the mic', () => {
     const { gate: g } = gate();
     g.process(frame(0.2), true);

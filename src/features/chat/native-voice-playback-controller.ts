@@ -82,6 +82,11 @@ export class NativeVoicePlaybackController {
     this.cancelPoll();
   }
 
+  /** The native session's own state (priming/recovering count as audible). */
+  nativeState(): string {
+    return this.session.getSnapshot().state;
+  }
+
   finishTurn(): void {
     if (this.state === 'stopped') return;
     this.session.flushTurn(this.generation, this.epoch);
