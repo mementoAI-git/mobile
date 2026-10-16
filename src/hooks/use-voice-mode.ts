@@ -1080,6 +1080,8 @@ export function useVoiceMode({
       // Identifies this warm-up: a newer one, or leaving the screen, replaces it.
       const entry = { key, ready: Promise.resolve(), claimed: false };
       warmingRef.current = entry;
+      const began = Date.now();
+      logger.runtime('[VoiceMode] preparing the call');
       // Cancelled when replaced, or when a call starts without waiting for it.
       const cancelled = () => !entry.claimed && (warmingRef.current !== entry || engineRef.current !== null);
       entry.ready = (async () => {
@@ -1111,7 +1113,9 @@ export function useVoiceMode({
             buffer,
           };
           warmStartRef.current?.hold(call);
-          logger.runtime('[VoiceMode] call prepared before the tap');
+          logger.runtime('[VoiceMode] call prepared before the tap', {
+            tookMs: Date.now() - began,
+          });
           if (entry.claimed) return;
           // Replace it before it goes stale, a few times per visit.
           const refresh = warmRefreshRef.current;
@@ -1363,7 +1367,9 @@ export function useVoiceMode({
       );
 
       setStep('token');
+      const waitStartedAt = Date.now();
       const warm = warmReady ? await warmReady.catch(() => undefined) : undefined;
+      const waitedForWarmMs = Date.now() - waitStartedAt;
       if (callEnded()) {
         warm?.session.close();
         return;
@@ -1517,7 +1523,12 @@ export function useVoiceMode({
         const replayed = warm.buffer.release((message) => {
           if (transportsRef.current?.isActive(transport)) handleLiveMessage(message);
         });
-        logger.runtime('[VoiceMode] started from the prepared call', { replayed });
+        logger.runtime('[VoiceMode] started from the prepared call', {
+          replayed,
+          // Waited for preparation to finish, and how long it was ready before the tap.
+          waitedMs: waitedForWarmMs,
+          readyForMs: Math.max(0, waitStartedAt - warm.startedAt),
+        });
       } else {
         session.sendClientContent({
           turns: [{ role: 'user', parts: [{ text: greetingPromptFor(liveToken) }] }],
