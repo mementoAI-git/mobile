@@ -83,6 +83,59 @@ describe('VoiceControlRegistry.press', () => {
   });
 });
 
+describe('VoiceControlRegistry toggles', () => {
+  function toggle(registry: VoiceControlRegistry, label: string, on: boolean) {
+    const state = { on, presses: 0 };
+    registry.addPressTarget({
+      label,
+      press: () => {
+        state.presses += 1;
+        state.on = !state.on;
+      },
+      isActive: () => true,
+      isOn: () => state.on,
+    });
+    return state;
+  }
+
+  test('turns an option on when asked and it is off', () => {
+    const registry = new VoiceControlRegistry();
+    const annual = toggle(registry, 'Annual', false);
+
+    expect(registry.press('annual', true)).toBe('Pressed "Annual". It is now on.');
+    expect(annual.presses).toBe(1);
+  });
+
+  test('leaves an option alone when it is already how the host wants it', () => {
+    const registry = new VoiceControlRegistry();
+    const reminders = toggle(registry, 'Daily reminders', true);
+
+    expect(registry.press('daily reminders', true)).toBe('"Daily reminders" is already on.');
+    expect(registry.press('daily reminders', false)).toBe('Pressed "Daily reminders". It is now off.');
+    expect(reminders.presses).toBe(1);
+  });
+
+  test('shows on/off state when listing what is on screen', () => {
+    const registry = new VoiceControlRegistry();
+    toggle(registry, 'Monthly', false);
+    toggle(registry, 'Annual', true);
+
+    expect(registry.press('weekly')).toContain('"Monthly" (off), "Annual" (on)');
+  });
+});
+
+describe('VoiceControlRegistry.unlabelledOnScreen', () => {
+  test('counts unlabelled tappables on the screen in front, for labelling later', () => {
+    const registry = new VoiceControlRegistry();
+    registry.addUnlabelledTarget({ isActive: () => true });
+    const remove = registry.addUnlabelledTarget({ isActive: () => true });
+    registry.addUnlabelledTarget({ isActive: () => false });
+    remove();
+
+    expect(registry.unlabelledOnScreen()).toBe(1);
+  });
+});
+
 describe('VoiceControlRegistry.scroll', () => {
   test('scrolls the list on the screen in front of the host', () => {
     const registry = new VoiceControlRegistry();

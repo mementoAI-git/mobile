@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Pressable } from '@/components/ui/Touchable';
 import BarChart3 from 'lucide-react-native/icons/chart-column';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Animated, {

@@ -4,9 +4,9 @@ import {
   Linking,
   ScrollView,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';

@@ -23,19 +23,27 @@ export function useVoicePressTarget(
   label: string | undefined,
   onPress: (() => void) | undefined,
   enabled: boolean,
+  /** For switches and options: whether it is on now. */
+  isOn?: boolean,
 ): void {
   const inFront = useIsScreenInFront();
-  const state = useRef({ onPress, enabled, inFront });
-  state.current = { onPress, enabled, inFront };
+  const state = useRef({ onPress, enabled, inFront, isOn });
+  state.current = { onPress, enabled, inFront, isOn };
 
   useEffect(() => {
     const name = label?.trim();
-    if (!name) return;
+    if (!name) {
+      // Counted so unreachable (unlabelled) taps show up in development.
+      return voiceControl.addUnlabelledTarget({
+        isActive: () => Boolean(state.current.onPress) && state.current.inFront(),
+      });
+    }
     return voiceControl.addPressTarget({
       label: name,
       press: () => state.current.onPress?.(),
       isActive: () =>
         state.current.enabled && Boolean(state.current.onPress) && state.current.inFront(),
+      isOn: () => state.current.isOn,
     });
   }, [label]);
 }

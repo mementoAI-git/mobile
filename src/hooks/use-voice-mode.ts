@@ -85,6 +85,7 @@ import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-aler
 import { logger } from '@/lib/logger';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
+import { invalidateMemoryQueries } from '@/features/memories/cache';
 import { useAuthStore, useUserStore } from '@/store';
 
 type SetupReady = {
@@ -1226,7 +1227,16 @@ export function useVoiceMode({
         applyEffects: (effects) => {
           for (const effect of effects) {
             if (effect.type === 'refresh') {
-              void queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+              if (effect.what === 'profile') {
+                void queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+              } else if (effect.what === 'memories') {
+                invalidateMemoryQueries(queryClient, { includeUserStats: true });
+              } else if (effect.what === 'capsules') {
+                void queryClient.invalidateQueries({ queryKey: ['capsules'] });
+                void queryClient.invalidateQueries({ queryKey: queryKeys.capsuleStats });
+              } else {
+                void queryClient.invalidateQueries({ queryKey: queryKeys.beneficiaries });
+              }
             } else if (effect.type === 'open') {
               const destination = resolveVoiceDestination(effect.destination);
               if (destination) callActionsRef.current?.navigate(destination.href);
@@ -1371,6 +1381,8 @@ export function useVoiceMode({
             micPeak: Math.round(debugMicPeakRef.current * 1_000) / 1_000,
             bargeIns,
             suppressed,
+            buttonsOnScreen: voiceControl.activeButtons().length,
+            unlabelledTaps: voiceControl.unlabelledOnScreen(),
           });
           debugMicPeakRef.current = 0;
         }, 250);

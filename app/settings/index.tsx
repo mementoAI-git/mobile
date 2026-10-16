@@ -6,9 +6,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';

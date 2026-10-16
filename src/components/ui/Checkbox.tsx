@@ -1,5 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { View } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import * as Haptics from 'expo-haptics';
 import Check from 'lucide-react-native/icons/check';
 import { COLORS } from '@/constants/tokens';

@@ -4,10 +4,10 @@ import {
   Text,
   RefreshControl,
   StyleSheet,
-  TouchableOpacity,
   ImageBackground,
   Image,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Plus from 'lucide-react-native/icons/plus';

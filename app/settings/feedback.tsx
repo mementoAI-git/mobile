@@ -6,9 +6,9 @@ import {
   Platform,
   ScrollView,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ImagePlus from 'lucide-react-native/icons/image-plus';
 import RotateCcw from 'lucide-react-native/icons/rotate-ccw';

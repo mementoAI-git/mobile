@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { Button, TextInput, Spinner } from '@/components/ui';
 import ImageIcon from 'lucide-react-native/icons/image';
 import X from 'lucide-react-native/icons/x';

@@ -31,7 +31,8 @@ export function createScreenControlHandlers(deps: {
     [PRESS_BUTTON_TOOL]: (args) => {
       const label = typeof args.label === 'string' ? args.label.trim() : '';
       if (!label) return 'Which button? Ask the host what it says.';
-      return deps.registry.press(label.slice(0, 80));
+      const turnOn = typeof args.turn_on === 'boolean' ? args.turn_on : undefined;
+      return deps.registry.press(label.slice(0, 80), turnOn);
     },
   };
 }

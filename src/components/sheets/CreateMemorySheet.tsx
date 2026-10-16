@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { Button, TextInput, Spinner, LinkPreviews } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
 import ImageIcon from 'lucide-react-native/icons/image';

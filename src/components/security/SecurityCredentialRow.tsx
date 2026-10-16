@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import Trash2 from 'lucide-react-native/icons/trash';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';

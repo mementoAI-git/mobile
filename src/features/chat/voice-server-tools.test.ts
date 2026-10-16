@@ -78,6 +78,8 @@ describe('parseVoiceToolEffects', () => {
     expect(
       parseVoiceToolEffects([
         { type: 'refresh', what: 'profile' },
+        { type: 'refresh', what: 'capsules' },
+        { type: 'refresh', what: 'everything' },
         { type: 'open', destination: 'profile' },
         { type: 'open', destination: 'not-a-screen' },
         { type: 'open_story', id: '64b7f0c2a1b2c3d4e5f60718' },
@@ -87,6 +89,7 @@ describe('parseVoiceToolEffects', () => {
       ]),
     ).toEqual([
       { type: 'refresh', what: 'profile' },
+      { type: 'refresh', what: 'capsules' },
       { type: 'open', destination: 'profile' },
       { type: 'open_story', id: '64b7f0c2a1b2c3d4e5f60718' },
     ]);

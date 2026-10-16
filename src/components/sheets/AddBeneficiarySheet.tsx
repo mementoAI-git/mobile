@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';

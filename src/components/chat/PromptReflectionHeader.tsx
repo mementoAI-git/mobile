@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   LayoutAnimation,
   Platform,
   UIManager,
@@ -10,6 +9,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import ChevronUp from 'lucide-react-native/icons/chevron-up';
 import * as Haptics from 'expo-haptics';

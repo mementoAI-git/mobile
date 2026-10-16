@@ -4,12 +4,12 @@ import {
   Text,
   ImageBackground,
   Image,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';

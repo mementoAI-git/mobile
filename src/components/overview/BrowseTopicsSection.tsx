@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { useRouter } from 'expo-router';
 import { TYPE } from '@/constants/typography';
 import { Skeleton } from '@/components/ui/Skeleton';

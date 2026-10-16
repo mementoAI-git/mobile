@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import Pencil from 'lucide-react-native/icons/pencil';
 import Eye from 'lucide-react-native/icons/eye';
 import Pause from 'lucide-react-native/icons/pause';

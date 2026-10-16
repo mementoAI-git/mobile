@@ -17,12 +17,11 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   ScrollView,
   StyleSheet,
   Animated,
-  Pressable,
 } from 'react-native';
+import { Pressable, TouchableOpacity } from '@/components/ui/Touchable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BookOpen from 'lucide-react-native/icons/book-open';

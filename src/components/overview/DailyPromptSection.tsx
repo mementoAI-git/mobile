@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, TouchableOpacity, Text } from 'react-native';
+import { View, Text } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import Square from 'lucide-react-native/icons/square';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';

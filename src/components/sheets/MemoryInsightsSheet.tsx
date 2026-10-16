@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, ScrollView, Image } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Plus from 'lucide-react-native/icons/plus';

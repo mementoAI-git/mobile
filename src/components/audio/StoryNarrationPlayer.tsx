@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { useAudioPlayer } from 'expo-audio';
 import Play from 'lucide-react-native/icons/play';
 import Pause from 'lucide-react-native/icons/pause';

@@ -8,9 +8,14 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, TouchableOpacity, Share,
-  ScrollView, TextInput, ActivityIndicator,
+  View,
+  Text,
+  Share,
+  ScrollView,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import X from 'lucide-react-native/icons/x';
 import Share2 from 'lucide-react-native/icons/share-2';
 import Bookmark from 'lucide-react-native/icons/bookmark';
