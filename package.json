@@ -16,10 +16,11 @@
     "test:native-voice": "mkdir -p .native-test && clang++ -std=c++20 -O1 -pthread -Wall -I modules/react-native-memento-voice/common/cpp modules/react-native-memento-voice/common/cpp/mementovoice/VoicePlaybackSession.cpp modules/react-native-memento-voice/common/cpp/tests/declick_test.cpp -o .native-test/declick_test && ./.native-test/declick_test && clang++ -std=c++20 -O1 -pthread -Wall -I modules/react-native-memento-voice/common/cpp modules/react-native-memento-voice/common/cpp/mementovoice/VoicePlaybackSession.cpp modules/react-native-memento-voice/common/cpp/tests/playback_quality_test.cpp -o .native-test/playback_quality_test && ./.native-test/playback_quality_test",
     "typecheck": "tsc --noEmit --ignoreDeprecations 6.0",
     "check:prod": "node scripts/check-production-readiness.js",
+    "check:native-duplicates": "node scripts/check-native-duplicates.js",
     "check:typography": "node scripts/check-typography-compliance.js",
     "check:responsive": "bun test src/features/layout/responsive-compliance.test.ts",
     "doctor": "node scripts/run-expo-doctor.js",
-    "verify": "bun run lint && bun run typecheck && bun run check:typography && bun run check:responsive && bun run test && bun run check:prod",
+    "verify": "bun run lint && bun run typecheck && bun run check:typography && bun run check:responsive && bun run test && bun run check:prod && bun run check:native-duplicates",
     "verify:full": "bun run verify && bun run doctor",
     "prepare": "husky"
   },
@@ -120,7 +121,9 @@
     "typescript": "~6.0.3"
   },
   "overrides": {
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "expo-constants": "~57.0.22",
+    "expo-linking": "~57.0.13"
   },
   "private": true,
   "patchedDependencies": {

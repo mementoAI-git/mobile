@@ -43,6 +43,10 @@ jobs:
       - name: Production readiness checks
         run: bun run check:prod
 
+      # Fast, lockfile-only: names the native module and the fix before expo-doctor runs.
+      - name: One version of each native module
+        run: bun run check:native-duplicates
+
       - name: Expo Doctor
         run: bun run doctor
 
