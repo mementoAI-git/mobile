@@ -16,10 +16,12 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { Asset } from 'expo-asset';
 
 import * as Sentry from '@sentry/react-native';
+import { ObserveRoot, useObserve } from 'expo-observe';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClientProvider } from '@tanstack/react-query';
 import {
   Stack,
+  useNavigationContainerRef,
   useRouter,
   useSegments,
   useRootNavigationState,
@@ -40,10 +42,6 @@ import { EBGaramond_500Medium } from '@expo-google-fonts/eb-garamond/500Medium';
 import { EBGaramond_700Bold } from '@expo-google-fonts/eb-garamond/700Bold';
 import { EBGaramond_400Regular_Italic } from '@expo-google-fonts/eb-garamond/400Regular_Italic';
 import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono/400Regular';
-import { Geist_400Regular } from '@expo-google-fonts/geist/400Regular';
-import { Geist_500Medium } from '@expo-google-fonts/geist/500Medium';
-import { Geist_600SemiBold } from '@expo-google-fonts/geist/600SemiBold';
-import { Geist_700Bold } from '@expo-google-fonts/geist/700Bold';
 
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -68,9 +66,12 @@ import { storageKeys } from '@/constants/storage-keys';
 
 import { COLORS } from '@/constants/tokens';
 import {
+  API_BASE_URL,
   SENTRY_DSN,
+  SENTRY_ENVIRONMENT,
   SENTRY_TRACES_SAMPLE_RATE,
 } from '@/lib/env';
+import { tracePropagationTargetsFor } from '@/lib/sentry-tracing';
 import { normalizeAppHref } from '@/lib/navigation';
 import { queryClient } from '@/lib/query-client';
 import { logger } from '@/lib/logger';
@@ -89,6 +90,7 @@ import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import type { IUser } from '@/types';
 import { shouldInitializeNotifications } from '@/features/notifications/work-policy';
+import { sampleVoiceTraces } from '@/features/chat/voice-telemetry';
 
 // -----------------------------------------------------------------------------
 // Reanimated
@@ -136,13 +138,26 @@ const SPLASH_ASSETS = [
 // Sentry
 // -----------------------------------------------------------------------------
 
+// Turns each screen change into a navigation transaction. RootLayout registers
+// expo-router's navigation container with it.
+const navigationIntegration = Sentry.reactNavigationIntegration({
+  enableTimeToInitialDisplay: true,
+});
+
 if (SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
+    environment: SENTRY_ENVIRONMENT,
     debug: __DEV__,
-    tracesSampleRate: Number.isFinite(SENTRY_TRACES_SAMPLE_RATE)
-      ? SENTRY_TRACES_SAMPLE_RATE
-      : 0.2,
+    integrations: [navigationIntegration],
+    // Trace headers go to our API only, not to third parties or storage URLs.
+    tracePropagationTargets: tracePropagationTargetsFor(API_BASE_URL),
+    // Every voice call is traced; other traces keep the configured rate.
+    tracesSampler: (context) =>
+      sampleVoiceTraces(
+        context,
+        Number.isFinite(SENTRY_TRACES_SAMPLE_RATE) ? SENTRY_TRACES_SAMPLE_RATE : 0.2,
+      ),
     sendDefaultPii: false,
 
     // Disable session replay to avoid continuous capture overhead while
@@ -215,7 +230,9 @@ function SessionBootstrap() {
         queryKey: queryKeys.profile,
         queryFn: async () =>
           (await get<IUser>(endpoint.profile)).data,
-        staleTime: 0,
+        // Accept a warm cache (<60s) so launch doesn't block on this
+        // round-trip; useProfile revalidates in the background on mount.
+        staleTime: 60_000,
       })
       .then(async (user) => {
         const currentPhase = useAuthStore.getState().phase;
@@ -272,6 +289,13 @@ function SessionBootstrap() {
 // -----------------------------------------------------------------------------
 
 function RootLayout() {
+  const navigationRef = useNavigationContainerRef();
+  useEffect(() => {
+    if (SENTRY_DSN && navigationRef) {
+      navigationIntegration.registerNavigationContainer(navigationRef);
+    }
+  }, [navigationRef]);
+
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
   const phase = useAuthStore((state) => state.phase);
@@ -343,13 +367,11 @@ function RootLayout() {
     EBGaramond_400Regular_Italic,
     AzeretMono_400Regular,
 
-    Geist_400Regular,
-    Geist_500Medium,
-    Geist_600SemiBold,
-    Geist_700Bold,
+    // NOTE: Geist weights removed from the blocking set — zero usage on
+    // mobile (verified: no font-geist classes, no Geist fontFamily styles).
+    // If web-parity numerics need it later, lazy-load after first paint.
 
     // Map web font family names directly to RN loaded fonts.
-    Geist: Geist_400Regular,
     Garamond: EBGaramond_400Regular,
     Sans: Inter_400Regular,
 
@@ -389,19 +411,27 @@ function RootLayout() {
   // App readiness
   // ---------------------------------------------------------------------------
 
+  const appReady =
+    navigationReady &&
+    hydrated &&
+    sessionStable &&
+    Boolean(fontsLoaded);
+
   useEffect(() => {
-    useUiStore.getState().setAppReady(
-      navigationReady &&
-      hydrated &&
-      sessionStable &&
-      Boolean(fontsLoaded),
-    );
-  }, [
-    navigationReady,
-    hydrated,
-    sessionStable,
-    fontsLoaded,
-  ]);
+    useUiStore.getState().setAppReady(appReady);
+  }, [appReady]);
+
+  // Expo Observe time-to-interactive: the app is ready AND the animated splash
+  // is gone, i.e. the user can actually use it. Reported once per launch.
+  // First launches play the full ~8s cinematic splash, returning ones ~1.3s,
+  // so they are tagged to keep the two apart in the dashboard.
+  const { markInteractive } = useObserve();
+  const markedInteractiveRef = React.useRef(false);
+  useEffect(() => {
+    if (!appReady || showAnimatedSplash || markedInteractiveRef.current) return;
+    markedInteractiveRef.current = true;
+    markInteractive({ params: { firstLaunch: hasSeenSplash === false } });
+  }, [appReady, hasSeenSplash, markInteractive, showAnimatedSplash]);
 
   // ---------------------------------------------------------------------------
   // Auth-driven navigation
@@ -671,7 +701,9 @@ function RootLayout() {
 
       {showAnimatedSplash && (
         <AnimatedSplash
-          replaySpeed={hasSeenSplash === true ? 2 : 1}
+          // Returning users get a ~1.3s brand hold instead of the full 8s
+          // cinematic — the full replay bought nothing after first launch.
+          replaySpeed={hasSeenSplash === true ? 6 : 1}
           onReady={hideNativeSplash}
           onDone={() => {
             void AsyncStorage.setItem(
@@ -692,6 +724,9 @@ function RootLayout() {
 
 // Only wrap with Sentry when it has been initialized.
 // Calling Sentry.wrap() before Sentry.init() causes tracing issues.
-export default SENTRY_DSN
-  ? Sentry.wrap(RootLayout)
-  : RootLayout;
+// ObserveRoot provides useObserve() to RootLayout and records app startup.
+export default ObserveRoot.wrap(
+  SENTRY_DSN
+    ? Sentry.wrap(RootLayout)
+    : RootLayout,
+);

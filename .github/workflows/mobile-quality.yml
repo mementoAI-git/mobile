@@ -10,7 +10,7 @@ on:
 
 jobs:
   quality:
-    name: Typecheck and production gates
+    name: Lint, typecheck, and production gates
     runs-on: ubuntu-latest
 
     steps:
@@ -25,15 +25,28 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Lint
+        run: bun run lint
+
       - name: Typecheck
         run: bun run typecheck
 
       - name: Unit tests
         run: bun run test
 
+      - name: Native C++ voice tests
+        # Compiles and runs the declick and playback-quality unit tests directly
+        # on the runner — no simulator needed. clang++ with C++20 is pre-installed
+        # on ubuntu-latest (clang-18).
+        run: bun run test:native-voice
+
       - name: Production readiness checks
         run: bun run check:prod
 
+      # Fast, lockfile-only: names the native module and the fix before expo-doctor runs.
+      - name: One version of each native module
+        run: bun run check:native-duplicates
+
       - name: Expo Doctor
         run: bun run doctor
-        
+

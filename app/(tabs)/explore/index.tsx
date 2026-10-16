@@ -12,6 +12,7 @@ import { getPromptCategorySlug } from '@/features/explore/category-identity';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useExploreLogic } from '@/hooks/use-explore-logic';
 import { useFocusEffect } from 'expo-router';
+import { useVoiceScroll } from '@/features/voice-control/hooks';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const EMPTY_EXPLORE_IMG = require('../../../assets/images/illustrations/empty_explore.webp');
@@ -50,6 +51,8 @@ export default function ExploreScreen() {
     }, [refetchIfStale])
   );
 
+  // Lets voice scroll this screen ("scroll down", "go to the top").
+  const voiceScrollRef = useVoiceScroll<FlatList<any>>();
   const getCategoryMeta = useCallback((item: any) => {
     const categorySlug = getPromptCategorySlug(item);
     const rawKey = categorySlug.toLowerCase();
@@ -148,7 +151,8 @@ export default function ExploreScreen() {
         {isLoading && !categories.length ? (
           <ExploreSkeleton />
         ) : (
-          <FlatList
+          <Animated.FlatList
+            ref={voiceScrollRef}
             data={categories}
             keyExtractor={(item, i) => getPromptCategorySlug(item) || String(i)}
             initialNumToRender={8}

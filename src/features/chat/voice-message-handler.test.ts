@@ -208,4 +208,19 @@ describe('VoiceMessageHandler', () => {
       { type: 'tool-call-cancellation', ids: ['c1'] },
     ]);
   });
+
+  test('reports Gemini token usage when a message carries it', () => {
+    const handler = new VoiceMessageHandler();
+
+    expect(
+      handler.handle(
+        { usageMetadata: { promptTokenCount: 1200, responseTokenCount: 80, totalTokenCount: 1280 } } as any,
+        1,
+      ),
+    ).toEqual([{ type: 'usage', promptTokens: 1200, responseTokens: 80, totalTokens: 1280 }]);
+    expect(handler.handle({ usage_metadata: { total_token_count: 9 } } as any, 1)).toEqual([
+      { type: 'usage', promptTokens: undefined, responseTokens: undefined, totalTokens: 9 },
+    ]);
+    expect(handler.handle({ serverContent: {} } as any, 1)).toEqual([]);
+  });
 });

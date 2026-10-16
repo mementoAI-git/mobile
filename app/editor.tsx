@@ -10,10 +10,21 @@
  */
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, StyleSheet, Image,
-  ActivityIndicator, Keyboard, Modal, ImageBackground, Linking,
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Image,
+  ActivityIndicator,
+  Keyboard,
+  Modal,
+  ImageBackground,
+  Linking,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView, SafeAreaInsetsContext, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';

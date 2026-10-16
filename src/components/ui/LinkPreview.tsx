@@ -2,13 +2,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Linking,
   Image,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { Image as ExpoImage } from 'expo-image';
 import ExternalLink from 'lucide-react-native/icons/external-link';
 import X from 'lucide-react-native/icons/x';

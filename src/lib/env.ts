@@ -39,6 +39,10 @@ export function publishedPostUrl(memoryId?: string | null): string {
 
 export const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() ?? '';
 
+/** Set per EAS profile, so TestFlight traces don't mix with production ones. */
+export const SENTRY_ENVIRONMENT =
+  process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT?.trim() || (isDev ? 'development' : 'production');
+
 export const SENTRY_TRACES_SAMPLE_RATE = Number(
   process.env.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? (isDev ? '1' : '0.2'),
 );

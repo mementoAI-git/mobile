@@ -2,11 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
-  Pressable,
   Platform,
   ImageBackground,
 } from 'react-native';
+import { Pressable, TouchableOpacity } from '@/components/ui/Touchable';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,

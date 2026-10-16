@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Linking, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, FlatList, Linking, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';

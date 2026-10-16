@@ -1,5 +1,6 @@
 import React, {useCallback} from 'react';
-import {ImageBackground, Platform, ScrollView, Text, TouchableOpacity, View} from 'react-native';
+import { ImageBackground, Platform, ScrollView, Text, View } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Check from 'lucide-react-native/icons/check';
 import * as Haptics from 'expo-haptics';

@@ -3,9 +3,9 @@ import {
   View,
   Text,
   TextInput as RNTextInput,
-  Pressable,
   StyleSheet,
 } from 'react-native';
+import { Pressable } from '@/components/ui/Touchable';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInRight, FadeInDown } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';

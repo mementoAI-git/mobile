@@ -1,5 +1,6 @@
 import React, {useCallback, useState} from 'react';
-import {Pressable, ScrollView, Text, View} from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
+import { Pressable } from '@/components/ui/Touchable';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useRouter} from 'expo-router';
 import {useQueryClient} from '@tanstack/react-query';

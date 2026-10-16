@@ -18,7 +18,9 @@
  */
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Image, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { getThumbnailAsync } from 'expo-video-thumbnails';
 import * as Haptics from 'expo-haptics';
 import Play from 'lucide-react-native/icons/play';
@@ -200,7 +202,9 @@ export function VideoThumbnail({
         <Image
           source={{ uri: thumbUri }}
           style={StyleSheet.absoluteFill}
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy="disk"
+          recyclingKey={thumbUri}
           onLoad={() => runtimeDiagnostics.record('media', 'thumbnail-image-load', {
             outcome: 'success',
             source: hasServerThumb ? 'server' : 'generated',

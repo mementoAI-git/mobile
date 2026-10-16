@@ -1,5 +1,6 @@
 import React, {useCallback} from 'react';
-import {Pressable, Text, View} from 'react-native';
+import { Text, View } from 'react-native';
+import { Pressable } from '@/components/ui/Touchable';
 import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
 

@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import { Avatar } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';

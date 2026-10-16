@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, Image } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import dayjs from 'dayjs';

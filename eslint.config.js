@@ -18,6 +18,32 @@ module.exports = defineConfig([
     },
   },
   {
+    // Taps must go through the voice-aware wrappers so Memento can press
+    // them by voice ("tap Save"). Error level: --quiet hides warnings.
+    files: ['app/**/*.{ts,tsx}', 'src/**/*.{ts,tsx}'],
+    ignores: [
+      'src/components/ui/Touchable.tsx',
+      'src/components/ui/Button.tsx',
+      'src/components/settings/SettingsHubRow.tsx',
+      'app/voice-call.tsx',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react-native',
+              importNames: ['TouchableOpacity', 'Pressable'],
+              message:
+                "Import TouchableOpacity and Pressable from '@/components/ui/Touchable' so voice can press them.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['scripts/**/*.js'],
     languageOptions: {
       globals: {

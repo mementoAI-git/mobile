@@ -8,7 +8,8 @@
  */
 
 import React, { useCallback } from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Svg, Path } from 'react-native-svg';

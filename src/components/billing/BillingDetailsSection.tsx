@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import FileText from 'lucide-react-native/icons/file-text';
 import Pencil from 'lucide-react-native/icons/pencil';
 import * as Haptics from 'expo-haptics';

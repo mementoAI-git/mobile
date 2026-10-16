@@ -6,9 +6,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
@@ -33,6 +33,8 @@ import { useSubscription } from '@/hooks/queries/use-subscription';
 import { TYPE } from '@/constants/typography';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { useProfileSettingsLogic } from '@/hooks/use-profile-settings-logic';
+import { useVoiceScroll } from '@/features/voice-control/hooks';
+import Animated from 'react-native-reanimated';
 
 const X_ICON = require('../../assets/images/icons/x.png');
 const DISCORD_ICON = require('../../assets/images/icons/discord-colored.png');
@@ -71,6 +73,8 @@ export default function SettingsIndex() {
     })}`
     : null;
 
+  // Lets voice scroll this screen ("scroll down", "go to the top").
+  const voiceScrollRef = useVoiceScroll<Animated.ScrollView>();
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();
     if (router.canGoBack()) router.back();
@@ -107,7 +111,11 @@ export default function SettingsIndex() {
           <View style={{ width: 44 }} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <Animated.ScrollView
+          ref={voiceScrollRef}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}
+        >
         <View style={{ marginBottom: 16 }}>
           <PlanSummaryBanner
             isProOrAbove={isProOrAbove}
@@ -287,7 +295,7 @@ export default function SettingsIndex() {
             </View>
           </View>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
       </ResponsiveScreen>
 
       <OnboardingCelebrationOverlay

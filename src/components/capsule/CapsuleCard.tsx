@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, TouchableOpacity, Text } from 'react-native';
+import { View, Text } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import * as Haptics from 'expo-haptics';
 import dayjs from 'dayjs';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';

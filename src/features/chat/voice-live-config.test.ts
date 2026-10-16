@@ -16,6 +16,7 @@ describe('voice Live configuration', () => {
       token: 'ephemeral',
       model: 'gemini-3.8-live',
       supportsVoiceTurns: false,
+      serverTools: [],
       voiceName: 'Fenrir',
     });
   });
@@ -26,6 +27,7 @@ describe('voice Live configuration', () => {
       model: 'gemini-2.5-flash-native-audio-preview-09-2025',
       voiceName: 'Aoede',
       supportsVoiceTurns: false,
+      serverTools: [],
     });
   });
 
@@ -117,4 +119,33 @@ describe('voice Live configuration', () => {
     expect(parsed.speakerFullDuplex).toBe(false);
     expect(parseVoiceLiveToken({ token: 't' }, 'Fenrir').speakerFullDuplex).toBeUndefined();
   });
+
+  test('parses the turn detection the API locked into the session', () => {
+    expect(
+      parseVoiceLiveToken(
+        {
+          token: 't',
+          turnDetection: { variant: 'silence-800', silenceDurationMs: 800, prefixPaddingMs: 200 },
+        },
+        'Fenrir',
+      ).turnDetection,
+    ).toEqual({ variant: 'silence-800', silenceDurationMs: 800, prefixPaddingMs: 200 });
+    expect(
+      parseVoiceLiveToken({ token: 't', turnDetection: { silenceDurationMs: 'x' } }, 'Fenrir')
+        .turnDetection,
+    ).toEqual({ variant: undefined, silenceDurationMs: undefined, prefixPaddingMs: undefined });
+    expect(parseVoiceLiveToken({ token: 't' }, 'Fenrir').turnDetection).toBeUndefined();
+  });
+
+  test('lists the server tools to forward, dropping malformed names', () => {
+    const token = parseVoiceLiveToken(
+      {
+        token: 't',
+        serverTools: ['update_profile', 'open_story', 42, '../../x', 'UPPER'],
+      },
+      'Aoede',
+    );
+    expect(token.serverTools).toEqual(['update_profile', 'open_story']);
+  });
 });
+

@@ -23,9 +23,16 @@ import React, {
   useRef, useState, useCallback, useEffect,
 } from 'react';
 import {
-  View, Text, Modal, TouchableOpacity, StyleSheet, Image,
-  ActivityIndicator, AppState, Linking,
+  View,
+  Text,
+  Modal,
+  StyleSheet,
+  Image,
+  ActivityIndicator,
+  AppState,
+  Linking,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-context';
 import { CameraView, Camera as ExpoCamera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';

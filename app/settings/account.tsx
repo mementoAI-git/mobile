@@ -6,9 +6,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Fingerprint from 'lucide-react-native/icons/fingerprint-pattern';
 import ShieldCheck from 'lucide-react-native/icons/shield-check';

@@ -6,7 +6,7 @@
  * - Fetches first 24KB of page HTML to extract <title> and OpenGraph metadata.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface LinkPreviewData {
@@ -191,12 +191,28 @@ async function fetchOgData(url: string): Promise<{ title: string | null; descrip
   }
 }
 
+// In-flight dedup across hook instances: 10 bubbles linking the same URL
+// share one fetch instead of firing 10 concurrent ones. Entries clear on
+// settle so later mounts revalidate through the persistent cache.
+const inflight = new Map<string, Promise<{ title: string | null; description: string | null; imageUrl: string | null }>>();
+
+function fetchOgDataShared(url: string) {
+  let pending = inflight.get(url);
+  if (!pending) {
+    pending = fetchOgData(url).finally(() => {
+      inflight.delete(url);
+    });
+    inflight.set(url, pending);
+  }
+  return pending;
+}
+
 /**
  * Hook: given message text, returns an array of link preview data objects.
  * Loads cached values from storage first, then fetches missing ones dynamically.
  */
 export function useLinkPreview(text: string): LinkPreviewData[] {
-  const urls = extractUrls(text);
+  const urls = useMemo(() => extractUrls(text), [text]);
   const [previews, setPreviews] = useState<LinkPreviewData[]>([]);
   const loadedRef = useRef<Set<string>>(new Set());
 
@@ -226,6 +242,7 @@ export function useLinkPreview(text: string): LinkPreviewData[] {
       });
       setPreviews(stubs);
 
+      let wroteCache = false;
       for (const url of urls) {
         if (cancelled) break;
         if (cache.has(url) || loadedRef.current.has(url)) {
@@ -236,8 +253,13 @@ export function useLinkPreview(text: string): LinkPreviewData[] {
         }
         loadedRef.current.add(url);
         try {
-          const og = await fetchOgData(url);
+          const og = await fetchOgDataShared(url);
           if (cancelled) break;
+          // A sibling instance may have already cached it while we awaited.
+          if (cache.has(url)) {
+            setPreviews(prev => prev.map(p => p.url === url ? cache.get(url)! : p));
+            continue;
+          }
           const data: LinkPreviewData = {
             url,
             hostname: getHostname(url),
@@ -248,18 +270,20 @@ export function useLinkPreview(text: string): LinkPreviewData[] {
             loaded: true,
           };
           cache.set(url, data);
-          await persistCache();
+          wroteCache = true;
           if (cancelled) break;
           setPreviews(prev => prev.map(p => p.url === url ? data : p));
         } catch {}
       }
+      // One batched disk write instead of one per URL.
+      if (wroteCache) await persistCache();
     };
 
     run();
     return () => {
       cancelled = true;
     };
-  }, [text]);
+  }, [urls]);
 
   return previews;
 }

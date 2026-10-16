@@ -40,6 +40,7 @@ describe('app-wide voice call', () => {
     const screen = await read('app/voice-call.tsx');
 
     expect(screen).toContain('useVoiceCall()');
+    expect(screen).toContain("? 'Reconnecting…'");
     expect(screen).not.toContain('useVoiceMode(');
     expect(screen).not.toContain('useBackgroundMusic');
     expect(screen).toContain('accessibilityLabel="Minimize call"');
@@ -74,5 +75,24 @@ describe('app-wide voice call', () => {
     expect(provider).toContain('if (!isCallLive(current)) {');
     expect(provider).toContain('callActivity.controller.endNow();');
   });
-});
 
+  test('tells the user when a call could not start instead of silently resetting', async () => {
+    const screen = await Bun.file(new URL('../../../app/voice-call.tsx', import.meta.url)).text();
+
+    expect(screen).toContain("voice.connectionFailure?.kind === 'connection-error' && !voice.isConnecting");
+    expect(screen).toContain('We couldn’t start your call. Check your connection and try again.');
+  });
+
+  test('saves the chosen voice to the profile before a call token is built for it', async () => {
+    const screen = await Bun.file(new URL('../../../app/voice-call.tsx', import.meta.url)).text();
+    const sheet = await Bun.file(
+      new URL('../../components/sheets/VoiceCallSettingsSheet.tsx', import.meta.url),
+    ).text();
+
+    expect(screen).toContain('if (!choice || !(await persistVoice(choice))) return;');
+    expect(screen).toContain("if (stage !== 'ready' || !voiceInSync) return;");
+    expect(screen).toContain('profileUsesVoice(userStoreUser ?? user, selectedVoice)');
+    expect(sheet).toContain('await saveCallVoice(voice, { saveProfile: updateProfileAsync, saveLocal: selectVoice });');
+    expect(sheet).not.toContain('updateProfile({ chat_voice');
+  });
+});

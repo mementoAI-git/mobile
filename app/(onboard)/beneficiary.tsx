@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SelectionChip } from '@/components/onboarding/SelectionChip';
 import { RELATIONSHIP_OPTIONS } from '@/constants/onboarding';

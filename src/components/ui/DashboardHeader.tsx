@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
-import { View, ImageBackground, TouchableOpacity } from 'react-native';
+import { View, ImageBackground } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import Animated from 'react-native-reanimated';
 import Search from 'lucide-react-native/icons/search';
 import { Avatar } from './Avatar';

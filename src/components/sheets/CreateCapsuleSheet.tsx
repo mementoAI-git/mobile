@@ -2,11 +2,11 @@ import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   ScrollView,
   Platform,
   Keyboard,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';

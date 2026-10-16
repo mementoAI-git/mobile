@@ -1,5 +1,6 @@
 import React from 'react';
-import { ImageBackground, View, ScrollView, ImageSourcePropType, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { ImageBackground, View, ScrollView, ImageSourcePropType, StyleSheet, Platform } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import * as Haptics from 'expo-haptics';
 import type { LucideIcon } from 'lucide-react-native';
 import { cn } from '@/lib/utils';

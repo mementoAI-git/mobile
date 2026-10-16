@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground, Text} from 'react-native';
+import { View, ScrollView, ImageBackground, Text } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';

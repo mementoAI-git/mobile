@@ -22,13 +22,29 @@ function normalizeTranscript(value: string): string {
  * three forms without duplicating words or dropping corrections.
  */
 export function mergeVoiceTranscript(current: string, incoming: string): string {
+  return mergeTranscriptParts(current, incoming).text;
+}
+
+function leadingSharedWords(previous: string, next: string): { shared: number; total: number } {
+  const a = previous.toLocaleLowerCase().split(' ');
+  const b = next.toLocaleLowerCase().split(' ');
+  let shared = 0;
+  while (shared < a.length && shared < b.length && a[shared] === b[shared]) shared += 1;
+  return { shared, total: a.length };
+}
+
+/**
+ * `related` is false when `incoming` has no visible relation to `current`
+ * and was simply appended: then it may be a different utterance.
+ */
+function mergeTranscriptParts(current: string, incoming: string): { text: string; related: boolean } {
   const previous = normalizeTranscript(current);
   const next = normalizeTranscript(incoming);
-  if (!next) return previous;
-  if (!previous) return next;
-  if (next === previous) return previous;
-  if (next.startsWith(previous)) return next;
-  if (previous.startsWith(next)) return previous;
+  if (!next) return { text: previous, related: true };
+  if (!previous) return { text: next, related: true };
+  if (next === previous) return { text: previous, related: true };
+  if (next.startsWith(previous)) return { text: next, related: true };
+  if (previous.startsWith(next)) return { text: previous, related: true };
 
   const previousLower = previous.toLocaleLowerCase();
   const nextLower = next.toLocaleLowerCase();
@@ -43,11 +59,21 @@ export function mergeVoiceTranscript(current: string, incoming: string): string 
       nextBoundary &&
       previousLower.slice(-overlap) === nextLower.slice(0, overlap)
     ) {
-      return `${previous}${next.slice(overlap)}`;
+      return { text: `${previous}${next.slice(overlap)}`, related: true };
     }
   }
 
-  return NO_SPACE_BEFORE.test(next) ? `${previous}${next}` : `${previous} ${next}`;
+  // A corrected snapshot: it opens with most of the existing text and then
+  // differs ("I went to Lagos" -> "I went to Abuja"). Keep the newer version;
+  // appending would store both. A continuation never restates most of the
+  // line before it.
+  const { shared, total } = leadingSharedWords(previous, next);
+  if (shared >= 2 && shared >= Math.ceil(total / 2)) return { text: next, related: true };
+
+  return {
+    text: NO_SPACE_BEFORE.test(next) ? `${previous}${next}` : `${previous} ${next}`,
+    related: false,
+  };
 }
 
 export class VoiceTranscriptTurns {
@@ -74,13 +100,15 @@ export class VoiceTranscriptTurns {
       this.active.userInterim = mergeVoiceTranscript(this.active.userInterim, fragment);
     } else {
       const pendingUser = this.pending?.messages.find((message) => message.role === 'user');
-      if (this.pending && !this.active.userInterim && !this.active.userFinal) {
-        if (pendingUser) {
-          pendingUser.text = mergeVoiceTranscript(pendingUser.text, fragment);
-        } else {
-          this.pending.messages.unshift({ role: 'user', text: fragment.trim(), is_voice: true });
+      // A late final for the turn that just ended amends it. Anything else in
+      // the settle window is the user's next utterance: it starts a new turn,
+      // even after a model-only turn like the greeting.
+      if (pendingUser && !this.active.userInterim && !this.active.userFinal) {
+        const merged = mergeTranscriptParts(pendingUser.text, fragment);
+        if (merged.related) {
+          pendingUser.text = merged.text;
+          return pendingUser.text;
         }
-        return pendingUser?.text ?? fragment.trim();
       }
       this.active.userFinal = mergeVoiceTranscript(this.active.userFinal, fragment);
       this.active.userInterim = '';

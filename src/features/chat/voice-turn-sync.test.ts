@@ -87,4 +87,19 @@ describe('VoiceTurnSync', () => {
     expect(calls[0].body.memory_id).toBe('m0');
     expect(calls[0].body.turns.filter((t: any) => t.interrupted).map((t: any) => t.text)).toEqual(['d']);
   });
+
+  test('reports every change to its unacknowledged turns, for the on-device outbox', async () => {
+    const { post } = recorder([new Error('offline')]);
+    const snapshots: Array<{ turns: number[]; memoryId?: string }> = [];
+    const sync = new VoiceTurnSync(post, '/ai/voice/turns', 's1', undefined, (pending, memoryId) =>
+      snapshots.push({ turns: pending.map((t) => t.index), memoryId }),
+    );
+
+    sync.addTurns([turn('hi', 'hey')]);
+    await sync.flush(); // fails: still pending
+    await sync.flush(); // succeeds: acknowledged
+
+    expect(snapshots[0]).toEqual({ turns: [0, 1], memoryId: undefined });
+    expect(snapshots.at(-1)).toEqual({ turns: [], memoryId: 'm1' });
+  });
 });

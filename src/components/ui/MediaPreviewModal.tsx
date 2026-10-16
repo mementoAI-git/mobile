@@ -12,10 +12,20 @@
 
 import React, { useRef, useCallback, useState, useEffect, useMemo } from 'react';
 import {
-  View, Text, Modal, FlatList,
-  TouchableOpacity, useWindowDimensions, Animated as RNAnimated,
-  StyleSheet, Share, ActivityIndicator, Image, ImageBackground, Platform,
+  View,
+  Text,
+  Modal,
+  FlatList,
+  useWindowDimensions,
+  Animated as RNAnimated,
+  StyleSheet,
+  Share,
+  ActivityIndicator,
+  Image,
+  ImageBackground,
+  Platform,
 } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 // Type-only import: erased at compile time, never triggers the native module
 // lookup — safe to keep even when the real package isn't usable (Expo Go).
 import type * as MediaLibraryType from 'expo-media-library/legacy';

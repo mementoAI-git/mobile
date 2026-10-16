@@ -6,7 +6,8 @@
  */
 
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
-import { View, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
+import { TouchableOpacity } from '@/components/ui/Touchable';
 import {
   RichText,
   useEditorBridge,

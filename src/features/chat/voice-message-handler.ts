@@ -12,7 +12,8 @@ export type VoiceMessageEffect =
   | { type: 'resumption-handle'; handle: string }
   | { type: 'go-away'; timeLeftMs: number }
   | { type: 'tool-call'; calls: VoiceToolCall[] }
-  | { type: 'tool-call-cancellation'; ids: string[] };
+  | { type: 'tool-call-cancellation'; ids: string[] }
+  | { type: 'usage'; promptTokens?: number; responseTokens?: number; totalTokens?: number };
 
 export type VoiceServerMessageSummary = {
   setupComplete: boolean;
@@ -124,6 +125,20 @@ export class VoiceMessageHandler {
       effects.push({
         type: 'tool-call-cancellation',
         ids: cancellation.ids.filter((id: unknown): id is string => typeof id === 'string'),
+      });
+    }
+
+    const usage = message.usageMetadata ?? message.usage_metadata;
+    if (usage && typeof usage === 'object') {
+      const count = (camel: string, snake: string) => {
+        const value = (usage as Record<string, unknown>)[camel] ?? (usage as Record<string, unknown>)[snake];
+        return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+      };
+      effects.push({
+        type: 'usage',
+        promptTokens: count('promptTokenCount', 'prompt_token_count'),
+        responseTokens: count('responseTokenCount', 'response_token_count'),
+        totalTokens: count('totalTokenCount', 'total_token_count'),
       });
     }
 

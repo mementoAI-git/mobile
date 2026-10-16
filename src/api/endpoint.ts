@@ -86,6 +86,7 @@ export default {
   ephemeralToken: '/ai/ephemeral-token',
   voiceTurns: '/ai/voice/turns',
   voiceMemorySearch: '/ai/voice/memory-search',
+  voiceTool: (name: string) => `/ai/voice/tools/${encodeURIComponent(name)}`,
   voiceCallEnd: '/ai/voice/calls/:sessionId/end',
   voiceCallSummary: '/ai/voice/calls/:sessionId/summary',
   generateTags: '/ai/generate-tags',

@@ -19,9 +19,33 @@ export type VoiceLiveToken = {
   supportsVoiceTurns: boolean;
   /** Tools the API locked into this session, for example ['search_memories']. */
   tools?: string[];
+  /** Tools to forward to POST /ai/voice/tools/:name. Empty on older APIs. */
+  serverTools: string[];
   /** Server device policy. Undefined on APIs that predate it. */
   speakerFullDuplex?: boolean;
+  /** Turn detection the API locked into the session. Undefined on older APIs. */
+  turnDetection?: VoiceTurnDetection;
 };
+
+export type VoiceTurnDetection = {
+  variant?: string;
+  silenceDurationMs?: number;
+  prefixPaddingMs?: number;
+};
+
+function finiteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function parseTurnDetection(value: unknown): VoiceTurnDetection | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const detection = value as Record<string, unknown>;
+  return {
+    variant: nonEmptyString(detection.variant) ? detection.variant : undefined,
+    silenceDurationMs: finiteNumber(detection.silenceDurationMs),
+    prefixPaddingMs: finiteNumber(detection.prefixPaddingMs),
+  };
+}
 
 export const LEGACY_LIVE_MODEL =
   'gemini-2.5-flash-native-audio-preview-09-2025';
@@ -78,8 +102,14 @@ export function parseVoiceLiveToken(
     tools: Array.isArray(response.tools)
       ? response.tools.filter((tool): tool is string => typeof tool === 'string')
       : undefined,
+    serverTools: Array.isArray(response.serverTools)
+      ? response.serverTools.filter(
+          (tool): tool is string => typeof tool === 'string' && /^[a-z_]{1,64}$/.test(tool),
+        )
+      : [],
     speakerFullDuplex:
       typeof response.speakerFullDuplex === 'boolean' ? response.speakerFullDuplex : undefined,
+    turnDetection: parseTurnDetection(response.turnDetection),
   };
 }
 

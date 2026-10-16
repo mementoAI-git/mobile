@@ -3,13 +3,17 @@ import { describe, expect, test } from 'bun:test';
 import type { VoiceBufferEndedEvent, VoiceQueuedBuffer } from './voice-audio-types';
 import {
   VoiceAudioEngine,
+  classifyOutputRoute,
   isHeadphonesRoute,
+  VOICE_BARGE_IN_HOLD_MS,
+  VOICE_INPUT_FRAMES,
   type VoiceAudioContextAdapter,
   type VoiceAudioNativeAdapter,
   type VoiceAudioQueueAdapter,
   type VoiceAudioRecorderAdapter,
 } from './voice-audio-engine';
-import { pcm16Base64ToFloat32 } from './voice-pcm';
+import { VOICE_ECHO_PRE_ROLL_FRAMES } from './voice-echo-gate';
+import { calculateRmsEnergy, pcm16Base64ToFloat32 } from './voice-pcm';
 
 class FakeQueue implements VoiceAudioQueueAdapter {
   private nextId = 1;
@@ -83,13 +87,19 @@ class FakeNative implements VoiceAudioNativeAdapter {
   appStateListener?: (state: string) => void;
   hasInputDevice = true;
   isHeadphonesDevice = false;
+  outputRoute: ReturnType<typeof classifyOutputRoute> = 'speaker';
   preferredSampleRate = 48_000;
+  /** When set, activating the audio session waits for it. */
+  sessionGate?: Promise<void>;
+  /** What iOS reports for voice processing; undefined = unknown (older native build). */
+  voiceProcessingActive?: boolean;
 
   setSessionOptions(options: object): void {
     this.calls.push(`session.options:${JSON.stringify(options)}`);
   }
   async setSessionActive(active: boolean): Promise<void> {
     this.calls.push(`session.active:${active}`);
+    if (active && this.sessionGate) await this.sessionGate;
   }
   getPreferredSampleRate(): number {
     this.calls.push(`session.sampleRate:${this.preferredSampleRate}`);
@@ -116,6 +126,12 @@ class FakeNative implements VoiceAudioNativeAdapter {
   }
   async isHeadphonesConnected(): Promise<boolean> {
     return this.isHeadphonesDevice;
+  }
+  async getOutputRoute() {
+    return this.outputRoute;
+  }
+  isVoiceProcessingActive(): boolean | undefined {
+    return this.voiceProcessingActive;
   }
   async requestRecordingPermission(): Promise<'Granted'> {
     return 'Granted';
@@ -151,7 +167,7 @@ describe('VoiceAudioEngine', () => {
     ]);
     expect(native.calls).toContain('queue.connect');
     expect(native.calls).toContain(
-      'recorder.callback:{"sampleRate":16000,"bufferLength":1600,"channelCount":1}',
+      `recorder.callback:{"sampleRate":16000,"bufferLength":${VOICE_INPUT_FRAMES},"channelCount":1}`,
     );
     expect(native.calls.at(-1)).toBe('recorder.start');
   });
@@ -183,18 +199,23 @@ describe('VoiceAudioEngine', () => {
   test('forwards actual mono frames as PCM16 and counts duration anomalies', async () => {
     const native = new FakeNative();
     const chunks: string[] = [];
+    const levels: number[] = [];
     const engine = new VoiceAudioEngine({ native });
-    await engine.start((chunk) => chunks.push(chunk));
+    await engine.start((chunk, rms) => {
+      chunks.push(chunk);
+      levels.push(rms);
+    });
 
-    const samples = Float32Array.from({ length: 1_600 }, (_, index) => index / 1_600);
-    native.recorder.input?.({ buffer: { getChannelData: () => samples }, numFrames: 1_600 });
-    const short = samples.subarray(0, 800);
-    native.recorder.input?.({ buffer: { getChannelData: () => short }, numFrames: 800 });
+    const samples = Float32Array.from({ length: VOICE_INPUT_FRAMES }, (_, index) => index / VOICE_INPUT_FRAMES);
+    native.recorder.input?.({ buffer: { getChannelData: () => samples }, numFrames: VOICE_INPUT_FRAMES });
+    const short = samples.subarray(0, VOICE_INPUT_FRAMES / 2);
+    native.recorder.input?.({ buffer: { getChannelData: () => short }, numFrames: VOICE_INPUT_FRAMES / 2 });
 
     const decoded = pcm16Base64ToFloat32(chunks[0]);
-    expect(decoded.ok && decoded.samples.length).toBe(1_600);
+    expect(decoded.ok && decoded.samples.length).toBe(VOICE_INPUT_FRAMES);
     const shortDecoded = pcm16Base64ToFloat32(chunks[1]);
-    expect(shortDecoded.ok && shortDecoded.samples.length).toBe(800);
+    expect(shortDecoded.ok && shortDecoded.samples.length).toBe(VOICE_INPUT_FRAMES / 2);
+    expect(levels).toEqual([calculateRmsEnergy(samples), calculateRmsEnergy(short)]);
     expect(engine.snapshot().captureDurationAnomalies).toBe(1);
     expect(engine.snapshot()).toMatchObject({
       modelOutputSampleRate: 24_000,
@@ -274,6 +295,64 @@ describe('VoiceAudioEngine', () => {
     expect(native.calls).toContain('queue.enqueue:4410:44100');
   });
 
+  test('names the output route, keeping Bluetooth call audio apart from Bluetooth media', () => {
+    expect(classifyOutputRoute(undefined)).toBe('unknown');
+    expect(classifyOutputRoute([])).toBe('unknown');
+    // iOS port types
+    expect(classifyOutputRoute([{ name: 'Speaker', category: 'Speaker' }])).toBe('speaker');
+    expect(classifyOutputRoute([{ name: 'Receiver', category: 'Receiver' }])).toBe('earpiece');
+    expect(classifyOutputRoute([{ name: 'Headphones', category: 'Headphones' }])).toBe('wired');
+    expect(classifyOutputRoute([{ name: 'USB', category: 'USBAudio' }])).toBe('wired');
+    expect(classifyOutputRoute([{ name: 'Bose', category: 'BluetoothHFP' }])).toBe('bluetooth-call');
+    expect(classifyOutputRoute([{ name: 'AirPods', category: 'BluetoothA2DPOutput' }])).toBe('bluetooth-media');
+    expect(classifyOutputRoute([{ name: 'Beats', category: 'BluetoothLE' }])).toBe('bluetooth-media');
+    expect(classifyOutputRoute([{ name: 'Car', category: 'CarAudio' }])).toBe('other');
+    // Android device types
+    expect(classifyOutputRoute([{ name: 'x', category: 'Built-in Speaker' }])).toBe('speaker');
+    expect(classifyOutputRoute([{ name: 'x', category: 'Built-in Earpiece' }])).toBe('earpiece');
+    expect(classifyOutputRoute([{ name: 'x', category: 'Wired Headset' }])).toBe('wired');
+    expect(classifyOutputRoute([{ name: 'x', category: 'Bluetooth SCO' }])).toBe('bluetooth-call');
+    expect(classifyOutputRoute([{ name: 'x', category: 'Bluetooth A2DP' }])).toBe('bluetooth-media');
+    expect(classifyOutputRoute([{ name: 'x', category: 'Other (27)' }])).toBe('other');
+  });
+
+  test('reports the output route at start and after the last route change', async () => {
+    const native = new FakeNative();
+    native.outputRoute = 'speaker';
+    const engine = new VoiceAudioEngine({ native });
+    await engine.start(() => {});
+    expect(engine.snapshot()).toMatchObject({ startOutputRoute: 'speaker', outputRoute: 'speaker' });
+
+    native.outputRoute = 'bluetooth-call';
+    native.routeListener?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(engine.snapshot()).toMatchObject({
+      startOutputRoute: 'speaker',
+      outputRoute: 'bluetooth-call',
+    });
+  });
+
+  test('leaves the microphone off when stopped while still starting', async () => {
+    const native = new FakeNative();
+    let openSession!: () => void;
+    native.sessionGate = new Promise((resolve) => {
+      openSession = resolve;
+    });
+    const failures: Error[] = [];
+    const engine = new VoiceAudioEngine({ native, onFatalError: (error) => failures.push(error) });
+
+    const starting = engine.start(() => {});
+    await engine.stop();
+    openSession();
+    await starting;
+
+    expect(native.calls).not.toContain('recorder.start');
+    expect(native.calls.filter((call) => call.startsWith('context.create'))).toHaveLength(0);
+    expect(native.calls.at(-1)).toBe('session.active:false');
+    expect(failures).toHaveLength(0);
+  });
+
   test('classifies headphone and speaker output routes correctly', () => {
     expect(isHeadphonesRoute([])).toBe(false);
     expect(isHeadphonesRoute(undefined)).toBe(false);
@@ -298,10 +377,10 @@ describe('VoiceAudioEngine', () => {
     engine.armGreetingShield();
 
     // Input arrives while greeting shield is active (e.g. echo or user background noise)
-    const micData = new Float32Array(1_600).fill(0.05);
+    const micData = new Float32Array(VOICE_INPUT_FRAMES).fill(0.05);
     native.recorder.input?.({
       buffer: { getChannelData: () => micData },
-      numFrames: 1_600,
+      numFrames: VOICE_INPUT_FRAMES,
     });
 
     // Greeting shield blocks transmission
@@ -315,7 +394,7 @@ describe('VoiceAudioEngine', () => {
     // After shield is disarmed and output ends, mic data is transmitted continuously
     native.recorder.input?.({
       buffer: { getChannelData: () => micData },
-      numFrames: 1_600,
+      numFrames: VOICE_INPUT_FRAMES,
     });
     expect(chunks).toHaveLength(1);
   });
@@ -354,10 +433,10 @@ describe('VoiceAudioEngine', () => {
     expect(engine.isPlaying()).toBe(true);
 
     // Speaker echo enters the microphone while AI is speaking
-    const echoFrame = new Float32Array(1_600).fill(0.05);
+    const echoFrame = new Float32Array(VOICE_INPUT_FRAMES).fill(0.05);
     native.recorder.input?.({
       buffer: { getChannelData: () => echoFrame },
-      numFrames: 1_600,
+      numFrames: VOICE_INPUT_FRAMES,
     });
 
     // Suppressed! No echo chunk is dispatched to Gemini Live
@@ -368,10 +447,10 @@ describe('VoiceAudioEngine', () => {
     engine.interruptOutput(2);
 
     // Now that output is no longer audible, user speech flows through
-    const userVoice = new Float32Array(1_600).fill(0.1);
+    const userVoice = new Float32Array(VOICE_INPUT_FRAMES).fill(0.1);
     native.recorder.input?.({
       buffer: { getChannelData: () => userVoice },
-      numFrames: 1_600,
+      numFrames: VOICE_INPUT_FRAMES,
     });
     expect(chunks).toHaveLength(1);
   });
@@ -392,10 +471,10 @@ describe('VoiceAudioEngine', () => {
     expect(engine.isPlaying()).toBe(true);
 
     // User speaks into mic while listening through headphones
-    const userVoice = new Float32Array(1_600).fill(0.1);
+    const userVoice = new Float32Array(VOICE_INPUT_FRAMES).fill(0.1);
     native.recorder.input?.({
       buffer: { getChannelData: () => userVoice },
-      numFrames: 1_600,
+      numFrames: VOICE_INPUT_FRAMES,
     });
 
     // Passthrough! Full duplex allows natural vocal interruption
@@ -409,22 +488,27 @@ describe('VoiceAudioEngine', () => {
     const engine = new VoiceAudioEngine({ native, speakerFullDuplex: true });
 
     await engine.start((chunk) => chunks.push(chunk));
-    engine.armGreetingShield();
 
     const pcmSamples = new Float32Array(4800).fill(0.1);
     const pcmBase64 = btoa(String.fromCharCode(...new Uint8Array(pcmSamples.length * 2)));
     engine.enqueueOutput(pcmBase64, 1);
     expect(engine.isPlaying()).toBe(true);
 
-    const userVoice = new Float32Array(1_600).fill(0.1);
-    native.recorder.input?.({
-      buffer: { getChannelData: () => userVoice },
-      numFrames: 1_600,
-    });
+    const userVoice = new Float32Array(VOICE_INPUT_FRAMES).fill(0.1);
+    // Two speech frames: one alone could be a click, so it is held until confirmed.
+    for (let i = 0; i < 2; i += 1) {
+      native.recorder.input?.({
+        buffer: { getChannelData: () => userVoice },
+        numFrames: VOICE_INPUT_FRAMES,
+      });
+    }
 
-    expect(chunks).toHaveLength(1);
+    expect(chunks).toHaveLength(2);
   });
 
+  // With the speaker gate the greeting's mic is dropped; once the server
+  // allows full duplex the greeting calibrates the echo filter instead, so
+  // frames keep flowing (as silence) rather than being dropped.
   test('applies the server speaker duplex policy after construction', async () => {
     const native = new FakeNative();
     native.isHeadphonesDevice = false;
@@ -437,12 +521,15 @@ describe('VoiceAudioEngine', () => {
 
     const pcmSamples = new Float32Array(4800).fill(0.1);
     engine.enqueueOutput(btoa(String.fromCharCode(...new Uint8Array(pcmSamples.length * 2))), 1);
-    native.recorder.input?.({
-      buffer: { getChannelData: () => new Float32Array(1_600).fill(0.1) },
-      numFrames: 1_600,
-    });
+    for (let i = 0; i < 2; i += 1) {
+      native.recorder.input?.({
+        buffer: { getChannelData: () => new Float32Array(VOICE_INPUT_FRAMES).fill(0.1) },
+        numFrames: VOICE_INPUT_FRAMES,
+      });
+    }
 
-    expect(chunks).toHaveLength(1);
+    expect(chunks).toHaveLength(2);
+    expect(engine.snapshot()).toMatchObject({ uplinkDroppedShield: 0, bargeIns: 0 });
   });
 
   test('reports whether native playback is active', async () => {
@@ -458,11 +545,15 @@ describe('VoiceAudioEngine', () => {
     const native = new FakeNative();
     native.isHeadphonesDevice = false;
     const chunks: string[] = [];
+    const levels: number[] = [];
     const engine = new VoiceAudioEngine({ native });
-    await engine.start((chunk) => chunks.push(chunk));
+    await engine.start((chunk, rms) => {
+      chunks.push(chunk);
+      levels.push(rms);
+    });
     const frame = (level: number) => ({
-      buffer: { getChannelData: () => new Float32Array(1_600).fill(level) },
-      numFrames: 1_600,
+      buffer: { getChannelData: () => new Float32Array(VOICE_INPUT_FRAMES).fill(level) },
+      numFrames: VOICE_INPUT_FRAMES,
     });
 
     engine.armGreetingShield();
@@ -484,5 +575,166 @@ describe('VoiceAudioEngine', () => {
     expect(snapshot.uplinkDroppedSpeakerGate).toBe(1);
     expect(snapshot.uplinkDelivered).toBe(2);
     expect(snapshot.uplinkPeakRms).toBeCloseTo(0.25, 5);
+  });
+
+  test('does not shield the greeting on earphones, where there is no echo to block', async () => {
+    const native = new FakeNative();
+    native.isHeadphonesDevice = true;
+    const chunks: string[] = [];
+    const engine = new VoiceAudioEngine({ native });
+    await engine.start((chunk) => chunks.push(chunk));
+
+    engine.armGreetingShield();
+    for (let i = 0; i < 2; i += 1) {
+      native.recorder.input?.({
+        buffer: { getChannelData: () => new Float32Array(VOICE_INPUT_FRAMES).fill(0.1) },
+        numFrames: VOICE_INPUT_FRAMES,
+      });
+    }
+
+    expect(chunks).toHaveLength(2);
+    expect(engine.snapshot().uplinkDroppedShield).toBe(0);
+  });
+
+  describe('echo on the loudspeaker', () => {
+    const SPEAKING = btoa(String.fromCharCode(...new Uint8Array(4_800 * 2)));
+    const frame = (level: number) => new Float32Array(VOICE_INPUT_FRAMES).fill(level);
+    const feed = (native: FakeNative, samples: Float32Array) =>
+      native.recorder.input?.({ buffer: { getChannelData: () => samples }, numFrames: samples.length });
+    const isSilent = (chunk: string) => {
+      const decoded = pcm16Base64ToFloat32(chunk);
+      return decoded.ok && decoded.samples.every((sample) => sample === 0);
+    };
+
+    test('falls back to the speaker gate when iOS did not actually engage echo cancellation', async () => {
+      const native = new FakeNative();
+      native.voiceProcessingActive = false;
+      const chunks: string[] = [];
+      const engine = new VoiceAudioEngine({ native, iosVoiceProcessing: true, speakerFullDuplex: true });
+      await engine.start((chunk) => chunks.push(chunk));
+      // The server's device policy arriving later must not re-enable it.
+      engine.setSpeakerFullDuplex(true);
+
+      engine.enqueueOutput(SPEAKING, 1);
+      feed(native, frame(0.2));
+
+      expect(chunks).toHaveLength(0);
+      expect(engine.snapshot()).toMatchObject({ voiceProcessingActive: false, speakerFullDuplex: false });
+    });
+
+    // macOS (and iOS) can report voice processing off for a moment while a
+    // route change reconfigures audio. One such readback must not cost the
+    // rest of the call its full duplex.
+    test('restores full duplex when echo cancellation comes back after a route change', async () => {
+      const native = new FakeNative();
+      native.voiceProcessingActive = true;
+      const engine = new VoiceAudioEngine({ native, iosVoiceProcessing: true, speakerFullDuplex: true });
+      await engine.start(() => {});
+
+      native.voiceProcessingActive = false;
+      native.routeListener?.();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(engine.snapshot()).toMatchObject({ voiceProcessingActive: false, speakerFullDuplex: false });
+
+      native.voiceProcessingActive = true;
+      native.routeListener?.();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(engine.snapshot()).toMatchObject({ voiceProcessingActive: true, speakerFullDuplex: true });
+    });
+
+    test('still honours the server turning full duplex off when echo cancellation comes back', async () => {
+      const native = new FakeNative();
+      native.voiceProcessingActive = false;
+      const engine = new VoiceAudioEngine({ native, iosVoiceProcessing: true, speakerFullDuplex: true });
+      await engine.start(() => {});
+      engine.setSpeakerFullDuplex(false);
+
+      native.voiceProcessingActive = true;
+      native.routeListener?.();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(engine.snapshot()).toMatchObject({ speakerFullDuplex: false });
+    });
+
+    test('keeps full duplex when echo cancellation is confirmed, or unknown on older native builds', async () => {
+      for (const active of [true, undefined]) {
+        const native = new FakeNative();
+        native.voiceProcessingActive = active;
+        const engine = new VoiceAudioEngine({ native, iosVoiceProcessing: true, speakerFullDuplex: true });
+        await engine.start(() => {});
+        expect(engine.snapshot()).toMatchObject({ voiceProcessingActive: active, speakerFullDuplex: true });
+      }
+    });
+
+    test('uses the greeting to learn the echo level, so loud echo after it cannot barge in', async () => {
+      const native = new FakeNative();
+      const chunks: string[] = [];
+      const engine = new VoiceAudioEngine({ native, speakerFullDuplex: true });
+      await engine.start((chunk) => chunks.push(chunk));
+      engine.armGreetingShield();
+      engine.enqueueOutput(SPEAKING, 1);
+
+      // Loud echo of the greeting: sent as silence, never a barge-in.
+      for (let i = 0; i < 10; i += 1) feed(native, frame(0.12));
+      expect(chunks.every(isSilent)).toBe(true);
+      expect(engine.snapshot()).toMatchObject({ bargeIns: 0, peakEchoLevel: 0.12 });
+
+      // After the greeting, the same echo level is recognised as echo.
+      engine.disarmGreetingShield();
+      for (let i = 0; i < 3; i += 1) feed(native, frame(0.12));
+      expect(engine.snapshot()).toMatchObject({ bargeIns: 0 });
+    });
+
+    test('replaces leftover echo with silence while Memento is audible on the speaker', async () => {
+      const native = new FakeNative();
+      const chunks: string[] = [];
+      const levels: number[] = [];
+      const engine = new VoiceAudioEngine({ native, speakerFullDuplex: true });
+      await engine.start((chunk, rms) => {
+        chunks.push(chunk);
+        levels.push(rms);
+      });
+
+      engine.enqueueOutput(SPEAKING, 1);
+      // Held as pre-roll first, in case it is the start of a word.
+      for (let i = 0; i <= VOICE_ECHO_PRE_ROLL_FRAMES; i += 1) feed(native, frame(0.03));
+
+      expect(chunks).toHaveLength(1);
+      expect(isSilent(chunks[0])).toBe(true);
+      // Echo must not count as the user speaking in latency metrics either.
+      expect(levels).toEqual([0]);
+      expect(engine.snapshot()).toMatchObject({ uplinkEchoSuppressed: 1, bargeIns: 0 });
+    });
+
+    test('lets a clear voice barge in and keeps the mic open for the rest of the sentence', async () => {
+      const native = new FakeNative();
+      const clock = { now: 10_000 };
+      const chunks: string[] = [];
+      const engine = new VoiceAudioEngine({ native, speakerFullDuplex: true, now: () => clock.now });
+      await engine.start((chunk) => chunks.push(chunk));
+      engine.enqueueOutput(SPEAKING, 1);
+
+      feed(native, frame(0.2)); // "wait"
+      clock.now += 400;
+      feed(native, frame(0.03)); // a softer word mid-sentence
+      clock.now += VOICE_BARGE_IN_HOLD_MS;
+      // Back to leftover echo: held as pre-roll, then sent as silence.
+      for (let i = 0; i <= VOICE_ECHO_PRE_ROLL_FRAMES; i += 1) feed(native, frame(0.03));
+
+      expect(chunks.map(isSilent)).toEqual([false, false, true]);
+      expect(engine.snapshot()).toMatchObject({ bargeIns: 1, uplinkEchoSuppressed: 1 });
+    });
+
+    test('does not filter on earphones, where there is no acoustic echo', async () => {
+      const native = new FakeNative();
+      native.isHeadphonesDevice = true;
+      const chunks: string[] = [];
+      const engine = new VoiceAudioEngine({ native, speakerFullDuplex: true });
+      await engine.start((chunk) => chunks.push(chunk));
+      engine.enqueueOutput(SPEAKING, 1);
+
+      feed(native, frame(0.03));
+
+      expect(chunks.map(isSilent)).toEqual([false]);
+    });
   });
 });

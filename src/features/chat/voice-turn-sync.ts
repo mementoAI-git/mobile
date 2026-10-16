@@ -7,6 +7,9 @@ export type VoiceTurnPayload = {
   interrupted?: boolean;
 };
 
+/** Called with the turns still unacknowledged whenever they change. */
+export type VoiceTurnPendingListener = (pending: VoiceTurnPayload[], memoryId?: string) => void;
+
 export type VoiceTurnPoster = (
   url: string,
   body: { session_id: string; memory_id?: string; turns: VoiceTurnPayload[] },
@@ -29,6 +32,7 @@ export class VoiceTurnSync {
     private readonly url: string,
     private readonly sessionId: string,
     memoryId?: string,
+    private readonly onPendingChange?: VoiceTurnPendingListener,
   ) {
     this.memoryId = memoryId;
   }
@@ -52,7 +56,10 @@ export class VoiceTurnSync {
         });
       }
     });
-    if (this.pending.length) void this.flush();
+    if (this.pending.length) {
+      this.notifyPending();
+      void this.flush();
+    }
   }
 
   flush(): Promise<boolean> {
@@ -72,6 +79,10 @@ export class VoiceTurnSync {
     return this.memoryId;
   }
 
+  private notifyPending(): void {
+    this.onPendingChange?.([...this.pending], this.memoryId);
+  }
+
   private async flushPending(): Promise<boolean> {
     while (this.pending.length) {
       const batch = this.pending.slice(0, MAX_BATCH);
@@ -86,6 +97,7 @@ export class VoiceTurnSync {
         )?.data?.memory_id;
         if (typeof memoryId === 'string' && memoryId) this.memoryId = memoryId;
         this.pending.splice(0, batch.length);
+        this.notifyPending();
       } catch {
         return false;
       }
