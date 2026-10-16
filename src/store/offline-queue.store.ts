@@ -6,6 +6,7 @@ import { post, put, del } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { queryClient } from '@/lib/query-client';
 import { logger } from '@/lib/logger';
+import { invalidateMemoryQueries } from '@/features/memories/cache';
 import {
   enqueueOfflineMutation,
   dequeueOfflineMutation,
@@ -102,7 +103,10 @@ export const useOfflineQueueStore = create<OfflineQueueState>((set, get) => ({
     }
 
     set({ isSyncing: false });
-    queryClient.invalidateQueries();
+    // Scoped: only memory lists + stats refetch. The previous blanket
+    // invalidateQueries() refetched every mounted query (subscription,
+    // billing, profile, prompts) on each offline sync.
+    invalidateMemoryQueries(queryClient, { includeUserStats: true });
     toast('Offline sync complete!', 'success');
   },
 }));

@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { View, RefreshControl, useWindowDimensions } from 'react-native';
 import { MasonryMemoryCard } from './MasonryMemoryCard';
+import { Spinner } from '@/components/ui/Spinner';
 import type { IMemory } from '@/types';
 import { COLORS } from '@/constants/tokens';
 import { contentMaxWidth, screenGutter } from '@/constants/responsive';
@@ -99,8 +100,31 @@ export function MasonryMemoryGrid({
     });
   }, [windowHeight]);
 
+  // Stable item identity across paginated fetches. Each fetch produces new
+  // object identities, which defeated every memo below and re-rendered all
+  // cards on each append (the flicker). Reuse the previous object when the
+  // content signature matches; any real change flows through as a new ref.
+  const stableItemsRef = useRef(new Map<string, IMemory>());
+  const stableMemories = useMemo(() => {
+    const cache = stableItemsRef.current;
+    const seen = new Set<string>();
+    const next: IMemory[] = memories.map((memory) => {
+      seen.add(memory._id);
+      const prev = cache.get(memory._id);
+      if (prev && memorySignature(prev) === memorySignature(memory)) {
+        return prev;
+      }
+      cache.set(memory._id, memory);
+      return memory;
+    });
+    for (const id of Array.from(cache.keys())) {
+      if (!seen.has(id)) cache.delete(id);
+    }
+    return next;
+  }, [memories]);
+
   useEffect(() => {
-    const memoryIds = new Set(memories.map((memory) => memory._id));
+    const memoryIds = new Set(stableMemories.map((memory) => memory._id));
     Object.keys(layoutUpdatesRef.current).forEach((id) => {
       if (!memoryIds.has(id)) {
         delete layoutUpdatesRef.current[id];
@@ -159,13 +183,13 @@ export function MasonryMemoryGrid({
 
   const masonryLayout = useMemo(() => (
     buildMasonryColumnLayout({
-      items: memories,
+      items: stableMemories,
       measuredHeights,
       estimateHeight,
       columnCount: COLUMN_COUNT,
       gap: CARD_GAP,
     })
-  ), [estimateHeight, measuredHeights, memories]);
+  ), [estimateHeight, measuredHeights, stableMemories]);
 
   const visibleWindowTop = Math.max(0, scrollMetrics.offsetY - headerHeight);
   const visibleWindowBottom = visibleWindowTop + scrollMetrics.viewportHeight;
@@ -253,7 +277,7 @@ export function MasonryMemoryGrid({
       ) : null}
 
       {/* Two-column masonry layout or empty state */}
-      {memories.length === 0 ? (
+      {stableMemories.length === 0 ? (
         ListEmptyComponent ? (
           <View style={{ maxWidth: effectiveWidth, width: '100%', alignSelf: 'center', paddingHorizontal: gutter, paddingTop: 32 }}>
             {ListEmptyComponent}
@@ -285,8 +309,27 @@ export function MasonryMemoryGrid({
           ))}
         </View>
       )}
+
+      {/* Pagination footer — visible while the next page loads */}
+      {loadingMore && stableMemories.length > 0 ? (
+        <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+          <Spinner size="small" />
+        </View>
+      ) : null}
     </Animated.ScrollView>
   );
+}
+
+function memorySignature(memory: IMemory): string {
+  return [
+    memory.updated_at,
+    memory.bookmarked,
+    memory.enrichment_status,
+    memory.title,
+    memory.body?.length ?? 0,
+    memory.attachments?.length ?? 0,
+    memory.attachments?.[0]?._id ?? '',
+  ].join('|');
 }
 
 function stableHash(s: string): number {
