@@ -22,7 +22,6 @@ import { DashboardHeader, OverviewSkeleton, GradientText, GreetingIcon, JourneyS
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { useProfile } from '@/hooks/queries/use-profile';
-import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/constants/query-keys';
 import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
@@ -235,8 +234,13 @@ export default function OverviewScreen() {
   const { data: statsData, refetch: refetchStats, isLoading: statsLoading } = useUserStats();
   const { data: memoriesStats, refetch: refetchMemories, isLoading: memoriesLoading } = useMemoriesStats();
   const { data: capsuleStats, refetch: refetchCapsule, isLoading: capsuleLoading } = useCapsuleStats();
-  const { data: beneficiariesRaw } = useBeneficiaries();
-  const { data: recentStoriesData } = useStories({ limit: 50 });
+  // Stories power two client fallbacks only: the weekly count when stats
+  // lack it, and the spotlight story when the server provides none. When
+  // stats already cover both, skip the 50-doc fetch on launch entirely.
+  const needsStories =
+    !statsData?.spotlight ||
+    (statsData?.week_count == null && (statsData as any)?.weekly_count == null);
+  const { data: recentStoriesData } = useStories({ limit: 50 }, { enabled: needsStories });
 
   // Manual pull-to-refresh: invalidate all caches to trigger global background updates
   const handleManualRefresh = useCallback(async () => {
@@ -290,14 +294,11 @@ export default function OverviewScreen() {
   const weeklyMemories =
     Number(memoriesStats?.week_count ?? memoriesStats?.weekly_count) ||
     clientWeeklyStories;
-  // Use actual beneficiaries list count — matches web which calls endpoint.beneficiaries directly
-  const beneficiariesCount = (() => {
-    if (!beneficiariesRaw) return 0;
-    if ((beneficiariesRaw as any)?.totalDocs != null) return Number((beneficiariesRaw as any).totalDocs);
-    if (Array.isArray(beneficiariesRaw)) return beneficiariesRaw.length;
-    if ((beneficiariesRaw as any)?.docs) return ((beneficiariesRaw as any).docs as any[]).length;
-    return 0;
-  })();
+  // Beneficiaries count comes from userStats (same source
+  // use-overview-logic trusts) so launch skips the full-pagination
+  // beneficiaries walk entirely.
+  const beneficiariesCount =
+    Number((statsData as any)?.beneficiaries_count) || 0;
   const capsuleCount = capsuleStats?.scheduled_count || 0;
   const quickPending = Number(stats.quick_capture_pending_count) || 0;
 

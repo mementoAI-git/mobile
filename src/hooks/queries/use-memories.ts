@@ -16,18 +16,21 @@ interface StoriesQueryOptions {
   enabled?: boolean;
 }
 
-export function useMemories(params?: { limit?: number }) {
+export function useMemories(params?: { limit?: number; enabled?: boolean }) {
   const token = useAuthStore((s) => s.token?.access_token);
+  // `enabled` gates the fetch without leaking into the cache key.
+  const limit = params?.limit;
+  const enabled = params?.enabled ?? true;
 
   return useInfiniteQuery({
-    queryKey: queryKeys.memories(params),
+    queryKey: queryKeys.memories(limit === undefined ? undefined : { limit }),
     queryFn: ({ pageParam = 1 }) =>
       fetchPaginated<IMemory>(
         `${endpoint.memories}?page=${pageParam}&limit=${params?.limit ?? 20}`,
       ),
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     initialPageParam: 1,
-    enabled: !!token,
+    enabled: !!token && enabled,
     // 30s stale time — avoids refetch on every tab switch
     staleTime: 30_000,
   });

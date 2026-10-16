@@ -52,7 +52,11 @@ export function useChatLogic() {
 
   const primaryChatId = profile?.primary_conversation_id ?? userPrimaryConversationId ?? null;
 
-  const { data: memoriesData } = useMemories({ limit: 50 });
+  // Lazy fallback: the 50-doc list only fetches when the dedicated
+  // prompt lookup missed but a title is available to match on. Common
+  // opens (host chat, resolved prompts) skip it entirely.
+  const needsLookup = isPromptType && !promptMemory && !!promptTitle;
+  const { data: memoriesData } = useMemories({ limit: 50, enabled: needsLookup });
   const allUserMemories = useMemo(() => {
     return memoriesData?.pages?.flatMap((p) => p.docs) ?? [];
   }, [memoriesData]);
@@ -272,14 +276,19 @@ export function useChatLogic() {
     ],
   );
 
-  // Refetch enrichment stats and prompt memory cache after each AI response
+  // Refetch enrichment stats and prompt memory cache after each AI response.
+  // Throttled to one invalidation per 30s — a long session otherwise
+  // refetches userStats (+ 3 prompt keys) on every single turn.
   const prevMessagesLengthRef = useRef(messages.length);
+  const lastStatsInvalidateRef = useRef(0);
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
     if (
       messages.length > prevMessagesLengthRef.current &&
-      lastMessage?.role === 'ai'
+      lastMessage?.role === 'ai' &&
+      Date.now() - lastStatsInvalidateRef.current > 30_000
     ) {
+      lastStatsInvalidateRef.current = Date.now();
       queryClient.invalidateQueries({ queryKey: queryKeys.userStats });
       if (isPromptType && id) {
         queryClient.invalidateQueries({ queryKey: queryKeys.overviewPrompts });
