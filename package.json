@@ -120,7 +120,9 @@
     "typescript": "~6.0.3"
   },
   "overrides": {
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "expo-constants": "~57.0.22",
+    "expo-linking": "~57.0.13"
   },
   "private": true,
   "patchedDependencies": {
