@@ -53,4 +53,5 @@ logs/
 CODEBASE_MAP.md
 
 # EAS signing material (credentials.json, certificates, profiles): never commit or upload
+credentials.json
 credentials/

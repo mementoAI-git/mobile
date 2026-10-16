@@ -1,5 +1,6 @@
 import React, { forwardRef, useState, useCallback, useMemo } from 'react';
-import { View, Text, Image, useWindowDimensions } from 'react-native';
+import { View, Text, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import X from 'lucide-react-native/icons/x';
@@ -98,7 +99,11 @@ export const SelectFromMediaModal = React.memo(
             <Image
               source={{ uri: item.thumbnail || item.url }}
               style={{ width: '100%', height: '100%' }}
-              resizeMode="cover"
+              contentFit="cover"
+              // Disk cache + recycling key: grid cells remount constantly
+              // while scrolling; without this each remount re-downloads.
+              cachePolicy="disk"
+              recyclingKey={item.thumbnail || item.url}
             />
           ) : (
             <View className="flex-1 items-center justify-center bg-fill-weak">

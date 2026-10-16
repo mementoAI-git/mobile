@@ -42,10 +42,6 @@ import { EBGaramond_500Medium } from '@expo-google-fonts/eb-garamond/500Medium';
 import { EBGaramond_700Bold } from '@expo-google-fonts/eb-garamond/700Bold';
 import { EBGaramond_400Regular_Italic } from '@expo-google-fonts/eb-garamond/400Regular_Italic';
 import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono/400Regular';
-import { Geist_400Regular } from '@expo-google-fonts/geist/400Regular';
-import { Geist_500Medium } from '@expo-google-fonts/geist/500Medium';
-import { Geist_600SemiBold } from '@expo-google-fonts/geist/600SemiBold';
-import { Geist_700Bold } from '@expo-google-fonts/geist/700Bold';
 
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -234,7 +230,9 @@ function SessionBootstrap() {
         queryKey: queryKeys.profile,
         queryFn: async () =>
           (await get<IUser>(endpoint.profile)).data,
-        staleTime: 0,
+        // Accept a warm cache (<60s) so launch doesn't block on this
+        // round-trip; useProfile revalidates in the background on mount.
+        staleTime: 60_000,
       })
       .then(async (user) => {
         const currentPhase = useAuthStore.getState().phase;
@@ -369,13 +367,11 @@ function RootLayout() {
     EBGaramond_400Regular_Italic,
     AzeretMono_400Regular,
 
-    Geist_400Regular,
-    Geist_500Medium,
-    Geist_600SemiBold,
-    Geist_700Bold,
+    // NOTE: Geist weights removed from the blocking set — zero usage on
+    // mobile (verified: no font-geist classes, no Geist fontFamily styles).
+    // If web-parity numerics need it later, lazy-load after first paint.
 
     // Map web font family names directly to RN loaded fonts.
-    Geist: Geist_400Regular,
     Garamond: EBGaramond_400Regular,
     Sans: Inter_400Regular,
 

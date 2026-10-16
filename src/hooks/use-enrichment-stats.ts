@@ -4,11 +4,7 @@
  */
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { get } from '@/api/mutations';
-import endpoint from '@/api/endpoint';
-import { queryKeys } from '@/constants/query-keys';
-import { useAuthStore } from '@/store';
+import { useUserStats } from './queries/use-overview';
 import type { UserStatsData, LifeDimension } from '@/constants/enrichment';
 
 const BASELINE_KEY = 'memento:enrichment:baseline';
@@ -41,8 +37,6 @@ export interface UseEnrichmentStatsResult {
 }
 
 export function useEnrichmentStats(): UseEnrichmentStatsResult {
-  const queryClient = useQueryClient();
-  const token = useAuthStore((s) => s.token?.access_token);
   const [deltaToday, setDeltaToday] = useState(0);
   const [milestoneJustReached, setMilestoneJustReached] = useState(false);
   const [dismissedNudges, setDismissedNudges] = useState<string[]>([]);
@@ -50,12 +44,10 @@ export function useEnrichmentStats(): UseEnrichmentStatsResult {
   const lastMilestoneRef = useRef<number>(0);
   const isMountedRef = useRef(true);
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: queryKeys.userStats,
-    queryFn: () => get<UserStatsData>(endpoint.userStats).then((r) => r.data),
-    enabled: !!token,
-    staleTime: 30_000,
-  });
+  // Single owner for the userStats cache entry — shares fetcher, polling,
+  // and store sync with useUserStats instead of competing with a second
+  // useQuery on the same key.
+  const { data, isLoading, refetch } = useUserStats();
 
   const stats = data ?? null;
 

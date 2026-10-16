@@ -207,12 +207,13 @@ export default function ChatScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      // Chat-scoped only. profile/memories() are 30s-stale queries that
+      // refetch on their own when stale — invalidating them here forced up
+      // to 4 refetches (incl. the 50-doc memories list) on every focus.
       if (activeChatId) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.promptMessages(activeChatId) });
         void queryClient.invalidateQueries({ queryKey: queryKeys.memory(activeChatId) });
       }
-      void queryClient.invalidateQueries({ queryKey: queryKeys.profile });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.memories() });
     }, [activeChatId])
   );
 
@@ -414,6 +415,26 @@ export default function ChatScreen() {
     setReplyQuote(null);
   }, [send, replyQuote]);
 
+  // Day separators precomputed in one forward pass. renderMessage used to
+  // walk backward per row (O(n²) trims + lookups on every render).
+  const daySeparatorByKey = useMemo(() => {
+    const map = new Map<string, boolean>();
+    let previousTimestamp: string | undefined;
+    for (const message of allMessages) {
+      const text = ((message?.text ?? message?.content ?? '') as string).trim();
+      const attachments = message?.attatchments ?? (message as any)?.attachments ?? [];
+      const key = getChatMessageKey(message as any);
+      if (!text && !attachments.length) {
+        map.set(key, false);
+        continue;
+      }
+      const currentTimestamp = (message as any)?.created_at || (message as any)?.createdAt;
+      map.set(key, shouldShowChatDaySeparator(previousTimestamp, currentTimestamp));
+      if (currentTimestamp) previousTimestamp = currentTimestamp;
+    }
+    return map;
+  }, [allMessages]);
+
   const renderMessage = useCallback(
     ({ item, index }: { item: any; index: number }) => {
       const itemText = ((item.text ?? item.content ?? '') as string).trim();
@@ -422,22 +443,7 @@ export default function ChatScreen() {
         return null;
       }
 
-      let previousTimestamp: string | undefined;
-      const msgs = allMessagesRef.current;
-      for (let i = index - 1; i >= 0; i -= 1) {
-        const prev = msgs[i];
-        const prevText = ((prev?.text ?? prev?.content ?? '') as string).trim();
-        const prevAtt = prev?.attatchments ?? (prev as any)?.attachments ?? [];
-        if (prevText.length > 0 || prevAtt.length > 0) {
-          const ts = (prev as any)?.created_at || (prev as any)?.createdAt;
-          if (ts) {
-            previousTimestamp = ts;
-            break;
-          }
-        }
-      }
-      const currentTimestamp = item.created_at || item.createdAt;
-      const showDate = shouldShowChatDaySeparator(previousTimestamp, currentTimestamp);
+      const showDate = daySeparatorByKey.get(getChatMessageKey(item)) ?? false;
 
       return (
         <MemoMessageRow
@@ -450,7 +456,7 @@ export default function ChatScreen() {
         />
       );
     },
-    [handleReplyMessage, handleScrollToOriginal, handlePreviewAttachments, highlightedMessageId],
+    [handleReplyMessage, handleScrollToOriginal, handlePreviewAttachments, highlightedMessageId, daySeparatorByKey],
   );
 
   const streamingFooterComponent = React.useMemo(() => {
@@ -658,6 +664,9 @@ export default function ChatScreen() {
             data={allMessages}
             keyExtractor={getChatMessageKey}
             getItemType={getChatMessageItemType}
+            // Pre-render distance — fewer blank flashes on fast scroll
+            // through variable-height threads. (v2 auto-estimates sizes.)
+            drawDistance={500}
             renderItem={renderMessage}
             onStartReached={handleLoadOlderMessages}
             onStartReachedThreshold={0.2}

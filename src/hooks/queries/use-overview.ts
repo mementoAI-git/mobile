@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchEntity } from '@/api/domain-fetchers';
 import endpoint from '@/api/endpoint';
@@ -7,6 +8,10 @@ import { useUserStore, useAuthStore } from '@/store';
 // User stats — streak, enrichment_score, quick_capture_pending_count, beneficiaries_count
 export function useUserStats() {
   const token = useAuthStore((s) => s.token);
+  // Caps the 4s quick-capture poll: if the backend stays pending past this
+  // window the enrichment is stuck, so stop polling and fall back to the
+  // normal 30s-stale refetch instead of polling forever.
+  const pendingSinceRef = useRef<number | null>(null);
 
   return useQuery({
     queryKey: queryKeys.userStats,
@@ -34,33 +39,20 @@ export function useUserStats() {
     enabled: !!token,
     staleTime: 30_000,
     refetchInterval: (query) => {
-      // Poll every 4s if quick captures are pending (matches web behaviour)
-      const pending = query.state.data?.quick_capture_pending_count;
-      return Number(pending) > 0 ? 4_000 : false;
+      // Poll every 4s if quick captures are pending (matches web behaviour),
+      // up to 2 min — then back off to avoid polling a stuck backend forever.
+      const pending = Number(query.state.data?.quick_capture_pending_count) > 0;
+      if (!pending) {
+        pendingSinceRef.current = null;
+        return false;
+      }
+      if (pendingSinceRef.current === null) pendingSinceRef.current = Date.now();
+      return Date.now() - pendingSinceRef.current > 120_000 ? false : 4_000;
     },
   });
 }
 
-// Memories stats — stories_count, media_count, bookmark_count, storage, week_count
-export function useMemoriesStats() {
-  const token = useAuthStore((s) => s.token?.access_token);
-
-  return useQuery({
-    queryKey: queryKeys.memoriesStats,
-    queryFn: () => fetchEntity<any>(endpoint.memoriesStats),
-    enabled: !!token,
-    staleTime: 60_000,
-  });
-}
-
-// Capsule stats — scheduled_count, draft_count, delivered_count
-export function useCapsuleStats() {
-  const token = useAuthStore((s) => s.token?.access_token);
-
-  return useQuery({
-    queryKey: queryKeys.capsuleStats,
-    queryFn: () => fetchEntity<any>(endpoint.capsuleStats),
-    enabled: !!token,
-    staleTime: 60_000,
-  });
-}
+// Canonical stats hooks live with their domains (single queryFn per cache key).
+// Re-exported here so existing import sites don't churn.
+export { useMemoriesStats } from './use-memories';
+export { useCapsuleStats } from './use-capsules';
