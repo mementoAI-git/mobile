@@ -19,9 +19,9 @@ export const queryKeys = {
 
   prompts: (params?: object) => (params ? (['prompts', params] as const) : (['prompts'] as const)),
   dailyPrompts: (dateKey?: string) => (dateKey ? (['daily-prompts', dateKey] as const) : (['daily-prompts'] as const)),
-  promptCategories: ['prompt-categories'] as const,
+  promptCategories: ['explore-categories'] as const,
   categoryDetailsPrompts: (slug?: string, answered?: boolean) =>
-    slug ? ['category-details-prompts', slug, answered] as const : ['category-details-prompts'] as const,
+    slug ? ['explore-category-topics', slug, answered] as const : ['explore-category-topics'] as const,
   overviewPrompts: ['overview-prompts'] as const,
   memoryByPrompt: (promptId: string) => ['memory-by-prompt', promptId] as const,
   promptMessages: (id: string) => ['prompt-messages', id] as const,

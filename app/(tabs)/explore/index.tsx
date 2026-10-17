@@ -6,9 +6,8 @@ import { ContinueReflectingCard } from '@/components/explore/ContinueReflectingC
 import { DashboardHeader, ExploreSkeleton, EmptyState, Spinner } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { CATEGORY_META } from '@/constants/categories';
-import { formatCategoryProgress } from '@/features/explore/category-progress';
-import { getPromptCategorySlug } from '@/features/explore/category-identity';
+import { getCategoryMeta } from '@/constants/categories';
+import type { ExploreCategory } from '@/features/explore/explore-catalog';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useExploreLogic } from '@/hooks/use-explore-logic';
 import { useFocusEffect } from 'expo-router';
@@ -31,9 +30,28 @@ const MemoPromptItem = React.memo(function PromptItem({
   return <ContinueReflectingCard title={prompt.title || ''} onPress={handlePress} />;
 });
 
+const ExploreCategoryItem = React.memo(function ExploreCategoryItem({
+  category,
+  onPress,
+}: {
+  category: ExploreCategory;
+  onPress: (slug: string) => void;
+}) {
+  const handlePress = useCallback(() => onPress(category.slug), [category.slug, onPress]);
+  return (
+    <CategoryCard
+      title={category.title}
+      subtitle={category.description}
+      image={getCategoryMeta(category.slug)?.image}
+      onPress={handlePress}
+    />
+  );
+});
+
 export default function ExploreScreen() {
   const {
     categories,
+    usingBundledCatalog,
     staticPrompts,
     isLoading,
     isStartingConversation,
@@ -53,24 +71,6 @@ export default function ExploreScreen() {
 
   // Lets voice scroll this screen ("scroll down", "go to the top").
   const voiceScrollRef = useVoiceScroll<FlatList<any>>();
-  const getCategoryMeta = useCallback((item: any) => {
-    const categorySlug = getPromptCategorySlug(item);
-    const rawKey = categorySlug.toLowerCase();
-    const key = rawKey
-      .replace(/&/g, 'and')
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '');
-    return CATEGORY_META[key] || {
-      title:
-        (typeof item === 'object' && item?.name) ||
-        categorySlug.replace(/-/g, ' ') ||
-        'Category',
-      subtitle: 'Explore prompts in this category',
-      image: null,
-    };
-  }, []);
-
-
   const listHeader = useMemo(
     () => (
       <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-6">
@@ -102,34 +102,21 @@ export default function ExploreScreen() {
         <Animated.Text className="text-text-strong mb-4" style={TYPE.sectionTitle}>
           Explore categories
         </Animated.Text>
+        {usingBundledCatalog && !isLoading && (
+          <Text accessibilityRole="text" className="text-text-weak" style={TYPE.body}>
+            Questions are temporarily unavailable while Explore is being updated. Pull down to try again.
+          </Text>
+        )}
       </Animated.View>
     ),
-    [staticPrompts, handlePromptPress],
+    [staticPrompts, handlePromptPress, usingBundledCatalog, isLoading],
   );
 
   const renderCategoryItem = useCallback(
-    ({ item }: { item: any }) => {
-      const meta = getCategoryMeta(item);
-      const categorySlug = getPromptCategorySlug(item);
-      const progress = formatCategoryProgress(
-        item.answered_prompts ?? item.answeredCount,
-        item.total_prompts ?? item.prompts_count ?? item.totalCount
-      );
-
-      return (
-        <CategoryCard
-          title={meta.title}
-          subtitle={meta.subtitle}
-          image={meta.image}
-          progressLabel={progress?.label}
-          isComplete={progress?.isComplete}
-          onPress={
-            categorySlug ? () => handleOpenCategory(categorySlug) : undefined
-          }
-        />
-      );
-    },
-    [getCategoryMeta, handleOpenCategory],
+    ({ item }: { item: ExploreCategory }) => (
+      <ExploreCategoryItem category={item} onPress={handleOpenCategory} />
+    ),
+    [handleOpenCategory],
   );
 
   return (
@@ -154,7 +141,7 @@ export default function ExploreScreen() {
           <Animated.FlatList
             ref={voiceScrollRef}
             data={categories}
-            keyExtractor={(item, i) => getPromptCategorySlug(item) || String(i)}
+            keyExtractor={(item) => item.slug}
             initialNumToRender={8}
             maxToRenderPerBatch={5}
             windowSize={5}

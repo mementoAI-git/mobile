@@ -4,10 +4,10 @@ import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import Inbox from 'lucide-react-native/icons/inbox';
-import { Spinner, ExploreSkeleton, EmptyState } from '@/components/ui';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { Spinner, ExploreSkeleton, EmptyState, Tabs, Button } from '@/components/ui';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useCategoryPromptsLogic } from '@/hooks/use-category-prompts-logic';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
@@ -16,6 +16,69 @@ import type { IPrompt } from '@/types';
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const QUESTION_ICON = require('../../../assets/images/question-2.png');
 
+const TOPIC_TABS = [
+  { key: 'all', label: 'All topics' },
+  { key: 'answered', label: 'Answered' },
+];
+
+const ExploreTopicItem = React.memo(function ExploreTopicItem({ prompt, onPress }: {
+  prompt: IPrompt;
+  onPress: (prompt: IPrompt) => void;
+}) {
+  const handlePress = React.useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onPress(prompt);
+  }, [prompt, onPress]);
+  return (
+    <View
+      className="bg-card rounded-2xl p-5 border border-stroke-weaker shadow-sm gap-4 relative"
+    >
+      {/* Question Tag */}
+      <View className="absolute top-4 right-4 px-2 py-0.5 rounded-full bg-brand/5 border border-brand/10">
+        <Animated.Text className="text-brand capitalize" style={TYPE.eyebrow}>
+          Question
+        </Animated.Text>
+      </View>
+
+      {/* Main content: icon + question */}
+      <View className="flex-row items-start gap-4 pr-12">
+        <View className="size-14 items-center justify-center bg-fill-weaker rounded-2xl border border-stroke-weaker">
+          <Image
+            source={QUESTION_ICON}
+            className="size-9"
+            resizeMode="contain"
+          />
+        </View>
+        <View className="flex-1 pt-1">
+          <Animated.Text
+            className="text-text-strong"
+            style={TYPE.cardTitle}
+          >
+            {prompt.title}
+          </Animated.Text>
+        </View>
+      </View>
+
+      {/* Action reply button */}
+      <View className="flex-row pt-2">
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={handlePress}
+          accessibilityRole="button"
+          className="min-h-11 justify-center px-5 py-2 rounded-full border border-stroke-strong bg-white active:bg-fill-weaker"
+        >
+          <Animated.Text
+            className="text-text-strong"
+            style={TYPE.buttonSmall}
+          >
+            Reflect
+          </Animated.Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+});
+
 export default function CategoryPromptsScreen() {
   const {
     id,
@@ -23,7 +86,12 @@ export default function CategoryPromptsScreen() {
     totalDocs,
     categoryMeta,
     activeTab,
-    setActiveTab,
+    handleTabChange,
+    usingBundledCatalog,
+    isError,
+    handleLoadMore,
+    handleRetryTopics,
+    isFetchingNextPage,
     isLoading,
     isRefetching,
     refetch,
@@ -39,57 +107,17 @@ export default function CategoryPromptsScreen() {
     }, [refetchIfStale])
   );
 
+  const handleBackPress = React.useCallback(() => {
+    Haptics.selectionAsync();
+    handleBack();
+  }, [handleBack]);
+  const handleRetryPress = React.useCallback(() => {
+    Haptics.selectionAsync();
+    refetch();
+  }, [refetch]);
+
   const renderPromptItem = React.useCallback(
-    ({ item }: { item: IPrompt }) => (
-      <View
-        className="bg-card rounded-2xl p-5 border border-stroke-weaker shadow-sm gap-4 relative"
-      >
-        {/* Question Tag */}
-        <View className="absolute top-4 right-4 px-2 py-0.5 rounded-full bg-brand/5 border border-brand/10">
-          <Animated.Text className="text-brand capitalize" style={TYPE.eyebrow}>
-            Question
-          </Animated.Text>
-        </View>
-
-        {/* Main content: icon + question */}
-        <View className="flex-row items-start gap-4 pr-12">
-          <View className="size-14 items-center justify-center bg-fill-weaker rounded-2xl border border-stroke-weaker">
-            <Image
-              source={QUESTION_ICON}
-              className="size-9"
-              resizeMode="contain"
-            />
-          </View>
-          <View className="flex-1 pt-1">
-            <Animated.Text
-              className="text-text-strong"
-              style={TYPE.cardTitle}
-            >
-              {item.title}
-            </Animated.Text>
-          </View>
-        </View>
-
-        {/* Action reply button */}
-        <View className="flex-row pt-2">
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              handlePromptPress(item);
-            }}
-            className="px-5 py-2 rounded-full border border-stroke-strong bg-white active:bg-fill-weaker"
-          >
-            <Animated.Text
-              className="text-text-strong"
-              style={TYPE.buttonSmall}
-            >
-              Reply question
-            </Animated.Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    ),
+    ({ item }: { item: IPrompt }) => <ExploreTopicItem prompt={item} onPress={handlePromptPress} />,
     [handlePromptPress],
   );
 
@@ -98,12 +126,11 @@ export default function CategoryPromptsScreen() {
       {/* Header */}
       <View className="flex-row items-center gap-3 px-6 py-4 border-b border-stroke-weaker bg-card shadow-sm">
         <TouchableOpacity
-          onPress={() => {
-            Haptics.selectionAsync();
-            handleBack();
-          }}
+          onPress={handleBackPress}
+          accessibilityRole="button"
+          accessibilityLabel="Back to Explore"
           activeOpacity={0.7}
-          className="size-10 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center -ml-2"
+          className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center -ml-2"
         >
           <ChevronLeft size={20} color={COLORS.textBase} />
         </TouchableOpacity>
@@ -117,13 +144,13 @@ export default function CategoryPromptsScreen() {
       </View>
 
       <View className="flex-1 relative">
-        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-30" />
+        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" />
 
         {isPending && (
           <View className="absolute inset-0 bg-black/10 items-center justify-center z-50">
             <View className="bg-white p-6 rounded-2xl shadow-lg border border-stroke-weaker items-center gap-3">
               <Spinner size="large" color={COLORS.brand} />
-              <Animated.Text className="text-text-strong" style={TYPE.label}>Starting reflect session...</Animated.Text>
+              <Animated.Text className="text-text-strong" style={TYPE.label}>Starting your reflection…</Animated.Text>
             </View>
           </View>
         )}
@@ -135,6 +162,16 @@ export default function CategoryPromptsScreen() {
         ) : (
           <FlatList
             data={prompts}
+            initialNumToRender={8}
+            maxToRenderPerBatch={5}
+            windowSize={5}
+            removeClippedSubviews
+            onEndReachedThreshold={0.3}
+            onEndReached={handleLoadMore}
+            ListFooterComponent={
+              isFetchingNextPage ? <Spinner /> :
+                isError && prompts.length > 0 ? <Button variant="secondary" onPress={handleRetryTopics}>Try again</Button> : null
+            }
             keyExtractor={(item, index) => item._id ?? `prompt-${index}`}
             contentContainerClassName="p-5 pb-32 gap-5"
             showsVerticalScrollIndicator={false}
@@ -168,58 +205,37 @@ export default function CategoryPromptsScreen() {
                       {categoryMeta.subtitle}
                     </Animated.Text>
                   </View>
+                  {!usingBundledCatalog && id && !isError && (
                   <View className="flex-row">
                     <View className="px-3 py-1.5 rounded-full bg-fill-weaker border border-stroke-weaker flex-row items-center gap-1.5">
                       <View className="size-2 rounded-full bg-brand" />
                       <Animated.Text className="text-text-strong" style={TYPE.metadata}>
-                        {totalDocs} topics
+                        {totalDocs} {totalDocs === 1 ? 'topic' : 'topics'}
                       </Animated.Text>
                     </View>
                   </View>
+                  )}
                 </View>
 
-                {/* Tabs selection */}
-                <View className="flex-row border-b border-stroke-weaker mt-2">
-                  {(['Uploaded', 'Answered', 'Unanswered'] as const).map((tab, idx) => {
-                    const isActive = activeTab === idx;
-                    return (
-                      <TouchableOpacity
-                        key={tab}
-                        activeOpacity={0.7}
-                        onPress={() => {
-                          if (isActive) return;
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          setActiveTab(idx as 0 | 1 | 2);
-                        }}
-                        className="flex-1 py-3 items-center relative"
-                      >
-                        <Animated.Text
-                          className={isActive ? 'text-brand' : 'text-text-weak'}
-                          style={TYPE.label}
-                        >
-                          {tab}
-                        </Animated.Text>
-                        {isActive && (
-                          <Animated.View
-                            className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-brand rounded-t-full"
-                          />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                {!usingBundledCatalog && id && (
+                  <Tabs
+                    tabs={TOPIC_TABS}
+                    activeKey={activeTab}
+                    onTabChange={handleTabChange}
+                    className="min-h-[52px]"
+                  />
+                )}
               </View>
             }
             renderItem={renderPromptItem}
             ListEmptyComponent={
-              <View className="items-center justify-center py-16 gap-3">
-                <Inbox size={40} color={COLORS.textDisabled} strokeWidth={1.5} />
-                <Animated.Text
-                  className="text-text-weak text-center"
-                  style={TYPE.body}>
-                  No prompts under this filter yet.
-                </Animated.Text>
-              </View>
+              <EmptyState
+                icon={Inbox}
+                title={!id ? 'Find a new path' : usingBundledCatalog || isError ? 'A little pause in exploring' : activeTab === 'answered' ? 'Your reflections start here' : 'More stories to discover'}
+                description={!id ? 'Choose a category to keep exploring your story.' : usingBundledCatalog ? 'Questions are temporarily unavailable while Explore is being updated. Please try again shortly.' : isError ? 'We couldn’t load your topics. Give it another try.' : activeTab === 'answered' ? 'The topics you answer in this category will appear here.' : 'New topics will appear here when they’re ready.'}
+                actionLabel={!id ? 'Back to Explore' : usingBundledCatalog || isError ? 'Try again' : undefined}
+                onAction={!id ? handleBackPress : handleRetryPress}
+              />
             }
           />
         )}
