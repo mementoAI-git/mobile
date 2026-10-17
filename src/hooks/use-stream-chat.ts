@@ -8,6 +8,10 @@ import { buildPromptWithReplyQuote, type ChatReplyQuote } from '@/lib/utils';
 import type { IMessageAttachment } from '@/types';
 import { createChatMessageIdFactory } from '@/features/chat/message-list';
 import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
+import { StreamPacer } from '@/features/chat/stream-pacer';
+
+/** How often the reply on screen grows by the next word or two. */
+const PACE_TICK_MS = 33;
 
 type ChatAttachmentPreview = IMessageAttachment;
 
@@ -117,6 +121,20 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
+      // The model writes a reply faster than anyone can read it; reveal it
+      // word by word instead of in one dump (see StreamPacer).
+      const pacer = new StreamPacer();
+      const paceTimer = setInterval(() => {
+        if (isMountedRef.current && !controller.signal.aborted) setStreamingText(pacer.tick());
+      }, PACE_TICK_MS);
+      const revealed = () =>
+        new Promise<void>((resolve) => {
+          const check = () => {
+            if (pacer.isCaughtUp() || controller.signal.aborted || !isMountedRef.current) resolve();
+            else setTimeout(check, PACE_TICK_MS);
+          };
+          check();
+        });
 
       try {
         // Read from in-memory Zustand store — synchronous, zero native I/O latency.
@@ -176,8 +194,10 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
           } else {
             accumulated += chunk;
           }
-          if (isMountedRef.current) setStreamingText(accumulated);
+          pacer.receive(accumulated);
         }
+        // Finish revealing what arrived before it becomes a saved message.
+        await revealed();
 
         if (isMountedRef.current && !controller.signal.aborted) {
           streamOutcome = 'success';
@@ -210,6 +230,7 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
           setStreaming(false);
         }
       } finally {
+        clearInterval(paceTimer);
         finishStream({
           outcome: controller.signal.aborted ? 'abort' : streamOutcome,
           chunkCount: streamChunkCount,
