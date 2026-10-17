@@ -31,6 +31,15 @@ export const VOICE_BARGE_IN_HOLD_MS = 1_500;
  * 100 ms frames added up to 100 ms before Gemini heard the end of speech.
  */
 export const VOICE_INPUT_FRAMES = 640;
+/**
+ * The first moments of each reply on the loudspeaker: the mic stays closed and
+ * only teaches the echo filter, as during the greeting. At high volume the
+ * onset of a reply is when Memento most often hears itself, and nobody
+ * interrupts within a third of a second of Memento starting to talk.
+ */
+export const VOICE_REPLY_ONSET_MS = 300;
+/** Per mic frame (40 ms): the leftover echo heard during a fallback halves in about 1.4 s. */
+const FALLBACK_ECHO_DECAY = 0.98;
 const OUTPUT_SAMPLE_RATE = 24_000;
 const FALLBACK_PLAYBACK_SAMPLE_RATE = 48_000;
 
@@ -178,6 +187,14 @@ export type VoiceAudioEngineSnapshot = VoiceMetricSnapshot & {
   concealedMs?: number;
   /** PCM chunks the native renderer dropped as malformed, e.g. an odd byte count. */
   malformedChunks?: number;
+  /** Underruns while no audio had arrived from Gemini for a while (network or the model). */
+  underrunsWaitingForAudio?: number;
+  /** Underruns although audio had just arrived (the app was slow to play it). */
+  underrunsWithAudio?: number;
+  /** Longest wait between Gemini's audio chunks inside a reply. */
+  maxChunkGapMs?: number;
+  /** Longest the JavaScript thread was blocked during playback. */
+  maxJsStallMs?: number;
   /** Whether iOS confirmed echo cancellation; undefined when not requested or unknown. */
   voiceProcessingActive?: boolean;
   /** Effective: off when echo cancellation was requested but iOS did not engage it. */
@@ -278,11 +295,18 @@ export class VoiceAudioEngine {
   private playbackContextSampleRate?: number;
   private playbackGeneration = 0;
   private routeChangePromise: Promise<void> = Promise.resolve();
-  private nativeStats: {
-    adaptiveExtraMs?: number;
-    concealedMs?: number;
-    malformedChunks?: number;
-  } = {};
+  private nativeStats: Partial<
+    Pick<
+      VoiceAudioEngineSnapshot,
+      | 'adaptiveExtraMs'
+      | 'concealedMs'
+      | 'malformedChunks'
+      | 'underrunsWaitingForAudio'
+      | 'underrunsWithAudio'
+      | 'maxChunkGapMs'
+      | 'maxJsStallMs'
+    >
+  > = {};
   private nativePlayback = false;
   private startOutputRoute?: VoiceOutputRoute;
   private outputRoute?: VoiceOutputRoute;
@@ -293,6 +317,16 @@ export class VoiceAudioEngine {
   /** What the build and server allow, before the voice-processing check. */
   private requestedSpeakerFullDuplex: boolean;
   private readonly echoGate: VoiceEchoGate;
+  /** When Memento last became audible on the loudspeaker; 0 while it is quiet. */
+  private audibleSince = 0;
+  /**
+   * Leftover echo while the mic is closed during Memento's speech (the
+   * self-interruption fallback), so the call knows when it has dropped, for
+   * example after the user turned the volume down.
+   */
+  private fallbackEchoLevel = 0;
+  /** Mic frames measured for fallbackEchoLevel since the fallback began. */
+  private fallbackEchoFrames = 0;
 
   constructor(options: VoiceAudioEngineOptions = {}) {
     this.native = options.native ?? createNativeVoiceAudioAdapter();
@@ -345,6 +379,24 @@ export class VoiceAudioEngine {
       bargeIns: this.echoGate.bargeIns,
       suppressed: this.echoGate.suppressed,
     };
+  }
+
+  /** How long Memento has been audible on the loudspeaker, or undefined if it is not. */
+  audibleForMs(): number | undefined {
+    return this.audibleSince === 0 ? undefined : this.now() - this.audibleSince;
+  }
+
+  /**
+   * Leftover echo of Memento's voice at the mic right now: learned by the echo
+   * filter in full duplex, or measured directly while the mic is closed.
+   */
+  leftoverEchoLevel(): number {
+    return this.speakerFullDuplex ? this.echoGate.echoLevel : this.fallbackEchoLevel;
+  }
+
+  /** Seconds of Memento's speech measured since the current fallback began. */
+  fallbackEchoMeasuredSeconds(): number {
+    return (this.fallbackEchoFrames * VOICE_INPUT_FRAMES) / INPUT_SAMPLE_RATE;
   }
 
   /** The mic is open on the loudspeaker while Memento talks. */
@@ -425,8 +477,16 @@ export class VoiceAudioEngine {
           // suppress mic uplink while playback is active/audible to eliminate acoustic echo feedback
           // that causes the server VAD to falsely detect user speech and cut the AI response.
           // When headphones are connected, full duplex is safe (no acoustic speaker feedback).
-          if (!this.speakerFullDuplex && !this.isHeadphones && this.isAudible(200)) {
+          const audibleOnSpeaker = !this.isHeadphones && this.isAudible(200);
+          const at = this.now();
+          if (!audibleOnSpeaker) this.audibleSince = 0;
+          else if (this.audibleSince === 0) this.audibleSince = at;
+          if (!this.speakerFullDuplex && audibleOnSpeaker) {
             this.uplinkDroppedSpeakerGate += 1;
+            // Still measure what reaches the mic: it is (mostly) Memento's echo.
+            const level = calculateRmsEnergy(event.buffer.getChannelData(0));
+            this.fallbackEchoLevel = Math.max(level, this.fallbackEchoLevel * FALLBACK_ECHO_DECAY);
+            this.fallbackEchoFrames += 1;
             return;
           }
 
@@ -440,7 +500,9 @@ export class VoiceAudioEngine {
           const gating = this.speakerFullDuplex && !this.isHeadphones && this.isAudible(200);
           // During the greeting in full duplex, nothing can barge in; the
           // filter learns the echo level from it instead (see armGreetingShield).
-          const learnOnly = this.greetingShieldActive;
+          // The start of every reply gets the same protection.
+          const replyOnset = gating && at - this.audibleSince < VOICE_REPLY_ONSET_MS;
+          const learnOnly = this.greetingShieldActive || replyOnset;
           for (const frame of this.echoGate.process(samples, gating, { learnOnly })) {
             this.uplinkDelivered += 1;
             const rms = calculateRmsEnergy(frame);
@@ -464,6 +526,11 @@ export class VoiceAudioEngine {
 
   /** Apply the server's device policy once the token arrives. */
   setSpeakerFullDuplex(enabled: boolean): void {
+    if (!enabled && this.requestedSpeakerFullDuplex) {
+      // A fallback starts: measure its echo afresh.
+      this.fallbackEchoLevel = 0;
+      this.fallbackEchoFrames = 0;
+    }
     this.requestedSpeakerFullDuplex = enabled;
     this.applySpeakerFullDuplex();
   }

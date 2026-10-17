@@ -6,8 +6,9 @@ import type {
 import type { VoicePlaybackState, VoiceTimerScheduler } from './voice-audio-types';
 import { VOICE_MAX_QUEUE_MS } from './voice-playback-controller';
 import { VoiceSessionMetrics } from './voice-session-metrics';
+import { logger } from '@/lib/logger';
 
-const NATIVE_STATE_POLL_MS = 50;
+export const NATIVE_STATE_POLL_MS = 50;
 // Deeper than the JS fallback's 180/240 ms: cellular jitter otherwise turns
 // each late packet into an audible hole mid-word.
 export const NATIVE_VOICE_STARTUP_BUFFER_MS = 240;
@@ -27,6 +28,12 @@ export interface NativeVoicePlaybackSessionAdapter {
   stop(generation: number): void;
 }
 
+/**
+ * An underrun this long after Gemini's last audio chunk means the player was
+ * waiting for audio, not failing to play audio it had.
+ */
+export const VOICE_UNDERRUN_AUDIO_WAIT_MS = 150;
+
 export class NativeVoicePlaybackController {
   state: VoicePlaybackState = 'idle';
 
@@ -35,6 +42,20 @@ export class NativeVoicePlaybackController {
   private lastUnderrunCount = 0;
   private lastPlaybackEndTime = 0;
   private finalSnapshot?: NativeVoicePlaybackSnapshot;
+  // Why playback ran dry, for the call report: Gemini's audio had stopped
+  // arriving (network or the model), or it had arrived and something else
+  // (often the app's JavaScript thread being busy) kept it from playing.
+  private lastChunkAt = 0;
+  private pollDueAt = 0;
+  private maxChunkGapMs = 0;
+  private maxJsStallMs = 0;
+  private underrunsWaitingForAudio = 0;
+  private underrunsWithAudio = 0;
+  // Dev trace of each reply's start: how long the player waited after
+  // Gemini's first chunk, and how much audio had arrived by then.
+  private primeStartedAt = 0;
+  private primeAudioMs = 0;
+  private primeChunks = 0;
   /** Output sample rate of the native context, used to convert concealed frames to ms. */
   targetSampleRate?: number;
 
@@ -45,6 +66,7 @@ export class NativeVoicePlaybackController {
     private readonly metrics: VoiceSessionMetrics = new VoiceSessionMetrics(),
     private readonly onStateChange?: (state: VoicePlaybackState) => void,
     private readonly scheduler: VoiceTimerScheduler = defaultScheduler,
+    private readonly now: () => number = Date.now,
   ) {
     this.session.start(generation, epoch);
   }
@@ -59,13 +81,30 @@ export class NativeVoicePlaybackController {
     );
     if (!accepted) return false;
 
+    const at = this.now();
+    // Gaps between chunks inside a reply: a long one means Gemini's audio
+    // stalled on the way.
+    if (this.lastChunkAt > 0 && this.state !== 'idle') {
+      this.maxChunkGapMs = Math.max(this.maxChunkGapMs, at - this.lastChunkAt);
+    }
+    this.lastChunkAt = at;
+
     const durationMs = estimatePcm16DurationMs(base64Pcm, 24_000);
     this.metrics.observeOutputChunkDuration(durationMs);
     this.metrics.markFirstOutput();
     // Native render state is authoritative and the poll mirrors it. A chunk
     // only starts priming from idle; mid-response chunks must not flip a
     // playing stream back to prebuffering (that churned isAiSpeaking per chunk).
-    if (this.state === 'idle') this.setState('prebuffering');
+    if (this.state === 'idle') {
+      this.primeStartedAt = at;
+      this.primeAudioMs = 0;
+      this.primeChunks = 0;
+      this.setState('prebuffering');
+    }
+    if (this.primeStartedAt > 0) {
+      this.primeAudioMs += durationMs;
+      this.primeChunks += 1;
+    }
     this.schedulePoll();
     return true;
   }
@@ -93,9 +132,21 @@ export class NativeVoicePlaybackController {
     this.schedulePoll();
   }
 
-  getStats(): { adaptiveExtraMs?: number; concealedMs?: number; malformedChunks: number } {
+  getStats(): {
+    adaptiveExtraMs?: number;
+    concealedMs?: number;
+    malformedChunks: number;
+    underrunsWaitingForAudio: number;
+    underrunsWithAudio: number;
+    maxChunkGapMs: number;
+    maxJsStallMs: number;
+  } {
     const snapshot = this.finalSnapshot ?? this.session.getSnapshot();
     return {
+      underrunsWaitingForAudio: this.underrunsWaitingForAudio,
+      underrunsWithAudio: this.underrunsWithAudio,
+      maxChunkGapMs: this.maxChunkGapMs,
+      maxJsStallMs: this.maxJsStallMs,
       adaptiveExtraMs: snapshot.adaptiveExtraMs,
       concealedMs:
         snapshot.concealedFrames === undefined || !this.targetSampleRate
@@ -137,17 +188,36 @@ export class NativeVoicePlaybackController {
 
   private schedulePoll(): void {
     if (this.pollTimer !== undefined || this.state === 'stopped') return;
+    this.pollDueAt = this.now() + NATIVE_STATE_POLL_MS;
     this.pollTimer = this.scheduler.setTimeout(() => {
       this.pollTimer = undefined;
+      const at = this.now();
+      // A late poll means the JavaScript thread was busy: it was not handing
+      // Gemini's audio to the player either.
+      this.maxJsStallMs = Math.max(this.maxJsStallMs, at - this.pollDueAt);
       const snapshot = this.session.getSnapshot();
       this.metrics.observeQueueDepth(snapshot.bufferedMs);
       while (this.lastUnderrunCount < snapshot.underrunCount) {
         this.metrics.markUnderrun();
         this.lastUnderrunCount += 1;
+        if (at - this.lastChunkAt >= VOICE_UNDERRUN_AUDIO_WAIT_MS) this.underrunsWaitingForAudio += 1;
+        else this.underrunsWithAudio += 1;
       }
 
       if (snapshot.state === 'playing' || snapshot.state === 'draining') {
         this.metrics.markPlaybackStart();
+        if (this.primeStartedAt > 0) {
+          if (__DEV__) {
+            logger.runtime('[VoicePlayback] reply started', {
+              waitedMs: at - this.primeStartedAt,
+              arrivedMs: Math.round(this.primeAudioMs),
+              chunks: this.primeChunks,
+              bufferedMs: snapshot.bufferedMs,
+              adaptiveExtraMs: snapshot.adaptiveExtraMs,
+            });
+          }
+          this.primeStartedAt = 0;
+        }
         this.setState('playing');
       } else if (snapshot.state === 'priming' || snapshot.state === 'recovering') {
         this.setState('prebuffering');

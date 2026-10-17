@@ -21,7 +21,10 @@ describe('story editor title field', () => {
 
     expect(field).toContain('multiline');
     expect(field).toContain('submitBehavior="submit"');
-    expect(field).toContain('singleLineTitle(raw)');
+    // The handler (shared with voice typing) keeps titles on one line.
+    expect(field).toContain('onChangeText={handleTitleChange}');
+    const handler = editor.slice(editor.indexOf('const handleTitleChange'), editor.indexOf('const writeStoryByVoice'));
+    expect(handler).toContain('singleLineTitle(raw)');
     expect(field).not.toContain('blurOnSubmit');
   });
 });

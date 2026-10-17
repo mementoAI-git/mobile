@@ -41,6 +41,10 @@ export type VoiceCallEngineStats = Partial<
     | 'routeRebuilds'
     | 'concealedMs'
     | 'malformedChunks'
+    | 'underrunsWaitingForAudio'
+    | 'underrunsWithAudio'
+    | 'maxChunkGapMs'
+    | 'maxJsStallMs'
     | 'nativePlayback'
     | 'playbackContextSampleRate'
     | 'startOutputRoute'
@@ -200,7 +204,12 @@ function sendVoiceCall(report: VoiceCallReport, sentry: VoiceTelemetrySentry): v
   measure('voice_startup_audio', latency.audioStart?.durationMs, 'millisecond');
   measureStats(measure, 'voice_reply', latency.turnStats.response);
   measureStats(measure, 'voice_reply_audible', latency.turnStats.audible);
-  measure('voice_replies', latency.turnStats.response.count, 'none');
+  measure(
+    'voice_replies',
+    latency.turnStats.response.count + (latency.turnStats.unmeasured ?? 0),
+    'none',
+  );
+  measure('voice_replies_unmeasured', latency.turnStats.unmeasured, 'none');
   measure('voice_reply_early_interruptions', latency.turnStats.earlyInterruptions, 'none');
   measure('voice_interruptions_spoken', latency.turnStats.interruptions.speech, 'none');
   measure('voice_interruptions_tapped', latency.turnStats.interruptions.tap, 'none');
@@ -225,6 +234,11 @@ function sendVoiceCall(report: VoiceCallReport, sentry: VoiceTelemetrySentry): v
   measure('voice_total_tokens_max', report.usage?.maxTotalTokens, 'none');
   measure('voice_malformed_chunks', engine?.malformedChunks, 'none');
   measure('voice_concealed', engine?.concealedMs, 'millisecond');
+  // Why playback ran dry (see NativeVoicePlaybackController).
+  measure('voice_underruns_waiting_for_audio', engine?.underrunsWaitingForAudio, 'none');
+  measure('voice_underruns_with_audio', engine?.underrunsWithAudio, 'none');
+  measure('voice_chunk_gap_max', engine?.maxChunkGapMs, 'millisecond');
+  measure('voice_js_stall_max', engine?.maxJsStallMs, 'millisecond');
 
   if (failed) root.setStatus({ code: SPAN_STATUS_ERROR, message: 'failed' });
   if (failure) {

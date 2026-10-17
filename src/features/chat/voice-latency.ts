@@ -41,8 +41,15 @@ export const VOICE_EARLY_INTERRUPTION_WINDOW_MS = 2_000;
 
 export type VoiceInterruptionSource = 'speech' | 'tap';
 
-/** RMS of a mic frame that counts as speech rather than room noise. */
+/** RMS of a mic frame that always counts as speech. */
 export const VOICE_SPEECH_RMS = 0.02;
+/**
+ * Quieter frames count as speech when they stand this far above the call's
+ * own background noise, so quiet speakers' turns are measured too.
+ */
+export const VOICE_SPEECH_OVER_NOISE = 3;
+/** Never treat frames below this as speech, however quiet the room. */
+export const VOICE_SPEECH_MIN_RMS = 0.006;
 
 const MAX_TURNS = 100;
 
@@ -95,6 +102,11 @@ export type VoiceLatencySummary = {
     earlyInterruptions: number;
     /** Replies interrupted by voice, and by the Interrupt button. */
     interruptions: Record<VoiceInterruptionSource, number>;
+    /**
+     * Replies to speech Gemini transcribed but the mic never measured as
+     * speech: counted as replies, left out of the timing.
+     */
+    unmeasured: number;
   };
 };
 
@@ -103,6 +115,10 @@ export class VoiceLatencyTracker {
   private readonly milestones = new Map<VoiceMilestone, number>();
   private readonly turns: VoiceTurnLatency[] = [];
   private lastSpeechAt?: number;
+  /** Background mic level of this call, tracked from its quiet frames. */
+  // Starts high: until quiet frames pull it down, only clear speech counts.
+  private noiseFloor = VOICE_SPEECH_RMS / VOICE_SPEECH_OVER_NOISE;
+  private unmeasuredReplies = 0;
   private lastTranscriptAt?: number;
   private lastModelTurnEndAt?: number;
   private modelTurnOpen = false;
@@ -131,7 +147,15 @@ export class VoiceLatencyTracker {
 
   /** Call for every mic frame actually sent to Gemini. */
   observeMicFrame(rms: number): void {
-    if (rms >= VOICE_SPEECH_RMS) this.lastSpeechAt = this.now();
+    // Falls quickly to quiet frames, creeps up slowly, so speech barely moves it.
+    this.noiseFloor = rms < this.noiseFloor
+      ? this.noiseFloor * 0.8 + rms * 0.2
+      : this.noiseFloor * 0.99 + rms * 0.01;
+    const threshold = Math.min(
+      VOICE_SPEECH_RMS,
+      Math.max(VOICE_SPEECH_MIN_RMS, this.noiseFloor * VOICE_SPEECH_OVER_NOISE),
+    );
+    if (rms >= threshold) this.lastSpeechAt = this.now();
   }
 
   observeUserTranscript(): void {
@@ -164,6 +188,8 @@ export class VoiceLatencyTracker {
       if (this.turns.length < MAX_TURNS) this.turns.push(turn);
       this.awaitingPlayback = turn;
       this.currentReply = turn;
+    } else if (this.lastTranscriptAt !== undefined && this.lastTranscriptAt > turnEnd) {
+      this.unmeasuredReplies += 1;
     }
     this.toolCallSinceTurnEnd = false;
   }
@@ -230,6 +256,7 @@ export class VoiceLatencyTracker {
           speech: this.turns.filter((turn) => turn.interruptedBy === 'speech').length,
           tap: this.turns.filter((turn) => turn.interruptedBy === 'tap').length,
         },
+        unmeasured: this.unmeasuredReplies,
       },
     };
   }

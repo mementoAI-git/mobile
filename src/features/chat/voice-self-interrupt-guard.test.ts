@@ -1,9 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+  shouldRestore,
   VOICE_ECHO_MEMORY_MS,
   VOICE_FALLBACK_MAX_MS,
   VOICE_FALLBACK_MS,
+  VOICE_ONSET_INTERRUPT_MS,
+  VOICE_RESTORE_ECHO_FLOOR,
+  VOICE_RESTORE_MIN_MEASURED_S,
   VoiceSelfInterruptGuard,
 } from './voice-self-interrupt-guard';
 
@@ -31,24 +35,46 @@ function interruption(g: VoiceSelfInterruptGuard, said: string, heard: string, o
 }
 
 describe('VoiceSelfInterruptGuard', () => {
-  test('falls back after Memento twice interrupts itself with its own words', () => {
+  // At high volume one self-interruption is followed by more, each cutting
+  // Memento off mid-sentence: the first one is enough.
+  test('falls back the first time Memento interrupts itself with its own words', () => {
     const { g, fallbacks } = guard();
 
     interruption(g, 'So tell me about your grandmother', 'tell me about');
-    expect(fallbacks).toHaveLength(0);
-    interruption(g, 'What was her kitchen like?', 'her kitchen');
 
     expect(fallbacks).toHaveLength(1);
-    expect(g.suspected).toBe(2);
+    expect(g.suspected).toBe(1);
   });
 
   test('treats an interruption with nothing transcribed as echo or noise', () => {
     const { g, fallbacks } = guard();
 
     interruption(g, 'Tell me more', '');
-    interruption(g, 'Go on', '');
 
     expect(fallbacks).toHaveLength(1);
+  });
+
+  test('counts a cut-off right as Memento starts talking as echo, whatever was transcribed', () => {
+    const { g, fallbacks } = guard();
+    g.observeOutputText('So tell me about your grandmother');
+    // Distorted echo can transcribe as different words.
+    g.observeInterrupted(true, VOICE_ONSET_INTERRUPT_MS - 1);
+    g.observeInputText('actually it was my aunt');
+    g.observeModelAudio();
+
+    expect(fallbacks).toHaveLength(1);
+    expect(g.onsetInterruptions).toBe(1);
+  });
+
+  test('judges a later cut-off by its words, so a real interruption still works', () => {
+    const { g, fallbacks } = guard();
+    g.observeOutputText('So tell me about your grandmother');
+    g.observeInterrupted(true, VOICE_ONSET_INTERRUPT_MS + 500);
+    g.observeInputText('actually it was my aunt');
+    g.observeModelAudio();
+
+    expect(fallbacks).toHaveLength(0);
+    expect(g.onsetInterruptions).toBe(0);
   });
 
   test('a real interruption is not echo, even a short one', () => {
@@ -120,19 +146,13 @@ describe('VoiceSelfInterruptGuard', () => {
     expect(fallbacks).toHaveLength(1);
   });
 
-  test('backs off longer each time it has to fall back again', () => {
+  test('waits longer before its first echo check each time it has to fall back again', () => {
     const { g, durations } = guard();
 
-    interruption(g, 'Tell me more', '');
-    interruption(g, 'Go on', '');
-    g.restore();
-    interruption(g, 'Tell me more', '');
-    expect(durations).toEqual([VOICE_FALLBACK_MS]); // one suspect after restoring is not enough
-    interruption(g, 'Go on', '');
-    g.restore();
-    for (let i = 0; i < 2; i += 1) interruption(g, 'And then?', '');
-    g.restore();
-    for (let i = 0; i < 2; i += 1) interruption(g, 'And then?', '');
+    for (let round = 0; round < 4; round += 1) {
+      interruption(g, 'Tell me more', '');
+      g.restore();
+    }
 
     expect(durations).toEqual([
       VOICE_FALLBACK_MS,
@@ -152,5 +172,27 @@ describe('VoiceSelfInterruptGuard', () => {
     g.observeInputText(' was born in Lagos in 1931');
     g.observeModelAudio();
     expect(g.suspected).toBe(0);
+  });
+});
+
+describe('shouldRestore', () => {
+  test('listens while Memento talks again once the echo is under a third of its level', () => {
+    expect(shouldRestore(0.09, 0.025, 3)).toBe(true);
+  });
+
+  test('a halved echo is still too loud at full volume', () => {
+    expect(shouldRestore(0.09, 0.045, 3)).toBe(false);
+  });
+
+  test('keeps the mic closed while the echo is still loud (volume still up)', () => {
+    expect(shouldRestore(0.09, 0.08, 3)).toBe(false);
+  });
+
+  test('restores when the echo is too faint to matter, whatever it was before', () => {
+    expect(shouldRestore(0.02, VOICE_RESTORE_ECHO_FLOOR, 3)).toBe(true);
+  });
+
+  test('does not trust a low reading before hearing Memento speak for a moment', () => {
+    expect(shouldRestore(0.09, 0, VOICE_RESTORE_MIN_MEASURED_S - 0.1)).toBe(false);
   });
 });

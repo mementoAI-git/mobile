@@ -4,8 +4,10 @@ import type { NativeVoicePlaybackSnapshot } from 'react-native-memento-voice';
 
 import type { VoiceTimerScheduler } from './voice-audio-types';
 import {
+  NATIVE_STATE_POLL_MS,
   NativeVoicePlaybackController,
   type NativeVoicePlaybackSessionAdapter,
+  VOICE_UNDERRUN_AUDIO_WAIT_MS,
 } from './native-voice-playback-controller';
 import { VoiceSessionMetrics } from './voice-session-metrics';
 
@@ -185,10 +187,80 @@ describe('NativeVoicePlaybackController', () => {
       malformedChunkCount: 0,
     };
 
-    expect(controller.getStats()).toEqual({
+    expect(controller.getStats()).toMatchObject({
       adaptiveExtraMs: 240,
       concealedMs: 100,
       malformedChunks: 2,
     });
+  });
+});
+
+describe('why playback ran dry', () => {
+  function setup() {
+    const clock = { now: 1_000 };
+    const session = new FakeNativeSession();
+    const scheduler = new FakeScheduler();
+    const controller = new NativeVoicePlaybackController(
+      session,
+      3,
+      7,
+      new VoiceSessionMetrics(),
+      undefined,
+      scheduler,
+      () => clock.now,
+    );
+    const underrun = () => {
+      session.snapshot = {
+        ...session.snapshot,
+        state: 'recovering',
+        underrunCount: session.snapshot.underrunCount + 1,
+      };
+    };
+    return { clock, session, scheduler, controller, underrun };
+  }
+
+  test('separates waiting for Gemini audio from failing to play audio that had arrived', () => {
+    const { clock, scheduler, controller, underrun } = setup();
+    controller.enqueue('AAAA', 7);
+
+    // Gemini went quiet for a while, then the buffer ran out.
+    clock.now += VOICE_UNDERRUN_AUDIO_WAIT_MS + 100;
+    underrun();
+    scheduler.fireOne();
+
+    // Audio had just arrived, yet the buffer still ran out.
+    controller.enqueue('AAAA', 7);
+    clock.now += 20;
+    underrun();
+    scheduler.fireOne();
+
+    expect(controller.getStats()).toMatchObject({
+      underrunsWaitingForAudio: 1,
+      underrunsWithAudio: 1,
+    });
+  });
+
+  test('records the longest wait between chunks inside a reply', () => {
+    const { clock, session, scheduler, controller } = setup();
+    controller.enqueue('AAAA', 7);
+    session.snapshot = { ...session.snapshot, state: 'playing' };
+    scheduler.fireOne();
+    clock.now += 700;
+    controller.enqueue('AAAA', 7);
+    clock.now += 200;
+    controller.enqueue('AAAA', 7);
+
+    expect(controller.getStats().maxChunkGapMs).toBe(700);
+  });
+
+  test('records how long the JavaScript thread blocked the player', () => {
+    const { clock, session, scheduler, controller } = setup();
+    controller.enqueue('AAAA', 7);
+    session.snapshot = { ...session.snapshot, state: 'playing' };
+    // The poll fires 900 ms late.
+    clock.now += NATIVE_STATE_POLL_MS + 900;
+    scheduler.fireOne();
+
+    expect(controller.getStats().maxJsStallMs).toBe(900);
   });
 });

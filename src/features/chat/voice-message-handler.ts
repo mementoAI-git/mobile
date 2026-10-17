@@ -149,20 +149,6 @@ export class VoiceMessageHandler {
       effects.push({ type: 'interrupted' });
     }
 
-    const modelTurn = content.modelTurn ?? content.model_turn;
-    for (const rawPart of modelTurn?.parts ?? []) {
-      const part = rawPart as Record<string, any>;
-      const data = part.inlineData?.data ?? part.inline_data?.data;
-      if (typeof data === 'string' && data.length > 0) {
-        effects.push({ type: 'output-audio', data, epoch: currentEpoch });
-      }
-      // ⚠️  DO NOT capture part.text as a spoken transcript.
-      // In Gemini 2.5 native-audio models with thinking enabled, modelTurn.parts[]
-      // contains the model's chain-of-thought reasoning text, NOT what it actually
-      // spoke. The real spoken transcript is always in content.outputTranscription.
-      // Capturing part.text would show the model's internal reasoning to the user.
-    }
-
     // ── Input transcription ──────────────────────────────────────────────────
     // inputTranscription: final, complete utterance delivered as one string.
     // interimInputTranscription: live partial updated on each VAD frame.
@@ -177,6 +163,23 @@ export class VoiceMessageHandler {
       effects.push({ type: 'input-transcript', text: finalInputText, isInterim: false });
     } else if (typeof interimInputText === 'string' && interimInputText.length > 0) {
       effects.push({ type: 'input-transcript', text: interimInputText, isInterim: true });
+    }
+
+    // Input must reach the interruption guard before new audio makes it judge
+    // the interruption. Keep the new output transcript after that judgement so
+    // words in this answer are not mistaken for echo of the previous answer.
+    const modelTurn = content.modelTurn ?? content.model_turn;
+    for (const rawPart of modelTurn?.parts ?? []) {
+      const part = rawPart as Record<string, any>;
+      const data = part.inlineData?.data ?? part.inline_data?.data;
+      if (typeof data === 'string' && data.length > 0) {
+        effects.push({ type: 'output-audio', data, epoch: currentEpoch });
+      }
+      // ⚠️  DO NOT capture part.text as a spoken transcript.
+      // In Gemini 2.5 native-audio models with thinking enabled, modelTurn.parts[]
+      // contains the model's chain-of-thought reasoning text, NOT what it actually
+      // spoke. The real spoken transcript is always in content.outputTranscription.
+      // Capturing part.text would show the model's internal reasoning to the user.
     }
 
     // ── Output transcription ─────────────────────────────────────────────────
