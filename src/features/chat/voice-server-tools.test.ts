@@ -1,18 +1,21 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+  SERVER_TOOL_UNCERTAIN,
   SERVER_TOOL_UNAVAILABLE,
   createServerToolHandlers,
   parseVoiceToolEffects,
   type VoiceToolEffect,
 } from './voice-server-tools';
 
+const live = { callId: 'fc-1', isLive: () => true };
+
 function setup(respond: (name: string, args: Record<string, unknown>) => Promise<unknown>) {
-  const calls: { name: string; args: Record<string, unknown> }[] = [];
+  const calls: { name: string; args: Record<string, unknown>; callId?: string }[] = [];
   const applied: VoiceToolEffect[] = [];
   const handlers = createServerToolHandlers(['update_profile', 'open_story'], {
-    run: (name, args) => {
-      calls.push({ name, args });
+    run: (name, args, invocation) => {
+      calls.push({ name, args, ...(invocation.callId && { callId: invocation.callId }) });
       return respond(name, args);
     },
     applyEffects: (effects) => applied.push(...effects),
@@ -27,9 +30,9 @@ describe('createServerToolHandlers', () => {
       data: { result: 'Done: changed their nickname to Yo.', effects: [] },
     }));
 
-    const result = await handlers.update_profile({ nickname: 'Yo' });
+    const result = await handlers.update_profile({ nickname: 'Yo' }, live);
 
-    expect(calls).toEqual([{ name: 'update_profile', args: { nickname: 'Yo' } }]);
+    expect(calls).toEqual([{ name: 'update_profile', args: { nickname: 'Yo' }, callId: 'fc-1' }]);
     expect(result).toBe('Done: changed their nickname to Yo.');
   });
 
@@ -44,7 +47,7 @@ describe('createServerToolHandlers', () => {
       },
     }));
 
-    await handlers.update_profile({ nickname: 'Yo' });
+    await handlers.update_profile({ nickname: 'Yo' }, live);
 
     expect(applied).toEqual([
       { type: 'refresh', what: 'profile' },
@@ -57,14 +60,39 @@ describe('createServerToolHandlers', () => {
       throw new Error('500');
     });
 
-    expect(await handlers.update_profile({ nickname: 'Yo' })).toBe(SERVER_TOOL_UNAVAILABLE);
+    expect(await handlers.update_profile({ nickname: 'Yo' }, live)).toBe(SERVER_TOOL_UNAVAILABLE);
     expect(applied).toEqual([]);
   });
 
-  test('answers within the deadline when the server is slow', async () => {
+  test('a slow server is an unknown outcome, not a failure to retry', async () => {
     const { handlers } = setup(() => new Promise(() => undefined));
 
-    expect(await handlers.open_story({ query: 'Lagos' })).toBe(SERVER_TOOL_UNAVAILABLE);
+    expect(await handlers.open_story({ query: 'Lagos' }, live)).toBe(SERVER_TOOL_UNCERTAIN);
+  });
+
+  test('an HTTP timeout is an unknown outcome too', async () => {
+    const { handlers } = setup(async () => {
+      throw Object.assign(new Error('timeout of 8000ms exceeded'), { code: 'ECONNABORTED' });
+    });
+
+    expect(await handlers.update_profile({ nickname: 'Yo' }, live)).toBe(SERVER_TOOL_UNCERTAIN);
+  });
+
+  test('after the call ends, refreshes caches but never navigates', async () => {
+    const { applied, handlers } = setup(async () => ({
+      data: {
+        result: 'Done.',
+        effects: [
+          { type: 'refresh', what: 'profile' },
+          { type: 'open', destination: 'profile' },
+          { type: 'open_story', id: '0123456789abcdef01234567' },
+        ],
+      },
+    }));
+
+    await handlers.update_profile({ nickname: 'Yo' }, { callId: 'fc-2', isLive: () => false });
+
+    expect(applied).toEqual([{ type: 'refresh', what: 'profile' }]);
   });
 
   test('only creates handlers for the tools the token lists', () => {

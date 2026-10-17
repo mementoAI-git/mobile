@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useVoiceContent } from '@/features/voice-control/hooks';
 import { View, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import Square from 'lucide-react-native/icons/square';
@@ -52,6 +53,8 @@ export function DailyPromptSection() {
 
   const activeRow = prompts[activeIndex];
   const promptText = activeRow?.slot_kind === 'ai' ? activeRow.ai_prompt_text : activeRow?.prompt?.title;
+  // "Read me the prompt": Memento reads what the card shows.
+  useVoiceContent("Today's prompt", () => promptText ?? '', Boolean(promptText));
 
   const handleCapture = useCallback(() => {
     if (!activeRow || activeRow.answered) return;

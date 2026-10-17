@@ -89,6 +89,8 @@ import { serializeVoiceCallTranscript } from '@/features/chat/voice-transcript-p
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { logger } from '@/lib/logger';
+import { makeMutable } from 'react-native-reanimated';
+import { VoiceThinkingTracker } from '@/features/chat/voice-thinking';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
 import { invalidateMemoryQueries } from '@/features/memories/cache';
@@ -247,7 +249,7 @@ function greetingPromptFor(liveToken: VoiceLiveToken): string {
   const name = user?.nickname || user?.first_name || '';
   return (
     liveToken.greetingInstruction ??
-    `Start with a brief, warm greeting in English${name ? ` to ${name}` : ''}. Then let them lead.`
+    `Start with a brief, warm greeting${name ? ` to ${name}` : ''}. Then let them lead.`
   );
 }
 
@@ -289,6 +291,8 @@ export function useVoiceMode({
   const [aiSpeechText, setAiSpeechText] = useState('Ready to connect secure voice link...');
   const [userSpeechText, setUserSpeechText] = useState('');
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  // Memento heard the user and is working on a reply (see VoiceThinkingTracker).
+  const [isThinking, setIsThinking] = useState(false);
   const [connectionFailure, setConnectionFailure] = useState<VoiceConnectionFailure | null>(null);
 
   const sessionRef = useRef<Session | null>(null);
@@ -350,6 +354,9 @@ export function useVoiceMode({
   }
   const transcriptDiagnosticsRef = useRef(createVoiceTranscriptDiagnostics());
   const latencyRef = useRef<VoiceLatencyTracker | null>(null);
+  const thinkingRef = useRef(new VoiceThinkingTracker());
+  // Loudness of what the mic sends (0..1), for the call screen's level ring.
+  const micLevelRef = useRef(makeMutable(0));
   const selfInterruptRef = useRef<VoiceSelfInterruptGuard | null>(null);
   // Development only: a timestamped trace of the speaker filter's view.
   const debugTraceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -389,6 +396,7 @@ export function useVoiceMode({
   // tell it was superseded.
   const connectAttemptRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const thinkingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingTimeRef = useRef(0);
   const userSpeechTextRef = useRef('');
   const aiSpeechTextRef = useRef('');
@@ -465,6 +473,7 @@ export function useVoiceMode({
 
   const syncCompletedTurns = useCallback((interruptedLast = false) => {
     const completed = transcriptRef.current.drainCompleted();
+    if (__DEV__ && completed.length) logger.runtime('[VoiceMode] turns', completed);
     if (completed.length) turnSyncRef.current?.addTurns(completed, { interruptedLast });
   }, []);
 
@@ -523,6 +532,7 @@ export function useVoiceMode({
           const names = effect.calls.map((call) => call.name);
           transcriptDiagnosticsRef.current.toolCalls.push(...names);
           latencyRef.current?.observeToolCall();
+          thinkingRef.current.observeToolCall();
           logger.runtime('[VoiceMode] tool calls', { names });
           void toolRelayRef.current?.handle(effect.calls);
         } else if (effect.type === 'tool-call-cancellation') {
@@ -538,6 +548,7 @@ export function useVoiceMode({
           // handleInterruption() promotes any interim user text to final so
           // it isn't lost when we complete the (truncated) model turn.
           latencyRef.current?.observeModelTurnEnd({ interruptedBy: 'speech' });
+          thinkingRef.current.reset();
           selfInterruptRef.current?.observeInterrupted(
             engine?.isSpeakerFullDuplexActive() ?? false,
             engine?.audibleForMs(),
@@ -564,6 +575,7 @@ export function useVoiceMode({
         } else if (effect.type === 'output-audio') {
           if (responseGateRef.current?.acceptOutput() === false) continue;
           latencyRef.current?.observeModelAudio();
+          thinkingRef.current.reset();
           selfInterruptRef.current?.observeModelAudio();
           goodbyeRef.current?.tracker.onModelAudio();
           if (engine?.enqueueOutput(effect.data, effect.epoch) && isMountedRef.current) {
@@ -572,6 +584,7 @@ export function useVoiceMode({
           }
         } else if (effect.type === 'input-transcript') {
           latencyRef.current?.observeUserTranscript();
+          if (!effect.isInterim || effect.text) thinkingRef.current.observeUserTranscript();
           selfInterruptRef.current?.observeInputText(effect.text, effect.isInterim);
           const text = transcriptRef.current.appendUser(effect.text, effect.isInterim);
           userSpeechTextRef.current = text;
@@ -601,6 +614,8 @@ export function useVoiceMode({
           const { discarded } = responseGateRef.current?.endTurn() ?? { discarded: false };
           latencyRef.current?.observeModelTurnEnd();
           engine?.finishOutputTurn();
+          // A turn with no reply audio (tool only) still ends the wait.
+          if (!isAiSpeakingRef.current) thinkingRef.current.reset();
           goodbyeRef.current?.tracker.onTurnComplete();
           // The Interrupt button already completed and synced this turn.
           if (discarded) continue;
@@ -674,6 +689,13 @@ export function useVoiceMode({
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    if (thinkingTimerRef.current) {
+      clearInterval(thinkingTimerRef.current);
+      thinkingTimerRef.current = null;
+    }
+    thinkingRef.current.reset();
+    micLevelRef.current.value = 0;
+    if (isMountedRef.current) setIsThinking(false);
     if (debugTraceTimerRef.current) {
       clearInterval(debugTraceTimerRef.current);
       debugTraceTimerRef.current = null;
@@ -911,10 +933,7 @@ export function useVoiceMode({
           },
         },
         // The token locks the real config server-side. This only satisfies the SDK.
-        config: buildGeminiLiveConfig(
-          liveToken.voiceName,
-          useUserStore.getState().user,
-        ),
+        config: buildGeminiLiveConfig(liveToken.voiceName),
       });
       try {
         await withDeadline(
@@ -1372,6 +1391,8 @@ export function useVoiceMode({
         }
         diagnostics.micFramesSent += 1;
         latencyRef.current?.observeMicFrame(rms);
+        thinkingRef.current.observeMic(rms);
+        micLevelRef.current.value = rms;
         uplinkRecorderRef.current?.add(data);
         try {
           sessionRef.current?.sendRealtimeInput({
@@ -1422,8 +1443,14 @@ export function useVoiceMode({
       // Profile changes, opening a story, and whatever the API adds: run on
       // the server, with effects applied here.
       const serverToolHandlers = createServerToolHandlers(liveToken.serverTools, {
-        run: (name, args) =>
-          post(endpoint.voiceTool(name), { args }, { timeout: VOICE_SERVER_TOOL_TIMEOUT_MS }),
+        // Gemini's call id lets the API run a repeated call once; the
+        // session id keeps "undo" within this call.
+        run: (name, args, invocation) =>
+          post(
+            endpoint.voiceTool(name),
+            { args, call_id: invocation.callId, session_id: sessionIdRef.current },
+            { timeout: VOICE_SERVER_TOOL_TIMEOUT_MS },
+          ),
         applyEffects: (effects) => {
           for (const effect of effects) {
             if (effect.type === 'refresh') {
@@ -1573,6 +1600,16 @@ export function useVoiceMode({
         recordingTimeRef.current += 1;
         setRecordingTime((time) => time + 1);
       }, 1_000);
+      thinkingRef.current.reset();
+      let wasThinking = false;
+      thinkingTimerRef.current = setInterval(() => {
+        if (!isMountedRef.current) return;
+        const thinking = thinkingRef.current.isThinking(isAiSpeakingRef.current);
+        if (thinking === wasThinking) return;
+        wasThinking = thinking;
+        if (__DEV__) logger.runtime('[VoiceMode] thinking', { on: thinking });
+        setIsThinking(thinking);
+      }, 150);
       if (__DEV__) {
         // Logs whenever playback or filter state changes, and a heartbeat
         // every 2 s with the loudest mic frame sent since the last line.
@@ -1659,6 +1696,7 @@ export function useVoiceMode({
     // playing once it arrives (see VoiceResponseGate).
     responseGateRef.current?.interruptLocally();
     latencyRef.current?.observeModelTurnEnd({ interruptedBy: 'tap' });
+    thinkingRef.current.reset();
     const newEpoch = engine.nextEpoch();
     engine.interruptOutput(newEpoch);
     if (greetingTimerRef.current) {
@@ -1726,6 +1764,8 @@ export function useVoiceMode({
       aiSpeechText,
       userSpeechText,
       isAiSpeaking,
+      isThinking,
+      micLevel: micLevelRef.current,
       connectionFailure,
       connect,
       prefetch,
@@ -1746,6 +1786,7 @@ export function useVoiceMode({
       aiSpeechText,
       userSpeechText,
       isAiSpeaking,
+      isThinking,
       connectionFailure,
       connect,
       prefetch,

@@ -204,7 +204,12 @@ function sendVoiceCall(report: VoiceCallReport, sentry: VoiceTelemetrySentry): v
   measure('voice_startup_audio', latency.audioStart?.durationMs, 'millisecond');
   measureStats(measure, 'voice_reply', latency.turnStats.response);
   measureStats(measure, 'voice_reply_audible', latency.turnStats.audible);
-  measure('voice_replies', latency.turnStats.response.count, 'none');
+  measure(
+    'voice_replies',
+    latency.turnStats.response.count + (latency.turnStats.unmeasured ?? 0),
+    'none',
+  );
+  measure('voice_replies_unmeasured', latency.turnStats.unmeasured, 'none');
   measure('voice_reply_early_interruptions', latency.turnStats.earlyInterruptions, 'none');
   measure('voice_interruptions_spoken', latency.turnStats.interruptions.speech, 'none');
   measure('voice_interruptions_tapped', latency.turnStats.interruptions.tap, 'none');
