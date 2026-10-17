@@ -10,6 +10,7 @@ function setup(options: { canGoBack?: boolean } = {}) {
     registry,
     canGoBack: () => options.canGoBack ?? true,
     goBack: () => navigation.push('back'),
+    settleMs: 0,
   });
   return { registry, navigation, handlers };
 }
@@ -42,7 +43,7 @@ describe('screen control tools', () => {
   test('scroll accepts the four directions and nothing else', async () => {
     const { registry, handlers } = setup();
     const moves: string[] = [];
-    registry.addScrollTarget({ scroll: (to) => moves.push(to), isActive: () => true });
+    registry.addScrollTarget({ scroll: (to) => void moves.push(to), isActive: () => true });
 
     await handlers.scroll({ direction: 'down' });
     await handlers.scroll({ direction: 'top' });
@@ -52,7 +53,7 @@ describe('screen control tools', () => {
 
   test('go_back goes back when there is somewhere to go', async () => {
     const { handlers, navigation } = setup();
-    expect(await handlers.go_back({})).toBe('Went back.');
+    expect(await handlers.go_back({})).toBe('Went back. Still on an app screen.');
     expect(navigation).toEqual(['back']);
   });
 
@@ -60,5 +61,69 @@ describe('screen control tools', () => {
     const { handlers, navigation } = setup({ canGoBack: false });
     expect(await handlers.go_back({})).toContain('no screen to go back to');
     expect(navigation).toEqual([]);
+  });
+});
+
+describe('screen control tools report where the host is', () => {
+  test('go_back names the screen it left and the one it reached', async () => {
+    const registry = new VoiceControlRegistry();
+    let screen = 'A story';
+    registry.setScreenName(() => screen);
+    const handlers = createScreenControlHandlers({
+      registry,
+      canGoBack: () => true,
+      goBack: () => {
+        screen = 'Your stories';
+      },
+      settleMs: 0,
+    });
+    expect(await handlers.go_back({})).toBe('Went back from A story. Now on Your stories.');
+  });
+
+  test('press_button says where a press led', async () => {
+    const registry = new VoiceControlRegistry();
+    let screen = 'Home (Overview)';
+    registry.setScreenName(() => screen);
+    registry.addPressTarget({
+      label: 'Reply Prompt →',
+      press: () => {
+        screen = 'A conversation';
+      },
+      isActive: () => true,
+    });
+    const handlers = createScreenControlHandlers({
+      registry,
+      canGoBack: () => true,
+      goBack: () => undefined,
+      settleMs: 0,
+    });
+    expect(await handlers.press_button({ label: 'reply prompt' })).toBe(
+      'Pressed "Reply Prompt →". Now on A conversation.',
+    );
+  });
+
+  test('type_text adds by default and sends only when asked', async () => {
+    const registry = new VoiceControlRegistry();
+    let value = '';
+    const sent: string[] = [];
+    registry.addTextTarget({
+      label: 'message',
+      read: () => value,
+      write: (text) => {
+        value = text;
+      },
+      submit: () => sent.push(value),
+      isActive: () => true,
+    });
+    const handlers = createScreenControlHandlers({
+      registry,
+      canGoBack: () => false,
+      goBack: () => undefined,
+      settleMs: 0,
+    });
+    await handlers.type_text({ text: 'I miss' });
+    await handlers.type_text({ text: 'grandma', send: true });
+    expect(value).toBe('I miss grandma');
+    expect(sent).toEqual(['I miss grandma']);
   });
 });
