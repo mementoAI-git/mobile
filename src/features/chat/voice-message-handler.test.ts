@@ -4,8 +4,39 @@ import {
   summarizeVoiceServerMessage,
   VoiceMessageHandler,
 } from './voice-message-handler';
+import { VoiceSelfInterruptGuard } from './voice-self-interrupt-guard';
 
 describe('VoiceMessageHandler', () => {
+  for (const transcriptField of ['inputTranscription', 'interimInputTranscription']) {
+    test(`uses bundled ${transcriptField} before judging an interruption on new audio`, () => {
+      const handler = new VoiceMessageHandler();
+      const fallbacks: number[] = [];
+      const guard = new VoiceSelfInterruptGuard({
+        now: () => 10_000,
+        onFallback: (duration) => fallbacks.push(duration),
+        limit: 1,
+      });
+      guard.observeOutputText('Tell me about your childhood home');
+      guard.observeInterrupted(true, 2_000);
+
+      const effects = handler.handle({
+        serverContent: {
+          modelTurn: { parts: [{ inlineData: { data: 'audio', mimeType: 'audio/pcm' } }] },
+          [transcriptField]: { text: 'actually it was my aunt' },
+          outputTranscription: { text: 'actually it was my aunt' },
+        },
+      }, 1);
+      for (const effect of effects) {
+        if (effect.type === 'input-transcript') guard.observeInputText(effect.text, effect.isInterim);
+        if (effect.type === 'output-audio') guard.observeModelAudio();
+        if (effect.type === 'output-transcript') guard.observeOutputText(effect.text);
+      }
+
+      expect(guard.suspected).toBe(0);
+      expect(fallbacks).toEqual([]);
+    });
+  }
+
   test('summarizes raw event delivery without exposing transcript or audio content', () => {
     const summary = summarizeVoiceServerMessage({
       setupComplete: {},
@@ -125,9 +156,9 @@ describe('VoiceMessageHandler', () => {
       }, 3),
     ).toEqual([
       { type: 'setup-complete' },
+      { type: 'input-transcript', text: 'user words', isInterim: false },
       { type: 'output-audio', data: 'audio-data', epoch: 3 },
       // No output-transcript from part.text — thinking text is ignored.
-      { type: 'input-transcript', text: 'user words', isInterim: false },
       { type: 'output-transcript', text: 'assistant words', finished: false },
       { type: 'turn-complete' },
     ]);

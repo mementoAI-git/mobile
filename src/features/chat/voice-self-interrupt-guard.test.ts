@@ -176,8 +176,12 @@ describe('VoiceSelfInterruptGuard', () => {
 });
 
 describe('shouldRestore', () => {
-  test('listens while Memento talks again once the echo has halved', () => {
-    expect(shouldRestore(0.09, 0.04, 3)).toBe(true);
+  test('listens while Memento talks again once the echo is under a third of its level', () => {
+    expect(shouldRestore(0.09, 0.025, 3)).toBe(true);
+  });
+
+  test('a halved echo is still too loud at full volume', () => {
+    expect(shouldRestore(0.09, 0.045, 3)).toBe(false);
   });
 
   test('keeps the mic closed while the echo is still loud (volume still up)', () => {

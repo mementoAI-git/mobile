@@ -26,9 +26,9 @@ export const VOICE_SELF_INTERRUPT_LIMIT = 1;
 /** An interruption this soon after Memento became audible is its own echo. */
 export const VOICE_ONSET_INTERRUPT_MS = 400;
 /** Leftover echo must fall to this share of its level when the fallback began. */
-export const VOICE_RESTORE_ECHO_RATIO = 0.5;
+export const VOICE_RESTORE_ECHO_RATIO = 0.3;
 /** Below this, leftover echo is too faint to trigger anything. */
-export const VOICE_RESTORE_ECHO_FLOOR = 0.015;
+export const VOICE_RESTORE_ECHO_FLOOR = 0.01;
 /** Seconds of Memento's speech to measure before trusting a low echo reading. */
 export const VOICE_RESTORE_MIN_MEASURED_S = 1;
 
