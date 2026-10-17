@@ -7,6 +7,7 @@ import {
   isHeadphonesRoute,
   VOICE_BARGE_IN_HOLD_MS,
   VOICE_INPUT_FRAMES,
+  VOICE_REPLY_ONSET_MS,
   type VoiceAudioContextAdapter,
   type VoiceAudioNativeAdapter,
   type VoiceAudioQueueAdapter,
@@ -601,6 +602,11 @@ describe('VoiceAudioEngine', () => {
     const frame = (level: number) => new Float32Array(VOICE_INPUT_FRAMES).fill(level);
     const feed = (native: FakeNative, samples: Float32Array) =>
       native.recorder.input?.({ buffer: { getChannelData: () => samples }, numFrames: samples.length });
+    // Memento starts a reply, then the reply-onset shield ends.
+    const pastReplyOnset = (native: FakeNative, clock: { now: number }) => {
+      feed(native, frame(0));
+      clock.now += VOICE_REPLY_ONSET_MS;
+    };
     const isSilent = (chunk: string) => {
       const decoded = pcm16Base64ToFloat32(chunk);
       return decoded.ok && decoded.samples.every((sample) => sample === 0);
@@ -686,15 +692,19 @@ describe('VoiceAudioEngine', () => {
 
     test('replaces leftover echo with silence while Memento is audible on the speaker', async () => {
       const native = new FakeNative();
+      const clock = { now: 10_000 };
       const chunks: string[] = [];
       const levels: number[] = [];
-      const engine = new VoiceAudioEngine({ native, speakerFullDuplex: true });
+      const engine = new VoiceAudioEngine({ native, speakerFullDuplex: true, now: () => clock.now });
       await engine.start((chunk, rms) => {
         chunks.push(chunk);
         levels.push(rms);
       });
 
       engine.enqueueOutput(SPEAKING, 1);
+      pastReplyOnset(native, clock);
+      chunks.length = 0;
+      levels.length = 0;
       // Held as pre-roll first, in case it is the start of a word.
       for (let i = 0; i <= VOICE_ECHO_PRE_ROLL_FRAMES; i += 1) feed(native, frame(0.03));
 
@@ -702,7 +712,7 @@ describe('VoiceAudioEngine', () => {
       expect(isSilent(chunks[0])).toBe(true);
       // Echo must not count as the user speaking in latency metrics either.
       expect(levels).toEqual([0]);
-      expect(engine.snapshot()).toMatchObject({ uplinkEchoSuppressed: 1, bargeIns: 0 });
+      expect(engine.snapshot()).toMatchObject({ uplinkEchoSuppressed: 2, bargeIns: 0 });
     });
 
     test('lets a clear voice barge in and keeps the mic open for the rest of the sentence', async () => {
@@ -712,6 +722,8 @@ describe('VoiceAudioEngine', () => {
       const engine = new VoiceAudioEngine({ native, speakerFullDuplex: true, now: () => clock.now });
       await engine.start((chunk) => chunks.push(chunk));
       engine.enqueueOutput(SPEAKING, 1);
+      pastReplyOnset(native, clock);
+      chunks.length = 0;
 
       feed(native, frame(0.2)); // "wait"
       clock.now += 400;
@@ -721,7 +733,45 @@ describe('VoiceAudioEngine', () => {
       for (let i = 0; i <= VOICE_ECHO_PRE_ROLL_FRAMES; i += 1) feed(native, frame(0.03));
 
       expect(chunks.map(isSilent)).toEqual([false, false, true]);
-      expect(engine.snapshot()).toMatchObject({ bargeIns: 1, uplinkEchoSuppressed: 1 });
+      expect(engine.snapshot()).toMatchObject({ bargeIns: 1, uplinkEchoSuppressed: 2 });
+    });
+
+    test('keeps the mic closed while a reply starts, even for loud sound, and learns the echo from it', async () => {
+      const native = new FakeNative();
+      const clock = { now: 10_000 };
+      const chunks: string[] = [];
+      const engine = new VoiceAudioEngine({ native, speakerFullDuplex: true, now: () => clock.now });
+      await engine.start((chunk) => chunks.push(chunk));
+      engine.enqueueOutput(SPEAKING, 1);
+
+      // Distorted full-volume echo at the start of the reply.
+      feed(native, frame(0.2));
+      clock.now += VOICE_REPLY_ONSET_MS - 40;
+      feed(native, frame(0.2));
+
+      expect(chunks.map(isSilent)).toEqual([true, true]);
+      expect(engine.snapshot()).toMatchObject({ bargeIns: 0 });
+      expect(engine.audibleForMs()).toBe(VOICE_REPLY_ONSET_MS - 40);
+      // The filter learned it: the same level later in the reply is echo too.
+      clock.now += 40;
+      for (let i = 0; i <= VOICE_ECHO_PRE_ROLL_FRAMES; i += 1) feed(native, frame(0.2));
+      expect(engine.snapshot()).toMatchObject({ bargeIns: 0 });
+    });
+
+    test('measures the echo while the mic is closed for a fallback, from a fresh start', async () => {
+      const native = new FakeNative();
+      const engine = new VoiceAudioEngine({ native, speakerFullDuplex: true });
+      await engine.start(() => {});
+      engine.setSpeakerFullDuplex(false);
+      engine.enqueueOutput(SPEAKING, 1);
+
+      for (let i = 0; i < 25; i += 1) feed(native, frame(0.05));
+
+      expect(engine.leftoverEchoLevel()).toBeCloseTo(0.05, 5);
+      expect(engine.fallbackEchoMeasuredSeconds()).toBe(1);
+      engine.setSpeakerFullDuplex(true);
+      engine.setSpeakerFullDuplex(false);
+      expect(engine.fallbackEchoMeasuredSeconds()).toBe(0);
     });
 
     test('does not filter on earphones, where there is no acoustic echo', async () => {
