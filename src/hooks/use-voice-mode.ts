@@ -56,7 +56,7 @@ import { saveUplinkRecording, VoiceUplinkRecorder } from '@/features/chat/voice-
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { VoiceLatencyTracker } from '@/features/chat/voice-latency';
 import { reportVoiceCall, type VoiceCallFailure } from '@/features/chat/voice-telemetry';
-import { VoiceSelfInterruptGuard } from '@/features/chat/voice-self-interrupt-guard';
+import { shouldRestore, VoiceSelfInterruptGuard } from '@/features/chat/voice-self-interrupt-guard';
 import { voiceControl } from '@/features/voice-control/registry';
 import {
   SCREEN_CONTROL_TOOLS,
@@ -136,6 +136,9 @@ const VOICE_AUDIO_POLICY = resolveVoiceAudioPolicy({
   iosVoiceProcessingRequested: process.env.EXPO_PUBLIC_VOICE_IOS_VOICE_PROCESSING === 'true',
 });
 const SPEAKER_FULL_DUPLEX = VOICE_AUDIO_POLICY.speakerFullDuplex;
+// While the self-interruption fallback lasts, how often to check whether the
+// echo has dropped enough to listen while Memento talks again.
+const VOICE_FALLBACK_RECHECK_MS = 15_000;
 // Prepare the call (session open, greeting asked for) while the user looks at
 // the Start button, so the tap plays the greeting at once. Off with 'false'.
 const VOICE_WARM_START = process.env.EXPO_PUBLIC_VOICE_WARM_START !== 'false';
@@ -535,7 +538,10 @@ export function useVoiceMode({
           // handleInterruption() promotes any interim user text to final so
           // it isn't lost when we complete the (truncated) model turn.
           latencyRef.current?.observeModelTurnEnd({ interruptedBy: 'speech' });
-          selfInterruptRef.current?.observeInterrupted(engine?.isSpeakerFullDuplexActive() ?? false);
+          selfInterruptRef.current?.observeInterrupted(
+            engine?.isSpeakerFullDuplexActive() ?? false,
+            engine?.audibleForMs(),
+          );
           const newEpoch = engine?.nextEpoch() ?? 1;
           engine?.interruptOutput(newEpoch);
           if (greetingTimerRef.current) {
@@ -1229,20 +1235,35 @@ export function useVoiceMode({
     const guard = new VoiceSelfInterruptGuard({
       now: Date.now,
       onFallback: (durationMs) => {
+        // The echo that made Memento hear itself; listening resumes once the
+        // echo has clearly dropped (the volume went down), not on a timer.
+        const echoAtFallback = engineRef.current?.leftoverEchoLevel() ?? 0;
         fullDuplexRef.current = false;
         engineRef.current?.setSpeakerFullDuplex(false);
         logger.runtime('[VoiceMode] Memento is hearing itself on the speaker; pausing the mic while it talks', {
           durationMs,
+          echo: Math.round(echoAtFallback * 1_000) / 1_000,
         });
-        if (selfInterruptTimerRef.current) clearTimeout(selfInterruptTimerRef.current);
-        selfInterruptTimerRef.current = setTimeout(() => {
-          selfInterruptTimerRef.current = null;
-          if (selfInterruptRef.current !== guard) return;
-          guard.restore();
-          fullDuplexRef.current = allowedFullDuplexRef.current;
-          engineRef.current?.setSpeakerFullDuplex(allowedFullDuplexRef.current);
-          logger.runtime('[VoiceMode] listening while Memento talks again');
-        }, durationMs);
+        const check = (afterMs: number) => {
+          if (selfInterruptTimerRef.current) clearTimeout(selfInterruptTimerRef.current);
+          selfInterruptTimerRef.current = setTimeout(() => {
+            selfInterruptTimerRef.current = null;
+            const engine = engineRef.current;
+            if (selfInterruptRef.current !== guard || !engine) return;
+            const echoNow = engine.leftoverEchoLevel();
+            if (!shouldRestore(echoAtFallback, echoNow, engine.fallbackEchoMeasuredSeconds())) {
+              check(VOICE_FALLBACK_RECHECK_MS);
+              return;
+            }
+            guard.restore();
+            fullDuplexRef.current = allowedFullDuplexRef.current;
+            engine.setSpeakerFullDuplex(allowedFullDuplexRef.current);
+            logger.runtime('[VoiceMode] the echo dropped; listening while Memento talks again', {
+              echo: Math.round(echoNow * 1_000) / 1_000,
+            });
+          }, afterMs);
+        };
+        check(durationMs);
       },
     });
     selfInterruptRef.current = guard;
