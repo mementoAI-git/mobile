@@ -6,6 +6,7 @@ import type {
 import type { VoicePlaybackState, VoiceTimerScheduler } from './voice-audio-types';
 import { VOICE_MAX_QUEUE_MS } from './voice-playback-controller';
 import { VoiceSessionMetrics } from './voice-session-metrics';
+import { logger } from '@/lib/logger';
 
 export const NATIVE_STATE_POLL_MS = 50;
 // Deeper than the JS fallback's 180/240 ms: cellular jitter otherwise turns
@@ -50,6 +51,11 @@ export class NativeVoicePlaybackController {
   private maxJsStallMs = 0;
   private underrunsWaitingForAudio = 0;
   private underrunsWithAudio = 0;
+  // Dev trace of each reply's start: how long the player waited after
+  // Gemini's first chunk, and how much audio had arrived by then.
+  private primeStartedAt = 0;
+  private primeAudioMs = 0;
+  private primeChunks = 0;
   /** Output sample rate of the native context, used to convert concealed frames to ms. */
   targetSampleRate?: number;
 
@@ -89,7 +95,16 @@ export class NativeVoicePlaybackController {
     // Native render state is authoritative and the poll mirrors it. A chunk
     // only starts priming from idle; mid-response chunks must not flip a
     // playing stream back to prebuffering (that churned isAiSpeaking per chunk).
-    if (this.state === 'idle') this.setState('prebuffering');
+    if (this.state === 'idle') {
+      this.primeStartedAt = at;
+      this.primeAudioMs = 0;
+      this.primeChunks = 0;
+      this.setState('prebuffering');
+    }
+    if (this.primeStartedAt > 0) {
+      this.primeAudioMs += durationMs;
+      this.primeChunks += 1;
+    }
     this.schedulePoll();
     return true;
   }
@@ -191,6 +206,18 @@ export class NativeVoicePlaybackController {
 
       if (snapshot.state === 'playing' || snapshot.state === 'draining') {
         this.metrics.markPlaybackStart();
+        if (this.primeStartedAt > 0) {
+          if (__DEV__) {
+            logger.runtime('[VoicePlayback] reply started', {
+              waitedMs: at - this.primeStartedAt,
+              arrivedMs: Math.round(this.primeAudioMs),
+              chunks: this.primeChunks,
+              bufferedMs: snapshot.bufferedMs,
+              adaptiveExtraMs: snapshot.adaptiveExtraMs,
+            });
+          }
+          this.primeStartedAt = 0;
+        }
         this.setState('playing');
       } else if (snapshot.state === 'priming' || snapshot.state === 'recovering') {
         this.setState('prebuffering');
