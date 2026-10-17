@@ -78,6 +78,32 @@ describe('VoiceEchoGate', () => {
     expect(levels(g.process(frame(0.05), false))).toEqual([0, 0, 0.05]);
   });
 
+  test('does not carry an open mic into the next reply after playback stops', () => {
+    const { clock, gate: g } = gate();
+    g.process(frame(0.03), true, { learnOnly: true });
+    g.process(frame(0.2), true); // user interrupts
+    clock.now += 200;
+    expect(levels(g.process(frame(0.05), false))).toEqual([0.05]);
+    clock.now += 200; // next reply begins before the old hold expires
+
+    expect(g.process(frame(0.03), true)).toEqual([]);
+    expect(g.echoLevel).toBeCloseTo(0.03);
+    expect(g.bargeIns).toBe(1);
+  });
+
+  test('reply calibration cancels an earlier open mic without forgetting the echo level', () => {
+    const { clock, gate: g } = gate();
+    g.process(frame(0.2), true);
+    clock.now += 200;
+    // A fast reply can start without a non-gating mic frame between replies.
+    expect(levels(g.process(frame(0.1), true, { learnOnly: true }))).toEqual([0]);
+    clock.now += 300;
+
+    expect(g.process(frame(0.1), true)).toEqual([]);
+    expect(g.echoLevel).toBeCloseTo(0.1);
+    expect(g.bargeIns).toBe(1);
+  });
+
   test('copies held frames, so a reused recorder buffer does not change them', () => {
     const { gate: g } = gate();
     const buffer = frame(0.04);
