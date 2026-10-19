@@ -1,3 +1,6 @@
+import { currentDigitalMindHeaders } from '@/features/chat/digital-mind-runtime';
+import { useReducedMotion } from 'react-native-reanimated';
+import { createTextReveal } from '@/features/chat/text-reveal';
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import endpoint from '@/api/endpoint';
 import { useAuthStore } from '@/store';
@@ -34,6 +37,10 @@ interface SendOptions {
 }
 
 export function useStreamChat(memoryId?: string, promptId?: string) {
+  const reducedMotion = useReducedMotion();
+  const reducedMotionRef = useRef(reducedMotion);
+  reducedMotionRef.current = reducedMotion;
+  const revealRef = useRef<ReturnType<typeof createTextReveal> | null>(null);
   const [messages, setMessages] = useState<StreamMessage[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
@@ -55,6 +62,11 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
   const createMessageId = createMessageIdRef.current;
 
   useEffect(() => {
+    // Fast Refresh and effect replay run cleanup without recreating refs.
+    isMountedRef.current = true;
+    // Cleanup aborted the old request; replay must also release its UI guard.
+    streamingRef.current = false;
+    setStreaming(false);
     return () => {
       isMountedRef.current = false;
       abortRef.current?.abort();
@@ -111,12 +123,23 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
         mode: chatMode ?? 'open',
       });
       let streamOutcome: 'success' | 'abort' | 'failure' = 'failure';
+      const streamStartedAt = Date.now();
+      let firstChunkMs: number | null = null;
       let streamChunkCount = 0;
       let streamErrorClass: string | undefined;
 
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
+      const reveal = createTextReveal({
+        immediate: () => reducedMotionRef.current,
+        onText: (visible) => {
+          if (isMountedRef.current && abortRef.current === controller && !controller.signal.aborted) setStreamingText(visible);
+        },
+      });
+      revealRef.current = reveal;
+      const cancelReveal = () => reveal.cancel();
+      controller.signal.addEventListener('abort', cancelReveal, { once: true });
 
       try {
         // Read from in-memory Zustand store — synchronous, zero native I/O latency.
@@ -130,6 +153,7 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
           headers: {
             'Content-Type': 'application/json',
             ...getMementoClientHeaders(),
+            ...currentDigitalMindHeaders(),
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
@@ -168,6 +192,7 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
           const { done, value } = await reader.read();
           if (done || !isMountedRef.current || controller.signal.aborted) break;
           const chunk = decoder.decode(value, { stream: true });
+          if (chunk.length && firstChunkMs === null) firstChunkMs = Date.now() - streamStartedAt;
           streamChunkCount += 1;
           runtimeDiagnostics.rate('chat', 'stream-chunks');
           // Handle full-text replacement pattern (web uses this)
@@ -176,10 +201,12 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
           } else {
             accumulated += chunk;
           }
-          if (isMountedRef.current) setStreamingText(accumulated);
+          reveal.update(accumulated);
         }
 
-        if (isMountedRef.current && !controller.signal.aborted) {
+        // Keep the pending message and Stop control alive until the visible text catches up.
+        await reveal.finish();
+        if (isMountedRef.current && !controller.signal.aborted && abortRef.current === controller) {
           streamOutcome = 'success';
           streamingRef.current = false;
           setMessages((prev) => [...prev, {
@@ -210,20 +237,22 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
           setStreaming(false);
         }
       } finally {
+        controller.signal.removeEventListener('abort', cancelReveal);
+        reveal.cancel();
+        if (revealRef.current === reveal) revealRef.current = null;
         finishStream({
           outcome: controller.signal.aborted ? 'abort' : streamOutcome,
           chunkCount: streamChunkCount,
+          firstChunkMs,
           ...(streamErrorClass ? { errorClass: streamErrorClass } : {}),
         });
-        if (readerRef.current) {
-          readerRef.current = null;
-        }
         if (abortRef.current === controller) {
+          readerRef.current = null;
           abortRef.current = null;
-        }
-        if (isMountedRef.current) {
-          streamingRef.current = false;
-          setStreaming(false);
+          if (isMountedRef.current) {
+            streamingRef.current = false;
+            setStreaming(false);
+          }
         }
       }
     },
@@ -235,12 +264,19 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
   );
 
   const abort = useCallback(() => {
+    const partial = revealRef.current?.text;
+    revealRef.current?.cancel();
+    revealRef.current = null;
     abortRef.current?.abort();
     readerRef.current?.cancel().catch(() => undefined);
     readerRef.current = null;
     streamingRef.current = false;
+    if (partial && isMountedRef.current) {
+      setMessages(prev => [...prev, { _id: createMessageId(), role: 'ai', text: partial, created_at: new Date().toISOString(), isLive: true }]);
+    }
+    setStreamingText('');
     setStreaming(false);
-  }, []);
+  }, [createMessageId]);
 
   const clear = useCallback(() => {
     setMessages([]);

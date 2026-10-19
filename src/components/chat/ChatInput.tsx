@@ -1,3 +1,4 @@
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import * as Device from 'expo-device';
 import {
@@ -38,7 +39,7 @@ import { EmojiPickerSheet } from '@/components/chat/EmojiPickerSheet';
 import { insertEmojiAtPosition } from '@/features/chat/emoji-data';
 import { RecordingIconButton } from '@/components/ui/RecordingIconButton';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
-import { COLORS } from '@/constants/tokens';
+import { COLORS, type ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import Animated, {
   useAnimatedStyle,
@@ -110,6 +111,7 @@ const MemoAttachmentTile = React.memo(function MemoAttachmentTile({
   onPreview: (idx: number) => void;
   onRemove: (clientId: string) => void;
 }) {
+  const COLORS = useThemeColors();
   const isMedia = attachment.mimeType.startsWith('image/') || attachment.mimeType.startsWith('video/');
   const isVideo = attachment.mimeType.startsWith('video/');
   const isAudio = attachment.mimeType.startsWith('audio/');
@@ -179,7 +181,7 @@ export interface ChatSendPayload {
 }
 
 interface ChatInputProps {
-  onSend: (payload: ChatSendPayload) => void;
+  onSend: (payload: ChatSendPayload) => void | boolean;
   onStop?: () => void;
   disabled?: boolean;
   placeholder?: string;
@@ -187,6 +189,7 @@ interface ChatInputProps {
   maxComposerHeight?: number;
   parentOwnsBottomSafeArea?: boolean;
   initialAudioUri?: string;
+  voiceMode?: boolean;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -223,6 +226,7 @@ const COMPACT_TEXT_EXPANSION_BUFFER = 0;
 
 export function ChatInput({
   onSend,
+  voiceMode = false,
   onStop,
   disabled,
   placeholder = 'Type a message...',
@@ -231,6 +235,8 @@ export function ChatInput({
   parentOwnsBottomSafeArea = false,
   initialAudioUri,
 }: ChatInputProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const [text, setText] = useState('');
   const [multiline, setMultiline] = useState(false);
   const [compactTextHeight, setCompactTextHeight] = useState(COMPACT_TEXT_MIN_HEIGHT);
@@ -498,7 +504,7 @@ export function ChatInput({
     }, 300);
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onSend({ text: trimmed, attachmentIds: readyIds, attachmentPreviews: readyAttachmentPreviews });
+    if (onSend({ text: trimmed, attachmentIds: readyIds, attachmentPreviews: readyAttachmentPreviews }) === false) return;
     setText('');
     textInputRef.current?.clear();
     setMultiline(false);
@@ -983,7 +989,7 @@ export function ChatInput({
               scrollEnabled={useExpandedComposer ? expandedTextScrollable : compactTextScrollable}
               placeholder={isRecording ? 'Listening…' : placeholder}
               placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
-              selectionColor={isRecording ? COLORS.brand : COLORS.textStrong}
+              selectionColor={COLORS.brand}
               multiline
               maxFontSizeMultiplier={1.3}
               style={textInputStyle}
@@ -1036,7 +1042,7 @@ export function ChatInput({
                 </Animated.View>
               ) : (
                 <View style={styles.compactActionRow}>
-                  {controls.showMic && (
+                  {controls.showMic && !voiceMode && (
                     <Animated.View style={micPulseStyle}>
                       <RecordingIconButton
                         onPress={handleMicPress}
@@ -1118,7 +1124,7 @@ export function ChatInput({
               </Animated.View>
             ) : (
               <View style={styles.compactActionRow}>
-                {controls.showMic && (
+                {controls.showMic && !voiceMode && (
                   <Animated.View style={micPulseStyle}>
                     <RecordingIconButton
                       onPress={handleMicPress}
@@ -1203,7 +1209,7 @@ export function ChatInput({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   floatingContainer: {
     backgroundColor: COLORS.fillWeaker,
     borderWidth: 1,
@@ -1473,4 +1479,4 @@ const styles = StyleSheet.create({
 });
 
 // Link the forward-declared reference so MemoAttachmentTile can use the same StyleSheet
-chatInputStyles = styles;
+chatInputStyles = createStyles(COLORS);

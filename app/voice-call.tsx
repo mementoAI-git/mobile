@@ -1,3 +1,5 @@
+import { VoiceGlow } from '@/components/effects/VoiceGlow';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
 import { Button } from '@/components/ui/Button';
 import { VoiceArtwork } from '@/components/chat/VoiceArtwork';
+import { VoicePicker } from '@/components/chat/VoicePicker';
 import { VoiceUpgradeScreen } from '@/components/chat/VoiceUpgradeScreen';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -27,28 +30,10 @@ import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
 import { useAuthStore, useUiStore, useUserStore, useVoicePreferenceStore } from '@/store';
 
-function VoiceDots({ selectedId, onSelect }: { selectedId: VoiceId; onSelect: (id: VoiceId) => void }) {
-  return (
-    <View className="mt-4 flex-row">
-      {VOICE_CATALOG.map((voice) => (
-        <Pressable
-          key={voice.id}
-          accessibilityLabel={`Choose ${voice.name}`}
-          accessibilityRole="radio"
-          accessibilityState={{ checked: voice.id === selectedId }}
-          onPress={() => onSelect(voice.id)}
-          className="min-h-11 min-w-11 items-center justify-center"
-        >
-          <View className="size-2.5 rounded-full" style={{ backgroundColor: voice.id === selectedId ? COLORS.brand : COLORS.strokeWeak }} />
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
 export default function VoiceCallRoute() {
+  const COLORS = useThemeColors();
   const router = useRouter();
-  const { memoryId } = useLocalSearchParams<{ memoryId?: string }>();
+  const { memoryId, returnToChat } = useLocalSearchParams<{ memoryId?: string; returnToChat?: string }>();
   const user = useAuthStore((state) => state.user);
   const userStoreUser = useUserStore((state) => state.user);
   const selectedVoiceId = useVoicePreferenceStore((state) => state.selectedVoiceId);
@@ -75,6 +60,16 @@ export default function VoiceCallRoute() {
     [draftVoiceId, selectedVoiceId],
   );
   const { voice, configure } = useVoiceCall();
+  const returnedToChatRef = useRef(false);
+  const returnNavigationRef = useRef(router);
+  returnNavigationRef.current = router;
+  useEffect(() => {
+    if (returnToChat !== 'true' || !voice.isConnected || voice.isEnding || returnedToChatRef.current) return;
+    returnedToChatRef.current = true;
+    const navigation = returnNavigationRef.current;
+    if (navigation.canGoBack()) navigation.back();
+    else navigation.replace('/(tabs)/chat');
+  }, [returnToChat, voice.isConnected, voice.isEnding]);
   const { mutateAsync: updateProfileAsync } = useUpdateProfile();
   const [savingVoice, setSavingVoice] = useState(false);
   const [voiceSaveFailed, setVoiceSaveFailed] = useState(false);
@@ -166,9 +161,10 @@ export default function VoiceCallRoute() {
   }, [router, voice]);
 
   const chooseVoice = useCallback((id: VoiceId) => {
+    if (id === draftVoiceId) return;
     Haptics.selectionAsync();
     setDraftVoiceId(id);
-  }, []);
+  }, [draftVoiceId]);
 
   const confirmVoice = useCallback(async () => {
     const choice = getVoiceById(draftVoiceId);
@@ -255,17 +251,8 @@ export default function VoiceCallRoute() {
             locations={[0, 0.56]}
             className="absolute inset-0"
           />
-          <SafeAreaView className="flex-1 px-8" edges={['top', 'bottom']}>
-            <View className="flex-1 items-center justify-center pb-24">
-              <VoiceArtwork voice={getVoiceById(draftVoiceId) ?? VOICE_CATALOG[0]} size={230} />
-              <Text className="mt-7 text-text-strong" style={TYPE.screenTitle}>
-                {(getVoiceById(draftVoiceId) ?? VOICE_CATALOG[0]).name}
-              </Text>
-              <Text className="mt-1 text-text-base" style={TYPE.body}>
-                {(getVoiceById(draftVoiceId) ?? VOICE_CATALOG[0]).subtitle}
-              </Text>
-              <VoiceDots selectedId={draftVoiceId} onSelect={chooseVoice} />
-            </View>
+          <SafeAreaView className="flex-1 px-4" edges={['top', 'bottom']}>
+            <VoicePicker selectedId={draftVoiceId} onSelect={chooseVoice} />
             <Button voiceLabel={false} fullWidth className="mb-2 h-14" loading={savingVoice} onPress={() => void confirmVoice()}>
               Open voice call
             </Button>
@@ -284,6 +271,7 @@ export default function VoiceCallRoute() {
   return (
     <NativeModalSafeAreaBoundary>
       <SafeAreaView className="flex-1 bg-background px-4" edges={['top', 'bottom']}>
+        <VoiceGlow active={voice.isConnected && !voice.isEnding} level={voice.getPlaybackLevel} height={260} />
         <View className="mt-5 flex-row items-center justify-between">
           <Button voiceLabel={false} variant="outline" className="h-11" leftIcon={<PhoneOff size={20} color={COLORS.textBase} />} onPress={requestEnd}>
             End call

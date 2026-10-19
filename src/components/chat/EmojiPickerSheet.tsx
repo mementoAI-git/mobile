@@ -1,3 +1,4 @@
+import { useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { forwardRef, useCallback, useMemo, useState } from 'react';
 import {
   View,
@@ -13,26 +14,29 @@ import {
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
-import X from 'lucide-react-native/icons/x';
-import { COLORS } from '@/constants/tokens';
+import type { ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { iconSize, radius, minTouchTarget } from '@/constants/responsive';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding, getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
 import { EMOJI_CATEGORIES, type EmojiCategory } from '@/features/chat/emoji-data';
 
 interface EmojiPickerSheetProps {
   onSelectEmoji: (emoji: string) => void;
   onClose?: () => void;
+  managed?: boolean;
 }
 
 const NUM_COLUMNS = 7;
 
 export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetProps>(
-  function EmojiPickerSheet({ onSelectEmoji, onClose }, ref) {
+  function EmojiPickerSheet({ onSelectEmoji, onClose, managed = false }, ref) {
+  const styles = useThemeStyles(createStyles);
     const { width: windowWidth } = useWindowDimensions();
     const insets = useSafeAreaInsets();
-    const emojiSize = useMemo(() => Math.floor((windowWidth - 40) / NUM_COLUMNS), [windowWidth]);
+    const emojiSize = useMemo(() => {
+      const columns = Math.min(NUM_COLUMNS, Math.floor((windowWidth - 40) / 44));
+      return Math.floor((windowWidth - 40) / Math.max(1, columns));
+    }, [windowWidth]);
     const snapPoints = useMemo(() => ['42%', '65%'], []);
     const [activeCategoryId, setActiveCategoryId] = useState<string>(EMOJI_CATEGORIES[0].id);
 
@@ -52,8 +56,9 @@ export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetPro
       (emoji: string) => {
         Haptics.selectionAsync();
         onSelectEmoji(emoji);
+        if (managed) onClose?.();
       },
-      [onSelectEmoji]
+      [onSelectEmoji, managed, onClose]
     );
 
     const handleCategoryTab = useCallback((catId: string) => {
@@ -68,16 +73,7 @@ export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetPro
       );
     }, [activeCategoryId]);
 
-    return (
-      <BottomSheetModal
-        ref={ref}
-        topInset={getSheetTopInset(insets.top)}
-        snapPoints={snapPoints}
-        backdropComponent={renderBackdrop}
-        handleIndicatorStyle={styles.handleIndicator}
-        backgroundStyle={styles.sheetBackground}
-        onDismiss={onClose}
-      >
+    const content = (
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
@@ -93,6 +89,9 @@ export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetPro
                 return (
                   <TouchableOpacity
                     key={cat.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={cat.name}
+                    accessibilityState={{ selected: isActive }}
                     onPress={() => handleCategoryTab(cat.id)}
                     style={[styles.categoryTab, isActive && styles.categoryTabActive]}
                     activeOpacity={0.7}
@@ -114,6 +113,8 @@ export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetPro
               {activeCategory.emojis.map((emoji, idx) => (
                 <TouchableOpacity
                   key={`${emoji}-${idx}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Choose ${emoji}`}
                   onPress={() => handleSelectEmoji(emoji)}
                   style={[styles.emojiButton, { width: emojiSize, height: emojiSize }]}
                   activeOpacity={0.6}
@@ -124,12 +125,28 @@ export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetPro
             </View>
           </BottomSheetScrollView>
         </View>
+    );
+
+    if (managed) return content;
+
+    return (
+      <BottomSheetModal
+        ref={ref}
+        topInset={getSheetTopInset(insets.top)}
+        snapPoints={snapPoints}
+        backdropComponent={renderBackdrop}
+        handleStyle={SHEET_HEADER_HANDLE_STYLE}
+        handleIndicatorStyle={styles.handleIndicator}
+        backgroundStyle={styles.sheetBackground}
+        onDismiss={onClose}
+      >
+        {content}
       </BottomSheetModal>
     );
   }
 );
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   sheetBackground: {
     backgroundColor: COLORS.background,
     borderTopLeftRadius: 24,
@@ -142,13 +159,14 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingTop: 0,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.strokeWeaker,
     gap: 12,
@@ -163,15 +181,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   categoryTab: {
-    width: 34,
-    height: 34,
+    width: 44,
+    height: 44,
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.fillWeaker,
   },
   categoryTabActive: {
-    backgroundColor: `${COLORS.brand}1A`,
+    backgroundColor: COLORS.brandSubtle,
     borderWidth: 1,
     borderColor: COLORS.brand,
   },

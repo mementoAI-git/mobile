@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -31,6 +32,8 @@ interface VoiceUpgradeScreenProps {
 }
 
 export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const [selectedPlan, setSelectedPlan] = useState<VoiceUpgradePlan>('annual');
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
@@ -221,9 +224,9 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   safeArea: { backgroundColor: COLORS.background, flex: 1 },
-  content: { paddingBottom: 28, paddingHorizontal: 20, paddingTop: 20 },
+  content: { paddingBottom: 28, paddingHorizontal: 16, paddingTop: 20 },
   closeButton: {
     alignItems: 'center',
     alignSelf: 'flex-end',

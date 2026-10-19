@@ -1,3 +1,8 @@
+import { currentDigitalMindName, currentDigitalMindHeaders } from '@/features/chat/digital-mind-runtime';
+import { voiceEffectLevel } from '@/features/chat/voice-effect-level';
+import { voiceLanguageInstruction } from '@/features/chat/voice-language';
+import { sendVoiceText } from '@/features/chat/voice-text-input';
+import { useVoicePreferenceStore } from '@/store/voice-preference.store';
 import type { LiveServerMessage, Session } from '@google/genai/web';
 import NetInfo from '@react-native-community/netinfo';
 import * as Device from 'expo-device';
@@ -6,6 +11,7 @@ import { Platform } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import endpoint from '@/api/endpoint';
+import type { VoiceChatSession } from '@/features/chat/voice-chat-timeline';
 import { get, post } from '@/api/mutations';
 import { VoiceAudioEngine } from '@/features/chat/voice-audio-engine';
 import { resolveVoiceAudioPolicy } from '@/features/chat/voice-audio-policy';
@@ -224,7 +230,7 @@ function validMemoryId(memoryId?: string | null): string | undefined {
 
 /** Identifies what a session token was built for. */
 function voiceTokenKey(memoryId: string | undefined, voiceName: string | undefined): string {
-  return [useUserStore.getState().user?._id ?? '', memoryId ?? '', voiceName ?? ''].join('|');
+  return [useUserStore.getState().user?._id ?? '', memoryId ?? '', voiceName ?? '', useVoicePreferenceStore.getState().languageCode, currentDigitalMindName() ?? ''].join('|');
 }
 
 function fetchVoiceToken(memoryId: string | undefined) {
@@ -234,7 +240,7 @@ function fetchVoiceToken(memoryId: string | undefined) {
       deviceModel: Device.modelName,
       capabilities: CLIENT_CAPABILITIES,
     }),
-    { timeout: VOICE_TOKEN_TIMEOUT_MS },
+    { timeout: VOICE_TOKEN_TIMEOUT_MS, headers: currentDigitalMindHeaders() },
   );
 }
 
@@ -242,10 +248,11 @@ function fetchVoiceToken(memoryId: string | undefined) {
 function greetingPromptFor(liveToken: VoiceLiveToken): string {
   const user = useUserStore.getState().user;
   const name = user?.nickname || user?.first_name || '';
+  const language = voiceLanguageInstruction(useVoicePreferenceStore.getState().languageCode);
   return (
     liveToken.greetingInstruction ??
-    `Start with a brief, warm greeting in English${name ? ` to ${name}` : ''}. Then let them lead.`
-  );
+    `Start with a brief, warm greeting in the selected conversation language${name ? ` to ${name}` : ''}. Then let them lead.`
+  ) + ' ' + language;
 }
 
 function syncCompletedTurnsInto(
@@ -273,6 +280,7 @@ export function useVoiceMode({
   voiceName?: string;
   callActions?: VoiceCallActionEffects;
 } = {}) {
+  const languageCode = useVoicePreferenceStore(state => state.languageCode);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   /**
@@ -287,6 +295,7 @@ export function useVoiceMode({
   const [userSpeechText, setUserSpeechText] = useState('');
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [connectionFailure, setConnectionFailure] = useState<VoiceConnectionFailure | null>(null);
+  const [voiceTimeline, setVoiceTimeline] = useState<VoiceChatSession | null>(null);
 
   const sessionRef = useRef<Session | null>(null);
   const resumeHandleRef = useRef<string | null>(null);
@@ -306,12 +315,18 @@ export function useVoiceMode({
   const isMutedRef = useRef(false);
   const isGreetingActiveRef = useRef(false);
   const isAiSpeakingRef = useRef(false);
+  const playbackLevelRef = useRef(0);
+  const getPlaybackLevel = useCallback(() => engineRef.current?.isAudible(0) ? playbackLevelRef.current : 0, []);
   const isMountedRef = useRef(true);
   const isDisconnectingRef = useRef(false);
   const isSessionActiveRef = useRef(false);
   const hasCompletedSessionRef = useRef(false);
   const sessionIdRef = useRef<string>(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const transcriptRef = useRef(new VoiceTranscriptTurns());
+  const timelineRef = useRef<Omit<VoiceChatSession, 'messages'> | null>(null);
+  const timelineTimesRef = useRef(new Map<number, string>());
+  const timelineConnectedRef = useRef(false);
+  const publishTimelineRef = useRef<() => void>(() => {});
   const turnSyncRef = useRef<VoiceTurnSync | null>(null);
   // On-device copy of this call's unsaved turns and its end (see VoiceCallOutbox).
   const outboxRef = useRef<VoiceCallOutbox | null>(null);
@@ -337,12 +352,18 @@ export function useVoiceMode({
   const aiTextSetterRef = useRef<ThrottledSetter<string> | null>(null);
   if (!userTextSetterRef.current) {
     userTextSetterRef.current = createThrottledSetter((text: string) => {
-      if (isMountedRef.current) setUserSpeechText(text);
+      if (isMountedRef.current) {
+        setUserSpeechText(text);
+        publishTimelineRef.current();
+      }
     }, TRANSCRIPT_UI_INTERVAL_MS);
   }
   if (!aiTextSetterRef.current) {
     aiTextSetterRef.current = createThrottledSetter((text: string) => {
-      if (isMountedRef.current) setAiSpeechText(text);
+      if (isMountedRef.current) {
+        setAiSpeechText(text);
+        publishTimelineRef.current();
+      }
     }, TRANSCRIPT_UI_INTERVAL_MS);
   }
   const transcriptDiagnosticsRef = useRef(createVoiceTranscriptDiagnostics());
@@ -408,6 +429,25 @@ export function useVoiceMode({
     return rawTargetId && /^[0-9a-fA-F]{24}$/.test(rawTargetId) ? rawTargetId : undefined;
   }, []);
 
+  publishTimelineRef.current = () => {
+    const timeline = timelineRef.current;
+    if (!timeline || !isMountedRef.current) return;
+    const transcript = transcriptRef.current.getTimelineMessages();
+    if (!timelineConnectedRef.current && transcript.length === 0) return;
+    const messages = transcript.map((message, index) => {
+      if (!timelineTimesRef.current.has(index)) timelineTimesRef.current.set(index, new Date().toISOString());
+      return {
+        ...message,
+        _id: `voice-live-${timeline.id}-${index}`,
+        voice_session_id: timeline.id,
+        voice_turn_index: index,
+        created_at: timelineTimesRef.current.get(index),
+        isLive: !timeline.endedAt,
+      };
+    });
+    setVoiceTimeline({ ...timeline, memoryId: resolveTargetMemoryId(), messages });
+  };
+
   const persistVoiceMessages = useCallback(
     async (messages: VoiceTranscriptMessage[]): Promise<boolean> => {
       if (!messages.length) return true;
@@ -453,7 +493,7 @@ export function useVoiceMode({
         void queryClient.invalidateQueries({ queryKey: queryKeys.stories() });
         return true;
       } catch (error) {
-        logger.error('Failed to save voice transcript', error);
+        logger.handledError('Failed to save voice transcript', error);
         return false;
       }
     },
@@ -461,6 +501,7 @@ export function useVoiceMode({
   );
 
   const syncCompletedTurns = useCallback((interruptedLast = false) => {
+    publishTimelineRef.current();
     const completed = transcriptRef.current.drainCompleted();
     if (completed.length) turnSyncRef.current?.addTurns(completed, { interruptedLast });
   }, []);
@@ -561,6 +602,7 @@ export function useVoiceMode({
           selfInterruptRef.current?.observeModelAudio();
           goodbyeRef.current?.tracker.onModelAudio();
           if (engine?.enqueueOutput(effect.data, effect.epoch) && isMountedRef.current) {
+            playbackLevelRef.current = voiceEffectLevel(effect.data);
             isAiSpeakingRef.current = true;
             setIsAiSpeaking(true);
           }
@@ -635,6 +677,10 @@ export function useVoiceMode({
     isSessionActiveRef.current = false;
     isMutedRef.current = true;
     if (isMountedRef.current) setIsEnding(true);
+    if (timelineRef.current) {
+      timelineRef.current.endedAt = new Date().toISOString();
+      publishTimelineRef.current();
+    }
     networkUnsubscribeRef.current?.();
     networkUnsubscribeRef.current = null;
     lastNetworkRef.current = undefined;
@@ -677,7 +723,7 @@ export function useVoiceMode({
 
     const engine = engineRef.current;
     engineRef.current = null;
-    await engine?.stop().catch((error) => logger.warn('Voice audio cleanup failed', error));
+    await engine?.stop().catch((error) => logger.handledError('Voice audio cleanup failed', error));
     const engineSnapshot = engine?.snapshot();
     if (engineSnapshot) logger.runtime('[VoiceMode] session metrics', engineSnapshot);
     const latency = latencyRef.current?.summary();
@@ -755,7 +801,7 @@ export function useVoiceMode({
         void queryClient.invalidateQueries({ queryKey: queryKeys.memory(savedMemoryId) });
       }
       void queryClient.invalidateQueries({ queryKey: queryKeys.memories() });
-      if (!transcriptPersisted) logger.error('Voice turns could not be saved after retry; kept on device');
+      if (!transcriptPersisted) logger.handledError('Voice turns could not be saved after retry; kept on device');
       const outbox = outboxRef.current;
       outboxRef.current = null;
       if (outbox) {
@@ -772,13 +818,13 @@ export function useVoiceMode({
               });
             }
           })
-          .catch((error) => logger.warn('Voice call end could not be recorded', error));
+          .catch((error) => logger.handledError('Voice call end could not be recorded', error));
       } else if (transcriptPersisted) {
         // Saves the real duration and starts server-side transcript clean-up.
         void post(
           voiceCallEndPath(turnSync.getSessionId()),
           buildVoiceCallEndBody(finalDuration, savedMemoryId),
-        ).catch((error) => logger.warn('Voice call end could not be recorded', error));
+        ).catch((error) => logger.handledError('Voice call end could not be recorded', error));
       }
     } else {
       transcriptRef.current.drainCompleted();
@@ -825,6 +871,7 @@ export function useVoiceMode({
 
     userTextSetterRef.current?.flush();
     aiTextSetterRef.current?.flush();
+    publishTimelineRef.current();
     if (isMountedRef.current) {
       setIsConnected(false);
       setIsConnecting(false);
@@ -893,7 +940,7 @@ export function useVoiceMode({
             handleLiveMessage(message);
           },
           onerror: (error) => {
-            logger.error('Live voice session failed', error);
+            logger.debug('Live voice session failed', error);
             setupReady.reject(new Error('Voice session failed during setup.'));
             if (session) options.onClosed?.(session);
             void connectionLostRef.current(session, true);
@@ -908,6 +955,9 @@ export function useVoiceMode({
         config: buildGeminiLiveConfig(
           liveToken.voiceName,
           useUserStore.getState().user,
+          undefined,
+          useVoicePreferenceStore.getState().languageCode,
+          currentDigitalMindName(),
         ),
       });
       try {
@@ -951,7 +1001,7 @@ export function useVoiceMode({
                 deviceModel: Device.modelName,
                 capabilities: CLIENT_CAPABILITIES,
               }),
-              { timeout: VOICE_TOKEN_TIMEOUT_MS },
+              { timeout: VOICE_TOKEN_TIMEOUT_MS, headers: currentDigitalMindHeaders() },
             );
             const liveToken = parseVoiceLiveToken(
               tokenResponse.data,
@@ -973,7 +1023,7 @@ export function useVoiceMode({
             logger.runtime('[VoiceMode] reconnected', { reason, attempt });
             return 'reconnected';
           } catch (error) {
-            logger.warn('Voice reconnect attempt failed', error);
+            logger.handledError('Voice reconnect attempt failed', error);
           }
         }
       } finally {
@@ -1044,7 +1094,7 @@ export function useVoiceMode({
       try {
         sessionRef.current?.sendRealtimeInput({ audioStreamEnd: true });
       } catch (error) {
-        logger.warn('Could not signal the paused microphone', error);
+        logger.handledError('Could not signal the paused microphone', error);
       }
     }
   }, []);
@@ -1219,6 +1269,10 @@ export function useVoiceMode({
     transcriptRef.current = new VoiceTranscriptTurns();
     transcriptDiagnosticsRef.current = createVoiceTranscriptDiagnostics();
     sessionIdRef.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    timelineRef.current = { id: sessionIdRef.current, memoryId: resolveTargetMemoryId(), startedAt: new Date().toISOString() };
+    timelineTimesRef.current.clear();
+    timelineConnectedRef.current = false;
+    setVoiceTimeline(null);
     messageHandlerRef.current = new VoiceMessageHandler();
     uplinkRecorderRef.current = DEBUG_RECORD_UPLINK ? new VoiceUplinkRecorder() : null;
     latencyRef.current = new VoiceLatencyTracker();
@@ -1267,7 +1321,7 @@ export function useVoiceMode({
       speakerFullDuplex: SPEAKER_FULL_DUPLEX,
       iosVoiceProcessing: VOICE_AUDIO_POLICY.iosVoiceProcessing,
       onFatalError: (error) => {
-        logger.error('Native voice audio failed', error);
+        logger.handledError('Native voice audio failed', error);
         failureRef.current ??= { step: 'audio', message: error.message };
         if (isMountedRef.current) {
           setConnectionFailure({
@@ -1444,7 +1498,7 @@ export function useVoiceMode({
                 try {
                   sessionRef.current?.sendToolResponse({ functionResponses });
                 } catch (error) {
-                  logger.warn('Failed to send voice tool response', error);
+                  logger.handledError('Failed to send voice tool response', error);
                 }
               },
               {
@@ -1481,7 +1535,7 @@ export function useVoiceMode({
             // being killed or the network dropping at hang-up.
             (pending, savedMemoryId) => {
               outbox?.saveTurns(callSessionId, savedMemoryId, pending).catch((error) =>
-                logger.warn('Voice outbox write failed', error),
+                logger.handledError('Voice outbox write failed', error),
               );
             },
           )
@@ -1595,6 +1649,8 @@ export function useVoiceMode({
       connectStepRef.current = null;
       if (isMountedRef.current) {
         setIsConnected(true);
+        timelineConnectedRef.current = true;
+        publishTimelineRef.current();
         setIsConnecting(false);
       }
     } catch (error) {
@@ -1606,7 +1662,7 @@ export function useVoiceMode({
       };
       const failure = getVoiceConnectionFailure(error);
       if (failure.kind === 'connection-error') {
-        logger.error('Failed to connect voice session', error);
+        logger.debug('Failed to connect voice session', error);
       }
       if (isMountedRef.current) setConnectionFailure(failure);
       await disconnect();
@@ -1663,6 +1719,38 @@ export function useVoiceMode({
     }
   }, [syncCompletedTurns]);
 
+
+  // The greeting already includes the language. Only send an update when it changes mid-call.
+  const appliedLanguageRef = useRef(languageCode);
+  useEffect(() => {
+    if (!isConnected) { appliedLanguageRef.current = languageCode; return; }
+    if (!sessionRef.current || appliedLanguageRef.current === languageCode) return;
+    try {
+      sessionRef.current.sendClientContent({
+        turns: [{ role: 'user', parts: [{ text: voiceLanguageInstruction(languageCode) }] }],
+        turnComplete: true,
+      });
+      appliedLanguageRef.current = languageCode;
+    } catch (error) {
+      logger.handledError('Could not update the active voice language', error);
+    }
+  }, [isConnected, languageCode]);
+
+  const sendText = useCallback((text: string) => {
+    sendVoiceText(text, {
+      ready: isConnected && !isReconnecting && !isEnding,
+      session: sessionRef.current,
+      record: (value) => {
+        // Keep typed messages separate from any speech already in flight.
+        transcriptRef.current.completeTurn();
+        transcriptRef.current.appendUser(value);
+        transcriptRef.current.completeTurn();
+        syncCompletedTurns();
+        publishTimelineRef.current();
+      },
+    });
+  }, [isConnected, isReconnecting, isEnding, syncCompletedTurns]);
+
   // Sends what earlier calls left on the device (network down at hang-up, app
   // killed mid-call): at launch, when an account signs in, and whenever the
   // network comes back. The call in progress is never touched.
@@ -1675,7 +1763,7 @@ export function useVoiceMode({
         .drain((url, body) => post(url, body), {
           skipSessionId: isSessionActiveRef.current ? sessionIdRef.current : undefined,
         })
-        .catch((error) => logger.warn('Voice outbox drain failed', error));
+        .catch((error) => logger.handledError('Voice outbox drain failed', error));
     };
     drain();
     const unsubscribe = NetInfo.addEventListener((state) => {
@@ -1697,6 +1785,7 @@ export function useVoiceMode({
   return useMemo(
     () => ({
       isConnected,
+      voiceTimeline,
       isConnecting,
       isEnding,
       isReconnecting,
@@ -1705,6 +1794,7 @@ export function useVoiceMode({
       aiSpeechText,
       userSpeechText,
       isAiSpeaking,
+      getPlaybackLevel,
       connectionFailure,
       connect,
       prefetch,
@@ -1713,10 +1803,12 @@ export function useVoiceMode({
       toggleMute,
       setMuted,
       endCallAfterGoodbye,
+      sendText,
       interrupt,
     }),
     [
       isConnected,
+      voiceTimeline,
       isConnecting,
       isEnding,
       isReconnecting,
@@ -1725,6 +1817,7 @@ export function useVoiceMode({
       aiSpeechText,
       userSpeechText,
       isAiSpeaking,
+      getPlaybackLevel,
       connectionFailure,
       connect,
       prefetch,
@@ -1733,6 +1826,7 @@ export function useVoiceMode({
       toggleMute,
       setMuted,
       endCallAfterGoodbye,
+      sendText,
       interrupt,
     ],
   );

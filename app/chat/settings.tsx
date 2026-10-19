@@ -1,3 +1,5 @@
+import type { ThemeColors } from '@/constants/tokens';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   PanResponder,
@@ -29,6 +31,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { COLORS, FONTS } from '@/constants/tokens';
+import { DEEP_SKY } from '@/constants/appearance';
 import { TYPE } from '@/constants/typography';
 import { minTouchTarget, iconSize, radius, responsiveSpace } from '@/constants/responsive';
 import { getChatSettingsLayout } from '@/features/chat/chat-settings-layout';
@@ -50,7 +53,9 @@ import {
 import { useUpdateProfile } from '@/hooks/mutations/use-profile-mutation';
 import { useToast } from '@/components/ui/Toast';
 
-const SCORE_COLORS = [
+
+
+const getScoreColors = (COLORS: ThemeColors) => [
   COLORS.info,
   COLORS.beneficiaryGroupBlue,
   COLORS.beneficiaryGroupGreen,
@@ -72,6 +77,7 @@ function RoundButton({
   label: string;
   onPress: () => void;
 }) {
+  const styles = useThemeStyles(createStyles);
   const handlePress = useCallback(() => {
     Haptics.selectionAsync();
     onPress();
@@ -101,6 +107,8 @@ function MediaTile({
   onPress: () => void;
   width: number;
 }) {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const handlePress = useCallback(() => {
     Haptics.selectionAsync();
     onPress();
@@ -131,6 +139,8 @@ function InsightCard({
   title: string;
   width: number;
 }) {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const handlePress = useCallback(() => {
     Haptics.selectionAsync();
   }, []);
@@ -164,6 +174,8 @@ function SelectionCard({
   selected: boolean;
   width: number;
 }) {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -210,6 +222,7 @@ function VolumeSlider({
   onChange: (value: number) => void;
   value: number;
 }) {
+  const styles = useThemeStyles(createStyles);
   const [trackWidth, setTrackWidth] = useState(0);
   const updateValue = useCallback((x: number) => {
     if (trackWidth <= 0) return;
@@ -259,6 +272,8 @@ function parseScore(value?: string) {
 }
 
 export default function ChatSettingsScreen() {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const { width: screenWidth } = useWindowDimensions();
   const { enrichmentStats, chatId } = useLocalSearchParams<{ enrichmentStats?: string; chatId?: string }>();
   const layout = useMemo(() => getChatSettingsLayout(screenWidth), [screenWidth]);
@@ -360,10 +375,11 @@ export default function ChatSettingsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
-      <StatusBar style="dark" />
       <LinearGradient
-        colors={[COLORS.onboardingAmberPale, COLORS.onboardingWarmWhite, COLORS.background]}
+        colors={[COLORS.brandTint, COLORS.brandSubtle, 'transparent']}
         locations={[0, 0.66, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
         pointerEvents="none"
         style={styles.backgroundGradient}
       />
@@ -393,7 +409,7 @@ export default function ChatSettingsScreen() {
             </View>
 
             <View style={styles.scoreBar}>
-              {SCORE_COLORS.map((color, index) => (
+              {getScoreColors(COLORS).map((color, index) => (
                 <View
                   key={color}
                   style={[
@@ -530,9 +546,10 @@ export default function ChatSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   screen: {
-    backgroundColor: COLORS.background,
+    // Deep Sky normally reveals the shared canvas; this overlay needs its own opaque surface.
+    backgroundColor: COLORS.background === 'transparent' ? DEEP_SKY.canvas : COLORS.background,
     flex: 1,
   },
   backgroundGradient: {
@@ -630,7 +647,7 @@ const styles = StyleSheet.create({
   },
   scoreActionIcon: {
     alignItems: 'center',
-    backgroundColor: COLORS.textStrong,
+    backgroundColor: COLORS.mediaSurface,
     borderRadius: 2,
     height: 15,
     justifyContent: 'center',
@@ -739,7 +756,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   selectionCardSelected: {
-    // borderColor: COLORS.onboardingAmber,
+    borderColor: COLORS.brand,
     borderWidth: 2,
   },
   selectedMark: {
@@ -803,7 +820,7 @@ const styles = StyleSheet.create({
   },
   recordPlayer: {
     alignItems: 'center',
-    backgroundColor: COLORS.onboardingAmberPale,
+    backgroundColor: COLORS.brandTint,
     borderColor: COLORS.onboardingAmber,
     borderRadius: 8,
     borderWidth: 1,

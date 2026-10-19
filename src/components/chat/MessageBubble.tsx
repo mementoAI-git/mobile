@@ -1,22 +1,23 @@
-import React, { useEffect, useCallback, useMemo } from 'react';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
+import React, { useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, Image, Linking, StyleSheet } from 'react-native';
-import { TouchableOpacity } from '@/components/ui/Touchable';
-import * as Clipboard from 'expo-clipboard';
+import { Pressable, TouchableOpacity } from '@/components/ui/Touchable';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import type { IMessage } from '@/types';
 import dayjs from 'dayjs';
-import { COLORS, FONTS } from '@/constants/tokens';
-import { TYPE } from '@/constants/typography';
+import { COLORS, FONTS, type ThemeColors } from '@/constants/tokens';
+import { TYPE, TYPE_METRICS } from '@/constants/typography';
 import { tokenizeMessageMarkdown } from '@/features/chat/message-markdown';
-import CornerDownRight from 'lucide-react-native/icons/corner-down-right';
 import FileText from 'lucide-react-native/icons/file-text';
 import Music from 'lucide-react-native/icons/music';
 import Play from 'lucide-react-native/icons/play';
 import ExternalLink from 'lucide-react-native/icons/external-link';
-import Copy from 'lucide-react-native/icons/copy';
-import Mic from 'lucide-react-native/icons/mic';
-import * as Haptics from 'expo-haptics';
+import { useMessageActions } from './MessageActionsProvider';
+import { MESSAGE_LONG_PRESS_MS, getMessageReactionKey } from '@/features/chat/message-actions';
+import { getChatMessageKey } from '@/features/chat/message-list';
+import { useAuthStore } from '@/store/auth.store';
+import { useMessageReactionsStore } from '@/store/message-reactions.store';
 import type { PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
@@ -26,8 +27,6 @@ import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-typ
 import { getAttachmentPreviewKind } from '@/features/media/media-runtime-policy';
 import type { SignedMediaAccessMetadata } from '@/features/media/signed-media-access';
 import { iconSize, radius, minTouchTarget, responsiveSpace, ms } from '@/constants/responsive';
-import { isVoiceCallMessage } from '@/features/chat/voice-transcript-parser';
-import { VoiceCallCard } from './VoiceCallCard';
 
 // ─── Backward-compat helpers for old messages ────────────────────────────────
 
@@ -97,6 +96,7 @@ function AttachmentTile({ attachment, onPress }: {
   attachment: ChatAttachment;
   onPress: () => void;
 }) {
+  const COLORS = useThemeColors();
   const cat = getMediaCategory({ mimeType: attachment.type, name: attachment.name, uri: attachment.url });
   const previewKind = getAttachmentPreviewKind({ category: cat, uri: attachment.url });
 
@@ -198,7 +198,7 @@ function isMessageOnlyUrl(text: string): boolean {
   return regex.test(trimmed);
 }
 
-export function parseFormattedMessage(text: string, _isUser?: boolean): React.ReactNode[] {
+export function parseFormattedMessage(text: string, isUser?: boolean, styles = createStyles(COLORS)): React.ReactNode[] {
   const tokens = tokenizeMessageMarkdown(text);
   if (tokens.length === 0) {
     return [text];
@@ -218,21 +218,21 @@ export function parseFormattedMessage(text: string, _isUser?: boolean): React.Re
 
       case 'bold':
         return (
-          <Text key={index} style={styles.markdownBold}>
+          <Text key={index} style={[styles.markdownBold, isUser && TYPE_METRICS.bodyLarge]}>
             {token.text}
           </Text>
         );
 
       case 'bold_italic':
         return (
-          <Text key={index} style={styles.markdownBoldItalic}>
+          <Text key={index} style={[styles.markdownBoldItalic, isUser && TYPE_METRICS.bodyLarge]}>
             {token.text}
           </Text>
         );
 
       case 'code':
         return (
-          <Text key={index} style={styles.markdownCode}>
+          <Text key={index} style={[styles.markdownCode, isUser && TYPE_METRICS.bodyLarge]}>
             {token.text}
           </Text>
         );
@@ -284,6 +284,7 @@ export function parseFormattedMessage(text: string, _isUser?: boolean): React.Re
 const parseTextWithLinks = parseFormattedMessage;
 
 function LinkPreviewChip({ preview }: { preview: LinkPreviewData }) {
+  const COLORS = useThemeColors();
   const handlePress = useCallback(() => {
     Linking.openURL(preview.url).catch(() => {});
   }, [preview.url]);
@@ -373,6 +374,7 @@ function AttachmentPlaceholder({
   height: number;
   borderRadius: number;
 }) {
+  const COLORS = useThemeColors();
   return (
     <View style={{
       width,
@@ -539,6 +541,8 @@ export const MessageBubble = React.memo(function MessageBubble({
   highlighted = false,
   animated = false,
 }: MessageBubbleProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const isUser = message.role === 'user';
   const rawAttachments: ChatAttachment[] =
     (message as any).attachments ?? (message as any).attatchments ?? [];
@@ -547,10 +551,21 @@ export const MessageBubble = React.memo(function MessageBubble({
   const replyQuote: { role: string; text: string } | null =
     (message as any).replyTo ?? (isUser ? extractReplyQuote(rawContent) : null);
   const content = isUser ? stripReplyWrapper(rawContent) : rawContent;
+  const surfaceRef = useRef<View>(null);
+  const openActions = useMessageActions();
+  const userId = useAuthStore((state) => state.user?._id ?? 'guest');
+  const reactionKey = getMessageReactionKey(userId, getChatMessageKey({ ...message, text: rawContent }));
+  const reaction = useMessageReactionsStore((state) => state.reactions[reactionKey]);
+  const handleOpenActions = useCallback(() => {
+    if (!surfaceRef.current) return;
+    openActions?.({ view: surfaceRef.current, text: content, reactionKey, onReply });
+  }, [content, onReply, openActions, reactionKey]);
+  const handleAccessibilityAction = useCallback((event: { nativeEvent: { actionName: string } }) => {
+    if (event.nativeEvent.actionName === 'activate' || event.nativeEvent.actionName === 'longpress') handleOpenActions();
+  }, [handleOpenActions]);
   const responseTime = 'created_at' in message && message.created_at
     ? dayjs(message.created_at).format('h:mma')
     : null;
-  const isVoice = Boolean((message as any).is_voice);
 
   const previewAttachments: PreviewAttachment[] = useMemo(
     () => rawAttachments.map(toPreviewAttachment),
@@ -567,19 +582,6 @@ export const MessageBubble = React.memo(function MessageBubble({
 
   if (!hasContent) return null;
 
-  if (isVoiceCallMessage(content, isVoice)) {
-    const Container = animated ? Animated.View : View;
-    const containerProps = animated ? { entering: FadeIn.duration(150) } : {};
-    return (
-      <Container {...containerProps} style={styles.voiceCallWrapper}>
-        <VoiceCallCard
-          message={message as any}
-          onReply={onReply}
-          highlighted={highlighted}
-        />
-      </Container>
-    );
-  }
 
   const Container = animated ? Animated.View : View;
   const containerProps = animated
@@ -596,11 +598,20 @@ export const MessageBubble = React.memo(function MessageBubble({
         isUser && rawAttachments.length > 0 && styles.userAttachmentContainer,
       ]}
     >
-        <View
+        <Pressable
+          ref={surfaceRef}
+          collapsable={false}
+          accessible={Boolean(onReply)}
+          accessibilityLabel={content || 'Message attachment'}
+          onLongPress={onReply ? handleOpenActions : undefined}
+          delayLongPress={MESSAGE_LONG_PRESS_MS}
+          accessibilityHint="Touch and hold for reply, copy, and reactions"
+          accessibilityActions={[{ name: 'longpress', label: 'Message actions' }]}
+          onAccessibilityAction={handleAccessibilityAction}
           style={[
             styles.messageSurface,
             isUser ? styles.userSurface : styles.assistantSurface,
-            isOnlyUrl && { backgroundColor: 'transparent', paddingHorizontal: 0, paddingVertical: 0 }
+            isOnlyUrl && isUser && { backgroundColor: 'transparent', paddingHorizontal: 0, paddingVertical: 0 }
           ]}
         >
 
@@ -625,61 +636,37 @@ export const MessageBubble = React.memo(function MessageBubble({
           {/* Message text */}
           {content.trim().length > 0 && !isOnlyUrl && (
             <Text
-              style={[styles.messageText, { marginTop: rawAttachments.length > 0 ? 4 : 0 }]}
+              style={[styles.messageText, isUser && TYPE.bodyLarge, { marginTop: rawAttachments.length > 0 ? 4 : 0 }]}
               numberOfLines={isMessageOnlyUrl(content) ? 1 : undefined}
             >
-              {parseFormattedMessage(content, isUser)}
+              {parseFormattedMessage(content, isUser, styles)}
             </Text>
           )}
 
           {/* Link preview chips */}
           {content.trim().length > 0 && <LinkPreviews text={content} />}
-        </View>
+        </Pressable>
+
+        {reaction && (
+          <Pressable
+            onPress={handleOpenActions}
+            accessibilityRole="button"
+            accessibilityLabel={`Your reaction ${reaction}. Change reaction`}
+            style={{ alignSelf: isUser ? 'flex-end' : 'flex-start', minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak, borderRadius: 10, marginTop: 4 }}
+          >
+            <Text style={[TYPE.uiTitle, { transform: [{ scale: 0.8 }] }]}>{reaction}</Text>
+          </Pressable>
+        )}
 
         {/* Meta row */}
         <View style={[styles.metaRow, isUser ? styles.metaRowUser : styles.metaRowAssistant]}>
-          {isVoice && (
-            <View style={styles.voiceIndicator}>
-              <Mic size={iconSize(12)} color={COLORS.textWeak} strokeWidth={2} />
-              <Text style={styles.voiceLabel}>Spoken</Text>
-            </View>
-          )}
           {responseTime && <Text style={styles.timeLabel}>{responseTime}</Text>}
-          {content.trim().length > 0 && (
-            <TouchableOpacity
-              accessibilityLabel="Copy message"
-              accessibilityRole="button"
-              onPress={() => {
-                Haptics.selectionAsync();
-                Clipboard.setStringAsync(content.trim()).catch(() => {});
-              }}
-              activeOpacity={0.7}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={styles.metaIconButton}
-            >
-              <Copy size={iconSize(17)} color={COLORS.textStrong} strokeWidth={2} />
-            </TouchableOpacity>
-          )}
-          {onReply && (
-            <TouchableOpacity
-              accessibilityLabel="Reply to message"
-              accessibilityRole="button"
-              onPress={onReply}
-              activeOpacity={0.7}
-              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
-              style={styles.replyButton}
-            >
-              <CornerDownRight size={iconSize(18)} color={COLORS.textStrong} strokeWidth={2} />
-              <Text style={styles.replyLabel}>Reply</Text>
-            </TouchableOpacity>
-          )}
         </View>
     </Container>
   );
 });
 
-const styles = StyleSheet.create({
-  voiceCallWrapper: { alignSelf: 'stretch', width: '100%', marginBottom: 8 },
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   messageContainer: { marginBottom: 14 },
   messageContainerHighlighted: {
     backgroundColor: COLORS.brandSubtle,
@@ -690,15 +677,15 @@ const styles = StyleSheet.create({
   },
   userMessageContainer: { alignSelf: 'flex-end', maxWidth: '64%' },
   userAttachmentContainer: { maxWidth: '78%' },
-  assistantMessageContainer: { alignSelf: 'stretch' },
+  assistantMessageContainer: { alignSelf: 'flex-start', maxWidth: '88%' },
   messageSurface: { overflow: 'hidden' },
   userSurface: {
-    backgroundColor: COLORS.fillWeak,
-    borderRadius: radius(6),
-    paddingHorizontal: 6,
+    backgroundColor: COLORS.fillChatUser,
+    borderRadius: 14,
+    paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  assistantSurface: { backgroundColor: COLORS.background },
+  assistantSurface: { backgroundColor: COLORS.fillWeak, borderRadius: 14, padding: 10 },
   messageText: {
     color: COLORS.textStrong,
     ...TYPE.body,
@@ -757,31 +744,5 @@ const styles = StyleSheet.create({
     ...TYPE.bodySmall,
     lineHeight: 18,
   },
-  metaIconButton: {
-    alignItems: 'center',
-    height: 24,
-    justifyContent: 'center',
-    width: 24,
-  },
-  replyButton: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 5,
-    minHeight: 24,
-  },
-  replyLabel: {
-    color: COLORS.textStrong,
-    ...TYPE.bodySmall,
-    lineHeight: 18,
-  },
-  voiceIndicator: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 3,
-  },
-  voiceLabel: {
-    color: COLORS.textWeak,
-    ...TYPE.metadata,
-    lineHeight: 14,
-  },
+
 });

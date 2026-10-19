@@ -1,3 +1,7 @@
+import { useThemeColors, useThemeStyles, useResolvedAppearance } from '@/hooks/use-theme-colors';
+import { BlurView } from 'expo-blur';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
@@ -10,8 +14,7 @@ import {
 } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { FlashList } from '@shopify/flash-list';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { BlurTargetView, BlurView } from 'expo-blur';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import MoreHorizontal from 'lucide-react-native/icons/ellipsis';
 import PhoneCall from 'lucide-react-native/icons/phone-call';
@@ -21,6 +24,10 @@ import {
   MessageBubble,
   type ChatAttachmentPreviewRequest,
 } from '@/components/chat/MessageBubble';
+import { VoiceSessionDivider } from '@/components/chat/VoiceSessionDivider';
+import { DigitalMindHeader } from '@/components/chat/DigitalMindHeader';
+import { VoiceChatComposer } from '@/components/chat/VoiceChatComposer';
+import { MessageActionsProvider } from '@/components/chat/MessageActionsProvider';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { ChatInput, type ChatSendPayload } from '@/components/chat/ChatInput';
 import { MilestoneCard } from '@/components/chat/MilestoneCard';
@@ -28,7 +35,7 @@ import { DeepDiveNudge } from '@/components/chat/DeepDiveNudge';
 import { DeepDiveBanner } from '@/components/chat/DeepDiveBanner';
 import { PromptReflectionHeader } from '@/components/chat/PromptReflectionHeader';
 import { ChatSkeleton } from '@/components/ui';
-import { COLORS } from '@/constants/tokens';
+import { type ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { dimensionLabel } from '@/constants/enrichment';
 import Animated, {
@@ -91,6 +98,7 @@ const STARTER_PROMPTS = [
 ] as const;
 
 function ChatDateSeparator({ label }: { label: string }) {
+  const styles = useThemeStyles(createStyles);
   return (
     <View style={styles.dateSeparator}>
       <View style={styles.dateSeparatorPill}>
@@ -136,25 +144,30 @@ const MemoMessageRow = React.memo(function MemoMessageRow({
   return (
     <View>
       {showDate && timestamp ? <ChatDateSeparator label={getChatDayLabel(timestamp)} /> : null}
-      <MessageBubble
+      {item.voice_boundary ? <VoiceSessionDivider active={item.voice_boundary === 'started'} /> : <MessageBubble
         message={item}
         highlighted={isHighlighted}
         animated={Boolean(item.isLive)}
         onReply={handleReply}
         onScrollToOriginal={item.replyTo?.text ? handleScroll : undefined}
         onPreviewAttachments={onPreviewAttachments}
-      />
+      />}
     </View>
   );
 });
 
 export default function ChatScreen() {
+  const COLORS = useThemeColors();
+  const insets = useSafeAreaInsets();
+  const styles = useThemeStyles(createStyles);
+  const dark = useResolvedAppearance() === 'dark';
   React.useEffect(() => {
     runtimeDiagnostics.record('screen', 'mount', { screen: 'chat' });
     return () => runtimeDiagnostics.record('screen', 'unmount', { screen: 'chat' });
   }, []);
-  // promptLabel is only set by BrowseTopicsSection topic cards — daily prompts don't set it
-  const { promptLabel, focusMessageId, focusAttachmentId, initialAudioUri } = useLocalSearchParams<{
+  // Route labels show immediately; the header resolves canonical metadata for direct links.
+  const { id: promptId, promptLabel, focusMessageId, focusAttachmentId, initialAudioUri } = useLocalSearchParams<{
+    id?: string;
     promptLabel?: string;
     focusMessageId?: string;
     focusAttachmentId?: string;
@@ -191,6 +204,8 @@ export default function ChatScreen() {
   // Intercept Android hardware back to prevent app exit when history is empty
   useBackHandler(handleBack);
 
+  const { voice: voiceCall } = useVoiceCall();
+  const showInlineVoice = Boolean((voiceCall.isConnected || voiceCall.isConnecting || voiceCall.isEnding) && voiceCall.voiceTimeline?.memoryId === activeChatId);
   const [replyQuote, setReplyQuote] = useState<ChatReplyQuote | null>(null);
   const [replyQuoteHeight, setReplyQuoteHeight] = useState(0);
   const [headerHeight, setHeaderHeight] = useState(DEFAULT_HEADER_HEIGHT);
@@ -200,7 +215,6 @@ export default function ChatScreen() {
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const completedFocusRef = useRef<string | null>(null);
   const uploadedInitialAudioRef = useRef<string | null>(null);
-  const blurTargetRef = useRef<View>(null);
   const { mutateAsync: uploadFile } = useFileUpload();
 
   const isActuallyStreaming = streaming || isStartingConversation;
@@ -344,7 +358,6 @@ export default function ChatScreen() {
     router.push({ pathname: '/coming-soon', params: { feature: 'narration' } });
   }, [router]);
 
-  const { voice: voiceCall } = useVoiceCall();
   const handleVoiceCall = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     // Start preparing the call now, while the call screen opens, for the same
@@ -361,7 +374,7 @@ export default function ChatScreen() {
     }
     router.push({
       pathname: '/voice-call',
-      params: { memoryId: activeChatId ?? '' },
+      params: { memoryId: activeChatId ?? '', returnToChat: 'true' },
     });
   }, [activeChatId, router, voiceCall]);
 
@@ -406,6 +419,20 @@ export default function ChatScreen() {
   }, []);
 
   const handleSendPayload = useCallback((payload: ChatSendPayload) => {
+    if (showInlineVoice) {
+      if (payload.attachmentIds.length) {
+        toast('Send attachments after your voice conversation ends.', 'error');
+        return false;
+      }
+      try {
+        voiceCall.sendText(replyQuote ? `Replying to: “${replyQuote.text}”\n\n${payload.text}` : payload.text);
+        setReplyQuote(null);
+      } catch (error) {
+        toast(error instanceof Error ? error.message : 'Could not send. Please try again.', 'error');
+        return false;
+      }
+      return;
+    }
     send(
       payload.text,
       replyQuote,
@@ -413,7 +440,7 @@ export default function ChatScreen() {
       payload.attachmentPreviews.length ? payload.attachmentPreviews : undefined,
     );
     setReplyQuote(null);
-  }, [send, replyQuote]);
+  }, [send, replyQuote, showInlineVoice, voiceCall]);
 
   // Day separators precomputed in one forward pass. renderMessage used to
   // walk backward per row (O(n²) trims + lookups on every render).
@@ -485,12 +512,15 @@ export default function ChatScreen() {
         {showPrompt && displayTitle ? (
           <PromptReflectionHeader
             title={displayTitle}
-            category={promptLabel}
+            questionId={promptId}
+            memoryId={promptMemory?._id}
+            bookmarked={Boolean(promptMemory?.bookmarked)}
+            category={promptLabel || promptMemory?.category}
           />
         ) : null}
       </>
     );
-  }, [isFetchingOlderMessages, isPromptType, promptTitle, promptMemory?.title, promptLabel]);
+  }, [isFetchingOlderMessages, isPromptType, promptTitle, promptMemory?.title, promptMemory?.category, promptMemory?._id, promptMemory?.bookmarked, promptLabel, promptId]);
 
   const messagesContentStyle = React.useMemo(
     () => [styles.messagesContent, { paddingBottom: messageBottomPadding }],
@@ -582,9 +612,7 @@ export default function ChatScreen() {
           <ArrowLeft size={21} color={COLORS.textStrong} strokeWidth={2.2} />
         </TouchableOpacity>
 
-        <Text numberOfLines={1} style={styles.headerTitle}>
-          {isPromptType ? 'Prompt' : 'Chat'}
-        </Text>
+        {isPromptType ? <Text numberOfLines={1} style={styles.headerTitle}>Prompt</Text> : <DigitalMindHeader />}
 
         <View style={styles.headerActions}>
           <TouchableOpacity
@@ -618,7 +646,8 @@ export default function ChatScreen() {
       </View>
 
       {/* ── Contextual chat surfaces ───────────────────────────── */}
-      {!isPromptType && (
+      {showInlineVoice && <VoiceChatComposer />}
+      {!showInlineVoice && !isPromptType && (
         <View>
           {/* Deep dive banner (while in deep_dive mode) */}
           {chatMode === 'deep_dive' && deepDiveDimension && (
@@ -635,7 +664,7 @@ export default function ChatScreen() {
       )}
 
       {/* ── Deep Dive Nudge (floating above messages) ─────────────── */}
-      {!isPromptType && showDeepDiveNudge && nudgeDimension && (
+      {!showInlineVoice && !isPromptType && showDeepDiveNudge && nudgeDimension && (
         <DeepDiveNudge
           dimension={nudgeDimension}
           question={nudgeQuestion}
@@ -645,7 +674,7 @@ export default function ChatScreen() {
       )}
 
       {/* ── Messages ─────────────────────────────────────────────── */}
-      <BlurTargetView ref={blurTargetRef} style={styles.messageList}>
+      <View style={styles.messageList}>
         {(enrichmentStats.deltaToday > 0 || enrichmentStats.milestoneJustReached) && (
           <MilestoneCard
             enrichmentDelta={enrichmentStats.deltaToday}
@@ -678,20 +707,33 @@ export default function ChatScreen() {
             ListEmptyComponent={listEmptyComponent}
           />
         )}
-      </BlurTargetView>
+      </View>
 
       <View
         pointerEvents="box-none"
         style={styles.composerOverlay}
       >
-        <BlurView
+        <MaskedView
           pointerEvents="none"
-          intensity={Platform.OS === 'android' ? 90 : 75}
-          tint="light"
-          blurTarget={blurTargetRef}
-          blurMethod={Platform.OS === 'android' ? 'dimezisBlurViewSdk31Plus' : undefined}
-          style={styles.composerBackdrop}
-        />
+          accessible={false}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={[styles.composerBackdrop, { bottom: -insets.bottom }]}
+          maskElement={
+            <View style={{ flex: 1 }}>
+              <LinearGradient
+                colors={['transparent', COLORS.textInverse]}
+                style={{ height: 64 }}
+              />
+              <View style={{ flex: 1, backgroundColor: COLORS.textInverse }} />
+            </View>
+          }
+        >
+          {Platform.OS === 'ios' && (
+            <BlurView tint={dark ? 'dark' : 'light'} intensity={90} style={StyleSheet.absoluteFill} />
+          )}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: Platform.OS === 'ios' ? COLORS.glass : COLORS.card }]} />
+        </MaskedView>
         {/* ── Reply Quote Preview Panel ────────────────────────────── */}
         {replyQuote && (
           <Animated.View
@@ -701,14 +743,9 @@ export default function ChatScreen() {
           >
             <View className="flex-1 pr-3 pl-3" style={{ borderLeftWidth: 3, borderLeftColor: COLORS.brand }}>
               <Text
-                className="text-brand uppercase tracking-wider mb-0.5"
-                style={TYPE.eyebrow}
-              >
-                Replying to {replyQuote.role === 'user' ? 'your message' : 'Memento'}
-              </Text>
-              <Text
                 className="text-text-weak"
-                numberOfLines={1}
+                numberOfLines={2}
+                ellipsizeMode="tail"
                 style={TYPE.bodySmall}
               >
                 {replyQuote.text}
@@ -726,14 +763,18 @@ export default function ChatScreen() {
         )}
 
         {/* ── Chat Input ────────────────────────────────────────────── */}
-        <ChatInput
-          maxComposerHeight={composerOverlayMaxHeight}
-          parentOwnsBottomSafeArea
-          initialAudioUri={initialAudioUri}
-          onSend={handleSendPayload}
-          onStop={stop}
-          loading={isActuallyStreaming || isLoading}
-        />
+        <View>
+          <ChatInput
+            maxComposerHeight={composerOverlayMaxHeight}
+            parentOwnsBottomSafeArea
+            voiceMode={showInlineVoice}
+            initialAudioUri={initialAudioUri}
+            onSend={handleSendPayload}
+            onStop={showInlineVoice ? voiceCall.interrupt : stop}
+            disabled={showInlineVoice && (!voiceCall.isConnected || voiceCall.isReconnecting || voiceCall.isEnding)}
+            loading={showInlineVoice ? false : isActuallyStreaming || isLoading}
+          />
+        </View>
       </View>
 
       {attachmentPreview && (
@@ -752,19 +793,19 @@ export default function ChatScreen() {
       {Platform.OS === 'ios' ? (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           <View style={styles.screenSurface}>
-            {content}
+            <MessageActionsProvider>{content}</MessageActionsProvider>
           </View>
         </KeyboardAvoidingView>
       ) : (
         <View style={styles.screenSurface}>
-          {content}
+          <MessageActionsProvider>{content}</MessageActionsProvider>
         </View>
       )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   screenSurface: {
     backgroundColor: COLORS.background,
     flex: 1,
@@ -794,7 +835,7 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 4,
   },
   messageList: {
     backgroundColor: COLORS.background,
@@ -845,7 +886,7 @@ const styles = StyleSheet.create({
   },
   composerBackdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: COLORS.background,
-    // top: -12,
+    top: -64,
+    overflow: 'hidden',
   },
 });

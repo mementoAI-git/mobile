@@ -74,12 +74,14 @@ describe('voice Live configuration', () => {
     });
   });
 
-  test('locks the conversation exclusively to English via structured systemInstruction', () => {
+  test('defaults to English while honoring the selected conversation language', () => {
     const config = buildGeminiLiveConfig('Fenrir');
     const instruction = (config.systemInstruction as { parts?: Array<{ text?: string }> })?.parts?.[0]?.text ?? '';
 
-    expect(instruction).toContain('LANGUAGE DIRECTIVE: YOU MUST COMMUNICATE EXCLUSIVELY AND UNMISTAKABLY IN ENGLISH AT ALL TIMES.');
-    expect(instruction).toContain('Under NO circumstances should you switch to or speak any other language');
+    expect(instruction).toContain('Respond aloud in English');
+    const french = buildGeminiLiveConfig('Fenrir', null, undefined, 'fr-FR');
+    expect(JSON.stringify(french.systemInstruction)).toContain('Respond aloud in French');
+    expect(french.speechConfig?.languageCode).toBe('fr-FR');
     expect(config.speechConfig?.languageCode).toBe('en-US');
     expect(config.inputAudioTranscription).toEqual({});
     expect(config.outputAudioTranscription).toEqual({});
@@ -89,7 +91,7 @@ describe('voice Live configuration', () => {
     const config = buildGeminiLiveConfig('Fenrir', { nickname: 'Avery' });
     const instruction = (config.systemInstruction as { parts?: Array<{ text?: string }> })?.parts?.[0]?.text ?? '';
 
-    expect(instruction).toContain('speaking with Avery');
+    expect(instruction).toContain('speaking with "Avery"');
   });
 
   test('parses systemInstruction from ephemeral token payload', () => {
@@ -105,7 +107,7 @@ describe('voice Live configuration', () => {
     const config = buildGeminiLiveConfig('Fenrir', { nickname: 'Avery' }, 'STORED CONTEXT: Visited Tokyo in 2024.');
     const instruction = (config.systemInstruction as { parts?: Array<{ text?: string }> })?.parts?.[0]?.text ?? '';
 
-    expect(instruction).toContain('speaking with Avery');
+    expect(instruction).toContain('speaking with "Avery"');
     expect(instruction).toContain('STORED CONTEXT: Visited Tokyo in 2024.');
   });
 

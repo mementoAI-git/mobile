@@ -7,6 +7,7 @@ import { isCallLive } from '@/features/chat/call-indicator';
 import { useBackgroundMusic } from '@/hooks/use-background-music';
 import { useVoiceMode, type VoiceCallActionEffects } from '@/hooks/use-voice-mode';
 import { useAuthStore } from '@/store';
+import { toast } from '@/components/ui/Toast';
 
 export const VOICE_CALL_PATH = '/voice-call';
 
@@ -53,6 +54,13 @@ export function VoiceCallProvider({ children }: { children: React.ReactNode }) {
     voiceName: config.voiceName,
     callActions,
   });
+  // Report handled connection failures through app UI, not development LogBox.
+  useEffect(() => {
+    if (voice.connectionFailure?.kind === 'connection-error') {
+      toast('Your voice connection was interrupted. Please try again.', 'error');
+    }
+  }, [voice.connectionFailure]);
+
   const active = voice.isConnected || voice.isConnecting;
   const activeRef = useRef(active);
   activeRef.current = active;

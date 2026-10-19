@@ -105,7 +105,8 @@ describe('Gemini voice provider contract', () => {
     expect(source).toContain('if (!transports.isActive(transport)) return;');
     expect(source).toContain('transportsRef.current?.activate(transport);');
     expect(source).toContain("'Voice session setup timed out.'");
-    expect(source).toContain('{ timeout: VOICE_TOKEN_TIMEOUT_MS }');
+    expect(source).toContain('timeout: VOICE_TOKEN_TIMEOUT_MS');
+    expect(source).toContain('headers: currentDigitalMindHeaders()');
     expect(source).toContain('nextReconnectDelay(attempt, Date.now() - startedAt)');
     // A failed reconnect after go-away or a network change ends the call.
     expect(source).toContain("endCallIfReconnectFailedRef.current(result, 'go-away')");
@@ -183,8 +184,8 @@ describe('Gemini voice provider contract', () => {
     expect(hook).toContain('primary_conversation_id');
     expect(chatScreen).toContain('useFocusEffect(');
     expect(chatScreen).toContain('queryKeys.promptMessages');
-    expect(bubble).toContain('isVoice');
-    expect(bubble).toContain('Spoken');
+    expect(bubble).not.toContain('Spoken');
+    expect(chatScreen).toContain('<VoiceSessionDivider');
   });
 
   test('logs privacy-safe Gemini transcript delivery diagnostics', async () => {

@@ -10,9 +10,11 @@ export interface ChatListMessage {
   replyTo?: { role: string; text: string } | null;
   attatchments?: IMessageAttachment[];
   is_voice?: boolean;
+  isLive?: boolean;
   /** Voice call this turn belongs to; turns of one call share it. */
   voice_session_id?: string | null;
   voice_turn_index?: number | null;
+  voice_boundary?: 'started' | 'ended';
   /** Call length in seconds, saved on every turn when the call ends. */
   duration?: number | null;
 }
@@ -55,6 +57,7 @@ export function getChatMessageKey(message: ChatListMessage) {
 }
 
 export function getChatMessageItemType(message: ChatListMessage) {
+  if (message.voice_boundary) return 'voice-divider';
   if (isVoiceCallMessage(message.text ?? message.content, message.is_voice)) {
     return 'voice-call';
   }

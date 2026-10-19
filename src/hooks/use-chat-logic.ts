@@ -18,13 +18,15 @@ import type { ChatReplyQuote } from '@/lib/utils';
 import type { IMessageAttachment } from '@/types';
 import { resolveChatConversationId } from '@/features/chat/navigation';
 import type { ChatListMessage } from '@/features/chat/message-list';
-import { groupVoiceCallThreads } from '@/features/chat/voice-call-threads';
+import { buildVoiceChatTimeline } from '@/features/chat/voice-chat-timeline';
+import { useVoiceCall } from '@/hooks/use-voice-call';
 import {
   mergeConversationMessagePages,
   mergeAllConversationMessages,
 } from '@/features/chat/conversation-pagination';
 
 export function useChatLogic() {
+  const { voice: { voiceTimeline } } = useVoiceCall();
   const { id, type, promptTitle } = useLocalSearchParams<{ id?: string; type?: string; promptTitle?: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -129,15 +131,15 @@ export function useChatLogic() {
   const serverMessages = serverMessagePages?.pages[0];
   const allMessages = useMemo(() => {
     const merged = mergeAllConversationMessages(persistedMessages, messages);
-    // Show each voice call as one expandable thread rather than loose turns.
-    return groupVoiceCallThreads(
+    return buildVoiceChatTimeline(
       merged.filter((m) => {
         const text = (m.text ?? m.content ?? '').trim();
         const attachments = m.attatchments ?? (m as any).attachments ?? [];
         return text.length > 0 || attachments.length > 0;
       }),
+      voiceTimeline?.memoryId === activeChatId ? voiceTimeline : null,
     );
-  }, [persistedMessages, messages]);
+  }, [persistedMessages, messages, voiceTimeline, activeChatId]);
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();

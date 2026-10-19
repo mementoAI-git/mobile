@@ -252,3 +252,18 @@ describe('VoiceTranscriptTurns', () => {
     ]);
   });
 });
+
+describe('live chat transcript snapshot', () => {
+  test('includes completed, pending, and in-progress speech without draining or duplicating turns', () => {
+    const turns = new VoiceTranscriptTurns();
+    turns.appendModel('Hello');
+    turns.completeTurn();
+    turns.appendUser('My story');
+    turns.appendModel('Tell me more');
+    turns.beginTurnCompletion();
+    turns.appendUser('Another memory', true);
+    expect(turns.getTimelineMessages().map(message => message.text)).toEqual(['Hello', 'My story', 'Tell me more', 'Another memory']);
+    expect(turns.getTimelineMessages()).toEqual(turns.getTimelineMessages());
+    expect(turns.drainCompleted()).toHaveLength(1);
+  });
+});
