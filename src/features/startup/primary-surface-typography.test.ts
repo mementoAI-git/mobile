@@ -128,9 +128,12 @@ describe('primary surface typography', () => {
     }
   });
 
-  test('TYPE.bodyLarge is restricted to the Overview conversational hero prompt', () => {
+  test('the Overview conversational hero uses the shared prompt card typography', () => {
     const overview = readFileSync('app/(tabs)/overview/index.tsx', 'utf8');
-    expect(overview).toContain('style={TYPE.bodyLarge}');
+    const prompt = readFileSync('src/components/overview/MemoryPromptCard.tsx', 'utf8');
+    expect(overview).toContain('<MemoryPromptCard');
+    expect(prompt).toContain('...TYPE.cardTitle');
+    expect(prompt).toContain('...TYPE.button');
   });
 });
 

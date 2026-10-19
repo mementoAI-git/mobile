@@ -21,7 +21,7 @@ export function RecentActivitiesSection() {
     return (
       <View className="gap-4">
         <Skeleton className="h-8 w-40 ml-1 rounded-full" />
-        <View className="bg-white border border-stroke-weaker rounded-[32px] p-2">
+        <View className="bg-card border border-stroke-weaker rounded-[32px] p-2">
           {[1, 2, 3].map((i) => (
             <View key={i} className="flex-row items-center gap-4 p-4">
               <Skeleton className="size-11 rounded-2xl" />
@@ -42,7 +42,7 @@ export function RecentActivitiesSection() {
     <Animated.View entering={FadeInDown.delay(300)} className="gap-4">
       <View className="flex-row items-center justify-between px-1">
         <Animated.Text className="text-text-strong" style={TYPE.sectionTitle}>
-          Recent <Animated.Text className="text-text-weak italic">Activities</Animated.Text>
+          Recent <Animated.Text className="text-text-weak" style={TYPE.sectionTitleWeak}>Activities</Animated.Text>
         </Animated.Text>
         <TouchableOpacity onPress={handleSeeAll} activeOpacity={0.7}>
           <Animated.Text style={TYPE.buttonSmall}>See all</Animated.Text>

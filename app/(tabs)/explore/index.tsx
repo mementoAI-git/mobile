@@ -1,8 +1,9 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo } from 'react';
-import { View, FlatList, RefreshControl, ImageBackground, ScrollView, Text } from 'react-native';
+import { View, FlatList, RefreshControl, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoryCard } from '@/components/explore/CategoryCard';
-import { ContinueReflectingCard } from '@/components/explore/ContinueReflectingCard';
+import { DailyPromptSection } from '@/components/overview/DailyPromptSection';
 import { DashboardHeader, ExploreSkeleton, EmptyState, Spinner } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -13,22 +14,7 @@ import { useExploreLogic } from '@/hooks/use-explore-logic';
 import { useFocusEffect } from 'expo-router';
 import { useVoiceScroll } from '@/features/voice-control/hooks';
 
-const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const EMPTY_EXPLORE_IMG = require('../../../assets/images/illustrations/empty_explore.webp');
-
-// Stable module-level sub-component — avoid creating React component types inside render
-const MemoPromptItem = React.memo(function PromptItem({
-  prompt,
-  onPress,
-}: {
-  prompt: any;
-  onPress: (p: any) => void;
-}) {
-  const handlePress = useCallback(() => {
-    onPress(prompt);
-  }, [prompt, onPress]);
-  return <ContinueReflectingCard title={prompt.title || ''} onPress={handlePress} />;
-});
 
 const ExploreCategoryItem = React.memo(function ExploreCategoryItem({
   category,
@@ -49,17 +35,16 @@ const ExploreCategoryItem = React.memo(function ExploreCategoryItem({
 });
 
 export default function ExploreScreen() {
+  const COLORS = useThemeColors();
   const {
     categories,
     usingBundledCatalog,
-    staticPrompts,
     isLoading,
     isStartingConversation,
     refetch,
     refetchIfStale,
     isRefetching,
     handleOpenCategory,
-    handlePromptPress,
     handleBackToOverview,
   } = useExploreLogic();
 
@@ -74,30 +59,11 @@ export default function ExploreScreen() {
   const listHeader = useMemo(
     () => (
       <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-6">
-        <Animated.Text className="text-text-weak mb-6" style={TYPE.body}>
+        <Animated.Text className="text-text-weak mb-10" style={TYPE.body}>
           Discover prompts that help you explore the depths of your story and find new ways to connect.
         </Animated.Text>
 
-        {staticPrompts.length > 0 && (
-          <View className="mb-6">
-            <Animated.Text className="text-text-strong mb-4" style={TYPE.sectionTitle}>
-              Continue{' '}
-              <Text style={{ fontStyle: 'italic', color: COLORS.textWeak }}>
-                reflecting
-              </Text>
-            </Animated.Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingLeft: 24, paddingRight: 8, paddingBottom: 8 }}
-              className="-mx-6"
-            >
-              {staticPrompts.map((prompt) => (
-                <MemoPromptItem key={prompt._id} prompt={prompt} onPress={handlePromptPress} />
-              ))}
-            </ScrollView>
-          </View>
-        )}
+        <View className="mb-10"><DailyPromptSection /></View>
 
         <Animated.Text className="text-text-strong mb-4" style={TYPE.sectionTitle}>
           Explore categories
@@ -109,7 +75,7 @@ export default function ExploreScreen() {
         )}
       </Animated.View>
     ),
-    [staticPrompts, handlePromptPress, usingBundledCatalog, isLoading],
+    [usingBundledCatalog, isLoading],
   );
 
   const renderCategoryItem = useCallback(
@@ -124,11 +90,11 @@ export default function ExploreScreen() {
       <DashboardHeader title="Explore" />
 
       <View className="flex-1 relative">
-        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
+
 
         {isStartingConversation && (
           <View className="absolute inset-0 bg-black/10 items-center justify-center z-50">
-            <View className="bg-white p-6 rounded-2xl shadow-lg border border-stroke-weaker items-center gap-3">
+            <View className="bg-card p-6 rounded-2xl shadow-lg border border-stroke-weaker items-center gap-3">
               <Spinner size="large" color={COLORS.brand} />
               <Animated.Text className="text-text-strong" style={TYPE.label}>Starting reflect session...</Animated.Text>
             </View>
@@ -147,7 +113,7 @@ export default function ExploreScreen() {
             windowSize={5}
             removeClippedSubviews
             ListHeaderComponent={listHeader}
-            contentContainerClassName="px-6 pb-24 flex-grow"
+            contentContainerClassName="px-4 pb-24 flex-grow"
             showsVerticalScrollIndicator={false}
             renderItem={renderCategoryItem}
             refreshControl={

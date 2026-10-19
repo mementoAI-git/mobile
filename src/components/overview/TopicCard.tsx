@@ -1,102 +1,64 @@
-import React from 'react';
-import { View, Image, Text } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Image, Text, type ImageSourcePropType } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import * as Haptics from 'expo-haptics';
-import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { cn } from '@/lib/utils';
-import Animated from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, useReducedMotion, withSpring } from 'react-native-reanimated';
 
 interface TopicCardProps {
   title: string;
-  image: any;
+  image?: ImageSourcePropType;
   category?: string;
-  badge?: string;
+  description?: string;
+  fullWidth?: boolean;
+  imageHeight?: number;
   onPress?: () => void;
   className?: string;
 }
 
-/** Format slug "life-transition" → "Life transition" */
-function formatCategory(slug: string): string {
-  const formatted = slug
-    .replace(/-/g, ' ')
-    .replace(/\b\w/, (c) => c.toUpperCase());
+export const TopicCard = React.memo(function TopicCard({ title, image, category, description, fullWidth = false, imageHeight = 140, onPress, className }: TopicCardProps) {
+  const reducedMotion = useReducedMotion();
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const handlePressIn = useCallback(() => {
+    if (!reducedMotion) scale.value = withSpring(0.97);
+  }, [reducedMotion, scale]);
+  const handlePressOut = useCallback(() => { scale.value = withSpring(1); }, [scale]);
+  const handlePress = useCallback(() => {
+    Haptics.selectionAsync();
+    onPress?.();
+  }, [onPress]);
 
-  if (slug.toLowerCase() === 'relationship') return 'Relationships';
-  return formatted;
-}
-
-export function TopicCard({ title, image, category, badge, onPress, className }: TopicCardProps) {
   return (
-    <TouchableOpacity
-      onPress={() => {
-        Haptics.selectionAsync();
-        onPress?.();
-      }}
-      activeOpacity={0.7}
-      className={cn('gap-3', className)}
-      style={{ width: 220 }}
-    >
-      {/* Image — flat corners (no border radius) */}
-      <View style={{ width: '100%', height: 140, overflow: 'hidden', backgroundColor: COLORS.fillWeak }}>
-        <Image
-          source={image}
-          style={{ width: '100%', height: '100%' }}
-          resizeMode="cover"
-        />
-        {/* Category tag — white pill top-left */}
-        {category ? (
-          <View style={{
-            position: 'absolute',
-            top: 10,
-            left: 10,
-            backgroundColor: 'rgba(255,255,255,0.92)',
-            paddingHorizontal: 10,
-            paddingVertical: 5,
-            borderRadius: 999,
-          }}>
-            <Text style={{
-              ...TYPE.metadata,
-              color: COLORS.textStrong,
-              lineHeight: 14,
-            }}>
-              {formatCategory(category)}
-            </Text>
-          </View>
-        ) : null}
+    <Animated.View style={animStyle}>
+      <TouchableOpacity
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={!onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${category ? `${category}: ` : ''}${title}`}
+        activeOpacity={0.9}
+        className={cn('gap-4 rounded-[24px] border border-stroke-weak bg-card p-3', className)}
+        style={{ width: fullWidth ? '100%' : 240 }}
+      >
+        <View className="w-full overflow-hidden rounded-xl bg-fill-weak" style={{ height: imageHeight }}>
+          {image && <Image source={image} className="w-full h-full" resizeMode="cover" accessibilityElementsHidden />}
+          {category ? (
+            <View className="absolute top-2.5 left-2.5 right-2.5 items-start">
+              <View className="rounded-full bg-card px-2.5 py-1.5">
+                <Text className="text-text-strong" style={TYPE.metadata}>{category}</Text>
+              </View>
+            </View>
+          ) : null}
 
-        {/* Highlight badge — e.g. Grow this chapter */}
-        {badge ? (
-          <View style={{
-            position: 'absolute',
-            bottom: 10,
-            left: 10,
-            backgroundColor: COLORS.brand,
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-            borderRadius: 999,
-          }}>
-            <Text style={{
-              ...TYPE.eyebrow,
-              color: COLORS.textInverse,
-              lineHeight: 13,
-            }}>
-              {badge}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-
-      {/* Title below image */}
-      <View className="gap-1 px-1">
-        <Animated.Text
-          className="text-text-strong leading-tight"
-          style={TYPE.body}
-          numberOfLines={3}
-        >
-          {title}
-        </Animated.Text>
-      </View>
-    </TouchableOpacity>
+        </View>
+        <View className="px-1 pb-1 gap-2">
+          <Text className="text-text-strong" style={TYPE.cardTitle} numberOfLines={fullWidth ? undefined : 3}>{title}</Text>
+          {description ? <Text className="text-text-base" style={TYPE.body}>{description}</Text> : null}
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
   );
-}
+});

@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { View, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -26,6 +27,7 @@ export function MemorySpotlightCard({
   fallbackStory,
   onPress,
 }: MemorySpotlightCardProps) {
+  const COLORS = useThemeColors();
   const router = useRouter();
 
   const memoryId = spotlight?.memory_id || fallbackStory?._id;
@@ -70,7 +72,7 @@ export function MemorySpotlightCard({
     <Animated.View entering={FadeInDown.delay(280)} className="gap-3">
       <View className="flex-row items-center justify-between px-1">
         <Text className="text-text-strong" style={TYPE.sectionTitle}>
-          Memory <Text className="text-text-weak italic">Spotlight</Text>
+          Memory <Text className="text-text-weak" style={TYPE.sectionTitleWeak}>Spotlight</Text>
         </Text>
       </View>
 
@@ -79,7 +81,7 @@ export function MemorySpotlightCard({
         activeOpacity={0.92}
         accessibilityRole="button"
         accessibilityLabel={`Revisit memory: ${title}`}
-        className="bg-white border border-stroke-weaker overflow-hidden"
+        className="bg-card border border-stroke-weaker overflow-hidden"
         style={{
           borderRadius: radius(28),
           padding: responsiveSpace(20),
@@ -108,7 +110,7 @@ export function MemorySpotlightCard({
         {rawExcerpt ? (
           <Text
             className="italic leading-relaxed mb-4"
-            style={{ ...TYPE.body, color: '#555555' }}
+            style={{ ...TYPE.body, color: COLORS.previewText }}
             numberOfLines={3}
           >
             “{rawExcerpt}”

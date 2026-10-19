@@ -1,5 +1,6 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
-import { View, FlatList, ImageBackground, Image, RefreshControl } from 'react-native';
+import { View, FlatList, Image, RefreshControl } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
@@ -11,75 +12,16 @@ import Animated from 'react-native-reanimated';
 import { useCategoryPromptsLogic } from '@/hooks/use-category-prompts-logic';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
+import { ExploreQuestionCard } from '@/components/explore/ExploreQuestionCard';
 import type { IPrompt } from '@/types';
-
-const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
-const QUESTION_ICON = require('../../../assets/images/question-2.png');
 
 const TOPIC_TABS = [
   { key: 'all', label: 'All topics' },
   { key: 'answered', label: 'Answered' },
 ];
 
-const ExploreTopicItem = React.memo(function ExploreTopicItem({ prompt, onPress }: {
-  prompt: IPrompt;
-  onPress: (prompt: IPrompt) => void;
-}) {
-  const handlePress = React.useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onPress(prompt);
-  }, [prompt, onPress]);
-  return (
-    <View
-      className="bg-card rounded-2xl p-5 border border-stroke-weaker shadow-sm gap-4 relative"
-    >
-      {/* Question Tag */}
-      <View className="absolute top-4 right-4 px-2 py-0.5 rounded-full bg-brand/5 border border-brand/10">
-        <Animated.Text className="text-brand capitalize" style={TYPE.eyebrow}>
-          Question
-        </Animated.Text>
-      </View>
-
-      {/* Main content: icon + question */}
-      <View className="flex-row items-start gap-4 pr-12">
-        <View className="size-14 items-center justify-center bg-fill-weaker rounded-2xl border border-stroke-weaker">
-          <Image
-            source={QUESTION_ICON}
-            className="size-9"
-            resizeMode="contain"
-          />
-        </View>
-        <View className="flex-1 pt-1">
-          <Animated.Text
-            className="text-text-strong"
-            style={TYPE.cardTitle}
-          >
-            {prompt.title}
-          </Animated.Text>
-        </View>
-      </View>
-
-      {/* Action reply button */}
-      <View className="flex-row pt-2">
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={handlePress}
-          accessibilityRole="button"
-          className="min-h-11 justify-center px-5 py-2 rounded-full border border-stroke-strong bg-white active:bg-fill-weaker"
-        >
-          <Animated.Text
-            className="text-text-strong"
-            style={TYPE.buttonSmall}
-          >
-            Reflect
-          </Animated.Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-});
-
 export default function CategoryPromptsScreen() {
+  const COLORS = useThemeColors();
   const {
     id,
     prompts,
@@ -117,14 +59,14 @@ export default function CategoryPromptsScreen() {
   }, [refetch]);
 
   const renderPromptItem = React.useCallback(
-    ({ item }: { item: IPrompt }) => <ExploreTopicItem prompt={item} onPress={handlePromptPress} />,
+    ({ item }: { item: IPrompt }) => <ExploreQuestionCard prompt={item} onPress={handlePromptPress} />,
     [handlePromptPress],
   );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
       {/* Header */}
-      <View className="flex-row items-center gap-3 px-6 py-4 border-b border-stroke-weaker bg-card shadow-sm">
+      <View className="flex-row items-center gap-3 px-4 py-4 border-b border-stroke-weaker bg-card shadow-sm">
         <TouchableOpacity
           onPress={handleBackPress}
           accessibilityRole="button"
@@ -144,11 +86,11 @@ export default function CategoryPromptsScreen() {
       </View>
 
       <View className="flex-1 relative">
-        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" />
+
 
         {isPending && (
           <View className="absolute inset-0 bg-black/10 items-center justify-center z-50">
-            <View className="bg-white p-6 rounded-2xl shadow-lg border border-stroke-weaker items-center gap-3">
+            <View className="bg-card p-6 rounded-2xl shadow-lg border border-stroke-weaker items-center gap-3">
               <Spinner size="large" color={COLORS.brand} />
               <Animated.Text className="text-text-strong" style={TYPE.label}>Starting your reflection…</Animated.Text>
             </View>
@@ -173,7 +115,7 @@ export default function CategoryPromptsScreen() {
                 isError && prompts.length > 0 ? <Button variant="secondary" onPress={handleRetryTopics}>Try again</Button> : null
             }
             keyExtractor={(item, index) => item._id ?? `prompt-${index}`}
-            contentContainerClassName="p-5 pb-32 gap-5"
+            contentContainerClassName="px-4 pt-5 pb-32 gap-5"
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.brand} />

@@ -3,6 +3,7 @@ import { usePromptCategories, useDailyPrompts } from '@/hooks/queries/use-prompt
 import { useStartConversation } from '@/hooks/mutations/use-memory-mutations';
 import { useCallback, useMemo } from 'react';
 import { resolveExploreCatalog } from '@/features/explore/explore-catalog';
+import { getExploreCategoryTitle } from '@/features/explore/question-presentation';
 import type { IPrompt } from '@/types';
 
 export function useExploreLogic() {
@@ -40,7 +41,7 @@ export function useExploreLogic() {
   const handlePromptPress = useCallback((prompt: IPrompt) => {
     router.push({
       pathname: '/chat/[id]',
-      params: { id: prompt._id || '', type: 'prompt', promptTitle: prompt.title || '' },
+      params: { id: prompt._id || '', type: 'prompt', promptTitle: prompt.title || '', promptLabel: getExploreCategoryTitle(prompt.category) },
     });
   }, [router]);
 

@@ -76,6 +76,16 @@ export function useCategoryDetailsPrompts(slug: string, answered?: boolean, enab
   });
 }
 
+export function usePromptDetails(promptId: string) {
+  const token = useAuthStore((s) => s.token?.access_token);
+  return useQuery({
+    queryKey: ['prompt-details', promptId],
+    queryFn: () => fetchEntity<IPrompt>(`${endpoint.promptDetails}${encodeURIComponent(promptId)}`),
+    enabled: !!token && /^[0-9a-fA-F]{24}$/.test(promptId),
+    staleTime: 60_000,
+  });
+}
+
 export function useMemoryByPrompt(promptId: string) {
   const token = useAuthStore((s) => s.token?.access_token);
 
