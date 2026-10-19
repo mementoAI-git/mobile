@@ -1,3 +1,5 @@
+import type { ThemeColors } from '@/constants/tokens';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 /**
  * app/(tabs)/stories/[id].tsx — Story detail
  *
@@ -37,6 +39,7 @@ import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, radius, minTouchTarget, responsiveSpace } from '@/constants/responsive';
+import { returnFromStory } from '@/features/navigation/story-navigation';
 import { useStoryDetailLogic } from '@/hooks/use-story-detail-logic';
 import { useBackHandler } from '@/hooks/use-back-handler';
 import { useConversationMessages } from '@/hooks/queries/use-memories';
@@ -49,7 +52,7 @@ const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_m
 function StoryDetailSkeleton() {
   return (
     <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-      <View style={{ padding: 20, gap: 16 }}>
+      <View style={{ paddingVertical: 20, paddingHorizontal: 16, gap: 16 }}>
         <Skeleton style={{ height: 40, width: '80%', borderRadius: 8 }} />
         <Skeleton style={{ height: 18, width: '50%', borderRadius: 8 }} />
         {/* mosaic skeleton */}
@@ -85,6 +88,7 @@ const MemoMosaicTile = React.memo(function MemoMosaicTile({
   memoryId?: string;
   onPress: (item: any) => void;
 }) {
+  const COLORS = useThemeColors();
   const handlePress = useCallback(() => onPress(item), [item, onPress]);
   return (
     <TouchableOpacity
@@ -105,8 +109,8 @@ const MemoMosaicTile = React.memo(function MemoMosaicTile({
         resizeMode="cover"
       />
       {showMoreCount && showMoreCount > 0 ? (
-        <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.52)', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ ...TYPE.uiTitle, color: '#fff' }}>+{showMoreCount} more</Text>
+        <View style={{ position: 'absolute', inset: 0, backgroundColor: COLORS.mediaScrim, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ ...TYPE.uiTitle, color: COLORS.mediaText }}>+{showMoreCount} more</Text>
         </View>
       ) : null}
     </TouchableOpacity>
@@ -122,6 +126,7 @@ const MemoAudioCard = React.memo(function MemoAudioCard({
   memoryTitle?: string;
   onPress: (item: any) => void;
 }) {
+  const COLORS = useThemeColors();
   const { width: windowWidth } = useWindowDimensions();
   const cardWidth = (Math.min(windowWidth, 720) - 40) / 2;
   const handlePress = useCallback(() => onPress(item), [item, onPress]);
@@ -142,12 +147,12 @@ const MemoAudioCard = React.memo(function MemoAudioCard({
         style={{ borderRadius: 16, overflow: 'hidden', height: 120 }}
       >
         <Image source={{ uri: albumArt }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: 'rgba(0,0,0,0.45)' }}>
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: COLORS.mediaScrim }}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 1.5, height: 14 }}>
             {[5, 10, 14, 11, 7, 12, 8, 14].map((h, i) => <View key={i} style={{ width: 2.5, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />)}
           </View>
-          <Text style={{ ...TYPE.metadata, color: '#fff', flex: 1 }} numberOfLines={1}>{fileName}</Text>
-          {dur > 0 && <Text style={{ ...TYPE.metadata, color: 'rgba(255,255,255,0.7)' }}>{fmt(dur)}</Text>}
+          <Text style={{ ...TYPE.metadata, color: COLORS.mediaText, flex: 1 }} numberOfLines={1}>{fileName}</Text>
+          {dur > 0 && <Text style={{ ...TYPE.metadata, color: COLORS.mediaTextWeak }}>{fmt(dur)}</Text>}
         </View>
       </TouchableOpacity>
     );
@@ -164,19 +169,19 @@ const MemoAudioCard = React.memo(function MemoAudioCard({
       <TouchableOpacity
         onPress={handlePress}
         activeOpacity={0.88}
-        style={{ backgroundColor: COLORS.textStrong, borderRadius: radius(20), aspectRatio: 1, width: cardWidth, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
+        style={{ backgroundColor: COLORS.mediaSurface, borderRadius: radius(20), aspectRatio: 1, width: cardWidth, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 32 }}>
           {bars.map((barH, i) => (
             <View key={i} style={{ flex: 1, height: barH, borderRadius: 2, backgroundColor: `${COLORS.brand}cc`, maxHeight: 28 }} />
           ))}
         </View>
-        <Text style={{ ...TYPE.metadata, color: 'rgba(255,255,255,0.9)', textAlign: 'center' }} numberOfLines={2}>
+        <Text style={{ ...TYPE.metadata, color: COLORS.mediaText, textAlign: 'center' }} numberOfLines={2}>
           {fileName}
         </Text>
         {dur > 0 && (
-          <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
-            <Text style={{ ...TYPE.metadata, color: 'rgba(255,255,255,0.8)' }}>{fmt(dur)}</Text>
+          <View style={{ backgroundColor: COLORS.mediaFill, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+            <Text style={{ ...TYPE.metadata, color: COLORS.mediaTextWeak }}>{fmt(dur)}</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -196,7 +201,7 @@ const MemoAudioCard = React.memo(function MemoAudioCard({
       </View>
       <Text style={{ ...TYPE.metadata, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>{fileName}</Text>
       {dur > 0 && (
-        <View style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+        <View style={{ backgroundColor: COLORS.cardOverlay, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
           <Text style={{ ...TYPE.metadata, color: COLORS.textBase }}>{fmt(dur)}</Text>
         </View>
       )}
@@ -211,6 +216,7 @@ const MemoDocumentCard = React.memo(function MemoDocumentCard({
   item: any;
   onPress: (url?: string) => void;
 }) {
+  const COLORS = useThemeColors();
   const { width: windowWidth } = useWindowDimensions();
   const cardWidth = (Math.min(windowWidth, 720) - 40) / 2;
   const handlePress = useCallback(() => onPress(item.url), [item.url, onPress]);
@@ -246,6 +252,7 @@ const MemoDocumentCard = React.memo(function MemoDocumentCard({
 // display them as a clean prose block.
 
 function PromptReplySection({ memoryId }: { memoryId: string }) {
+  const COLORS = useThemeColors();
   const {
     data: messagePages,
     isLoading,
@@ -260,7 +267,7 @@ function PromptReplySection({ memoryId }: { memoryId: string }) {
 
   if (isLoading) {
     return (
-      <View style={{ paddingHorizontal: 20, paddingTop: 16, gap: 8 }}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 16, gap: 8 }}>
         <Skeleton style={{ height: 16, width: '90%', borderRadius: 6 }} />
         <Skeleton style={{ height: 16, width: '75%', borderRadius: 6 }} />
         <Skeleton style={{ height: 16, width: '83%', borderRadius: 6 }} />
@@ -271,7 +278,7 @@ function PromptReplySection({ memoryId }: { memoryId: string }) {
   if (userReplies.length === 0) return null;
 
   return (
-    <View style={{ paddingHorizontal: 20, paddingTop: 16, gap: 6 }}>
+    <View style={{ paddingHorizontal: 16, paddingTop: 16, gap: 6 }}>
       {/* Section label */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
         <MessageSquare size={13} color={COLORS.textMuted} strokeWidth={1.8} />
@@ -302,6 +309,8 @@ function PromptReplySection({ memoryId }: { memoryId: string }) {
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function StoryDetailScreen() {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const { width: windowWidth } = useWindowDimensions();
   const videoWidth = Math.min(windowWidth, 720) - 40;
   const {
@@ -320,9 +329,7 @@ export default function StoryDetailScreen() {
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();
-    if (returnToOverview) router.replace('/(tabs)/overview');
-    else if (router.canGoBack()) router.back();
-    else router.replace('/(tabs)/stories');
+    returnFromStory(router, returnToOverview);
   }, [returnToOverview, router]);
   useBackHandler(handleBack);
 
@@ -477,7 +484,7 @@ export default function StoryDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
 
         {/* ── Title ── */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14 }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14 }}>
           <Animated.Text
             {...{ sharedTransitionTag: `memory-title-${memory._id}` } as any}
             style={styles.title}
@@ -515,7 +522,7 @@ export default function StoryDetailScreen() {
 
         {/* ── Image mosaic ── */}
         {imgOnly.length > 0 && (
-          <View style={{ paddingHorizontal: 20, gap: 6, marginBottom: 8 }}>
+          <View style={{ paddingHorizontal: 16, gap: 6, marginBottom: 8 }}>
             {/* Row 1: wide + narrow */}
             {row1.length > 0 && (
               <View style={{ flexDirection: 'row', gap: 6, height: 200 }}>
@@ -555,7 +562,7 @@ export default function StoryDetailScreen() {
 
         {/* Videos — real extracted thumbnail + play button via VideoThumbnail */}
         {videos.length > 0 && (
-          <View style={{ paddingHorizontal: 20, gap: 8, marginBottom: 8 }}>
+          <View style={{ paddingHorizontal: 16, gap: 8, marginBottom: 8 }}>
             {videos.map((item, idx) => (
               <VideoThumbnail
                 key={item.url ?? idx}
@@ -573,7 +580,7 @@ export default function StoryDetailScreen() {
 
         {/* Audio — tappable music/voice card thumbnails → opens MediaPreviewModal */}
         {audioAttachments.length > 0 && (
-          <View style={{ paddingHorizontal: 20, gap: 8, marginBottom: 8 }}>
+          <View style={{ paddingHorizontal: 16, gap: 8, marginBottom: 8 }}>
             {audioAttachments.map((item) => (
               <MemoAudioCard
                 key={item._id}
@@ -587,7 +594,7 @@ export default function StoryDetailScreen() {
 
         {/* ── Body ── */}
         {memory.body ? (
-          <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
             <StoryHtmlBody html={memory.body} />
           </View>
         ) : null}
@@ -599,7 +606,7 @@ export default function StoryDetailScreen() {
 
         {/* ── Other attachments (documents only) ── */}
         {otherAttachments.length > 0 && (
-          <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 8 }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 20, gap: 8 }}>
             <Text style={styles.sectionLabel}>DOCUMENTS</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {otherAttachments.map(a => (
@@ -627,7 +634,7 @@ export default function StoryDetailScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = {
+const createStyles = (COLORS: ThemeColors) => ({
   header: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
@@ -660,7 +667,7 @@ const styles = {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'space-between' as const,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 14,
     gap: 8,
     flexWrap: 'wrap' as const,
@@ -694,4 +701,4 @@ const styles = {
     color: COLORS.textMuted,
     marginBottom: 4,
   },
-};
+});

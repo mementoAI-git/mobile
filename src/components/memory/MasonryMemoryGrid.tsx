@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { View, RefreshControl, useWindowDimensions } from 'react-native';
 import { MasonryMemoryCard } from './MasonryMemoryCard';
@@ -62,6 +63,7 @@ export function MasonryMemoryGrid({
   onMemoryPress,
   scrollY,
 }: MasonryMemoryGridProps) {
+  const COLORS = useThemeColors();
   const { width, height: windowHeight } = useWindowDimensions();
 
   // Map from memory._id → measured height in pixels
