@@ -1,15 +1,16 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { View } from 'react-native';
 import { Tabs } from 'expo-router';
-import { TabBar } from '@/components/TabBar';
 import { COLORS } from '@/constants/tokens';
 import { shouldPopTabToTopOnBlur } from '@/features/navigation/tab-reset-policy';
 
 export default function TabsLayout() {
+  const COLORS = useThemeColors();
   return (
     <View style={{ flex: 1 }}>
       <Tabs
-        tabBar={(props) => <TabBar {...props} />}
+        tabBar={() => null}
         screenOptions={{
           headerShown: false,
           // Make React Navigation's tab bar wrapper fully transparent so the floating
@@ -31,7 +32,10 @@ export default function TabsLayout() {
       >
         <Tabs.Screen name="overview" />
         <Tabs.Screen name="chat" />
-        <Tabs.Screen name="stories" />
+        <Tabs.Screen
+          name="stories"
+          options={{ popToTopOnBlur: shouldPopTabToTopOnBlur('stories') }}
+        />
         <Tabs.Screen
           name="explore"
           options={{ popToTopOnBlur: shouldPopTabToTopOnBlur('explore') }}

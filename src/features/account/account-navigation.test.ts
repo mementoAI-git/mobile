@@ -18,7 +18,7 @@ describe('account overview navigation', () => {
     expect(account).toContain("openSheet('edit-profile')");
     expect(account).toContain("router.replace('/(tabs)/overview')");
     expect(account).toContain("openSheet('streak')");
-    expect(header).toContain("router.push('/account')");
+    expect(header).toContain("openSheet('quick-tools')");
     expect(header).not.toContain("router.push('/settings/profile')");
     expect(settingsIndex).toContain("push('/settings/profile')");
   });

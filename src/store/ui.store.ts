@@ -3,6 +3,11 @@ import type { Href } from 'expo-router';
 import type { StoryDraft } from '@/components/sheets/DraftsSheet';
 
 export type SheetName =
+  | 'calendar-date'
+  | 'calendar-stories'
+  | 'emoji-picker'
+  | 'quick-tools'
+  | 'appearance'
   | 'create-memory'
   | 'create-capsule'
   | 'add-beneficiary'
@@ -26,6 +31,7 @@ export type SheetName =
   | 'change-password'
   | 'setup-two-factor'
   | 'security-confirmation'
+  | 'digital-mind'
   | 'voice-call-settings'
   | 'end-voice-session'
   | 'upgrade-success'
@@ -38,6 +44,9 @@ export type SheetName =
 
 interface UiState {
   appReady: boolean;
+  menuOpen: boolean;
+  openMenu: () => void;
+  closeMenu: () => void;
   activeSheet: SheetName;
   sheetProps: Record<string, any>;
   pendingDeepLink: Href | null;
@@ -53,6 +62,9 @@ interface UiState {
 
 export const useUiStore = create<UiState>((set, get) => ({
   appReady: false,
+  menuOpen: false,
+  openMenu: () => set({ menuOpen: true }),
+  closeMenu: () => set({ menuOpen: false }),
   activeSheet: null,
   sheetProps: {},
   pendingDeepLink: null,
@@ -65,7 +77,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   },
   openSheet: (name, props = {}) => {
     if (!get().appReady) return;
-    set({ activeSheet: name, sheetProps: props });
+    set({ activeSheet: name, sheetProps: props, menuOpen: false });
   },
   closeSheet: () => set({ activeSheet: null, sheetProps: {} }),
   storyDrafts: [],
