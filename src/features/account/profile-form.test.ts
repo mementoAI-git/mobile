@@ -6,6 +6,12 @@ import {
 } from './profile-form';
 
 describe('edit profile form', () => {
+  test('edits the same biography shown by the account About me card', () => {
+    const profile = { context: { self_description: 'Older profile introduction' } } as any;
+    expect(normalizeProfileForm(profile, 'Current introduction').bio).toBe('Current introduction');
+    expect(normalizeProfileForm(profile, '').bio).toBe('');
+    expect(normalizeProfileForm(profile, undefined).bio).toBe('Older profile introduction');
+  });
   test('normalizes profile values and dates for display', () => {
     expect(normalizeProfileForm({
       email: 'wisdom@example.com',

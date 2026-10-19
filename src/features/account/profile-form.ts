@@ -38,6 +38,7 @@ export function formatProfileBirthday(value: unknown): string {
 
 export function normalizeProfileForm(
   profile: Partial<IUser> | null | undefined,
+  biography?: string | null,
 ): ProfileFormValues {
   return {
     email: profile?.email ?? '',
@@ -48,7 +49,7 @@ export function normalizeProfileForm(
     phone: profile?.phone_number ?? '',
     country: profile?.country ?? '',
     location: profile?.location ?? '',
-    bio: profile?.context?.self_description ?? '',
+    bio: biography ?? profile?.context?.self_description ?? '',
   };
 }
 
