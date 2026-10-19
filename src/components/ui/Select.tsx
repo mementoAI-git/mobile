@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { View, Text, type ViewProps } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -47,6 +48,7 @@ export function Select({
   className,
   ...props
 }: SelectProps) {
+  const COLORS = useThemeColors();
   const openSheet = useUiStore((s) => s.openSheet);
   const selectedOption = options.find((o) => o.value === value);
 

@@ -94,7 +94,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
   return (
     <View style={{ flex: 1 }}>
       {/* Header */}
-      <View className="px-6 pt-2 pb-4 flex-row items-center justify-between border-b border-stroke-weaker">
+      <View className="px-5 pb-4 flex-row items-center justify-between border-b border-stroke-weaker">
         <View>
           <Text className="text-text-strong" style={TYPE.sectionTitle}>
             {previewOnly ? 'View Capsule' : 'Capsule Details'}
@@ -183,10 +183,10 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
 
         {/* Details & Metadata */}
         {!previewOnly && (
-          <View className="px-6 gap-6">
+          <View className="px-5 gap-6">
             <View className="bg-fill-weaker rounded-2xl p-5 gap-4 border border-stroke-weaker">
               <View className="flex-row items-center gap-4">
-                <View className="size-10 rounded-full bg-white items-center justify-center border border-stroke-weaker">
+                <View className="size-10 rounded-full bg-card items-center justify-center border border-stroke-weaker">
                   <Calendar size={18} color={COLORS.brand} />
                 </View>
                 <View>
@@ -202,7 +202,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
               </View>
 
               <View className="flex-row items-center gap-4">
-                <View className="size-10 rounded-full bg-white items-center justify-center border border-stroke-weaker">
+                <View className="size-10 rounded-full bg-card items-center justify-center border border-stroke-weaker">
                   <Users size={18} color={COLORS.brand} />
                 </View>
                 <View>
@@ -221,7 +221,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
               <View className="bg-fill-weaker rounded-2xl p-5 gap-4 border border-stroke-weaker">
                 {(initialCapsule.memories?.length ?? 0) > 0 && (
                   <View className="flex-row items-center gap-4 border-b border-stroke-weaker pb-4">
-                    <View className="size-10 rounded-full bg-white items-center justify-center border border-stroke-weaker">
+                    <View className="size-10 rounded-full bg-card items-center justify-center border border-stroke-weaker">
                       <Bookmark size={18} color={COLORS.brand} />
                     </View>
                     <View>
@@ -245,7 +245,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
                         <TouchableOpacity
                           key={a._id || idx}
                           onPress={() => handleOpenFile(a.url)}
-                          className="flex-row items-center justify-between bg-white border border-stroke-weaker p-3 rounded-xl"
+                          className="flex-row items-center justify-between bg-card border border-stroke-weaker p-3 rounded-xl"
                         >
                           <View className="flex-row items-center gap-3 flex-1">
                             <View className="size-8 bg-fill-weaker rounded border border-stroke-weaker items-center justify-center">

@@ -1,3 +1,5 @@
+import { toast } from '@/components/ui/Toast';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useEffect } from 'react';
 import { View, ScrollView, ImageBackground, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -15,6 +17,7 @@ import * as Clipboard from 'expo-clipboard';
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 export default function TwoFactorScreen() {
+  const COLORS = useThemeColors();
   const {
     is2FAEnabled,
     setupData,
@@ -99,7 +102,7 @@ export default function TwoFactorScreen() {
 
         {/* Setup flow */}
         {setupData && (
-          <Animated.View entering={FadeInDown.delay(150).duration(500)} className="bg-white rounded-[32px] p-6 gap-5">
+          <Animated.View entering={FadeInDown.delay(150).duration(500)} className="bg-card rounded-[32px] p-6 gap-5">
             <View style={{ gap: 2 }}>
               <Text className="text-text-muted uppercase tracking-[2px]" style={TYPE.metadata}>
                 Setup
@@ -123,7 +126,11 @@ export default function TwoFactorScreen() {
                 activeOpacity={0.7}
                 onPress={async () => {
                   Haptics.selectionAsync();
-                  await Clipboard.setStringAsync(setupData.secret ?? '');
+                  try {
+                    await Clipboard.setStringAsync(setupData.secret ?? '');
+                  } catch {
+                    toast('We couldn’t copy the key. Please try again.', 'error');
+                  }
                 }}
                 className="bg-fill-weaker rounded-2xl p-4 flex-row items-center justify-between"
               >

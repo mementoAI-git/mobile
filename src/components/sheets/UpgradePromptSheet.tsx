@@ -101,7 +101,7 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
       </View>
 
       {/* Subscription Pricing Option */}
-      <View className="bg-white border border-brand/30 rounded-3xl p-5 shadow-md flex-row items-center justify-between mb-8 relative overflow-hidden">
+      <View className="bg-card border border-brand/30 rounded-3xl p-5 shadow-md flex-row items-center justify-between mb-8 relative overflow-hidden">
         {/* Abstract subtle accent glow */}
         <View className="absolute right-0 top-0 size-24 bg-brand/5 rounded-full blur-2xl -mr-6 -mt-6 pointer-events-none" />
 

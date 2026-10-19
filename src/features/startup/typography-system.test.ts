@@ -6,15 +6,21 @@ describe('global typography system', () => {
   test('matches the approved Overview-derived role scale', () => {
     expect(TYPE).toMatchObject({
       displayStat: {fontFamily: FONTS.serif, fontSize: 49, lineHeight: 56},
+      sheetTitle: {fontFamily: FONTS.sans, fontWeight: '600', fontSize: 20, lineHeight: 32},
+      editorTitle: {fontFamily: FONTS.serif, fontSize: 24, lineHeight: 32},
       displayTitle: {fontFamily: FONTS.serif, fontSize: 37, lineHeight: 43},
+      dashboardTitle: {fontFamily: FONTS.sans, fontWeight: '600', fontSize: 24, lineHeight: 30},
+      dashboardTitleSmall: {fontFamily: FONTS.bodyBold, fontWeight: '700', fontSize: 16, lineHeight: 22},
+      voicePickerTitle: {fontFamily: FONTS.bodyBold, fontWeight: '700', fontSize: 20, lineHeight: 26},
       screenTitle: {fontFamily: FONTS.serif, fontSize: 29, lineHeight: 35},
-      greeting: {fontFamily: FONTS.sans, fontSize: 25, lineHeight: 33},
+      greeting: {fontFamily: FONTS.serif, fontSize: 25, lineHeight: 33},
       sectionTitle: {fontFamily: FONTS.serif, fontSize: 23, lineHeight: 29},
+      sectionTitleWeak: {fontFamily: FONTS.serifItalic, fontSize: 23, lineHeight: 29},
       cardTitle: {fontFamily: FONTS.serifMedium, fontSize: 21, lineHeight: 27},
       uiTitle: {fontFamily: FONTS.sansSemi, fontSize: 21, lineHeight: 27},
       bodyLarge: {fontFamily: FONTS.sans, fontSize: 16, lineHeight: 25},
       body: {fontFamily: FONTS.sans, fontSize: 15, lineHeight: 24},
-      bodyStrong: {fontFamily: FONTS.sansBold, fontSize: 15, lineHeight: 24},
+      bodyStrong: {fontFamily: FONTS.bodyBold, fontWeight: '700', fontSize: 15, lineHeight: 24},
       bodySmall: {fontFamily: FONTS.sans, fontSize: 13, lineHeight: 19},
       label: {fontFamily: FONTS.sansMedium, fontSize: 14, lineHeight: 20},
       button: {fontFamily: FONTS.sansSemi, fontSize: 16, lineHeight: 23},
@@ -30,9 +36,9 @@ describe('global typography system', () => {
   test('exposes only the approved role names', () => {
     expect(Object.keys(TYPE).sort()).toEqual([
       'body', 'bodyLarge', 'bodySmall', 'bodyStrong', 'button', 'buttonSmall', 'cardTitle',
-      'displayStat', 'displayTitle', 'eyebrow', 'greeting', 'input', 'label',
-      'metadata', 'mono', 'screenTitle', 'sectionTitle', 'stat', 'uiTitle',
-    ]);
+      'dashboardTitle', 'dashboardTitleSmall', 'displayStat', 'displayTitle', 'editorTitle', 'eyebrow', 'greeting', 'greetingName', 'input', 'label',
+      'calendarWheel', 'metadata', 'mono', 'musicCaption', 'musicTrack', 'musicVolume', 'publishSuccessAction', 'publishSuccessTitle', 'screenTitle', 'sectionTitle', 'sectionTitleWeak', 'sheetTitle', 'stat', 'uiTitle', 'voicePickerTitle',
+    ].sort());
   });
 
   test('scales typography responsively using conservative factors', async () => {

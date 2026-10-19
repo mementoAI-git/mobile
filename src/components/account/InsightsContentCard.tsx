@@ -1,3 +1,6 @@
+import { ThemedCardBackground } from '@/components/ui/ThemedCardBackground';
+import type { ThemeColors } from '@/constants/tokens';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useMemo } from 'react';
 import { ImageBackground, StyleSheet, Text, View } from 'react-native';
 import FileText from 'lucide-react-native/icons/file-text';
@@ -36,18 +39,7 @@ interface InsightsContentCardProps {
   preferences: string[];
 }
 
-const DIMENSION_COLORS = [
-  COLORS.info,
-  COLORS.blue6,
-  COLORS.success,
-  COLORS.onboardingGreenSoft,
-  COLORS.warning,
-  COLORS.onboardingAmberLight,
-  COLORS.onboardingAmber,
-  COLORS.brandWeak,
-  COLORS.brand,
-  COLORS.error,
-] as const;
+
 
 const TAB_TITLES: Record<Exclude<InsightsTab, 'enrichment'>, string> = {
   insights: 'Insights',
@@ -63,6 +55,20 @@ export const InsightsContentCard = React.memo(function InsightsContentCard({
   notes,
   preferences,
 }: InsightsContentCardProps) {
+  const COLORS = useThemeColors();
+  const DIMENSION_COLORS = [
+  COLORS.info,
+  COLORS.blue6,
+  COLORS.success,
+  COLORS.onboardingGreenSoft,
+  COLORS.warning,
+  COLORS.onboardingAmberLight,
+  COLORS.onboardingAmber,
+  COLORS.brandWeak,
+  COLORS.brand,
+  COLORS.error,
+] as const;
+  const styles = useThemeStyles(createStyles);
   const dimensions = useMemo(
     () => normalizeEnrichmentDimensions(categoryScores),
     [categoryScores],
@@ -92,7 +98,7 @@ export const InsightsContentCard = React.memo(function InsightsContentCard({
 
     return (
       <View style={styles.card}>
-        <ImageBackground
+        <ThemedCardBackground
           source={tabBg}
           style={styles.cardBg}
           resizeMode="cover"
@@ -140,7 +146,7 @@ export const InsightsContentCard = React.memo(function InsightsContentCard({
               </Text>
             </View>
           )}
-        </ImageBackground>
+        </ThemedCardBackground>
       </View>
     );
   }
@@ -149,7 +155,7 @@ export const InsightsContentCard = React.memo(function InsightsContentCard({
 
   return (
     <View style={styles.card}>
-      <ImageBackground
+      <ThemedCardBackground
         source={tabBg}
         style={styles.cardBg}
         resizeMode="cover"
@@ -202,12 +208,12 @@ export const InsightsContentCard = React.memo(function InsightsContentCard({
             </View>
           ))}
         </View>
-      </ImageBackground>
+      </ThemedCardBackground>
     </View>
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   card: {
     borderRadius: radius(24),
     backgroundColor: COLORS.card,
@@ -255,7 +261,7 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     backgroundColor: COLORS.brandSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(255, 94, 0, 0.15)',
+    borderColor: COLORS.brandTint,
     borderRadius: radius(16),
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -286,7 +292,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: radius(12),
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    backgroundColor: COLORS.cardOverlay,
   },
   dimensionLeft: {
     flexDirection: 'row',
@@ -322,7 +328,7 @@ const styles = StyleSheet.create({
     gap: 12,
     borderRadius: radius(16),
     padding: responsiveSpace(14),
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: COLORS.cardOverlay,
     borderWidth: 1,
     borderColor: COLORS.strokeWeaker,
   },

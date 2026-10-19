@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { ImageBackground, View, ScrollView, ImageSourcePropType, StyleSheet, Platform } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -39,6 +40,8 @@ export function StatCard({
   className,
   variant = 'blue',
 }: StatCardProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const scaleValue = useSharedValue(1);
   const hasBg = !!bg;
 
@@ -117,7 +120,7 @@ export function StatCard({
   );
 
   const containerStyle = cn(
-    'flex-1 rounded-[24px] overflow-hidden border border-stroke-weaker bg-white',
+    'flex-1 rounded-[24px] overflow-hidden border border-stroke-weaker bg-card',
     className
   );
 
@@ -151,7 +154,7 @@ export function StatCard({
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   shadow: {
     ...Platform.select({
       ios: {

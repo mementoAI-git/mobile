@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -19,6 +20,7 @@ export const SecurityCredentialRow = React.memo(function SecurityCredentialRow({
   subtitle,
   onDelete,
 }: SecurityCredentialRowProps) {
+  const COLORS = useThemeColors();
   return (
     <View
       style={{

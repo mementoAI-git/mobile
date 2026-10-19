@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -31,6 +32,7 @@ export function StoryNarrationPlayer({
   onClose,
   visible = true,
 }: StoryNarrationPlayerProps) {
+  const COLORS = useThemeColors();
   const [speed, setSpeed] = useState<PlaybackSpeed>(1.0);
   const player = useAudioPlayer(track.audioUrl ? { uri: track.audioUrl } : null);
 

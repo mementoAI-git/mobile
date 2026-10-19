@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, {useCallback, useState} from 'react';
 import { Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -16,6 +17,7 @@ import {openBillingPortal} from '@/features/settings/billing-flow';
 import {getSheetBottomPadding} from '@/features/layout/sheet-safe-area';
 
 function PayPalIcon() {
+  const COLORS = useThemeColors();
   return (
     <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
       <Path
@@ -31,6 +33,7 @@ function PayPalIcon() {
 }
 
 function VisaBadge() {
+  const COLORS = useThemeColors();
   return (
     <View style={{borderWidth: 1, borderColor: COLORS.strokeWeak, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: COLORS.card}}>
       <Text style={{...TYPE.eyebrow, color: COLORS.info}}>VISA</Text>
@@ -39,6 +42,7 @@ function VisaBadge() {
 }
 
 function PaymentCardPlaceholder() {
+  const COLORS = useThemeColors();
   return (
     <View style={{width: 140, height: 90, borderRadius: 10, overflow: 'hidden', backgroundColor: COLORS.strokeWeak}}>
       <View style={{height: 22, backgroundColor: COLORS.fillWeak}}/>
@@ -60,6 +64,7 @@ function MockInputField({
   rightElement?: React.ReactNode;
   onPress?: () => void;
 }) {
+  const COLORS = useThemeColors();
   return (
     <TouchableOpacity
       activeOpacity={onPress ? 0.75 : 1}
@@ -107,6 +112,7 @@ export function AddPaymentMethodSheet({
   canManage?: boolean;
   onUpgrade?: () => void;
 }) {
+  const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'card' | 'paypal'>('card');
@@ -235,7 +241,7 @@ export function AddPaymentMethodSheet({
 
       <View style={{flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(getSheetBottomPadding(insets.bottom, 12), 16), backgroundColor: COLORS.background}}>
         <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={onClose}>Dismiss</Button>
-        <Button size="lg" className="h-14 flex-1 bg-text-strong text-white" loading={busy} onPress={() => void continueSecurely()}>
+        <Button size="lg" className="h-14 flex-1 bg-media-surface text-white" loading={busy} onPress={() => void continueSecurely()}>
           {canManage ? 'Continue to Portal' : 'Upgrade to Pro'}
         </Button>
       </View>

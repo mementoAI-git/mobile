@@ -1,3 +1,5 @@
+import type { ThemeColors } from '@/constants/tokens';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 /**
  * SearchMemorySheet — full-featured search bottom sheet
  *
@@ -82,6 +84,8 @@ const MemoryRow = React.memo(function MemoryRow({
   memory: any;
   onPress: () => void;
 }) {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const previewBody = stripHtml(memory.body);
   return (
     <TouchableOpacity
@@ -128,6 +132,8 @@ const RecentPill = React.memo(function RecentPill({
   onPress: () => void;
   onRemove: () => void;
 }) {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   return (
     <View style={styles.recentPill}>
       <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.recentPillText}>
@@ -163,6 +169,8 @@ const MemoSuggestionRowItem = React.memo(function MemoSuggestionRowItem({
   prompt: any;
   onSuggestionPress: (p: any) => void;
 }) {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const handlePress = useCallback(() => onSuggestionPress(prompt), [prompt, onSuggestionPress]);
   return (
     <TouchableOpacity
@@ -178,6 +186,8 @@ const MemoSuggestionRowItem = React.memo(function MemoSuggestionRowItem({
 
 // ── Main component ─────────────────────────────────────────────────────────
 export function SearchMemorySheet() {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const closeSheet = useUiStore((s) => s.closeSheet);
   const email = useUserStore((s) => s.user?.email);
 
@@ -429,10 +439,10 @@ export function SearchMemorySheet() {
 }
 
 // ── Styles ─────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 4,
+    paddingTop: 0,
     paddingBottom: 32,
   },
   header: {
@@ -596,7 +606,7 @@ const styles = StyleSheet.create({
   },
   resultBody: {
     ...TYPE.bodySmall,
-    color: '#555555',
+    color: COLORS.previewText,
     lineHeight: 18,
   },
   resultDate: {

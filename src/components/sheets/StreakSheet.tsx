@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -84,6 +85,7 @@ function StreakArc({ size = 120 }: { size?: number }) {
 }
 
 export function StreakSheet() {
+  const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
   const closeSheet = useUiStore((s) => s.closeSheet);
   const user = useUserStore((s) => s.user);
@@ -148,7 +150,7 @@ export function StreakSheet() {
       </View>
 
       {/* ── Title + subtitle ────────────────────────────────────── */}
-      <View style={{ alignItems: 'center', gap: 6, marginBottom: 32, paddingHorizontal: 24 }}>
+      <View style={{ alignItems: 'center', gap: 6, marginBottom: 32, paddingHorizontal: 20 }}>
         <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong, textAlign: 'center' }}>
           {streakCount === 1 ? 'Day' : 'Days'} streak
         </Text>
@@ -158,7 +160,7 @@ export function StreakSheet() {
       </View>
 
       {/* ── Week calendar (Mon–Sun) ──────────────────────────────── */}
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4, marginBottom: 28, paddingHorizontal: 16 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4, marginBottom: 28, paddingHorizontal: 20 }}>
         {WEEK_LABELS.map((label, index) => {
           const isToday = index === todayMonFirst;
           const isPastStreak = streakCount > 0 && index < todayMonFirst && index >= streakStart;
@@ -211,7 +213,7 @@ export function StreakSheet() {
       </View>
 
       {/* ── Bottom stats card ───────────────────────────────────── */}
-      <View style={{ marginHorizontal: 16 }}>
+      <View style={{ marginHorizontal: 20 }}>
         <View style={{
           backgroundColor: COLORS.fillWeaker,
           borderRadius: 20,

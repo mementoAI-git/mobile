@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -30,6 +31,8 @@ export function PermissionRecoveryState({
   onSecondary,
   tone = 'light',
 }: PermissionRecoveryStateProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const isDark = tone === 'dark';
 
   const handleAction = useCallback(() => {
@@ -80,7 +83,7 @@ export function PermissionRecoveryState({
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',

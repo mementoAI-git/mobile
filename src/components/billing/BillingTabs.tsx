@@ -15,10 +15,10 @@ export const BillingTabs = React.memo(function BillingTabs({active, onChange}: P
           onChange('overview');
         }}
         activeOpacity={0.78}
-        className={`h-11 flex-row items-center rounded-full px-5 ${active === 'overview' ? 'bg-text-strong' : 'bg-fill-weak'}`}
+        className={`h-11 flex-row items-center rounded-full px-5 ${active === 'overview' ? 'bg-active-fill' : 'bg-fill-weak'}`}
       >
         <Text
-          className={active === 'overview' ? 'text-white' : 'text-text-strong'}
+          className={active === 'overview' ? 'text-active-text' : 'text-text-strong'}
           style={TYPE.buttonSmall}
         >
           Overview
@@ -30,10 +30,10 @@ export const BillingTabs = React.memo(function BillingTabs({active, onChange}: P
           onChange('invoices');
         }}
         activeOpacity={0.78}
-        className={`h-11 flex-row items-center rounded-full px-5 ${active === 'invoices' ? 'bg-text-strong' : 'bg-fill-weak'}`}
+        className={`h-11 flex-row items-center rounded-full px-5 ${active === 'invoices' ? 'bg-active-fill' : 'bg-fill-weak'}`}
       >
         <Text
-          className={active === 'invoices' ? 'text-white' : 'text-text-strong'}
+          className={active === 'invoices' ? 'text-active-text' : 'text-text-strong'}
           style={TYPE.buttonSmall}
         >
           Invoices

@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 /**
  * CameraCaptureModal
  *
@@ -80,6 +81,8 @@ export function CameraCaptureModal({
   onClose,
   onCapture,
 }: CameraCaptureModalProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const insets = useSafeAreaInsets();
 
   // expo-camera v17: ref to the class component instance
@@ -574,7 +577,7 @@ export function CameraCaptureModal({
 
 // ─── Styles ────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#000',

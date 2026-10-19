@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -29,6 +30,7 @@ export function PasswordInput({
   containerClassName,
   ...props
 }: PasswordInputProps) {
+  const COLORS = useThemeColors();
   const [show, setShow] = useState(false);
   const glyphSize = iconSize(20);
 

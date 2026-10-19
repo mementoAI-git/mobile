@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -21,6 +22,7 @@ import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-aler
 const FEEDBACK_OPTIONS = ['Bug', 'Feature Request', 'UI/UX Issue', 'General Feedback', 'Other'];
 
 export function FeedbackSheet() {
+  const COLORS = useThemeColors();
   const user = useUserStore(s => s.user);
   const closeSheet = useUiStore((s) => s.closeSheet);
   const { toast } = useToast();
@@ -76,7 +78,7 @@ export function FeedbackSheet() {
         }
       } catch (err) {
         if (isMountedRef.current) {
-          logger.error('Upload failed', err);
+          logger.handledError('Upload failed', err);
           toast('There was an error uploading your screenshot.', 'error');
         }
       }
@@ -102,7 +104,7 @@ export function FeedbackSheet() {
       }
     } catch (error) {
       if (isMountedRef.current) {
-        logger.error('Failed to send feedback:', error);
+        logger.handledError('Failed to send feedback:', error);
         toast('Couldn’t send feedback. Try again.', 'error');
       }
     } finally {
@@ -144,7 +146,7 @@ export function FeedbackSheet() {
         <Text className="text-text-strong mb-1.5" style={TYPE.label}>Type</Text>
         <TouchableOpacity
           onPress={() => setShowTypeSelect(!showTypeSelect)}
-          className="border border-stroke-weaker bg-white rounded-xl px-3 py-3"
+          className="border border-stroke-weaker bg-card rounded-xl px-3 py-3"
         >
           <Text className="text-text-strong" style={TYPE.label}>{type}</Text>
         </TouchableOpacity>

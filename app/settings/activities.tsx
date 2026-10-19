@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, ScrollView, ImageBackground, Text, ActivityIndicator } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -24,6 +25,7 @@ const PAGE_SIZE = 20;
 const WELCOME_BG = require('../../assets/images/backgrounds/welcome_bg.png');
 
 function EditorialHeroCard({ totalDocs }: { totalDocs: number }) {
+  const COLORS = useThemeColors();
   if (totalDocs === 0) return null;
 
   const bodyText = totalDocs >= 100
@@ -50,6 +52,7 @@ function EditorialHeroCard({ totalDocs }: { totalDocs: number }) {
 // ─── Stats banner (4 stats, all brand orange) ─────────────────────────────
 
 function StatsBanner({ totalDocs, docs }: { totalDocs: number; docs: Activity[] }) {
+  const COLORS = useThemeColors();
   const thisWeek = useMemo(() => {
     const cutoff = dayjs().subtract(7, 'day');
     return docs.filter((d) => dayjs(d.created_at).isAfter(cutoff)).length;
@@ -96,6 +99,7 @@ function StatsBanner({ totalDocs, docs }: { totalDocs: number; docs: Activity[] 
 // ─── Screen ────────────────────────────────────────────────────────────────
 
 export default function ActivitiesScreen() {
+  const COLORS = useThemeColors();
   const router = useRouter();
   const {
     data,

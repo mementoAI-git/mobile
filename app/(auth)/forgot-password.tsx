@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React from 'react';
 import {
   View,
@@ -22,6 +23,8 @@ import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/r
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 export default function ForgotPasswordScreen() {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const {
     email,
     setEmail,
@@ -125,11 +128,11 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 32,
   },

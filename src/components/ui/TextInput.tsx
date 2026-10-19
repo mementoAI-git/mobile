@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState, useRef, useEffect } from 'react';
 import { TextInput as RNTextInput, View, Text, TextInputProps, Animated, Platform } from 'react-native';
 import { cn } from '@/lib/utils';
@@ -36,6 +37,7 @@ export function TextInput({
   onBlur,
   ...props
 }: InputProps) {
+  const COLORS = useThemeColors();
   const [focused, setFocused] = useState(false);
   const isRounded = variant === 'rounded';
 
@@ -100,7 +102,7 @@ export function TextInput({
           {
             flexDirection: 'row',
             alignItems: props.multiline ? 'flex-start' : 'center',
-            backgroundColor: isRounded ? '#ffffff' : COLORS.fillWeaker,
+            backgroundColor: isRounded ? COLORS.card : COLORS.fillWeaker,
             borderWidth,
             borderColor,
             borderRadius: resolvedRadius,
@@ -122,6 +124,8 @@ export function TextInput({
               padding: 0,
               ...Platform.select({ android: { paddingVertical: 0 } }),
             }}
+            selectionColor={COLORS.brand}
+            cursorColor={COLORS.brand}
             placeholderTextColor={COLORS.textMuted}
             onFocus={(e: any) => {
               setFocused(true);
@@ -143,6 +147,8 @@ export function TextInput({
               padding: 0,
               ...Platform.select({ android: { paddingVertical: 0 } }),
             }}
+            selectionColor={COLORS.brand}
+            cursorColor={COLORS.brand}
             placeholderTextColor={COLORS.textMuted}
             onFocus={(e: any) => {
               setFocused(true);

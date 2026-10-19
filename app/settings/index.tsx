@@ -1,3 +1,5 @@
+import type { ThemeColors } from '@/constants/tokens';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback, useState } from 'react';
 import { OnboardingCelebrationOverlay } from '@/components/onboarding/OnboardingCelebrationOverlay';
 import {
@@ -49,6 +51,8 @@ const COMMUNITY_LINKS = [
 ] as const;
 
 export default function SettingsIndex() {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const {
     profile,
     isPending,
@@ -107,7 +111,7 @@ export default function SettingsIndex() {
           >
             <ArrowLeft size={22} color={COLORS.textBase} />
           </TouchableOpacity>
-          <Text style={TYPE.screenTitle}>Settings</Text>
+          <Text style={[TYPE.screenTitle, { color: COLORS.textStrong }]}>Settings</Text>
           <View style={{ width: 44 }} />
         </View>
 
@@ -141,7 +145,7 @@ export default function SettingsIndex() {
             className="h-14 w-14 border-0"
           />
           <View style={{ flex: 1 }}>
-            <Text numberOfLines={1} style={TYPE.cardTitle}>{displayName}</Text>
+            <Text numberOfLines={1} style={[TYPE.cardTitle, { color: COLORS.textStrong }]}>{displayName}</Text>
             <Text numberOfLines={1} style={styles.profileEmail}>{profile?.email}</Text>
             {memberSince && <Text style={styles.memberSince}>{memberSince}</Text>}
           </View>
@@ -234,7 +238,7 @@ export default function SettingsIndex() {
                   void Haptics.selectionAsync();
                   openSheet('first-story-milestone');
                 }}
-                className="bg-white border border-stroke-weaker px-3 py-2 rounded-full"
+                className="bg-card border border-stroke-weaker px-3 py-2 rounded-full"
               >
                 <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
                   📖 First Story
@@ -250,7 +254,7 @@ export default function SettingsIndex() {
                     recipientsCount: 2,
                   });
                 }}
-                className="bg-white border border-stroke-weaker px-3 py-2 rounded-full"
+                className="bg-card border border-stroke-weaker px-3 py-2 rounded-full"
               >
                 <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
                   ⏳ Capsule Sealed
@@ -262,7 +266,7 @@ export default function SettingsIndex() {
                   void Haptics.selectionAsync();
                   openSheet('upgrade-success');
                 }}
-                className="bg-white border border-stroke-weaker px-3 py-2 rounded-full"
+                className="bg-card border border-stroke-weaker px-3 py-2 rounded-full"
               >
                 <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
                   👑 Pro Upgrade
@@ -274,7 +278,7 @@ export default function SettingsIndex() {
                   void Haptics.selectionAsync();
                   openSheet('daily-ritual');
                 }}
-                className="bg-white border border-stroke-weaker px-3 py-2 rounded-full"
+                className="bg-card border border-stroke-weaker px-3 py-2 rounded-full"
               >
                 <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
                   ⏰ Reflection Window
@@ -286,7 +290,7 @@ export default function SettingsIndex() {
                   void Haptics.selectionAsync();
                   setShowVaultCelebration(true);
                 }}
-                className="bg-white border border-stroke-weaker px-3 py-2 rounded-full"
+                className="bg-card border border-stroke-weaker px-3 py-2 rounded-full"
               >
                 <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
                   🏛️ Vault Celebration
@@ -308,7 +312,7 @@ export default function SettingsIndex() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
   header: {
     minHeight: 62,

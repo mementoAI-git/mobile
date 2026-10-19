@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, PanResponder, GestureResponderEvent } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Circle, Line, Text as SvgText } from 'react-native-svg';
@@ -30,6 +31,7 @@ export function SplineChart({
   data = DEFAULT_DATA,
   height = 180,
 }: SplineChartProps) {
+  const COLORS = useThemeColors();
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
 
   // Initial width dynamically computed: screen width minus external margins (48px) and card padding (40px)
@@ -130,7 +132,7 @@ export function SplineChart({
   const activePoint = activeIdx !== null ? coords[activeIdx] : null;
 
   return (
-    <View className="bg-white border border-stroke-weaker rounded-3xl p-5 overflow-hidden">
+    <View className="bg-card border border-stroke-weaker rounded-3xl p-5 overflow-hidden">
       <View className="flex-row items-center justify-between mb-4">
         <View>
           <Text className="text-text-weak uppercase tracking-wider" style={TYPE.metadata}>

@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { memo } from 'react';
 import { Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -18,6 +19,7 @@ export const BeneficiaryGroupRow = memo(function BeneficiaryGroupRow({
   index: number;
   onPress: () => void;
 }) {
+  const COLORS = useThemeColors();
   const count = getGroupMemberCount(group);
   const color = GROUP_COLOR_PALETTE[group.color ?? 1]?.color ?? COLORS.info;
   const created = group.created_at

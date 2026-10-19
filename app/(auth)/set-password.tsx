@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -76,6 +77,8 @@ function CelebrationBadge({ size = 100 }: { size?: number }) {
 }
 
 export default function SetPasswordScreen() {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const {
     form: { control, formState: { errors } },
     isPending,
@@ -269,11 +272,11 @@ export default function SetPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 32,
   },

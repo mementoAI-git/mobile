@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -38,6 +39,7 @@ interface PickedAvatar {
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
+  const COLORS = useThemeColors();
   return (
     <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>
       {children}
@@ -50,6 +52,7 @@ function SheetInput({
   style,
   ...props
 }: React.ComponentProps<typeof BottomSheetTextInput>) {
+  const COLORS = useThemeColors();
   return (
     <BottomSheetTextInput
       {...props}
@@ -73,6 +76,7 @@ function SheetInput({
 }
 
 export function AddBeneficiarySheet({ onClose, editData }: Props) {
+  const COLORS = useThemeColors();
   const isEdit = Boolean(editData?._id || editData?.email);
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState(editData?.email || '');
@@ -238,7 +242,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
     <View style={{ flex: 1 }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ flex: 1 }}>
-          <View style={{ minHeight: 68, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ minHeight: 44, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
               {isEdit ? 'Edit Beneficiary' : 'Invite Beneficiary'}
             </Text>

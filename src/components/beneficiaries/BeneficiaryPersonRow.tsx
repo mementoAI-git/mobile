@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { memo } from 'react';
 import { Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -19,8 +20,11 @@ export const BeneficiaryPersonRow = memo(function BeneficiaryPersonRow({
   beneficiary: IBeneficiary;
   onPress: () => void;
 }) {
+  const COLORS = useThemeColors();
   const picture = beneficiary.user?.picture_url;
   const badge = getBeneficiaryStatusBadge(beneficiary);
+  const statusColor = badge.variant === 'active' ? COLORS.success : badge.variant === 'verified' ? COLORS.info : COLORS.warning;
+  const statusFill = badge.variant === 'active' ? COLORS.successFill : badge.variant === 'verified' ? COLORS.infoFill : COLORS.warningFill;
   const accessLabel = getVaultAccessScopeLabel((beneficiary as any).access_scope);
 
   return (
@@ -43,8 +47,8 @@ export const BeneficiaryPersonRow = memo(function BeneficiaryPersonRow({
           </Text>
           <View
             style={{
-              backgroundColor: badge.bgColor,
-              borderColor: badge.borderColor,
+              backgroundColor: statusFill,
+              borderColor: COLORS.strokeWeak,
               borderWidth: 1,
               borderRadius: 999,
               paddingHorizontal: 8,
@@ -54,7 +58,7 @@ export const BeneficiaryPersonRow = memo(function BeneficiaryPersonRow({
             <Text
               style={{
                 ...TYPE.eyebrow,
-                color: badge.textColor,
+                color: statusColor,
                 letterSpacing: 0.3,
               }}
             >

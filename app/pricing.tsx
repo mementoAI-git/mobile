@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, {useCallback} from 'react';
 import { ImageBackground, Platform, ScrollView, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -26,6 +27,7 @@ const FREE_FEATURES = ['Add story/journals/thoughts.', 'Core chat and memories',
 const PRO_FEATURES = ['Everything in Free', 'Voice mode conversations.', 'Supermemory integration', 'Bigger storage (10GB)'];
 
 function FeatureList({items, inverse = false}: {items: string[]; inverse?: boolean}) {
+  const COLORS = useThemeColors();
   return <View className="gap-4 mt-7">{items.map(item => <View key={item} className="flex-row items-start gap-3"><Check size={21} color={inverse ? COLORS.textInverse : COLORS.textBase} strokeWidth={2} /><Text className="flex-1" style={{...TYPE.body, color: inverse ? COLORS.textInverse : COLORS.textBase}}>{item}</Text></View>)}</View>;
 }
 
@@ -43,6 +45,7 @@ function formatPeriodEndDate(dateStr?: string | null): string {
 }
 
 export default function ManagePlanScreen() {
+  const COLORS = useThemeColors();
   const {
     interval,
     changeInterval,
@@ -139,7 +142,7 @@ export default function ManagePlanScreen() {
               variant="secondary"
               size="lg"
               fullWidth
-              className="mt-7 bg-white"
+              className="mt-7 bg-card"
               disabled={!isProOrAbove}
               onPress={requestCancellation}
             >
@@ -173,7 +176,7 @@ export default function ManagePlanScreen() {
                 {currentPlanInterval === 'monthly' && (
                   <View
                     pointerEvents="none"
-                    className="absolute -top-2.5 left-3.5 bg-white px-2 py-0.5 rounded-full z-10"
+                    className="absolute -top-2.5 left-3.5 bg-card px-2 py-0.5 rounded-full z-10"
                     style={{
                       shadowColor: COLORS.shadow,
                       shadowOffset: { width: 0, height: 1 },
@@ -209,7 +212,7 @@ export default function ManagePlanScreen() {
                 {currentPlanInterval === 'annual' && (
                   <View
                     pointerEvents="none"
-                    className="absolute -top-2.5 left-3.5 bg-white px-2 py-0.5 rounded-full z-10"
+                    className="absolute -top-2.5 left-3.5 bg-card px-2 py-0.5 rounded-full z-10"
                     style={{
                       shadowColor: COLORS.shadow,
                       shadowOffset: { width: 0, height: 1 },
@@ -263,7 +266,7 @@ export default function ManagePlanScreen() {
                   variant="secondary"
                   size="lg"
                   fullWidth
-                  className="mt-7 bg-white"
+                  className="mt-7 bg-card"
                   loading={loading}
                   disabled={!purchaseAvailable}
                   onPress={() => handleCheckout('pro')}
@@ -275,7 +278,7 @@ export default function ManagePlanScreen() {
                   variant="secondary"
                   size="lg"
                   fullWidth
-                  className="mt-7 bg-white"
+                  className="mt-7 bg-card"
                   loading={loading}
                   onPress={handleManageSubscription}
                 >
@@ -287,7 +290,7 @@ export default function ManagePlanScreen() {
                 variant="secondary"
                 size="lg"
                 fullWidth
-                className="mt-7 bg-white"
+                className="mt-7 bg-card"
                 loading={loading}
                 disabled={isCancellationScheduled || !purchaseAvailable}
                 onPress={() => handleCheckout('pro')}

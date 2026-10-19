@@ -144,7 +144,7 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel={`Time capsule: ${capsule.title || 'Untitled Capsule'}, status ${statusLabels[capsule.status] ?? capsule.status}`}
-            className="bg-white rounded-[22px] overflow-hidden border border-stroke-weaker"
+            className="bg-card rounded-[22px] overflow-hidden border border-stroke-weaker"
           >
             <View className="p-3 flex-row gap-3">
               {/* Left side: Single Attachment Thumbnail */}
@@ -286,7 +286,7 @@ export const CapsuleCard = React.memo(function CapsuleCard({ capsule, onPress, l
           accessible={true}
           accessibilityRole="button"
           accessibilityLabel={`Time capsule: ${capsule.title || 'Untitled Capsule'}, status ${statusLabels[capsule.status] ?? capsule.status}`}
-          className="bg-white rounded-[22px] overflow-hidden border border-stroke-weaker shadow-sm"
+          className="bg-card rounded-[22px] overflow-hidden border border-stroke-weaker shadow-sm"
         >
           <View className="p-4 gap-3">
             {/* Header: Status + Actions */}

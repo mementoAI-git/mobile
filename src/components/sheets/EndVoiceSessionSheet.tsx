@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { Text, View } from 'react-native';
 import PhoneOff from 'lucide-react-native/icons/phone-off';
@@ -14,6 +15,7 @@ interface EndVoiceSessionSheetProps {
 }
 
 export function EndVoiceSessionSheet({ duration, onEnd, onClose }: EndVoiceSessionSheetProps) {
+  const COLORS = useThemeColors();
   return (
     <View className="items-center pb-2 pt-6">
       <View className="size-20 items-center justify-center rounded-full bg-fill-weaker">

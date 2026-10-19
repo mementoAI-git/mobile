@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, {useCallback} from 'react';
 import { Text, View } from 'react-native';
 import { Pressable } from '@/components/ui/Touchable';
@@ -11,14 +12,15 @@ import type {BillingInvoice} from '@/features/settings/billing-adapters';
 import {formatInvoiceAmount, formatInvoiceDate} from '@/features/settings/billing-invoice-presentation';
 
 function BillingStatusBadge({status}: {status?: string}) {
+  const COLORS = useThemeColors();
   const normalized = status?.toLowerCase();
   const state = normalized === 'paid' || normalized === 'succeeded' ? 'paid' : normalized === 'failed' || normalized === 'void' ? 'failed' : 'pending';
   const label = state === 'paid' ? 'Paid' : state === 'failed' ? 'Failed' : 'Pending';
   const palette = state === 'paid'
-    ? {backgroundColor: CARD_PASTEL_SURFACES[3].bg, color: COLORS.success}
+    ? {backgroundColor: COLORS.successFill, color: COLORS.success}
     : state === 'failed'
-      ? {backgroundColor: COLORS.brandSubtle, color: COLORS.error}
-      : {backgroundColor: CARD_PASTEL_SURFACES[2].bg, color: COLORS.warning};
+      ? {backgroundColor: COLORS.errorFill, color: COLORS.error}
+      : {backgroundColor: COLORS.warningFill, color: COLORS.warning};
   return (
     <View style={{borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2.5, backgroundColor: palette.backgroundColor}}>
       <Text style={{...TYPE.metadata, color: palette.color}}>{label}</Text>
@@ -27,6 +29,7 @@ function BillingStatusBadge({status}: {status?: string}) {
 }
 
 const InvoiceRow = React.memo(function InvoiceRow({invoice}: {invoice: BillingInvoice}) {
+  const COLORS = useThemeColors();
   const open = useCallback(() => {
     if (!invoice.url) return;
     Haptics.selectionAsync();

@@ -9,6 +9,7 @@ import {
   type View,
 } from 'react-native';
 
+import { withBrandButtonSurface, withPressableBrandSurface } from '@/features/appearance/brand-button-surface';
 import { useVoicePressTarget } from '@/features/voice-control/hooks';
 import { voiceLabelFor } from '@/features/voice-control/label';
 
@@ -59,7 +60,7 @@ function useVoicePress(
 export const TouchableOpacity = forwardRef<View, TouchableOpacityProps & VoiceProps>(
   function TouchableOpacity({ voiceLabel, ...props }, ref) {
     useVoicePress(voiceLabel, props);
-    return <RNTouchableOpacity ref={ref} {...props} />;
+    return <RNTouchableOpacity ref={ref} {...props} style={withBrandButtonSurface(props.style, props.className)} />;
   },
 );
 
@@ -68,5 +69,5 @@ export const Pressable = forwardRef<View, PressableProps & VoiceProps>(function 
   ref,
 ) {
   useVoicePress(voiceLabel, props);
-  return <RNPressable ref={ref} {...props} />;
+  return <RNPressable ref={ref} {...props} style={withPressableBrandSurface(props.style, props.className)} />;
 });

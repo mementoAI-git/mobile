@@ -73,7 +73,7 @@ export function CapsuleActionsSheet({ capsule, onClose }: CapsuleActionsSheetPro
       onPress={onPress}
       disabled={disabled}
       activeOpacity={0.8}
-      className="flex-row items-center gap-4 p-4 rounded-[20px] bg-white border border-stroke-weaker"
+      className="flex-row items-center gap-4 p-4 rounded-[20px] bg-card border border-stroke-weaker"
       style={danger ? { borderColor: `${COLORS.error}20` } : undefined}
     >
       <View

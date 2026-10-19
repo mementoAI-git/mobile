@@ -87,7 +87,7 @@ export function OnboardingShell({
     <Animated.View
       key={`onboarding-content-${step ?? 'static'}`}
       entering={FadeInDown.duration(600).reduceMotion(ReduceMotion.System)}
-      className="flex-1 px-6"
+      className="flex-1 px-4"
     >
       {title ? (
         <View className="mb-6">
@@ -119,7 +119,7 @@ export function OnboardingShell({
 
       {/* Header */}
       {hasHeader ? (
-        <View className="px-6 pt-2 pb-3">
+        <View className="px-4 pt-2 pb-3">
           <View className="flex-row items-center justify-between min-h-[44px]">
             <View className="w-16 items-start justify-center">
               {onBack ? (
@@ -222,7 +222,7 @@ export function OnboardingShell({
 
         {/* Footer */}
         {hasFooter ? (
-          <View className="px-6 pt-3 pb-4 bg-background/95 border-t border-stroke-weaker">
+          <View className="px-4 pt-3 pb-4 bg-background/95 border-t border-stroke-weaker">
             {errorMessage ? (
               <Animated.Text
                 entering={FadeInDown.duration(200).reduceMotion(ReduceMotion.System)}

@@ -1,3 +1,4 @@
+import { useThemedStyles } from '@/hooks/use-theme-colors';
 import React, { useEffect, useState } from 'react';
 import { AppState, View, StyleSheet, Text, ImageBackground, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
@@ -10,6 +11,7 @@ const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const LOGO = require('../../../assets/images/memento_flat.webp');
 
 export function AppSwitcherPrivacyBlur() {
+  const styles = useThemedStyles(stylesBase);
   const [isBackgrounded, setIsBackgrounded] = useState(false);
   const recordBackground = useVaultLockStore((s) => s.recordBackground);
   const checkResumeLock = useVaultLockStore((s) => s.checkResumeLock);
@@ -50,7 +52,7 @@ export function AppSwitcherPrivacyBlur() {
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   container: {
     zIndex: 99999,
     alignItems: 'center',
