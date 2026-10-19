@@ -27,17 +27,12 @@ describe('story editor title field', () => {
 });
 
 describe('story editor cancel', () => {
-  test('Save draft leaves at once instead of waiting for the server', async () => {
+  test('connects Cancel to local save and safe back navigation without confirmation', async () => {
     const editor = await Bun.file(new URL('../../../app/editor.tsx', import.meta.url)).text();
-    const handler = editor.slice(
-      editor.indexOf('const saveOnPress = '),
-      editor.indexOf("setCancelConfirmTitle('Save to drafts?')"),
-    );
-
-    expect(handler).toContain('const saveOnPress = () => {');
-    expect(handler).not.toContain('await ');
-    expect(handler).toContain('void upsertDraft(email,');
-    expect(handler.indexOf('router.back()')).toBeGreaterThan(handler.indexOf('void upsertDraft'));
+    expect(editor).toContain('onPress={handleCancel}');
+    expect(editor).toContain('await saveLocalDraft(user?.email, draft)');
+    expect(editor).toContain("router.replace('/(tabs)/overview')");
+    expect(editor).not.toContain('setCancelConfirmVisible');
+    expect(editor).not.toContain('<ConfirmDialog');
   });
 });
-

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { extractUrls } from '@/hooks/use-link-preview';
+import { extractUrls, fetchOgData } from '@/hooks/use-link-preview';
 
 describe('OpenGraph link previews', () => {
   test('extracts URLs from plain text and sentence boundaries', () => {
@@ -38,10 +38,19 @@ describe('OpenGraph link previews', () => {
       new URL('../../../app/create.tsx', import.meta.url),
     ).text();
 
-    expect(editor).toContain('<LinkPreviews text={storyBody}');
+    expect(editor).toContain('<LinkPreviews variant="composer" text={storyLinkText');
+    expect(editor).toContain('!dismissedLinks.includes(url)');
     expect(editor).toContain('<LinkPreviews text={qcBody}');
     expect(quickCapture).toContain('<LinkPreviews text={text}');
     expect(createMemory).toContain('<LinkPreviews text={body}');
     expect(fullCreate).toContain('<LinkPreviews text={body}');
   });
+});
+
+ test('loads metadata on native fetch responses without streaming bodies', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => ({ ok: true, body: undefined, text: async () => '<title>Example story</title><meta property="og:description" content="A preview"><meta property="og:image" content="/cover.png">' })) as unknown as typeof fetch;
+  try {
+    expect(await fetchOgData('https://example.com/story')).toEqual({ title: 'Example story', description: 'A preview', imageUrl: 'https://example.com/cover.png' });
+  } finally { globalThis.fetch = originalFetch; }
 });

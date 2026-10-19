@@ -23,15 +23,17 @@ describe('editor publish sheet', () => {
     expect(editor).toContain('publishSheetRef.current?.present();');
   });
 
-  test('requires meaningful story body content before enabling the Next action', () => {
-    expect(editor).toContain('function hasMeaningfulStoryBodyContent');
-    expect(editor).toContain('const storyHasContent = hasMeaningfulStoryBodyContent(storyBody);');
-    expect(editor).toContain('if (!storyHasContent) return;');
+  test('allows title, meaningful body, or uploaded attachments before continuing', () => {
+    expect(editor).toContain("import { hasMeaningfulStoryBodyContent } from '@/features/editor/story-content'");
+    expect(editor).toContain('const hasContent = hasMeaningfulStoryBodyContent(v);');
+    expect(editor).toContain('const storyCanContinue = Boolean(title.trim()) || storyHasContent || uploadedIds.length > 0;');
+    expect(editor).toContain('disabled={!storyCanContinue');
   });
 
-  test('keeps publish success as a full-screen modal while using the sheet only for the form', () => {
+  test('replaces the editor content with publish success while using the sheet for the form', () => {
     expect(editor).toContain('const [publishedUrl, setPublishedUrl] = useState<string | null>(null);');
-    expect(editor).toContain('<Modal visible={!!publishedUrl} animationType="slide" presentationStyle="fullScreen" statusBarTranslucent');
+    expect(editor).toContain('if (publishedUrl) {');
+    expect(editor).not.toContain('<Modal visible={!!publishedUrl}');
     expect(editor).toContain('<PublishSuccessView');
     expect(editor).toContain('onPublished={handlePublishCreated}');
   });

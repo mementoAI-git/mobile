@@ -35,3 +35,11 @@ describe('editor autosave helpers', () => {
     expect(isMeaningfulDraftContent('   ', '   ')).toBe(false);
   });
 });
+
+test('Drafts indicator is green only after meaningful content is saved', async () => {
+  const { getDraftButtonDotColor } = await import('./autosave');
+  expect(getDraftButtonDotColor('saved', true)).toBe(COLORS.success);
+  expect(getDraftButtonDotColor('saved', false)).toBe(COLORS.textMuted);
+  expect(getDraftButtonDotColor('saving', true)).toBe(COLORS.warning);
+  expect(getDraftButtonDotColor('unsaved', true)).toBe(COLORS.error);
+});

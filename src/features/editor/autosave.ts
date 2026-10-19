@@ -8,26 +8,26 @@ export interface AutosaveBadgeConfig {
   textColor: string;
 }
 
-export function getAutosaveStatusBadge(status: AutosaveStatus): AutosaveBadgeConfig {
+export function getAutosaveStatusBadge(status: AutosaveStatus, colors = COLORS): AutosaveBadgeConfig {
   switch (status) {
     case 'saved':
       return {
         label: 'Saved',
-        dotColor: COLORS.success,
-        textColor: COLORS.textWeak,
+        dotColor: colors.success,
+        textColor: colors.textWeak,
       };
     case 'saving':
       return {
         label: 'Saving…',
-        dotColor: COLORS.warning,
-        textColor: COLORS.textWeak,
+        dotColor: colors.warning,
+        textColor: colors.textWeak,
       };
     case 'unsaved':
     default:
       return {
         label: 'Unsaved',
-        dotColor: COLORS.error,
-        textColor: COLORS.textWeak,
+        dotColor: colors.error,
+        textColor: colors.textWeak,
       };
   }
 }
@@ -41,4 +41,8 @@ export function isMeaningfulDraftContent(title: string, body: string): boolean {
   const cleanTitle = (title || '').trim();
   const cleanBody = (body || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
   return cleanTitle.length > 0 || cleanBody.length > 0;
+}
+
+export function getDraftButtonDotColor(status: AutosaveStatus, hasContent: boolean, colors = COLORS): string {
+  return hasContent ? getAutosaveStatusBadge(status, colors).dotColor : colors.textMuted;
 }

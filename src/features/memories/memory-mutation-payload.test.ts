@@ -27,3 +27,9 @@ describe('memory mutation serialization', () => {
     });
   });
 });
+
+
+test('keeps automatic quick-note classification when persisting an offline mutation', () => {
+  const payload = serializeMemoryMutationPayload({title: 'Quick note', body: '<p>A small thought</p>', capture_source: 'quick' as const, status: 'save'});
+  expect(JSON.parse(JSON.stringify(payload))).toMatchObject({title: 'Quick note', capture_source: 'quick'});
+});

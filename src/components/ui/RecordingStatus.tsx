@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -28,6 +29,8 @@ export function RecordingStatus({
   onCancel,
   style,
 }: RecordingStatusProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const display = label ?? formatDuration(seconds);
 
   return (
@@ -52,7 +55,7 @@ export function RecordingStatus({
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   root: {
     flexDirection: 'row',
     alignItems: 'center',

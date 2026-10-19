@@ -26,6 +26,7 @@ export function useCreateMemory() {
           data: {
             _id: offlineId,
             title: payload.title,
+            capture_source: payload.capture_source,
             body: payload.body,
             tags: payload.tags || [],
             status: payload.status || 'save',
@@ -93,6 +94,7 @@ export function useUpdateMemory(id: string) {
       if (variables.body   !== undefined) safeFields.body   = variables.body;
       if (variables.tags   !== undefined) safeFields.tags   = variables.tags;
       if (variables.status !== undefined) safeFields.status = variables.status;
+      if (variables.capture_source !== undefined) safeFields.capture_source = variables.capture_source;
 
       const textPatcher = (old: any) => {
         if (!old?.pages) return old;

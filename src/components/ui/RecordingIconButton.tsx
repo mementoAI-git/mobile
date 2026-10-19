@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -6,7 +7,10 @@ import { COLORS } from '@/constants/tokens';
 import { iconSize, minTouchTarget } from '@/constants/responsive';
 
 interface RecordingIconButtonProps {
+  accessibilityLabel?: string;
   active?: boolean;
+  neutral?: boolean;
+  hitSlop?: number;
   disabled?: boolean;
   muted?: boolean;
   onPress?: () => void;
@@ -16,25 +20,32 @@ interface RecordingIconButtonProps {
 
 export function RecordingIconButton({
   active,
+  neutral,
+  hitSlop,
+  accessibilityLabel,
   disabled,
   muted,
   onPress,
   children,
   style,
 }: RecordingIconButtonProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const glyphSize = iconSize(20);
 
   return (
     <TouchableOpacity
       onPress={onPress}
+      hitSlop={hitSlop}
       activeOpacity={0.78}
       disabled={disabled}
+      accessibilityLabel={accessibilityLabel ?? (active ? 'Stop recording audio' : 'Record audio')}
       accessibilityRole="button"
       accessibilityState={{ disabled, selected: active }}
       style={[
         styles.button,
         style,
-        active && styles.active,
+        active && (neutral ? { backgroundColor: COLORS.fillWeak } : styles.active),
         muted && styles.muted,
         disabled && styles.disabled,
       ]}
@@ -42,7 +53,7 @@ export function RecordingIconButton({
       {children ?? (
         <Mic
           size={glyphSize}
-          color={active ? COLORS.textInverse : COLORS.textBase}
+          color={active && !neutral ? COLORS.textInverse : COLORS.textBase}
           strokeWidth={2}
         />
       )}
@@ -50,7 +61,7 @@ export function RecordingIconButton({
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   button: {
     width: minTouchTarget(44),
     height: minTouchTarget(44),

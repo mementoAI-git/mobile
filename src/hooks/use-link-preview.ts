@@ -136,7 +136,7 @@ function resolveAbsoluteUrl(relativeOrAbsolute: string | null, baseUrl: string):
   }
 }
 
-async function fetchOgData(url: string): Promise<{ title: string | null; description: string | null; imageUrl: string | null }> {
+export async function fetchOgData(url: string): Promise<{ title: string | null; description: string | null; imageUrl: string | null }> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 6000);
@@ -152,16 +152,16 @@ async function fetchOgData(url: string): Promise<{ title: string | null; descrip
     
     // Read first 32KB for rich meta tags
     const reader = res.body?.getReader();
-    if (!reader) return { title: null, description: null, imageUrl: null };
-    let html = '';
+    // React Native fetch does not always expose a ReadableStream.
+    let html = reader ? '' : (await res.text()).slice(0, 32768);
     let bytesRead = 0;
-    while (bytesRead < 32768) {
+    while (reader && bytesRead < 32768) {
       const { done, value } = await reader.read();
       if (done) break;
       html += new TextDecoder().decode(value);
       bytesRead += value.byteLength;
     }
-    reader.cancel().catch(() => {});
+    reader?.cancel().catch(() => {});
 
     // 1. Title
     let title = extractMetaTag(html, 'title');

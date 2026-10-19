@@ -5,6 +5,7 @@ import {
   RecordingPresets,
   setAudioModeAsync,
 } from 'expo-audio';
+import { toast } from '@/components/ui/Toast';
 import { logger } from '@/lib/logger';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 
@@ -55,8 +56,11 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       await recorder.record();
       return true;
     } catch (err) {
-      logger.error('Failed to start recording', err);
-      onError?.(err);
+      logger.handledError('Failed to start recording', err);
+      if (isMountedRef.current) {
+        if (onError) onError(err);
+        else toast('We couldn’t start recording. Please try again.', 'error');
+      }
       return false;
     }
   }, [onError, onPermissionDenied, recorder]);
@@ -80,7 +84,8 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
       return recorder.uri ?? null;
     } catch (err) {
-      logger.error('Failed to stop recording', err);
+      logger.handledError('Failed to stop recording', err);
+      if (isMountedRef.current) toast('We couldn’t finish recording. Please try again.', 'error');
       return null;
     }
   }, [recorder]);
