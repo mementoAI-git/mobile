@@ -6,7 +6,7 @@ const modal = readFileSync('src/components/ui/MediaPreviewModal.tsx', 'utf8');
 
 describe('Media preview modal', () => {
   test('uses a functional Expo Go export fallback and visible save failures instead of native alerts', () => {
-    expect(modal).toContain("setActionNotice('Use the share menu to save this file.')");
+    expect(modal).toContain("toast('Use the share menu to save this file.', 'info')");
     expect(modal).toContain('await Share.share({ url: localUri, message: item.name })');
     expect(modal).toContain("toast('Could not save media. Please try again in a moment.', 'error')");
     expect(modal).not.toContain('Alert.alert(');

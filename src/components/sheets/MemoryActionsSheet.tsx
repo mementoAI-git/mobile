@@ -1,3 +1,4 @@
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 /**
  * MemoryActionsSheet — story detail actions bottom sheet
  *
@@ -31,7 +32,7 @@ import {
 } from '@/hooks/mutations/use-memory-mutations';
 import { IMemory } from '@/types';
 
-import { COLORS, FONTS } from '@/constants/tokens';
+import { type ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { toast } from '@/components/ui/Toast';
 import { publishedPostUrl } from '@/lib/env';
@@ -55,6 +56,8 @@ const MemoTagPill = React.memo(function MemoTagPill({
   tag: string;
   onRemove: (tag: string) => void;
 }) {
+  const COLORS = useThemeColors();
+  const s = useThemeStyles(createStyles);
   const handleRemove = useCallback(() => onRemove(tag), [tag, onRemove]);
   return (
     <View style={s.tagPill}>
@@ -67,6 +70,8 @@ const MemoTagPill = React.memo(function MemoTagPill({
 });
 
 export function MemoryActionsSheet({ memory, onClose }: Props) {
+  const COLORS = useThemeColors();
+  const s = useThemeStyles(createStyles);
 
   const { mutate: deleteMemory, isPending: isDeleting } = useDeleteMemory();
   const { mutate: toggleBookmark, isPending: isBookmarking } = useBookmarkMemory();
@@ -111,7 +116,9 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
       await Share.share({
         message: `${memory.title || 'Check out my story'}\n\n${publishedPostUrl(memory._id)}`,
       });
-    } catch {}
+    } catch {
+      toast('We couldn’t share this story. Please try again.', 'error');
+    }
     onClose?.();
   }, [memory, onClose]);
 
@@ -358,7 +365,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const s = {
+const createStyles = (COLORS: ThemeColors) => ({
   header: {
     flexDirection: 'row' as const, alignItems: 'center' as const,
     justifyContent: 'space-between' as const,
@@ -371,7 +378,7 @@ const s = {
   },
   actionRow: {
     flexDirection: 'row' as const, alignItems: 'center' as const, gap: 14,
-    padding: 16, backgroundColor: COLORS.card, borderRadius: 16,
+    padding: 16, backgroundColor: COLORS.fillWeak, borderRadius: 16,
     marginBottom: 10,
   },
   actionLabel: { ...TYPE.body, color: COLORS.textStrong },
@@ -410,4 +417,4 @@ const s = {
     alignItems: 'center' as const, justifyContent: 'center' as const,
   },
   deleteBtnText: { ...TYPE.button, color: COLORS.error },
-};
+});

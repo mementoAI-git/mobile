@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useThemeColors } from '@/hooks/use-theme-colors';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Share } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -11,25 +12,39 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { Button } from '@/components/ui';
+import { Button, toast } from '@/components/ui';
 import { useUiStore } from '@/store';
 import { logger } from '@/lib/logger';
 import { publishedPostUrl } from '@/lib/env';
 
 export function ShareMemorySheet() {
+  const COLORS = useThemeColors();
   const sheetProps = useUiStore((s) => s.sheetProps);
   const closeSheet = useUiStore((s) => s.closeSheet);
   const openSheet = useUiStore((s) => s.openSheet);
   const memoryId = sheetProps?.id;
   const [copied, setCopied] = useState(false);
+  const mountedRef = useRef(true);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; clearTimeout(copyTimerRef.current); };
+  }, []);
 
   const shareUrl = publishedPostUrl(typeof memoryId === 'string' ? memoryId : undefined);
 
   const handleCopy = async () => {
     Haptics.selectionAsync();
-    await Clipboard.setStringAsync(shareUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await Clipboard.setStringAsync(shareUrl);
+      if (!mountedRef.current) return;
+      setCopied(true);
+      clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => { if (mountedRef.current) setCopied(false); }, 2000);
+    } catch (error) {
+      logger.handledError('Could not copy story link', error);
+      toast('We couldn’t copy the link. Please try again.', 'error');
+    }
   };
 
   const handleShare = async () => {
@@ -40,7 +55,8 @@ export function ShareMemorySheet() {
         url: shareUrl,
       });
     } catch (error) {
-      logger.error('Native share failed', error);
+      logger.handledError('Native share failed', error);
+      toast('We couldn’t share this story. Please try again.', 'error');
     }
   };
 
@@ -50,7 +66,7 @@ export function ShareMemorySheet() {
   };
 
   return (
-    <View className="flex-1 px-5 pb-8 pt-2">
+    <View className="flex-1 pb-8">
       <View className="flex-row items-center justify-between mb-4">
         <Text className="text-text-strong" style={TYPE.sectionTitle}>
           Story added
@@ -89,7 +105,7 @@ export function ShareMemorySheet() {
             <Text className="text-text-strong" style={TYPE.label}>
               Share link
             </Text>
-            <View className="flex-row items-stretch bg-white border border-stroke-weaker rounded-xl overflow-hidden h-12">
+            <View className="flex-row items-stretch bg-card border border-stroke-weaker rounded-xl overflow-hidden h-12">
               <View className="flex-1 justify-center px-4">
                 <Text className="text-text-strong truncate" numberOfLines={1} style={TYPE.body}>
                   {shareUrl}
@@ -114,7 +130,7 @@ export function ShareMemorySheet() {
               <Text className="text-text-weak" style={TYPE.metadata}>Or share natively</Text>
               <View className="h-px flex-1 bg-stroke-weaker" />
             </View>
-            <Button variant="outline" onPress={handleShare} className="h-12 rounded-xl bg-white border-stroke-weak">
+            <Button variant="outline" onPress={handleShare} className="h-12 rounded-xl bg-card border-stroke-weak">
               <ShareIcon size={18} color={COLORS.textBase} className="mr-2" />
               <Text className="text-text-strong" style={TYPE.button}>Share Options...</Text>
             </Button>
@@ -122,7 +138,7 @@ export function ShareMemorySheet() {
         </View>
 
         {/* Footer Actions */}
-        <View className="flex-row gap-3 pt-2">
+        <View className="flex-row gap-3">
           <Button variant="outline" className="flex-1 h-12 rounded-full border-stroke-weak" onPress={closeSheet}>
             <Text className="text-text-strong" style={TYPE.button}>Dismiss</Text>
           </Button>

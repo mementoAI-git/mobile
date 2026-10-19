@@ -2,9 +2,9 @@
  * Toast — imperative singleton + React context
  *
  * Design:
- *  - Full solid background (brand / success / error)
+ *  - Theme-adaptive raised surface with semantic status icons
  *  - Icon left (Check / AlertTriangle / Info)
- *  - White text
+ *  - Theme-adaptive text
  *  - Slides in from the top, below the status bar
  *  - Auto-dismisses after 3.5s, no manual X button
  *
@@ -13,7 +13,7 @@
  */
 
 import React, {
-  createContext, useContext, useState, useCallback, useEffect,
+  createContext, useContext, useSyncExternalStore,
 } from 'react';
 import { View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,9 +21,10 @@ import Animated, { FadeInDown, FadeOutUp, LinearTransition } from 'react-native-
 import Check from 'lucide-react-native/icons/check';
 import AlertTriangle from 'lucide-react-native/icons/triangle-alert';
 import Info from 'lucide-react-native/icons/info';
-import { COLORS } from '@/constants/tokens';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { TYPE } from '@/constants/typography';
 import { iconSize, radius, responsiveSpace } from '@/constants/responsive';
+import { toastQueue, type ToastType } from '@/features/notifications/toast-queue';
 
 // Springs in from above and fades out upward; others slide to make room.
 const TOAST_ENTERING = FadeInDown.springify().damping(20).stiffness(300).mass(0.8);
@@ -32,29 +33,15 @@ const TOAST_LAYOUT = LinearTransition.springify().damping(20).stiffness(300);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ToastType = 'success' | 'error' | 'info';
-
-interface ToastItem {
-  id: string;
-  message: string;
-  type: ToastType;
-}
-
 interface ToastContextType {
   toast: (message: string, type?: ToastType) => void;
 }
 
 // ─── Module-level singleton ───────────────────────────────────────────────────
 
-let _toastHandler: ((message: string, type: ToastType) => void) | null = null;
-
-/** Imperative toast — safe to call from anywhere, including sheets & portals */
+/** Imperative toast — shared across screens, sheets, and native modal windows. */
 export function toast(message: string, type: ToastType = 'info') {
-  if (_toastHandler) {
-    _toastHandler(message, type);
-  } else {
-    Promise.resolve().then(() => _toastHandler?.(message, type));
-  }
+  toastQueue.add(message, type);
 }
 
 // ─── React context ────────────────────────────────────────────────────────────
@@ -63,14 +50,9 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const BG: Record<ToastType, string> = {
-  success: COLORS.success,
-  error:   COLORS.error,
-  info:    COLORS.brand,
-};
-
 function ToastIcon({ type }: { type: ToastType }) {
-  const color = '#ffffff';
+  const colors = useThemeColors();
+  const color = type === 'success' ? colors.success : type === 'error' ? colors.error : colors.info;
   const size = iconSize(18);
   const sw = 2.5;
   if (type === 'success') return <Check size={size} color={color} strokeWidth={sw} />;
@@ -80,29 +62,27 @@ function ToastIcon({ type }: { type: ToastType }) {
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
+const toastApi = { toast };
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const insets = useSafeAreaInsets();
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
-
-  const addToast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 3500);
-  }, []);
-
-  useEffect(() => {
-    _toastHandler = addToast;
-    return () => { _toastHandler = null; };
-  }, [addToast]);
-
   return (
-    <ToastContext.Provider value={{ toast: addToast }}>
-      {children}
+    <ToastContext.Provider value={toastApi}>
+      <View testID="toast-screen-host" style={{ flex: 1, position: 'relative' }}>
+        {children}
+        <ToastViewport />
+      </View>
+    </ToastContext.Provider>
+  );
+}
 
-      {/* ── Toast stack — top of screen, inside safe area ── */}
+/** Native modals have their own window; render this there so toasts stay above them. */
+export function ToastViewport() {
+  const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
+  const toasts = useSyncExternalStore(toastQueue.subscribe, toastQueue.getSnapshot, toastQueue.getSnapshot);
+  return (
       <View
+        testID="toast-stack"
         style={{
           position: 'absolute',
           top: insets.top + 8,
@@ -130,9 +110,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 paddingHorizontal: responsiveSpace(16),
                 paddingVertical: responsiveSpace(14),
                 borderRadius: radius(14),
-                backgroundColor: BG[t.type],
+                backgroundColor: colors.cardRaised,
+                borderWidth: 1,
+                borderColor: colors.strokeWeak,
                 // subtle shadow so it lifts off the content beneath
-                shadowColor: '#000',
+                shadowColor: colors.shadow,
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.18,
                 shadowRadius: 12,
@@ -144,7 +126,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 style={{
                   flex: 1,
                   ...TYPE.label,
-                  color: '#ffffff',
+                  color: colors.textStrong,
                   lineHeight: 20,
                 }}
               >
@@ -154,7 +136,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           </Animated.View>
         ))}
       </View>
-    </ToastContext.Provider>
   );
 }
 
