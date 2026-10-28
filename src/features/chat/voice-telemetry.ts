@@ -53,6 +53,7 @@ export type VoiceCallEngineStats = Partial<
     | 'voiceProcessingActive'
     | 'uplinkEchoSuppressed'
     | 'bargeIns'
+    | 'echoContinuations'
     | 'uplinkCaptured'
     | 'uplinkDelivered'
     | 'uplinkDroppedShield'
@@ -223,6 +224,7 @@ function sendVoiceCall(report: VoiceCallReport, sentry: VoiceTelemetrySentry): v
   measure('voice_route_changes', engine?.routeChanges, 'none');
   measure('voice_echo_suppressed_frames', engine?.uplinkEchoSuppressed, 'none');
   measure('voice_barge_ins', engine?.bargeIns, 'none');
+  measure('voice_echo_continuations', engine?.echoContinuations, 'none');
   // Where the user's microphone went: a call that "doesn't hear me" shows
   // up here as frames dropped by the shield or speaker gate, or as a peak
   // level too low for Gemini to notice.

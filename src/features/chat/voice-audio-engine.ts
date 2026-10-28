@@ -196,6 +196,8 @@ export type VoiceAudioEngineSnapshot = VoiceMetricSnapshot & {
   peakEchoLevel: number;
   /** Times a clear voice got through the echo filter. */
   bargeIns: number;
+  /** Replies that started while the user was still talking (mic kept open). */
+  echoContinuations: number;
   /** Output route when the call's audio started, and after the last route change. */
   startOutputRoute?: VoiceOutputRoute;
   outputRoute?: VoiceOutputRoute;
@@ -376,6 +378,7 @@ export class VoiceAudioEngine {
       greeting: this.greetingShieldActive,
       echoLevel: Math.round(this.echoGate.echoLevel * 1_000) / 1_000,
       bargeIns: this.echoGate.bargeIns,
+      continuations: this.echoGate.continuations,
       suppressed: this.echoGate.suppressed,
     };
   }
@@ -639,6 +642,7 @@ export class VoiceAudioEngine {
       uplinkEchoSuppressed: this.echoGate.suppressed,
       peakEchoLevel: Math.round(this.echoGate.peakEchoLevel * 10_000) / 10_000,
       bargeIns: this.echoGate.bargeIns,
+      echoContinuations: this.echoGate.continuations,
     };
   }
 
