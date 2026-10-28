@@ -59,6 +59,7 @@ import {
 } from '@/features/chat/voice-call-actions';
 import { GoodbyeTracker } from '@/features/chat/voice-goodbye';
 import { saveUplinkRecording, VoiceUplinkRecorder } from '@/features/chat/voice-uplink-recorder';
+import { saveGateCapture, VoiceGateCapture } from '@/features/chat/voice-gate-capture';
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { VoiceLatencyTracker } from '@/features/chat/voice-latency';
 import { reportVoiceCall, type VoiceCallFailure } from '@/features/chat/voice-telemetry';
@@ -155,6 +156,9 @@ const VOICE_WARM_START = process.env.EXPO_PUBLIC_VOICE_WARM_START !== 'false';
 const VOICE_WARM_START_REFRESHES = 3;
 // Development only: save the mic audio sent to Gemini as a WAV for inspection.
 const DEBUG_RECORD_UPLINK = __DEV__ && process.env.EXPO_PUBLIC_VOICE_DEBUG_RECORD === 'true';
+// Development only: save the raw mic and speaker state for replay through the
+// echo gate (voice-gate-replay.ts).
+const DEBUG_CAPTURE_GATE = __DEV__ && process.env.EXPO_PUBLIC_VOICE_DEBUG_CAPTURE === 'true';
 // About 10 s in total, enough to ride out a tunnel or a network switch.
 type ReconnectReason = 'go-away' | 'connection-lost' | 'network-change';
 /** `in-progress`: another reconnect is already running. `ended`: the call ended meanwhile. */
@@ -339,6 +343,7 @@ export function useVoiceMode({
   const outboxRef = useRef<VoiceCallOutbox | null>(null);
   const toolRelayRef = useRef<VoiceToolRelay | null>(null);
   const uplinkRecorderRef = useRef<VoiceUplinkRecorder | null>(null);
+  const gateCaptureRef = useRef<VoiceGateCapture | null>(null);
   const callActionsRef = useRef(callActions);
   callActionsRef.current = callActions;
   const goodbyeRef = useRef<{
@@ -712,6 +717,20 @@ export function useVoiceMode({
     if (uplinkRecorder) {
       logger.runtime('[VoiceMode] uplink recording saved', {
         uri: saveUplinkRecording(uplinkRecorder) ?? 'failed',
+      });
+    }
+    const gateCapture = gateCaptureRef.current;
+    gateCaptureRef.current = null;
+    if (gateCapture) {
+      const engineState = engineRef.current?.snapshot();
+      logger.runtime('[VoiceMode] gate capture saved', {
+        uri:
+          saveGateCapture(gateCapture, {
+            deviceModel: Device.modelName,
+            outputRoute: engineState?.outputRoute,
+            voiceProcessingActive: engineState?.voiceProcessingActive,
+            speakerFullDuplex: SPEAKER_FULL_DUPLEX,
+          }) ?? 'failed',
       });
     }
     if (goodbyeRef.current) {
@@ -1297,6 +1316,7 @@ export function useVoiceMode({
     setVoiceTimeline(null);
     messageHandlerRef.current = new VoiceMessageHandler();
     uplinkRecorderRef.current = DEBUG_RECORD_UPLINK ? new VoiceUplinkRecorder() : null;
+    gateCaptureRef.current = DEBUG_CAPTURE_GATE ? new VoiceGateCapture() : null;
     latencyRef.current = new VoiceLatencyTracker();
     // On a loud speaker, leftover echo can still get past the echo filter and
     // Memento keeps interrupting itself. When it does, stop listening while
@@ -1357,6 +1377,9 @@ export function useVoiceMode({
     const engine = new VoiceAudioEngine({
       speakerFullDuplex: SPEAKER_FULL_DUPLEX,
       iosVoiceProcessing: VOICE_AUDIO_POLICY.iosVoiceProcessing,
+      onMicFrame: DEBUG_CAPTURE_GATE
+        ? (samples, flags) => gateCaptureRef.current?.add(samples, flags)
+        : undefined,
       onFatalError: (error) => {
         logger.handledError('Native voice audio failed', error);
         failureRef.current ??= { step: 'audio', message: error.message };
