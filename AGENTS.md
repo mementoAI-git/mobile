@@ -1,6 +1,8 @@
 # Memento Agent Guidelines
 
-This document is the **single source of truth** for design language, technical architecture, and implementation standards for the Memento mobile application. Every AI agent and developer must follow it strictly before writing a single line of UI code.
+This document describes the design language, technical architecture, and implementation standards for the Memento mobile application. Every AI agent and developer must read it before writing a single line of UI code.
+
+> 🧭 **The code is the source of truth.** Token values live in `src/constants/tokens.ts`, `src/constants/typography.ts` and `tailwind.config.ts`, and are enforced by the startup tests in `src/features/startup/` and the checks in `bun run verify`. If this document disagrees with the code or those checks, follow the code and update this document in the same change.
 
 ---
 
@@ -85,7 +87,7 @@ The web (`web/src/index.css`) uses a v3 semantic token system built on `rgba(23,
 
 | Mobile token | Value | Web CSS variable |
 |---|---|---|
-| `COLORS.background` | `#fefbf8` | `--background` / `--color-background` |
+| `COLORS.background` | `#ffffff` | `--background` / `--color-background` |
 | `COLORS.textStrong` | `rgba(23,11,0,0.9)` | `--text-neutral-strong` / `--brown-1000` |
 | `COLORS.textBase` | `rgba(23,11,0,0.65)` | `--text-neutral-weak` / `--brown-700` |
 | `COLORS.textWeak` | `rgba(23,11,0,0.45)` | `--text-neutral-weaker` / `--brown-500` |
@@ -116,6 +118,8 @@ This same convention applies to fill, stroke, text, and icon tokens. When decidi
 ### 2. Typography
 
 #### Font Stack
+These are the loaded families. Screens don't set them directly; the `TYPE` roles below do.
+
 | Weight | Token | Loaded as |
 |--------|-------|-----------|
 | Regular body | `FONTS.sans` / `FONTS.chatBody` | SF Pro Rounded (`ui-rounded`) on iOS; `Inter_400Regular` on Android |
@@ -129,18 +133,57 @@ This same convention applies to fill, stroke, text, and icon tokens. When decidi
 #### Usage Rules
 - Body text uses the system SF Pro Rounded design on iOS. Web requests `ui-rounded` with Inter/system fallbacks; Android retains bundled Inter. Keep `font-sans` aligned with `FONTS.sans`. Editorial headings and medium/semibold/bold UI font tokens retain their existing families.
 - Bold body emphasis uses `TYPE.bodyStrong` (`FONTS.bodyBold` with weight 700), so chat and story emphasis also stays in SF Pro Rounded on iOS. Custom capsule designs and exported memoir typography retain their dedicated families.
-- **Every screen's primary title**: `FONTS.serif` — this is non-negotiable. The serif is the soul of the brand.
-- **All interactive labels, button text, metadata**: `FONTS.sansBold` or `FONTS.sansSemi`
-- **All body / paragraph copy**: `FONTS.sans`
-- **All uppercase tracking labels** (e.g. "MAY 20 · 2 MIN READ"): `FONTS.sansBold` + `tracking-widest` + `uppercase` + small size (`text-[10px]` or `text-xs`)
-- **Numbers and stats**: `FONTS.sansBold` — large numerics look best in Inter Bold
-- **Never** render body copy in EBGaramond — it is purely a display/heading font
-
+- **Every screen's primary title** uses a serif role (`screenTitle` or `displayTitle`). The serif is the soul of the brand.
+- **Never** render body copy in EBGaramond — it is purely a display/heading font.
+- **Uppercase tracking labels**: `TYPE.eyebrow` plus `uppercase tracking-widest` classes.
+- Color, alignment, letter spacing and margins can be layered on top: `style={[TYPE.body, { color: COLORS.textBase }]}`.
+- Need a size no role covers? Add a role to `typography.ts` rather than styling inline.
 - Muted words within main-page section headings use `TYPE.sectionTitleWeak` (the loaded serif italic face), not synthetic italics.
 
-#### Scale Reference
-| Context | Size | Font |
-|---------|------|------|
+#### Type Roles — Always Use `TYPE.*`
+Text is styled with a role from `TYPE` in `src/constants/typography.ts`. Each role sets the font family, size and line height together. Most sizes are scaled for the device with `ms()` from `src/constants/responsive.ts`, so the base sizes below grow slightly on larger screens.
+
+```tsx
+import { TYPE } from '@/constants/typography';
+
+<Text style={TYPE.screenTitle} className="text-text-strong">Your stories</Text>
+<Text style={[TYPE.eyebrow, { color: COLORS.brand }]} className="uppercase tracking-widest">May 20 · 2 min read</Text>
+```
+
+| Role | Font | Base size / line height | Use |
+|------|------|------------------------|-----|
+| `displayStat` | `FONTS.serif` | 48 / 54 | Hero numerics |
+| `displayTitle` | `FONTS.serif` | 36 / 42 | Hero titles |
+| `screenTitle` | `FONTS.serif` | 28 / 34 | Every screen's primary title |
+| `greeting` / `greetingName` | `FONTS.serif` / `FONTS.serifItalic` | 24 / 32 | Overview greeting and the host's name |
+| `sectionTitle` / `sectionTitleWeak` | `FONTS.serif` / `FONTS.serifItalic` | 22 / 28 | Section headers; muted words within them |
+| `cardTitle` | `FONTS.serifMedium` | 20 / 26 | Card titles |
+| `uiTitle` | `FONTS.sansSemi` | 20 / 26 | Non-editorial UI titles |
+| `sheetTitle` | `FONTS.sans` 600 on iOS, `FONTS.sansSemi` elsewhere | 20 / 32 (fixed) | Bottom sheet titles |
+| `bodyLarge` | `FONTS.sans` | 16 / 24 | Lead paragraphs |
+| `body` | `FONTS.sans` | 15 / 23 | Body copy |
+| `bodyStrong` | `FONTS.bodyBold` 700 | 15 / 23 | Emphasised body copy |
+| `bodySmall` | `FONTS.sans` | 13 / 19 | Secondary copy |
+| `label` | `FONTS.sansMedium` | 14 / 20 | Labels, list rows |
+| `button` | `FONTS.sansSemi` | 16 / 22 | Standard button text |
+| `buttonSmall` | `FONTS.sansSemi` | 14 / 20 | Compact button text |
+| `metadata` | `FONTS.sansMedium` | 11 / 16 | Dates, counts, pill text, tab labels |
+| `eyebrow` | `FONTS.sansBold` | 10 / 14 | Uppercase tracking labels |
+| `input` | `FONTS.sans` | 16 / 22 | Text inputs |
+| `stat` | `FONTS.sansBold` | 20 / 26 | Inline stat numerics |
+| `mono` | `FONTS.mono` | 13 / 19 | Code / mono |
+
+`typography.ts` also holds single-purpose roles (`dashboardTitle`, `editorTitle`, `voicePickerTitle`, the music and publish-success roles, and others). Read the file for those rather than copying their values.
+
+#### Enforced by `bun run check:typography`
+`scripts/check-typography-compliance.js` scans `app/` and `src/` (except `typography.ts` and tests) and fails on:
+- inline `fontSize`, `fontFamily` or `fontWeight` in styles
+- arbitrary sizes like `text-[10px]`
+- Tailwind size classes (`text-xs` … `text-6xl`) and weight classes (`font-medium`, `font-bold`, …)
+
+The only exception is capsule theme previews, marked with a `typography-exception: capsule-theme-preview` comment on or above the line. The pre-commit hook runs this through `bun run verify`.
+
+---------|------|------|
 | Screen hero title | 28–36px | `FONTS.serif` |
 | Section header | 20–24px | `FONTS.serif` |
 | Card title | 18–22px | `FONTS.serif` |
@@ -201,7 +244,7 @@ shadowRadius: 16,
 // Android
 elevation: 3,
 ```
-The shadow should be barely perceptible — it lifts the card off the cream background without dramatizing it.
+The shadow should be barely perceptible — it lifts the card off the page background without dramatizing it.
 
 #### Texture / Pattern Overlay
 Main pages use the same untextured, theme-adaptive `COLORS.background` surface as Overview. Do not add a page-wide `welcome_bg.png` overlay to Explore, Stories, Capsules, or Chat. The texture example below is reserved for explicitly textured surfaces.
@@ -215,7 +258,7 @@ Main pages use the same untextured, theme-adaptive `COLORS.background` surface a
 
 #### Buttons
 ```
-Primary CTA:     bg-brand, rounded-full, h-14, text-white, FONTS.sansBold
+Primary CTA:     bg-brand, rounded-full, h-14, text-white, TYPE.button
 Secondary:       border border-stroke-weak, bg-fill-weaker, rounded-full, h-14
 Destructive:     border-error/20, bg-error/5, text-error
 Icon-only round: size-10 or size-11, rounded-full, bg-fill-weaker, border-stroke-weaker
@@ -227,7 +270,7 @@ Overlay pill:    bg-black/50, rounded-full, px-2.5 py-1 (for on-image overlays)
 Container:  bg-fill-weaker, border-stroke-weaker, rounded-full (pill shape)
 Focus:      border-brand
 Height:     h-14 (standard), h-12 (compact)
-Text:       FONTS.sans, text-text-strong
+Text:       TYPE.input, text-text-strong
 Placeholder: COLORS.textMuted
 ```
 
@@ -238,8 +281,8 @@ Shadow:      cardShadow (see above)
 Hero image:  aspectRatio: 3/2, full-width, rounded-t-[24px]
 Date pill:   absolute bottom-3 left-4, bg-black/50, rounded-full, white text
 Actions pill: absolute top-3 right-4, bg-black/50, rounded-full, white icon
-Title:       22px FONTS.serif, below image, mt-4
-Body:        FONTS.sans, color: '#555555', 2 lines max
+Title:       TYPE.cardTitle, below image, mt-4
+Body:        TYPE.body, color: COLORS.previewText ('#555555'), 2 lines max
 Tags:        MemTag component, flex-wrap
 No footer row: actions are on the image overlay, not the bottom row
 ```
@@ -250,8 +293,8 @@ Image/Video: seeded aspect ratio (4:5, 5:6, 3:4, 1:1), rounded-[20px]
 Audio:       dark bg-text-strong, Mic icon + duration, wave lines
 Text-only:   seeded pastel surface (5 options from stableHash of _id)
 Actions:     ⋮ pill overlaid top-right on each card variant
-Title:       FONTS.sansMedium, 12px, centered below the card
-Body text:   FONTS.sans, 11px, max 4 lines — user's own words only
+Title:       TYPE.bodySmall, centered below the card
+Body text:   TYPE.bodySmall, text-text-base — user's own words only
 ```
 
 > ⚠️ **Never render AI-generated `summary` or `topics` fields on feed cards.** These are backend inference artifacts and may contain nonsense. Show only user-authored `body` and user-defined `tags`.
@@ -261,13 +304,13 @@ Body text:   FONTS.sans, 11px, max 4 lines — user's own words only
 Provider:      @gorhom/bottom-sheet via SheetManager
 Header:        serif title left, X button right (size-8 rounded-full bg-fill-weaker)
 Handle:        backgroundColor: COLORS.strokeStrong, opacity: 0.3
-Background:    COLORS.background (#fefbf8)
+Background:    COLORS.card (#ffffff)
 Trigger:       useUiStore.getState().openSheet() — never use local Modal state
 ```
 
 #### Pills / Tags / Badges
 ```
-Standard tag:  FONTS.sansBold, uppercase, tracking-widest, text-[10px], rounded-full
+Standard tag:  TYPE.eyebrow, uppercase, tracking-widest, rounded-full
               bg-fill-weaker, border-stroke-weaker
 Brand tag:     bg-brand/5, border-brand/15, text-brand
 Status badge:  Use the Badge UI component with variant prop
@@ -279,8 +322,8 @@ Topic pills:   Seeded hue system (stableHash of topic string → HSL color)
 Tab bar bg:     bg-background (#ffffff)
 Active icon:    COLORS.brand + strokeWidth 2.2
 Inactive icon:  COLORS.textMuted + strokeWidth 1.8
-Active label:   FONTS.sansSemi, COLORS.brand
-Inactive label: FONTS.sans, COLORS.textMuted
+Active label:   TYPE.metadata, COLORS.textStrong
+Inactive label: TYPE.metadata, COLORS.textBase
 Active dot:     size-1, bg-brand, above icon
 ```
 
@@ -437,7 +480,7 @@ Empty state titles should be warm and inviting, not system-speak (e.g., "Your st
 - Hero: 2 large `ImageBackground` cards (`rounded-[32px]`), `p-7`, editorial serif title
 - Stats: 4 `OverviewJourneyCard` items with background images from `/assets/images/backgrounds/`
 - Chart: `SplineChart` with touch-drag interaction and haptic feedback
-- Greeting: EBGaramond 32px, `getGreeting()` + user nickname in italic success green
+- Greeting: `TYPE.greeting`, `getGreeting()` + the user's nickname in `TYPE.greetingName` (serif italic), success green
 
 ### Chat Tab (Host Chat)
 - Entry screen: resolves `primary_conversation_id` then `router.replace` — never shows a blank spinner for long

@@ -1,10 +1,12 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
 
 import type { NativeVoicePlaybackSnapshot } from 'react-native-memento-voice';
 
 import type { VoiceTimerScheduler } from './voice-audio-types';
 import {
+  createNativeVoicePlaybackSession,
   NATIVE_STATE_POLL_MS,
+  NATIVE_VOICE_WARMUP_RAMP_MS,
   NativeVoicePlaybackController,
   type NativeVoicePlaybackSessionAdapter,
   VOICE_UNDERRUN_AUDIO_WAIT_MS,
@@ -262,5 +264,36 @@ describe('why playback ran dry', () => {
     scheduler.fireOne();
 
     expect(controller.getStats().maxJsStallMs).toBe(900);
+  });
+});
+
+describe('echo cancellation warm-up', () => {
+  test('asks the native session to fade in its first audio over 200 ms', () => {
+    let received: Record<string, unknown> | undefined;
+    mock.module('react-native-memento-voice', () => ({
+      isNativeVoicePlaybackAvailable: () => true,
+      NativeVoicePlaybackSession: class {
+        constructor(_context: unknown, options: Record<string, unknown>) {
+          received = options;
+        }
+      },
+    }));
+    const previous = process.env.EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK;
+    process.env.EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK = 'true';
+    try {
+      expect(createNativeVoicePlaybackSession({})).toBeDefined();
+    } finally {
+      process.env.EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK = previous;
+    }
+    expect(NATIVE_VOICE_WARMUP_RAMP_MS).toBe(200);
+    expect(received?.warmupRampMs).toBe(NATIVE_VOICE_WARMUP_RAMP_MS);
+  });
+
+  test('the native bridge reads the ramp and tolerates bundles without it', async () => {
+    const host = await Bun.file(
+      'modules/react-native-memento-voice/common/cpp/mementovoice/VoiceSessionHostObject.cpp',
+    ).text();
+    expect(host).toContain('getProperty(rt, "warmupRampMs")');
+    expect(host).toContain('warmupRampMs.isNumber()');
   });
 });

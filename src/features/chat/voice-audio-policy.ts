@@ -8,11 +8,14 @@ export type VoiceAudioPolicy = {
 /**
  * Decides the two voice audio settings together.
  *
- * iOS voice processing is off unless explicitly enabled. Turning it on makes
- * the audio library re-initialize Apple's voice-processing unit on the main
- * thread whenever iOS reports an engine configuration change, and on real
- * iPhones that call hung, freezing the app until iOS killed it (TestFlight
- * builds 19 and 20, crash code 0x8BADF00D in setVoiceProcessingEnabled).
+ * iOS voice processing is off unless explicitly enabled (EAS testflight turns
+ * it on; production does not yet). It once froze real iPhones: the audio
+ * library rebuilt the engine for the configuration change that switching
+ * voice processing posts, which switched it on again, in a main-thread loop
+ * (TestFlight builds 19 and 20, crash code 0x8BADF00D). The patch in
+ * patches/react-native-audio-api@*.patch breaks that loop by ignoring
+ * configuration changes for a second after a switch. What still holds
+ * production back is leftover echo at full speaker volume, not the freeze.
  *
  * Full duplex on the loudspeaker needs echo cancellation, so on iOS it is
  * only allowed when voice processing is on. Otherwise the speaker gate mutes

@@ -13,6 +13,14 @@ export const NATIVE_STATE_POLL_MS = 50;
 // each late packet into an audible hole mid-word.
 export const NATIVE_VOICE_STARTUP_BUFFER_MS = 240;
 export const NATIVE_VOICE_RECOVERY_BUFFER_MS = 360;
+/**
+ * The first audio of each playback session (a call, or playback rebuilt for
+ * an output route with a new sample rate) fades in over this long. Apple's
+ * echo canceller needs about 200 ms to converge, and recommends ramping
+ * playback up over that time so the start of the greeting does not leak into
+ * the mic.
+ */
+export const NATIVE_VOICE_WARMUP_RAMP_MS = 200;
 const defaultScheduler: VoiceTimerScheduler = {
   setTimeout: (callback, delayMs) => globalThis.setTimeout(callback, delayMs),
   clearTimeout: (timer) =>
@@ -257,6 +265,7 @@ export function createNativeVoicePlaybackSession(
         startupBufferMs: NATIVE_VOICE_STARTUP_BUFFER_MS,
         recoveryBufferMs: NATIVE_VOICE_RECOVERY_BUFFER_MS,
         maxBufferedMs: VOICE_MAX_QUEUE_MS,
+        warmupRampMs: NATIVE_VOICE_WARMUP_RAMP_MS,
       },
     );
   } catch {

@@ -28,6 +28,19 @@ import { BARGE_IN_THRESHOLDS, calculateRmsEnergy, isBargeInSpeech } from './voic
  * from recordings, not by feel.
  */
 
+/**
+ * After a clear voice gets through the leftover-echo filter, the mic stays
+ * fully open this long, so the rest of the sentence (softer words included)
+ * reaches Gemini.
+ */
+export const VOICE_BARGE_IN_HOLD_MS = 1_500;
+/**
+ * The first moments of each reply on the loudspeaker: the mic stays closed and
+ * only teaches the echo filter, as during the greeting. At high volume the
+ * onset of a reply is when Memento most often hears itself, and nobody
+ * interrupts within a third of a second of Memento starting to talk.
+ */
+export const VOICE_REPLY_ONSET_MS = 300;
 /** 3 frames of 40 ms: the start of a word kept before speech is confirmed. */
 export const VOICE_ECHO_PRE_ROLL_FRAMES = 3;
 /** Speech-level frames, within the held window, that confirm the user is talking. */

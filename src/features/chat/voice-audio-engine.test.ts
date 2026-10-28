@@ -542,6 +542,35 @@ describe('VoiceAudioEngine', () => {
     expect(engine.snapshot().nativePlayback).toBe(false);
   });
 
+  test('shows every raw mic frame to onMicFrame, even ones the speaker gate drops', async () => {
+    const native = new FakeNative();
+    native.isHeadphonesDevice = false;
+    const seen: { level: number; audibleOnSpeaker: boolean; greetingShield: boolean }[] = [];
+    const engine = new VoiceAudioEngine({
+      native,
+      onMicFrame: (samples, flags) => seen.push({ level: samples[0], ...flags }),
+    });
+    await engine.start(() => {});
+    const frame = (level: number) => ({
+      buffer: { getChannelData: () => new Float32Array(VOICE_INPUT_FRAMES).fill(level) },
+      numFrames: VOICE_INPUT_FRAMES,
+    });
+
+    engine.armGreetingShield();
+    native.recorder.input?.(frame(0.2));
+    engine.disarmGreetingShield();
+    const pcmSamples = new Float32Array(4800).fill(0.1);
+    engine.enqueueOutput(btoa(String.fromCharCode(...new Uint8Array(pcmSamples.length * 2))), 1);
+    native.recorder.input?.(frame(0.3));
+    engine.interruptOutput(2);
+    native.recorder.input?.(frame(0.4));
+
+    expect(seen.map((entry) => Math.round(entry.level * 10) / 10)).toEqual([0.2, 0.3, 0.4]);
+    expect(seen.map((entry) => entry.greetingShield)).toEqual([true, false, false]);
+    expect(seen[1].audibleOnSpeaker).toBe(true);
+    expect(engine.snapshot().uplinkDroppedSpeakerGate).toBe(1);
+  });
+
   test('reports where microphone frames go, and how loud the sent audio is', async () => {
     const native = new FakeNative();
     native.isHeadphonesDevice = false;

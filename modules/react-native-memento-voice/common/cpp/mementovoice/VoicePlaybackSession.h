@@ -30,6 +30,10 @@ struct PlaybackOptions {
   uint32_t adaptiveRelaxStepMs = 60;
   // Packet loss concealment: how long to extend the last sound on an underrun.
   uint32_t concealMaxMs = 60;
+  // Echo cancellation warm-up: the session's first audio rises from silence
+  // to full level over this long. Apple's echo canceller needs about 200 ms
+  // to converge; a loud start before then leaks into the mic. 0 is off.
+  uint32_t warmupRampMs = 0;
 };
 
 struct PlaybackSnapshot {
@@ -105,6 +109,7 @@ class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSe
       uint64_t sequence);
   void resetConverter() noexcept;
   void finishRender(float *output, size_t written, size_t frameCount, bool conceal) noexcept;
+  void applyWarmupRamp(float *output, size_t written) noexcept;
   void pushHistory(const float *samples, size_t count) noexcept;
   bool startConcealment() noexcept;
   float nextConcealSample() noexcept;
@@ -146,6 +151,8 @@ class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSe
   size_t concealRemaining_ = 0;
   size_t concealTotal_ = 0;
   bool concealUsedForGap_ = false;
+  // Render-thread-only warm-up ramp progress, in output frames.
+  uint64_t warmupFramesDone_ = 0;
   // Render-thread-only adaptive buffer state.
   uint32_t adaptiveExtraMs_ = 0;
   uint64_t framesSinceUnderrun_ = 0;
