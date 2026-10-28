@@ -1,5 +1,6 @@
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useVoiceTextField } from '@/features/voice-control/hooks';
 import * as Device from 'expo-device';
 import {
   View,
@@ -741,6 +742,12 @@ export function ChatInput({
       if (!isTextComposerExpanded) setIsTextComposerExpanded(true);
     }
   }, [isRecording, isTextComposerExpanded]);
+
+  // Voice can type here ("say … and send it") and send, so the host sees it.
+  useVoiceTextField('message', text, handleTextChange, {
+    enabled: !disabled,
+    submit: handleSend,
+  });
 
   // ─── Content size change handlers ────────────────────────────────────────
   // A single onContentSizeChange handler is used regardless of expansion state.

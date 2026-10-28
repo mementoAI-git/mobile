@@ -14,8 +14,20 @@ export type VoiceToolCall = {
   args: Record<string, unknown>;
 };
 
+/** Which call a handler is answering, and whether it still matters. */
+export type VoiceToolInvocation = {
+  /** Gemini's id for the call, when it sent one. */
+  callId?: string;
+  /** False once the voice call ended or Gemini cancelled this call. */
+  isLive: () => boolean;
+};
+
 /** Handles one tool call and returns the text the model receives. */
-export type VoiceToolHandler = (args: Record<string, unknown>) => Promise<string> | string;
+export type VoiceToolHandler = (
+  args: Record<string, unknown>,
+  /** Always given by the relay; absent means a live call (tests, direct use). */
+  invocation?: VoiceToolInvocation,
+) => Promise<string> | string;
 
 export type VoiceToolResponse = {
   id?: string;
@@ -72,7 +84,12 @@ export class VoiceToolRelay {
     });
     if (Object.prototype.hasOwnProperty.call(this.handlers, call.name)) {
       try {
-        return reply(await this.handlers[call.name](call.args ?? {}));
+        return reply(
+          await this.handlers[call.name](call.args ?? {}, {
+            callId: call.id,
+            isLive: () => !this.disposed && !(call.id && this.cancelled.has(call.id)),
+          }),
+        );
       } catch {
         return reply(`${call.name} failed. Tell the host it did not work.`);
       }

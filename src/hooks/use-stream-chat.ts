@@ -203,7 +203,6 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
           }
           reveal.update(accumulated);
         }
-
         // Keep the pending message and Stop control alive until the visible text catches up.
         await reveal.finish();
         if (isMountedRef.current && !controller.signal.aborted && abortRef.current === controller) {

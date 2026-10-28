@@ -4,7 +4,17 @@ import { buildEphemeralTokenUrl, VOICE_CLIENT_CAPABILITIES } from './voice-token
 
 describe('buildEphemeralTokenUrl', () => {
   test('returns the bare endpoint without parameters', () => {
-    expect(buildEphemeralTokenUrl('/ai/ephemeral-token', {})).toBe('/ai/ephemeral-token');
+    expect(buildEphemeralTokenUrl('/ai/ephemeral-token', { timeZone: null })).toBe(
+      '/ai/ephemeral-token',
+    );
+  });
+
+  test("sends the device's time zone so dates are the host's own", () => {
+    const url = buildEphemeralTokenUrl('/ai/ephemeral-token', {});
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    expect(new URL(`https://x${url}`).searchParams.get('timezone')).toBe(zone);
+    const lagos = buildEphemeralTokenUrl('/ai/ephemeral-token', { timeZone: 'Africa/Lagos' });
+    expect(new URL(`https://x${lagos}`).searchParams.get('timezone')).toBe('Africa/Lagos');
   });
 
   test('encodes every parameter', () => {
@@ -31,7 +41,7 @@ describe('buildEphemeralTokenUrl', () => {
     });
 
     expect(new URL(`https://x${url}`).searchParams.get('capabilities')).toBe(
-      'search_memories,call_actions,server_tools,screen_control',
+      'search_memories,call_actions,server_tools,screen_control,screen_fields',
     );
   });
 });

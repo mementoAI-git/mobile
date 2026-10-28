@@ -262,3 +262,50 @@ describe('VoiceLatencyTracker turns', () => {
     expect(tracker.summary().turnStats.response).toEqual({ count: 0 });
   });
 });
+
+describe('quiet speakers', () => {
+  test('a quiet voice in a quiet room is measured as a turn', () => {
+    let now = 0;
+    const tracker = new VoiceLatencyTracker(() => now);
+    for (let i = 0; i < 50; i += 1) {
+      tracker.observeMicFrame(0.002);
+      now += 40;
+    }
+    for (let i = 0; i < 20; i += 1) {
+      tracker.observeMicFrame(0.012);
+      now += 40;
+    }
+    const speechEnd = now - 40;
+    for (let i = 0; i < 15; i += 1) {
+      tracker.observeMicFrame(0.002);
+      now += 40;
+    }
+    tracker.observeModelAudio();
+    const { turns, turnStats } = tracker.summary();
+    expect(turns).toHaveLength(1);
+    expect(turns[0].speechEndAt).toBe(speechEnd);
+    expect(turnStats.unmeasured).toBe(0);
+  });
+
+  test('the same level in a noisy room is not speech', () => {
+    let now = 0;
+    const tracker = new VoiceLatencyTracker(() => now);
+    for (let i = 0; i < 100; i += 1) {
+      tracker.observeMicFrame(0.012);
+      now += 40;
+    }
+    tracker.observeModelAudio();
+    expect(tracker.summary().turns).toHaveLength(0);
+  });
+
+  test('a reply to transcribed speech the mic missed is counted, not timed', () => {
+    let now = 0;
+    const tracker = new VoiceLatencyTracker(() => now);
+    tracker.observeUserTranscript();
+    now += 500;
+    tracker.observeModelAudio();
+    const { turns, turnStats } = tracker.summary();
+    expect(turns).toHaveLength(0);
+    expect(turnStats.unmeasured).toBe(1);
+  });
+});

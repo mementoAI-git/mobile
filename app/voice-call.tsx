@@ -16,6 +16,7 @@ import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafe
 import { Button } from '@/components/ui/Button';
 import { VoiceArtwork } from '@/components/chat/VoiceArtwork';
 import { VoicePicker } from '@/components/chat/VoicePicker';
+import { VoiceLevelRing, type VoiceRingMode } from '@/components/chat/VoiceLevelRing';
 import { VoiceUpgradeScreen } from '@/components/chat/VoiceUpgradeScreen';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -33,7 +34,7 @@ import { useAuthStore, useUiStore, useUserStore, useVoicePreferenceStore } from 
 export default function VoiceCallRoute() {
   const COLORS = useThemeColors();
   const router = useRouter();
-  const { memoryId, returnToChat } = useLocalSearchParams<{ memoryId?: string; returnToChat?: string }>();
+  const { memoryId, returnToChat, autostart } = useLocalSearchParams<{ memoryId?: string; returnToChat?: string; autostart?: string }>();
   const user = useAuthStore((state) => state.user);
   const userStoreUser = useUserStore((state) => state.user);
   const selectedVoiceId = useVoicePreferenceStore((state) => state.selectedVoiceId);
@@ -187,6 +188,16 @@ export default function VoiceCallRoute() {
     }
   }, [persistVoice, selectedVoice, stage, voice, voiceInSync]);
 
+  // Development only: memento://voice-call?autostart=1 starts the call
+  // without a tap, for scripted simulator runs.
+  const autostartedRef = useRef(false);
+  useEffect(() => {
+    if (!__DEV__ || autostart !== '1' || autostartedRef.current) return;
+    if (stage !== 'ready' || !voiceInSync) return;
+    autostartedRef.current = true;
+    void startCall();
+  }, [autostart, stage, startCall, voiceInSync]);
+
   const toggleMute = useCallback(() => {
     voice.toggleMute();
     setStage((current) => getVoiceCallTransition(current, 'toggle-mute'));
@@ -268,6 +279,13 @@ export default function VoiceCallRoute() {
   }
 
   const live = stage === 'live' || stage === 'muted';
+  const ringMode: VoiceRingMode = !live || stage === 'muted'
+    ? 'idle'
+    : voice.isAiSpeaking
+      ? 'speaking'
+      : voice.isThinking
+        ? 'thinking'
+        : 'listening';
   return (
     <NativeModalSafeAreaBoundary>
       <SafeAreaView className="flex-1 bg-background px-4" edges={['top', 'bottom']}>
@@ -298,7 +316,9 @@ export default function VoiceCallRoute() {
             onPress={voice.isAiSpeaking ? voice.interrupt : undefined}
             accessibilityLabel={voice.isAiSpeaking ? 'Tap to interrupt' : undefined}
           >
-            <VoiceArtwork voice={selectedVoice} size={132} />
+            <VoiceLevelRing mode={ringMode} micLevel={voice.micLevel} size={132}>
+              <VoiceArtwork voice={selectedVoice} size={132} />
+            </VoiceLevelRing>
           </Pressable>
           <Text className="mt-5 text-text-strong" style={TYPE.stat}>
             {formatVoiceCallDuration(voice.recordingTime)}
@@ -323,43 +343,39 @@ export default function VoiceCallRoute() {
                 : voice.isReconnecting
                   ? 'Reconnecting…'
                   : live
-                  ? voice.isAiSpeaking
-                    ? 'Memento is speaking…'
-                    : stage === 'muted'
-                      ? 'Microphone muted'
-                      : 'Listening…'
+                  ? stage === 'muted'
+                    ? 'Microphone muted'
+                    : voice.isAiSpeaking
+                      ? 'Memento is speaking…'
+                      : voice.isThinking
+                        ? 'Thinking…'
+                        : 'Listening…'
                   : 'Ready when you are'}
             </Text>
           </View>
           {live ? (
-            <>
-              {voice.isAiSpeaking ? (
-                <Button voiceLabel={false}
-                  variant="outline"
-                  className="mt-12 h-14 w-44"
-                  onPress={voice.interrupt}
-                  leftIcon={<Square size={18} color={COLORS.textStrong} fill={COLORS.textStrong} strokeWidth={0} />}
-                >
-                  Interrupt
-                </Button>
-              ) : (
-                <Button voiceLabel={false}
-                  variant="outline"
-                  className="mt-12 h-14 w-44"
-                  onPress={toggleMute}
-                  leftIcon={stage === 'muted' ? <MicOff size={22} color={COLORS.error} /> : <Mic size={22} color={COLORS.textStrong} />}
-                >
-                  {stage === 'muted' ? 'Unmute' : 'Mute'}
-                </Button>
-              )}
-              <Text className="mt-3 text-text-base" style={TYPE.label}>
-                {voice.isAiSpeaking
-                  ? 'Tap to speak'
-                  : stage === 'muted'
-                    ? 'You’re muted'
-                    : 'Tap to mute'}
-              </Text>
-            </>
+            // Fixed slots: Mute never turns into Interrupt under the thumb.
+            <View className="mt-12 flex-row gap-3">
+              <Button voiceLabel={false}
+                variant="outline"
+                className="h-14 w-40"
+                onPress={toggleMute}
+                accessibilityLabel={stage === 'muted' ? 'Unmute microphone' : 'Mute microphone'}
+                leftIcon={stage === 'muted' ? <MicOff size={22} color={COLORS.error} /> : <Mic size={22} color={COLORS.textStrong} />}
+              >
+                {stage === 'muted' ? 'Unmute' : 'Mute'}
+              </Button>
+              <Button voiceLabel={false}
+                variant="outline"
+                className="h-14 w-40"
+                disabled={!voice.isAiSpeaking}
+                onPress={voice.interrupt}
+                accessibilityLabel="Stop Memento speaking"
+                leftIcon={<Square size={18} color={voice.isAiSpeaking ? COLORS.textStrong : COLORS.textMuted} fill={voice.isAiSpeaking ? COLORS.textStrong : COLORS.textMuted} strokeWidth={0} />}
+              >
+                Interrupt
+              </Button>
+            </View>
           ) : (
             <>
               <Button voiceLabel={false} className="mt-12 h-14 w-44" loading={voice.isConnecting} onPress={() => void startCall()}>

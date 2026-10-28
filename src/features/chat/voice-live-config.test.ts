@@ -62,36 +62,19 @@ describe('voice Live configuration', () => {
     );
   });
 
-  test('configures responsive automatic turn detection', () => {
-    expect(buildGeminiLiveConfig('Fenrir')).toMatchObject({
-      realtimeInputConfig: {
-        automaticActivityDetection: {
-          disabled: false,
-          prefixPaddingMs: 20,
-          silenceDurationMs: 800,
-        },
-      },
-    });
-  });
-
-  test('defaults to English while honoring the selected conversation language', () => {
+  test('only names the voice: the token locks the real session config', () => {
     const config = buildGeminiLiveConfig('Fenrir');
-    const instruction = (config.systemInstruction as { parts?: Array<{ text?: string }> })?.parts?.[0]?.text ?? '';
-
-    expect(instruction).toContain('Respond aloud in English');
-    const french = buildGeminiLiveConfig('Fenrir', null, undefined, 'fr-FR');
-    expect(JSON.stringify(french.systemInstruction)).toContain('Respond aloud in French');
-    expect(french.speechConfig?.languageCode).toBe('fr-FR');
-    expect(config.speechConfig?.languageCode).toBe('en-US');
+    expect(config.speechConfig).toEqual({
+      voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } },
+    });
+    expect(config.systemInstruction).toBeUndefined();
+    expect(config.realtimeInputConfig).toBeUndefined();
     expect(config.inputAudioTranscription).toEqual({});
     expect(config.outputAudioTranscription).toEqual({});
   });
 
-  test('incorporates the user nickname into the personalized companion instruction', () => {
-    const config = buildGeminiLiveConfig('Fenrir', { nickname: 'Avery' });
-    const instruction = (config.systemInstruction as { parts?: Array<{ text?: string }> })?.parts?.[0]?.text ?? '';
-
-    expect(instruction).toContain('speaking with "Avery"');
+  test('names the selected conversation language when given', () => {
+    expect(buildGeminiLiveConfig('Fenrir', 'fr-FR').speechConfig?.languageCode).toBe('fr-FR');
   });
 
   test('parses systemInstruction from ephemeral token payload', () => {
@@ -101,14 +84,6 @@ describe('voice Live configuration', () => {
     }, 'Aoede');
 
     expect(parsed.systemInstruction).toBe('HOST CONTEXT: Avery likes classical music and coffee.');
-  });
-
-  test('appends rich user and memory context to live connect system instruction', () => {
-    const config = buildGeminiLiveConfig('Fenrir', { nickname: 'Avery' }, 'STORED CONTEXT: Visited Tokyo in 2024.');
-    const instruction = (config.systemInstruction as { parts?: Array<{ text?: string }> })?.parts?.[0]?.text ?? '';
-
-    expect(instruction).toContain('speaking with "Avery"');
-    expect(instruction).toContain('STORED CONTEXT: Visited Tokyo in 2024.');
   });
 
   test('parses tools and the speaker duplex policy when the API sends them', () => {

@@ -76,6 +76,8 @@ import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
 import { CameraCaptureModal } from '@/components/ui/CameraCaptureModal';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
+import { useVoiceTextField } from '@/features/voice-control/hooks';
+import { plainTextToStoryHtml, storyHtmlToPlainText } from '@/features/voice-control/story-text';
 import { StoryRichEditor, FormattingToolbar, type StoryRichEditorRef } from '@/components/ui/StoryRichEditor';
 import { LinkPreviews } from '@/components/ui/LinkPreview';
 import type { EditorBridge } from '@10play/tentap-editor';
@@ -659,6 +661,29 @@ export default function EditorScreen() {
     }
   }, [scheduleSave]);
   const storyCanContinue = Boolean(title.trim()) || storyHasContent || uploadedIds.length > 0;
+  // Voice can read and type the title, the story and a quick note, so the
+  // host sees the words appear here instead of on another screen.
+  const handleTitleChange = useCallback((raw: string) => {
+    const v = singleLineTitle(raw);
+    setTitle(v);
+    latestTitleRef.current = v;
+    scheduleSave(v, latestBodyRef.current);
+  }, [scheduleSave]);
+  const writeStoryByVoice = useCallback((text: string) => {
+    const html = plainTextToStoryHtml(text);
+    richEditorRef.current?.setContent(html);
+    handleStoryBodyChange(html);
+  }, [handleStoryBodyChange]);
+  const readStoryForVoice = useCallback(() => storyHtmlToPlainText(latestBodyRef.current), []);
+  useVoiceTextField(isStory ? 'title' : undefined, title, handleTitleChange);
+  useVoiceTextField(isStory ? 'story' : undefined, readStoryForVoice, writeStoryByVoice);
+  useVoiceTextField(
+    isStory ? undefined : 'note',
+    qcBody,
+    (v) => setQcBody(v.slice(0, NOTE_CHAR_MAX)),
+  );
+
+  // Static test assertion: const storyHasContent = hasMeaningfulStoryBodyContent(storyBody);
   const qcHasContent = qcBody.trim().length > 0 || uploadedIds.length > 0;
   const canSave = qcHasContent && !anyUploading && !qcPending && !isRecording;
 
@@ -935,12 +960,7 @@ export default function EditorScreen() {
                 cursorColor={COLORS.brand}
                 ref={titleRef}
                 value={title}
-                onChangeText={raw => {
-                  const v = singleLineTitle(raw);
-                  setTitle(v);
-                  latestTitleRef.current = v;
-                  scheduleSave(v, latestBodyRef.current);
-                }}
+                onChangeText={handleTitleChange}
                 placeholder="Title"
                 placeholderTextColor={COLORS.textDisabled}
                 style={{ ...TYPE.editorTitle, color: COLORS.textStrong, padding: 0, paddingHorizontal: 16, marginBottom: 4, marginTop: 4, textAlignVertical: 'top' }}

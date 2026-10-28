@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { minTouchTarget, mvs, radius as responsiveRadius, responsiveSpace } from '@/constants/responsive';
+import { useVoiceTextField } from '@/features/voice-control/hooks';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -19,6 +20,8 @@ interface InputProps extends TextInputProps {
   InputComponent?: any;
   variant?: 'pill' | 'rounded';
   rounded?: 'full' | 'xl' | 'lg' | number;
+  /** What the host calls this field by voice; `false` keeps voice out. */
+  voiceLabel?: string | false;
 }
 
 export function TextInput({
@@ -35,10 +38,21 @@ export function TextInput({
   InputComponent,
   onFocus,
   onBlur,
+  voiceLabel,
   ...props
 }: InputProps) {
   const COLORS = useThemeColors();
   const [focused, setFocused] = useState(false);
+  // Voice can read and type here ("change my nickname to …") so the host
+  // sees it typed. Never passwords or other secrets.
+  useVoiceTextField(
+    voiceLabel === false || props.secureTextEntry
+      ? undefined
+      : voiceLabel || label || props.accessibilityLabel || props.placeholder,
+    props.value,
+    props.onChangeText,
+    { enabled: props.editable !== false },
+  );
   const isRounded = variant === 'rounded';
 
   // Animate from 0 (rest) to 1 (focused)

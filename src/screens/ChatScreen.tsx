@@ -3,6 +3,7 @@ import { BlurView } from 'expo-blur';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { useVoiceContent } from '@/features/voice-control/hooks';
 import {
   View,
   Text,
@@ -200,6 +201,17 @@ export default function ChatScreen() {
     activeChatId,
     router,
   } = useChatLogic();
+  // What Memento can read on this screen: the prompt being answered, and
+  // the last few messages.
+  useVoiceContent('Prompt', () => promptTitle || promptMemory?.title || '', Boolean(isPromptType));
+  useVoiceContent('Latest messages', () =>
+    [...(allMessages ?? [])]
+      .filter((message) => message?.text)
+      .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
+      .slice(-6)
+      .map((message) => `${message.role === 'user' ? 'Host' : 'Memento'}: ${message.text}`)
+      .join(' / '),
+  );
 
   // Intercept Android hardware back to prevent app exit when history is empty
   useBackHandler(handleBack);

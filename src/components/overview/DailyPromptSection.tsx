@@ -14,6 +14,7 @@ import { useReflectionShuffleUsage } from '@/hooks/queries/use-reflection-shuffl
 import { useReflectionShuffle } from '@/hooks/mutations/use-reflection-shuffle';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useUiStore } from '@/store';
+import { useVoiceContent } from '@/features/voice-control/hooks';
 import { canShuffleReflections, reflectionCapture, reflectionShuffleKey, rotateReflections } from '@/features/prompts/daily-reflections';
 import { getPromptReplyCounts } from '@/features/prompts/prompt-reply-count';
 import { avatarsForCard, createAvatarOrder, refreshAvatarOrder } from '@/features/prompts/reflection-avatars';
@@ -81,6 +82,11 @@ export function DailyPromptSection() {
       avatars: avatarsForCard(avatarOrder, index),
     })), usage?.used ?? 0);
   }, [prompts, usage?.used, avatarOrder]);
+
+  const firstRow = cards[0]?.row;
+  const promptText = firstRow ? (firstRow.slot_kind === 'ai' ? firstRow.ai_prompt_text : firstRow.prompt.title) : '';
+  // "Read me the prompt": Memento reads what the first card shows.
+  useVoiceContent("Today's prompt", () => promptText ?? '', Boolean(promptText));
 
   const allowed = canShuffleReflections(cards.length, usage, shuffling || isLoading);
   const handleShuffle = useCallback(() => {

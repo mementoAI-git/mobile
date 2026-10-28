@@ -143,3 +143,49 @@ describe('VoiceToolRelay', () => {
     expect(sent.map((batch) => batch.map((response) => response.id))).toEqual([['fast'], ['slow']]);
   });
 });
+
+describe('VoiceToolRelay invocation', () => {
+  test('tells the handler its call id, and when the call no longer matters', async () => {
+    const seen: { callId?: string; live: boolean[] }[] = [];
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const instance = new VoiceToolRelay(
+      async () => '',
+      () => undefined,
+      {
+        save_story: async (_args, invocation) => {
+          const entry = { callId: invocation?.callId, live: [invocation?.isLive() ?? true] };
+          seen.push(entry);
+          await gate;
+          entry.live.push(invocation?.isLive() ?? true);
+          return 'Saved.';
+        },
+      },
+    );
+
+    const pending = instance.handle([
+      { id: 'a', name: 'save_story', args: {} },
+      { id: 'b', name: 'save_story', args: {} },
+    ]);
+    await Promise.resolve();
+    instance.cancel(['a']);
+    release();
+    await pending;
+
+    expect(seen).toEqual([
+      { callId: 'a', live: [true, false] },
+      { callId: 'b', live: [true, true] },
+    ]);
+
+    let liveAfterHangUp: boolean | undefined;
+    const after = new VoiceToolRelay(async () => '', () => undefined, {
+      save_story: async (_args, invocation) => {
+        after.dispose();
+        liveAfterHangUp = invocation?.isLive();
+        return 'Saved.';
+      },
+    });
+    await after.handle([{ id: 'c', name: 'save_story', args: {} }]);
+    expect(liveAfterHangUp).toBe(false);
+  });
+});

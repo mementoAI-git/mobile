@@ -62,7 +62,7 @@ import { saveUplinkRecording, VoiceUplinkRecorder } from '@/features/chat/voice-
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { VoiceLatencyTracker } from '@/features/chat/voice-latency';
 import { reportVoiceCall, type VoiceCallFailure } from '@/features/chat/voice-telemetry';
-import { VoiceSelfInterruptGuard } from '@/features/chat/voice-self-interrupt-guard';
+import { shouldRestore, VoiceSelfInterruptGuard } from '@/features/chat/voice-self-interrupt-guard';
 import { voiceControl } from '@/features/voice-control/registry';
 import {
   SCREEN_CONTROL_TOOLS,
@@ -95,6 +95,8 @@ import { serializeVoiceCallTranscript } from '@/features/chat/voice-transcript-p
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { logger } from '@/lib/logger';
+import { makeMutable } from 'react-native-reanimated';
+import { VoiceThinkingTracker } from '@/features/chat/voice-thinking';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
 import { invalidateMemoryQueries } from '@/features/memories/cache';
@@ -142,6 +144,9 @@ const VOICE_AUDIO_POLICY = resolveVoiceAudioPolicy({
   iosVoiceProcessingRequested: process.env.EXPO_PUBLIC_VOICE_IOS_VOICE_PROCESSING === 'true',
 });
 const SPEAKER_FULL_DUPLEX = VOICE_AUDIO_POLICY.speakerFullDuplex;
+// While the self-interruption fallback lasts, how often to check whether the
+// echo has dropped enough to listen while Memento talks again.
+const VOICE_FALLBACK_RECHECK_MS = 15_000;
 // Prepare the call (session open, greeting asked for) while the user looks at
 // the Start button, so the tap plays the greeting at once. Off with 'false'.
 const VOICE_WARM_START = process.env.EXPO_PUBLIC_VOICE_WARM_START !== 'false';
@@ -294,6 +299,8 @@ export function useVoiceMode({
   const [aiSpeechText, setAiSpeechText] = useState('Ready to connect secure voice link...');
   const [userSpeechText, setUserSpeechText] = useState('');
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  // Memento heard the user and is working on a reply (see VoiceThinkingTracker).
+  const [isThinking, setIsThinking] = useState(false);
   const [connectionFailure, setConnectionFailure] = useState<VoiceConnectionFailure | null>(null);
   const [voiceTimeline, setVoiceTimeline] = useState<VoiceChatSession | null>(null);
 
@@ -368,6 +375,9 @@ export function useVoiceMode({
   }
   const transcriptDiagnosticsRef = useRef(createVoiceTranscriptDiagnostics());
   const latencyRef = useRef<VoiceLatencyTracker | null>(null);
+  const thinkingRef = useRef(new VoiceThinkingTracker());
+  // Loudness of what the mic sends (0..1), for the call screen's level ring.
+  const micLevelRef = useRef(makeMutable(0));
   const selfInterruptRef = useRef<VoiceSelfInterruptGuard | null>(null);
   // Development only: a timestamped trace of the speaker filter's view.
   const debugTraceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -407,6 +417,7 @@ export function useVoiceMode({
   // tell it was superseded.
   const connectAttemptRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const thinkingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingTimeRef = useRef(0);
   const userSpeechTextRef = useRef('');
   const aiSpeechTextRef = useRef('');
@@ -503,6 +514,7 @@ export function useVoiceMode({
   const syncCompletedTurns = useCallback((interruptedLast = false) => {
     publishTimelineRef.current();
     const completed = transcriptRef.current.drainCompleted();
+    if (__DEV__ && completed.length) logger.runtime('[VoiceMode] turns', completed);
     if (completed.length) turnSyncRef.current?.addTurns(completed, { interruptedLast });
   }, []);
 
@@ -561,6 +573,7 @@ export function useVoiceMode({
           const names = effect.calls.map((call) => call.name);
           transcriptDiagnosticsRef.current.toolCalls.push(...names);
           latencyRef.current?.observeToolCall();
+          thinkingRef.current.observeToolCall();
           logger.runtime('[VoiceMode] tool calls', { names });
           void toolRelayRef.current?.handle(effect.calls);
         } else if (effect.type === 'tool-call-cancellation') {
@@ -576,7 +589,11 @@ export function useVoiceMode({
           // handleInterruption() promotes any interim user text to final so
           // it isn't lost when we complete the (truncated) model turn.
           latencyRef.current?.observeModelTurnEnd({ interruptedBy: 'speech' });
-          selfInterruptRef.current?.observeInterrupted(engine?.isSpeakerFullDuplexActive() ?? false);
+          thinkingRef.current.reset();
+          selfInterruptRef.current?.observeInterrupted(
+            engine?.isSpeakerFullDuplexActive() ?? false,
+            engine?.audibleForMs(),
+          );
           const newEpoch = engine?.nextEpoch() ?? 1;
           engine?.interruptOutput(newEpoch);
           if (greetingTimerRef.current) {
@@ -599,6 +616,7 @@ export function useVoiceMode({
         } else if (effect.type === 'output-audio') {
           if (responseGateRef.current?.acceptOutput() === false) continue;
           latencyRef.current?.observeModelAudio();
+          thinkingRef.current.reset();
           selfInterruptRef.current?.observeModelAudio();
           goodbyeRef.current?.tracker.onModelAudio();
           if (engine?.enqueueOutput(effect.data, effect.epoch) && isMountedRef.current) {
@@ -608,6 +626,7 @@ export function useVoiceMode({
           }
         } else if (effect.type === 'input-transcript') {
           latencyRef.current?.observeUserTranscript();
+          if (!effect.isInterim || effect.text) thinkingRef.current.observeUserTranscript();
           selfInterruptRef.current?.observeInputText(effect.text, effect.isInterim);
           const text = transcriptRef.current.appendUser(effect.text, effect.isInterim);
           userSpeechTextRef.current = text;
@@ -637,6 +656,8 @@ export function useVoiceMode({
           const { discarded } = responseGateRef.current?.endTurn() ?? { discarded: false };
           latencyRef.current?.observeModelTurnEnd();
           engine?.finishOutputTurn();
+          // A turn with no reply audio (tool only) still ends the wait.
+          if (!isAiSpeakingRef.current) thinkingRef.current.reset();
           goodbyeRef.current?.tracker.onTurnComplete();
           // The Interrupt button already completed and synced this turn.
           if (discarded) continue;
@@ -714,6 +735,13 @@ export function useVoiceMode({
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    if (thinkingTimerRef.current) {
+      clearInterval(thinkingTimerRef.current);
+      thinkingTimerRef.current = null;
+    }
+    thinkingRef.current.reset();
+    micLevelRef.current.value = 0;
+    if (isMountedRef.current) setIsThinking(false);
     if (debugTraceTimerRef.current) {
       clearInterval(debugTraceTimerRef.current);
       debugTraceTimerRef.current = null;
@@ -952,13 +980,7 @@ export function useVoiceMode({
           },
         },
         // The token locks the real config server-side. This only satisfies the SDK.
-        config: buildGeminiLiveConfig(
-          liveToken.voiceName,
-          useUserStore.getState().user,
-          undefined,
-          useVoicePreferenceStore.getState().languageCode,
-          currentDigitalMindName(),
-        ),
+        config: buildGeminiLiveConfig(liveToken.voiceName, useVoicePreferenceStore.getState().languageCode),
       });
       try {
         await withDeadline(
@@ -1283,20 +1305,35 @@ export function useVoiceMode({
     const guard = new VoiceSelfInterruptGuard({
       now: Date.now,
       onFallback: (durationMs) => {
+        // The echo that made Memento hear itself; listening resumes once the
+        // echo has clearly dropped (the volume went down), not on a timer.
+        const echoAtFallback = engineRef.current?.leftoverEchoLevel() ?? 0;
         fullDuplexRef.current = false;
         engineRef.current?.setSpeakerFullDuplex(false);
         logger.runtime('[VoiceMode] Memento is hearing itself on the speaker; pausing the mic while it talks', {
           durationMs,
+          echo: Math.round(echoAtFallback * 1_000) / 1_000,
         });
-        if (selfInterruptTimerRef.current) clearTimeout(selfInterruptTimerRef.current);
-        selfInterruptTimerRef.current = setTimeout(() => {
-          selfInterruptTimerRef.current = null;
-          if (selfInterruptRef.current !== guard) return;
-          guard.restore();
-          fullDuplexRef.current = allowedFullDuplexRef.current;
-          engineRef.current?.setSpeakerFullDuplex(allowedFullDuplexRef.current);
-          logger.runtime('[VoiceMode] listening while Memento talks again');
-        }, durationMs);
+        const check = (afterMs: number) => {
+          if (selfInterruptTimerRef.current) clearTimeout(selfInterruptTimerRef.current);
+          selfInterruptTimerRef.current = setTimeout(() => {
+            selfInterruptTimerRef.current = null;
+            const engine = engineRef.current;
+            if (selfInterruptRef.current !== guard || !engine) return;
+            const echoNow = engine.leftoverEchoLevel();
+            if (!shouldRestore(echoAtFallback, echoNow, engine.fallbackEchoMeasuredSeconds())) {
+              check(VOICE_FALLBACK_RECHECK_MS);
+              return;
+            }
+            guard.restore();
+            fullDuplexRef.current = allowedFullDuplexRef.current;
+            engine.setSpeakerFullDuplex(allowedFullDuplexRef.current);
+            logger.runtime('[VoiceMode] the echo dropped; listening while Memento talks again', {
+              echo: Math.round(echoNow * 1_000) / 1_000,
+            });
+          }, afterMs);
+        };
+        check(durationMs);
       },
     });
     selfInterruptRef.current = guard;
@@ -1405,6 +1442,8 @@ export function useVoiceMode({
         }
         diagnostics.micFramesSent += 1;
         latencyRef.current?.observeMicFrame(rms);
+        thinkingRef.current.observeMic(rms);
+        micLevelRef.current.value = rms;
         uplinkRecorderRef.current?.add(data);
         try {
           sessionRef.current?.sendRealtimeInput({
@@ -1455,8 +1494,14 @@ export function useVoiceMode({
       // Profile changes, opening a story, and whatever the API adds: run on
       // the server, with effects applied here.
       const serverToolHandlers = createServerToolHandlers(liveToken.serverTools, {
-        run: (name, args) =>
-          post(endpoint.voiceTool(name), { args }, { timeout: VOICE_SERVER_TOOL_TIMEOUT_MS }),
+        // Gemini's call id lets the API run a repeated call once; the
+        // session id keeps "undo" within this call.
+        run: (name, args, invocation) =>
+          post(
+            endpoint.voiceTool(name),
+            { args, call_id: invocation.callId, session_id: sessionIdRef.current },
+            { timeout: VOICE_SERVER_TOOL_TIMEOUT_MS },
+          ),
         applyEffects: (effects) => {
           for (const effect of effects) {
             if (effect.type === 'refresh') {
@@ -1606,6 +1651,16 @@ export function useVoiceMode({
         recordingTimeRef.current += 1;
         setRecordingTime((time) => time + 1);
       }, 1_000);
+      thinkingRef.current.reset();
+      let wasThinking = false;
+      thinkingTimerRef.current = setInterval(() => {
+        if (!isMountedRef.current) return;
+        const thinking = thinkingRef.current.isThinking(isAiSpeakingRef.current);
+        if (thinking === wasThinking) return;
+        wasThinking = thinking;
+        if (__DEV__) logger.runtime('[VoiceMode] thinking', { on: thinking });
+        setIsThinking(thinking);
+      }, 150);
       if (__DEV__) {
         // Logs whenever playback or filter state changes, and a heartbeat
         // every 2 s with the loudest mic frame sent since the last line.
@@ -1694,6 +1749,7 @@ export function useVoiceMode({
     // playing once it arrives (see VoiceResponseGate).
     responseGateRef.current?.interruptLocally();
     latencyRef.current?.observeModelTurnEnd({ interruptedBy: 'tap' });
+    thinkingRef.current.reset();
     const newEpoch = engine.nextEpoch();
     engine.interruptOutput(newEpoch);
     if (greetingTimerRef.current) {
@@ -1795,6 +1851,8 @@ export function useVoiceMode({
       userSpeechText,
       isAiSpeaking,
       getPlaybackLevel,
+      isThinking,
+      micLevel: micLevelRef.current,
       connectionFailure,
       connect,
       prefetch,
@@ -1818,6 +1876,7 @@ export function useVoiceMode({
       userSpeechText,
       isAiSpeaking,
       getPlaybackLevel,
+      isThinking,
       connectionFailure,
       connect,
       prefetch,

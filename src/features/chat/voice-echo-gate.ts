@@ -76,12 +76,16 @@ export class VoiceEchoGate {
     options: { learnOnly?: boolean } = {},
   ): Float32Array[] {
     if (gating && options.learnOnly) {
-      // Calibrating (the greeting): everything is echo; learn its level.
+      // A new calibration window must cancel any earlier barge-in hold.
+      this.openUntil = 0;
+      // Calibrating (the greeting or reply onset): learn the residual level.
       const out = this.releaseHeld(false);
       out.push(this.silence({ samples, rms: calculateRmsEnergy(samples), speech: false }));
       return out;
     }
     if (!gating) {
+      // Speech passes freely now; its hold must not bypass the next reply's filter.
+      this.openUntil = 0;
       // Held frames did not confirm speech while Memento was audible.
       const out = this.releaseHeld(false);
       out.push(samples);

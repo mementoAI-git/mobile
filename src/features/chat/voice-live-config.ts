@@ -1,5 +1,4 @@
-import { digitalMindVoiceIdentity } from './digital-mind-identity';
-import { voiceLanguageInstruction, type VoiceLanguageCode } from './voice-language';
+import type { VoiceLanguageCode } from './voice-language';
 import type { LiveConnectConfig, Modality } from '@google/genai/web';
 
 /**
@@ -52,7 +51,6 @@ function parseTurnDetection(value: unknown): VoiceTurnDetection | undefined {
 export const LEGACY_LIVE_MODEL =
   'gemini-2.5-flash-native-audio-preview-09-2025';
 
-
 function nonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -104,60 +102,21 @@ export function parseVoiceLiveToken(
   };
 }
 
-export function buildGeminiLiveConfig(
-  voiceName: string,
-  user?: {
-    nickname?: string | null;
-    first_name?: string | null;
-    fullname?: string | null;
-  } | null,
-  contextInstruction?: string,
-  languageCode: VoiceLanguageCode = 'en-US',
-  aiName?: string,
-): LiveConnectConfig {
-  const nickname = user?.nickname || user?.first_name || user?.fullname;
-  const identity = digitalMindVoiceIdentity(nickname, aiName);
-
-  const systemParts = [
-    voiceLanguageInstruction(languageCode),
-    identity,
-    'CRITICAL TRUTHFULNESS & GROUNDING: Speak only about what the user shares or what is explicitly present in your background context. NEVER invent, fabricate, or hallucinate past events, dates, or conversations that are not in your context. If you do not know or do not recall something, honestly and warmly ask the user to tell you more about it.',
-    'Keep spoken responses concise, thoughtful, and natural unless the user asks for more detail.',
-    'Speak naturally without verbal markdown, bullet points, headings, or long lists.',
-    'Follow the host’s lead. Ask at most one relevant follow-up question when useful, and often none.',
-    'Be patient through short pauses and never repeat a greeting after an interruption.',
-  ];
-
-  if (contextInstruction && contextInstruction.trim().length > 0) {
-    systemParts.push(
-      'AUTHENTIC CONVERSATION AND USER CONTEXT (use this background knowledge naturally; never fabricate details beyond what is here):',
-      contextInstruction.trim(),
-    );
-  }
-
-  const systemText = systemParts.join(' ');
-
+/**
+ * The config the SDK requires when connecting. The ephemeral token locks the
+ * real session config on the server (prompt, voice, turn detection, tools),
+ * and Gemini ignores this one, so it only names the voice and transcription.
+ */
+export function buildGeminiLiveConfig(voiceName: string, languageCode?: VoiceLanguageCode): LiveConnectConfig {
   return {
     responseModalities: AUDIO_MODALITY,
-    systemInstruction: {
-      parts: [{ text: systemText }],
-    },
     speechConfig: {
-      languageCode,
+      ...(languageCode ? { languageCode } : {}),
       voiceConfig: {
         prebuiltVoiceConfig: { voiceName },
       },
     },
     inputAudioTranscription: {},
     outputAudioTranscription: {},
-    realtimeInputConfig: {
-      automaticActivityDetection: {
-        disabled: false,
-        // Reduce pre-speech lead padding for lower latency response start
-        prefixPaddingMs: 20,
-        // 800ms gives room for natural mid-sentence pauses without premature endpointing
-        silenceDurationMs: 800,
-      },
-    },
   };
 }

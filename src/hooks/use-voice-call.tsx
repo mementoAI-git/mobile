@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { router, usePathname } from 'expo-router';
+import { router, useGlobalSearchParams, usePathname } from 'expo-router';
 import { Platform } from 'react-native';
 
 import { CallActivityController, createCallActivityAdapter } from '@/features/chat/call-activity';
@@ -8,6 +8,8 @@ import { useBackgroundMusic } from '@/hooks/use-background-music';
 import { useVoiceMode, type VoiceCallActionEffects } from '@/hooks/use-voice-mode';
 import { useAuthStore } from '@/store';
 import { toast } from '@/components/ui/Toast';
+import { voiceControl } from '@/features/voice-control/registry';
+import { isCurrentScreen, voiceScreenName } from '@/features/voice-control/screen-names';
 
 export const VOICE_CALL_PATH = '/voice-call';
 
@@ -33,6 +35,15 @@ export function VoiceCallProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
   pathnameRef.current = pathname;
+  const { mode } = useGlobalSearchParams<{ mode?: string }>();
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  // Voice tools say which screen the host is on after every action.
+  useEffect(() => {
+    voiceControl.setScreenName(() =>
+      voiceScreenName(pathnameRef.current, modeRef.current ? `mode=${modeRef.current}` : ''),
+    );
+  }, []);
 
   const leaveCallScreen = useCallback(() => {
     if (pathnameRef.current === VOICE_CALL_PATH && router.canGoBack()) router.back();
@@ -41,6 +52,9 @@ export function VoiceCallProvider({ children }: { children: React.ReactNode }) {
   const callActions = useMemo<VoiceCallActionEffects>(
     () => ({
       navigate: (href) => {
+        // Already there (an edit made on this screen): stay, so the host
+        // sees the change in place instead of the screen reopening.
+        if (isCurrentScreen(href, pathnameRef.current)) return;
         leaveCallScreen();
         router.push(href as never);
       },

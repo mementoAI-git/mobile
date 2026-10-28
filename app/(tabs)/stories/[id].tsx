@@ -12,6 +12,8 @@ import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
  *  Attachment cards (voice / audio / document)
  */
 import React, { useState, useCallback, useMemo } from 'react';
+import { useVoiceContent } from '@/features/voice-control/hooks';
+import { storyHtmlToPlainText } from '@/features/voice-control/story-text';
 import {
   View,
   Text,
@@ -326,6 +328,9 @@ export default function StoryDetailScreen() {
     audioAttachments,
     otherAttachments,
   } = useStoryDetailLogic();
+  useVoiceContent('Story', () =>
+    memory ? `${memory.title || 'Untitled'}. ${storyHtmlToPlainText(String(memory.body || ''))}` : '',
+  );
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();

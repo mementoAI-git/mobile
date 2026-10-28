@@ -1,5 +1,6 @@
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo } from 'react';
+import { useVoiceContent } from '@/features/voice-control/hooks';
 import { View, RefreshControl, ScrollView } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -59,6 +60,13 @@ export default function StoriesScreen() {
     handleCreateNew,
     handleClearSearch,
   } = useStoriesLogic();
+  // "Which stories do I have?": the titles in the list, newest first.
+  useVoiceContent('Stories in the list', () =>
+    (stories ?? [])
+      .slice(0, 15)
+      .map((story, index) => `${index + 1}. ${story?.title || 'Untitled'}`)
+      .join('; '),
+  );
 
   const simulatedBeneficiary = useGuardianLensStore((s) => s.simulatedBeneficiary);
   const clearSimulation = useGuardianLensStore((s) => s.clearSimulation);
