@@ -12,7 +12,7 @@ The model and the voice prompt are in good shape. What keeps calls from feeling 
 
 ## Corrections to earlier assumptions
 
-- **The iOS voice-processing freeze is fixed.** `c3ceb64` (11 Oct) patches `react-native-audio-api` to ignore engine configuration changes for one second after switching voice processing, breaking the main-thread loop behind 0x8BADF00D. TestFlight already runs with it on. It is on `dev`, not `main`. What holds production back is self-interruption at full speaker volume (17 Oct report), not the freeze.
+- **The iOS voice-processing freeze is fixed.** `c3ceb64` (11 Oct) patches `react-native-audio-api` to ignore engine configuration changes for one second after switching voice processing, breaking the main-thread loop behind 0x8BADF00D. TestFlight already runs with it on, and it reached `main` with #81 (17 Oct), so production builds contain it; only production's `eas.json` flags keep voice processing and full duplex off. What holds production back is self-interruption at full speaker volume (17 Oct report), not the freeze.
 - **Playback is in the echo canceller's reference path.** On iOS the mic and playback share one `AVAudioEngine` (playback is an `AVAudioSourceNode` on its main mixer), and voice processing is enabled on that engine's input node.
 - **Android echo cancellation is unverified, not known broken.** AOSP says capture with the voice-communication preset *should* include AEC; it does not document an output-usage requirement. We record with `voiceCommunication` and never set a voice-communication output usage or communication mode. Preview/TestFlight builds turn full duplex on for Android without device validation, and the server denylist (`VOICE_SPEAKER_DUPLEX_DENYLIST`) is empty by default.
 - **`START_SENSITIVITY_LOW` is deliberate.** Gemini's default is HIGH; LOW "detects the start of speech less often", trading fewer false interruptions for harder real ones.
@@ -33,7 +33,7 @@ The model and the voice prompt are in good shape. What keeps calls from feeling 
 3. **Validate Android** before full duplex ships there; add a voice-communication output usage only if AEC demonstrably fails to engage.
 4. **Hybrid VAD** to shorten end-of-turn waits, behind a flag, judged on premature-reply rate.
 5. **Manual-VAD spike** for backchannels and to replace the loudness heuristics with a trained speech detector plus turn model. Pass criteria: no session stalls, holds up on our accents, runs in the C++ module.
-6. **Ship full duplex to production** (merge `c3ceb64` to `main`) once the replay numbers meet the targets.
+6. **Ship full duplex to production** (turn on `EXPO_PUBLIC_VOICE_IOS_VOICE_PROCESSING` and `EXPO_PUBLIC_VOICE_FULL_DUPLEX` in the production profile) once the replay numbers meet the targets.
 
 This reorders the 17 Oct fix list: interruption comes before turn speed, because faster turns make cutoffs worse while Memento cannot be interrupted.
 
