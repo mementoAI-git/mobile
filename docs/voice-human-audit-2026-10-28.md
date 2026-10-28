@@ -48,6 +48,17 @@ This reorders the 17 Oct fix list: interruption comes before turn speed, because
 - **Finding pinned by the replay tests**: if the user is already speaking when a reply starts, the 300 ms onset window learns their voice as echo, and the gate then misses the whole interruption.
 - Stale comments about the freeze corrected in `voice-audio-policy.ts` and `.env.example`.
 
+## Done on branch `voice/turn-taking-fixes`
+
+- **A voice already talking when a reply starts carries on through it.** Clear speech (two frames) within 300 ms before Memento became audible keeps the mic open through the reply onset instead of being learned as echo; the self-interrupt guard then judges that early interruption by its words. Counted as `voice_echo_continuations`. Speech that starts at the same instant as the reply is still indistinguishable from echo by level. Not yet seen live: needs a device recording.
+- **"Thinking…" follows Gemini, not mic level.** On two real simulator recordings, room sounds Gemini ignored looked exactly like soft speech by level (300–500 ms bursts several times above the floor). A noise-relative threshold did not help (7 false triggers either way in a quiet room, 1 → 3 under swelling noise) and was reverted. Thinking now needs Gemini's transcript of the user or a running tool: later, but never shown when nobody spoke.
+- **Hybrid end of turn**, off by default (`EXPO_PUBLIC_VOICE_HYBRID_END_MS`). Reports `voice.hybrid_end_ms` and `voice_hybrid_turn_ends`. Its "the user spoke" signal is mic level, with the weakness above; choose the delay from recordings.
+
+## What the simulator cannot test
+
+- **Echo and interruption timing.** The simulator uses the Mac's microphone, speakers and echo canceller. With voice processing on, macOS cancels synthetic speech played through the same speakers (`say` reached the mic at ~0.017 instead of ~0.07), so overlap scenarios cannot be staged. Use a phone.
+- **Fresh installs reset state** the rig depends on: microphone permission, the saved voice, and the dev menu's onboarding flag. Re-grant with `xcrun simctl privacy booted grant microphone io.mymemento.app` before trusting any mic result.
+
 ## Sources
 
 - Gemini Live capabilities (VAD, hybrid VAD, audioStreamEnd): https://ai.google.dev/gemini-api/docs/live-api/capabilities
