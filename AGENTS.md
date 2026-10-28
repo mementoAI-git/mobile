@@ -490,7 +490,7 @@ Empty state titles should be warm and inviting, not system-speak (e.g., "Your st
 
 ### Memories (Stories) Tab
 - **Grid mode**: `MasonryMemoryGrid` with 2-column column-balancing algorithm
-- **List mode**: `MemoryCard` editorial feed with 3:2 hero image, date pill overlay, actions pill overlay
+- **List mode**: `MasonryMemoryCard` with `variant="list"` — editorial feed with 3:2 hero image, date pill overlay, actions pill overlay
 - Never show AI `summary` or `topics` on feed cards
 - Masonry cards: seeded aspect ratio + seeded pastel surface (text-only) — consistent per memory across sessions
 
