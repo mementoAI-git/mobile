@@ -98,6 +98,7 @@ import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-aler
 import { logger } from '@/lib/logger';
 import { makeMutable } from 'react-native-reanimated';
 import { VoiceThinkingTracker } from '@/features/chat/voice-thinking';
+import { parseHybridEndMs, VoiceHybridEnd } from '@/features/chat/voice-hybrid-end';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
 import { invalidateMemoryQueries } from '@/features/memories/cache';
@@ -159,6 +160,9 @@ const DEBUG_RECORD_UPLINK = __DEV__ && process.env.EXPO_PUBLIC_VOICE_DEBUG_RECOR
 // Development only: save the raw mic and speaker state for replay through the
 // echo gate (voice-gate-replay.ts).
 const DEBUG_CAPTURE_GATE = __DEV__ && process.env.EXPO_PUBLIC_VOICE_DEBUG_CAPTURE === 'true';
+// Experimental, off by default: tell Gemini the user has finished after this
+// much quiet instead of waiting for its silence window (voice-hybrid-end.ts).
+const HYBRID_END_MS = parseHybridEndMs(process.env.EXPO_PUBLIC_VOICE_HYBRID_END_MS);
 // About 10 s in total, enough to ride out a tunnel or a network switch.
 type ReconnectReason = 'go-away' | 'connection-lost' | 'network-change';
 /** `in-progress`: another reconnect is already running. `ended`: the call ended meanwhile. */
@@ -381,6 +385,8 @@ export function useVoiceMode({
   const transcriptDiagnosticsRef = useRef(createVoiceTranscriptDiagnostics());
   const latencyRef = useRef<VoiceLatencyTracker | null>(null);
   const thinkingRef = useRef(new VoiceThinkingTracker());
+  const hybridEndRef = useRef(new VoiceHybridEnd(HYBRID_END_MS));
+  const hybridTurnEndsRef = useRef(0);
   // Loudness of what the mic sends (0..1), for the call screen's level ring.
   const micLevelRef = useRef(makeMutable(0));
   const selfInterruptRef = useRef<VoiceSelfInterruptGuard | null>(null);
@@ -795,6 +801,9 @@ export function useVoiceMode({
         failure: failureRef.current ?? undefined,
         endedDuringStep: connectStepRef.current ?? undefined,
         turnDetection: turnDetectionRef.current,
+        hybridEnd: HYBRID_END_MS
+          ? { delayMs: HYBRID_END_MS, turnEnds: hybridTurnEndsRef.current }
+          : undefined,
         toolCalls: transcriptDiagnosticsRef.current.toolCalls.length,
         selfInterruptions: selfInterruptRef.current
           ? {
@@ -1318,6 +1327,8 @@ export function useVoiceMode({
     setVoiceTimeline(null);
     messageHandlerRef.current = new VoiceMessageHandler();
     uplinkRecorderRef.current = DEBUG_RECORD_UPLINK ? new VoiceUplinkRecorder() : null;
+    hybridEndRef.current = new VoiceHybridEnd(HYBRID_END_MS);
+    hybridTurnEndsRef.current = 0;
     gateCaptureRef.current = DEBUG_CAPTURE_GATE ? new VoiceGateCapture() : null;
     latencyRef.current = new VoiceLatencyTracker();
     // On a loud speaker, leftover echo can still get past the echo filter and
@@ -1474,6 +1485,12 @@ export function useVoiceMode({
           sessionRef.current?.sendRealtimeInput({
             audio: { data, mimeType: 'audio/pcm;rate=16000' },
           });
+          const quietMs = thinkingRef.current.quietForMs();
+          if (hybridEndRef.current.check(quietMs, isAiSpeakingRef.current)) {
+            hybridTurnEndsRef.current += 1;
+            logger.runtime('[VoiceMode] hybrid end of turn', { quietMs });
+            sessionRef.current?.sendRealtimeInput({ audioStreamEnd: true });
+          }
         } catch {
           // Socket is closing during a reconnect. Drop this frame.
         }

@@ -68,6 +68,11 @@ export class VoiceThinkingTracker {
     return Math.max(VOICE_THINKING_SPEECH_RMS, VOICE_THINKING_NOISE_MARGIN * noise);
   }
 
+  /** How long the user has been quiet since they last spoke; undefined if not heard this turn. */
+  quietForMs(): number | undefined {
+    return this.heardUser ? this.now() - this.lastSpeechAt : undefined;
+  }
+
   /** Gemini transcribed something the user said. */
   observeUserTranscript(): void {
     this.heardUser = true;

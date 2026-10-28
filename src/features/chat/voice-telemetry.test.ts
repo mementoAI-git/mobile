@@ -184,6 +184,24 @@ describe('reportVoiceCall', () => {
     expect(measurements.voice_reply_p50.span).toBeDefined();
   });
 
+  test('tags calls that end turns early (hybrid end of turn), and counts those turns', () => {
+    const { sentry, spans, measurements } = fakeSentry();
+
+    reportVoiceCall(
+      {
+        latency: completedCall(),
+        endedAt: 9_000,
+        platform: 'ios',
+        toolCalls: 0,
+        hybridEnd: { delayMs: 300, turnEnds: 2 },
+      },
+      sentry,
+    );
+
+    expect(spans[0].options.attributes).toMatchObject({ 'voice.hybrid_end_ms': 300 });
+    expect(measurements.voice_hybrid_turn_ends).toMatchObject({ value: 2, unit: 'none' });
+  });
+
   test('marks calls that never reached setup as failed', () => {
     const { sentry, spans } = fakeSentry();
     const tracker = new VoiceLatencyTracker(() => 0);
