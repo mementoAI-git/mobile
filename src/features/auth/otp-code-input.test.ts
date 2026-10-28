@@ -37,3 +37,19 @@ describe('OtpCodeInput logic and policies', () => {
     expect(getResendSecondsRemaining(null, now, 30_000)).toBe(0);
   });
 });
+
+describe('authentication code entry', () => {
+  test('email and authenticator verification share the paste-capable six-cell input', async () => {
+    for (const screen of ['verify-email', 'two-factor']) {
+      const source = await Bun.file(new URL(`../../../app/(auth)/${screen}.tsx`, import.meta.url)).text();
+      expect(source).toContain('<OtpCodeInput');
+      expect(source).not.toContain('maxLength={1}');
+    }
+  });
+
+  test('preserves all six pasted digits, including leading zeroes and formatted codes', () => {
+    expect(normalizeOtpInput('012345')).toBe('012345');
+    expect(normalizeOtpInput('012 345')).toBe('012345');
+    expect(normalizeOtpInput('012-345\n')).toBe('012345');
+  });
+});

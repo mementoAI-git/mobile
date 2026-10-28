@@ -10,7 +10,7 @@ describe('ResponsiveScreen width and gutter behavior', () => {
   });
 
   test('reference gutters match intended composition', () => {
-    expect(screenGutter(393)).toBeGreaterThanOrEqual(20);
+    expect(screenGutter(393)).toBe(16);
     expect(screenGutter(393)).toBeLessThanOrEqual(24);
   });
 

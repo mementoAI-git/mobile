@@ -1,3 +1,5 @@
+import { toast } from '@/components/ui/Toast';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState } from 'react';
 import { Image, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -21,6 +23,7 @@ export function SetupTwoFactorSheet({
   setupData,
   onClose,
 }: SetupTwoFactorSheetProps) {
+  const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
   const [manual, setManual] = useState(!setupData.qr_code);
   const twoFactor = useTwoFactorSettingsLogic();
@@ -72,7 +75,11 @@ export function SetupTwoFactorSheet({
             <TouchableOpacity
               onPress={async () => {
                 Haptics.selectionAsync();
-                await Clipboard.setStringAsync(setupData.secret ?? '');
+                try {
+                    await Clipboard.setStringAsync(setupData.secret ?? '');
+                  } catch {
+                    toast('We couldn’t copy the key. Please try again.', 'error');
+                  }
               }}
               style={twoFactorStyles.codeRow}
             >
@@ -149,7 +156,7 @@ export function SetupTwoFactorSheet({
 
 const twoFactorStyles = {
   header: {
-    minHeight: 62,
+    minHeight: 44,
     paddingHorizontal: 20,
     flexDirection: 'row' as const,
     alignItems: 'center' as const,

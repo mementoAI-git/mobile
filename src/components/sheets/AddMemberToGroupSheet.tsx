@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, Platform, StyleSheet } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -19,6 +20,8 @@ interface Props {
 }
 
 export function AddMemberToGroupSheet({ groupId }: Props) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const insets = useSafeAreaInsets();
   const closeSheet = useUiStore((s) => s.closeSheet);
   const { data: beneficiariesData } = useBeneficiaries();
@@ -71,7 +74,7 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
   return (
     <View style={{ flex: 1 }}>
       {/* ── Header ── */}
-      <View style={{ height: 68, paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <View style={{ minHeight: 44, paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
           Add Member to group
         </Text>
@@ -159,7 +162,7 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
         </Button>
         <Button
           size="lg"
-          className="h-14 flex-1 bg-text-strong"
+          className="h-14 flex-1 bg-media-surface"
           textClassName="text-white"
           loading={isPending}
           disabled={selectedIds.size === 0 || isPending}
@@ -172,7 +175,7 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   memberCard: {
     flexDirection: 'row',
     alignItems: 'center',

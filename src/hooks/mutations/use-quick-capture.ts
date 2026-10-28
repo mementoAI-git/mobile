@@ -5,7 +5,7 @@ import { invalidateMemoryQueries } from '@/features/memories/cache';
 import type { MemoryVisibility } from '@/features/memories/memory-audience';
 
 export interface QuickCapturePayload {
-  /** Plain text body — AI enriches title/tags server-side */
+  /** Plain text body — saved as Quick note, with tags enriched server-side */
   body: string;
   /** Array of uploaded file _id strings */
   attachments?: string[];
@@ -25,7 +25,7 @@ export interface QuickCapturePayload {
  * useQuickCapture — calls the dedicated /memories/quick-capture endpoint.
  *
  * Unlike useCreateMemory (which requires a title), quick capture sends
- * raw body text and lets the server AI-generate title, tags, and enrichment.
+ * raw body text, keeps the Quick note title, and enriches tags in the background.
  * The resulting memory will have capture_source: "quick" and
  * enrichment_status: "pending" until the background job completes.
  */

@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ImageBackground,
@@ -31,7 +32,7 @@ type BeneficiaryTab = 'people' | 'groups';
 
 function CollectionSkeleton() {
   return (
-    <View className="gap-3 px-6 pt-6">
+    <View className="gap-3 px-4 pt-6">
       {[1, 2, 3].map((item) => (
         <Skeleton key={item} className="h-24 w-full rounded-[24px]" />
       ))}
@@ -57,17 +58,17 @@ function CountTab({
       accessibilityRole="tab"
       accessibilityLabel={`${label}, ${count}`}
       accessibilityState={{ selected: active }}
-      className={`h-11 flex-row items-center rounded-full px-5 ${active ? 'bg-text-strong' : 'bg-fill-weaker'}`}
+      className={`h-11 flex-row items-center rounded-full px-5 ${active ? 'bg-active-fill' : 'bg-fill-weaker'}`}
     >
       <Text
-        className={active ? 'text-white' : 'text-text-strong'}
+        className={active ? 'text-active-text' : 'text-text-strong'}
         style={TYPE.buttonSmall}
       >
         {label}
       </Text>
-      <View className={`ml-2.5 rounded-full px-2 py-0.5 ${active ? 'bg-white/20' : 'bg-fill-weak'}`}>
+      <View className={`ml-2.5 rounded-full px-2 py-0.5 ${active ? 'bg-fill-weak' : 'bg-fill-weak'}`}>
         <Text
-          className={active ? 'text-white' : 'text-text-weak'}
+          className={active ? 'text-active-text' : 'text-text-weak'}
           style={TYPE.metadata}
         >
           {count > 99 ? '99+' : count}
@@ -78,6 +79,7 @@ function CountTab({
 }
 
 export default function BeneficiariesSettingsScreen() {
+  const COLORS = useThemeColors();
   const {
     beneficiaries,
     groups,
@@ -160,7 +162,7 @@ export default function BeneficiariesSettingsScreen() {
           {isLoading ? (
             <CollectionSkeleton />
           ) : isError ? (
-            <View className="flex-1 items-center justify-center px-8">
+            <View className="flex-1 items-center justify-center px-4">
               <Text className="text-center" style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>
                 Your trusted circle needs a refresh
               </Text>

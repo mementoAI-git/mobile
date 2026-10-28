@@ -12,17 +12,14 @@ export function getTabBarItemWidths({
   maxInactiveWidth,
 }: TabBarWidthInput) {
   const pillInternalWidth = Math.max(0, screenWidth - 120);
-  const activeWidth = Math.min(maxActiveWidth, pillInternalWidth * 0.32);
-  const inactiveCount = Math.max(1, visibleTabsCount - 1);
   const interItemGapTotal = Math.max(0, visibleTabsCount - 1) * 4;
-  const remainingItemWidth = Math.max(
-    0,
-    pillInternalWidth - interItemGapTotal - activeWidth,
-  );
-  const inactiveWidth = Math.min(
+  const itemWidth = Math.min(
+    maxActiveWidth,
     maxInactiveWidth,
-    remainingItemWidth / inactiveCount,
+    Math.max(0, pillInternalWidth - interItemGapTotal) / Math.max(1, visibleTabsCount),
   );
+  const activeWidth = itemWidth;
+  const inactiveWidth = itemWidth;
 
   return {
     pillInternalWidth,

@@ -1,3 +1,6 @@
+import { ThemedCardBackground } from '@/components/ui/ThemedCardBackground';
+import type { ThemeColors } from '@/constants/tokens';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ImageBackground,
@@ -50,6 +53,8 @@ function InsightsSkeleton() {
 }
 
 export default function InsightsScreen() {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<InsightsTab>('enrichment');
   const user = useUserStore((s) => s.user);
@@ -245,7 +250,7 @@ export default function InsightsScreen() {
                 elevation: 2,
               }}
             >
-              <ImageBackground
+              <ThemedCardBackground
                 source={STREAK_BG}
                 style={{ width: '100%', padding: 20, gap: 16 }}
                 resizeMode="cover"
@@ -259,7 +264,7 @@ export default function InsightsScreen() {
                         borderRadius: 18,
                         backgroundColor: COLORS.brandSubtle,
                         borderWidth: 1,
-                        borderColor: 'rgba(255, 94, 0, 0.15)',
+                        borderColor: COLORS.brandTint,
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
@@ -277,7 +282,7 @@ export default function InsightsScreen() {
                       borderRadius: 999,
                       backgroundColor: COLORS.brandSubtle,
                       borderWidth: 1,
-                      borderColor: 'rgba(255, 94, 0, 0.15)',
+                      borderColor: COLORS.brandTint,
                     }}
                   >
                     <Text style={{ ...TYPE.bodyStrong, color: COLORS.brand }}>
@@ -292,12 +297,12 @@ export default function InsightsScreen() {
                       key={milestone.id}
                       style={{
                         backgroundColor: milestone.achieved
-                          ? 'rgba(6, 122, 87, 0.05)'
-                          : 'rgba(255, 255, 255, 0.8)',
+                          ? COLORS.successFill
+                          : COLORS.cardOverlay,
                         borderRadius: 16,
                         borderWidth: 1,
                         borderColor: milestone.achieved
-                          ? 'rgba(6, 122, 87, 0.15)'
+                          ? COLORS.successStroke
                           : COLORS.strokeWeaker,
                         paddingHorizontal: 16,
                         paddingVertical: 14,
@@ -333,7 +338,7 @@ export default function InsightsScreen() {
                           paddingVertical: 4,
                           borderRadius: 999,
                           backgroundColor: milestone.achieved
-                            ? 'rgba(6, 122, 87, 0.08)'
+                            ? COLORS.successFill
                             : COLORS.fillWeak,
                         }}
                       >
@@ -349,7 +354,7 @@ export default function InsightsScreen() {
                     </View>
                   ))}
                 </View>
-              </ImageBackground>
+              </ThemedCardBackground>
             </View>
           </View>
           )}
@@ -359,7 +364,7 @@ export default function InsightsScreen() {
   );
 }
 
-const styles = {
+const createStyles = (COLORS: ThemeColors) => ({
   header: {
     minHeight: 62,
     paddingHorizontal: 16,
@@ -406,14 +411,14 @@ const styles = {
     borderColor: 'transparent',
   },
   activeTab: {
-    backgroundColor: COLORS.textStrong,
-    borderColor: COLORS.textStrong,
+    backgroundColor: COLORS.activeFill,
+    borderColor: COLORS.activeFill,
   },
   tabText: {
     color: COLORS.textStrong,
     ...TYPE.label,
   },
   activeTabText: {
-    color: COLORS.textInverse,
+    color: COLORS.activeText,
   },
-};
+});

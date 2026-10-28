@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React from 'react';
 import {
   View,
@@ -24,6 +25,8 @@ const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 const APP_ICON = require('../../assets/icon.png');
 
 export default function VerifyEmailScreen() {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const {
     email,
     code,
@@ -168,7 +171,7 @@ export default function VerifyEmailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   screenBg: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -176,7 +179,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 24,
     paddingBottom: 32,
   },

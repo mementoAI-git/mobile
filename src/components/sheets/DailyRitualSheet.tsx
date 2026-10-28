@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -121,6 +122,7 @@ function formatRitualTime(date: Date): string {
 }
 
 export function DailyRitualSheet({ onClose, onSaved }: DailyRitualSheetProps) {
+  const COLORS = useThemeColors();
   const user = useUserStore((s) => s.user);
   const [settings, setSettings] = useState<DailyRitualSettings>({
     enabled: true,
@@ -211,7 +213,7 @@ export function DailyRitualSheet({ onClose, onSaved }: DailyRitualSheetProps) {
   }, [onClose]);
 
   return (
-    <View className="flex-grow px-5 pb-8 pt-2">
+    <View className="flex-grow pb-8">
       <View pointerEvents="none" className="absolute inset-0">
         <ImageBackground
           source={PATTERN}

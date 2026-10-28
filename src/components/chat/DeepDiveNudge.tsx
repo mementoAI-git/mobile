@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { View, Text, Image } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -24,6 +25,7 @@ interface DeepDiveNudgeProps {
  * Shown in the chat header toolbar when chatMode === 'open' and a nudge is available.
  */
 export function DeepDiveNudge({ dimension, question, onDeepDive, onDismiss }: DeepDiveNudgeProps) {
+  const COLORS = useThemeColors();
   const label = dimensionLabel(dimension);
 
   return (
@@ -33,7 +35,7 @@ export function DeepDiveNudge({ dimension, question, onDeepDive, onDismiss }: De
       className="mx-4 mb-2"
     >
       <View
-        className="flex-row items-start gap-3 bg-white border border-stroke-weaker rounded-2xl p-3.5 shadow-sm"
+        className="flex-row items-start gap-3 bg-card border border-stroke-weaker rounded-2xl p-3.5 shadow-sm"
         style={{ borderRadius: radius(16) }}
       >
         {/* AI Host Orb */}

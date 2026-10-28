@@ -132,7 +132,7 @@ export interface IMemory {
   /** Quick capture / daily-prompt enrichment state — mirrors web enrichment_status */
   enrichment_status?: 'pending' | 'completed' | 'failed';
   /** Source of capture — 'quick' for voice/quick-capture memories */
-  capture_source?: 'quick' | 'manual' | 'prompt';
+  capture_source?: 'quick' | 'standard' | 'manual' | 'prompt';
   /** Prompt type for daily-prompt reflections */
   prompt_type?: 'static' | 'ai-generated';
 }
@@ -233,7 +233,10 @@ export interface ICapsule {
 }
 
 export interface IPrompt {
+  source?: import('@/features/explore/question-presentation').ExploreQuestionSource;
+  status?: import('@/features/explore/question-presentation').ExploreQuestionStatus;
   _id?: string;
+  category?: string;
   title: string;
   type: string;
   tags: string[];
@@ -252,14 +255,20 @@ export interface IDailyPromptCapture {
   reflection_day_key: string;
 }
 
-export interface IDashboardPromptSlot {
-  slot_kind: 'ai' | 'static';
-  prompt: IPrompt;
+export type IDashboardPromptSlot = ({
+  slot_kind: 'ai';
   ai_prompt_text: string;
+  prompt?: never;
+} | {
+  slot_kind: 'static';
+  prompt: IPrompt;
+  ai_prompt_text?: never;
+}) & {
   reflection_day_key: string;
   answered: boolean;
   display_label?: string;
-}
+  reply_user_count?: number;
+};
 
 export interface IMessageAttachment {
   _id?: string;

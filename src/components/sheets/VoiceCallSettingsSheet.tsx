@@ -1,12 +1,13 @@
-import React, { useCallback, useState } from 'react';
+import { useThemeColors } from '@/hooks/use-theme-colors';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Pressable } from '@/components/ui/Touchable';
 import Check from 'lucide-react-native/icons/check';
 import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import { Button } from '@/components/ui/Button';
+import { VoiceLanguageSelect } from '@/components/chat/VoiceLanguageSelect';
 import { VoiceArtwork } from '@/components/chat/VoiceArtwork';
-import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { VOICE_CATALOG, getVoiceById, type VoiceId } from '@/features/chat/voice-catalog';
 import { useUiStore, useVoicePreferenceStore } from '@/store';
@@ -20,9 +21,15 @@ interface VoiceCallSettingsSheetProps {
 }
 
 export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: VoiceCallSettingsSheetProps) {
+  const COLORS = useThemeColors();
   const [draft, setDraft] = useState(selectedVoiceId);
+  const savedLanguage = useVoicePreferenceStore(state => state.languageCode);
+  const [language, setLanguage] = useState(savedLanguage);
+  const selectLanguage = useVoicePreferenceStore(state => state.selectLanguage);
   const selectVoice = useVoicePreferenceStore((state) => state.selectVoice);
   const { mutateAsync: updateProfileAsync } = useUpdateProfile();
+  const isMountedRef = useRef(true);
+  useEffect(() => { isMountedRef.current = true; return () => { isMountedRef.current = false; }; }, []);
   const [saving, setSaving] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
 
@@ -34,19 +41,21 @@ export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: Vo
     setSaveFailed(false);
     setSaving(true);
     try {
-      await saveCallVoice(voice, { saveProfile: updateProfileAsync, saveLocal: selectVoice });
+      if (draft !== selectedVoiceId) await saveCallVoice(voice, { saveProfile: updateProfileAsync, saveLocal: selectVoice });
+      await selectLanguage(language);
     } catch {
-      setSaveFailed(true);
+      if (isMountedRef.current) setSaveFailed(true);
       return;
     } finally {
-      setSaving(false);
+      if (isMountedRef.current) setSaving(false);
     }
-    await onSaved?.(draft);
+    if (!isMountedRef.current) return;
+    if (draft !== selectedVoiceId) await onSaved?.(draft);
     useUiStore.getState().closeSheet();
-  }, [draft, onSaved, selectVoice, updateProfileAsync]);
+  }, [draft, language, selectedVoiceId, selectLanguage, onSaved, selectVoice, updateProfileAsync]);
 
   return (
-    <View className="pb-2 pt-2">
+    <View className="pb-2">
       <View className="mb-5 flex-row items-center justify-between">
         <Text className="text-text-strong" style={TYPE.sectionTitle}>Settings</Text>
         <Pressable
@@ -59,6 +68,7 @@ export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: Vo
           <X size={20} color={COLORS.textBase} />
         </Pressable>
       </View>
+      <VoiceLanguageSelect value={language} onChange={setLanguage} disabled={saving} />
       <Text className="mb-3 text-text-strong" style={TYPE.label}>Change voice</Text>
       <View className="gap-3">
         {VOICE_CATALOG.map((voice) => {
@@ -86,7 +96,7 @@ export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: Vo
       </View>
       {saveFailed ? (
         <Text className="mt-3 text-center text-error-strong" style={TYPE.bodySmall}>
-          We couldn’t save your voice. Check your connection and try again.
+          We couldn’t save your settings. Check your connection and try again.
         </Text>
       ) : null}
     </View>

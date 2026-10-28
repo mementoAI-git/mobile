@@ -222,6 +222,15 @@ export class VoiceTranscriptTurns {
     }));
   }
 
+  /** A read-only snapshot for inline chat, including speech still arriving. */
+  getTimelineMessages(): VoiceTranscriptMessage[] {
+    const messages = this.getSessionTurns().flatMap(turn => turn.messages);
+    const user = this.getActiveUserText().trim();
+    if (user) messages.push({ role: 'user', text: user, is_voice: true });
+    if (this.active.ai.trim()) messages.push({ role: 'ai', text: this.active.ai.trim(), is_voice: true });
+    return messages;
+  }
+
   restoreFailedTurn(turn: VoiceTranscriptTurn): void {
     this.completed.unshift(turn);
   }

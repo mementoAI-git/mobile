@@ -1,58 +1,36 @@
+import type { ImageSourcePropType } from 'react-native';
+import catalog from '@/features/explore/explore-catalog.generated.json';
+import { resolveExploreCategorySlug, type ExploreCategorySlug } from '@/features/explore/category-identity';
+
 export type CategoryMeta = {
   title: string;
   subtitle: string;
-  image: any;
+  image: ImageSourcePropType;
 };
 
-export const CATEGORY_META: Record<string, CategoryMeta> = {
-  career: {
-    title: 'Career and ambition',
-    subtitle: "The aspirations and goals you've set to achieve professional success and personal fulfillment.",
-    image: require('../../assets/images/categories/career.webp'),
-  },
-  family: {
-    title: 'Family life',
-    subtitle: "The bonds, traditions, and stories that define your home and heritage.",
-    image: require('../../assets/images/categories/family.webp'),
-  },
-  relationship: {
-    title: 'Finding love & relationships',
-    subtitle: "The people who shape your heart and the lessons learned through connection.",
-    image: require('../../assets/images/categories/relationship.webp'),
-  },
-  region: {
-    title: 'Faith and religious beliefs',
-    subtitle: "The principles and convictions that guide your perspective on life.",
-    image: require('../../assets/images/categories/region.webp'),
-  },
-  belief: {
-    title: 'Worldviews & beliefs',
-    subtitle: "The principles and convictions that guide your perspective on life.",
-    image: require('../../assets/images/categories/belief.webp'),
-  },
-  purpose: {
-    title: 'Finding purpose',
-    subtitle: "Discovering what gives your life meaning and how you contribute to the world.",
-    image: require('../../assets/images/categories/purpose.webp'),
-  },
-  'life-transition': {
-    title: 'Life transitions & changes',
-    subtitle: "Moments of growth, uncertainty, and reinvention. Capture how you've navigated turning points, new beginnings, and the lessons that shaped who you are becoming.",
-    image: require('../../assets/images/categories/life-transition.webp'),
-  },
-  wellbeing: {
-    title: 'Wellbeing & daily life',
-    subtitle: "Your everyday rhythms — how you care for yourself, find balance, and make sense of the world around you.",
-    image: require('../../assets/images/categories/wellbeing.webp'),
-  },
-  identity: {
-    title: 'Identity and self-discovery',
-    subtitle: "Reflections on who you are, what you believe, and how you've evolved. Trace your values, turning points, and the personal truths that continue to guide your journey.",
-    image: require('../../assets/images/categories/identify.webp'),
-  },
-  'experience-culture': {
-    title: 'Experiences & culture',
-    subtitle: "Moments that connect you to the world — travels, traditions, and shared experiences that shape your perspective and deepen your sense of belonging.",
-    image: require('../../assets/images/categories/experience.webp'),
-  },
+const CATEGORY_IMAGES: Record<ExploreCategorySlug, ImageSourcePropType> = {
+  'growing-up': require('../../assets/images/categories/growing-up.webp'),
+  'people-i-love': require('../../assets/images/categories/people-i-love.webp'),
+  'the-life-i-live': require('../../assets/images/categories/the-life-i-live.webp'),
+  'things-i-love': require('../../assets/images/categories/things-i-love.webp'),
+  'who-i-am': require('../../assets/images/categories/who-i-am.webp'),
+  'work-purpose': require('../../assets/images/categories/work-purpose.webp'),
+  'beliefs-faith': require('../../assets/images/categories/beliefs-faith.webp'),
+  'where-i-come-from': require('../../assets/images/categories/where-i-come-from.webp'),
+  'stories-adventures': require('../../assets/images/categories/stories-adventures.webp'),
+  'what-life-taught-me': require('../../assets/images/categories/what-life-taught-me.webp'),
+  'whats-ahead': require('../../assets/images/categories/whats-ahead.webp'),
 };
+
+export const CATEGORY_META = Object.fromEntries(
+  catalog.map(category => [category.slug, {
+    title: category.title,
+    subtitle: category.description,
+    image: CATEGORY_IMAGES[category.slug as ExploreCategorySlug],
+  }]),
+) as Record<ExploreCategorySlug, CategoryMeta>;
+
+export function getCategoryMeta(value?: string | null): CategoryMeta | null {
+  const slug = resolveExploreCategorySlug(value);
+  return slug ? CATEGORY_META[slug] : null;
+}

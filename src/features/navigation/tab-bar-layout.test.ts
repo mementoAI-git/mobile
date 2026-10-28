@@ -7,12 +7,12 @@ describe('tab bar responsive width budget', () => {
       screenWidth: 393,
       visibleTabsCount: 4,
       maxActiveWidth: 96,
-      maxInactiveWidth: 60,
+      maxInactiveWidth: 96,
     });
 
     expect(layout.pillInternalWidth).toBe(273);
-    expect(layout.activeWidth).toBeCloseTo(87.36, 2);
-    expect(layout.inactiveWidth).toBeCloseTo(57.88, 2);
+    expect(layout.activeWidth).toBeCloseTo(65.25, 2);
+    expect(layout.inactiveWidth).toBeCloseTo(65.25, 2);
     expect(
       layout.activeWidth
         + layout.inactiveWidth * 3
@@ -25,7 +25,7 @@ describe('tab bar responsive width budget', () => {
       screenWidth: 120,
       visibleTabsCount: 4,
       maxActiveWidth: 96,
-      maxInactiveWidth: 60,
+      maxInactiveWidth: 96,
     });
 
     expect(layout.activeWidth).toBeGreaterThanOrEqual(0);

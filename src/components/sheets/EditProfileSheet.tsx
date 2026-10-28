@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, {
   useCallback,
   useEffect,
@@ -27,6 +28,7 @@ import {
 } from '@/features/account/profile-form';
 import { useUpdateProfile, useUploadProfilePicture } from '@/hooks/mutations/use-profile-mutation';
 import { useProfile } from '@/hooks/queries/use-profile';
+import { usePersona } from '@/hooks/queries/use-persona';
 import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
 
 interface EditProfileSheetProps {
@@ -38,8 +40,10 @@ export function EditProfileSheet({
   onClose,
   expandSheet,
 }: EditProfileSheetProps) {
+  const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
   const { data: profile } = useProfile();
+  const { data: persona } = usePersona();
   const updateProfile = useUpdateProfile();
   const uploadProfilePicture = useUploadProfilePicture();
   const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
@@ -53,12 +57,12 @@ export function EditProfileSheet({
     reset,
     formState: { errors },
   } = useForm<ProfileFormValues>({
-    defaultValues: normalizeProfileForm(profile),
+    defaultValues: normalizeProfileForm(profile, persona?.self_description),
   });
 
   useEffect(() => {
-    reset(normalizeProfileForm(profile));
-  }, [profile, reset]);
+    reset(normalizeProfileForm(profile, persona?.self_description));
+  }, [profile, persona?.self_description, reset]);
 
   const handlePickAvatar = useCallback(async () => {
     Haptics.selectionAsync();
@@ -194,7 +198,7 @@ export function EditProfileSheet({
         <View style={{ flex: 1 }}>
           <View
             style={{
-              minHeight: 62,
+              minHeight: 44,
               paddingHorizontal: 20,
               flexDirection: 'row',
               alignItems: 'center',

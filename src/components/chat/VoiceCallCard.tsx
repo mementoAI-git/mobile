@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -43,6 +44,8 @@ export const VoiceCallCard = React.memo(function VoiceCallCard({
   onReply,
   highlighted = false,
 }: VoiceCallCardProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const sessionId = message.voice_session_id ?? null;
@@ -72,16 +75,20 @@ export const VoiceCallCard = React.memo(function VoiceCallCard({
 
   const handleCopyTranscript = useCallback(async () => {
     void Haptics.selectionAsync();
-    if (!parsed.turns.length) {
-      await Clipboard.setStringAsync(rawText);
-      toast('Call summary copied', 'info');
-      return;
+    try {
+      if (!parsed.turns.length) {
+        await Clipboard.setStringAsync(rawText);
+        toast('Call summary copied', 'info');
+        return;
+      }
+      const fullText = parsed.turns
+        .map((t) => `${t.speakerName}: ${t.text}`)
+        .join('\n\n');
+      await Clipboard.setStringAsync(fullText);
+      toast('Transcript copied to clipboard', 'info');
+    } catch {
+      toast('We couldn’t copy the transcript. Please try again.', 'error');
     }
-    const fullText = parsed.turns
-      .map((t) => `${t.speakerName}: ${t.text}`)
-      .join('\n\n');
-    await Clipboard.setStringAsync(fullText);
-    toast('Transcript copied to clipboard', 'info');
   }, [parsed.turns, rawText]);
 
   const subtitle = parsed.hasTranscript
@@ -269,7 +276,7 @@ export const VoiceCallCard = React.memo(function VoiceCallCard({
   );
 });
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   cardContainer: {
     backgroundColor: COLORS.card,
     borderColor: COLORS.strokeWeak,

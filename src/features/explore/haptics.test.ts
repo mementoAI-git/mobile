@@ -15,7 +15,8 @@ describe('explore haptic ownership', () => {
 
     expect(exploreLogic).not.toContain('expo-haptics');
     expect(categoryLogic).not.toContain('expo-haptics');
-    expect(categoryScreen).toContain('Haptics.impactAsync');
+    const questionCard = await Bun.file(new URL('../../components/explore/ExploreQuestionCard.tsx', import.meta.url)).text();
+    expect(questionCard).toContain('Haptics.impactAsync');
     expect(categoryScreen).toContain('Haptics.selectionAsync');
   });
 });

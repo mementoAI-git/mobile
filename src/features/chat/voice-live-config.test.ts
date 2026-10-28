@@ -73,6 +73,10 @@ describe('voice Live configuration', () => {
     expect(config.outputAudioTranscription).toEqual({});
   });
 
+  test('names the selected conversation language when given', () => {
+    expect(buildGeminiLiveConfig('Fenrir', 'fr-FR').speechConfig?.languageCode).toBe('fr-FR');
+  });
+
   test('parses systemInstruction from ephemeral token payload', () => {
     const parsed = parseVoiceLiveToken({
       token: 'ephemeral',

@@ -36,7 +36,7 @@ export function useIAP() {
         }
         setProducts(productMap);
       } catch (err) {
-        logger.warn('[useIAP] loadProducts error:', err);
+        logger.handledError('[useIAP] loadProducts error:', err);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -77,7 +77,7 @@ export function useIAP() {
         }
         return started;
       } catch (err: any) {
-        logger.error('[useIAP] buySubscription error:', err);
+        logger.handledError('[useIAP] buySubscription error:', err);
         const msg = err?.message || 'Could not complete purchase. Please try again.';
         toast(msg, 'error');
         return false;
@@ -109,7 +109,7 @@ export function useIAP() {
         return false;
       }
     } catch (err: any) {
-      logger.error('[useIAP] restorePurchases error:', err);
+      logger.handledError('[useIAP] restorePurchases error:', err);
       toast(err?.message || 'Could not restore purchases.', 'error');
       return false;
     } finally {
@@ -122,7 +122,7 @@ export function useIAP() {
       void Haptics.selectionAsync();
       await iapService.openSubscriptionManagement();
     } catch (err: any) {
-      logger.error('[useIAP] openManagement error:', err);
+      logger.handledError('[useIAP] openManagement error:', err);
       toast('Could not open subscription settings.', 'error');
     }
   }, []);

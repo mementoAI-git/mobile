@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Linking, Text, View, useWindowDimensions } from 'react-native';
 import { Pressable } from '@/components/ui/Touchable';
@@ -23,6 +24,7 @@ type GalleryTab = 'media' | 'docs' | 'links';
 type AssetType = 'all' | 'image' | 'video' | 'audio';
 
 export default function ChatMediaScreen() {
+  const COLORS = useThemeColors();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const params = useLocalSearchParams<{ chatId?: string; tab?: GalleryTab; assetType?: AssetType }>();

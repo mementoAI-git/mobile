@@ -1,3 +1,5 @@
+import { AppTabBar } from '@/components/TabBar';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import '../global.css';
 
 import React, { useCallback, useEffect, useState } from 'react';
@@ -43,7 +45,7 @@ import { EBGaramond_700Bold } from '@expo-google-fonts/eb-garamond/700Bold';
 import { EBGaramond_400Regular_Italic } from '@expo-google-fonts/eb-garamond/400Regular_Italic';
 import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono/400Regular';
 
-import { StatusBar } from 'expo-status-bar';
+import { AppearanceProvider } from '@/components/system/AppearanceProvider';
 import {
   useShareIntentContext,
   ShareIntentProvider,
@@ -55,6 +57,7 @@ import { OfflineNotice } from '@/components/ui/OfflineNotice';
 import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
 import { AuthenticatedNotificationManager } from '@/components/system/AuthenticatedNotificationManager';
 import { AnimatedSplash } from '@/components/system/AnimatedSplash';
+import { AppMenuLayout } from '@/components/navigation/AppMenuLayout';
 import { SheetManager } from '@/components/sheets/SheetManager';
 import { AppSwitcherPrivacyBlur } from '@/components/security/AppSwitcherPrivacyBlur';
 import { VaultLockoutScreen } from '@/components/security/VaultLockoutScreen';
@@ -289,6 +292,7 @@ function SessionBootstrap() {
 // -----------------------------------------------------------------------------
 
 function RootLayout() {
+  const COLORS = useThemeColors();
   const navigationRef = useNavigationContainerRef();
   useEffect(() => {
     if (SENTRY_DSN && navigationRef) {
@@ -421,6 +425,12 @@ function RootLayout() {
     useUiStore.getState().setAppReady(appReady);
   }, [appReady]);
 
+  // A restored appearance can settle before the animated splash lays out.
+  // Once content is ready, never leave the native launch cover over the app.
+  useEffect(() => {
+    if (appReady) void hideNativeSplash();
+  }, [appReady, hideNativeSplash]);
+
   // Expo Observe time-to-interactive: the app is ready AND the animated splash
   // is gone, i.e. the user can actually use it. Reported once per launch.
   // First launches play the full ~8s cinematic splash, returning ones ~1.3s,
@@ -513,7 +523,7 @@ function RootLayout() {
 
       RNStatusBar.setTranslucent(false);
     }
-  }, []);
+  }, [COLORS.background]);
 
   // Keep native splash up while our critical boot resources load.
   //
@@ -528,7 +538,7 @@ function RootLayout() {
     <SafeAreaProvider
       initialMetrics={initialWindowMetrics}
     >
-      <StatusBar style="dark" />
+      <AppearanceProvider>
 
       <GestureHandlerRootView className="flex-1">
         <KeyboardProvider preload={false}>
@@ -552,6 +562,7 @@ function RootLayout() {
 
                       <ShareIntentWatcher />
 
+                      <AppMenuLayout>
                       <CallIndicatorLayout>
                         <Stack
                           screenOptions={{
@@ -565,6 +576,7 @@ function RootLayout() {
                           <Stack.Screen
                             name="(tabs)"
                             options={{
+                              gestureEnabled: false,
                               contentStyle: {
                                 backgroundColor:
                                   COLORS.background,
@@ -575,6 +587,7 @@ function RootLayout() {
                           <Stack.Screen
                             name="account"
                             options={{
+                              gestureEnabled: false,
                               animation:
                                 'slide_from_right',
                             }}
@@ -668,6 +681,7 @@ function RootLayout() {
                           <Stack.Screen
                             name="settings"
                             options={{
+                              gestureEnabled: false,
                               animation:
                                 'slide_from_right',
                             }}
@@ -684,7 +698,9 @@ function RootLayout() {
 
                           <Stack.Screen name="+not-found" />
                         </Stack>
+                        <AppTabBar />
                       </CallIndicatorLayout>
+                      </AppMenuLayout>
 
                       <SheetManager />
                       <AppSwitcherPrivacyBlur />
@@ -698,6 +714,7 @@ function RootLayout() {
           </AppErrorBoundary>
         </KeyboardProvider>
       </GestureHandlerRootView>
+      </AppearanceProvider>
 
       {showAnimatedSplash && (
         <AnimatedSplash

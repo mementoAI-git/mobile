@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { Image, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -31,6 +32,7 @@ export const BillingPaymentMethodsSection = React.memo(function BillingPaymentMe
   onAdd: () => void;
   onEdit: (id: string) => void;
 }) {
+  const COLORS = useThemeColors();
   return (
     <View className="rounded-[24px] pt-1 pb-2">
       {/* Header row */}
@@ -97,13 +99,13 @@ export const BillingPaymentMethodsSection = React.memo(function BillingPaymentMe
                 {method.isDefault && (
                   <View
                     style={{
-                      backgroundColor: COLORS.success,
+                      backgroundColor: COLORS.successFill,
                       borderRadius: 999,
                       paddingHorizontal: 12,
                       paddingVertical: 3.5,
                     }}
                   >
-                    <Text style={{ ...TYPE.metadata, color: COLORS.textInverse }}>
+                    <Text style={{ ...TYPE.metadata, color: COLORS.success }}>
                       Default
                     </Text>
                   </View>

@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState } from 'react';
 import { Text, View } from 'react-native';
 import AlertTriangle from 'lucide-react-native/icons/triangle-alert';
@@ -98,6 +99,7 @@ export function SecurityConfirmationSheet({
   description,
   confirmLabel,
 }: SecurityConfirmationSheetProps) {
+  const COLORS = useThemeColors();
   const [loading, setLoading] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const copy = COPY[kind];
@@ -177,7 +179,7 @@ export function SecurityConfirmationSheet({
         <Button
           variant={copy?.destructive ? 'destructive' : 'primary'}
           size="lg"
-          className={copy?.destructive ? 'h-14 flex-1' : 'h-14 flex-1 bg-text-strong'}
+          className={copy?.destructive ? 'h-14 flex-1' : 'h-14 flex-1 bg-media-surface'}
           loading={loading}
           onPress={confirm}
         >

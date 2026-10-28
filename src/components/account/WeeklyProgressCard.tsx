@@ -1,3 +1,5 @@
+import type { ThemeColors } from '@/constants/tokens';
+import { useThemeStyles } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from '@/components/ui/Touchable';
@@ -27,6 +29,7 @@ interface WeeklyProgressCardProps {
 }
 
 function WeekCell({ day }: { day: AccountWeekDay }) {
+  const styles = useThemeStyles(createStyles);
   return (
     <View style={styles.dayCell}>
       <Text style={[styles.dayLabel, day.isToday && styles.todayLabel]}>
@@ -57,6 +60,7 @@ export const WeeklyProgressCard = React.memo(function WeeklyProgressCard({
   reflectionsCount,
   onPress,
 }: WeeklyProgressCardProps) {
+  const styles = useThemeStyles(createStyles);
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -98,7 +102,7 @@ export const WeeklyProgressCard = React.memo(function WeeklyProgressCard({
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   card: {
     minHeight: 180,
     borderRadius: radius(16),

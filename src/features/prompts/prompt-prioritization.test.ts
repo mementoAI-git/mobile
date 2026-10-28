@@ -51,3 +51,27 @@ describe('prompt prioritization', () => {
     expect(result[0].score).toBe(0);
   });
 });
+
+describe('canonical Explore category ranking', () => {
+  test('maps the new taxonomy to the appropriate life dimensions', () => {
+    const expected = {
+      'growing-up': 'memories_experiences', 'people-i-love': 'relationships_people',
+      'the-life-i-live': 'everyday_life', 'things-i-love': 'passions_interests',
+      'who-i-am': 'identity_self', 'work-purpose': 'work_purpose',
+      'beliefs-faith': 'beliefs_worldview', 'where-i-come-from': 'heritage_roots',
+      'stories-adventures': 'memories_experiences', 'what-life-taught-me': 'lessons_wisdom',
+      'whats-ahead': 'hopes_legacy',
+    };
+    for (const [slug, dimension] of Object.entries(expected)) {
+      expect(CATEGORY_TO_ENRICHMENT_MAP[slug]).toBe(dimension);
+    }
+  });
+  test('ranks canonical prompts by the right dimensions', () => {
+    const result = prioritizePromptsByEnrichment([
+      { _id: 'work', category: 'work-purpose' },
+      { _id: 'hopes', category: 'whats-ahead' },
+    ], { category_scores: [{ key: 'work_purpose', score: 70 }, { key: 'hopes_legacy', score: 10 }] });
+    expect(result.map(item => item.prompt._id)).toEqual(['hopes', 'work']);
+    expect(result[0].isLowestDimension).toBe(true);
+  });
+});

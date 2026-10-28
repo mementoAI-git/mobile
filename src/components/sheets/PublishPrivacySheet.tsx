@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useMemo, useCallback, useState, useEffect, forwardRef } from 'react';
 import { View, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -8,7 +9,7 @@ import {
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getSheetTopInset } from '@/features/layout/sheet-safe-area';
+import { getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
 import Check from 'lucide-react-native/icons/check';
 import Lock from 'lucide-react-native/icons/lock';
 import Search from 'lucide-react-native/icons/search';
@@ -19,7 +20,7 @@ import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useGroups } from '@/hooks/queries/use-groups';
 import type { IBeneficiary, IGroup } from '@/types';
 
-import { Skeleton } from '@/components/ui';
+import { Skeleton, TextInput } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { normalizeCollection } from '@/features/beneficiaries/collections';
@@ -50,6 +51,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
   onApply,
   onClose,
 }, ref) {
+  const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
 
@@ -175,7 +177,8 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
       ref={ref}
       topInset={getSheetTopInset(insets.top)}
       index={0}
-      snapPoints={['86%']}
+      snapPoints={['92%']}
+      enableDynamicSizing={false}
       stackBehavior="push"
       enablePanDownToClose
       onDismiss={resetDraft}
@@ -183,7 +186,8 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
-      handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3, width: 42, height: 4, borderRadius: 2 }}
+      handleStyle={SHEET_HEADER_HANDLE_STYLE}
+        handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3, width: 42, height: 4, borderRadius: 2 }}
       backgroundStyle={{ backgroundColor: COLORS.background, borderTopLeftRadius: 28, borderTopRightRadius: 28 }}
     >
       <View style={{ flex: 1, backgroundColor: COLORS.background }}>
@@ -191,14 +195,14 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
         <View
           style={{
             paddingHorizontal: 20,
-            paddingTop: 12,
+            paddingTop: 0,
             paddingBottom: 16,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
+          <Text style={{ ...TYPE.sheetTitle, color: COLORS.textStrong, flex: 1, marginRight: 12 }}>
             Who can see this story?
           </Text>
           <TouchableOpacity
@@ -219,9 +223,10 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
         </View>
 
         <BottomSheetScrollView
+          style={{ flex: 1 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 24 }}
+          contentContainerStyle={{ paddingTop: 8, paddingBottom: 24 }}
         >
           {/* ── Top Two Cards: Private & Everyone ── */}
           <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20 }}>
@@ -232,6 +237,9 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
               style={{
                 flex: 1,
                 backgroundColor: `${COLORS.error}0D`,
+                borderWidth: 1,
+                borderColor: draftMode === 'private' ? `${COLORS.error}40` : 'transparent',
+                overflow: 'visible',
                 borderRadius: 16,
                 padding: 14,
                 position: 'relative',
@@ -293,6 +301,9 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
               style={{
                 flex: 1,
                 backgroundColor: `${COLORS.info}0D`,
+                borderWidth: 1,
+                borderColor: draftMode === 'all' ? `${COLORS.info}40` : 'transparent',
+                overflow: 'visible',
                 borderRadius: 16,
                 padding: 14,
                 position: 'relative',
@@ -348,34 +359,22 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
             </TouchableOpacity>
           </View>
 
-          {/* ── Search Input ── */}
-          <View
-            style={{
-              marginHorizontal: 20,
-              marginTop: 16,
-              height: 48,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: COLORS.strokeWeak,
-              backgroundColor: COLORS.fillWeaker,
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: 12,
-              gap: 10,
-            }}
-          >
-            <Search size={18} color={COLORS.textWeak} strokeWidth={1.8} />
-            <BottomSheetTextInput
+          {/* Shared input keeps focus, selection and keyboard behavior consistent. */}
+          <View style={{ marginHorizontal: 20, marginTop: 16 }}>
+            <TextInput
+              InputComponent={BottomSheetTextInput}
+              accessibilityLabel="Search user or group"
               value={search}
               onChangeText={setSearch}
               placeholder="Search user or group"
-              placeholderTextColor={COLORS.textMuted}
-              style={{
-                flex: 1,
-                ...TYPE.label,
-                color: COLORS.textStrong,
-                paddingVertical: 0,
-              }}
+              variant="rounded"
+              size="compact"
+              rounded={12}
+              autoCorrect={false}
+              returnKeyType="search"
+              selectionColor={COLORS.brand}
+              cursorColor={COLORS.brand}
+              leftElement={<Search size={18} color={COLORS.textWeak} strokeWidth={1.8} />}
             />
           </View>
 
@@ -504,6 +503,8 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
               <Text
                 style={{
                   paddingVertical: 24,
+                  maxWidth: '80%',
+                  alignSelf: 'center',
                   textAlign: 'center',
                   ...TYPE.label,
                   color: COLORS.textWeak,

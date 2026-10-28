@@ -25,6 +25,7 @@ const VOLUME_STORAGE_KEY = 'memento.bg_music_volume';
 interface BackgroundMusicContextType {
   currentTrack: BackgroundTrackKey;
   isPlaying: boolean;
+  isLoading: boolean;
   volume: number;
   setVolume: (vol: number) => void;
   playTrack: (key: BackgroundTrackKey) => Promise<void>;
@@ -41,26 +42,34 @@ export function BackgroundMusicProvider({ children }: { children: React.ReactNod
   const user = useAuthStore((state) => state.user);
   const [currentTrack, setCurrentTrack] = useState<BackgroundTrackKey>('none');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [volume, setVolumeState] = useState(50);
+  const volumeRef = useRef(50);
   const playerRef = useRef<AudioPlayer | null>(null);
   const pausedForVoiceRef = useRef(false);
+  const loadRequestRef = useRef(0);
 
   // Restore saved volume
   useEffect(() => {
+    let active = true;
     AsyncStorage.getItem(VOLUME_STORAGE_KEY)
       .then((saved) => {
-        if (saved) {
+        if (active && saved) {
           const parsed = Number(saved);
           if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
             setVolumeState(parsed);
+            volumeRef.current = parsed;
+            if (playerRef.current) playerRef.current.volume = parsed / 100;
           }
         }
       })
       .catch(() => {});
+    return () => { active = false; };
   }, []);
 
   const setVolume = useCallback((vol: number) => {
     const clamped = Math.max(0, Math.min(100, Math.round(vol)));
+    volumeRef.current = clamped;
     setVolumeState(clamped);
     if (playerRef.current) {
       playerRef.current.volume = clamped / 100;
@@ -69,6 +78,8 @@ export function BackgroundMusicProvider({ children }: { children: React.ReactNod
   }, []);
 
   const stopTrack = useCallback(async () => {
+    loadRequestRef.current += 1;
+    pausedForVoiceRef.current = false;
     try {
       if (playerRef.current) {
         playerRef.current.pause();
@@ -80,6 +91,7 @@ export function BackgroundMusicProvider({ children }: { children: React.ReactNod
     } finally {
       setCurrentTrack('none');
       setIsPlaying(false);
+      setIsLoading(false);
     }
   }, []);
 
@@ -96,6 +108,11 @@ export function BackgroundMusicProvider({ children }: { children: React.ReactNod
         return;
       }
 
+      const request = ++loadRequestRef.current;
+      setIsLoading(true);
+      setIsPlaying(false);
+      setCurrentTrack(key);
+      pausedForVoiceRef.current = false;
       try {
         // Clean up previous player
         if (playerRef.current) {
@@ -113,22 +130,26 @@ export function BackgroundMusicProvider({ children }: { children: React.ReactNod
           getInfo: FileSystem.getInfoAsync,
           download: FileSystem.downloadAsync,
         });
+        if (request !== loadRequestRef.current) return;
 
         const player = createAudioPlayer({ uri });
         player.loop = true;
-        player.volume = volume / 100;
+        player.volume = volumeRef.current / 100;
         player.play();
 
         playerRef.current = player;
         setCurrentTrack(key);
         setIsPlaying(true);
       } catch (err) {
-        logger.warn('Could not start background music track', err);
+        if (request !== loadRequestRef.current) return;
+        logger.handledError('Could not start background music track', err);
         toast('This background track needs a connection the first time you play it.', 'info');
         setIsPlaying(false);
+      } finally {
+        if (request === loadRequestRef.current) setIsLoading(false);
       }
     },
-    [stopTrack, volume]
+    [stopTrack]
   );
 
   const pauseForVoice = useCallback(() => {
@@ -170,23 +191,23 @@ export function BackgroundMusicProvider({ children }: { children: React.ReactNod
     }
   }, [currentTrack, isPlaying, playTrack]);
 
-  // Sync with user.bg_music from profile
+  // A new signed-in session always starts silent, even with a saved track.
+  // stopTrack also cancels any download still pending from the previous user.
   useEffect(() => {
-    const desired = (user?.bg_music as BackgroundTrackKey) || 'none';
-    if (desired !== currentTrack) {
-      if (desired === 'none' || !desired) {
-        if (currentTrack !== 'none') {
-          void stopTrack();
-        }
-      } else {
-        void playTrack(desired);
-      }
-    }
-  }, [user?.bg_music]);
+    void stopTrack();
+  }, [user?._id, stopTrack]);
+
+  // Profile hydration/refetch restores a preference, never permission to play.
+  // Explicitly turning music off still stops an already playing track.
+  useEffect(() => {
+    const desired = getBackgroundTrack(user?.bg_music).key;
+    if (desired === 'none') void stopTrack();
+  }, [user?.bg_music, stopTrack]);
 
   // Teardown on unmount
   useEffect(() => {
     return () => {
+      loadRequestRef.current += 1;
       if (playerRef.current) {
         try {
           playerRef.current.pause();
@@ -204,6 +225,7 @@ export function BackgroundMusicProvider({ children }: { children: React.ReactNod
       value={{
         currentTrack,
         isPlaying,
+        isLoading,
         volume,
         setVolume,
         playTrack,
@@ -226,6 +248,7 @@ export function useBackgroundMusic() {
     return {
       currentTrack: 'none' as BackgroundTrackKey,
       isPlaying: false,
+      isLoading: false,
       volume: 50,
       setVolume: () => {},
       playTrack: async () => {},

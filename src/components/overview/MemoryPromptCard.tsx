@@ -1,3 +1,4 @@
+import { COLORS } from '@/constants/tokens';
 import React from "react";
 import {
     StyleSheet,
@@ -14,7 +15,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { MemoryCardArtwork } from "./MemoryCardArtwork";
-import { FONTS } from "@/constants/tokens";
+import { FONTS, MEMORY_PROMPT_GRADIENT } from "@/constants/tokens";
 import { TYPE } from "@/constants/typography";
 import { iconSize, minTouchTarget, radius, responsiveSpace } from "@/constants/responsive";
 
@@ -40,15 +41,7 @@ export function MemoryPromptCard({
 
     return (
         <LinearGradient
-            colors={[
-                "#0B8EEA",
-                "#159EEA",
-                "#54C5F5",
-                "#79DDFB",
-            ]}
-            locations={[0, 0.34, 0.74, 1]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
+            {...MEMORY_PROMPT_GRADIENT}
             style={styles.card}
         >
             <View style={styles.hero}>
@@ -84,7 +77,7 @@ export function MemoryPromptCard({
                 <Plus
                     size={iconSize(21)}
                     strokeWidth={2.25}
-                    color="#28231F"
+                    color={COLORS.shadow}
                 />
 
                 <Text
@@ -121,7 +114,7 @@ const styles = StyleSheet.create({
         ...TYPE.cardTitle,
         marginTop: 9,
 
-        color: "#FFFFFF",
+        color: COLORS.textInverse,
 
         letterSpacing: -0.15,
 
@@ -132,7 +125,7 @@ const styles = StyleSheet.create({
         minHeight: minTouchTarget(44),
 
         borderRadius: radius(8),
-        backgroundColor: "#FFFFFF",
+        backgroundColor: COLORS.textInverse,
 
         flexDirection: "row",
         alignItems: "center",
@@ -144,7 +137,7 @@ const styles = StyleSheet.create({
     buttonText: {
         ...TYPE.button,
 
-        color: "#28231F",
+        color: COLORS.shadow,
 
         letterSpacing: -0.2,
 

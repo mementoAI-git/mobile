@@ -8,20 +8,26 @@ describe('PromptReflectionHeader component', () => {
     ).text();
 
     expect(source).toContain("from '@/constants/tokens'");
-    expect(source).toContain('COLORS.brand');
+    expect(source).toContain('COLORS.fillWeak');
     expect(source).toContain('TYPE.cardTitle');
-    expect(source).toContain('TYPE.eyebrow');
+    expect(source).toContain('getExploreCategoryTitle');
+    expect(source).toContain('getQuestionIdenticonUrl');
+    expect(source).toContain('useReducedMotion');
+    expect(source).toContain('Share topic');
+    expect(source).toContain('Bookmark topic');
+    expect(source).toContain('disabled={!memoryId}');
+    expect(source).toContain('accessibilityState={{ expanded: isExpanded }}');
     expect(source).toContain('LayoutAnimation');
     expect(source).toContain('accessibilityRole="button"');
     expect(source).toContain('numberOfLines={1}');
     expect(source).not.toMatch(/text-gray-|text-slate-/);
   });
 
-  test('titles prompt conversations as "Prompt" and host conversations as "Chat"', async () => {
+  test('keeps the Prompt title and shows the customizable digital mind for host conversations', async () => {
     const screen = await Bun.file(
       new URL('../../screens/ChatScreen.tsx', import.meta.url),
     ).text();
 
-    expect(screen).toContain("{isPromptType ? 'Prompt' : 'Chat'}");
+    expect(screen).toContain('style={styles.headerTitle}>Prompt</Text> : <DigitalMindHeader />');
   });
 });

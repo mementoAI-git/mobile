@@ -1,3 +1,4 @@
+import { useThemedStyles } from '@/hooks/use-theme-colors';
 /**
  * ConfirmDialog — on-brand replacement for React Native's Alert.alert()
  *
@@ -36,7 +37,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
 import { minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -69,6 +70,7 @@ export function ConfirmDialog({
   buttons,
   onClose,
 }: ConfirmDialogProps) {
+  const styles = useThemedStyles(stylesBase);
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
 
@@ -107,7 +109,8 @@ export function ConfirmDialog({
       ref={bottomSheetRef}
       enableDynamicSizing
       backdropComponent={renderBackdrop}
-      handleIndicatorStyle={styles.handleIndicator}
+      handleStyle={SHEET_HEADER_HANDLE_STYLE}
+        handleIndicatorStyle={styles.handleIndicator}
       backgroundStyle={styles.sheetBackground}
       onDismiss={onClose}
     >
@@ -167,7 +170,7 @@ export function ConfirmDialog({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   sheetBackground: {
     backgroundColor: COLORS.background,
     borderTopLeftRadius: radius(28),
@@ -182,7 +185,7 @@ const styles = StyleSheet.create({
 
   card: {
     paddingHorizontal: responsiveSpace(20),
-    paddingTop: responsiveSpace(12),
+    paddingTop: 0,
     gap: responsiveSpace(8),
   },
 

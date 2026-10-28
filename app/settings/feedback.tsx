@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
@@ -51,6 +52,7 @@ interface FeedbackAttachment {
 }
 
 export default function FeedbackSettingsScreen() {
+  const COLORS = useThemeColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const user = useUserStore((state) => state.user);
@@ -280,7 +282,7 @@ export default function FeedbackSettingsScreen() {
           </ResponsiveScreen>
 
           <View
-            className="px-5 pt-3 bg-background"
+            className="px-4 pt-3 bg-background"
             style={{ paddingBottom: Math.max(insets.bottom, 16) }}
           >
             <Button

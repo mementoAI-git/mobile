@@ -3,6 +3,7 @@ import { View, Text, Image } from 'react-native';
 import { cn, getInitials } from '@/lib/utils';
 import { TYPE } from '@/constants/typography';
 import { resolveFileUrl } from '@/features/account/profile-form';
+import { defaultAvatarUrl } from '@/features/account/avatar-source';
 
 interface AvatarProps {
   uri?: string | null;
@@ -26,19 +27,14 @@ const sizeMap = {
 };
 
 export function Avatar({ uri, name, seed, size = 'md', className }: AvatarProps) {
-  const [imageFailed, setImageFailed] = React.useState(false);
+  const [failedUri, setFailedUri] = React.useState<string | null>(null);
   const s = sizeMap[size];
-  const initials = name ? getInitials(name) : '?';
+  const initials = name?.trim() ? getInitials(name) : '';
   const resolvedUri = resolveFileUrl(uri);
 
-  const avatarSeed = (seed || name || '').trim().toLowerCase();
-
-  const fallbackUri =
-    !resolvedUri && avatarSeed
-      ? `https://api.dicebear.com/9.x/adventurer/png?seed=${encodeURIComponent(avatarSeed)}&backgroundColor=fefbf8`
-      : null;
-
-  const effectiveUri = imageFailed ? null : resolvedUri || fallbackUri;
+  const candidateUri = resolvedUri || defaultAvatarUrl(seed, name);
+  const effectiveUri = candidateUri !== failedUri ? candidateUri : null;
+  const handleImageError = React.useCallback(() => setFailedUri(effectiveUri), [effectiveUri]);
 
   return (
     <View
@@ -54,7 +50,8 @@ export function Avatar({ uri, name, seed, size = 'md', className }: AvatarProps)
           source={{ uri: effectiveUri }}
           className="w-full h-full"
           resizeMode="cover"
-          onError={() => setImageFailed(true)}
+          key={effectiveUri}
+          onError={handleImageError}
         />
       ) : (
         <Text

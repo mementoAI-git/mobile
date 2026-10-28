@@ -17,11 +17,12 @@ export function AccountSkeleton() {
           </View>
           <Skeleton className="size-20 rounded-full" />
         </View>
-        <Skeleton className="h-16 rounded-xl" />
+        <Skeleton className="h-36 rounded-[24px]" />
         <View className="flex-row gap-3">
           <Skeleton className="h-12 w-32 rounded-full" />
           <Skeleton className="h-12 w-36 rounded-full" />
         </View>
+        <Skeleton className="h-48 rounded-[24px]" />
       </View>
       <Skeleton className="h-[292px] rounded-[28px]" />
       <Skeleton className="h-[360px] rounded-[28px]" />

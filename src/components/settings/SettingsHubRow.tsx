@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
@@ -25,6 +26,7 @@ export const SettingsHubRow = React.memo(function SettingsHubRow({
   onPress,
   showChevron = true,
 }: SettingsHubRowProps) {
+  const COLORS = useThemeColors();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -55,7 +57,7 @@ export const SettingsHubRow = React.memo(function SettingsHubRow({
       >
         <View style={{ width: 32, alignItems: 'center' }}>{icon}</View>
         <Text
-          style={[TYPE.body, { flex: 1 }]}
+          style={[TYPE.body, { flex: 1, color: COLORS.textStrong }]}
         >
           {label}
         </Text>

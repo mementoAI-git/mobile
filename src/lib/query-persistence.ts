@@ -16,7 +16,7 @@ const PERSISTED_ROOTS: ReadonlySet<string> = new Set([
   'subscription',
   'daily-prompts',
   'overview-prompts',
-  'prompt-categories',
+  'explore-categories',
   'beneficiaries',
 ]);
 

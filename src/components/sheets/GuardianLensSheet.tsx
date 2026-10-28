@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -21,6 +22,7 @@ export function GuardianLensSheet({
   beneficiary,
   onClose,
 }: GuardianLensSheetProps) {
+  const COLORS = useThemeColors();
   const { data: storiesData } = useStories({ limit: 50 });
   const { data: capsulesData } = useCapsules();
 
@@ -59,7 +61,7 @@ export function GuardianLensSheet({
   };
 
   return (
-    <View className="flex-grow px-5 pb-8 pt-2">
+    <View className="flex-grow pb-8 pt-2">
       {/* Top Bar with Simulation Pill & 44x44 Close Button */}
       <View className="flex-row items-center justify-between mb-4">
         <View className="flex-row items-center gap-1.5 bg-brand/10 rounded-full px-3 py-1">

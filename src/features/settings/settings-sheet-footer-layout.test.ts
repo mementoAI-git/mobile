@@ -101,12 +101,12 @@ describe('Settings sheet footer layout', () => {
     expect(manager).toContain('getSheetBottomPadding(insets.bottom');
   });
 
-  test('uses responsive gutter in SheetManager container', () => {
+  test('uses 20px gutter in SheetManager container', () => {
     const manager = readFileSync(
       new URL('../../components/sheets/SheetManager.tsx', import.meta.url),
       'utf8',
     );
-    expect(manager).toContain('screenGutter');
-    expect(manager).toContain('paddingHorizontal: screenGutter(windowWidth)');
+    expect(manager).not.toContain('screenGutter');
+    expect(manager).toContain('paddingHorizontal: config?.horizontalPadding ?? 20');
   });
 });

@@ -58,7 +58,7 @@ export default function OnboardWelcomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
-      <View className="flex-row items-center justify-between px-6 pt-2">
+      <View className="flex-row items-center justify-between px-4 pt-2">
         <Animated.View style={headerLogoAnimatedStyle}>
           <Logo size="md" />
         </Animated.View>
@@ -94,7 +94,7 @@ export default function OnboardWelcomeScreen() {
           onLayout={(e) => {
             titleY.value = e.nativeEvent.layout.y;
           }}
-          className="px-6 gap-3"
+          className="px-4 gap-3"
         >
           <AnimatedText
             entering={FadeInDown.delay(400).springify()}
@@ -110,7 +110,7 @@ export default function OnboardWelcomeScreen() {
           </Animated.Text>
         </View>
 
-        <View className="px-6 mt-10 gap-6">
+        <View className="px-4 mt-10 gap-6">
           <Text className="text-brand uppercase tracking-wider" style={TYPE.label}>
             What can you do on Memento?
           </Text>
@@ -132,7 +132,7 @@ export default function OnboardWelcomeScreen() {
           />
         </View>
 
-        <View className="px-6 mt-10">
+        <View className="px-4 mt-10">
           <View className="pt-6 border-t border-stroke-weak gap-2">
             <Text className="text-text-muted uppercase tracking-widest" style={TYPE.eyebrow}>
               Memento is private by design
@@ -143,7 +143,7 @@ export default function OnboardWelcomeScreen() {
           </View>
         </View>
 
-        <View className="px-6 mt-10">
+        <View className="px-4 mt-10">
           <Button
             onPress={() => router.push('/(onboard)/nickname')}
             size="lg"

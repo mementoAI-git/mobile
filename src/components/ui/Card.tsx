@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, ViewProps } from 'react-native';
 import { cn } from '@/lib/utils';
-import { COLORS } from '@/constants/tokens';
 
 interface CardProps extends ViewProps {
   children: React.ReactNode;
@@ -9,8 +8,8 @@ interface CardProps extends ViewProps {
   size?: 'default' | 'sm';
 }
 
-// Matches web card.tsx:
-//   rounded-2xl (16px)
+// Mobile card default:
+//   rounded-[10px] (10px)
 //   bg-card (#ffffff)
 //   ring-1 ring-foreground/10 → approximated with border border-stroke-weaker + shadow-card
 //   overflow-hidden (images clip to radius)
@@ -19,7 +18,7 @@ export function Card({ children, className, size = 'default', ...props }: CardPr
   return (
     <View
       className={cn(
-        'bg-card rounded-2xl border border-stroke-weaker overflow-hidden px-4',
+        'bg-card rounded-[10px] border border-stroke-weaker overflow-hidden px-4',
         size === 'default' ? 'py-4 gap-4' : 'py-3 gap-3',
         className,
       )}

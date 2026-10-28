@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -36,9 +37,10 @@ const MemoTagPillItem = React.memo(function MemoTagPillItem({
   tag: string;
   onRemove: (t: string) => void;
 }) {
+  const COLORS = useThemeColors();
   const handleRemove = useCallback(() => onRemove(tag), [tag, onRemove]);
   return (
-    <View className="flex-row items-center bg-white border border-stroke-weaker rounded-full pl-3 pr-1 py-1 h-8 gap-1 shadow-sm">
+    <View className="flex-row items-center bg-card border border-stroke-weaker rounded-full pl-3 pr-1 py-1 h-8 gap-1 shadow-sm">
       <Text className="text-text-strong" style={TYPE.label}>#{tag}</Text>
       <TouchableOpacity onPress={handleRemove} className="p-1" hitSlop={12}>
         <X size={14} color={COLORS.textWeak} />
@@ -55,6 +57,7 @@ interface Props {
 }
 
 export function CreateMemorySheet({ onClose, editData }: Props) {
+  const COLORS = useThemeColors();
   const openSheet = useUiStore((s) => s.openSheet);
   const insets = useSafeAreaInsets();
   const { toast } = useToast();
@@ -210,7 +213,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingHorizontal: 24,
-          paddingTop: 8,
+          paddingTop: 0,
           paddingBottom: insets.bottom ? insets.bottom + 24 : 48,
           gap: 24
         }}

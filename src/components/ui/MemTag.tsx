@@ -15,7 +15,7 @@ export function MemTag({ label, className }: MemTagProps) {
   return (
     <View
       className={cn(
-        'rounded-full border border-sand-5 bg-sand-1 px-2 py-0.5 self-start',
+        'rounded-full border border-stroke-weak bg-fill-weak px-2 py-0.5 self-start',
         className,
       )}
     >

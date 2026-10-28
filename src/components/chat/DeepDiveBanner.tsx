@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { View, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -19,6 +20,7 @@ interface DeepDiveBannerProps {
  * Displays which dimension is active and provides a one-tap exit.
  */
 export function DeepDiveBanner({ dimensionLabel, onExit }: DeepDiveBannerProps) {
+  const COLORS = useThemeColors();
   return (
     <Animated.View entering={FadeInDown.duration(250)}>
       <View className="flex-row items-center gap-2 bg-brand/10 border border-brand/20 rounded-full px-3 py-1.5">

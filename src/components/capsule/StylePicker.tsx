@@ -10,7 +10,7 @@ import { CAPSULE_THEMES, Theme } from '@/constants/themes';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize } from '@/constants/responsive';
-import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding, getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
 import { useCapsuleThemeFonts } from '@/hooks/use-capsule-theme-fonts';
 
 interface StylePickerProps {
@@ -46,7 +46,7 @@ export function StylePicker({
 
   return (
     <>
-      <View className="bg-white rounded-2xl p-4 gap-4 border border-stroke-weaker shadow-sm w-full">
+      <View className="bg-card rounded-2xl p-4 gap-4 border border-stroke-weaker shadow-sm w-full">
         <View className="flex-row items-end justify-between gap-4">
           {/* Theme Circles */}
           <View className="flex-1">
@@ -123,9 +123,10 @@ export function StylePicker({
         topInset={getSheetTopInset(insets.top)}
         snapPoints={['50%']}
         backdropComponent={renderBackdrop}
+        handleStyle={SHEET_HEADER_HANDLE_STYLE}
         handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
       >
-        <View className="px-5 py-4 border-b border-stroke-weaker flex-row justify-between items-center">
+        <View className="px-5 pb-4 border-b border-stroke-weaker flex-row justify-between items-center">
           <Text style={TYPE.uiTitle}>Select Theme</Text>
           <TouchableOpacity onPress={() => themeModalRef.current?.dismiss()} hitSlop={12}>
             <X size={iconSize(20)} color={COLORS.textWeak} />
@@ -138,7 +139,7 @@ export function StylePicker({
               <TouchableOpacity
                 key={theme.id}
                 onPress={() => { onThemeSelect(theme); themeModalRef.current?.dismiss(); }}
-                className={`p-4 rounded-xl flex-row items-center justify-between border ${isSelected ? 'border-brand bg-brand/5' : 'border-stroke-weaker bg-white'}`}
+                className={`p-4 rounded-xl flex-row items-center justify-between border ${isSelected ? 'border-brand bg-brand/5' : 'border-stroke-weaker bg-card'}`}
               >
                 <View className="flex-row items-center gap-3">
                   <View className="size-8 rounded-full border border-stroke-weak" style={{ backgroundColor: theme.color }} />
@@ -157,9 +158,10 @@ export function StylePicker({
         topInset={getSheetTopInset(insets.top)}
         snapPoints={['40%']}
         backdropComponent={renderBackdrop}
+        handleStyle={SHEET_HEADER_HANDLE_STYLE}
         handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
       >
-        <View className="px-5 py-4 border-b border-stroke-weaker flex-row justify-between items-center">
+        <View className="px-5 pb-4 border-b border-stroke-weaker flex-row justify-between items-center">
           <Text style={TYPE.uiTitle}>Select Size</Text>
           <TouchableOpacity onPress={() => sizeModalRef.current?.dismiss()} hitSlop={12}>
             <X size={iconSize(20)} color={COLORS.textWeak} />
@@ -172,7 +174,7 @@ export function StylePicker({
               <TouchableOpacity
                 key={size}
                 onPress={() => { onSizeSelect(size); sizeModalRef.current?.dismiss(); }}
-                className={`p-4 rounded-xl flex-row items-center justify-between border ${isSelected ? 'border-brand bg-brand/5' : 'border-stroke-weaker bg-white'}`}
+                className={`p-4 rounded-xl flex-row items-center justify-between border ${isSelected ? 'border-brand bg-brand/5' : 'border-stroke-weaker bg-card'}`}
               >
                 <Text className={isSelected ? 'text-brand' : 'text-text-strong'} style={TYPE.label}>{size}</Text>
                 {isSelected && <Check size={iconSize(20)} color={COLORS.brand} />}

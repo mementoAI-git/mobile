@@ -2,6 +2,9 @@ import React, { useCallback, useMemo } from 'react';
 import { View, ScrollView } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { useRouter } from 'expo-router';
+import { getCategoryMeta } from '@/constants/categories';
+import { getExploreCategoryTitle } from '@/features/explore/question-presentation';
+import * as Haptics from 'expo-haptics';
 import { TYPE } from '@/constants/typography';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useOverviewPrompts } from '@/hooks/queries/use-prompts';
@@ -10,30 +13,17 @@ import { prioritizePromptsByEnrichment } from '@/features/prompts/prompt-priorit
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { TopicCard } from './TopicCard';
 
-const CATEGORY_META: Record<string, { image: any }> = {
-  career: { image: require('../../../assets/images/categories/career.webp') },
-  family: { image: require('../../../assets/images/categories/family.webp') },
-  relationship: { image: require('../../../assets/images/categories/relationship.webp') },
-  belief: { image: require('../../../assets/images/categories/belief.webp') },
-  purpose: { image: require('../../../assets/images/categories/purpose.webp') },
-  'life-transition': { image: require('../../../assets/images/categories/life-transition.webp') },
-  wellbeing: { image: require('../../../assets/images/categories/wellbeing.webp') },
-  identity: { image: require('../../../assets/images/categories/identify.webp') },
-};
-
 // Isolated per-item component so each prompt's onPress is a stable useCallback
 // rather than an inline closure recreated on every parent render.
 function TopicCardItem({
   prompt,
-  badge,
   router,
 }: {
   prompt: any;
-  badge?: string;
   router: ReturnType<typeof useRouter>;
 }) {
-  const cat = prompt.category?.toLowerCase() || 'wellbeing';
-  const meta = CATEGORY_META[cat] || CATEGORY_META['wellbeing'];
+  const meta = getCategoryMeta(prompt.category);
+  const categoryTitle = getExploreCategoryTitle(prompt.category);
 
   const handlePress = useCallback(() => {
     router.push({
@@ -42,17 +32,16 @@ function TopicCardItem({
         id: prompt._id || '',
         type: 'prompt',
         promptTitle: prompt.title || '',
-        promptLabel: prompt.category || '',
+        promptLabel: categoryTitle,
       },
     });
-  }, [router, prompt._id, prompt.title, prompt.category]);
+  }, [router, prompt._id, prompt.title, categoryTitle]);
 
   return (
     <TopicCard
       title={prompt.title}
-      image={meta.image}
-      category={prompt.category}
-      badge={badge}
+      image={meta?.image}
+      category={categoryTitle}
       onPress={handlePress}
     />
   );
@@ -71,6 +60,7 @@ export function BrowseTopicsSection() {
   }, [rawPrompts, stats]);
 
   const handleSeeAll = useCallback(() => {
+    Haptics.selectionAsync();
     router.push('/(tabs)/explore');
   }, [router]);
 
@@ -92,10 +82,10 @@ export function BrowseTopicsSection() {
   return (
     <Animated.View entering={FadeInDown.delay(250)} className="gap-5">
       <View className="flex-row items-center justify-between px-1">
-        <Animated.Text className="text-text-strong" style={TYPE.sectionTitle}>
-          Browse conversations <Animated.Text className="text-text-weak italic">by topics</Animated.Text>
+        <Animated.Text className="text-text-strong flex-1 pr-4" style={TYPE.sectionTitle}>
+          Browse conversations <Animated.Text className="text-text-weak" style={TYPE.sectionTitleWeak}>by topics</Animated.Text>
         </Animated.Text>
-        <TouchableOpacity onPress={handleSeeAll} activeOpacity={0.7}>
+        <TouchableOpacity onPress={handleSeeAll} accessibilityRole="button" accessibilityLabel="See all topics" className="min-h-11 justify-center shrink-0" activeOpacity={0.7}>
           <Animated.Text className="text-brand" style={TYPE.buttonSmall}>See all</Animated.Text>
         </TouchableOpacity>
       </View>
@@ -104,14 +94,13 @@ export function BrowseTopicsSection() {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerClassName="px-1 gap-5"
-        snapToInterval={240}
+        snapToInterval={260}
         decelerationRate="fast"
       >
         {prioritizedPrompts.map((item, index) => (
           <MemoTopicCardItem
             key={item.prompt._id || item.prompt.title || index}
             prompt={item.prompt}
-            badge={item.isLowestDimension ? 'Grow this chapter' : undefined}
             router={router}
           />
         ))}

@@ -1,0 +1,26 @@
+import catalog from './explore-catalog.generated.json';
+import { resolveExploreCategorySlug } from './category-identity';
+import endpoint from '@/api/endpoint';
+
+export type ExploreQuestionSource = 'starter' | 'ai-generated' | 'legacy';
+export type ExploreQuestionStatus = 'unanswered' | 'answered' | 'skipped' | 'not-relevant';
+
+/** Same artwork seed and service as the web list and conversation header. */
+export function getQuestionIdenticonUrl(questionId: string, format: 'svg' | 'png' = 'svg'): string {
+  return `https://api.dicebear.com/10.x/disco/${format}?seed=${encodeURIComponent(questionId)}`;
+}
+
+export function getQuestionSourceLabel(source?: ExploreQuestionSource): string {
+  return source === 'ai-generated' ? 'Just for you'
+    : source === 'legacy' ? 'From your history' : 'Starter question';
+}
+
+export function getExploreCategoryTitle(value?: string | null): string {
+  const slug = resolveExploreCategorySlug(value);
+  return catalog.find(category => category.slug === slug)?.title || value?.trim() || 'Explore topics';
+}
+
+export function getQuestionFeedbackRequest(questionId: string, status: 'skipped' | 'not-relevant') {
+  if (!questionId.trim()) throw new Error('Question ID is required');
+  return { url: `${endpoint.promptDetails}${encodeURIComponent(questionId)}/feedback`, body: { status } };
+}

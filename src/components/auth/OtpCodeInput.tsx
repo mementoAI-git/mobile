@@ -114,7 +114,7 @@ export function OtpCodeInput({
         autoFocus={autoFocus}
         caretHidden
         accessibilityLabel="Verification code"
-        accessibilityHint={error ? 'Check your six-digit code and try again.' : 'Enter the six-digit code from your email.'}
+        accessibilityHint={error ? 'Check your six-digit code and try again.' : 'Enter or paste your six-digit verification code.'}
         accessibilityState={{ disabled }}
         style={TYPE.input}
         className="absolute inset-0 w-full h-full text-transparent bg-transparent"

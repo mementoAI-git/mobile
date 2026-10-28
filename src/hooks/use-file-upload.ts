@@ -32,7 +32,7 @@ export function useFileUpload() {
 
       throw new Error('Upload failed');
     } catch (error) {
-      logger.error('File upload error:', error);
+      logger.handledError('File upload error:', error);
       toast('Couldn’t upload the file. Try again.', 'error');
       return null;
     }
@@ -66,7 +66,7 @@ export function useFileUpload() {
       
       return null;
     } catch (error) {
-      logger.error('Error picking document:', error);
+      logger.handledError('Error picking document:', error);
       toast('Couldn’t select the file. Try again.', 'error');
       return null;
     }

@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ActivityIndicator, Keyboard, TextInput as RNTextInput, Platform } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -19,7 +20,7 @@ import { RecordingIconButton } from '@/components/ui/RecordingIconButton';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
 import { LinkPreviews } from '@/components/ui/LinkPreview';
 import type { IDailyPromptCapture } from '@/types';
-import { logger } from '@/lib/logger';
+import { toast } from '@/components/ui/Toast';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { getMediaUploadInput } from '@/features/media/attachments';
@@ -31,6 +32,7 @@ import { useAttachmentUploads } from '@/features/media/use-attachment-uploads';
 import type { IFile } from '@/types';
 
 export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
+  const COLORS = useThemeColors();
   const [text, setText] = useState<string>('');
   const [isPickingImage, setIsPickingImage] = useState<boolean>(false);
 
@@ -68,7 +70,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
     insert: 'append',
     isMountedRef,
     onUploadFailure: () => {
-      logger.error('Upload failed');
+      toast('We couldn’t upload the attachment. Please try again.', 'error');
     },
   });
   const uploadedAttachmentIds = useMemo(
@@ -175,7 +177,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
   };
 
   return (
-    <View className="px-5 pb-8 pt-2">
+    <View className="pb-8">
       {/* Header */}
       <View className="flex-row items-center justify-between mb-4">
         <Text className="text-text-strong" style={TYPE.sectionTitle}>
@@ -193,7 +195,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
       {/* Prompt question card — only shown when opened from a daily prompt */}
       {dailyPrompt?.pinned_text ? (
         <View
-          className="bg-white rounded-[20px] border border-stroke-weaker px-4 py-4 mb-4 gap-2"
+          className="bg-card rounded-[20px] border border-stroke-weaker px-4 py-4 mb-4 gap-2"
           style={{ shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 }}
         >
           <View
@@ -251,7 +253,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
             <TouchableOpacity
               onPress={handlePickImage}
               disabled={isUploadingAttachment || isPickingImage || isRecording}
-              className={`p-2 rounded-full border shadow-sm flex-row items-center gap-1 ${attachments.length > 0 ? 'bg-brand-tint border-brand-weak' : 'bg-white border-stroke-weaker'} ${isRecording ? 'opacity-50' : ''}`}
+              className={`p-2 rounded-full border shadow-sm flex-row items-center gap-1 ${attachments.length > 0 ? 'bg-brand-tint border-brand-weak' : 'bg-card border-stroke-weaker'} ${isRecording ? 'opacity-50' : ''}`}
             >
               <ImageIcon size={20} color={attachments.length > 0 ? COLORS.brand : COLORS.textBase} />
               {attachments.length > 0 && <Text className="text-brand ml-1" style={TYPE.metadata}>{attachments.length}</Text>}

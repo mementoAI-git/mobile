@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState, useRef } from 'react';
 import {
   View,
@@ -64,6 +65,7 @@ export function Tabs({
   style,
   ...props
 }: TabsProps) {
+  const COLORS = useThemeColors();
   const handlePress = (key: string) => {
     if (key === activeKey) return;
     Haptics.selectionAsync();

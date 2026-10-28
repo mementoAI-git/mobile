@@ -31,7 +31,7 @@ export default function BeneficiaryOnboardScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.onboardingCream }} edges={['top', 'bottom']}>
-      <View className="flex-row items-center justify-between px-6 pt-2">
+      <View className="flex-row items-center justify-between px-4 pt-2">
         <Logo size="md" />
         <TouchableOpacity
           onPress={handleComplete}
@@ -46,7 +46,7 @@ export default function BeneficiaryOnboardScreen() {
       </View>
 
       <ScrollView
-        contentContainerClassName="flex-grow px-8 pt-10 pb-10"
+        contentContainerClassName="flex-grow px-4 pt-10 pb-10"
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInUp.duration(600)} className="mb-10 items-center">

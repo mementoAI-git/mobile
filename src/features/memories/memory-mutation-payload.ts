@@ -3,6 +3,7 @@ import type { MemoryVisibility } from './memory-audience';
 
 export interface MemoryMutationPayload {
   title: string;
+  capture_source?: 'quick' | 'standard';
   body: string;
   tags?: string[];
   status?: 'draft' | 'save' | string;

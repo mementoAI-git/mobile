@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import {
   Switch as RNSwitch,
@@ -34,6 +35,7 @@ export function Switch({
   voiceLabel,
   ...props
 }: SwitchProps) {
+  const COLORS = useThemeColors();
   useVoicePressTarget(
     voiceLabel ?? props.accessibilityLabel,
     () => onValueChange(!value),

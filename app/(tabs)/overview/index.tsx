@@ -1,3 +1,6 @@
+import { isFutureCalendarDay } from '@/features/overview/calendar-selection';
+import { getGreeting, getGreetingPunctuation } from '@/features/overview/greeting';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   View,
@@ -12,21 +15,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Plus from 'lucide-react-native/icons/plus';
 import Zap from 'lucide-react-native/icons/zap';
-import Trophy from 'lucide-react-native/icons/trophy';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import { useUiStore } from '@/store';
 import { useUserStats, useMemoriesStats, useCapsuleStats } from '@/hooks/queries/use-overview';
 import { useStories } from '@/hooks/queries/use-memories';
 import { useUserStore } from '@/store';
-import { DashboardHeader, OverviewSkeleton, GradientText, GreetingIcon, JourneyStatIcon, Button, ZapIconWarm } from '@/components/ui';
+import { DashboardHeader, OverviewSkeleton, GradientText, GreetingIcon, JourneyStatIcon, Button } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { TYPE } from '@/constants/typography';
+import { TYPE, TYPE_METRICS } from '@/constants/typography';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/constants/query-keys';
 import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 import { DailyPromptSection } from '@/components/overview/DailyPromptSection';
-import { RecentActivitiesSection } from '@/components/overview/RecentActivitiesSection';
+import { useCalendarStories } from '@/hooks/queries/use-calendar-stories';
+import { storyDaysInMonth } from '@/features/overview/story-calendar';
 import { MemorySpotlightCard } from '@/components/overview/MemorySpotlightCard';
 import { BrowseTopicsSection } from '@/components/overview/BrowseTopicsSection';
 import * as Haptics from 'expo-haptics';
@@ -40,10 +43,6 @@ import { CalendarCard } from '@/components/overview/CalendarCard';
 import { useVoiceScroll } from '@/features/voice-control/hooks';
 
 const WELCOME_BG = require('../../../assets/images/backgrounds/welcome_bg.png');
-const ENRICHMENT_BG = require('../../../assets/images/backgrounds/enrichment_bg.png');
-const MEMORIES_BG = require('../../../assets/images/backgrounds/dash_memories_card.png');
-const BENEFI_BG = require('../../../assets/images/backgrounds/dash_benefi_card.png');
-const STREAK_BG = require('../../../assets/images/backgrounds/side_cards_for_streak.png');
 
 
 
@@ -54,9 +53,6 @@ interface OverviewJourneyCardProps {
   valueElement: React.ReactNode;
   icon: any;
   onPress?: () => void;
-  bgColor?: string;
-  borderColor?: string;
-  bgImage?: any;
 }
 
 const OverviewJourneyCard = React.memo(function OverviewJourneyCard({
@@ -64,9 +60,6 @@ const OverviewJourneyCard = React.memo(function OverviewJourneyCard({
   valueElement,
   icon,
   onPress,
-  bgColor = 'bg-white',
-  borderColor = 'border-stroke-weaker',
-  bgImage
 }: OverviewJourneyCardProps) {
   const scale = useSharedValue(1);
 
@@ -85,7 +78,7 @@ const OverviewJourneyCard = React.memo(function OverviewJourneyCard({
 
   const content = (
     <View className="flex-row items-center justify-between p-5 flex-1">
-      <View className="gap-1 flex-1">
+      <View className="gap-3 flex-1">
         <Text
           className="uppercase tracking-widest text-text-weak"
           style={TYPE.eyebrow}
@@ -124,19 +117,9 @@ const OverviewJourneyCard = React.memo(function OverviewJourneyCard({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={0.9}
-        className={`w-full rounded-2xl border border-stroke-weak ${bgColor} flex-row items-center justify-between overflow-hidden`}
+        className="w-full min-h-[96px] rounded-2xl border border-stroke-weak bg-fill-weak flex-row items-center justify-between overflow-hidden"
       >
-        {bgImage ? (
-          <ImageBackground
-            source={bgImage}
-            style={{ width: '100%' }}
-            resizeMode="cover"
-          >
-            {content}
-          </ImageBackground>
-        ) : (
-          content
-        )}
+        {content}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -144,17 +127,9 @@ const OverviewJourneyCard = React.memo(function OverviewJourneyCard({
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour >= 4 && hour < 7) return "Up early today,";
-  if (hour >= 7 && hour < 12) return "Good morning,";
-  if (hour >= 12 && hour < 17) return "Good afternoon,";
-  if (hour >= 17 && hour < 21) return "Good evening,";
-  if (hour >= 21) return "Night owl mode,";
-  return "Still going,";
-}
 
 export default function OverviewScreen() {
+  const COLORS = useThemeColors();
   React.useEffect(() => {
     runtimeDiagnostics.record('screen', 'mount', { screen: 'overview' });
     return () => runtimeDiagnostics.record('screen', 'unmount', { screen: 'overview' });
@@ -306,24 +281,32 @@ export default function OverviewScreen() {
   const isLoading = statsLoading || memoriesLoading || capsuleLoading;
 
   // ── Dynamic Calendar & Streak State ────────────────────────────────────────
+  const { data: calendarStories = [] } = useCalendarStories();
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(null);
 
   const handlePrevMonth = useCallback(() => {
     setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    setSelectedCalendarDay(null);
   }, []);
 
   const handleNextMonth = useCallback(() => {
     setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    setSelectedCalendarDay(null);
   }, []);
 
+  const selectCalendarDate = useCallback((date: Date) => {
+    setCalendarMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    setSelectedCalendarDay(date.getDate());
+  }, []);
   const handleResetMonth = useCallback(() => {
-    setCalendarMonth(new Date());
-  }, []);
-
+    openSheet('calendar-date', { date: calendarMonth, onSelect: selectCalendarDate });
+  }, [openSheet, calendarMonth, selectCalendarDate]);
   const handleCalendarDayPress = useCallback((day: number) => {
-    setSelectedCalendarDay((prev) => (prev === day ? null : day));
-  }, []);
+    if (isFutureCalendarDay(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day))) return;
+    setSelectedCalendarDay(day);
+    openSheet('calendar-stories', { date: new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day) });
+  }, [openSheet, calendarMonth]);
 
   // Live formatted time for calendar card
   const [currentTime, setCurrentTime] = useState(() => {
@@ -351,33 +334,12 @@ export default function OverviewScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  // Compute streak days falling within the displayed calendar month
-  const calendarStreakDays = useMemo(() => {
-    const days = new Set<number>();
-    const year = calendarMonth.getFullYear();
-    const month = calendarMonth.getMonth();
-    const today = new Date();
-    const todayNorm = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-    if (streakCount > 0) {
-      const streakStart = new Date(todayNorm);
-      streakStart.setDate(todayNorm.getDate() - (streakCount - 1));
-
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      for (let d = 1; d <= daysInMonth; d++) {
-        const cur = new Date(year, month, d);
-        if (cur >= streakStart && cur <= todayNorm) {
-          days.add(d);
-        }
-      }
-    }
-
-    return Array.from(days);
-  }, [calendarMonth, streakCount]);
+  const calendarStreakDays = useMemo(() => storyDaysInMonth(calendarStories, calendarMonth), [calendarStories, calendarMonth]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
       <DashboardHeader
+        compactTitle
         title="Overview"
         onStreakPress={openStreakSheet}
       />
@@ -389,146 +351,61 @@ export default function OverviewScreen() {
           <Animated.ScrollView
             ref={voiceScrollRef}
             showsVerticalScrollIndicator={false}
-            contentContainerClassName="px-6 pt-6 pb-32 gap-8"
+            contentContainerClassName="px-4 pt-6 pb-32 gap-10"
             onScroll={scrollHandler}
             scrollEventThrottle={16}
             refreshControl={
               <RefreshControl refreshing={manualRefreshing} onRefresh={handleManualRefresh} tintColor={COLORS.brand} />
             }
           >
-            {/* ── Editorial Greeting ────────────────────────────────── */}
-            <Animated.View entering={FadeInDown.duration(600)} className="flex-row items-start gap-4">
-              <GreetingIcon type={useBright ? 'sun' : 'moon'} size={40} />
-              <View className="flex-1">
-                <Animated.Text
-                  className="text-text-strong"
-                  style={TYPE.greeting}
-                >
-                  {greeting}
-                  {displayName && (
-                    <Animated.Text style={[
-                      TYPE.greeting,
-                      {
-                        color: COLORS.success,
-                        fontStyle: 'italic',
-                      },
-                    ]}
-                    >
-                      {' '}
-                      {displayName}.</Animated.Text>
-                  )}
-                </Animated.Text>
-              </View>
-            </Animated.View>
-
-            {/* ── Quick-Capture Status ─────────────────────────────── */}
-            {quickPending > 0 && (
-              <TouchableOpacity
-                onPress={() => router.push('/(tabs)/stories')}
-                activeOpacity={0.7}
-                className="flex-row items-center gap-3 bg-brand/5 rounded-2xl p-4"
-              >
-                <View className="size-8 bg-brand rounded-full items-center justify-center">
-                  <Zap size={14} color="white" fill="white" />
+            <View className="gap-10">
+              {/* ── Editorial Greeting ────────────────────────────────── */}
+              <Animated.View entering={FadeInDown.duration(600)} className="flex-row items-start gap-3">
+                <GreetingIcon type={useBright ? 'sun' : 'moon'} size={TYPE_METRICS.greeting.lineHeight} />
+                <View className="flex-1">
+                  <Animated.Text
+                    className="text-text-strong"
+                    style={TYPE.greeting}
+                  >
+                    {displayName ? greeting : greeting.replace(/,$/, getGreetingPunctuation(greeting))}
+                    {displayName && (
+                      <Animated.Text style={[
+                        TYPE.greetingName,
+                        {
+                          color: COLORS.success,
+                        },
+                      ]}
+                      >
+                        {' '}
+                        {displayName}{getGreetingPunctuation(greeting)}</Animated.Text>
+                    )}
+                  </Animated.Text>
                 </View>
-                <Animated.Text className="text-text-strong flex-1" style={TYPE.label}>
-                  <Animated.Text className="text-brand" style={TYPE.label}>{quickPending}</Animated.Text> quick capture{quickPending > 1 ? 's' : ''} finishing up...
-                </Animated.Text>
-                <ChevronRight size={16} color={COLORS.brand} />
-              </TouchableOpacity>
-            )}
+              </Animated.View>
 
-            {/* ── Two-Card Hero Section ─────────────────────────────── */}
-            <View className="gap-6">
-              {/* Card 1: Primary Action Hero */}
               <Animated.View entering={FadeInDown.delay(100)}>
-                <View className="flex-row items-start justify-between">
-                  <Text
-                    className="text-text-strong flex-1"
-                    style={TYPE.body}
-                  >
-                    What's on your mind today?
-                  </Text>
-                  <TouchableOpacity
-                    onPress={openStreakSheet}
-                    activeOpacity={0.8}
-                    className="flex-row items-center gap-3 px-3.5 py-2 rounded-full border border-white/30"
-                  >
-                    <View className="flex-row items-center gap-1.5">
-                      <ZapIconWarm size={20} />
-                      <Text className="text-text-strong" style={TYPE.buttonSmall}>{streakCount}</Text>
-                    </View>
-                    <View className="w-px h-3 bg-stroke-weaker" />
-                    <View className="flex-row items-center gap-1.5">
-                      <Trophy size={14} color={COLORS.warning} />
-                      <Text className="text-text-strong" style={TYPE.buttonSmall}>{enrichmentScore}%</Text>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-
-                {/* <ImageBackground
-                  source={WELCOME_BG}
-                  className="rounded-2xl overflow-hidden bg-white"
-                  imageStyle={{ borderRadius: 16 }}
-                >
-
-                  <View className="p-7 gap-8" style={{ borderRadius: 16 }}>
-                    <View className="flex-row items-start justify-between">
-                      <Text
-                        className="text-text-strong flex-1"
-                        style={TYPE.bodyLarge}
-                      >
-                        What's on your{"\n"}mind today?
-                      </Text>
-                      <TouchableOpacity
-                        onPress={openStreakSheet}
-                        activeOpacity={0.8}
-                        className="flex-row items-center gap-3 px-3.5 py-2 rounded-full border border-white/30"
-                      >
-                        <View className="flex-row items-center gap-1.5">
-                          <ZapIconWarm size={20} />
-                          <Text className="text-text-strong" style={TYPE.buttonSmall}>{streakCount}</Text>
-                        </View>
-                        <View className="w-px h-3 bg-stroke-weaker" />
-                        <View className="flex-row items-center gap-1.5">
-                          <Trophy size={14} color={COLORS.warning} />
-                          <Text className="text-text-strong" style={TYPE.buttonSmall}>{enrichmentScore}%</Text>
-                        </View>
-                      </TouchableOpacity>
-                    </View>
-
-                    <View className="flex-row items-center gap-3">
-                      <Button
-                        onPress={handleAddStory}
-                        size="lg"
-                        variant="primary"
-                        className="flex-[1.5]"
-                        leftIcon={<Plus size={20} color={COLORS.textInverse} strokeWidth={3} />}
-                      >
-                        Add story
-                      </Button>
-
-                      <Button
-                        onPress={handleQuickCapture}
-                        size="lg"
-                        variant="secondary"
-                        className="flex-1 bg-white border-0 shadow-none"
-                        leftIcon={<UiLightning01 size={20} color={COLORS.textBase} strokeWidth={2} />}
-                      >
-                        Quick capture
-                      </Button>
-                    </View>
-                  </View>
-                </ImageBackground> */}
-
                 <MemoryPromptCard onAddStory={handleAddStory} />
               </Animated.View>
 
-              {/* ── Daily Prompts ─────────────────────────────────────── */}
-              <DailyPromptSection />
-
-
+              {/* ── Quick-Capture Status ─────────────────────────────── */}
+              {quickPending > 0 && (
+                <TouchableOpacity
+                  onPress={() => router.push('/(tabs)/stories')}
+                  activeOpacity={0.7}
+                  className="flex-row items-center gap-3 bg-brand/5 rounded-2xl p-4"
+                >
+                  <View className="size-8 bg-brand rounded-full items-center justify-center">
+                    <Zap size={14} color={COLORS.textInverse} fill="white" />
+                  </View>
+                  <Animated.Text className="text-text-strong flex-1" style={TYPE.label}>
+                    <Animated.Text className="text-brand" style={TYPE.label}>{quickPending}</Animated.Text> quick capture{quickPending > 1 ? 's' : ''} finishing up...
+                  </Animated.Text>
+                  <ChevronRight size={16} color={COLORS.brand} />
+                </TouchableOpacity>
+              )}
             </View>
+
+            <DailyPromptSection />
 
             {/* ── Interactive Spline Chart ────────────────────────── */}
             {/* <Animated.View entering={FadeInDown.delay(250)}>
@@ -545,18 +422,17 @@ export default function OverviewScreen() {
               <OverviewJourneyCard
                 label="ALL MEMORIES"
                 valueElement={
-                  <View className="gap-0.5">
+                  <View className="flex-row items-baseline gap-2">
                     <View className="flex-row items-baseline">
                       <Text className="text-info-strong" style={TYPE.stat}>{memoriesCount}</Text>
-                      <Text className="text-text-strong ml-1" style={TYPE.button}>items</Text>
+                      <Text className="text-text-strong ml-1" style={TYPE.body}>items</Text>
                     </View>
-                    <Text style={[TYPE.metadata, { color: COLORS.success }]}>
+                    <Text style={[TYPE.body, { color: COLORS.success }]}>
                       +{weeklyMemories} this week
                     </Text>
                   </View>
                 }
                 icon={<JourneyStatIcon type="memories" />}
-                bgImage={MEMORIES_BG}
                 onPress={handleGoToStories}
               />
 
@@ -564,12 +440,11 @@ export default function OverviewScreen() {
                 label="BENEFICIARIES"
                 valueElement={
                   <>
-                    <Text className="text-brand" style={TYPE.uiTitle}>{beneficiariesCount}</Text>
+                    <Text className="text-brand" style={TYPE.stat}>{beneficiariesCount}</Text>
                     <Text className="text-text-strong ml-1" style={TYPE.body}>people</Text>
                   </>
                 }
                 icon={<JourneyStatIcon type="beneficiaries" />}
-                bgImage={BENEFI_BG}
                 onPress={handleGoToSettings}
               />
 
@@ -577,31 +452,37 @@ export default function OverviewScreen() {
                 label="STREAK COUNT"
                 valueElement={
                   <>
-                    <Text className="text-text-strong" style={TYPE.body}>You're on a </Text>
-                    <Text className="text-brand" style={TYPE.body}>{streakCount}-day</Text>
-                    <Text className="text-text-strong" style={TYPE.body}> streak</Text>
+                    <Text className="text-brand" style={TYPE.stat}>{streakCount}</Text>
+                    <Text className="text-text-strong ml-1" style={TYPE.body}>day streak</Text>
                   </>
                 }
                 icon={<JourneyStatIcon type="streak" />}
-                bgImage={STREAK_BG}
               />
             </View>
 
             {/* Card 2: Enrichment Hero */}
             <Animated.View entering={FadeInDown.delay(200)}>
-              <ImageBackground
-                source={ENRICHMENT_BG}
-                style={{ width: '100%', borderRadius: 16, overflow: 'hidden' }}
-                resizeMode="cover"
-              >
-                <View className="p-5 gap-2" style={{ borderRadius: 16 }}>
-                  <Text className="text-text-strong tracking-widest" style={TYPE.buttonSmall}>
-                    Enrichment score
-                  </Text>
+              <View className="bg-fill-weak rounded-2xl overflow-hidden p-5 gap-3">
+                  <View className="flex-row items-center justify-between gap-3">
+                    <Text className="flex-1 text-text-strong tracking-widest" style={TYPE.buttonSmall}>
+                      Enrichment score
+                    </Text>
+                    <Button
+                      onPress={handleViewInsights}
+                      size="sm"
+                      variant="ghost"
+                      className="bg-active-fill shrink-0"
+                      textClassName="text-active-text"
+                      style={{ borderRadius: 100, height: 32, minHeight: 32 }}
+                      hitSlop={{ top: 6, bottom: 6, left: 0, right: 0 }}
+                    >
+                      View Insight
+                    </Button>
+                  </View>
 
                   <View className="flex-row items-center gap-4">
                     <GradientText
-                      colors={['#EA790E', '#E9CDAD']}
+                      colors={[COLORS.brand, COLORS.onboardingAmberLight]}
                       style={TYPE.displayStat}
                     >
                       {enrichmentScore}%
@@ -615,18 +496,7 @@ export default function OverviewScreen() {
                     </Text>
                   </View>
 
-                  <View className="flex-row items-center gap-4 mt-1">
-                    <Button
-                      onPress={handleViewInsights}
-                      size="md"
-                      variant="black"
-                      className="rounded-[6]"
-                    >
-                      View Insight
-                    </Button>
-                  </View>
-                </View>
-              </ImageBackground>
+              </View>
             </Animated.View>
 
             {/* ── Memory Spotlight ─────────────────────────────────── */}
@@ -634,9 +504,6 @@ export default function OverviewScreen() {
               spotlight={statsData?.spotlight}
               fallbackStory={fallbackStory}
             />
-
-            {/* ── Recent Activities ─────────────────────────────────── */}
-            <RecentActivitiesSection />
 
             <CalendarCard
               month={calendarMonth}
@@ -674,14 +541,14 @@ export default function OverviewScreen() {
                 backgroundColor: COLORS.brand,
                 alignItems: 'center',
                 justifyContent: 'center',
-                shadowColor: '#170B00',
+                shadowColor: COLORS.shadow,
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.2,
                 shadowRadius: 12,
                 elevation: 6,
               }}
             >
-              <Plus size={26} color="white" strokeWidth={2.5} />
+              <Plus size={26} color={COLORS.textInverse} strokeWidth={2.5} />
             </TouchableOpacity>
           </Animated.View>
         </>

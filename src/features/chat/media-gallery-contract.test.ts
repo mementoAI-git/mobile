@@ -43,7 +43,8 @@ describe('chat media gallery contract', () => {
     expect(preview).toContain('deleteCandidate');
     expect(preview).toContain('handleConfirmDelete');
     expect(preview).toContain('galleryConfirmationOverlay');
-    expect(preview).toContain('actionNotice');
+    expect(preview).toContain('<ToastViewport />');
+    expect(preview).not.toContain('galleryActionNotice');
     expect(preview).toContain('Share.share');
   });
 

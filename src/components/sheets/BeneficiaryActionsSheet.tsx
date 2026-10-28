@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { Text, View } from 'react-native';
 import Mail from 'lucide-react-native/icons/mail';
@@ -19,6 +20,7 @@ export function BeneficiaryActionsSheet({
   onRemove: (id: string, name: string) => void;
   onClose?: () => void;
 }) {
+  const COLORS = useThemeColors();
   return (
     <View className="px-1 pb-2 pt-3">
       <View className="items-center">

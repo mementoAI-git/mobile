@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { Platform, Text, View } from 'react-native';
 import { Pressable } from '@/components/ui/Touchable';
@@ -52,6 +53,7 @@ export function CallIndicatorLayout({ children }: { children: React.ReactNode })
 }
 
 function IslandCapsule({ topInset }: { topInset: number }) {
+  const COLORS = useThemeColors();
   const { voice } = useVoiceCall();
   const frame = islandCapsuleFrame(topInset);
   const time = formatVoiceCallDuration(voice.recordingTime);
@@ -101,6 +103,7 @@ function IslandCapsule({ topInset }: { topInset: number }) {
 }
 
 function StatusBarTint({ height }: { height: number }) {
+  const COLORS = useThemeColors();
   const { voice } = useVoiceCall();
 
   return (

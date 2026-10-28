@@ -55,7 +55,7 @@ export default function AcceptInviteScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background px-6">
+    <SafeAreaView className="flex-1 bg-background px-4">
       <View className="flex-1 justify-center gap-6">
         <Animated.Text className="text-center" style={TYPE.displayTitle}>💌</Animated.Text>
 

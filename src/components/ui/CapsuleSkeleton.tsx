@@ -6,7 +6,7 @@ export function CapsuleSkeleton() {
   return (
     <ScrollView 
       showsVerticalScrollIndicator={false} 
-      contentContainerClassName="px-5 pt-3 pb-8 gap-6"
+      contentContainerClassName="px-4 pt-3 pb-8 gap-10"
     >
       <Skeleton className="h-4 w-64" />
       

@@ -1,5 +1,7 @@
+import { withPressableBrandSurface } from '@/features/appearance/brand-button-surface';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
-import { Pressable, Text, ActivityIndicator, View, Platform } from 'react-native';
+import { Pressable, Text, ActivityIndicator, View, Platform, type StyleProp, type ViewStyle, type PressableProps } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -14,7 +16,7 @@ import { useVoicePressTarget } from '@/features/voice-control/hooks';
 import { voiceLabelFor } from '@/features/voice-control/label';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'black';
-type Size = 'xs' | 'sm' | 'md' | 'lg';
+type Size = 'xs' | 'sm' | 'md' | 'lg' | 'menu' | 'menu-settings';
 
 interface ButtonProps {
   onPress?: () => void;
@@ -22,13 +24,16 @@ interface ButtonProps {
   loading?: boolean;
   variant?: Variant;
   size?: Size;
-  rounded?: 'full' | 'xl' | 'lg' | '2xl';
+  rounded?: 'default' | 'full' | 'xl' | 'lg' | '2xl';
   className?: string;
+  style?: StyleProp<ViewStyle>;
+  hitSlop?: PressableProps['hitSlop'];
   textClassName?: string;
   children: React.ReactNode;
   fullWidth?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  iconOnly?: boolean;
   accessibilityLabel?: string;
   /**
    * What the host says to press this by voice ("tap Save"). Defaults to the
@@ -56,7 +61,7 @@ const variantStyles: Record<Variant, { container: string; text: string }> = {
     text: 'text-text-base',
   },
   destructive: {
-    container: 'bg-error-strong',
+    container: 'bg-danger-fill',
     text: 'text-white',
   },
   black: {
@@ -69,11 +74,27 @@ const sizeMetrics: Record<
   Size,
   {
     minHeight: number;
+    height?: number;
+    paddingVertical?: number;
     paddingHorizontal: number;
     gap: number;
     hitSlop?: { top: number; bottom: number; left: number; right: number };
   }
 > = {
+  menu: {
+    minHeight: 48,
+    height: 48,
+    paddingVertical: 0,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  'menu-settings': {
+    minHeight: 48,
+    height: 48,
+    paddingVertical: 0,
+    paddingHorizontal: responsiveSpace(24),
+    gap: 8,
+  },
   xs: {
     minHeight: mvs(24, 0.25),
     paddingHorizontal: responsiveSpace(10),
@@ -108,7 +129,15 @@ const sizeMetrics: Record<
   },
 };
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+// Resolve NativeWind classes on the primitive after Reanimated forwards props.
+// Styling the animated wrapper can drop the native button surface styles.
+const StyledPressable = React.forwardRef<
+  React.ElementRef<typeof Pressable>,
+  React.ComponentProps<typeof Pressable>
+>((props, ref) => <Pressable {...props} ref={ref} style={withPressableBrandSurface(props.style, props.className)} />);
+StyledPressable.displayName = 'StyledPressable';
+
+const AnimatedPressable = Animated.createAnimatedComponent(StyledPressable);
 
 export function Button({
   onPress,
@@ -116,16 +145,20 @@ export function Button({
   loading,
   variant = 'primary',
   size = 'md',
-  rounded = 'full',
+  rounded = 'default',
   className,
+  style,
+  hitSlop,
   textClassName,
   children,
   fullWidth = false,
   leftIcon,
   rightIcon,
+  iconOnly = false,
   accessibilityLabel,
   voiceLabel,
 }: ButtonProps) {
+  const COLORS = useThemeColors();
   const isDisabled = disabled || loading;
   useVoicePressTarget(voiceLabelFor(voiceLabel, accessibilityLabel, children), onPress, !isDisabled);
   const v = variantStyles[variant];
@@ -149,7 +182,7 @@ export function Button({
       accessibilityLabel={accessibilityLabel}
       onPress={handlePress}
       disabled={isDisabled}
-      hitSlop={s.hitSlop}
+      hitSlop={hitSlop ?? s.hitSlop}
       onPressIn={() => {
         scale.value = withTiming(0.97, { duration: 100 });
       }}
@@ -165,14 +198,19 @@ export function Button({
         animStyle,
         {
           minHeight: s.minHeight,
-          paddingHorizontal: s.paddingHorizontal,
+          height: s.height,
+          paddingVertical: s.paddingVertical,
+          paddingHorizontal: iconOnly ? 0 : s.paddingHorizontal,
           gap: s.gap,
         },
+        style,
       ]}
       className={cn(
         'flex-row items-center justify-center',
         v.container,
-        rounded === 'xl'
+        rounded === 'default'
+          ? 'rounded-[10px]'
+          : rounded === 'xl'
           ? 'rounded-xl'
           : rounded === '2xl'
             ? 'rounded-2xl'
@@ -192,14 +230,16 @@ export function Button({
       ) : (
         <>
           {leftIcon && <View>{leftIcon}</View>}
-          <Text
-            numberOfLines={1}
-            maxFontSizeMultiplier={1.4}
-            className={cn(v.text, textClassName)}
-            style={size === 'lg' ? TYPE.button : TYPE.buttonSmall}
-          >
-            {children}
-          </Text>
+          {iconOnly ? children : (
+            <Text
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.4}
+              className={cn(v.text, textClassName)}
+              style={size === 'lg' ? TYPE.button : TYPE.buttonSmall}
+            >
+              {children}
+            </Text>
+          )}
           {rightIcon && <View>{rightIcon}</View>}
         </>
       )}

@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
@@ -22,6 +23,7 @@ import { useLinkPreview, type LinkPreviewData } from '@/hooks/use-link-preview';
 // ─── Favicon Badge ────────────────────────────────────────────────────────────
 
 function FaviconBadge({ url, hostname }: { url: string; hostname: string }) {
+  const styles = useThemedStyles(stylesBase);
   const [failed, setFailed] = useState(false);
   const letter = (hostname.charAt(0) || 'L').toUpperCase();
 
@@ -65,7 +67,7 @@ export interface LinkPreviewCardProps {
   preview: LinkPreviewData;
   onRemove?: (url: string) => void;
   style?: StyleProp<ViewStyle>;
-  variant?: 'card' | 'chip';
+  variant?: 'card' | 'chip' | 'composer';
 }
 
 export function LinkPreviewCard({
@@ -74,6 +76,8 @@ export function LinkPreviewCard({
   style,
   variant = 'card',
 }: LinkPreviewCardProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const handlePress = useCallback(() => {
     Haptics.selectionAsync();
     Linking.openURL(preview.url).catch(() => {});
@@ -104,11 +108,11 @@ export function LinkPreviewCard({
   }
 
   return (
-    <View style={[styles.cardOuter, style]}>
+    <View style={[styles.cardOuter, variant === 'composer' && { backgroundColor: COLORS.fillWeak }, style]}>
       <TouchableOpacity
         onPress={handlePress}
         activeOpacity={0.85}
-        style={styles.cardTouchable}
+        style={[styles.cardTouchable, variant === 'composer' && { flexDirection: 'row-reverse', padding: 14, paddingRight: 24 }]}
       >
         {hasImage && (
           <ExpoImage
@@ -145,6 +149,8 @@ export function LinkPreviewCard({
       {Boolean(onRemove) && (
         <TouchableOpacity
           onPress={handleRemove}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss link preview"
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={styles.removeBtn}
         >
@@ -162,7 +168,7 @@ export interface LinkPreviewsProps {
   previews?: LinkPreviewData[];
   onRemove?: (url: string) => void;
   style?: StyleProp<ViewStyle>;
-  variant?: 'card' | 'chip';
+  variant?: 'card' | 'chip' | 'composer';
 }
 
 export function LinkPreviews({
@@ -172,6 +178,7 @@ export function LinkPreviews({
   style,
   variant = 'card',
 }: LinkPreviewsProps) {
+  const styles = useThemedStyles(stylesBase);
   const hookPreviews = useLinkPreview(propPreviews ? '' : text);
   const activePreviews = propPreviews ?? hookPreviews;
 
@@ -193,7 +200,7 @@ export function LinkPreviews({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   listContainer: {
     gap: 8,
     marginVertical: 6,

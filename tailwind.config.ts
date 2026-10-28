@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss';
+import { platformSelect } from 'nativewind/theme';
 
 const config: Config = {
   content: [
@@ -11,13 +12,20 @@ const config: Config = {
       colors: {
         // ── Page / Surface ─────────────────────────────────────────
         // App page background: warm journal cream | card: white
-        background: '#ffffff',
-        card:       '#ffffff',
+        background: 'var(--surface-background)',
+        card:       'var(--surface-card)',
+        'card-raised': 'var(--surface-raised)',
+        'card-overlay': 'var(--surface-overlay)',
+        'active-fill': 'var(--active-fill)',
+        'active-text': 'var(--active-text)',
+        'media-surface': '#12131A',
+        'danger-fill': '#C73A3A',
 
         // web: --fill-neutral-weak/weaker/strong (rgba(23,11,0,*))
-        'fill-weak':    'rgba(23,11,0,0.04)',
-        'fill-weaker':  'rgba(23,11,0,0.02)',
-        'fill-strong':  'rgba(23,11,0,0.9)',
+        'fill-weak':    'var(--fill-weak)',
+        'fill-weaker':  'var(--fill-weaker)',
+        'fill-chat-user': 'rgba(224,148,67,0.14)',
+        'fill-strong':  'var(--fill-strong)',
 
         // ── Brand (Orange) ─────────────────────────────────────────
         // Canonical brand color: #E98246 (rgb 233, 130, 70)
@@ -32,34 +40,34 @@ const config: Config = {
         // ── Text ───────────────────────────────────────────────────
         // web: --brown-1000/700/500/100 (warm brown-tinted rgba, NOT grey)
         text: {
-          strong:   'rgba(23,11,0,0.9)',    // --text-neutral-strong
-          base:     'rgba(23,11,0,0.65)',   // --text-neutral-weak
-          weak:     'rgba(23,11,0,0.45)',   // --text-neutral-weaker
+          strong:   'var(--theme-text-strong)',    // --theme-text-neutral-strong
+          base:     'var(--ink-body)',   // --theme-text-neutral-weak
+          weak:     'var(--theme-text-weak)',   // --theme-text-neutral-weaker
           /** Mobile-only step (0.3) — web uses disabled (0.1) as the next step */
-          muted:    'rgba(23,11,0,0.3)',
-          disabled: 'rgba(23,11,0,0.1)',    // --text-neutral-disabled
+          muted:    'var(--theme-text-muted)',
+          disabled: 'var(--theme-text-disabled)',    // --theme-text-neutral-disabled
           inverse:  '#FFFFFF',
-          brand:    '#E98246',              // --text-brand-strong
-          success:  '#067A57',              // --green-1000
-          error:    '#C73A3A',              // brick red — aligned with web
-          warning:  '#8F6C1A',             // --amber-1000
-          info:     '#1A80F7',             // --blue-1000
+          brand:    '#E98246',              // --theme-text-brand-strong
+          success:  'var(--semantic-success)',              // --green-1000
+          error:    'var(--semantic-error)',              // brick red — aligned with web
+          warning:  'var(--semantic-warning)',             // --amber-1000
+          info:     'var(--semantic-info)',             // --blue-1000
         },
 
         // ── Stroke / Border ────────────────────────────────────────
         // web: --stroke-neutral-strong/weak/weaker
         stroke: {
-          strong:  'rgba(23,11,0,0.45)',   // --stroke-neutral-strong
-          weak:    'rgba(23,11,0,0.1)',    // --stroke-neutral-weak
-          weaker:  'rgba(23,11,0,0.04)',   // --stroke-neutral-weaker
+          strong:  'var(--stroke-strong)',   // --stroke-neutral-strong
+          weak:    'var(--stroke-weak)',    // --stroke-neutral-weak
+          weaker:  'var(--stroke-weaker)',   // --stroke-neutral-weaker
           brand:   '#E98246',              // --stroke-brand-strong
         },
 
         // ── Status ─────────────────────────────────────────────────
-        success: { weak: 'rgba(10,204,146,0.05)',  strong: '#067A57' },
-        error:   { weak: 'rgba(199,58,58,0.05)',   strong: '#C73A3A' },
-        warning: { weak: 'rgba(255,192,46,0.05)',  strong: '#8F6C1A' },
-        info:    { weak: 'rgba(26,128,247,0.06)',  strong: '#1A80F7' },
+        success: { weak: 'var(--semantic-success-fill)',  strong: 'var(--semantic-success)' },
+        error:   { weak: 'var(--semantic-error-fill)',   strong: 'var(--semantic-error)' },
+        warning: { weak: 'var(--semantic-warning-fill)',  strong: 'var(--semantic-warning)' },
+        info:    { weak: 'var(--semantic-info-fill)',  strong: 'var(--semantic-info)' },
         stat: {
           pink:   '#D91DAA',
           purple: '#6621F0',
@@ -128,8 +136,12 @@ const config: Config = {
       },
 
       fontFamily: {
-        // All loaded via expo-google-fonts in _layout.tsx
-        sans:           ['Inter_400Regular', 'system-ui', 'sans-serif'],
+        // SF Pro Rounded is provided by iOS; Android keeps bundled Inter.
+        sans: platformSelect({
+          ios: ['ui-rounded'],
+          android: ['Inter_400Regular'],
+          default: ['ui-rounded', 'Inter_400Regular', 'system-ui', 'sans-serif'],
+        }),
         'sans-medium':  ['Inter_500Medium',  'system-ui', 'sans-serif'],
         'sans-semi':    ['Inter_600SemiBold','system-ui', 'sans-serif'],
         'sans-bold':    ['Inter_700Bold',    'system-ui', 'sans-serif'],

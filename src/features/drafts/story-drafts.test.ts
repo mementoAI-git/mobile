@@ -215,3 +215,51 @@ describe('story drafts', () => {
     expect(world.calls).not.toContain(`delete:${id}`);
   });
 });
+
+
+test('clearing all drafts offline removes every row and retries every server delete on sync', async () => {
+  const world = fakeWorld();
+  const store = createDraftStore(world.deps);
+  const ids = await Promise.all([
+    store.upsert(EMAIL, draft('draft_1', 'First')),
+    store.upsert(EMAIL, draft('draft_2', 'Second')),
+    store.upsert(EMAIL, draft('draft_3', 'Third')),
+  ]);
+  world.setOnline(false);
+  await Promise.all(ids.map((id) => store.remove(EMAIL, id)));
+  expect(await store.readLocalDrafts(EMAIL)).toEqual([]);
+  expect(world.server.size).toBe(3);
+  world.setOnline(true);
+  expect(await store.sync(EMAIL)).toEqual([]);
+  expect(world.server.size).toBe(0);
+});
+
+test('Cancel checkpoints immediately even while a cloud autosave is stalled', async () => {
+  const world = fakeWorld();
+  let release!: (id: string) => void;
+  world.deps.createCloudDraft = () => new Promise(resolve => { release = resolve; });
+  const store = createDraftStore(world.deps);
+  const saving = store.upsert(EMAIL, draft('draft_busy', 'Old body', 1));
+  while (!release) await new Promise(resolve => setTimeout(resolve, 0));
+  await store.checkpoint(EMAIL, draft('draft_busy', 'Newest body', 2));
+  expect((await store.readLocalDrafts(EMAIL))[0].title).toBe('Newest body');
+  release('cloud-id'); await saving;
+  expect(await store.readLocalDrafts(EMAIL)).toEqual([draft('cloud-id', 'Newest body', 2)]);
+});
+test('pending media survives checkpoints and sync without invalid cloud attachment ids', async () => {
+  const world = fakeWorld(); const store = createDraftStore(world.deps);
+  const pending = { ...draft('draft_media', '', 10), attachments: [{ fileId: '', clientId: 'pending', uri: 'file://saved-photo.jpg', name: 'Photo', mimeType: 'image/jpeg' }] };
+  await store.checkpoint(EMAIL, pending);
+  expect((await store.sync(EMAIL))[0].attachments).toEqual(pending.attachments);
+  expect(world.calls.some(call => call.startsWith('create:'))).toBe(false);
+});
+test('a checkpoint left after a completed cloud save does not duplicate the draft after restart', async () => {
+  const world = fakeWorld();
+  const saved = draft('m42', 'Saved words', 100);
+  world.server.set('m42', saved);
+  world.storage.set(`article_drafts_${EMAIL}`, JSON.stringify([saved]));
+  world.storage.set(`article_draft_checkpoints_${EMAIL}`, JSON.stringify([{ ...saved, id: 'draft_original' }]));
+  const store = createDraftStore(world.deps);
+  expect(await store.sync(EMAIL)).toHaveLength(1);
+  expect(world.calls.some(call => call.startsWith('create:'))).toBe(false);
+});

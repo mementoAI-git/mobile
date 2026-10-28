@@ -42,7 +42,7 @@ describe('chat message list identity', () => {
     const source = await Bun.file(new URL('../../hooks/use-stream-chat.ts', import.meta.url)).text();
 
     expect(source).toContain('createChatMessageIdFactory');
-    expect(source.match(/_id: createMessageId\(\)/g)).toHaveLength(3);
+    expect(source.match(/_id: createMessageId\(\)/g)).toHaveLength(4);
   });
 });
 

@@ -48,7 +48,7 @@ export function CapsuleSealedSheet({
   };
 
   return (
-    <View className="flex-grow px-5 pb-8 pt-2">
+    <View className="flex-grow pb-8 pt-2">
       {/* Top Bar with 44x44 Close Button */}
       <View className="flex-row items-center justify-end mb-2">
         <TouchableOpacity

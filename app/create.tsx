@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 /**
  * app/create.tsx — Quick Capture full-screen compose
  *
@@ -87,6 +88,7 @@ type AttachmentItem = UploadAttachment<IFile>;
 // ─── Char ring ────────────────────────────────────────────────────────────────
 
 function CharRing({ value, max }: { value: number; max: number }) {
+  const COLORS = useThemeColors();
   const pct = Math.min(1, value / max);
   const nearLimit = pct > 0.8;
   const atLimit = pct >= 1;
@@ -132,6 +134,8 @@ function CharRing({ value, max }: { value: number; max: number }) {
 // ─── Attachment cards ─────────────────────────────────────────────────────────
 
 function ImageGrid({ items, onRemove, onPreview }: { items: AttachmentItem[]; onRemove: (id: string) => void; onPreview: (idx: number) => void }) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   if (!items.length) return null;
   const single = items.length === 1;
   return (
@@ -161,6 +165,7 @@ function ImageGrid({ items, onRemove, onPreview }: { items: AttachmentItem[]; on
 }
 
 function VoiceCard({ item, onRemove }: { item: AttachmentItem; onRemove: (id: string) => void }) {
+  const styles = useThemedStyles(stylesBase);
   const dur = item.duration ?? 0;
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   const bars = useMemo(() => {
@@ -182,6 +187,8 @@ function VoiceCard({ item, onRemove }: { item: AttachmentItem; onRemove: (id: st
 }
 
 function AudioFileCard({ item, onRemove }: { item: AttachmentItem; onRemove: (id: string) => void }) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   return (
     <View style={styles.fileCard}>
       <Music size={14} color={COLORS.brand} strokeWidth={1.8} />
@@ -195,6 +202,8 @@ function AudioFileCard({ item, onRemove }: { item: AttachmentItem; onRemove: (id
 }
 
 function GenericFileCard({ item, onRemove }: { item: AttachmentItem; onRemove: (id: string) => void }) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   return (
     <View style={styles.fileCard}>
       <FileText size={14} color={COLORS.textBase} strokeWidth={1.8} />
@@ -214,6 +223,8 @@ function GenericFileCard({ item, onRemove }: { item: AttachmentItem; onRemove: (
  *    (we can't use <Image> to extract a video frame on iOS)
  */
 function VideoCard({ item, onRemove }: { item: AttachmentItem; onRemove: (id: string) => void }) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   // After upload the server may return a thumbnail URL
   const thumbUri = item.file?.thumbnail;
   return (
@@ -245,6 +256,8 @@ function VideoCard({ item, onRemove }: { item: AttachmentItem; onRemove: (id: st
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function CreateScreen() {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const router = useRouter();
   const user = useUserStore((s) => s.user);
   const inputRef = useRef<TextInput>(null);
@@ -519,6 +532,8 @@ export default function CreateScreen() {
 
           {/* Primary input */}
           <TextInput
+                selectionColor={COLORS.brand}
+                cursorColor={COLORS.brand}
             ref={inputRef}
             value={body}
             onChangeText={(v) => setBody(v.slice(0, NOTE_CHAR_MAX))}
@@ -598,7 +613,7 @@ export default function CreateScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
   kav: { flex: 1 },
 
@@ -616,7 +631,7 @@ const styles = StyleSheet.create({
   pillText: { ...TYPE.label, color: COLORS.textStrong },
 
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 16 },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 16 },
 
   userRow: { flexDirection: 'row', alignItems: 'center', marginTop: 24, marginBottom: 16, gap: 12 },
   avatar: { width: 44, height: 44, borderRadius: 22 },
@@ -659,7 +674,7 @@ const styles = StyleSheet.create({
 
   privacyRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 20, paddingVertical: 10,
+    paddingHorizontal: 16, paddingVertical: 10,
     borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker,
   },
   privacyBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -680,7 +695,7 @@ const styles = StyleSheet.create({
   // Bottom toolbar — matches web action bar layout
   toolbar: {
     flexDirection: 'row', alignItems: 'center',
-    gap: 20, paddingHorizontal: 20,
+    gap: 20, paddingHorizontal: 16,
     paddingTop: 12, paddingBottom: 12,
     borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker,
     backgroundColor: COLORS.background,
@@ -726,7 +741,7 @@ const styles = StyleSheet.create({
 
   // Mode bar — "Switch modes or add media files"
   modeBar: {
-    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14,
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14,
     borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker,
     backgroundColor: COLORS.background,
     gap: 10,

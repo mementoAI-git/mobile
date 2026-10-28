@@ -1,3 +1,5 @@
+import type { ThemeColors } from '@/constants/tokens';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Pressable } from '@/components/ui/Touchable';
@@ -17,14 +19,7 @@ import { clampEnrichmentScore } from '@/features/account/account-overview';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const SCORE_SEGMENTS = [
-  { color: COLORS.info, flex: 4 },
-  { color: COLORS.blue6, flex: 2 },
-  { color: COLORS.success, flex: 2 },
-  { color: COLORS.warning, flex: 2 },
-  { color: COLORS.brand, flex: 2 },
-  { color: COLORS.error, flex: 1 },
-] as const;
+
 
 interface EnrichmentScoreCardProps {
   score: number;
@@ -35,6 +30,16 @@ export const EnrichmentScoreCard = React.memo(function EnrichmentScoreCard({
   score,
   onPress,
 }: EnrichmentScoreCardProps) {
+  const COLORS = useThemeColors();
+  const SCORE_SEGMENTS = [
+  { color: COLORS.info, flex: 4 },
+  { color: COLORS.blue6, flex: 2 },
+  { color: COLORS.success, flex: 2 },
+  { color: COLORS.warning, flex: 2 },
+  { color: COLORS.brand, flex: 2 },
+  { color: COLORS.error, flex: 1 },
+] as const;
+  const styles = useThemeStyles(createStyles);
   const safeScore = clampEnrichmentScore(score);
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
@@ -86,7 +91,7 @@ export const EnrichmentScoreCard = React.memo(function EnrichmentScoreCard({
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   card: {
     minHeight: 160,
     borderRadius: radius(16),
@@ -136,7 +141,7 @@ const styles = StyleSheet.create({
     borderRadius: radius(5),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.textStrong,
+    backgroundColor: COLORS.mediaSurface,
   },
   insightText: {
     flex: 1,

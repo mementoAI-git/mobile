@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useMemo } from 'react';
-import { FlatList, RefreshControl, View, ScrollView, ImageBackground } from 'react-native';
+import { FlatList, RefreshControl, View, ScrollView } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect } from 'expo-router';
@@ -18,7 +18,6 @@ import { useCapsulesLogic } from '@/hooks/use-capsules-logic';
 import { useUiStore } from '@/store';
 import { useVoiceScroll } from '@/features/voice-control/hooks';
 
-const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const MEMORIES_BG = require('../../../assets/images/backgrounds/memories_card_bg.png');
 const BENEFI_BG = require('../../../assets/images/backgrounds/benefi_card_bg.png');
 const CAPSULE_BG = require('../../../assets/images/backgrounds/time_cap_card_bg.png');
@@ -144,7 +143,7 @@ export function CapsuleContent() {
 
   const listHeaderComponent = useMemo(
     () => (
-      <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-4 gap-6">
+      <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-10 gap-10">
         <Animated.Text className="text-text-weak" style={TYPE.body}>
           Preserve your thoughts and media in time capsules that deliver to your loved ones exactly when you choose.
         </Animated.Text>
@@ -194,7 +193,7 @@ export function CapsuleContent() {
         </View>
 
         {/* Filter Pills, Search & Layout Actions */}
-        <View className="mt-2 flex-row items-center gap-2">
+        <View className="flex-row items-center gap-2">
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -301,7 +300,7 @@ export function CapsuleContent() {
       <DashboardHeader title="Time Capsule" />
 
       <View className="flex-1">
-        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
+
 
         {isLoading && !capsules.length ? (
           <CapsuleSkeleton />
@@ -315,7 +314,7 @@ export function CapsuleContent() {
             windowSize={5}
             removeClippedSubviews
             ListHeaderComponent={listHeaderComponent}
-            contentContainerClassName="px-6 pb-24 flex-grow"
+            contentContainerClassName="px-4 pb-24 flex-grow"
             showsVerticalScrollIndicator={false}
             renderItem={renderCapsuleItem}
             refreshControl={

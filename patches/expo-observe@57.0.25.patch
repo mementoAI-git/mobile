@@ -1,0 +1,24 @@
+diff --git a/ios/ObserveModule.swift b/ios/ObserveModule.swift
+index 5b7a3984a06aa923a03251eaa8f26ff63cb60435..df3a37204b7aed2deb0f8ff611a1ecf534a00a81 100644
+--- a/ios/ObserveModule.swift
++++ b/ios/ObserveModule.swift
+@@ -1,5 +1,6 @@
+ // Copyright 2025-present 650 Industries. All rights reserved.
+ 
++import Foundation
+ import ExpoAppMetrics
+ import ExpoModulesCore
+ 
+@@ -57,7 +58,11 @@ public final class ObserveModule: Module {
+ 
+       // Broadcast the integrations config so integration libraries (e.g. expo-image) can activate.
+       self.lastIntegrations = config.integrations ?? [:]
+-      self.emit(event: "configure", payload: ["integrations": self.lastIntegrations])
++      // The event crosses to the JS actor; give it an independent JSON snapshot
++      // instead of sending the same non-Sendable dictionary retained by the module.
++      let integrationsData = try JSONSerialization.data(withJSONObject: self.lastIntegrations)
++      let integrationsPayload = try JSONSerialization.jsonObject(with: integrationsData)
++      self.emit(event: "configure", payload: ["integrations": integrationsPayload])
+     }
+ 
+     Function("getIntegrations") {

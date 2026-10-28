@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback } from 'react';
 import { ImageBackground, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,6 +23,7 @@ const DEFAULT_USAGE = {
 };
 
 export default function BillingSettingsScreen() {
+  const COLORS = useThemeColors();
   const router = useRouter();
   const {
     summary, subLoading, isProOrAbove, invoices, invoicesLoading, usage, portalBusy,
@@ -54,7 +56,7 @@ export default function BillingSettingsScreen() {
       >
         <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.02 }} resizeMode="repeat" />
         {activeTab === 'overview' ? (
-          <View className="px-5 pb-6">
+          <View className="px-4 pb-6">
             <PlanSummaryBanner
               isProOrAbove={isProOrAbove}
               subscriptionKnown={Boolean(summary) && !subLoading}

@@ -20,6 +20,8 @@ Memento is a **premium personal legacy app** — it should feel like a high-end 
 
 ### 1. Color System
 
+**Appearance:** The menu Appearance control supports System, Light, Dark, and Deep Sky and persists the device preference. For live UI, read semantic colors with `useThemeColors()`; use `useThemeStyles(createStyles)` with an explicit `(colors: ThemeColors)` factory for module-level styles. The older `useThemedStyles()` value mapper is legacy-only; identical light values can represent different semantic roles. NativeWind semantic classes resolve through `AppearanceProvider`. Static `COLORS` remains the light palette for artwork and style definitions; never mutate it. Keep inverse text on colored banners. The white background rule below applies to Light mode; Dark uses `DARK_COLORS.background` (`#12131a`, matching web). Dark semantic ink, strokes and status colors mirror `Web/memento-web/src/index.css`. Use paired `activeFill`/`activeText` for selected tabs, `mediaSurface`/`mediaText` for fixed media overlays, and `ThemedCardBackground` for decorative raster card washes.
+
 All colors come from `COLORS` in `src/constants/tokens.ts` and the Tailwind config in `tailwind.config.ts`. **Never hardcode hex values except for the explicitly approved exceptions below.**
 
 #### Background Surfaces
@@ -116,7 +118,7 @@ This same convention applies to fill, stroke, text, and icon tokens. When decidi
 #### Font Stack
 | Weight | Token | Loaded as |
 |--------|-------|-----------|
-| Regular body | `FONTS.sans` | `Inter_400Regular` |
+| Regular body | `FONTS.sans` / `FONTS.chatBody` | SF Pro Rounded (`ui-rounded`) on iOS; `Inter_400Regular` on Android |
 | Medium labels | `FONTS.sansMedium` | `Inter_500Medium` |
 | Semi-bold UI | `FONTS.sansSemi` | `Inter_600SemiBold` |
 | Bold CTAs | `FONTS.sansBold` | `Inter_700Bold` |
@@ -125,12 +127,16 @@ This same convention applies to fill, stroke, text, and icon tokens. When decidi
 | Code / mono | `FONTS.mono` | `AzeretMono_400Regular` |
 
 #### Usage Rules
+- Body text uses the system SF Pro Rounded design on iOS. Web requests `ui-rounded` with Inter/system fallbacks; Android retains bundled Inter. Keep `font-sans` aligned with `FONTS.sans`. Editorial headings and medium/semibold/bold UI font tokens retain their existing families.
+- Bold body emphasis uses `TYPE.bodyStrong` (`FONTS.bodyBold` with weight 700), so chat and story emphasis also stays in SF Pro Rounded on iOS. Custom capsule designs and exported memoir typography retain their dedicated families.
 - **Every screen's primary title**: `FONTS.serif` — this is non-negotiable. The serif is the soul of the brand.
 - **All interactive labels, button text, metadata**: `FONTS.sansBold` or `FONTS.sansSemi`
 - **All body / paragraph copy**: `FONTS.sans`
 - **All uppercase tracking labels** (e.g. "MAY 20 · 2 MIN READ"): `FONTS.sansBold` + `tracking-widest` + `uppercase` + small size (`text-[10px]` or `text-xs`)
 - **Numbers and stats**: `FONTS.sansBold` — large numerics look best in Inter Bold
 - **Never** render body copy in EBGaramond — it is purely a display/heading font
+
+- Muted words within main-page section headings use `TYPE.sectionTitleWeak` (the loaded serif italic face), not synthetic italics.
 
 #### Scale Reference
 | Context | Size | Font |
@@ -145,7 +151,23 @@ This same convention applies to fill, stroke, text, and icon tokens. When decidi
 
 ---
 
+### Mobile shape standard (updated October 17, 2026)
+
+- Cards and buttons default to **10px radius** (`rounded-[10px]`). This supersedes the older card and pill defaults below. Shared `Card` and `Button` use this default; explicit specialized shapes remain opt-in (for example circular icon buttons).
+- Side-menu navigation and Search use **48px height**, **10px radius**, and **12px horizontal padding**; content is centered vertically. The active item uses `fillWeak` with neutral text.
+- Side-menu Settings uses **48px height**, **100px radius**, and responsive 24px base horizontal padding.
+- The side-menu profile and Search share a container, with a 32px gap before navigation. The profile uses the Overview prompt blue gradient.
+- The side-menu account card uses **12px padding on all sides** and a **14px radius**.
+
 ### 3. Layout & Spacing
+
+- Page content and headers use **16px** left/right gutters. Bottom sheets use **20px** total left/right gutters; avoid adding the sheet manager gutter twice. Internal card/control padding stays component-specific.
+
+- Bottom sheets use three main groups: header (drag handle, title, close control), body, and actions. Keep **8px** from the visible drag indicator to the header row, **32px** between the main groups, and **24px** between sections inside the body. Sheet titles use **20px** SF Pro Rounded semibold with **32px** line height. The Publish post sheet implements this structure with a shared native handle/header component.
+
+- Main-screen sections use **40px** separation (`gap-10`, `mb-10`, or `pb-10` at list-header boundaries). Keep related controls, list rows, and content inside a section at their component spacing.
+- The Overview greeting and primary action card are separate sections with **40px** between them.
+- Continue Reflecting groups its title and shuffle status in a zero-gap text column beside the shuffle button, with **16px** from the complete header group to the cards.
 
 #### Border Radius System
 | Shape | Value | Use case |
@@ -182,7 +204,7 @@ elevation: 3,
 The shadow should be barely perceptible — it lifts the card off the cream background without dramatizing it.
 
 #### Texture / Pattern Overlay
-Every main screen content area should have the `welcome_bg.png` texture at `opacity: 0.03`. This is the subtle grain that makes the app feel like a physical artifact.
+Main pages use the same untextured, theme-adaptive `COLORS.background` surface as Overview. Do not add a page-wide `welcome_bg.png` overlay to Explore, Stories, Capsules, or Chat. The texture example below is reserved for explicitly textured surfaces.
 ```tsx
 <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
 ```
@@ -448,3 +470,10 @@ When making function calls using tools that accept array or object parameters en
   <parameter>[{"color": "orange", "options": {"option_key_1": true, "option_key_2": "value"}}, {"color": "purple", "options": {"option_key_1": true, "option_key_2": "value"}}]</parameter>
 </example_complex_tool>
 ```
+
+## Verify the running product before reporting completion
+
+- Always inspect the implementation against every part of the user's request before reporting it as done.
+- For UI changes, open the actual running app, refresh/reload it from this checkout, and visually verify the requested layout and interaction states. Passing source checks, tests, typecheck, or lint alone is not visual verification.
+- Confirm the development server is serving the edited checkout and the device/browser has received the latest bundle. If the user reports no visible change, investigate the running app and server connection first.
+- Fix any mismatch found during verification. Report only what was actually verified; if a check is blocked, state the concrete blocker and do not claim the affected requirement is complete.
