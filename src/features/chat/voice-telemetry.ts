@@ -53,6 +53,7 @@ export type VoiceCallEngineStats = Partial<
     | 'voiceProcessingActive'
     | 'uplinkEchoSuppressed'
     | 'bargeIns'
+    | 'echoContinuations'
     | 'uplinkCaptured'
     | 'uplinkDelivered'
     | 'uplinkDroppedShield'
@@ -81,6 +82,8 @@ export type VoiceCallReport = {
   /** Echo cancellation and mic-open-during-playback settings for this call. */
   audioPolicy?: { iosVoiceProcessing: boolean; speakerFullDuplex: boolean };
   turnDetection?: VoiceTurnDetection;
+  /** Hybrid end of turn (voice-hybrid-end.ts): its delay, and how many turns it ended. */
+  hybridEnd?: { delayMs: number; turnEnds: number };
   /** Interruptions that looked like Memento hearing itself, and how often the call fell back. */
   selfInterruptions?: { suspected: number; fallbacks: number };
   engine?: VoiceCallEngineStats;
@@ -148,6 +151,7 @@ function sendVoiceCall(report: VoiceCallReport, sentry: VoiceTelemetrySentry): v
       'voice.turn_variant': report.turnDetection?.variant,
       'voice.silence_ms': report.turnDetection?.silenceDurationMs,
       'voice.prefix_padding_ms': report.turnDetection?.prefixPaddingMs,
+      'voice.hybrid_end_ms': report.hybridEnd?.delayMs,
     }),
   });
 
@@ -214,11 +218,13 @@ function sendVoiceCall(report: VoiceCallReport, sentry: VoiceTelemetrySentry): v
   measure('voice_interruptions_spoken', latency.turnStats.interruptions.speech, 'none');
   measure('voice_interruptions_tapped', latency.turnStats.interruptions.tap, 'none');
   measure('voice_tool_calls', report.toolCalls, 'none');
+  measure('voice_hybrid_turn_ends', report.hybridEnd?.turnEnds, 'none');
   measure('voice_underruns', engine?.underruns, 'none');
   measure('voice_route_rebuilds', engine?.routeRebuilds, 'none');
   measure('voice_route_changes', engine?.routeChanges, 'none');
   measure('voice_echo_suppressed_frames', engine?.uplinkEchoSuppressed, 'none');
   measure('voice_barge_ins', engine?.bargeIns, 'none');
+  measure('voice_echo_continuations', engine?.echoContinuations, 'none');
   // Where the user's microphone went: a call that "doesn't hear me" shows
   // up here as frames dropped by the shield or speaker gate, or as a peak
   // level too low for Gemini to notice.
