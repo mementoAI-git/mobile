@@ -194,6 +194,61 @@ describe('VoiceEchoGate', () => {
     });
   });
 
+  describe('the user is still talking when a reply starts', () => {
+    // Memento's echo cannot come before Memento's audio. Speech heard just
+    // before a reply became audible is the user carrying on, not echo, so the
+    // reply-onset calibration must not learn it (and so miss the rest).
+    function speakThenReply(g: VoiceEchoGate, clock: { now: number }, before: number[], gapMs: number) {
+      for (const level of before) {
+        g.process(frame(level), false);
+        clock.now += 40;
+      }
+      clock.now += gapMs;
+      const sent: Float32Array[] = [];
+      for (let i = 0; i < 8; i += 1) {
+        sent.push(...g.process(frame(0.1), true, { learnOnly: true }));
+        clock.now += 40;
+      }
+      return sent;
+    }
+
+    test('keeps the mic open through the reply onset, without learning the voice as echo', () => {
+      const { clock, gate: g } = gate();
+      const sent = speakThenReply(g, clock, [0.1, 0.1, 0.1], 0);
+
+      expect(levels(sent)).toEqual(new Array(8).fill(0.1));
+      expect(g.echoLevel).toBe(0);
+      expect(g.continuations).toBe(1);
+      // Still open after the onset, for the rest of the sentence.
+      expect(levels(g.process(frame(0.1), true))).toEqual([0.1]);
+    });
+
+    test('one loud click just before a reply is still calibrated as echo', () => {
+      const { clock, gate: g } = gate();
+      const sent = speakThenReply(g, clock, [0.2], 0);
+
+      expect(sent.every((f) => f.every((v) => v === 0))).toBe(true);
+      expect(g.echoLevel).toBeCloseTo(0.1);
+      expect(g.continuations).toBe(0);
+    });
+
+    test('a user who stopped before the reply started does not keep the mic open', () => {
+      const { clock, gate: g } = gate();
+      const sent = speakThenReply(g, clock, [0.1, 0.1, 0.1], 400);
+
+      expect(sent.every((f) => f.every((v) => v === 0))).toBe(true);
+      expect(g.continuations).toBe(0);
+    });
+
+    test('quiet room sound before a reply is not speech', () => {
+      const { clock, gate: g } = gate();
+      const sent = speakThenReply(g, clock, [0.03, 0.03, 0.03], 0);
+
+      expect(sent.every((f) => f.every((v) => v === 0))).toBe(true);
+      expect(g.continuations).toBe(0);
+    });
+  });
+
   test('reset drops held frames and closes the mic', () => {
     const { gate: g } = gate();
     g.process(frame(0.2), true);

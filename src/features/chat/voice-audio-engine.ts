@@ -399,6 +399,14 @@ export class VoiceAudioEngine {
   }
 
   /** The mic is open on the loudspeaker while Memento talks. */
+  /**
+   * The user was already talking when this reply became audible, so an
+   * interruption now is them, not Memento's echo (see VoiceEchoGate).
+   */
+  userContinuedIntoReply(): boolean {
+    return this.echoGate.isContinuing();
+  }
+
   isSpeakerFullDuplexActive(): boolean {
     return this.speakerFullDuplex && !this.isHeadphones;
   }

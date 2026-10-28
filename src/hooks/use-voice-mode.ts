@@ -597,7 +597,9 @@ export function useVoiceMode({
           thinkingRef.current.reset();
           selfInterruptRef.current?.observeInterrupted(
             engine?.isSpeakerFullDuplexActive() ?? false,
-            engine?.audibleForMs(),
+            // The user was already talking as this reply started: an early
+            // interruption is them, so judge it by its words, not its timing.
+            engine?.userContinuedIntoReply() ? undefined : engine?.audibleForMs(),
           );
           const newEpoch = engine?.nextEpoch() ?? 1;
           engine?.interruptOutput(newEpoch);

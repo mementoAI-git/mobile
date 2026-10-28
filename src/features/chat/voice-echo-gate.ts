@@ -41,6 +41,14 @@ export const VOICE_BARGE_IN_HOLD_MS = 1_500;
  * interrupts within a third of a second of Memento starting to talk.
  */
 export const VOICE_REPLY_ONSET_MS = 300;
+/**
+ * Speech this recent, just before Memento became audible, means the user is
+ * still talking: the reply's onset calibration lets it through instead of
+ * learning it as echo. Echo cannot come before Memento's audio.
+ */
+export const VOICE_ECHO_CONTINUATION_MS = 300;
+/** Speech frames this close together count as one run. */
+const SPEECH_RUN_GAP_MS = 100;
 /** 3 frames of 40 ms: the start of a word kept before speech is confirmed. */
 export const VOICE_ECHO_PRE_ROLL_FRAMES = 3;
 /** Speech-level frames, within the held window, that confirm the user is talking. */
@@ -62,12 +70,18 @@ export type VoiceEchoGateOptions = {
 export class VoiceEchoGate {
   private held: HeldFrame[] = [];
   private openUntil = 0;
+  /** The mic stays open through calibration until then (the user was talking). */
+  private continuingUntil = 0;
+  private lastSpeechAt = Number.NEGATIVE_INFINITY;
+  private speechRun = 0;
   private readonly preRollFrames: number;
   private readonly confirmFrames: number;
   /** Frames sent as silence. */
   suppressed = 0;
   /** Times the user's voice opened the mic. */
   bargeIns = 0;
+  /** Times a reply started while the user was still talking. */
+  continuations = 0;
   /** Loudest recent leftover echo (RMS), fading over time. */
   echoLevel = 0;
   /** Highest echo level seen this call. */
@@ -89,6 +103,17 @@ export class VoiceEchoGate {
     options: { learnOnly?: boolean } = {},
   ): Float32Array[] {
     if (gating && options.learnOnly) {
+      const now = this.options.now();
+      if (now < this.continuingUntil || this.userStillTalking(now)) {
+        if (now >= this.continuingUntil) {
+          this.continuingUntil = now + this.options.holdMs;
+          this.openUntil = this.continuingUntil;
+          this.continuations += 1;
+        }
+        const out = this.releaseHeld(true);
+        out.push(samples);
+        return out;
+      }
       // A new calibration window must cancel any earlier barge-in hold.
       this.openUntil = 0;
       // Calibrating (the greeting or reply onset): learn the residual level.
@@ -99,6 +124,8 @@ export class VoiceEchoGate {
     if (!gating) {
       // Speech passes freely now; its hold must not bypass the next reply's filter.
       this.openUntil = 0;
+      this.continuingUntil = 0;
+      this.noteSpeech(samples);
       // Held frames did not confirm speech while Memento was audible.
       const out = this.releaseHeld(false);
       out.push(samples);
@@ -132,10 +159,30 @@ export class VoiceEchoGate {
     return out;
   }
 
+  /** The user was talking as Memento became audible, and the mic is still open for them. */
+  isContinuing(): boolean {
+    return this.options.now() < this.continuingUntil;
+  }
+
   reset(): void {
     this.held = [];
     this.openUntil = 0;
+    this.continuingUntil = 0;
+    this.lastSpeechAt = Number.NEGATIVE_INFINITY;
+    this.speechRun = 0;
     this.echoLevel = 0;
+  }
+
+  /** While Memento is quiet: remember when the user last spoke, and for how long. */
+  private noteSpeech(samples: Float32Array): void {
+    if (!isBargeInSpeech(samples)) return;
+    const now = this.options.now();
+    this.speechRun = now - this.lastSpeechAt <= SPEECH_RUN_GAP_MS ? this.speechRun + 1 : 1;
+    this.lastSpeechAt = now;
+  }
+
+  private userStillTalking(now: number): boolean {
+    return this.speechRun >= this.confirmFrames && now - this.lastSpeechAt <= VOICE_ECHO_CONTINUATION_MS;
   }
 
   private releaseHeld(asSpoken: boolean): Float32Array[] {
