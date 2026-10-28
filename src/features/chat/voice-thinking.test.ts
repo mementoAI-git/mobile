@@ -7,6 +7,16 @@ import {
   VoiceThinkingTracker,
 } from './voice-thinking';
 
+/**
+ * A quiet room as the simulator heard it: a base around 0.01 with a short
+ * spike to 0.03 every second, and a lull that ends in a 400 ms quiet stretch.
+ */
+function roomNoise(frame: number): number {
+  const phase = frame % 25;
+  if (phase < 2) return 0.03;
+  return phase < 15 ? 0.01 : 0.008;
+}
+
 function tracker() {
   let now = 1_000;
   const subject = new VoiceThinkingTracker(() => now);
@@ -62,6 +72,58 @@ describe('VoiceThinkingTracker', () => {
     advance(VOICE_THINKING_QUIET_MS);
     subject.observeMic(0.002);
     expect(subject.isThinking(false)).toBe(true);
+  });
+
+  it('steady background noise above the old fixed level is not the user', () => {
+    // Seen on the simulator: a quiet room measured 0.013-0.036 and flipped
+    // "Thinking" on and off for a minute while nobody spoke.
+    const { subject, advance } = tracker();
+    for (let i = 0; i < 250; i += 1) {
+      subject.observeMic(roomNoise(i));
+      advance(40);
+      expect(subject.isThinking(false)).toBe(false);
+    }
+  });
+
+  it('scattered blips do not add up to speech', () => {
+    const { subject, advance } = tracker();
+    for (let blip = 0; blip < VOICE_THINKING_MIN_SPEECH_FRAMES * 2; blip += 1) {
+      subject.observeMic(0.2);
+      for (let i = 0; i < 25; i += 1) {
+        advance(40);
+        subject.observeMic(0.005);
+      }
+    }
+    expect(subject.isThinking(false)).toBe(false);
+  });
+
+  it('hears speech over steady background noise, then thinks', () => {
+    const { subject, advance } = tracker();
+    const frames = (level: number, count: number) => {
+      for (let i = 0; i < count; i += 1) {
+        subject.observeMic(level);
+        advance(40);
+      }
+    };
+    frames(0.02, 75);
+    frames(0.08, 25);
+    expect(subject.isThinking(false)).toBe(false);
+    frames(0.02, 10);
+    expect(subject.isThinking(false)).toBe(true);
+  });
+
+  it('ignores silence the echo filter sent in place of the mic', () => {
+    const { subject, advance } = tracker();
+    for (let i = 0; i < 75; i += 1) {
+      subject.observeMic(0);
+      advance(40);
+    }
+    // The floor was not dragged to zero, so ordinary noise is still noise.
+    for (let i = 0; i < 100; i += 1) {
+      subject.observeMic(roomNoise(i));
+      advance(40);
+      expect(subject.isThinking(false)).toBe(false);
+    }
   });
 
   it('never thinks while Memento is speaking, and resets on reply', () => {
