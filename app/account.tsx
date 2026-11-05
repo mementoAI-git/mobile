@@ -263,7 +263,7 @@ export default function AccountOverviewScreen() {
                   </View>
                   <Avatar
                     uri={profile?.picture_url || profile?.picture}
-                    seed={profile?.email || profile?._id}
+                    userId={profile?._id} seed={profile?.email}
                     name={displayName}
                     size="xl"
                     className="h-16 w-16 border-0"

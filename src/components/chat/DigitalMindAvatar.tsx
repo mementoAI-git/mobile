@@ -8,8 +8,8 @@ import { avatarBadgeOffset, DIGITAL_MIND_COLOURS, type DigitalMindProfile } from
 import { AVATAR_VIEWBOX, roundedAvatarPath } from '@/features/chat/friendly-avatar-shapes';
 
 const MEMENTO_MARK = require('../../../assets/images/splash-cinematic/memento_mark.webp');
-export function DigitalMindAvatar({ profile, size = 44, userImage, userName, userSeed, badge = true }: {
-  profile: DigitalMindProfile; size?: number; userImage?: string | null; userName?: string; userSeed?: string; badge?: boolean;
+export function DigitalMindAvatar({ profile, size = 44, userImage, userName, userSeed, userId, badge = true }: {
+  profile: DigitalMindProfile; size?: number; userImage?: string | null; userName?: string; userSeed?: string; userId?: string; badge?: boolean;
 }) {
   const colors = useThemeColors();
   const preset = DIGITAL_MIND_COLOURS.find(colour => colour.id === profile.colour) ?? DIGITAL_MIND_COLOURS[0];
@@ -19,7 +19,7 @@ export function DigitalMindAvatar({ profile, size = 44, userImage, userName, use
   const badgeOffset = avatarBadgeOffset(size, badgeSize);
   return <View accessible={false} style={{ width: size, height: size }}>
     <View style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden', backgroundColor: colors.cardRaised }}>
-      {profile.style === 'identicon' ? <Avatar uri={userImage} seed={userSeed} name={userName} size="xl" className="h-full w-full border-0" /> :
+      {profile.style === 'identicon' ? <Avatar uri={userImage} seed={userSeed} userId={userId} name={userName} size="xl" className="h-full w-full border-0" /> :
         <Svg width={size} height={size} viewBox={`0 0 ${AVATAR_VIEWBOX} ${AVATAR_VIEWBOX}`}>
           <Rect width={AVATAR_VIEWBOX} height={AVATAR_VIEWBOX} fill={ink} opacity={0.16} />
           <Path d={roundedAvatarPath(profile.style)} fill={ink} />

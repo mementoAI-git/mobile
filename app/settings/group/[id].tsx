@@ -224,7 +224,8 @@ export default function GroupDetailScreen() {
                   <View key={member._id} style={styles.memberCard}>
                     <View style={{ marginRight: 16 }}>
                       <Avatar
-                        uri={member.avatar}
+                        uri={member.user?.picture_url || member.avatar}
+                    userId={member.user?._id} seed={member.user?.email || member.email}
                         name={name}
                         size="md"
                       />

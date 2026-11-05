@@ -261,7 +261,7 @@ export function EditProfileSheet({
                 >
                   <Avatar
                     uri={localAvatarUri || profile?.picture_url || profile?.picture}
-                    seed={profile?.email || profile?._id}
+                    userId={profile?._id} seed={profile?.email}
                     name={displayName}
                     size="xl"
                     className="w-full h-full border-0"

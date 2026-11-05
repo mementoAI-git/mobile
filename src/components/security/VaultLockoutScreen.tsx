@@ -46,7 +46,7 @@ export function VaultLockoutScreen() {
       <ImageBackground source={PATTERN} style={[StyleSheet.absoluteFill, { opacity: 0.03 }]} resizeMode="repeat" />
 
       <View style={styles.card}>
-        <Avatar uri={user?.picture_url} name={displayName} size="xl" />
+        <Avatar userId={user?._id} seed={user?.email} uri={user?.picture_url} name={displayName} size="xl" />
 
         <Text style={[TYPE.sectionTitle, styles.title]}>
           Vault Locked

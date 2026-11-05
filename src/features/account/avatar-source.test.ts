@@ -12,3 +12,14 @@ describe('defaultAvatarUrl', () => {
     expect(defaultAvatarUrl(null, undefined)).toBeNull();
   });
 });
+
+it('uses the same account ID as web across name and email changes', () => {
+  const url = defaultAvatarUrl('old@example.com', 'Sam', ' User-123 ');
+  expect(url).toBe('https://api.dicebear.com/10.x/critters/png?seed=user-123');
+  expect(defaultAvatarUrl('new@example.com', 'Samuel', 'user-123')).toBe(url);
+  expect(defaultAvatarUrl(null, undefined, 'user-123')).toBe(url);
+});
+
+it('ignores blank ID and email before falling back to a legacy name', () => {
+  expect(defaultAvatarUrl(' ', ' Sam Smith ', ' ')).toBe('https://api.dicebear.com/10.x/critters/png?seed=sam%20smith');
+});

@@ -154,7 +154,7 @@ function AppMenu() {
               <Button variant="ghost" iconOnly onPress={openAccount} className="overflow-hidden rounded-[14px]" accessibilityLabel={`View account for ${name}`}>
                 <LinearGradient {...MEMORY_PROMPT_GRADIENT} style={{ width: '100%' }}>
                   <View className="flex-row items-center w-full gap-3" style={{ padding: 12 }}>
-                    <Avatar uri={user?.picture_url || user?.picture} name={name} seed={user?.email || user?._id} size="lg" />
+                    <Avatar uri={user?.picture_url || user?.picture} name={name} userId={user?._id} seed={user?.email} size="lg" />
                     <View className="flex-1 min-w-0">
                       <Text style={[TYPE.bodyStrong, { color: COLORS.textInverse }]} numberOfLines={2}>{name}</Text>
                       <Text style={[TYPE.bodySmall, { color: COLORS.textInverse }]} className="mt-1" numberOfLines={1} ellipsizeMode="tail">{user?.email}</Text>

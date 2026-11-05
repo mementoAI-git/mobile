@@ -39,7 +39,7 @@ export const BeneficiaryPersonRow = memo(function BeneficiaryPersonRow({
       }}
       className="flex-row items-center bg-card"
     >
-      <Avatar uri={picture} name={beneficiary.name} size="lg" />
+      <Avatar userId={beneficiary.user?._id} seed={beneficiary.user?.email || beneficiary.email} uri={picture} name={beneficiary.name} size="lg" />
       <View className="ml-4 flex-1">
         <View className="flex-row items-center justify-between">
           <Text style={{ ...TYPE.body, color: COLORS.textStrong }} numberOfLines={1}>

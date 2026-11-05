@@ -21,7 +21,7 @@ export function DigitalMindHeader() {
   }, [userId]);
   return <Pressable onPress={customize} accessibilityRole="button" accessibilityLabel={`Customize ${profile.name}`}
     className="flex-1 flex-row items-center gap-2 mx-2" style={{ minHeight: 44, minWidth: 0 }}>
-    <DigitalMindAvatar profile={profile} userImage={account?.picture_url || account?.picture} userName={account?.fullname || account?.first_name} userSeed={account?.email || userId} />
+    <DigitalMindAvatar profile={profile} userImage={account?.picture_url || account?.picture} userName={account?.fullname || account?.first_name} userId={userId} userSeed={account?.email} />
     <Text numberOfLines={2} className="flex-1 text-text-strong" style={TYPE.dashboardTitleSmall}>{profile.name}</Text>
   </Pressable>;
 }

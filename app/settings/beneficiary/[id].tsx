@@ -210,6 +210,7 @@ export default function BeneficiaryDetailScreen() {
           <View style={styles.heroBanner}>
             <View style={{ marginRight: 16 }}>
               <Avatar
+                userId={beneficiary.user?._id} seed={beneficiary.user?.email || beneficiary.email}
                 uri={beneficiary.avatar || beneficiary.user?.picture_url}
                 name={name}
                 size="lg"

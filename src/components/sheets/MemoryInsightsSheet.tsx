@@ -1,3 +1,4 @@
+import { Avatar } from "@/components/ui/Avatar";
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Image } from 'react-native';
@@ -125,13 +126,7 @@ export function MemoryInsightsSheet() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-4">
             {beneficiaries.map((b: any) => (
               <View key={b._id} className="items-center gap-1.5 w-14">
-                <View className="size-12 rounded-full bg-fill-weak items-center justify-center overflow-hidden">
-                  {b.user?.picture_url ? (
-                    <Image source={{ uri: b.user.picture_url }} className="size-full" />
-                  ) : (
-                    <Text className="text-text-strong" style={TYPE.label}>{b.name[0]}</Text>
-                  )}
-                </View>
+                <Avatar uri={b.user?.picture_url} userId={b.user?._id} seed={b.user?.email || b.email} name={b.name} size="lg" />
                 <Text className="text-text-strong text-center truncate w-full" style={TYPE.eyebrow}>
                   {b.name.split(' ')[0]}
                 </Text>

@@ -40,7 +40,7 @@ export function DigitalMindSheet({ userId, onClose }: { userId: string; onClose:
       <Button iconOnly variant="secondary" rounded="full" onPress={onClose} accessibilityLabel="Close digital mind customization" style={{ width: 44, height: 44, minHeight: 44, paddingHorizontal: 0 }}><X size={20} color={colors.textBase} /></Button>
     </View>
     <View className="items-center py-2">
-      <DigitalMindAvatar profile={preview} size={128} userImage={account?.picture_url || account?.picture} userName={account?.fullname || account?.first_name} userSeed={account?.email || userId} />
+      <DigitalMindAvatar profile={preview} size={128} userImage={account?.picture_url || account?.picture} userName={account?.fullname || account?.first_name} userId={userId} userSeed={account?.email} />
     </View>
     <TextInput label="Name" accessibilityLabel="Digital mind name" value={draft.name} onChangeText={changeName} placeholder={DEFAULT_DIGITAL_MIND.name}
       maxLength={DIGITAL_MIND_NAME_LIMIT} returnKeyType="done" variant="rounded" InputComponent={BottomSheetTextInput} />
@@ -49,7 +49,7 @@ export function DigitalMindSheet({ userId, onClose }: { userId: string; onClose:
       <View className="flex-row gap-3">
         {(['identicon', ...DIGITAL_MIND_SHAPES] as const).map(shape => <Pressable key={shape} onPress={() => chooseStyle(shape)} accessibilityRole="radio" accessibilityLabel={shape === 'identicon' ? 'Original identicon avatar' : `${shape} avatar`} accessibilityState={{ checked: draft.style === shape }}
           className="flex-1 items-center justify-center rounded-[14px] border py-3" style={{ borderColor: draft.style === shape ? colors.brand : colors.strokeWeak, backgroundColor: draft.style === shape ? colors.brandSubtle : colors.fillWeaker }}>
-          <DigitalMindAvatar profile={{ ...preview, style: shape }} size={44} badge={false} userImage={account?.picture_url || account?.picture} userSeed={account?.email || userId} userName={account?.fullname || account?.first_name} />
+          <DigitalMindAvatar profile={{ ...preview, style: shape }} size={44} badge={false} userImage={account?.picture_url || account?.picture} userId={userId} userSeed={account?.email} userName={account?.fullname || account?.first_name} />
         </Pressable>)}
       </View>
     </View>

@@ -139,7 +139,7 @@ export default function SettingsIndex() {
         >
           <Avatar
             uri={profile?.picture_url || profile?.picture}
-            seed={profile?.email || profile?._id}
+            userId={profile?._id} seed={profile?.email}
             name={displayName}
             size="xl"
             className="h-14 w-14 border-0"

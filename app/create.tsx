@@ -523,7 +523,7 @@ export default function CreateScreen() {
           <Animated.View entering={FadeInDown.duration(300)} style={styles.userRow}>
             <Avatar
               uri={user?.picture_url || user?.picture}
-              seed={user?.email || user?._id}
+              userId={user?._id} seed={user?.email}
               name={user?.nickname || user?.first_name}
               size="sm"
             />

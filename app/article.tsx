@@ -1,3 +1,4 @@
+import { Avatar } from "@/components/ui/Avatar";
 import { PublishSuccessView } from '@/components/editor/PublishSuccessView';
 import { useThemeColors, useThemedStyles, useThemeStyles } from '@/hooks/use-theme-colors';
 /**
@@ -15,7 +16,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  Image,
   Keyboard,
   Modal,
   ActivityIndicator,
@@ -406,10 +406,7 @@ export default function ArticleScreen() {
           {/* Document canvas */}
           <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={styles.authorRow}>
-              {avatarUri
-                ? <Image source={{ uri: avatarUri }} style={styles.avatar} />
-                : <View style={[styles.avatar, styles.avatarFallback]}><Text style={styles.avatarInitial}>{displayName.charAt(0).toUpperCase()}</Text></View>
-              }
+              <Avatar uri={avatarUri} userId={user?._id} seed={user?.email} name={displayName} className="size-8" />
               <Text style={styles.authorLabel}>{displayName}'s Memo.</Text>
             </View>
 

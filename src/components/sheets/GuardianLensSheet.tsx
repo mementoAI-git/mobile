@@ -84,7 +84,7 @@ export function GuardianLensSheet({
 
       {/* Header Profile Info */}
       <View className="flex-row items-center gap-3.5 mb-5">
-        <Avatar uri={beneficiary.user?.picture_url} name={beneficiary.name} size="lg" />
+        <Avatar userId={beneficiary.user?._id} seed={beneficiary.user?.email || beneficiary.email} uri={beneficiary.user?.picture_url} name={beneficiary.name} size="lg" />
         <View className="flex-1">
           <Text className="text-text-strong" style={TYPE.sectionTitle}>
             {beneficiary.name}’s View

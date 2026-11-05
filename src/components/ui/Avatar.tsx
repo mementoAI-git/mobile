@@ -9,6 +9,7 @@ interface AvatarProps {
   uri?: string | null;
   name?: string;
   seed?: string | null;
+  userId?: string | null;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
@@ -26,15 +27,16 @@ const sizeMap = {
   xl: { container: 'w-20 h-20', text: TYPE.stat },
 };
 
-export function Avatar({ uri, name, seed, size = 'md', className }: AvatarProps) {
-  const [failedUri, setFailedUri] = React.useState<string | null>(null);
+export function Avatar({ uri, name, seed, userId, size = 'md', className }: AvatarProps) {
+  const [failedUris, setFailedUris] = React.useState<Set<string>>(() => new Set());
   const s = sizeMap[size];
   const initials = name?.trim() ? getInitials(name) : '';
   const resolvedUri = resolveFileUrl(uri);
 
-  const candidateUri = resolvedUri || defaultAvatarUrl(seed, name);
-  const effectiveUri = candidateUri !== failedUri ? candidateUri : null;
-  const handleImageError = React.useCallback(() => setFailedUri(effectiveUri), [effectiveUri]);
+  const effectiveUri = [resolvedUri, defaultAvatarUrl(seed, name, userId)].find(uri => uri && !failedUris.has(uri));
+  const handleImageError = React.useCallback(() => {
+    if (effectiveUri) setFailedUris(previous => new Set(previous).add(effectiveUri));
+  }, [effectiveUri]);
 
   return (
     <View
@@ -50,6 +52,7 @@ export function Avatar({ uri, name, seed, size = 'md', className }: AvatarProps)
           source={{ uri: effectiveUri }}
           className="w-full h-full"
           resizeMode="cover"
+          style={effectiveUri.startsWith('https://api.dicebear.com/10.x/critters/') ? { transform: [{ scale: 1.5 }] } : undefined}
           key={effectiveUri}
           onError={handleImageError}
         />

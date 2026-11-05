@@ -150,7 +150,7 @@ export interface IPagination<T> {
   totalPages: number;
 }
 
-type IBeneficiaryUser = Pick<IUser, 'email' | 'first_name' | 'last_name' | 'picture_url'>;
+type IBeneficiaryUser = Pick<IUser, '_id' | 'email' | 'first_name' | 'last_name' | 'picture_url'>;
 
 export interface IBeneficiary {
   _id?: string;
@@ -178,6 +178,7 @@ export type CreateBeneficiaryBody = {
 };
 
 export interface IGroupMember {
+  user?: IBeneficiaryUser;
   _id?: string;
   name: string;
   email: string;
