@@ -354,14 +354,46 @@ function LinkPreviews({ text }: { text: string }) {
   );
 }
 
-// ─── Image strip grid (always horizontal, max 3 visible) ─────────────────────
+// ─── Chat media layouts ──────────────────────────────────────────────────────
 //
-// 1 image  → full bubble width, 4:3
-// 2 images → two equal tiles side-by-side
-// 3+ images → grid tiles, +N counter on the final darkened tile for overflow
+// 1-3 images or videos → tilted stack outside the bubble, first item in front
+// 4+ images → 2×2 grid in the bubble, +N counter on the final darkened tile
 
 const BUBBLE_MAX_W = 260;
 const GRID_GAP = 3;
+const MAX_STACKED_MEDIA = 3;
+const STACK_W = 240;
+const STACK_TILE_SIZE = Math.round(STACK_W * 0.58);
+const STACK_TILE_RADIUS = 18;
+const SINGLE_TILE_W = 220;
+
+// Offsets are fractions of the stack size. They leave room for the rotated corners.
+const STACK_LAYOUTS: Record<number, { height: number; slots: { left: number; top: number; rotate: string }[] }> = {
+  2: {
+    height: STACK_W,
+    slots: [
+      { left: 0.05, top: 0.36, rotate: '-6deg' },
+      { left: 0.37, top: 0.05, rotate: '8deg' },
+    ],
+  },
+  3: {
+    height: Math.round(STACK_W * (4 / 3)),
+    slots: [
+      { left: 0.05, top: 0.26, rotate: '-6deg' },
+      { left: 0.37, top: 0.03, rotate: '8deg' },
+      { left: 0.36, top: 0.52, rotate: '8deg' },
+    ],
+  },
+};
+
+function isVisualAttachment(attachment: ChatAttachment) {
+  return ['image', 'video'].includes(getMediaCategory({ mimeType: attachment.type, name: attachment.name, uri: attachment.url }));
+}
+
+function getStackedMedia(attachments: ChatAttachment[]) {
+  const media = attachments.filter(isVisualAttachment);
+  return media.length <= MAX_STACKED_MEDIA ? media : [];
+}
 
 function AttachmentPlaceholder({
   name,
@@ -449,47 +481,102 @@ const MediaPreviewTile = React.memo(function MediaPreviewTile({
   );
 });
 
+function StackTile({
+  attachment,
+  width,
+  height,
+  rotate,
+  position,
+  zIndex,
+  onPress,
+}: {
+  attachment: ChatAttachment;
+  width: number;
+  height: number;
+  rotate: string;
+  position?: { left: number; top: number };
+  zIndex?: number;
+  onPress: () => void;
+}) {
+  const styles = useThemeStyles(createStyles);
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${attachment.name || 'attachment'}`}
+      style={[
+        styles.stackTile,
+        { width, height, transform: [{ rotate }] },
+        position && { position: 'absolute', ...position, zIndex, elevation: zIndex ? 6 : 3 },
+      ]}
+    >
+      <MediaPreviewTile attachment={attachment} width={width} height={height} borderRadius={STACK_TILE_RADIUS} onPress={onPress} />
+      <View pointerEvents="none" style={styles.stackTileEdge} />
+    </TouchableOpacity>
+  );
+}
+
+function AttachmentStack({ attachments, onTap }: {
+  attachments: ChatAttachment[];
+  onTap: (index: number) => void;
+}) {
+  const media = getStackedMedia(attachments);
+  if (media.length === 0) return null;
+
+  if (media.length === 1) {
+    const origIdx = attachments.indexOf(media[0]);
+    return (
+      <View style={{ padding: 8 }}>
+        <StackTile
+          attachment={media[0]}
+          width={SINGLE_TILE_W}
+          height={Math.round(SINGLE_TILE_W * (3 / 4))}
+          rotate="-2deg"
+          onPress={() => onTap(origIdx)}
+        />
+      </View>
+    );
+  }
+
+  const layout = STACK_LAYOUTS[media.length];
+  return (
+    <View style={{ width: STACK_W, height: layout.height }}>
+      {media.map((a, i) => {
+        const origIdx = attachments.indexOf(a);
+        const slot = layout.slots[i];
+        return (
+          <StackTile
+            key={a._id ?? origIdx}
+            attachment={a}
+            width={STACK_TILE_SIZE}
+            height={STACK_TILE_SIZE}
+            rotate={slot.rotate}
+            position={{ left: slot.left * STACK_W, top: slot.top * layout.height }}
+            zIndex={i === 0 ? 1 : 0}
+            onPress={() => onTap(origIdx)}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
 function AttachmentGrid({ attachments, onTap }: {
   attachments: ChatAttachment[];
   onTap: (index: number) => void;
 }) {
-  if (attachments.length === 0) return null;
-
-  const mediaItems = attachments.filter(a => ['image', 'video'].includes(getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url })));
-  const fileItems = attachments.filter(a => !['image', 'video'].includes(getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url })));
+  const mediaItems = attachments.filter(isVisualAttachment);
+  const fileItems = attachments.filter(a => !isVisualAttachment(a));
   const count = mediaItems.length;
-  const fullW = BUBBLE_MAX_W;
+  const showGrid = count > MAX_STACKED_MEDIA;
+  if (!showGrid && fileItems.length === 0) return null;
 
   let imageSection: React.ReactNode = null;
 
-  if (count === 1) {
-    // Single image/video — full width, 4:3
-    const a = mediaItems[0];
-    const origIdx = attachments.indexOf(a);
-    imageSection = (
-      <TouchableOpacity onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
-        <MediaPreviewTile attachment={a} width={fullW} height={Math.round(fullW * (3 / 4))} borderRadius={12} onPress={() => onTap(origIdx)} />
-      </TouchableOpacity>
-    );
-  } else if (count <= 3) {
-    // 2-3 media items — horizontal strip, equal tiles
-    const tileW = Math.floor((fullW - GRID_GAP * (count - 1)) / count);
-    const tileH = Math.round(tileW * (3 / 4));
-    imageSection = (
-      <View style={{ flexDirection: 'row', gap: GRID_GAP }}>
-        {mediaItems.map((a, i) => {
-          const origIdx = attachments.indexOf(a);
-          return (
-            <TouchableOpacity key={a._id ?? origIdx} onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
-              <MediaPreviewTile attachment={a} width={tileW} height={tileH} borderRadius={10} onPress={() => onTap(origIdx)} />
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    );
-  } else {
+  if (showGrid) {
     // 4+ images — 2×2 grid, first 4 visible, +N counter on the 4th tile overlay
-    const tileW = Math.floor((fullW - GRID_GAP) / 2);
+    const tileW = Math.floor((BUBBLE_MAX_W - GRID_GAP) / 2);
     const tileH = Math.round(tileW * (3 / 4));
     const visible = mediaItems.slice(0, 4);
     const overflow = count - 4;
@@ -582,6 +669,16 @@ export const MessageBubble = React.memo(function MessageBubble({
 
   if (!hasContent) return null;
 
+  const stackedMedia = getStackedMedia(rawAttachments);
+  const hasStack = stackedMedia.length > 0;
+  const hasInlineAttachments = rawAttachments.length > stackedMedia.length;
+  const surfaceStyle = [
+    styles.messageSurface,
+    isUser ? styles.userSurface : styles.assistantSurface,
+    isOnlyUrl && isUser && { backgroundColor: 'transparent', paddingHorizontal: 0, paddingVertical: 0 },
+  ];
+  const showSurface = !hasStack || Boolean(replyQuote?.text) || hasInlineAttachments || content.trim().length > 0;
+
 
   const Container = animated ? Animated.View : View;
   const containerProps = animated
@@ -608,13 +705,12 @@ export const MessageBubble = React.memo(function MessageBubble({
           accessibilityHint="Touch and hold for reply, copy, and reactions"
           accessibilityActions={[{ name: 'longpress', label: 'Message actions' }]}
           onAccessibilityAction={handleAccessibilityAction}
-          style={[
-            styles.messageSurface,
-            isUser ? styles.userSurface : styles.assistantSurface,
-            isOnlyUrl && isUser && { backgroundColor: 'transparent', paddingHorizontal: 0, paddingVertical: 0 }
-          ]}
+          style={hasStack ? [styles.stackSurface, isUser ? styles.stackSurfaceUser : styles.stackSurfaceAssistant] : surfaceStyle}
         >
+          {hasStack && <AttachmentStack attachments={rawAttachments} onTap={handleAttachmentTap} />}
 
+          {showSurface && (
+          <View style={hasStack ? surfaceStyle : undefined}>
           {/* Reply quote */}
           {replyQuote && replyQuote.text && (
             <TouchableOpacity
@@ -629,14 +725,14 @@ export const MessageBubble = React.memo(function MessageBubble({
           )}
 
           {/* Attachments */}
-          {rawAttachments.length > 0 && (
+          {hasInlineAttachments && (
             <AttachmentGrid attachments={rawAttachments} onTap={handleAttachmentTap} />
           )}
 
           {/* Message text */}
           {content.trim().length > 0 && !isOnlyUrl && (
             <Text
-              style={[styles.messageText, isUser && TYPE.bodyLarge, { marginTop: rawAttachments.length > 0 ? 4 : 0 }]}
+              style={[styles.messageText, isUser && TYPE.bodyLarge, { marginTop: hasInlineAttachments ? 4 : 0 }]}
               numberOfLines={isMessageOnlyUrl(content) ? 1 : undefined}
             >
               {parseFormattedMessage(content, isUser, styles)}
@@ -645,6 +741,8 @@ export const MessageBubble = React.memo(function MessageBubble({
 
           {/* Link preview chips */}
           {content.trim().length > 0 && <LinkPreviews text={content} />}
+          </View>
+          )}
         </Pressable>
 
         {reaction && (
@@ -679,6 +777,24 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   userAttachmentContainer: { maxWidth: '78%' },
   assistantMessageContainer: { alignSelf: 'flex-start', maxWidth: '88%' },
   messageSurface: { overflow: 'hidden' },
+  stackSurface: { gap: 6 },
+  stackSurfaceUser: { alignItems: 'flex-end' },
+  stackSurfaceAssistant: { alignItems: 'flex-start' },
+  stackTile: {
+    borderRadius: STACK_TILE_RADIUS,
+    backgroundColor: COLORS.background,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+  stackTileEdge: {
+    ...StyleSheet.absoluteFill,
+    borderColor: COLORS.strokeWeaker,
+    borderRadius: STACK_TILE_RADIUS,
+    borderWidth: 1,
+  },
   userSurface: {
     backgroundColor: COLORS.fillChatUser,
     borderRadius: 14,
