@@ -58,17 +58,18 @@ interface Props {
 
 function IconBtn({
   active,
-  onPressIn,
+  onPress,
   children,
 }: {
   active?: boolean;
-  onPressIn: () => void;
+  onPress: () => void;
   children: React.ReactNode;
 }) {
   const styles = useThemeStyles(createStyles);
   return (
     <TouchableOpacity
-      onPressIn={() => { Haptics.selectionAsync(); onPressIn(); }}
+      // On release, because a touch that starts a swipe along the toolbar must not format.
+      onPress={() => { Haptics.selectionAsync(); onPress(); }}
       activeOpacity={0.7}
       hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
       style={[styles.toolBtn, active && styles.toolBtnActive]}
@@ -96,40 +97,40 @@ export function FormattingToolbar({ editor }: { editor: EditorBridge }) {
         contentContainerStyle={styles.toolbarContent}
         keyboardShouldPersistTaps="always"
       >
-        <IconBtn active={s.headingLevel === 1} onPressIn={() => editor.toggleHeading(1)}>
+        <IconBtn active={s.headingLevel === 1} onPress={() => editor.toggleHeading(1)}>
           <Heading1 size={sz} color={s.headingLevel === 1 ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
-        <IconBtn active={s.headingLevel === 2} onPressIn={() => editor.toggleHeading(2)}>
+        <IconBtn active={s.headingLevel === 2} onPress={() => editor.toggleHeading(2)}>
           <Heading2 size={sz} color={s.headingLevel === 2 ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
 
         <View style={styles.divider} />
 
-        <IconBtn active={s.isBoldActive} onPressIn={() => editor.toggleBold()}>
+        <IconBtn active={s.isBoldActive} onPress={() => editor.toggleBold()}>
           <Bold size={sz} color={s.isBoldActive ? activeColor : inactiveColor} strokeWidth={s.isBoldActive ? 2.5 : 2} />
         </IconBtn>
-        <IconBtn active={s.isItalicActive} onPressIn={() => editor.toggleItalic()}>
+        <IconBtn active={s.isItalicActive} onPress={() => editor.toggleItalic()}>
           <Italic size={sz} color={s.isItalicActive ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
-        <IconBtn active={s.isUnderlineActive} onPressIn={() => editor.toggleUnderline()}>
+        <IconBtn active={s.isUnderlineActive} onPress={() => editor.toggleUnderline()}>
           <UnderlineIcon size={sz} color={s.isUnderlineActive ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
-        <IconBtn active={s.isStrikeActive} onPressIn={() => editor.toggleStrike()}>
+        <IconBtn active={s.isStrikeActive} onPress={() => editor.toggleStrike()}>
           <Strikethrough size={sz} color={s.isStrikeActive ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
 
         <View style={styles.divider} />
 
-        <IconBtn active={s.isBulletListActive} onPressIn={() => editor.toggleBulletList()}>
+        <IconBtn active={s.isBulletListActive} onPress={() => editor.toggleBulletList()}>
           <List size={sz} color={s.isBulletListActive ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
-        <IconBtn active={s.isOrderedListActive} onPressIn={() => editor.toggleOrderedList()}>
+        <IconBtn active={s.isOrderedListActive} onPress={() => editor.toggleOrderedList()}>
           <ListOrdered size={sz} color={s.isOrderedListActive ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
 
         <View style={styles.divider} />
 
-        <IconBtn active={s.isBlockquoteActive} onPressIn={() => editor.toggleBlockquote()}>
+        <IconBtn active={s.isBlockquoteActive} onPress={() => editor.toggleBlockquote()}>
           <Quote size={sz} color={s.isBlockquoteActive ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
       </ScrollView>
