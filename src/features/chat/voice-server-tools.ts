@@ -49,7 +49,7 @@ function navigates(effect: VoiceToolEffect): boolean {
   return effect.type === 'open' || effect.type === 'open_story';
 }
 
-const REFRESHABLE = ['profile', 'memories', 'capsules', 'beneficiaries'] as const;
+const REFRESHABLE = ['profile', 'memories', 'capsules', 'beneficiaries', 'observations'] as const;
 export type VoiceRefreshable = (typeof REFRESHABLE)[number];
 
 export type VoiceToolEffect =
