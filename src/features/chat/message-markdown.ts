@@ -10,7 +10,7 @@ export type MessageMarkdownToken =
   | { type: 'url'; url: string };
 
 const INLINE_MARKDOWN_RE =
-  /(\[.+?\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s]+|\*\*\*[^\s*](?:[\s\S]*?[^\s*])?\*\*\*|\*\*[^\s*](?:[\s\S]*?[^\s*])?\*\*|\*[^\s*](?:[\s\S]*?[^\s*])?\*|___[^\s_](?:[\s\S]*?[^\s_])?___|__[^\s_](?:[\s\S]*?[^\s_])?__|`[^`\n]+`|~~[^\s~](?:[\s\S]*?[^\s~])?~~|==[^\s=](?:[\s\S]*?[^\s=])?==|(?:^|[\s(])_[^\s_](?:[\s\S]*?[^\s_])?_(?=[\s.,!?;:)]|$))/g;
+  /(\[.+?\]\((?:https?:\/\/[^\s)]+|\/(?:stories|chat)\/[0-9a-fA-F]{24})\)|https?:\/\/[^\s]+|\*\*\*[^\s*](?:[\s\S]*?[^\s*])?\*\*\*|\*\*[^\s*](?:[\s\S]*?[^\s*])?\*\*|\*[^\s*](?:[\s\S]*?[^\s*])?\*|___[^\s_](?:[\s\S]*?[^\s_])?___|__[^\s_](?:[\s\S]*?[^\s_])?__|`[^`\n]+`|~~[^\s~](?:[\s\S]*?[^\s~])?~~|==[^\s=](?:[\s\S]*?[^\s=])?==|(?:^|[\s(])_[^\s_](?:[\s\S]*?[^\s_])?_(?=[\s.,!?;:)]|$))/g;
 
 /**
  * Tokenizes plain text with inline Markdown formatting and links
@@ -83,4 +83,60 @@ export function tokenizeMessageMarkdown(text: string): MessageMarkdownToken[] {
   }
 
   return tokens;
+}
+
+export type MessageBlock =
+  | { type: 'paragraph'; text: string }
+  | { type: 'heading'; text: string; level: number }
+  | { type: 'bullet'; text: string; depth: number }
+  | { type: 'ordered'; text: string; marker: string; depth: number }
+  | { type: 'quote'; text: string };
+
+const HEADING_RE = /^(#{1,6})\s+(.+)$/;
+const BULLET_RE = /^(\s*)[-*+\u2022]\s+(.+)$/;
+const ORDERED_RE = /^(\s*)(\d{1,3})[.)]\s+(.+)$/;
+const QUOTE_RE = /^>\s?(.*)$/;
+
+function depthOf(indent: string): number {
+  return Math.min(2, Math.floor(indent.replace(/\t/g, '  ').length / 2));
+}
+
+/**
+ * Splits a message into Markdown blocks (paragraphs, headings, list items,
+ * quotes); each block's text is still inline Markdown.
+ */
+export function splitMessageBlocks(text: string): MessageBlock[] {
+  const blocks: MessageBlock[] = [];
+  let paragraph: string[] = [];
+  const endParagraph = () => {
+    if (paragraph.length) blocks.push({ type: 'paragraph', text: paragraph.join('\n') });
+    paragraph = [];
+  };
+  for (const line of (text || '').split('\n')) {
+    const heading = line.match(HEADING_RE);
+    const bullet = line.match(BULLET_RE);
+    const ordered = line.match(ORDERED_RE);
+    const quote = line.match(QUOTE_RE);
+    if (!line.trim()) {
+      endParagraph();
+    } else if (heading) {
+      endParagraph();
+      blocks.push({ type: 'heading', text: heading[2].replace(/\s*#+\s*$/, ''), level: heading[1].length });
+    } else if (bullet) {
+      endParagraph();
+      blocks.push({ type: 'bullet', text: bullet[2], depth: depthOf(bullet[1]) });
+    } else if (ordered) {
+      endParagraph();
+      blocks.push({ type: 'ordered', text: ordered[3], marker: `${ordered[2]}.`, depth: depthOf(ordered[1]) });
+    } else if (quote) {
+      endParagraph();
+      const last = blocks[blocks.length - 1];
+      if (last?.type === 'quote') last.text += `\n${quote[1]}`;
+      else blocks.push({ type: 'quote', text: quote[1] });
+    } else {
+      paragraph.push(line);
+    }
+  }
+  endParagraph();
+  return blocks;
 }

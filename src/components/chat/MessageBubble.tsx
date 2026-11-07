@@ -8,7 +8,11 @@ import type { IMessage } from '@/types';
 import dayjs from 'dayjs';
 import { COLORS, FONTS, type ThemeColors } from '@/constants/tokens';
 import { TYPE, TYPE_METRICS } from '@/constants/typography';
-import { tokenizeMessageMarkdown } from '@/features/chat/message-markdown';
+import { splitMessageBlocks, tokenizeMessageMarkdown } from '@/features/chat/message-markdown';
+import { collectReplySources, mementoRoute, parseMementoPath } from '@/features/chat/memento-links';
+import { router } from 'expo-router';
+import BookOpen from 'lucide-react-native/icons/book-open';
+import MessageCircle from 'lucide-react-native/icons/message-circle';
 import FileText from 'lucide-react-native/icons/file-text';
 import Music from 'lucide-react-native/icons/music';
 import Play from 'lucide-react-native/icons/play';
@@ -251,16 +255,22 @@ export function parseFormattedMessage(text: string, isUser?: boolean, styles = c
           </Text>
         );
 
-      case 'link':
+      case 'link': {
+        const memento = parseMementoPath(token.url);
         return (
           <Text
             key={index}
-            style={styles.markdownLink}
-            onPress={() => Linking.openURL(token.url).catch(() => {})}
+            style={memento ? styles.mementoLink : styles.markdownLink}
+            accessibilityRole="link"
+            accessibilityLabel={memento ? `Open ${memento.kind}: ${token.label}` : undefined}
+            onPress={() =>
+              memento ? router.push(mementoRoute(memento)) : Linking.openURL(token.url).catch(() => {})
+            }
           >
             {token.label}
           </Text>
         );
+      }
 
       case 'url': {
         const shortened = shortenUrl(token.url);
@@ -282,6 +292,98 @@ export function parseFormattedMessage(text: string, isUser?: boolean, styles = c
 }
 
 const parseTextWithLinks = parseFormattedMessage;
+
+type BubbleStyles = ReturnType<typeof createStyles>;
+
+/** A message as Markdown blocks: paragraphs, headings, lists and quotes. */
+function FormattedMessage({
+  content,
+  isUser,
+  styles,
+  textStyle,
+  numberOfLines,
+}: {
+  content: string;
+  isUser: boolean;
+  styles: BubbleStyles;
+  textStyle: React.ComponentProps<typeof Text>['style'];
+  numberOfLines?: number;
+}) {
+  const blocks = splitMessageBlocks(content);
+  if (blocks.length <= 1 && (!blocks[0] || blocks[0].type === 'paragraph')) {
+    return (
+      <Text style={textStyle} numberOfLines={numberOfLines}>
+        {parseFormattedMessage(content, isUser, styles)}
+      </Text>
+    );
+  }
+  return (
+    <View style={styles.blocks}>
+      {blocks.map((block, index) => {
+        const inline = parseFormattedMessage(block.text, isUser, styles);
+        switch (block.type) {
+          case 'heading':
+            return (
+              <Text key={index} accessibilityRole="header" style={[textStyle, styles.markdownBold, block.level <= 2 && styles.heading]}>
+                {inline}
+              </Text>
+            );
+          case 'bullet':
+          case 'ordered':
+            return (
+              <View key={index} style={[styles.listRow, { paddingLeft: block.depth * 14 }]}>
+                <Text style={[textStyle, styles.listMarker]} accessibilityElementsHidden importantForAccessibility="no">
+                  {block.type === 'bullet' ? '\u2022' : block.marker}
+                </Text>
+                <Text style={[textStyle, styles.listText]}>{inline}</Text>
+              </View>
+            );
+          case 'quote':
+            return (
+              <View key={index} style={styles.quoteBlock}>
+                <Text style={[textStyle, styles.markdownItalic]}>{inline}</Text>
+              </View>
+            );
+          default:
+            return (
+              <Text key={index} style={textStyle}>
+                {inline}
+              </Text>
+            );
+        }
+      })}
+    </View>
+  );
+}
+
+/** "Sources" under a reply: the stories and conversations it linked to. */
+function ReplySources({ text, styles }: { text: string; styles: BubbleStyles }) {
+  const COLORS = useThemeColors();
+  const sources = collectReplySources(text);
+  if (!sources.length) return null;
+  return (
+    <View style={styles.sourcesRow} accessibilityLabel="Sources">
+      <Text style={styles.sourcesLabel}>Sources</Text>
+      {sources.map((source) => {
+        const Icon = source.kind === 'story' ? BookOpen : MessageCircle;
+        return (
+          <Pressable
+            key={source.id}
+            onPress={() => router.push(mementoRoute(source))}
+            accessibilityRole="link"
+            accessibilityLabel={`Open ${source.kind}: ${source.label}`}
+            style={styles.sourceChip}
+          >
+            <Icon size={14} color={COLORS.textWeak} strokeWidth={1.8} />
+            <Text style={styles.sourceChipText} numberOfLines={1}>
+              {source.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 function LinkPreviewChip({ preview }: { preview: LinkPreviewData }) {
   const COLORS = useThemeColors();
@@ -731,12 +833,15 @@ export const MessageBubble = React.memo(function MessageBubble({
 
           {/* Message text */}
           {content.trim().length > 0 && !isOnlyUrl && (
-            <Text
-              style={[styles.messageText, isUser && TYPE.bodyLarge, { marginTop: hasInlineAttachments ? 4 : 0 }]}
-              numberOfLines={isMessageOnlyUrl(content) ? 1 : undefined}
-            >
-              {parseFormattedMessage(content, isUser, styles)}
-            </Text>
+            <View style={{ marginTop: hasInlineAttachments ? 4 : 0 }}>
+              <FormattedMessage
+                content={content}
+                isUser={isUser}
+                styles={styles}
+                textStyle={[styles.messageText, isUser && TYPE.bodyLarge]}
+                numberOfLines={isMessageOnlyUrl(content) ? 1 : undefined}
+              />
+            </View>
           )}
 
           {/* Link preview chips */}
@@ -744,6 +849,8 @@ export const MessageBubble = React.memo(function MessageBubble({
           </View>
           )}
         </Pressable>
+
+        {!isUser && content.trim().length > 0 && <ReplySources text={content} styles={styles} />}
 
         {reaction && (
           <Pressable
@@ -832,6 +939,31 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     color: COLORS.linkPreview,
     textDecorationLine: 'underline',
   },
+  mementoLink: {
+    ...TYPE.bodyStrong,
+    color: COLORS.linkPreview,
+    textDecorationLine: 'underline',
+  },
+  blocks: { gap: 6 },
+  heading: { ...TYPE.bodyStrong },
+  listRow: { flexDirection: 'row', gap: 6 },
+  listMarker: { minWidth: 14 },
+  listText: { flex: 1 },
+  quoteBlock: { borderLeftWidth: 3, borderLeftColor: COLORS.strokeWeak, paddingLeft: 8 },
+  sourcesRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 6, maxWidth: '100%' },
+  sourcesLabel: { ...TYPE.metadata, color: COLORS.textWeak },
+  sourceChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    minHeight: 32,
+    maxWidth: 220,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeak,
+  },
+  sourceChipText: { ...TYPE.metadata, color: COLORS.textStrong, flexShrink: 1 },
   replyQuote: {
     backgroundColor: COLORS.strokeWeaker,
     borderLeftColor: COLORS.info,
