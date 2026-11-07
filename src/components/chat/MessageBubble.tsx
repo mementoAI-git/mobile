@@ -11,6 +11,7 @@ import { TYPE, TYPE_METRICS } from '@/constants/typography';
 import { splitMessageBlocks, tokenizeMessageMarkdown } from '@/features/chat/message-markdown';
 import { collectReplySources, mementoRoute, parseMementoPath, splitConfirmations } from '@/features/chat/memento-links';
 import { ChatConfirmCard } from './ChatConfirmCard';
+import { ChatDoneCard } from './ChatDoneCard';
 import { ChatStoryCard } from './ChatStoryCard';
 import { router } from 'expo-router';
 import FileText from 'lucide-react-native/icons/file-text';
@@ -724,8 +725,8 @@ export const MessageBubble = React.memo(function MessageBubble({
   const replyQuote: { role: string; text: string } | null =
     (message as any).replyTo ?? (isUser ? extractReplyQuote(rawContent) : null);
   // Memento's confirmation cards are shown as buttons, not as text.
-  const { text: content, cards } = useMemo(
-    () => (isUser ? { text: stripReplyWrapper(rawContent), cards: [] } : splitConfirmations(rawContent)),
+  const { text: content, cards, dones } = useMemo(
+    () => (isUser ? { text: stripReplyWrapper(rawContent), cards: [], dones: [] } : splitConfirmations(rawContent)),
     [isUser, rawContent],
   );
   const surfaceRef = useRef<View>(null);
@@ -749,7 +750,7 @@ export const MessageBubble = React.memo(function MessageBubble({
     [rawAttachments],
   );
 
-  const hasContent = content.trim().length > 0 || rawAttachments.length > 0 || cards.length > 0;
+  const hasContent = content.trim().length > 0 || rawAttachments.length > 0 || cards.length > 0 || dones.length > 0;
   const isOnlyUrl = content.trim().length > 0 && isMessageOnlyUrl(content);
 
   // Must be declared before any early return (Rules of Hooks)
@@ -767,7 +768,7 @@ export const MessageBubble = React.memo(function MessageBubble({
     isUser ? styles.userSurface : styles.assistantSurface,
     isOnlyUrl && isUser && { backgroundColor: 'transparent', paddingHorizontal: 0, paddingVertical: 0 },
   ];
-  const showSurface = !hasStack || Boolean(replyQuote?.text) || hasInlineAttachments || content.trim().length > 0 || cards.length > 0;
+  const showSurface = !hasStack || Boolean(replyQuote?.text) || hasInlineAttachments || content.trim().length > 0 || cards.length > 0 || dones.length > 0;
 
 
   const Container = animated ? Animated.View : View;
@@ -834,6 +835,10 @@ export const MessageBubble = React.memo(function MessageBubble({
 
           {/* Link preview chips */}
           {content.trim().length > 0 && <LinkPreviews text={content} />}
+
+          {dones.map((done, index) => (
+            <ChatDoneCard key={done.action ?? `${done.tool}:${index}`} done={done} />
+          ))}
 
           {cards.map((card) => (
             <ChatConfirmCard key={String(card.args.confirmation ?? card.text)} card={card} />
