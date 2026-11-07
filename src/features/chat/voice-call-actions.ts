@@ -10,12 +10,15 @@ export const CALL_ACTIONS_CAPABILITY = 'call_actions';
 
 /**
  * Screens the model may open. Keep the keys in sync with
- * VOICE_SCREEN_DESTINATIONS in api/src/module/api/ai/live-session-config.ts.
+ * VOICE_SCREEN_DESTINATIONS in api/src/module/api/ai/live-session-config.ts,
+ * apart from people, which only web has; the model hears "That screen isn't
+ * available" for it here.
  */
 export const VOICE_DESTINATIONS = {
   home: { href: '/(tabs)/overview', label: 'home' },
   chat: { href: '/(tabs)/chat', label: 'chat' },
   stories: { href: '/(tabs)/stories', label: 'your stories' },
+  bookmarks: { href: '/(tabs)/stories?filter=bookmarked', label: 'your bookmarked stories' },
   new_story: { href: '/editor?mode=story&lockMode=true', label: 'a new story' },
   quick_note: { href: '/editor?mode=quick-capture', label: 'a quick note' },
   time_capsules: { href: '/(tabs)/capsule', label: 'your time capsules' },
