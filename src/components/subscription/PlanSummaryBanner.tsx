@@ -1,3 +1,5 @@
+import type { ThemeColors } from '@/constants/tokens';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -46,6 +48,8 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
   cancelAtPeriodEnd,
   provider,
 }: PlanSummaryBannerProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const resolvedTier = tier ?? (isProOrAbove ? 'pro' : 'free');
   const presentation = getBillingTierPresentation(resolvedTier);
   const badge = statusBadgeLabel(presentation.statusLabel, status, cancelAtPeriodEnd);
@@ -126,7 +130,7 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
     <Animated.View entering={FadeInDown.delay(80).duration(500)}>
       <LinearGradient
         colors={[
-          COLORS.info,
+          COLORS.blue7,
           COLORS.blue6,
         ]}
         start={{ x: 0, y: 0 }}
@@ -175,7 +179,7 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',

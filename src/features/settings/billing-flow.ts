@@ -79,7 +79,7 @@ export async function launchBillingCheckout({
       }
       return false;
     } catch (err: any) {
-      logger.warn('[BillingFlow] Native IAP checkout error:', err);
+      logger.handledError('[BillingFlow] Native IAP checkout error:', err);
       if (isAlreadyOwnedPurchaseError(err)) {
         try {
           const restored = await iapService.restorePurchases();
@@ -94,7 +94,7 @@ export async function launchBillingCheckout({
           );
           return false;
         } catch (restoreError) {
-          logger.warn('[BillingFlow] Existing subscription restore failed:', restoreError);
+          logger.handledError('[BillingFlow] Existing subscription restore failed:', restoreError);
           toast('Could not restore your existing subscription. Please try again.', 'error');
           return false;
         }
@@ -127,7 +127,7 @@ export async function launchBillingCheckout({
     await invalidateBillingQueries(queryClient);
     return true;
   } catch (err: any) {
-    logger.error('Checkout error:', err);
+    logger.handledError('Checkout error:', err);
     toast(err?.message || 'A billing error occurred. Please try again.', 'error');
     return false;
   }
@@ -154,7 +154,7 @@ export async function openBillingPortal({ returnPath, provider }: OpenBillingPor
     await WebBrowser.openBrowserAsync(portalUrl);
     return true;
   } catch (err: any) {
-    logger.error('Billing portal error:', err);
+    logger.handledError('Billing portal error:', err);
     toast(err?.message || 'Could not load billing portal.', 'error');
     return false;
   }
@@ -172,7 +172,7 @@ export async function restoreBillingPurchases({ queryClient }: BillingMutationOp
       return false;
     }
   } catch (err: any) {
-    logger.error('Restore purchases error:', err);
+    logger.handledError('Restore purchases error:', err);
     toast(err?.message || 'Could not restore purchases.', 'error');
     return false;
   }
@@ -185,7 +185,7 @@ export async function redeemBillingPromo(code: string, { queryClient }: BillingM
     await invalidateBillingQueries(queryClient);
     return true;
   } catch (err: any) {
-    logger.error('Promo redeem error:', err);
+    logger.handledError('Promo redeem error:', err);
     toast(err?.message || 'Could not redeem promo code.', 'error');
     return false;
   }
@@ -201,7 +201,7 @@ export async function cancelBillingSubscription(
     await invalidateBillingQueries(queryClient);
     return true;
   } catch (err: any) {
-    logger.error('Cancel subscription error:', err);
+    logger.handledError('Cancel subscription error:', err);
     toast(err?.message || 'Could not cancel subscription.', 'error');
     return false;
   }
@@ -214,7 +214,7 @@ export async function resumeBillingSubscription({ queryClient }: BillingMutation
     await invalidateBillingQueries(queryClient);
     return true;
   } catch (err: any) {
-    logger.error('Resume subscription error:', err);
+    logger.handledError('Resume subscription error:', err);
     toast(err?.message || 'Could not resume subscription.', 'error');
     return false;
   }

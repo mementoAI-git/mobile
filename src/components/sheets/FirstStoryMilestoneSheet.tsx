@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useEffect } from 'react';
 import { View, Text, Image } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -21,6 +22,7 @@ export function FirstStoryMilestoneSheet({
   title = 'Untitled Memory',
   onClose,
 }: FirstStoryMilestoneSheetProps) {
+  const COLORS = useThemeColors();
   useEffect(() => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }, []);
@@ -39,7 +41,7 @@ export function FirstStoryMilestoneSheet({
   };
 
   return (
-    <View className="flex-grow px-5 pb-8 pt-2">
+    <View className="flex-grow pb-8 pt-2">
       {/* Top Bar with 44x44 Close Button */}
       <View className="flex-row items-center justify-end mb-2">
         <TouchableOpacity

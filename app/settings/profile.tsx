@@ -1,3 +1,5 @@
+import type { ThemeColors } from '@/constants/tokens';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback } from 'react';
 import {
   ImageBackground,
@@ -41,6 +43,8 @@ function formatAboutMe(desc?: string | null): string {
 }
 
 export default function PersonalInfoScreen() {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const router = useRouter();
   const { data: profile } = useProfile();
   const { data: userContext } = useUserContext();
@@ -138,7 +142,7 @@ export default function PersonalInfoScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
   content: { paddingTop: 16, paddingBottom: 48 },
   aboutCard: {

@@ -1,3 +1,4 @@
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 /**
  * MediaPickerMenu — shared floating media-type picker
  *
@@ -13,11 +14,11 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Pressable, TouchableOpacity } from '@/components/ui/Touchable';
 import ImageIcon from 'lucide-react-native/icons/image';
-import ImagePlus from 'lucide-react-native/icons/image-plus';
+import Camera from 'lucide-react-native/icons/camera';
 import AudioLines from 'lucide-react-native/icons/audio-lines';
-import Music from 'lucide-react-native/icons/music';
+import Paperclip from 'lucide-react-native/icons/paperclip';
 import * as Haptics from 'expo-haptics';
-import { COLORS } from '@/constants/tokens';
+import type { ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, radius } from '@/constants/responsive';
 
@@ -28,7 +29,7 @@ export interface MediaPickerMenuProps {
   onCamera?: () => void;
   onVoice?: () => void;
   onFile?: () => void;
-  /** Shows recording state on the Voice tile */
+  /** Shows recording state on the Audio tile */
   isRecording?: boolean;
   /**
    * Left offset for the menu positioning — defaults to 12.
@@ -47,6 +48,8 @@ export function MediaPickerMenu({
   isRecording = false,
   menuLeft = 12,
 }: MediaPickerMenuProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   if (!visible) return null;
 
   const callAndClose = (fn?: () => void) => {
@@ -78,7 +81,7 @@ export function MediaPickerMenu({
           activeOpacity={0.8}
           style={styles.item}
         >
-          <ImagePlus size={iconSize(18)} color={COLORS.textStrong} strokeWidth={1.8} />
+          <Camera size={iconSize(18)} color={COLORS.textStrong} strokeWidth={1.8} />
           <Text style={styles.label}>Camera</Text>
         </TouchableOpacity>
 
@@ -89,7 +92,7 @@ export function MediaPickerMenu({
         >
           <AudioLines size={iconSize(18)} color={isRecording ? COLORS.brand : COLORS.textStrong} strokeWidth={1.8} />
           <Text style={[styles.label, isRecording && styles.labelRecording]}>
-            {isRecording ? 'Listening' : 'Voice'}
+            {isRecording ? 'Listening' : 'Audio'}
           </Text>
         </TouchableOpacity>
 
@@ -98,15 +101,15 @@ export function MediaPickerMenu({
           activeOpacity={0.8}
           style={styles.item}
         >
-          <Music size={iconSize(18)} color={COLORS.textStrong} strokeWidth={1.8} />
-          <Text style={styles.label}>File</Text>
+          <Paperclip size={iconSize(18)} color={COLORS.textStrong} strokeWidth={1.8} />
+          <Text style={styles.label}>Files</Text>
         </TouchableOpacity>
       </View>
     </>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   backdrop: {
     position: 'absolute',
     top: -9999,

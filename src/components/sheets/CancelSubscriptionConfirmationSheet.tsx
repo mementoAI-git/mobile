@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import {Text, View} from 'react-native';
 import {useRouter, type Href} from 'expo-router';
@@ -8,6 +9,7 @@ import {COLORS} from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 
 export function CancelSubscriptionConfirmationSheet({onClose}: {onClose?: () => void}) {
+  const COLORS = useThemeColors();
   const router = useRouter();
   const continueToReason = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);

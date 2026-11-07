@@ -1,6 +1,17 @@
 import type { EnrichmentCategory, UserStatsData } from '@/constants/enrichment';
 
 export const CATEGORY_TO_ENRICHMENT_MAP: Record<string, EnrichmentCategory> = {
+  'growing-up': 'memories_experiences',
+  'people-i-love': 'relationships_people',
+  'the-life-i-live': 'everyday_life',
+  'things-i-love': 'passions_interests',
+  'who-i-am': 'identity_self',
+  'work-purpose': 'work_purpose',
+  'beliefs-faith': 'beliefs_worldview',
+  'where-i-come-from': 'heritage_roots',
+  'stories-adventures': 'memories_experiences',
+  'what-life-taught-me': 'lessons_wisdom',
+  'whats-ahead': 'hopes_legacy',
   career: 'work_purpose',
   family: 'relationships_people',
   relationship: 'relationships_people',
@@ -12,16 +23,16 @@ export const CATEGORY_TO_ENRICHMENT_MAP: Record<string, EnrichmentCategory> = {
 };
 
 export const ENRICHMENT_TO_CATEGORY_SLUG: Record<EnrichmentCategory, string> = {
-  identity_self: 'identity',
-  relationships_people: 'relationship',
-  work_purpose: 'purpose',
-  memories_experiences: 'life-transition',
-  beliefs_worldview: 'belief',
-  passions_interests: 'wellbeing',
-  heritage_roots: 'family',
-  lessons_wisdom: 'belief',
-  hopes_legacy: 'purpose',
-  everyday_life: 'wellbeing',
+  identity_self: 'who-i-am',
+  relationships_people: 'people-i-love',
+  work_purpose: 'work-purpose',
+  memories_experiences: 'stories-adventures',
+  beliefs_worldview: 'beliefs-faith',
+  passions_interests: 'things-i-love',
+  heritage_roots: 'where-i-come-from',
+  lessons_wisdom: 'what-life-taught-me',
+  hopes_legacy: 'whats-ahead',
+  everyday_life: 'the-life-i-live',
 };
 
 export interface PrioritizedTopicPrompt {

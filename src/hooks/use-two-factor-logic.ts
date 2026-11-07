@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { TextInput as RNTextInput } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVerify2FA } from '@/hooks/mutations/use-auth-mutations';
 import * as Haptics from 'expo-haptics';
+import { isCompleteOtp, normalizeOtpInput } from '@/features/auth/email-verification';
 import { normalizeAppHref } from '@/lib/navigation';
 import { useUiStore, useAuthStore } from '@/store';
 
@@ -14,9 +14,14 @@ export function useTwoFactorLogic() {
   const activeToken = useAuthStore((s) => s.twoFactorPendingToken);
   const { mutate, isPending } = useVerify2FA();
 
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [code, setCode] = useState('');
   const [error, setError] = useState('');
-  const inputRefs = useRef<(RNTextInput | null)[]>([]);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     if (!activeToken) {
@@ -24,33 +29,26 @@ export function useTwoFactorLogic() {
       router.replace('/(auth)/login');
       return;
     }
-    setTimeout(() => inputRefs.current[0]?.focus(), 300);
   }, [activeToken, router]);
 
-  function handleDigit(index: number, value: string) {
-    const digit = value.replace(/\D/g, '').slice(-1);
-    const next = [...code];
-    next[index] = digit;
-    setCode(next);
-    if (digit && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  }
+  const handleCodeChange = useCallback((value: string) => {
+    if (isPending) return;
+    setCode(normalizeOtpInput(value));
+    setError('');
+  }, [isPending]);
 
-  function handleKeyPress(index: number, key: string) {
-    if (key === 'Backspace' && !code[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  }
+  const handleBackToSignIn = useCallback(() => {
+    Haptics.selectionAsync();
+    router.replace('/(auth)/login');
+  }, [router]);
 
-  async function handleSubmit() {
-    const fullCode = code.join('');
-    if (fullCode.length < 6) return;
+  const handleSubmit = useCallback(() => {
+    if (isPending || !activeToken || !isCompleteOtp(code)) return;
 
     setError('');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
-    mutate({ two_fa_token: activeToken!, code: fullCode }, {
+    mutate({ two_fa_token: activeToken, code }, {
       onSuccess: () => {
         useAuthStore.getState().setTwoFactorPendingToken(null);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -60,22 +58,21 @@ export function useTwoFactorLogic() {
       },
       onError: (err: any) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        if (!isMountedRef.current) return;
         setError(err?.message ?? 'Invalid code. Please try again.');
-        setCode(['', '', '', '', '', '']);
-        setTimeout(() => inputRefs.current[0]?.focus(), 100);
+        setCode('');
       }
     });
-  }
+  }, [activeToken, code, isPending, mutate, redirect]);
 
-  const filled = code.join('').length === 6;
+  const filled = isCompleteOtp(code);
 
   return {
     code,
     loading: isPending,
     error,
-    inputRefs,
-    handleDigit,
-    handleKeyPress,
+    handleCodeChange,
+    handleBackToSignIn,
     handleSubmit,
     filled,
     router,

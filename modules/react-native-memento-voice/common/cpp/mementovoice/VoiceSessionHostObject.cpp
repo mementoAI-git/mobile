@@ -142,6 +142,11 @@ void installVoicePlaybackBindings(jsi::Runtime &runtime) {
         options.startupBufferMs = static_cast<uint32_t>(optionsObject.getProperty(rt, "startupBufferMs").getNumber());
         options.recoveryBufferMs = static_cast<uint32_t>(optionsObject.getProperty(rt, "recoveryBufferMs").getNumber());
         options.maxBufferedMs = static_cast<uint32_t>(optionsObject.getProperty(rt, "maxBufferedMs").getNumber());
+        // Optional: a JS bundle older than this option leaves the ramp off.
+        auto warmupRampMs = optionsObject.getProperty(rt, "warmupRampMs");
+        if (warmupRampMs.isNumber()) {
+          options.warmupRampMs = static_cast<uint32_t>(warmupRampMs.getNumber());
+        }
         auto host = std::make_shared<VoiceSessionHostObject>(
             contextHost->getContext(), destinationHost, options);
         return jsi::Object::createFromHostObject(rt, host);

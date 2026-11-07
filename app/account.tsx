@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ImageBackground,
@@ -17,15 +18,18 @@ import * as Haptics from 'expo-haptics';
 import { PlanSummaryBanner } from '@/components/subscription/PlanSummaryBanner';
 import { EnrichmentScoreCard } from '@/components/account/EnrichmentScoreCard';
 import { WeeklyProgressCard } from '@/components/account/WeeklyProgressCard';
+import { AboutMeCard } from '@/components/account/AboutMeCard';
+import { MusicControllerCard } from '@/components/account/MusicControllerCard';
 import { AccountSkeleton, Avatar, Button } from '@/components/ui';
 
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import {
   clampEnrichmentScore,
   deriveAccountWeek,
 } from '@/features/account/account-overview';
 import { useProfile } from '@/hooks/queries/use-profile';
+import { usePersona } from '@/hooks/queries/use-persona';
 import { useSubscription } from '@/hooks/queries/use-subscription';
 import { useUserStats } from '@/hooks/queries/use-overview';
 import { useUiStore } from '@/store';
@@ -33,9 +37,11 @@ import { useUiStore } from '@/store';
 const PATTERN = require('../assets/images/backgrounds/welcome_bg.png');
 
 export default function AccountOverviewScreen() {
+  const COLORS = useThemeColors();
   const router = useRouter();
   const openSheet = useUiStore((state) => state.openSheet);
   const [refreshing, setRefreshing] = useState(false);
+  const { data: persona, refetch: refetchPersona } = usePersona();
 
   const {
     data: profile,
@@ -65,7 +71,7 @@ export default function AccountOverviewScreen() {
     ),
     [profile],
   );
-  const biography = profile?.context?.self_description?.trim() || null;
+  const biography = persona?.self_description ?? profile?.context?.self_description ?? '';
   const memberSince = useMemo(
     () => (profile?.created_at
       ? `Member since ${dayjs(profile.created_at).format('MMM YYYY')}`
@@ -121,13 +127,14 @@ export default function AccountOverviewScreen() {
     try {
       await Promise.all([
         refetchProfile(),
+        refetchPersona(),
         refetchStats(),
         refetchSubscription(),
       ]);
     } finally {
       setRefreshing(false);
     }
-  }, [refetchProfile, refetchStats, refetchSubscription]);
+  }, [refetchProfile, refetchPersona, refetchStats, refetchSubscription]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
@@ -256,24 +263,12 @@ export default function AccountOverviewScreen() {
                   </View>
                   <Avatar
                     uri={profile?.picture_url || profile?.picture}
-                    seed={profile?.email || profile?._id}
+                    userId={profile?._id} seed={profile?.email}
                     name={displayName}
                     size="xl"
                     className="h-16 w-16 border-0"
                   />
                 </View>
-
-                {biography && (
-                  <Text
-                    style={{
-                      color: COLORS.textStrong,
-                      ...TYPE.body,
-                      lineHeight: 21,
-                    }}
-                  >
-                    {biography}
-                  </Text>
-                )}
 
                 {hasError && (
                   <View
@@ -295,12 +290,14 @@ export default function AccountOverviewScreen() {
                   </View>
                 )}
 
-                <View style={{ flexDirection: 'row', gap: 12 }}>
+                <AboutMeCard biography={biography} onEdit={openEditProfile} />
+
+                <View className="flex-row flex-wrap gap-3">
                   <Button
                     variant="secondary"
                     size="lg"
                     className="h-10 px-4"
-                                        onPress={openEditProfile}
+                    onPress={openEditProfile}
                   >
                     Edit Profile
                   </Button>
@@ -308,11 +305,12 @@ export default function AccountOverviewScreen() {
                     variant="secondary"
                     size="lg"
                     className="h-10 px-4"
-                                        onPress={openInsights}
+                    onPress={openInsights}
                   >
                     View Insights
                   </Button>
                 </View>
+                <MusicControllerCard />
               </Animated.View>
 
               <EnrichmentScoreCard score={score} onPress={handleInsights} />

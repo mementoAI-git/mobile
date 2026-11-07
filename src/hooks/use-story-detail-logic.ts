@@ -6,6 +6,7 @@ import { useUiStore } from '@/store';
 import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-type';
 import { buildStoryEditorSeed } from '@/features/memories/memory-audience';
 import { useCallback, useMemo } from 'react';
+import { returnFromStory } from '@/features/navigation/story-navigation';
 
 export function useStoryDetailLogic() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
@@ -26,14 +27,7 @@ export function useStoryDetailLogic() {
           deleteMemory(memory._id, {
             onSuccess: () => {
               useUiStore.getState().closeSheet();
-              // After delete, back stack may be empty if opened via deep link
-              if (from === 'overview') {
-                router.replace('/(tabs)/overview');
-              } else if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace('/(tabs)/stories');
-              }
+              returnFromStory(router, from === 'overview');
               resolve();
             },
             onError: reject,

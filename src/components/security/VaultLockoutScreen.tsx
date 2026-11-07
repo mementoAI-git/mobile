@@ -1,3 +1,4 @@
+import { useThemedStyles } from '@/hooks/use-theme-colors';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ImageBackground } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -11,6 +12,7 @@ import { useUserStore } from '@/store';
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 
 export function VaultLockoutScreen() {
+  const styles = useThemedStyles(stylesBase);
   const isLocked = useVaultLockStore((s) => s.isLocked);
   const unlockVault = useVaultLockStore((s) => s.unlockVault);
   const user = useUserStore((s) => s.user);
@@ -44,7 +46,7 @@ export function VaultLockoutScreen() {
       <ImageBackground source={PATTERN} style={[StyleSheet.absoluteFill, { opacity: 0.03 }]} resizeMode="repeat" />
 
       <View style={styles.card}>
-        <Avatar uri={user?.picture_url} name={displayName} size="xl" />
+        <Avatar userId={user?._id} seed={user?.email} uri={user?.picture_url} name={displayName} size="xl" />
 
         <Text style={[TYPE.sectionTitle, styles.title]}>
           Vault Locked
@@ -68,13 +70,13 @@ export function VaultLockoutScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   container: {
     zIndex: 99998,
     backgroundColor: COLORS.background,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
   },
   card: {
     width: '100%',

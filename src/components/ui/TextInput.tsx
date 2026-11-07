@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState, useRef, useEffect } from 'react';
 import { TextInput as RNTextInput, View, Text, TextInputProps, Animated, Platform } from 'react-native';
 import { cn } from '@/lib/utils';
@@ -40,6 +41,7 @@ export function TextInput({
   voiceLabel,
   ...props
 }: InputProps) {
+  const COLORS = useThemeColors();
   const [focused, setFocused] = useState(false);
   // Voice can read and type here ("change my nickname to …") so the host
   // sees it typed. Never passwords or other secrets.
@@ -114,7 +116,7 @@ export function TextInput({
           {
             flexDirection: 'row',
             alignItems: props.multiline ? 'flex-start' : 'center',
-            backgroundColor: isRounded ? '#ffffff' : COLORS.fillWeaker,
+            backgroundColor: isRounded ? COLORS.card : COLORS.fillWeaker,
             borderWidth,
             borderColor,
             borderRadius: resolvedRadius,
@@ -136,6 +138,8 @@ export function TextInput({
               padding: 0,
               ...Platform.select({ android: { paddingVertical: 0 } }),
             }}
+            selectionColor={COLORS.brand}
+            cursorColor={COLORS.brand}
             placeholderTextColor={COLORS.textMuted}
             onFocus={(e: any) => {
               setFocused(true);
@@ -157,6 +161,8 @@ export function TextInput({
               padding: 0,
               ...Platform.select({ android: { paddingVertical: 0 } }),
             }}
+            selectionColor={COLORS.brand}
+            cursorColor={COLORS.brand}
             placeholderTextColor={COLORS.textMuted}
             onFocus={(e: any) => {
               setFocused(true);

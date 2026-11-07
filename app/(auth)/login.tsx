@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React from 'react';
 import {
   View,
@@ -56,6 +57,8 @@ export function AppleSvgIcon({ size = 20 }: { size?: number }) {
 }
 
 export default function LoginScreen() {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const {
     form: { control, formState: { errors } },
     isPending,
@@ -85,7 +88,7 @@ export default function LoginScreen() {
         >
           <ScrollView
             style={{ flex: 1 }}
-            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 }}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -248,7 +251,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   logoIcon: {
     width: iconSize(44),
     height: iconSize(44),

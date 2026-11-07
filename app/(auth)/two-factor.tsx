@@ -1,114 +1,125 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import {
   View,
-  TextInput as RNTextInput,
+  Text,
+  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
-import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import { Button, Logo } from '@/components/ui';
 import { useTwoFactorLogic } from '@/hooks/use-two-factor-logic';
-import { FONTS } from '@/constants/tokens';
+import { OtpCodeInput } from '@/components/auth/OtpCodeInput';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { iconSize, responsiveSpace } from '@/constants/responsive';
+
+const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 export default function TwoFactorScreen() {
+  const COLORS = useThemeColors();
+  const { width } = useWindowDimensions();
+  const isCompact = width < 375;
   const {
     code,
     loading,
     error,
-    inputRefs,
-    handleDigit,
-    handleKeyPress,
+    handleCodeChange,
     handleSubmit,
     filled,
-    router,
+    handleBackToSignIn,
   } = useTwoFactorLogic();
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
-        <ScrollView
-          contentContainerClassName="flex-grow justify-center px-6 py-12"
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+    <ImageBackground
+      source={PATTERN}
+      style={{ flex: 1, backgroundColor: COLORS.background }}
+      imageStyle={{ opacity: 0.03 }}
+      resizeMode="repeat"
+    >
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <View className="px-4 py-4">
+          <Logo size="sm" />
+        </View>
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
         >
-          <View className="items-center mb-10">
-            <Logo size="lg" />
-          </View>
-
-          {/* Header */}
-          <View className="mb-10">
-            <Animated.Text
-              className="text-text-strong mb-2"
-              style={TYPE.screenTitle}
-            >
-              Two-factor auth
-            </Animated.Text>
-            <Animated.Text
-              className="text-text-base"
-              style={TYPE.body}
-            >
-              Enter the 6-digit code from your authenticator app.
-            </Animated.Text>
-          </View>
-
-          {/* OTP inputs */}
-          <View className="flex-row gap-3 mb-6">
-            {code.map((digit, i) => (
-              <RNTextInput
-                key={i}
-                ref={(el) => { inputRefs.current[i] = el; }}
-                value={digit}
-                onChangeText={(v) => handleDigit(i, v)}
-                onKeyPress={({ nativeEvent }) => handleKeyPress(i, nativeEvent.key)}
-                keyboardType="number-pad"
-                maxLength={1}
-                className="flex-1 h-14 rounded-xl border border-stroke-weak bg-fill-weaker text-center text-text-strong"
-                style={[TYPE.uiTitle, { textAlign: 'center' }]}
-              />
-            ))}
-          </View>
-
-          {error ? (
-            <View className="bg-error-weak rounded-xl px-4 py-3 mb-4">
-              <Animated.Text
-                className="text-error-strong"
-                style={TYPE.bodySmall}
+          <ScrollView
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: 'center',
+              paddingHorizontal: 16,
+              paddingVertical: responsiveSpace(32),
+            }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View className="w-full max-w-md self-center">
+              <Button
+                variant="ghost"
+                onPress={handleBackToSignIn}
+                className="self-start -ml-4 mb-4"
+                textClassName="text-text-strong"
+                leftIcon={<ArrowLeft size={iconSize(20)} color={COLORS.textStrong} />}
               >
-                {error}
-              </Animated.Text>
+                Back to sign in
+              </Button>
+
+              <View className="mb-6">
+                <Text
+                  accessibilityRole="header"
+                  className="text-text-strong mb-2"
+                  style={TYPE.screenTitle}
+                >
+                  Two-factor <Text style={{ fontStyle: 'italic' }}>authentication</Text>
+                </Text>
+                <Text className="text-text-base" style={TYPE.body}>
+                  Enter the 6-digit code from your authenticator app.
+                </Text>
+              </View>
+
+              <View className={isCompact ? 'mb-5' : 'px-4 mb-5'}>
+                <OtpCodeInput
+                  value={code}
+                  onChange={handleCodeChange}
+                  disabled={loading}
+                  error={Boolean(error)}
+                  autoFocus
+                />
+              </View>
+
+              {error ? (
+                <View className="bg-error-weak rounded-xl px-4 py-3 mb-4">
+                  <Text
+                    accessibilityRole="alert"
+                    accessibilityLiveRegion="polite"
+                    className="text-error-strong"
+                    style={TYPE.bodySmall}
+                  >
+                    {error}
+                  </Text>
+                </View>
+              ) : null}
+
+              <Button
+                onPress={handleSubmit}
+                loading={loading}
+                disabled={!filled}
+                fullWidth
+                rounded="lg"
+              >
+                Verify
+              </Button>
             </View>
-          ) : null}
-
-          <Button
-            onPress={handleSubmit}
-            loading={loading}
-            disabled={!filled}
-            fullWidth
-            size="lg"
-          >
-            Verify
-          </Button>
-
-          <TouchableOpacity
-            onPress={() => router.replace('/(auth)/login')}
-            className="mt-6 items-center"
-          >
-            <Animated.Text
-              className="text-text-base"
-              style={TYPE.buttonSmall}
-            >
-              Back to sign in
-            </Animated.Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }

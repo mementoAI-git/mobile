@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -10,6 +11,7 @@ import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/r
 import type { BillingProfile } from '@/features/settings/billing-adapters';
 
 export const BillingDetailsSection = React.memo(function BillingDetailsSection({profile, onEdit}: {profile: BillingProfile; onEdit: () => void}) {
+  const COLORS = useThemeColors();
   const address = profile.address;
   const addressLines = address ? [address.line1, address.line2, [address.city, address.state, address.postalCode].filter(Boolean).join(', '), address.country].filter(Boolean) : [];
   

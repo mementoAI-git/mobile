@@ -11,7 +11,7 @@ export function AuthenticatedNotificationManager() {
     if (!expoPushToken) return;
 
     syncPushToken(expoPushToken, {
-      onError: (error) => logger.error('Failed to sync push token', error),
+      onError: (error) => logger.handledError('Failed to sync push token', error),
     });
   }, [expoPushToken, syncPushToken]);
 

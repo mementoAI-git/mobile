@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 /**
  * ActivityListItem — shared card row used by both:
  *  - RecentActivitiesSection (overview)
@@ -182,6 +183,7 @@ function isDeletedActivity(activity: Activity): boolean {
 }
 
 export const ActivityListItem = React.memo(function ActivityListItem({ activity, showDivider = false, fromOverview = false }: ActivityListItemProps) {
+  const COLORS = useThemeColors();
   const router = useRouter();
   const accentColor = getAccentColor(activity._id);
   const canOpenStory = Boolean(activity.reference) && !isDeletedActivity(activity);

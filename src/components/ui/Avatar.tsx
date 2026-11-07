@@ -3,11 +3,13 @@ import { View, Text, Image } from 'react-native';
 import { cn, getInitials } from '@/lib/utils';
 import { TYPE } from '@/constants/typography';
 import { resolveFileUrl } from '@/features/account/profile-form';
+import { defaultAvatarUrl } from '@/features/account/avatar-source';
 
 interface AvatarProps {
   uri?: string | null;
   name?: string;
   seed?: string | null;
+  userId?: string | null;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
@@ -25,20 +27,16 @@ const sizeMap = {
   xl: { container: 'w-20 h-20', text: TYPE.stat },
 };
 
-export function Avatar({ uri, name, seed, size = 'md', className }: AvatarProps) {
-  const [imageFailed, setImageFailed] = React.useState(false);
+export function Avatar({ uri, name, seed, userId, size = 'md', className }: AvatarProps) {
+  const [failedUris, setFailedUris] = React.useState<Set<string>>(() => new Set());
   const s = sizeMap[size];
-  const initials = name ? getInitials(name) : '?';
+  const initials = name?.trim() ? getInitials(name) : '';
   const resolvedUri = resolveFileUrl(uri);
 
-  const avatarSeed = (seed || name || '').trim().toLowerCase();
-
-  const fallbackUri =
-    !resolvedUri && avatarSeed
-      ? `https://api.dicebear.com/9.x/adventurer/png?seed=${encodeURIComponent(avatarSeed)}&backgroundColor=fefbf8`
-      : null;
-
-  const effectiveUri = imageFailed ? null : resolvedUri || fallbackUri;
+  const effectiveUri = [resolvedUri, defaultAvatarUrl(seed, name, userId)].find(uri => uri && !failedUris.has(uri));
+  const handleImageError = React.useCallback(() => {
+    if (effectiveUri) setFailedUris(previous => new Set(previous).add(effectiveUri));
+  }, [effectiveUri]);
 
   return (
     <View
@@ -54,7 +52,9 @@ export function Avatar({ uri, name, seed, size = 'md', className }: AvatarProps)
           source={{ uri: effectiveUri }}
           className="w-full h-full"
           resizeMode="cover"
-          onError={() => setImageFailed(true)}
+          style={effectiveUri.startsWith('https://api.dicebear.com/10.x/critters/') ? { transform: [{ scale: 1.5 }] } : undefined}
+          key={effectiveUri}
+          onError={handleImageError}
         />
       ) : (
         <Text

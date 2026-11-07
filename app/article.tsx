@@ -1,3 +1,6 @@
+import { Avatar } from "@/components/ui/Avatar";
+import { PublishSuccessView } from '@/components/editor/PublishSuccessView';
+import { useThemeColors, useThemedStyles, useThemeStyles } from '@/hooks/use-theme-colors';
 /**
  * app/article.tsx — Full-screen rich-text article editor
  *
@@ -13,27 +16,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  Image,
-  ImageBackground,
   Keyboard,
   Modal,
   ActivityIndicator,
   Share,
-  Linking,
 } from 'react-native';
+import type { ThemeColors } from '@/constants/tokens';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView, SafeAreaProvider, initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as Clipboard from 'expo-clipboard';
 import MoreHorizontal from 'lucide-react-native/icons/ellipsis';
-import Plus from 'lucide-react-native/icons/plus';
 import X from 'lucide-react-native/icons/x';
 import Users from 'lucide-react-native/icons/users';
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import Sparkles from 'lucide-react-native/icons/sparkles';
-import Copy from 'lucide-react-native/icons/copy';
-import Check from 'lucide-react-native/icons/check';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import { toast } from '@/components/ui/Toast';
 import * as Haptics from 'expo-haptics';
@@ -63,165 +59,6 @@ import {
 } from '@/features/memories/memory-audience';
 import { buildArticlePublishPayload } from '@/features/editor/article-publish-payload';
 
-// ─── Surfer illustration asset ────────────────────────────────────────────────
-
-const SURFER_WEBP = require('../assets/images/illustrations/surfer.webp');
-const SUCCESS_BG = require('../assets/images/backgrounds/published_success_bg.webp');
-
-const SUN = require("../assets/images/illustrations/fluent-emoji-flat_ringed-planet.png")
-const BIG_CLOUD = require("../assets/images/illustrations/noto-v1_cloud.png")
-const SMALL_CLOUD = require("../assets/images/illustrations/noto_cloud.png")
-
-const SOCIAL_LINKEDIN = require('../assets/images/icons/linkedin.png');
-const SOCIAL_FACEBOOK = require('../assets/images/icons/facebook.png');
-const SOCIAL_INSTAGRAM = require('../assets/images/icons/instagram.png');
-const SOCIAL_X = require('../assets/images/icons/x.png');
-// ─── Publish success screen ───────────────────────────────────────────────────
-
-function PublishSuccessView({
-  publishedUrl,
-  onAddAnother,
-  onDismiss,
-}: {
-  publishedUrl: string;
-  onAddAnother: () => void;
-  onDismiss: () => void;
-}) {
-  const [copied, setCopied] = useState(false);
-  const insets = useSafeAreaInsets();
-
-  const handleCopy = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await Clipboard.setStringAsync(publishedUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [publishedUrl]);
-
-  const openSocial = useCallback((platform: 'linkedin' | 'facebook' | 'instagram' | 'x') => {
-    Haptics.selectionAsync();
-    const encoded = encodeURIComponent(publishedUrl);
-    const urls: Record<string, string> = {
-      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encoded}`,
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encoded}`,
-      instagram: `https://www.instagram.com/`,
-      x: `https://x.com/intent/tweet?url=${encoded}`,
-    };
-    Linking.openURL(urls[platform]).catch(() => {});
-  }, [publishedUrl]);
-
-  const truncatedUrl = publishedUrl.length > 32
-    ? publishedUrl.slice(0, 32) + '…'
-    : publishedUrl;
-
-  return (
-    <ImageBackground
-      source={SUCCESS_BG}
-      style={sStyles.screenRoot}
-      resizeMode="cover"
-    >
-      <ScrollView
-        contentContainerStyle={[sStyles.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 32 }]}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        {/* Surfer hero */}
-        <View style={sStyles.heroArea}>
-          {/* <Image source={SUCCESS_BG} style={sStyles.heroBg} resizeMode="cover" /> */}
-          <Image
-            source={SUN}
-            style={sStyles.sunImage}
-            resizeMode="contain"
-          />
-          <Image
-            source={BIG_CLOUD}
-            style={sStyles.bigCloudImage}
-            resizeMode="contain"
-          />
-           <Image
-            source={SMALL_CLOUD}
-            style={sStyles.smallCloudImage}
-            resizeMode="contain"
-          />
-          <Image
-            source={SURFER_WEBP}
-            style={sStyles.surferImage}
-            resizeMode="contain"
-          />
-        </View>
-
-      {/* Content */}
-      <Animated.View entering={FadeInDown.duration(400).delay(100)} style={sStyles.content}>
-        <Text style={sStyles.title}>Story published</Text>
-
-        {/* Share card */}
-        <View style={sStyles.shareCard}>
-          <Text style={sStyles.shareLabel}>Share this story with friends</Text>
-
-          {/* URL row */}
-          <View style={sStyles.urlRow}>
-            <Text style={sStyles.urlText} numberOfLines={1}>{truncatedUrl}</Text>
-            <TouchableOpacity
-              onPress={handleCopy}
-              activeOpacity={0.8}
-              style={sStyles.copyBtn}
-            >
-              {copied
-                ? <Check size={15} color={COLORS.success} strokeWidth={2.5} />
-                : <Copy size={15} color={COLORS.info} strokeWidth={2} />
-              }
-              <Text style={[sStyles.copyText, copied && { color: COLORS.success }]}>
-                {copied ? 'Copied!' : 'Copy'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Divider */}
-          <View style={sStyles.dividerRow}>
-            <View style={sStyles.dividerLine} />
-            <Text style={sStyles.dividerText}>Or share on social media</Text>
-            <View style={sStyles.dividerLine} />
-          </View>
-
-          {/* Social icons */}
-          <View style={sStyles.socialRow}>
-            {([
-              { id: 'linkedin', icon: SOCIAL_LINKEDIN },
-              { id: 'facebook', icon: SOCIAL_FACEBOOK },
-              { id: 'instagram', icon: SOCIAL_INSTAGRAM },
-              { id: 'x', icon: SOCIAL_X },
-            ] as const).map(({ id, icon }) => (
-              <TouchableOpacity
-                key={id}
-                onPress={() => openSocial(id)}
-                activeOpacity={0.75}
-                style={sStyles.socialBtn}
-              >
-                <Image source={icon} style={sStyles.socialBtnIcon} resizeMode="contain" />
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Add another story */}
-        <TouchableOpacity
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onAddAnother(); }}
-          activeOpacity={0.85}
-          style={sStyles.addAnotherBtn}
-        >
-          <Plus size={18} color={COLORS.textInverse} strokeWidth={2.5} />
-          <Text style={sStyles.addAnotherText}>Add another story</Text>
-        </TouchableOpacity>
-
-        {/* Dismiss */}
-        <TouchableOpacity onPress={onDismiss} activeOpacity={0.7} style={sStyles.dismissBtn}>
-          <Text style={sStyles.dismissText}>Dismiss</Text>
-        </TouchableOpacity>
-      </Animated.View>
-      </ScrollView>
-    </ImageBackground>
-  );
-}
-
 const DRAFT_KEY = (email?: string | null) => `article_draft_${email ?? 'anon'}`;
 const AUTOSAVE_DELAY_MS = 1200;
 
@@ -240,6 +77,8 @@ function PublishModal({
   body: string;
   onClose: () => void;
 }) {
+  const COLORS = useThemeColors();
+  const pStyles = useThemedStyles(pStylesBase);
   const insets = useSafeAreaInsets();
   const [tags, setTags] = useState('');
   const [audience, setAudience] = useState<MemoryAudienceSelection>(() => deriveMemoryAudience({}));
@@ -384,8 +223,8 @@ function PublishModal({
                 <Text style={pStyles.tagsTitle}>Add Tags</Text>
                 <TouchableOpacity onPress={handleAutotag} activeOpacity={0.8} style={pStyles.autotagBtn} disabled={isAutotagging}>
                   {isAutotagging
-                    ? <ActivityIndicator size="small" color={COLORS.info} />
-                    : <Sparkles size={13} color={COLORS.info} strokeWidth={2} />
+                    ? <ActivityIndicator size="small" color={COLORS.brand} />
+                    : <Sparkles size={13} color={COLORS.brand} strokeWidth={2} />
                   }
                   <Text style={pStyles.autotagText}>Autotag</Text>
                 </TouchableOpacity>
@@ -441,6 +280,8 @@ function PublishModal({
 // ─── Main article screen ──────────────────────────────────────────────────────
 
 export default function ArticleScreen() {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const router = useRouter();
   const user = useUserStore((s) => s.user);
 
@@ -565,10 +406,7 @@ export default function ArticleScreen() {
           {/* Document canvas */}
           <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={styles.authorRow}>
-              {avatarUri
-                ? <Image source={{ uri: avatarUri }} style={styles.avatar} />
-                : <View style={[styles.avatar, styles.avatarFallback]}><Text style={styles.avatarInitial}>{displayName.charAt(0).toUpperCase()}</Text></View>
-              }
+              <Avatar uri={avatarUri} userId={user?._id} seed={user?.email} name={displayName} className="size-8" />
               <Text style={styles.authorLabel}>{displayName}'s Memo.</Text>
             </View>
 
@@ -604,7 +442,7 @@ export default function ArticleScreen() {
 
 // ─── Article styles ────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
   kav: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 },
@@ -619,7 +457,7 @@ const styles = StyleSheet.create({
   nextBtnDisabled: { opacity: 0.4 },
   nextText: { ...TYPE.label, color: COLORS.textInverse },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 22, paddingBottom: 24, paddingTop: 4 },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 24, paddingTop: 4 },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 24 },
   avatar: { width: 24, height: 24, borderRadius: 12 },
   avatarFallback: { backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
@@ -642,9 +480,9 @@ const styles = StyleSheet.create({
 
 // ─── Publish modal styles ─────────────────────────────────────────────────────
 
-const pStyles = StyleSheet.create({
+const pStylesBase = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
-  container: { paddingHorizontal: 20, paddingTop: 8 },
+  container: { paddingHorizontal: 16, paddingTop: 8 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   headerTitle: { ...TYPE.sectionTitle, color: COLORS.textStrong },
   closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' },
@@ -665,183 +503,3 @@ const pStyles = StyleSheet.create({
 });
 
 // ─── Success screen styles ────────────────────────────────────────────────────
-
-const sStyles = StyleSheet.create({
-  // Outermost View (takes full modal space)
-  screenRoot: {
-    flex: 1,
-  },
-
-  // ScrollView contentContainer
-  root: {
-    flexGrow: 1,
-  },
-
-  // Surfer hero — fixed-height positioning context
-  heroArea: {
-    height: 300,
-    width: '100%',
-    position: 'relative',
-  },
-  // Surfer: centered horizontally, anchored to bottom
-  surferImage: {
-    position: 'absolute',
-    width: 280,
-    height: 280,
-    alignSelf: 'center',
-    bottom: 0,
-  },
-  // Saturn planet: upper-left
-  sunImage: {
-    position: 'absolute',
-    width: 62,
-    height: 62,
-    left: 95,
-    top: 95,
-  },
-  // Large cloud: upper-right, slightly off-screen edge
-  bigCloudImage: {
-    position: 'absolute',
-    width: 100,
-    height: 80,
-    right: "50%",
-    marginRight: -150,
-    top: 50,
-  },
-  // Small cloud: upper-center-right
-  smallCloudImage: {
-    position: 'absolute',
-    width: 52,
-    height: 42,
-    left: '50%',
-    // marginLeft: -8,
-    top: 50,
-  },
-
-  // Content below hero
-  content: {
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    alignItems: 'center',
-    gap: 24,
-  },
-
-  title: {
-    ...TYPE.sectionTitle,
-    color: COLORS.textStrong,
-    textAlign: 'center',
-    lineHeight: 34,
-  },
-
-  // Share card
-  shareCard: {
-    width: '100%',
-    backgroundColor: COLORS.fillWeak,
-    borderRadius: 20,
-    padding: 20,
-    gap: 16,
-  },
-  shareLabel: {
-    ...TYPE.bodySmall,
-    color: COLORS.textBase,
-  },
-
-  // URL row
-  urlRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
-    overflow: 'hidden',
-  },
-  urlText: {
-    flex: 1,
-    ...TYPE.bodySmall,
-    color: COLORS.textWeak,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  copyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderLeftWidth: 1,
-    borderLeftColor: COLORS.strokeWeaker,
-    backgroundColor: COLORS.card,
-  },
-  copyText: {
-    ...TYPE.bodySmall,
-    color: COLORS.info,
-  },
-
-  // Divider
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.strokeWeaker,
-  },
-  dividerText: {
-    ...TYPE.metadata,
-    color: COLORS.textMuted,
-  },
-
-  // Social icons
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  socialBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  socialIcon: {
-    ...TYPE.stat,
-  },
-  socialBtnIcon: {
-    width: 28,
-    height: 28,
-  },
-
-  // Add another story button
-  addAnotherBtn: {
-    width: '100%',
-    height: 56,
-    borderRadius: 999,
-    backgroundColor: COLORS.textStrong,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  addAnotherText: {
-    ...TYPE.button,
-    color: COLORS.textInverse,
-  },
-
-  // Dismiss
-  dismissBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  dismissText: {
-    ...TYPE.body,
-    color: COLORS.textBase,
-    textAlign: 'center',
-  },
-});

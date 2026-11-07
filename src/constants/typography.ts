@@ -1,4 +1,4 @@
-import {StyleSheet} from 'react-native';
+import {Platform, StyleSheet} from 'react-native';
 import { ms } from '@/constants/responsive';
 import {FONTS} from '@/constants/tokens';
 
@@ -27,14 +27,27 @@ export const TYPE_METRICS = Object.freeze({
 export const TYPE = StyleSheet.create({
   displayStat: {fontFamily: FONTS.serif, ...TYPE_METRICS.displayStat},
   displayTitle: {fontFamily: FONTS.serif, ...TYPE_METRICS.displayTitle},
+  sheetTitle: {fontFamily: Platform.select({ios: FONTS.sans, default: FONTS.sansSemi}), fontWeight: '600', fontSize: 20, lineHeight: 32},
+  editorTitle: {fontFamily: FONTS.serif, fontSize: 24, lineHeight: 32},
   screenTitle: {fontFamily: FONTS.serif, ...TYPE_METRICS.screenTitle},
-  greeting: {fontFamily: FONTS.sans, ...TYPE_METRICS.greeting},
+  dashboardTitle: {fontFamily: Platform.select({ios: FONTS.sans, default: FONTS.sansSemi}), fontWeight: '600', fontSize: 24, lineHeight: 30},
+  dashboardTitleSmall: {fontFamily: FONTS.bodyBold, fontWeight: '700', fontSize: 16, lineHeight: 22},
+  publishSuccessTitle: {fontFamily: FONTS.sans, fontWeight: '600', fontSize: ms(24, 0.25), lineHeight: ms(32, 0.25)},
+  musicCaption: {fontFamily: FONTS.sansMedium, fontSize: 12, lineHeight: 16},
+  musicTrack: {fontFamily: FONTS.sansMedium, fontSize: 14, lineHeight: 20},
+  musicVolume: {fontFamily: FONTS.sans, fontSize: 13, lineHeight: 20},
+  calendarWheel: {fontSize: 23, fontWeight: '400'},
+  publishSuccessAction: {fontFamily: FONTS.sans, fontWeight: '600', ...TYPE_METRICS.bodyLarge},
+  voicePickerTitle: {fontFamily: FONTS.bodyBold, fontWeight: '700', fontSize: 20, lineHeight: 26},
+  greeting: {fontFamily: FONTS.serif, ...TYPE_METRICS.greeting},
+  greetingName: {fontFamily: FONTS.serifItalic, ...TYPE_METRICS.greeting},
   sectionTitle: {fontFamily: FONTS.serif, ...TYPE_METRICS.sectionTitle},
+  sectionTitleWeak: {fontFamily: FONTS.serifItalic, ...TYPE_METRICS.sectionTitle},
   cardTitle: {fontFamily: FONTS.serifMedium, ...TYPE_METRICS.cardTitle},
   uiTitle: {fontFamily: FONTS.sansSemi, ...TYPE_METRICS.uiTitle},
   bodyLarge: {fontFamily: FONTS.sans, ...TYPE_METRICS.bodyLarge},
   body: {fontFamily: FONTS.sans, ...TYPE_METRICS.body},
-  bodyStrong: {fontFamily: FONTS.sansBold, ...TYPE_METRICS.bodyStrong},
+  bodyStrong: {fontFamily: FONTS.bodyBold, fontWeight: '700', ...TYPE_METRICS.bodyStrong},
   bodySmall: {fontFamily: FONTS.sans, ...TYPE_METRICS.bodySmall},
   label: {fontFamily: FONTS.sansMedium, ...TYPE_METRICS.label},
   button: {fontFamily: FONTS.sansSemi, ...TYPE_METRICS.button},
@@ -47,3 +60,13 @@ export const TYPE = StyleSheet.create({
 });
 
 export type TypographyRole = keyof typeof TYPE;
+
+/** Draft artwork uses its bundled face once loaded, with the system face as fallback. */
+export function getDraftTypography(fontFamily: string) {
+  return {
+    action: {...TYPE.buttonSmall, fontFamily, fontWeight: '700' as const},
+    emptyTitle: {...TYPE.button, fontFamily},
+    emptyDescription: {...TYPE.label, fontFamily},
+    date: {...TYPE.metadata, fontFamily, fontSize: 12, lineHeight: 16},
+  };
+}

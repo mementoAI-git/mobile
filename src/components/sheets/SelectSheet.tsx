@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback } from 'react';
 import {
   View,
@@ -37,6 +38,7 @@ export function SelectSheet({
   placeholder,
   onClose,
 }: SelectSheetProps) {
+  const COLORS = useThemeColors();
   const handleSelect = useCallback(
     (option: SelectOption) => {
       Haptics.selectionAsync();

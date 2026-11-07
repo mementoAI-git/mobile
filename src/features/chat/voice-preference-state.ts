@@ -1,3 +1,4 @@
+import { parseVoiceLanguage, type VoiceLanguageCode } from './voice-language';
 import { getVoiceById, getVoiceByProviderName, type VoiceId } from './voice-catalog';
 import type { StateCreator } from 'zustand';
 
@@ -8,6 +9,8 @@ export interface VoicePreferenceStorage {
 
 export interface VoicePreferenceState {
   selectedVoiceId: VoiceId | null;
+  languageCode: VoiceLanguageCode;
+  selectLanguage(code: VoiceLanguageCode): Promise<void>;
   hydratedForUser: string | null;
   isHydrating: boolean;
   hydrate(userKey: string): Promise<void>;
@@ -38,15 +41,20 @@ export function createVoicePreferenceState(
   let hydrationRequest = 0;
   return (set, get) => ({
     selectedVoiceId: null,
+    languageCode: 'en-US',
     hydratedForUser: null,
     isHydrating: false,
     hydrate: async (userKey) => {
       const request = ++hydrationRequest;
-      set({ isHydrating: true, selectedVoiceId: null, hydratedForUser: null });
-      const raw = await storage.getItem(getVoicePreferenceStorageKey(userKey)).catch(() => null);
+      set({ isHydrating: true, selectedVoiceId: null, languageCode: 'en-US', hydratedForUser: null });
+      const [raw, language] = await Promise.all([
+        storage.getItem(getVoicePreferenceStorageKey(userKey)).catch(() => null),
+        storage.getItem(`${getVoicePreferenceStorageKey(userKey)}.language`).catch(() => null),
+      ]);
       if (request !== hydrationRequest) return;
       set({
         selectedVoiceId: parseVoicePreference(raw),
+        languageCode: parseVoiceLanguage(language),
         hydratedForUser: userKey,
         isHydrating: false,
       });
@@ -57,9 +65,15 @@ export function createVoicePreferenceState(
       set({ selectedVoiceId: voiceId });
       await storage.setItem(getVoicePreferenceStorageKey(userKey), JSON.stringify(voiceId));
     },
+    selectLanguage: async (code) => {
+      const userKey = get().hydratedForUser;
+      if (!userKey || parseVoiceLanguage(code) !== code) return;
+      await storage.setItem(`${getVoicePreferenceStorageKey(userKey)}.language`, code);
+      if (get().hydratedForUser === userKey) set({ languageCode: code });
+    },
     reset: () => {
       hydrationRequest += 1;
-      set({ selectedVoiceId: null, hydratedForUser: null, isHydrating: false });
+      set({ selectedVoiceId: null, languageCode: 'en-US', hydratedForUser: null, isHydrating: false });
     },
   });
 }

@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { Text, View } from 'react-native';
 import { TYPE } from '@/constants/typography';
@@ -13,6 +14,7 @@ function formatBytes(bytes: number) {
 }
 
 export const BillingStorageCard = React.memo(function BillingStorageCard({storage}: {storage: StoragePresentation}) {
+  const COLORS = useThemeColors();
   return (
     <View className="rounded-[24px]" style={{ borderRadius: radius(24), padding: responsiveSpace(20), backgroundColor: COLORS.fillWeak }}>
       <View className="flex-row justify-between items-center">

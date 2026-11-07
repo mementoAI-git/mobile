@@ -55,7 +55,7 @@ export const useOfflineQueueStore = create<OfflineQueueState>((set, get) => ({
         set({ queue: JSON.parse(raw) });
       }
     } catch (err) {
-      logger.error('Failed to load offline mutation queue:', err);
+      logger.handledError('Failed to load offline mutation queue:', err);
     }
   },
 
@@ -92,7 +92,7 @@ export const useOfflineQueueStore = create<OfflineQueueState>((set, get) => ({
         }
         await get().dequeueMutation(item.id);
       } catch (err: any) {
-        logger.error(`Offline sync failed for mutation ${item.id}:`, err);
+        logger.handledError(`Offline sync failed for mutation ${item.id}:`, err);
         const status = err?.httpStatus ?? err?.status ?? err?.response?.status;
         if (typeof status === 'number' && status >= 400 && status < 500) {
           await get().dequeueMutation(item.id);

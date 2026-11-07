@@ -14,30 +14,21 @@ import {
   pcm16Base64ToFloat32,
   resampleLinear,
 } from './voice-pcm';
-import { VoiceEchoGate } from './voice-echo-gate';
+import { VOICE_BARGE_IN_HOLD_MS, VOICE_REPLY_ONSET_MS, VoiceEchoGate } from './voice-echo-gate';
+import type { VoiceMicFrameFlags } from './voice-gate-capture';
 import { VoiceSessionMetrics, type VoiceMetricSnapshot } from './voice-session-metrics';
+
+// Defined with the echo gate; re-exported for existing importers.
+export { VOICE_BARGE_IN_HOLD_MS, VOICE_REPLY_ONSET_MS };
 
 const INPUT_SAMPLE_RATE = 16_000;
 
-/**
- * After a clear voice gets through the leftover-echo filter, the mic stays
- * fully open this long, so the rest of the sentence (softer words included)
- * reaches Gemini.
- */
-export const VOICE_BARGE_IN_HOLD_MS = 1_500;
 /**
  * Mic frame size: 640 samples at 16 kHz = 40 ms. Smaller frames reach Gemini
  * sooner after the user stops speaking and let the speaker gate react faster;
  * 100 ms frames added up to 100 ms before Gemini heard the end of speech.
  */
 export const VOICE_INPUT_FRAMES = 640;
-/**
- * The first moments of each reply on the loudspeaker: the mic stays closed and
- * only teaches the echo filter, as during the greeting. At high volume the
- * onset of a reply is when Memento most often hears itself, and nobody
- * interrupts within a third of a second of Memento starting to talk.
- */
-export const VOICE_REPLY_ONSET_MS = 300;
 /** Per mic frame (40 ms): the leftover echo heard during a fallback halves in about 1.4 s. */
 const FALLBACK_ECHO_DECAY = 0.98;
 const OUTPUT_SAMPLE_RATE = 24_000;
@@ -222,6 +213,12 @@ export type VoiceAudioEngineOptions = {
   /** Clock for the barge-in hold window. Defaults to Date.now. */
   now?: () => number;
   onFatalError?: (error: Error) => void;
+  /**
+   * Every raw mic frame, before the greeting shield, speaker gate or echo
+   * filter, for development capture (voice-gate-capture.ts). The buffer is
+   * reused: copy it to keep it.
+   */
+  onMicFrame?: (samples: Float32Array, flags: VoiceMicFrameFlags) => void;
   onPlaybackStateChange?: (
     state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
   ) => void;
@@ -273,6 +270,7 @@ export class VoiceAudioEngine {
   private speakerFullDuplex: boolean;
   private readonly iosVoiceProcessing: boolean;
   private readonly onFatalError?: (error: Error) => void;
+  private readonly onMicFrame?: (samples: Float32Array, flags: VoiceMicFrameFlags) => void;
   private readonly onPlaybackStateChange?: (
     state: 'idle' | 'prebuffering' | 'playing' | 'stopped',
   ) => void;
@@ -337,6 +335,7 @@ export class VoiceAudioEngine {
     this.now = options.now ?? Date.now;
     this.echoGate = new VoiceEchoGate({ now: this.now, holdMs: VOICE_BARGE_IN_HOLD_MS });
     this.onFatalError = options.onFatalError;
+    this.onMicFrame = options.onMicFrame;
     this.onPlaybackStateChange = options.onPlaybackStateChange;
   }
 
@@ -468,6 +467,13 @@ export class VoiceAudioEngine {
           // would capture its own echo. Once playback goes idle the shield disarms.
           // In full duplex the echo filter calibrates on the greeting instead.
           this.uplinkCaptured += 1;
+          if (this.onMicFrame) {
+            const raw = event.buffer.getChannelData(0);
+            this.onMicFrame(raw.subarray(0, Math.min(event.numFrames, raw.length)), {
+              audibleOnSpeaker: !this.isHeadphones && this.isAudible(200),
+              greetingShield: this.greetingShieldActive,
+            });
+          }
           if (this.greetingShieldActive && !this.speakerFullDuplex) {
             this.uplinkDroppedShield += 1;
             return;

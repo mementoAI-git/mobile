@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 /**
  * MediaPreviewModal — full-screen attachment previewer
  *
@@ -64,7 +65,7 @@ import { iconSize, radius, minTouchTarget } from '@/constants/responsive';
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
-import { toast } from '@/components/ui/Toast';
+import { toast, ToastViewport } from '@/components/ui/Toast';
 import { useResolvedAudioArtworkThumbnail } from '@/features/media/audio-artwork';
 import {
   refreshSignedMediaAccess,
@@ -156,6 +157,7 @@ async function resolvePreviewAttachmentAccess(
 // ─── Per-item renderers ───────────────────────────────────────────────────────
 
 function ImageSlide({ uri, onClose, onError }: { uri: string; onClose: () => void; onError?: () => void }) {
+  const styles = useThemedStyles(stylesBase);
   const location = sanitizeMediaUri(uri);
   return (
     // Tapping the image (or the cream area around it) closes the modal
@@ -187,6 +189,8 @@ function ImageSlide({ uri, onClose, onError }: { uri: string; onClose: () => voi
 }
 
 function UnavailableMediaSlide({ uri }: { uri: string }) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   useEffect(() => {
     const location = sanitizeMediaUri(uri);
     runtimeDiagnostics.record('media', 'preview-media-unavailable', {
@@ -209,13 +213,15 @@ function UnavailableMediaSlide({ uri }: { uri: string }) {
 }
 
 function InactiveVideoSlide({ item }: { item: PreviewAttachment }) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const canRenderThumbnail = Boolean(
     item.thumbnailUrl && canRenderAttachmentUri(item.thumbnailUrl),
   );
 
   return (
     <View style={styles.slide}>
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.textStrong }]}>
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.mediaSurface }]}>
         {canRenderThumbnail ? (
           <ExpoImage
             source={{ uri: item.thumbnailUrl! }}
@@ -248,6 +254,8 @@ function fmt(secs: number) {
 }
 
 function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   // autoPlay is handled via useEffect after mount — NOT in the player initializer.
   // This modal renders VideoView inside a horizontally snapping FlatList with
   // overlays. Android's default SurfaceView can fail to paint frames there, so
@@ -439,6 +447,7 @@ function useAudioWaveAnims() {
 }
 
 function AnimatedWaveBar({ baseHeight, anim }: { baseHeight: number; anim: SharedValue<number> }) {
+  const COLORS = useThemeColors();
   const animStyle = useAnimatedStyle(() => ({
     height: baseHeight * anim.value,
   }));
@@ -451,6 +460,8 @@ function AnimatedWaveBar({ baseHeight, anim }: { baseHeight: number; anim: Share
 }
 
 function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boolean }) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const player = useAudioPlayer(item.uri);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -636,6 +647,8 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
 }
 
 function DocSlide({ item }: { item: PreviewAttachment }) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const isAudio = item.mimeType.startsWith('audio/');
   const Icon = isAudio ? Music : FileText;
   return (
@@ -735,6 +748,8 @@ function makeRenderSlide(onClose: () => void, currentIndex: number, memoryId?: s
 // ─── Dot indicator ────────────────────────────────────────────────────────────
 
 function Dots({ count, active }: { count: number; active: number }) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   if (count <= 1) return null;
   return (
     <View style={styles.dotsRow}>
@@ -764,6 +779,8 @@ function GalleryFilmstrip({
   onSelect: (index: number) => void;
   memoryId?: string;
 }) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const stripRef = useRef<FlatList<PreviewAttachment>>(null);
 
   useEffect(() => {
@@ -824,6 +841,8 @@ function GalleryFilmstrip({
 // ─── Modal inner — reads insets from the scoped SafeAreaProvider ──────────────
 
 function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, headerMode = 'default', presentation = 'standard', onViewMessage, onDeletePersisted }: Omit<Props, 'visible' | 'initialIndex'> & { initialIndex: number }) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const listRef = useRef<FlatList>(null);
@@ -848,7 +867,6 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
   const [shareMenuVisible, setShareMenuVisible] = useState(false);
   const [deleteCandidate, setDeleteCandidate] = useState<PreviewAttachment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const currentItem = attachments[currentIndex];
   const currentItemIsVisual = !!currentItem && (
     currentItem.mimeType.startsWith('image/') || currentItem.mimeType.startsWith('video/')
@@ -863,11 +881,6 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
     ? Platform.OS === 'ios' ? 'Saved to Photos' : 'Saved to Gallery'
     : Platform.OS === 'ios' ? 'Saved to Files' : 'File downloaded';
 
-  useEffect(() => {
-    if (!actionNotice) return;
-    const timeout = setTimeout(() => setActionNotice(null), 2600);
-    return () => clearTimeout(timeout);
-  }, [actionNotice]);
 
   const handleShareButtonPress = useCallback(() => {
     Haptics.selectionAsync();
@@ -879,9 +892,13 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
     setShareMenuVisible(false);
     if (memoryId) {
       const url = publishedPostUrl(memoryId);
-      await Clipboard.setStringAsync(url);
-      // Also open native share with the link
-      await Share.share({ url, message: url });
+      try {
+        await Clipboard.setStringAsync(url);
+        // Also open native share with the link
+        await Share.share({ url, message: url });
+      } catch {
+        toast('We couldn’t share this link. Please try again.', 'error');
+      }
     }
   }, [memoryId]);
 
@@ -902,7 +919,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
           localUri = result.uri;
         }
         await Share.share({ url: localUri, message: item.name });
-        setActionNotice('Use the share menu to save this file.');
+        toast('Use the share menu to save this file.', 'info');
         return;
       }
 
@@ -929,10 +946,8 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
       await MediaLibrary.saveToLibraryAsync(localUri);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       toast(saveSuccessMessage, 'success');
-      setActionNotice(saveSuccessMessage);
     } catch {
       toast('Could not save media. Please try again in a moment.', 'error');
-      setActionNotice('Could not save media. Please try again.');
     }
   }, [attachments, currentIndex, memoryId, saveSuccessMessage]);
 
@@ -955,7 +970,9 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
       if (!currentItemIsVisual) {
         toast(saveSuccessMessage, 'success');
       }
-    } catch {}
+    } catch {
+      toast('We couldn’t share this file. Please try again.', 'error');
+    }
   }, [attachments, currentIndex, currentItemIsVisual, memoryId, saveSuccessMessage]);
 
   const handleSaveOrExport = useCallback(async () => {
@@ -999,7 +1016,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
       setDeleteCandidate(null);
       onClose();
     } catch {
-      setActionNotice('Could not delete this attachment.');
+      toast('Could not delete this attachment. Please try again.', 'error');
       setIsDeleting(false);
     }
   }, [deleteCandidate, isDeleting, onClose, onDeletePersisted]);
@@ -1125,11 +1142,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
         <Dots count={attachments.length} active={currentIndex} />
       )}
 
-      {actionNotice ? (
-        <View pointerEvents="none" style={styles.galleryActionNotice}>
-          <Text style={styles.galleryActionNoticeText}>{actionNotice}</Text>
-        </View>
-      ) : null}
+
 
       {deleteCandidate ? (
         <View style={styles.galleryConfirmationOverlay}>
@@ -1275,6 +1288,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onClose, onRemove, memoryId, headerMode = 'default', presentation = 'standard', onViewMessage, onDeletePersisted }: Props) {
+  const COLORS = useThemeColors();
   if (!attachments.length) return null;
   return (
     <Modal visible={visible} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
@@ -1293,6 +1307,7 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
           onViewMessage={onViewMessage}
           onDeletePersisted={onDeletePersisted}
         />
+        <ToastViewport />
       </SafeAreaProvider>
     </Modal>
   );
@@ -1300,7 +1315,7 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   shareMenuSafeArea: {
     backgroundColor: COLORS.background,
     borderTopLeftRadius: 32,
@@ -1530,19 +1545,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(23,11,0,0.18)',
-  },
-  galleryActionNotice: {
-    alignSelf: 'center',
-    backgroundColor: COLORS.textStrong,
-    borderRadius: 999,
-    bottom: 86,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    position: 'absolute',
-  },
-  galleryActionNoticeText: {
-    color: COLORS.textInverse,
-    ...TYPE.bodySmall,
   },
   galleryConfirmationOverlay: {
     bottom: 0,

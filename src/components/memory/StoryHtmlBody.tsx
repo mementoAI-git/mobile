@@ -1,10 +1,12 @@
+import { useThemeStyles } from '@/hooks/use-theme-colors';
+import type { ThemeColors } from '@/constants/tokens';
 import React from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { decodeHtmlEntities, parseStoryHtmlBlocks, type StoryHtmlBlock } from '@/features/memories/story-html';
 
-function renderInlineHtml(html: string, keyPrefix: string): React.ReactNode[] {
+function renderInlineHtml(html: string, keyPrefix: string, styles: ReturnType<typeof createStyles>, inlineStyles: ReturnType<typeof createInlineStyles>): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
   let remaining = html;
   let index = 0;
@@ -35,7 +37,7 @@ function renderInlineHtml(html: string, keyPrefix: string): React.ReactNode[] {
       const href = attributes.match(/\bhref\s*=\s*["']([^"']+)["']/i)?.[1];
       const inner = match[3] ?? '';
       const childStyle = [styles.inlineBase, inlineStyles[tag as keyof typeof inlineStyles] ?? null];
-      const child = renderInlineHtml(inner, `${keyPrefix}-${index}`);
+      const child = renderInlineHtml(inner, `${keyPrefix}-${index}`, styles, inlineStyles);
 
       nodes.push(
         <Text
@@ -55,25 +57,25 @@ function renderInlineHtml(html: string, keyPrefix: string): React.ReactNode[] {
   return nodes;
 }
 
-function renderBlock(block: StoryHtmlBlock, index: number) {
+function renderBlock(block: StoryHtmlBlock, index: number, styles: ReturnType<typeof createStyles>, inlineStyles: ReturnType<typeof createInlineStyles>) {
   switch (block.type) {
     case 'h1':
       return (
         <Text key={`h1-${index}`} style={styles.h1}>
-          {renderInlineHtml(block.html, `h1-${index}`)}
+          {renderInlineHtml(block.html, `h1-${index}`, styles, inlineStyles)}
         </Text>
       );
     case 'h2':
       return (
         <Text key={`h2-${index}`} style={styles.h2}>
-          {renderInlineHtml(block.html, `h2-${index}`)}
+          {renderInlineHtml(block.html, `h2-${index}`, styles, inlineStyles)}
         </Text>
       );
     case 'blockquote':
       return (
         <View key={`quote-${index}`} style={styles.blockquoteWrap}>
           <Text style={styles.blockquoteText}>
-            {renderInlineHtml(block.html, `quote-${index}`)}
+            {renderInlineHtml(block.html, `quote-${index}`, styles, inlineStyles)}
           </Text>
         </View>
       );
@@ -85,7 +87,7 @@ function renderBlock(block: StoryHtmlBlock, index: number) {
             <View key={`${block.type}-${index}-${itemIndex}`} style={styles.listRow}>
               <Text style={styles.listMarker}>{block.type === 'ol' ? `${itemIndex + 1}.` : '•'}</Text>
               <Text style={styles.paragraph}>
-                {renderInlineHtml(item, `${block.type}-${index}-${itemIndex}`)}
+                {renderInlineHtml(item, `${block.type}-${index}-${itemIndex}`, styles, inlineStyles)}
               </Text>
             </View>
           ))}
@@ -95,21 +97,23 @@ function renderBlock(block: StoryHtmlBlock, index: number) {
     default:
       return (
         <Text key={`p-${index}`} style={styles.paragraph}>
-          {renderInlineHtml(block.html, `p-${index}`)}
+          {renderInlineHtml(block.html, `p-${index}`, styles, inlineStyles)}
         </Text>
       );
   }
 }
 
 export function StoryHtmlBody({ html }: { html?: string | null }) {
+  const styles = useThemeStyles(createStyles);
+  const inlineStyles = useThemeStyles(createInlineStyles);
   const blocks = React.useMemo(() => parseStoryHtmlBlocks(html), [html]);
 
   if (blocks.length === 0) return null;
 
-  return <View>{blocks.map(renderBlock)}</View>;
+  return <View>{blocks.map((block, index) => renderBlock(block, index, styles, inlineStyles))}</View>;
 }
 
-const inlineStyles = {
+const createInlineStyles = (COLORS: ThemeColors) => ({
   strong: {...TYPE.bodyStrong, color: COLORS.textStrong},
   b: {...TYPE.bodyStrong, color: COLORS.textStrong},
   em: { fontStyle: 'italic' as const },
@@ -118,9 +122,9 @@ const inlineStyles = {
   strike: { textDecorationLine: 'line-through' as const },
   u: { textDecorationLine: 'underline' as const },
   a: { color: COLORS.brand, textDecorationLine: 'underline' as const },
-};
+});
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   inlineBase: {
     ...TYPE.body,
     color: COLORS.textStrong,

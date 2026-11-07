@@ -1,3 +1,5 @@
+import { DARK_CARD_SURFACES } from '@/constants/appearance';
+import { useThemeColors, useResolvedAppearance } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo, useEffect } from 'react';
 
 import { View, Text, Image, ImageBackground, ActivityIndicator } from 'react-native';
@@ -30,6 +32,7 @@ const RECORD_BANNER = require('../../../assets/images/backgrounds/record-banner.
 
 /** Small spinner shown while quick capture enrichment is pending */
 function InProgressBadge({ memory, overlay }: { memory: IMemory; overlay?: boolean }) {
+  const COLORS = useThemeColors();
   const isPending =
     memory.enrichment_status === 'pending' &&
     (memory.capture_source === 'quick' ||
@@ -136,6 +139,7 @@ function MasonryAudioCardVisual({
   aspectRatio: number;
   handleActions: () => void;
 }) {
+  const COLORS = useThemeColors();
   const isPlaying = useFeedAudioPlaybackStore(
     (s) => s.activeMemoryId === memory._id && s.isPlaying
   );
@@ -174,7 +178,7 @@ function MasonryAudioCardVisual({
 
   if (albumArt) {
     return (
-      <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
+      <View style={{ aspectRatio }} className="w-full rounded-[14px] overflow-hidden relative">
         <Image source={{ uri: albumArt }} className="w-full h-full" resizeMode="cover" />
         <InProgressBadge memory={memory} overlay />
         <View
@@ -218,12 +222,12 @@ function MasonryAudioCardVisual({
 
   if (isVoiceRecording) {
     return (
-      <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
+      <View style={{ aspectRatio }} className="w-full rounded-[14px] overflow-hidden relative">
         <ImageBackground source={RECORD_BANNER} className="absolute inset-0" resizeMode="cover" style={{ opacity: 0.9 }} />
         <InProgressBadge memory={memory} overlay />
         <View className="absolute inset-0 items-center justify-center px-4">
           <View
-            className="items-center gap-2.5 rounded-[20px] px-5 py-4 w-full"
+            className="items-center gap-2.5 rounded-[14px] px-5 py-4 w-full"
             style={{ backgroundColor: `${COLORS.textInverse}1a`, borderWidth: 1, borderColor: `${COLORS.textInverse}33` }}
           >
             <TouchableOpacity
@@ -262,7 +266,7 @@ function MasonryAudioCardVisual({
   return (
     <View
       style={{ aspectRatio, backgroundColor: COLORS.fillWeak }}
-      className="w-full rounded-[20px] overflow-hidden relative p-5"
+      className="w-full rounded-[14px] overflow-hidden relative p-5"
     >
       <InProgressBadge memory={memory} overlay />
       <View className="flex-1 items-center justify-center gap-3">
@@ -289,7 +293,7 @@ function MasonryAudioCardVisual({
         >
           {fileName}
         </Text>
-        <View className="bg-white/80 rounded-full px-3 py-1">
+        <View className="bg-card-overlay rounded-full px-3 py-1">
           <Text style={{ ...TYPE.metadata, color: COLORS.textBase }}>
             {displayDuration}
           </Text>
@@ -320,6 +324,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
   onPress,
   variant = 'grid',
 }: MasonryMemoryCardProps) {
+  const COLORS = useThemeColors();
   // Default press: navigate to detail. Stable regardless of whether onPress is provided.
   const handlePress = useCallback(() => {
     Haptics.selectionAsync();
@@ -338,7 +343,9 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
   // Seeded display properties — deterministic per memory._id
   const seed = stableHash(memory._id || memory.title || '');
   const aspectRatio = variant === 'list' ? 3 / 2 : MEDIA_ASPECT_RATIOS[seed % MEDIA_ASPECT_RATIOS.length];
-  const surface = CARD_PASTEL_SURFACES[seed % CARD_PASTEL_SURFACES.length];
+  const dark = useResolvedAppearance() === 'dark';
+  const surfaces = dark ? DARK_CARD_SURFACES : CARD_PASTEL_SURFACES;
+  const surface = surfaces[seed % surfaces.length];
   const storyTitle = memory.title || 'Untitled Memory';
   const textCardMinHeight = TEXT_CARD_MIN_HEIGHTS[seed % TEXT_CARD_MIN_HEIGHTS.length];
   const textBodyLines = TEXT_BODY_CLAMPS[seed % TEXT_BODY_CLAMPS.length];
@@ -377,13 +384,13 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
       const isVideo = getMediaCategory({ mimeType: bannerMedia.type, name: bannerMedia.name, uri: bannerMedia.url }) === 'video';
       if (isVideo && bannerMedia.url) {
         return (
-          <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden relative">
+          <View style={{ aspectRatio }} className="w-full rounded-[14px] overflow-hidden relative">
             <VideoThumbnail
               uri={bannerMedia.url}
               attachment={bannerMedia}
               context={{ memory_id: memory._id }}
               thumbnailUrl={bannerMedia.thumbnail}
-              borderRadius={20}
+              borderRadius={14}
               onPress={handleVideoPress}
             />
             <InProgressBadge memory={memory} overlay />
@@ -402,7 +409,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
         );
       }
       return (
-        <View style={{ aspectRatio }} className="w-full rounded-[20px] overflow-hidden bg-fill-weaker relative">
+        <View style={{ aspectRatio }} className="w-full rounded-[14px] overflow-hidden bg-fill-weaker relative">
           <SignedAttachmentImage
             key={bannerMedia.url}
             attachment={bannerMedia}
@@ -430,7 +437,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel={`Options for ${storyTitle}`}
-            className="absolute top-2 right-2 size-8 rounded-full bg-white/90 items-center justify-center shadow-sm"
+            className="absolute top-2 right-2 size-8 rounded-full bg-card-overlay items-center justify-center shadow-sm"
           >
             <MoreHorizontal size={14} color={COLORS.textBase} />
           </TouchableOpacity>
@@ -459,14 +466,14 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
           borderWidth: 1,
           minHeight: textCardMinHeight,
         }}
-        className="w-full rounded-[20px] p-4 gap-3 relative overflow-hidden"
+        className="w-full rounded-[14px] p-4 gap-3 relative overflow-hidden"
       >
         <View className='flex-row'>
           <InProgressBadge memory={memory} />
         </View>
         {bodyText ? (
           <Text
-            className="text-text-weak leading-relaxed"
+            className="text-text-base leading-relaxed"
             style={TYPE.bodySmall}
             numberOfLines={textBodyLines}
           >
@@ -479,7 +486,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
               <View
                 key={tag}
                 className="rounded-full px-2 py-0.5"
-                style={{ backgroundColor: `${surface.border}99`, borderWidth: 1, borderColor: surface.border }}
+                style={{ backgroundColor: COLORS.fillWeak, borderWidth: 1, borderColor: surface.border }}
               >
                 <Text style={{ ...TYPE.eyebrow, color: COLORS.textWeak }}>#{tag}</Text>
               </View>
@@ -493,14 +500,14 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
           accessibilityRole="button"
           accessibilityLabel={`Options for ${storyTitle}`}
           className="absolute top-2 right-2 size-7 rounded-full items-center justify-center"
-          style={{ backgroundColor: `${surface.border}cc` }}
+          style={{ backgroundColor: COLORS.fillWeak }}
         >
           <MoreHorizontal size={12} color={COLORS.textWeak} />
         </TouchableOpacity>
       </View>
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bannerMedia, audioMedia, bodyText, aspectRatio, surface, textCardMinHeight, textBodyLines, memory, handleActions, handleVideoPress]);
+  }, [COLORS, bannerMedia, audioMedia, bodyText, aspectRatio, surface, textCardMinHeight, textBodyLines, memory, handleActions, handleVideoPress]);
 
 
   if (variant === 'list') {
@@ -508,7 +515,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
     return (
       <Animated.View
         style={[animStyle]}
-        className="w-full mb-2 bg-white rounded-[24px] overflow-hidden border border-stroke-weak"
+        className="w-full mb-2 bg-card rounded-[14px] overflow-hidden border border-stroke-weak"
       >
         <TouchableOpacity
           onPress={handlePress}
@@ -520,7 +527,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
           accessibilityLabel={`Memory: ${storyTitle}`}
         >
           {hasMedia && (
-            <View className="overflow-hidden rounded-t-[24px]">
+            <View className="overflow-hidden rounded-t-[14px]">
               {visual}
             </View>
           )}
@@ -536,7 +543,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
             {bodyText ? (
               <Text
                 className="leading-relaxed"
-                style={{ ...TYPE.body, color: '#555555' }}
+                style={{ ...TYPE.body, color: COLORS.previewText }}
                 numberOfLines={2}
               >
                 {bodyText}
@@ -548,7 +555,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
                   <View
                     key={tag}
                     className="rounded-full px-2.5 py-0.5"
-                    style={{ backgroundColor: `${surface.border}99`, borderWidth: 1, borderColor: surface.border }}
+                    style={{ backgroundColor: COLORS.fillWeak, borderWidth: 1, borderColor: surface.border }}
                   >
                     <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>#{tag}</Text>
                   </View>

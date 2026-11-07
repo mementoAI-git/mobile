@@ -79,7 +79,7 @@ class InAppPurchaseService {
       }
       return this.isInitialized;
     } catch (err) {
-      logger.warn('[IAPService] initConnection error:', err);
+      logger.handledError('[IAPService] initConnection error:', err);
       this.isInitialized = false;
       return false;
     } finally {
@@ -102,7 +102,7 @@ class InAppPurchaseService {
           resolve(result);
         }
       } catch (err: any) {
-        logger.warn('[IAPService] purchase verification failed:', err);
+        logger.handledError('[IAPService] purchase verification failed:', err);
         if (this.pendingPurchaseRejecter) {
           const reject = this.pendingPurchaseRejecter;
           this.clearPendingPurchase();
@@ -112,7 +112,7 @@ class InAppPurchaseService {
     });
 
     this.errorSubscription = RNIap.purchaseErrorListener((error: any) => {
-      logger.warn('[IAPService] purchaseError:', error?.code, error?.message);
+      logger.handledError('[IAPService] purchaseError:', error?.code, error?.message);
       if (this.pendingPurchaseRejecter) {
         const reject = this.pendingPurchaseRejecter;
         this.clearPendingPurchase();
@@ -184,7 +184,7 @@ class InAppPurchaseService {
       this.isUsingFallbacks = products.length !== skus.length;
       return products;
     } catch (err) {
-      logger.warn('[IAPService] fetchProducts error, using fallbacks:', err);
+      logger.handledError('[IAPService] fetchProducts error, using fallbacks:', err);
       this.isUsingFallbacks = true;
       return fallbacks;
     }
@@ -219,7 +219,7 @@ class InAppPurchaseService {
     );
     if (!selectedProduct) {
       if (__DEV__) {
-        logger.warn('[IAPService] selected product unavailable:', {
+        logger.handledError('[IAPService] selected product unavailable:', {
           selectedSku: sku,
           returnedProductIds: storeProducts
             .filter((product) => product.storeAvailable)
@@ -269,7 +269,7 @@ class InAppPurchaseService {
         }
       } catch (err: any) {
         this.clearPendingPurchase();
-        logger.error('[IAPService] requestPurchase error:', err);
+        logger.handledError('[IAPService] requestPurchase error:', err);
         const normalized = new Error(purchaseErrorMessage(err ?? {}));
         (normalized as Error & {code?: string}).code = err?.code;
         reject(normalized);
@@ -331,7 +331,7 @@ class InAppPurchaseService {
         finished = true;
       } catch (finishErr) {
         finishAttempts++;
-        logger.warn(`[IAPService] finishTransaction attempt ${finishAttempts} failed:`, finishErr);
+        logger.handledError(`[IAPService] finishTransaction attempt ${finishAttempts} failed:`, finishErr);
         if (finishAttempts < 3) {
           await new Promise((r) => setTimeout(r, 1000));
         }
@@ -353,11 +353,11 @@ class InAppPurchaseService {
         try {
           await this.verifyAndFinishPurchase(purchase);
         } catch (err) {
-          logger.warn('[IAPService] Reconciling unfinished purchase failed:', err);
+          logger.handledError('[IAPService] Reconciling unfinished purchase failed:', err);
         }
       }
     } catch (err) {
-      logger.warn('[IAPService] reconcileUnfinishedPurchases error:', err);
+      logger.handledError('[IAPService] reconcileUnfinishedPurchases error:', err);
     }
   }
 
@@ -390,7 +390,7 @@ class InAppPurchaseService {
             restoredCount++;
           }
         } catch (verifyErr) {
-          logger.warn('[IAPService] restore purchase verification failed:', verifyErr);
+          logger.handledError('[IAPService] restore purchase verification failed:', verifyErr);
         }
       }
 
@@ -399,7 +399,7 @@ class InAppPurchaseService {
         success: restoredCount > 0 || validPurchases.length === 0,
       };
     } catch (err: any) {
-      logger.error('[IAPService] restorePurchases error:', err);
+      logger.handledError('[IAPService] restorePurchases error:', err);
       throw err;
     }
   }
@@ -446,7 +446,7 @@ class InAppPurchaseService {
         await WebBrowser.openBrowserAsync(url).catch(() => {});
       }
     } catch (linkErr) {
-      logger.warn('[IAPService] openSubscriptionManagement failed:', linkErr);
+      logger.handledError('[IAPService] openSubscriptionManagement failed:', linkErr);
     }
   }
 

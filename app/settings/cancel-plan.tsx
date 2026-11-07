@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, {useCallback, useState} from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Pressable } from '@/components/ui/Touchable';
@@ -14,6 +15,7 @@ import {buildCancellationPayload, CANCELLATION_REASONS, type CancellationReason}
 import {SettingsSubpageHeader} from '@/components/settings/SettingsSubpageHeader';
 
 export default function CancelPlanScreen() {
+  const COLORS = useThemeColors();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [reason, setReason] = useState<CancellationReason | null>(null);

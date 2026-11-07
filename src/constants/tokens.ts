@@ -9,12 +9,32 @@
  *  - `onboarding.*` full 13-token set mirrors web's --onboarding-* CSS vars.
  */
 
+import { BODY_FONT, BODY_BOLD_FONT } from './body-font';
+
 export const COLORS = {
   background: '#ffffff',
   backgroundInverse: '#12131A',
   // Pure black, to blend with the iPhone's Dynamic Island hardware.
   dynamicIsland: '#000000',
   card: '#ffffff',
+  cardRaised: '#ffffff',
+  publishRayStart: '#c9eff9',
+  cardOverlay: 'rgba(255,255,255,0.8)',
+  activeFill: 'rgba(23,11,0,0.9)',
+  activeText: '#FFFFFF',
+  mediaSurface: '#12131A',
+  mediaText: '#FFFFFF',
+  mediaTextWeak: 'rgba(255,255,255,0.78)',
+  mediaFill: 'rgba(255,255,255,0.15)',
+  mediaScrim: 'rgba(0,0,0,0.52)',
+  previewText: '#555555',
+  successFill: 'rgba(10,204,146,0.05)',
+  successStroke: 'rgba(10,204,146,0.2)',
+  errorFill: 'rgba(199,58,58,0.05)',
+  warningFill: 'rgba(255,192,46,0.05)',
+  infoFill: 'rgba(26,128,247,0.06)',
+  chatSettingsWash: '#F5E6DA',
+  chatSettingsWashEnd: '#FFFCF8',
 
   // Link preview chip
   linkPreview: '#22C661',
@@ -62,6 +82,8 @@ export const COLORS = {
   textMuted: 'rgba(23,11,0,0.3)',
   textDisabled: 'rgba(23,11,0,0.1)',
   textInverse: '#FFFFFF',
+  /** Web --icon-neutral-disabled (--brown-50). */
+  iconDisabled: 'rgba(23,11,0,0.04)',
 
   // Status
   success: '#067A57',
@@ -91,6 +113,8 @@ export const COLORS = {
   // Fill
   fillWeak: 'rgba(23,11,0,0.04)',
   fillWeaker: 'rgba(23,11,0,0.02)',
+  // Web --fill-chat-user: warm amber surface for the user's chat messages.
+  fillChatUser: 'rgba(224,148,67,0.14)',
   fillStrong: 'rgba(23,11,0,0.9)',
 
   // ── Onboarding (Groot) palette — full 13-token set matching web --onboarding-* vars ──
@@ -188,8 +212,9 @@ export const CARD_PASTEL_SURFACES = [
 ] as const;
 
 export const FONTS = {
-  sans: 'Inter_400Regular',
-  chatBody: 'Inter_400Regular',
+  sans: BODY_FONT,
+  chatBody: BODY_FONT,
+  bodyBold: BODY_BOLD_FONT,
   sansMedium: 'Inter_500Medium',
   sansSemi: 'Inter_600SemiBold',
   sansBold: 'Inter_700Bold',
@@ -203,3 +228,25 @@ export const FONTS = {
   geistSemi: 'Geist_600SemiBold',
   geistBold: 'Geist_700Bold',
 };
+
+/** Shared Overview prompt and side-menu profile surface. */
+export const MEMORY_PROMPT_GRADIENT = {
+  colors: ['#0B8EEA', '#159EEA', '#54C5F5', '#79DDFB'] as const,
+  locations: [0, 0.34, 0.74, 1] as const,
+  start: { x: 0.5, y: 0 },
+  end: { x: 0.5, y: 1 },
+};
+
+export type ThemeColors = typeof COLORS;
+
+/** Libraries.dev VoiceBeam sunset palette, matching the web voice surface. */
+export const VOICE_GLOW_PALETTE = {
+  dark: ['rgb(255,110,60)', 'rgb(255,180,40)', 'rgb(255,60,90)', 'rgb(255,210,80)', 'rgb(240,70,140)', 'rgb(255,140,50)', 'rgb(230,50,110)'],
+  light: ['rgb(235,80,30)', 'rgb(230,150,10)', 'rgb(230,30,70)', 'rgb(225,175,30)', 'rgb(215,40,110)', 'rgb(235,110,20)', 'rgb(205,30,90)'],
+};
+
+/** Exact --gradient-brand-button-surface from Web/memento-web/src/index.css.
+ * A background image only: the existing brand fill, shape and layout stay intact.
+ */
+export const BRAND_BUTTON_GRADIENT =
+  'radial-gradient(ellipse 100% 100% at 50% 0%, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0) 100%)';

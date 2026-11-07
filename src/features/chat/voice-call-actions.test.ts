@@ -85,6 +85,6 @@ describe('voice call actions', () => {
     for (const { href } of Object.values(VOICE_DESTINATIONS)) {
       expect(href.startsWith('/')).toBe(true);
     }
-    expect(Object.keys(VOICE_DESTINATIONS)).toHaveLength(18);
+    expect(Object.keys(VOICE_DESTINATIONS)).toHaveLength(19);
   });
 });

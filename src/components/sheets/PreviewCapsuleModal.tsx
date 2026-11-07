@@ -11,7 +11,7 @@ import { getThemeById } from '@/constants/themes';
 import type { IBeneficiary } from '@/types';
 import { useUserStore } from '@/store';
 import {TYPE} from '@/constants/typography';
-import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding, getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
 import { useCapsuleThemeFonts } from '@/hooks/use-capsule-theme-fonts';
 
 interface PreviewCapsuleModalProps {
@@ -79,12 +79,13 @@ export const PreviewCapsuleModal = forwardRef<BottomSheetModal, PreviewCapsuleMo
       snapPoints={['95%']}
       backdropComponent={renderBackdrop}
       enablePanDownToClose
-      handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
+      handleStyle={SHEET_HEADER_HANDLE_STYLE}
+        handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
       backgroundStyle={{ backgroundColor: COLORS.background }}
     >
       <View style={{ flex: 1 }}>
         {/* Header */}
-        <View className="px-5 pt-4 pb-4 flex-row items-center justify-between">
+        <View className="px-5 pb-4 flex-row items-center justify-between">
           <Text className="text-text-strong" style={TYPE.sectionTitle}>
             Preview Capsule
           </Text>

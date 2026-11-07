@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useEffect } from 'react';
 import { Keyboard, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -33,6 +34,7 @@ export function ChangePasswordSheet({
   expandSheet,
   collapseSheet,
 }: ChangePasswordSheetProps) {
+  const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
   const { data: profile } = useProfile();
   const changePassword = useChangePassword();
@@ -157,7 +159,7 @@ export function ChangePasswordSheet({
 
 const sheetStyles = {
   header: {
-    minHeight: 62,
+    minHeight: 44,
     paddingHorizontal: 20,
     flexDirection: 'row' as const,
     alignItems: 'center' as const,

@@ -66,7 +66,7 @@ export async function scheduleDailyRitual(
 
     return true;
   } catch (error) {
-    logger.error('Failed to schedule daily ritual notification', error);
+    logger.handledError('Failed to schedule daily ritual notification', error);
     return false;
   }
 }
@@ -84,6 +84,6 @@ export async function cancelDailyRitual(): Promise<void> {
       await Notifications.cancelScheduledNotificationAsync(RITUAL_NOTIFICATION_ID).catch(() => {});
     }
   } catch (error) {
-    logger.error('Failed to cancel daily ritual', error);
+    logger.handledError('Failed to cancel daily ritual', error);
   }
 }

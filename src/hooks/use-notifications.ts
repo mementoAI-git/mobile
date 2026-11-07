@@ -111,7 +111,7 @@ export function useNotifications() {
         try {
           notificationListener.current.remove();
         } catch (e) {
-          logger.error('Error removing notification subscription', e);
+          logger.handledError('Error removing notification subscription', e);
         } finally {
           notificationListener.current = null;
         }
@@ -120,7 +120,7 @@ export function useNotifications() {
         try {
           responseListener.current.remove();
         } catch (e) {
-          logger.error('Error removing response subscription', e);
+          logger.handledError('Error removing response subscription', e);
         } finally {
           responseListener.current = null;
         }
@@ -177,7 +177,7 @@ async function registerForPushNotificationsAsync() {
         })
       ).data;
     } catch (e) {
-      logger.error('Failed to get push token:', e);
+      logger.handledError('Failed to get push token:', e);
     }
   } else {
     logger.debug('Must use physical device for Push Notifications');

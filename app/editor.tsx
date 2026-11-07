@@ -1,3 +1,7 @@
+import { PublishSheetHeader } from '@/components/editor/PublishSheetHeader';
+import { PublishSuccessView } from '@/components/editor/PublishSuccessView';
+import { hasMeaningfulStoryBodyContent } from '@/features/editor/story-content';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 /**
  * app/editor.tsx — Unified compose screen
  *
@@ -20,22 +24,16 @@ import {
   Image,
   ActivityIndicator,
   Keyboard,
-  Modal,
-  ImageBackground,
-  Linking,
 } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView, SafeAreaInsetsContext, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
 import MoreHorizontal from 'lucide-react-native/icons/ellipsis';
-import Plus from 'lucide-react-native/icons/plus';
 import X from 'lucide-react-native/icons/x';
 import Users from 'lucide-react-native/icons/users';
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import Sparkles from 'lucide-react-native/icons/sparkles';
-import Copy from 'lucide-react-native/icons/copy';
-import Check from 'lucide-react-native/icons/check';
 import Lock from 'lucide-react-native/icons/lock';
 import FileText from 'lucide-react-native/icons/file-text';
 import Play from 'lucide-react-native/icons/play';
@@ -47,14 +45,14 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as ExpoCamera from 'expo-camera';
 import * as DocumentPicker from 'expo-document-picker';
-import * as Clipboard from 'expo-clipboard';
 import Animated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { minTouchTarget, radius, iconSize } from '@/constants/responsive';
 import {
-  getAutosaveStatusBadge,
+  getDraftButtonDotColor,
+  isMeaningfulDraftContent,
   type AutosaveStatus,
 } from '@/features/editor/autosave';
 import { useUserStore } from '@/store';
@@ -62,11 +60,17 @@ import { useCreateMemory, useUpdateMemory } from '@/hooks/mutations/use-memory-m
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useGroups } from '@/hooks/queries/use-groups';
-import { useAudioRecorder } from '@/hooks/use-audio-recorder';
-import { useToast } from '@/components/ui/Toast';
-import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetModalProvider, BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { upsertDraft, loadDrafts, readLocalDrafts, deleteDraft, DraftsSheet, type StoryDraft, type StoryDraftAttachment } from '@/components/sheets/DraftsSheet';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useStoryRecording } from '@/hooks/use-story-recording';
+import { Button } from '@/components/ui/Button';
+import { StoryRecordingPanel } from '@/components/editor/StoryRecordingPanel';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import { extractUrls } from '@/hooks/use-link-preview';
+import { useToast, ToastViewport } from '@/components/ui/Toast';
+import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetModalProvider, BottomSheetScrollView, BottomSheetTextInput, type BottomSheetHandleProps } from '@gorhom/bottom-sheet';
+import { upsertDraft, saveLocalDraft, loadDrafts, readLocalDrafts, deleteDraft, DraftsSheet, type StoryDraft, type StoryDraftAttachment } from '@/components/sheets/DraftsSheet';
+import { File, Paths, Directory } from 'expo-file-system';
+import { saveDraftAndExit, snapshotEditorBody } from '@/features/editor/exit-editor';
+import { toStoryDraftAttachments } from '@/features/editor/draft-attachments';
 import { useUiStore } from '@/store';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import { MediaPreviewModal } from '@/components/ui/MediaPreviewModal';
@@ -87,7 +91,7 @@ import { singleLineTitle } from '@/features/editor/title-input';
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
-import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding, getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
 import {
   DOCUMENT_PICKER_MIME_TYPES,
   MAX_ATTACHMENT_FILE_MB,
@@ -109,132 +113,10 @@ const QC_DRAFT_KEY = (email?: string | null) => `qc_draft_${email ?? 'anon'}`;
 const NOTE_CHAR_MAX = 8000;
 const FILE_INPUT_MIME = DOCUMENT_PICKER_MIME_TYPES;
 
-const SURFER_WEBP = require('../assets/images/illustrations/surfer.webp');
-const SUCCESS_BG = require('../assets/images/backgrounds/published_success_bg.webp');
-const SUN = require('../assets/images/illustrations/fluent-emoji-flat_ringed-planet.png');
-const BIG_CLOUD = require('../assets/images/illustrations/noto-v1_cloud.png');
-const SMALL_CLOUD = require('../assets/images/illustrations/noto_cloud.png');
-const SOCIAL_LINKEDIN = require('../assets/images/icons/linkedin.png');
-const SOCIAL_FACEBOOK = require('../assets/images/icons/facebook.png');
-const SOCIAL_INSTAGRAM = require('../assets/images/icons/instagram.png');
-const SOCIAL_X = require('../assets/images/icons/x.png');
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type AttachmentItem = UploadAttachment<IFile>;
-
-function toStoryDraftAttachments(attachments: AttachmentItem[]): StoryDraftAttachment[] {
-  return attachments.flatMap((attachment) => {
-    const fileId = attachment.fileId;
-    if (!fileId || attachment.isUploading) return [];
-
-    return [{
-      fileId,
-      uri: attachment.file?.url || attachment.uri,
-      name: attachment.name,
-      mimeType: attachment.mimeType,
-      isVoice: attachment.isVoice,
-      duration: attachment.duration,
-    }];
-  });
-}
-
-function hasMeaningfulStoryBodyContent(html?: string | null) {
-  if (!html) return false;
-
-  const normalized = html
-    .replace(/<br\s*\/?>/gi, '')
-    .replace(/<\/p>\s*<p>/gi, '')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/gi, ' ')
-    .trim();
-
-  return normalized.length > 0;
-}
-
-// ─── Publish success screen ───────────────────────────────────────────────────
-
-function PublishSuccessView({ publishedUrl, onAddAnother, onDismiss }: {
-  publishedUrl: string; onAddAnother: () => void; onDismiss: () => void;
-}) {
-  const [copied, setCopied] = useState(false);
-  const insets = useSafeAreaInsets();
-
-  const handleCopy = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await Clipboard.setStringAsync(publishedUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [publishedUrl]);
-
-  const openSocial = useCallback((platform: 'linkedin'|'facebook'|'instagram'|'x') => {
-    Haptics.selectionAsync();
-    const encoded = encodeURIComponent(publishedUrl);
-    const urls: Record<string,string> = {
-      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encoded}`,
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encoded}`,
-      instagram: 'https://www.instagram.com/',
-      x: `https://x.com/intent/tweet?url=${encoded}`,
-    };
-    Linking.openURL(urls[platform]).catch(() => {});
-  }, [publishedUrl]);
-
-  const truncatedUrl = publishedUrl.length > 32 ? publishedUrl.slice(0, 32) + '…' : publishedUrl;
-
-  return (
-    <ImageBackground source={SUCCESS_BG} style={{ flex: 1 }} resizeMode="cover">
-      <View style={{ flex: 1, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }}>
-        <View style={{ height: 220, width: '100%', position: 'relative' }}>
-          <Image source={SUN} style={{ position: 'absolute', width: 52, height: 52, left: 80, top: 60 }} resizeMode="contain" />
-          <Image source={BIG_CLOUD} style={{ position: 'absolute', width: 90, height: 72, right: '50%', marginRight: -140, top: 20 }} resizeMode="contain" />
-          <Image source={SMALL_CLOUD} style={{ position: 'absolute', width: 44, height: 36, left: '50%', top: 20 }} resizeMode="contain" />
-          <Image source={SURFER_WEBP} style={{ position: 'absolute', width: 220, height: 220, alignSelf: 'center', bottom: 0 }} resizeMode="contain" />
-        </View>
-        <Animated.View entering={FadeInDown.duration(400).delay(100)} style={{ flex: 1, paddingHorizontal: 24, paddingTop: 24, alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong, textAlign: 'center', lineHeight: 34 }}>
-            Story published
-          </Text>
-          <View style={{ width: '100%', backgroundColor: COLORS.fillWeak, borderRadius: 20, padding: 20, gap: 16 }}>
-            <Text style={{ ...TYPE.bodySmall, color: COLORS.textBase }}>Share this story with friends</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, overflow: 'hidden' }}>
-              <Text style={{ flex: 1, ...TYPE.bodySmall, color: COLORS.textWeak, paddingHorizontal: 14, paddingVertical: 14 }} numberOfLines={1}>{truncatedUrl}</Text>
-              <TouchableOpacity onPress={handleCopy} activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 16, paddingVertical: 14, borderLeftWidth: 1, borderLeftColor: COLORS.strokeWeaker }}>
-                {copied ? <Check size={15} color={COLORS.success} strokeWidth={2.5} /> : <Copy size={15} color={COLORS.info} strokeWidth={2} />}
-                <Text style={{ ...TYPE.bodySmall, color: copied ? COLORS.success : COLORS.info }}>{copied ? 'Copied!' : 'Copy'}</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={{ flex: 1, height: 1, backgroundColor: COLORS.strokeWeaker }} />
-              <Text style={{ ...TYPE.metadata, color: COLORS.textMuted }}>Or share on social media</Text>
-              <View style={{ flex: 1, height: 1, backgroundColor: COLORS.strokeWeaker }} />
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16 }}>
-              {([
-                { id: 'linkedin', icon: SOCIAL_LINKEDIN },
-                { id: 'facebook', icon: SOCIAL_FACEBOOK },
-                { id: 'instagram', icon: SOCIAL_INSTAGRAM },
-                { id: 'x', icon: SOCIAL_X },
-              ] as const).map(({ id, icon }) => (
-                <TouchableOpacity key={id} onPress={() => openSocial(id)} activeOpacity={0.75}
-                  style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.strokeWeaker, alignItems: 'center', justifyContent: 'center' }}>
-                  <Image source={icon} style={{ width: 28, height: 28 }} resizeMode="contain" />
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onAddAnother(); }} activeOpacity={0.85}
-            style={{ width: '100%', height: 56, borderRadius: 999, backgroundColor: COLORS.textStrong, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <Plus size={18} color={COLORS.textInverse} strokeWidth={2.5} />
-            <Text style={{ ...TYPE.button, color: COLORS.textInverse }}>Add another story</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onDismiss} activeOpacity={0.7} style={{ paddingVertical: 12, paddingHorizontal: 24 }}>
-            <Text style={{ ...TYPE.body, color: COLORS.textBase, textAlign: 'center' }}>Dismiss</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
-    </ImageBackground>
-  );
-}
 
 // ─── Publish modal (story mode) ───────────────────────────────────────────────
 
@@ -267,6 +149,7 @@ function PublishModalInner({
   initialGroupIds?: string[];
   initialVisibility?: MemoryVisibility;
 }) {
+  const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
   const [tags, setTags] = useState(initialTags ?? '');
   const [audience, setAudience] = useState<MemoryAudienceSelection>(() => deriveMemoryAudience({ visibility: initialVisibility, beneficiaries: initialBeneficiaryIds, groups: initialGroupIds }));
@@ -309,6 +192,7 @@ function PublishModalInner({
 
   const handleOpenPrivacySheet = useCallback(() => {
     Haptics.selectionAsync();
+    Keyboard.dismiss();
     requestAnimationFrame(() => privacySheetRef.current?.present());
   }, []);
 
@@ -354,25 +238,17 @@ function PublishModalInner({
   // empty array and voice notes / images added before publishing are silently dropped.
   }, [title, body, tags, attachmentIds, audience, isExistingStory, isEditMode, targetMemoryId, createMemory, updateMemory, toast, onComplete, onPublished, draftId, userEmail]);
 
-  const handleClose = useCallback(() => {
-    setTags(''); setAudience(deriveMemoryAudience({})); onClose();
-  }, [onClose]);
-
     return (
       <>
-      <View style={{ flex: 1, backgroundColor: COLORS.background }}>
         <BottomSheetScrollView
+          style={{ backgroundColor: COLORS.background }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: Math.max(insets.bottom + 24, 32) }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 32, gap: 32, paddingBottom: Math.max(insets.bottom + 24, 32) }}
         >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>Publish post</Text>
-                <TouchableOpacity onPress={handleClose} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
-                  <X size={16} color={COLORS.textBase} strokeWidth={2} />
-                </TouchableOpacity>
-              </View>
-              <View style={{ backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16, marginBottom: 24 }}>
+              {/* Body: visibility and tags share one 24px section rhythm. */}
+              <View style={{ gap: 24 }}>
+              <View style={{ backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16 }}>
                 <Text style={{ ...TYPE.body, color: COLORS.textStrong, marginBottom: 4 }}>Who can see this story?</Text>
                 <Text style={{ ...TYPE.bodySmall, color: COLORS.textBase, marginBottom: 14 }}>New stories are private unless you choose otherwise.</Text>
                 <TouchableOpacity
@@ -385,24 +261,28 @@ function PublishModalInner({
                   <ChevronDown size={16} color={COLORS.textMuted} strokeWidth={2} />
                 </TouchableOpacity>
               </View>
-              <View style={{ marginBottom: 32 }}>
+              <View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>Add Tags</Text>
+                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>Tags (optional)</Text>
                   <TouchableOpacity onPress={handleAutotag} disabled={isAutotagging} activeOpacity={0.8}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: `${COLORS.info}40`, backgroundColor: `${COLORS.info}08` }}>
                     {isAutotagging ? <ActivityIndicator size="small" color={COLORS.info} /> : <Sparkles size={13} color={COLORS.info} strokeWidth={2} />}
                     <Text style={{ ...TYPE.metadata, color: COLORS.info }}>Autotag</Text>
                   </TouchableOpacity>
                 </View>
-                <BottomSheetTextInput value={tags} onChangeText={setTags} placeholder="Manually enter tags or use the autotag button" placeholderTextColor={COLORS.textMuted} returnKeyType="done"
+                <BottomSheetTextInput value={tags} onChangeText={setTags} placeholder="Add tags if you like" placeholderTextColor={COLORS.textMuted} returnKeyType="done"
                   style={{ backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 14, paddingVertical: 14, ...TYPE.label, color: COLORS.textStrong, minHeight: 50 }} />
+                <Text style={{ ...TYPE.metadata, color: COLORS.textWeak, marginTop: 8 }}>Relevant tags will be added in the background if you leave this blank.</Text>
               </View>
+              </View>
+              {/* Actions are separated from the body by the 32px container gap. */}
+              <View>
               <TouchableOpacity onPress={handlePost} activeOpacity={0.85} disabled={(!title.trim() && !body.trim()) || isPending}
                 style={[{ height: 56, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }, ((!title.trim() && !body.trim()) || isPending) && { opacity: 0.45 }]}>
                 {isPending ? <ActivityIndicator color={COLORS.textInverse} /> : <Text style={{ ...TYPE.button, color: COLORS.textInverse }}>Post now</Text>}
               </TouchableOpacity>
+              </View>
         </BottomSheetScrollView>
-      </View>
       <PublishPrivacySheet
         ref={privacySheetRef}
         mode={audience.mode === 'everyone' ? 'all' : audience.mode}
@@ -423,6 +303,7 @@ function PublishModalInner({
 // ─── Main Editor Screen ───────────────────────────────────────────────────────
 
 export default function EditorScreen() {
+  const COLORS = useThemeColors();
   const router = useRouter();
   const { mode: rawMode, memoryId, initialData, lockMode } = useLocalSearchParams<{
     mode?: string; memoryId?: string; initialData?: string; lockMode?: string;
@@ -430,8 +311,6 @@ export default function EditorScreen() {
   const mode = (rawMode === 'quick-capture' ? 'quick-capture' : 'story') as 'story' | 'quick-capture';
   const isStory = mode === 'story';
   const isEditing = !!memoryId;
-  // When lockMode is set, the mode toggle is hidden — user cannot switch to quick-capture
-  const isModeSwithDisabled = lockMode === 'true' || isEditing;
 
   const user = useUserStore(s => s.user);
 
@@ -470,6 +349,7 @@ export default function EditorScreen() {
   const richEditorRef = useRef<StoryRichEditorRef>(null);
   const isMountedRef = useRef(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const exitingRef = useRef(false);
 
   // Multi-draft: each new story session gets its own id so up to 10 drafts can coexist
   const draftIdRef = useRef<string>(isEditing ? '' : `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`);
@@ -478,15 +358,28 @@ export default function EditorScreen() {
   const latestBodyRef = useRef('');
   // currentDraftId mirrors draftIdRef as state so PublishModal always receives the live value
   const [currentDraftId, setCurrentDraftId] = useState(draftIdRef.current);
-  const storyDrafts = useUiStore((s) => s.storyDrafts);
   const setStoryDrafts = useUiStore((s) => s.setStoryDrafts);
-  const draftCount = storyDrafts.length;
   // Incrementing this key forces StoryRichEditor to fully remount (blank WebView)
   const [editorInstanceKey, setEditorInstanceKey] = useState(0);
 
   // Story state
   const [title, setTitle] = useState('');
   const [storyBody, setStoryBody] = useState('');
+  const [storyLinkText, setStoryLinkText] = useState('');
+  useEffect(() => { setStoryLinkText(extractUrls(storyBody).join('\n')); }, [storyBody]);
+  const [dismissedLinks, setDismissedLinks] = useState<string[]>([]);
+  const applyDictation = useCallback(async (text: string) => {
+    if (isStory) {
+      const editor = richEditorRef.current;
+      if (!editor) throw new Error('The editor is not ready. Your recording is saved for retry.');
+      const body = await editor.insertDictation(text);
+      if (!isMountedRef.current) throw new Error('The editor closed. Your recording is saved for retry.');
+      latestBodyRef.current = body;
+      setStoryBody(body);
+      storyHasContentRef.current = hasMeaningfulStoryBodyContent(body);
+      setStoryHasContent(storyHasContentRef.current);
+    } else setQcBody(previous => [previous, text].filter(Boolean).join(' '));
+  }, [isStory]);
   const [storyHasContent, setStoryHasContent] = useState(false);
   const storyHasContentRef = useRef(false);
   const [savedStatus, setSavedStatus] = useState<'saved'|'saving'|'unsaved'>('saved');
@@ -504,10 +397,6 @@ export default function EditorScreen() {
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [cameraVisible, setCameraVisible] = useState(false);
-  const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
-  const [cancelConfirmTitle, setCancelConfirmTitle] = useState('');
-  const [cancelConfirmMessage, setCancelConfirmMessage] = useState('');
-  const [cancelConfirmOnSave, setCancelConfirmOnSave] = useState<(() => void) | null>(null);
 
   // Local DraftsSheet — bypasses global SheetManager so it renders inside this
   // fullScreenModal native window on iOS (not behind it in the tabs window).
@@ -537,15 +426,28 @@ export default function EditorScreen() {
     showPermissionRecoveryAlert({
       permission,
       title: 'Microphone is off',
-      description: 'Allow microphone access to add a voice note to this memory.',
-      settingsDescription: 'Microphone access is turned off in Settings. Turn it back on to add a voice note to this memory.',
+      description: 'Allow microphone access to record your story.',
+      settingsDescription: 'Microphone access is turned off in Settings. Turn it back on to record your story.',
     });
   }, []);
-  const { start: startRecording, stop: stopRecording, isRecording, duration: recDuration } = useAudioRecorder({
+  const { start: startRecording, stop: stopRecording, cancel: cancelRecording, retry: retryRecording,
+    discard: discardRecording, isRecording: isCapturing, isStarting, isTranscribing, canRetry, error: dictationError,
+    levels: recordingLevels, duration: recDuration } = useStoryRecording({
+    owner: user?.email || 'local',
+    onTranscript: applyDictation,
     onPermissionDenied: handleMicrophonePermissionDenied,
   });
+  const isRecording = isCapturing || isStarting;
+  const handleCancelDictation = useCallback(() => {
+    Haptics.selectionAsync();
+    void cancelRecording();
+  }, [cancelRecording]);
+  const handleStopDictation = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    void stopRecording();
+  }, [stopRecording]);
 
-  useEffect(() => { return () => { isMountedRef.current = false; if (saveTimerRef.current) clearTimeout(saveTimerRef.current); }; }, []);
+  useEffect(() => { isMountedRef.current = true; return () => { isMountedRef.current = false; if (saveTimerRef.current) clearTimeout(saveTimerRef.current); }; }, []);
 
   // Load drafts / pre-populate from edit params; also refresh draft count badge
   useEffect(() => {
@@ -596,7 +498,7 @@ export default function EditorScreen() {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     setSavedStatus('saving');
     saveTimerRef.current = setTimeout(async () => {
-      if (!t.trim() && !b.trim()) {
+      if (!isMeaningfulDraftContent(t, b) && attachments.length === 0) {
         // Empty — remove this draft slot silently
         if (draftIdRef.current) {
           const drafts = await deleteDraft(user?.email, draftIdRef.current).catch(() => null);
@@ -678,9 +580,15 @@ export default function EditorScreen() {
   }, [uploadAndAdd, toast]);
 
   const handleVoice = useCallback(async () => {
-    if (isRecording) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); const uri = await stopRecording(); if (uri) await uploadAndAdd(uri, 'audio/m4a', `voice_${Date.now()}.m4a`, { isVoice: true, duration: recDuration }); }
-    else { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); await startRecording(); }
-  }, [isRecording, stopRecording, startRecording, recDuration, uploadAndAdd]);
+    Haptics.selectionAsync();
+    if (isRecording) { await stopRecording(); return; }
+    if (isTranscribing) return;
+    if (canRetry) { await retryRecording(); return; }
+    if (isStory) richEditorRef.current?.beginDictation();
+    editorBridge?.blur();
+    Keyboard.dismiss();
+    await startRecording();
+  }, [isRecording, stopRecording, isTranscribing, canRetry, retryRecording, editorBridge, isStory, startRecording]);
 
   const attachmentGroups = useMemo(() => {
     const mediaAttachments: AttachmentItem[] = [];
@@ -733,11 +641,16 @@ export default function EditorScreen() {
     } catch (err: any) { setSaveError(err?.message ?? 'Could not save. Try again.'); }
   }, [quickCapture, qcBody, router, uploadedIds, user?.email, toast]);
 
+  useEffect(() => {
+    if (isDraftLoaded && !isEditing && !exitingRef.current) scheduleSave(latestTitleRef.current, latestBodyRef.current);
+  }, [attachments, scheduleSave, isDraftLoaded, isEditing]);
+
   // Stable onChange for StoryRichEditor — avoids recreating the bridge on every render
-  // Note: does NOT call scheduleSave — draft is only saved when the user taps Cancel
-  // latestBodyRef is updated synchronously so Cancel always has the latest content
+  // Keep autosave and URL previews current without rerendering for every body edit.
   const handleStoryBodyChange = useCallback((v: string) => {
     latestBodyRef.current = v;
+    const links = extractUrls(v).join('\n');
+    setStoryLinkText(previous => previous === links ? previous : links);
     scheduleSave(latestTitleRef.current, v);
 
     // Only update content state when transitioning (has content vs no content)
@@ -747,6 +660,7 @@ export default function EditorScreen() {
       setStoryHasContent(hasContent);
     }
   }, [scheduleSave]);
+  const storyCanContinue = Boolean(title.trim()) || storyHasContent || uploadedIds.length > 0;
   // Voice can read and type the title, the story and a quick note, so the
   // host sees the words appear here instead of on another screen.
   const handleTitleChange = useCallback((raw: string) => {
@@ -783,7 +697,7 @@ export default function EditorScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const hasQcDraft = savedQcBody.trim().length > 0 && savedQcBody !== qcBody;
-  const autosaveBadge = getAutosaveStatusBadge(savedStatus);
+  const draftDotColor = getDraftButtonDotColor(savedStatus, isMeaningfulDraftContent(title, storyBody), COLORS);
 
   const handleOpenPublishSheet = useCallback(() => {
     setStoryBody(latestBodyRef.current);
@@ -798,6 +712,10 @@ export default function EditorScreen() {
     setShowPublish(false);
     publishSheetRef.current?.dismiss();
   }, []);
+
+  const renderPublishHeader = useCallback((props: BottomSheetHandleProps) => (
+    <PublishSheetHeader {...props} onClose={handleClosePublishSheet} />
+  ), [handleClosePublishSheet]);
 
   const handlePublishFlowComplete = useCallback(() => {
     pendingPublishedUrlRef.current = null;
@@ -830,34 +748,60 @@ export default function EditorScreen() {
     }
   }, [isEditing, lockMode, router, setAttachments]);
 
-  const lastPublishedUrlRef = useRef<string | null>(null);
+  const handleCancel = useCallback(async () => {
+    if (exitingRef.current) return;
+    exitingRef.current = true;
+    Haptics.selectionAsync();
+    editorBridge?.blur(); Keyboard.dismiss();
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    const body = isStory
+      ? await snapshotEditorBody(richEditorRef.current ? () => richEditorRef.current!.getHTML() : undefined, () => latestBodyRef.current)
+      : qcBody;
+    const draftTitle = latestTitleRef.current || title;
+    const hasContent = Boolean(draftTitle.trim()) || hasMeaningfulStoryBodyContent(body) || attachments.length > 0;
+    const leave = () => { if (router.canGoBack()) router.back(); else router.replace('/(tabs)/overview'); };
+    const saved = await saveDraftAndExit({
+      saveLocal: hasContent ? async () => {
+        const savedAttachments = toStoryDraftAttachments(attachments);
+        for (const attachment of savedAttachments) {
+          if (attachment.fileId || !attachment.uri.startsWith('file:') || attachment.uri.startsWith(Paths.document.uri)) continue;
+          const directory = new Directory(Paths.document, 'draft-media');
+          directory.create({ idempotent: true, intermediates: true });
+          const extension = attachment.uri.split('.').pop()?.split('?')[0] || 'bin';
+          const savedFile = new File(directory, `${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`);
+          new File(attachment.uri).copy(savedFile);
+          attachment.uri = savedFile.uri;
+        }
+        const draft: StoryDraft = { id: draftIdRef.current || `draft_${Date.now()}`, title: draftTitle, body, updatedAt: Date.now(), attachments: savedAttachments.length ? savedAttachments : undefined };
+        if (isStory || attachments.length) {
+          await saveLocalDraft(user?.email, draft);
+          setStoryDrafts(await readLocalDrafts(user?.email));
+          void upsertDraft(user?.email, draft).then(() => readLocalDrafts(user?.email)).then(drafts => useUiStore.getState().setStoryDrafts(drafts)).catch(() => {});
+        } else await AsyncStorage.setItem(QC_DRAFT_KEY(user?.email), JSON.stringify({ body }));
+      } : undefined,
+      leave,
+      notify: () => toast('Draft saved', 'success'),
+      onFailure: () => toast('Could not save your draft. Please try again.', 'error'),
+    });
+    if (!saved) exitingRef.current = false;
+  }, [editorBridge, isStory, qcBody, attachments, router, user?.email, setStoryDrafts, toast, title]);
+
 
   const handlePublishCreated = useCallback((url: string) => {
-    lastPublishedUrlRef.current = url;
     pendingPublishedUrlRef.current = url;
     setShowPublish(false);
     publishSheetRef.current?.dismiss();
   }, []);
 
+  const successExitingRef = useRef(false);
   const handleDismissPublishedSuccess = useCallback(() => {
-    if (isEditing) {
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace('/(tabs)/stories');
-      }
+    if (successExitingRef.current) return;
+    successExitingRef.current = true;
+    if ((!isEditing && lockMode === 'true') || !router.canGoBack()) {
+      router.replace('/(tabs)/stories');
     } else {
-      if (lockMode === 'true' || !router.canGoBack()) {
-        router.replace('/(tabs)/stories');
-      } else {
-        router.back();
-      }
+      router.back();
     }
-    // Clean up modal state in the background after the screen transition begins
-    setTimeout(() => {
-      setPublishedUrl(null);
-      lastPublishedUrlRef.current = null;
-    }, 500);
   }, [isEditing, lockMode, router]);
 
   const handlePublishAddAnother = useCallback(() => {
@@ -876,6 +820,21 @@ export default function EditorScreen() {
     setTimeout(() => titleRef.current?.focus(), 200);
   }, [setAttachments]);
 
+  // Success owns the existing editor route: dismissing it needs only one native
+  // screen transition, with no composer exposed between stacked modal closures.
+  if (publishedUrl) {
+    return (
+      <NativeModalSafeAreaBoundary>
+        <PublishSuccessView
+          publishedUrl={publishedUrl}
+          onAddAnother={lockMode === 'true' ? handlePublishAddAnother : handleDismissPublishedSuccess}
+          onDismiss={handleDismissPublishedSuccess}
+        />
+        <ToastViewport />
+      </NativeModalSafeAreaBoundary>
+    );
+  }
+
   return (
     <NativeModalSafeAreaBoundary>
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
@@ -883,71 +842,18 @@ export default function EditorScreen() {
 
           {/* ── Header ── */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }}>
-            <TouchableOpacity onPress={() => {
-              Haptics.selectionAsync();
-              const cancelTitle = latestTitleRef.current || title;
-              const cancelBody = latestBodyRef.current || storyBody;
-              const hasContent = isStory
-                ? !isEditing && (cancelTitle.trim() || cancelBody.trim())
-                : qcBody.trim().length > 0;
-
-              if (!hasContent) {
-                // Nothing typed — exit immediately
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace(lockMode === 'true' || isStory ? '/(tabs)/stories' : '/(tabs)/overview');
-                }
-                return;
-              }
-
-              // Dismiss keyboard then show custom dialog
-              editorBridge?.blur();
-              Keyboard.dismiss();
-
-              // Leave at once and save in the background. Waiting for the
-              // server here made Cancel look broken on slow connections.
-              const saveOnPress = () => {
-                setCancelConfirmVisible(false);
-                if (isStory) {
-                  const email = user?.email;
-                  const savedAttachments = toStoryDraftAttachments(attachments);
-                  void upsertDraft(email, {
-                    id: draftIdRef.current, title: cancelTitle, body: cancelBody, updatedAt: Date.now(),
-                    attachments: savedAttachments.length ? savedAttachments : undefined,
-                  })
-                    .then(() => readLocalDrafts(email))
-                    .then((drafts) => useUiStore.getState().setStoryDrafts(drafts))
-                    .catch(() => {});
-                } else {
-                  AsyncStorage.setItem(QC_DRAFT_KEY(user?.email), JSON.stringify({ body: qcBody.trim() })).catch(() => {});
-                }
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace(lockMode === 'true' || isStory ? '/(tabs)/stories' : '/(tabs)/overview');
-                }
-              };
-
-              setCancelConfirmTitle('Save to drafts?');
-              setCancelConfirmMessage(isStory ? 'Your story will be saved to your drafts.' : 'Your note will be saved to your drafts.');
-              setCancelConfirmOnSave(() => saveOnPress);
-              setCancelConfirmVisible(true);
-            }} activeOpacity={0.7}
+            <TouchableOpacity onPress={handleCancel} activeOpacity={0.7}
               hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
               accessibilityLabel="Cancel editing"
-              style={{ height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
+              style={{ height: 34, paddingHorizontal: 12, flexDirection: 'row', gap: 5, borderRadius: 999, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
+              <ArrowLeft size={16} color={COLORS.textBase} />
               <Text style={{ ...TYPE.label, color: COLORS.textBase }}>Cancel</Text>
             </TouchableOpacity>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {isStory && (
                 <>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: COLORS.fillWeaker }}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: autosaveBadge.dotColor }} />
-                    <Text style={{ ...TYPE.metadata, color: autosaveBadge.textColor }}>{autosaveBadge.label}</Text>
-                  </View>
-                  {/* My Drafts button — badge shows count, opens DraftsSheet */}
+                  {/* Drafts with the current autosave status */}
                   <TouchableOpacity onPress={() => {
                     Haptics.selectionAsync();
                     editorBridge?.blur(); // dismiss WKWebView keyboard (Tiptap body)
@@ -970,7 +876,7 @@ export default function EditorScreen() {
                         setStoryHasContent(hasContent);
                         richEditorRef.current?.setContent(body);
                         if (Array.isArray(draft.attachments) && draft.attachments.length) {
-                          setAttachments(draft.attachments.map(a => ({
+                          setAttachments(draft.attachments.filter(a => a.fileId).map(a => ({
                             clientId: `restored_${a.fileId}_${Math.random().toString(36).slice(2)}`,
                             fileId: a.fileId,
                             uri: a.uri,
@@ -983,6 +889,9 @@ export default function EditorScreen() {
                         } else {
                           setAttachments([]);
                         }
+                        for (const attachment of draft.attachments || []) {
+                          if (!attachment.fileId) void uploadAndAdd(attachment.uri, attachment.mimeType, attachment.name, { isVoice: attachment.isVoice, duration: attachment.duration });
+                        }
                         setSavedStatus('saved');
                       },
                     }});
@@ -990,24 +899,21 @@ export default function EditorScreen() {
                   }} activeOpacity={0.7}
                     hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                     accessibilityLabel="Story drafts"
+                    disabled={isRecording || isTranscribing}
                     style={{ height: 34, paddingHorizontal: 12, borderRadius: radius(17), backgroundColor: COLORS.fillWeak, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                    <MoreHorizontal size={iconSize(16)} color={COLORS.textBase} strokeWidth={2} />
-                    {draftCount > 0 && (
-                      <View style={{ minWidth: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
-                        <Text style={{ ...TYPE.eyebrow, color: COLORS.textInverse }}>{draftCount}</Text>
-                      </View>
-                    )}
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: draftDotColor }} />
+                    <Text style={{ ...TYPE.label, color: COLORS.textBase }}>Drafts</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => {
-                    if (!storyHasContent) return;
-                    if (anyUploading) return;
+                    if (!storyCanContinue) return;
+                    if (anyUploading || isRecording || isTranscribing) return;
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     handleOpenPublishSheet();
                   }}
-                    disabled={!storyHasContent || anyUploading} activeOpacity={0.8}
+                    disabled={!storyCanContinue || anyUploading || isRecording || isTranscribing} activeOpacity={0.8}
                     hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                     accessibilityLabel="Next step"
-                    style={[{ height: 34, paddingHorizontal: 18, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }, (!storyHasContent || anyUploading) && { opacity: 0.4 }]}>
+                    style={[{ height: 34, paddingHorizontal: 18, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }, (!storyCanContinue || anyUploading || isRecording || isTranscribing) && { opacity: 0.4 }]}>
                     {anyUploading && <ActivityIndicator size="small" color={COLORS.textInverse} />}
                     <Text style={{ ...TYPE.label, color: COLORS.textInverse }}>Next</Text>
                   </TouchableOpacity>
@@ -1050,12 +956,14 @@ export default function EditorScreen() {
               {/* Multiline so long titles wrap. Return still moves to the body
                   instead of adding a line break, and pasted line breaks become spaces. */}
               <TextInput
+                selectionColor={COLORS.brand}
+                cursorColor={COLORS.brand}
                 ref={titleRef}
                 value={title}
                 onChangeText={handleTitleChange}
                 placeholder="Title"
                 placeholderTextColor={COLORS.textDisabled}
-                style={{ ...TYPE.displayTitle,  color: COLORS.textStrong, padding: 0, paddingHorizontal: 20, marginBottom: 4, lineHeight: 42, marginTop: 4, textAlignVertical: 'top' }}
+                style={{ ...TYPE.editorTitle, color: COLORS.textStrong, padding: 0, paddingHorizontal: 16, marginBottom: 4, marginTop: 4, textAlignVertical: 'top' }}
                 multiline
                 scrollEnabled={false}
                 submitBehavior="submit"
@@ -1072,7 +980,7 @@ export default function EditorScreen() {
                   showsHorizontalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
                   style={{ flexGrow: 0, flexShrink: 0 }}
-                  contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 10, gap: 8, flexDirection: 'row', alignItems: 'center' }}
+                  contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8, flexDirection: 'row', alignItems: 'center' }}
                 >
                   {/* Image / video chips */}
                   {mediaAttachments.map((a, idx) => {
@@ -1082,21 +990,21 @@ export default function EditorScreen() {
                     return (
                       <TouchableOpacity key={a.clientId} activeOpacity={0.85}
                         onPress={() => handleOpenAttachmentPreview(targetIdx)}
-                        style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: COLORS.textStrong }}>
+                        style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: COLORS.mediaSurface }}>
                         <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                         {/* Play overlay for videos */}
                         {isVideo && !a.isUploading && (
-                          <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' }}>
+                          <View style={{ ...StyleSheet.absoluteFill, backgroundColor: COLORS.mediaScrim, alignItems: 'center', justifyContent: 'center' }}>
                             <Play size={18} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
                           </View>
                         )}
                         {a.isUploading && (
-                          <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
+                          <View style={{ ...StyleSheet.absoluteFill, backgroundColor: COLORS.mediaScrim, alignItems: 'center', justifyContent: 'center' }}>
                             <ActivityIndicator color={COLORS.textInverse} />
                           </View>
                         )}
                         <TouchableOpacity onPress={(e) => { e.stopPropagation(); handleRemoveAttachment(a.clientId); }}
-                          style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+                          style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: COLORS.mediaScrim, alignItems: 'center', justifyContent: 'center' }}>
                           <X size={10} color={COLORS.textInverse} strokeWidth={2.5} />
                         </TouchableOpacity>
                       </TouchableOpacity>
@@ -1106,14 +1014,14 @@ export default function EditorScreen() {
                   {voiceAttachments.map(a => {
                     const dur = a.duration ?? 0;
                     return (
-                      <View key={a.clientId} style={{ height: 44, backgroundColor: COLORS.textStrong, borderRadius: 22, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View key={a.clientId} style={{ height: 44, backgroundColor: COLORS.mediaSurface, borderRadius: 22, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Music size={13} color={COLORS.textInverse} strokeWidth={1.8} />
-                        <Text style={{ ...TYPE.metadata, color: 'rgba(255,255,255,0.85)' }}>{Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}</Text>
+                        <Text style={{ ...TYPE.metadata, color: COLORS.mediaTextWeak }}>{Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}</Text>
                         {a.isUploading
                           ? <ActivityIndicator size="small" color={COLORS.textInverse} />
                           : (
                             <TouchableOpacity onPress={() => handleRemoveAttachment(a.clientId)} hitSlop={8}>
-                              <X size={11} color="rgba(255,255,255,0.7)" strokeWidth={2} />
+                              <X size={11} color={COLORS.mediaTextWeak} strokeWidth={2} />
                             </TouchableOpacity>
                           )}
                       </View>
@@ -1150,7 +1058,7 @@ export default function EditorScreen() {
                     scrollEnabled={true}
                   />
                   {/* OpenGraph link preview cards */}
-                  <LinkPreviews text={storyBody} style={{ marginHorizontal: 20, marginBottom: 8 }} />
+                  <LinkPreviews variant="composer" text={storyLinkText.split('\n').filter(url => !dismissedLinks.includes(url)).join('\n')} onRemove={url => setDismissedLinks(previous => [...previous, url])} style={{ marginHorizontal: 20, marginBottom: 8 }} />
                 </>
               ) : (
                 <View style={{ minHeight: 200, alignItems: 'center', justifyContent: 'center' }}>
@@ -1162,9 +1070,9 @@ export default function EditorScreen() {
 
           {/* ── Quick-capture content: ScrollView ── */}
           {!isStory && (
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <>
-                <TextInput ref={bodyRef} value={qcBody} onChangeText={v => setQcBody(v.slice(0, NOTE_CHAR_MAX))}
+                <TextInput selectionColor={COLORS.brand} cursorColor={COLORS.brand} ref={bodyRef} value={qcBody} onChangeText={v => setQcBody(v.slice(0, NOTE_CHAR_MAX))}
                   placeholder="What's on your mind?" placeholderTextColor={isRecording ? COLORS.brand : COLORS.textMuted}
                   style={{ ...TYPE.input, lineHeight: 24, color: COLORS.textStrong, padding: 0, margin: 0, textAlignVertical: 'top', minHeight: 56 }}
                   multiline autoFocus autoCorrect autoCapitalize="sentences" blurOnSubmit={false} scrollEnabled={false} maxLength={NOTE_CHAR_MAX} />
@@ -1184,26 +1092,26 @@ export default function EditorScreen() {
                         return (
                           <TouchableOpacity key={a.clientId} activeOpacity={0.85}
                             onPress={() => handleOpenAttachmentPreview(targetIdx)}
-                            style={{ width: '31.5%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: COLORS.textStrong }}>
+                            style={{ width: '31.5%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: COLORS.mediaSurface }}>
                             <Image source={{ uri: a.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                             {/* Play overlay for videos */}
                             {isVideo && !a.isUploading && (
-                              <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' }}>
+                              <View style={{ ...StyleSheet.absoluteFill, backgroundColor: COLORS.mediaScrim, alignItems: 'center', justifyContent: 'center' }}>
                                 <Play size={22} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
                               </View>
                             )}
                             {isLast && (
-                              <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
-                                <Text style={{ ...TYPE.label, color: '#fff' }}>+{mediaAttachments.length - 6}</Text>
+                              <View style={{ ...StyleSheet.absoluteFill, backgroundColor: COLORS.mediaScrim, alignItems: 'center', justifyContent: 'center' }}>
+                                <Text style={{ ...TYPE.label, color: COLORS.mediaText }}>+{mediaAttachments.length - 6}</Text>
                               </View>
                             )}
                             {a.isUploading && (
-                              <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', borderRadius: 12 }}>
+                              <View style={{ ...StyleSheet.absoluteFill, backgroundColor: COLORS.mediaScrim, alignItems: 'center', justifyContent: 'center', borderRadius: 12 }}>
                                 <ActivityIndicator color={COLORS.textInverse} />
                               </View>
                             )}
                             <TouchableOpacity onPress={(e) => { e.stopPropagation(); handleRemoveAttachment(a.clientId); }}
-                              style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+                              style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: COLORS.mediaScrim, alignItems: 'center', justifyContent: 'center' }}>
                               <X size={10} color={COLORS.textInverse} strokeWidth={2.5} />
                             </TouchableOpacity>
                           </TouchableOpacity>
@@ -1214,14 +1122,14 @@ export default function EditorScreen() {
                 {voiceAttachments.map(a => {
                   const dur = a.duration ?? 0;
                   return (
-                    <View key={a.clientId} style={{ marginTop: 8, backgroundColor: COLORS.textStrong, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View key={a.clientId} style={{ marginTop: 8, backgroundColor: COLORS.mediaSurface, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                       <Music size={14} color={COLORS.textInverse} strokeWidth={1.8} />
-                      <Text style={{ flex: 1, ...TYPE.metadata, color: 'rgba(255,255,255,0.85)' }}>
+                      <Text style={{ flex: 1, ...TYPE.metadata, color: COLORS.mediaTextWeak }}>
                         Voice · {Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}
                       </Text>
                       {a.isUploading && <ActivityIndicator size="small" color={COLORS.textInverse} />}
                       <TouchableOpacity onPress={() => handleRemoveAttachment(a.clientId)} hitSlop={8}>
-                        <X size={12} color="rgba(255,255,255,0.7)" strokeWidth={2} />
+                        <X size={12} color={COLORS.mediaTextWeak} strokeWidth={2} />
                       </TouchableOpacity>
                     </View>
                   );
@@ -1244,7 +1152,7 @@ export default function EditorScreen() {
 
           {/* Quick Capture is intentionally private. */}
           {!isStory && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingVertical: 10, borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderTopColor: COLORS.strokeWeaker }}>
               <Lock size={14} color={COLORS.textMuted} strokeWidth={1.8} />
               <Text style={{ ...TYPE.metadata, color: COLORS.textMuted }}>Private · Only me</Text>
             </View>
@@ -1252,19 +1160,24 @@ export default function EditorScreen() {
 
           {/* ── Action bar — story mode: ⊕ upload + inline formatting tools
                           quick-capture: mode pill + media buttons ── */}
+          {(dictationError || isTranscribing) && (
+            <View style={{ paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
+              {isTranscribing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><ActivityIndicator color={COLORS.textBase} /><Text accessibilityLiveRegion="polite" style={{ ...TYPE.bodySmall, color: COLORS.textBase }}>Transcribing…</Text></View> : <Text accessibilityRole="alert" style={{ ...TYPE.bodySmall, color: COLORS.error }}>{dictationError}</Text>}
+              {canRetry && <View style={{ flexDirection: 'row', gap: 12 }}>
+                <Button variant="secondary" size="sm" style={{ flex: 1 }} onPress={() => { void retryRecording(); }}>Retry transcription</Button>
+                <Button variant="ghost" size="sm" onPress={() => { void discardRecording(); }}>Discard recording</Button>
+              </View>}
+            </View>
+          )}
+          {isRecording && <StoryRecordingPanel starting={isStarting} levels={recordingLevels} seconds={recDuration} onCancel={handleCancelDictation} onStop={handleStopDictation} />}
           <EditorActionBar
             mode={mode}
-            disableModeSwitch={isModeSwithDisabled}
-            onSwitchMode={() => {
-              if (isModeSwithDisabled) return;
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.setParams({ mode: isStory ? 'quick-capture' : 'story' });
-              // Re-focus input after mode switch
-              setTimeout(() => { (isStory ? bodyRef : titleRef).current?.focus(); }, 100);
-            }}
+            disableModeSwitch
+            onSwitchMode={() => {}}
             onPhoto={handleImagePicker}
             onCamera={handleOpenCamera}
             onAudio={handleVoice}
+            audioDisabled={isTranscribing || canRetry}
             onFile={handleAudioFile}
             isRecording={isRecording}
             editor={isStory ? editorBridge : null}
@@ -1292,37 +1205,6 @@ export default function EditorScreen() {
         onCapture={handleCameraCapture}
       />
 
-      <Modal visible={!!publishedUrl} animationType="slide" presentationStyle="fullScreen" statusBarTranslucent onRequestClose={handleDismissPublishedSuccess}>
-        <SafeAreaProvider>
-          {(publishedUrl || lastPublishedUrlRef.current) ? (
-            <PublishSuccessView
-              publishedUrl={publishedUrl || lastPublishedUrlRef.current || ''}
-              onAddAnother={lockMode === 'true' ? handlePublishAddAnother : handleDismissPublishedSuccess}
-              onDismiss={handleDismissPublishedSuccess}
-            />
-          ) : null}
-        </SafeAreaProvider>
-      </Modal>
-
-      {/* Cancel / discard confirmation — on-brand replacement for Alert.alert */}
-      <ConfirmDialog
-        visible={cancelConfirmVisible}
-        title={cancelConfirmTitle}
-        message={cancelConfirmMessage}
-        onClose={() => setCancelConfirmVisible(false)}
-        buttons={[
-          { label: 'Save draft', variant: 'primary', onPress: () => { cancelConfirmOnSave?.(); } },
-          { label: 'Discard', variant: 'destructive', onPress: () => {
-            setCancelConfirmVisible(false);
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace(lockMode === 'true' || isStory ? '/(tabs)/stories' : '/(tabs)/overview');
-            }
-          } },
-          { label: 'Keep editing', variant: 'ghost', onPress: () => setCancelConfirmVisible(false) },
-        ]}
-      />
       {/* Local sheets — must live inside a BottomSheetModalProvider scoped to
           this editor window so they display correctly on iOS fullScreenModal */}
       <SafeAreaInsetsContext.Consumer>
@@ -1347,10 +1229,10 @@ export default function EditorScreen() {
           backdropComponent={(props: any) => (
             <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.4} pressBehavior="close" />
           )}
+          handleComponent={renderPublishHeader}
           handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
           backgroundStyle={{ backgroundColor: COLORS.background }}
         >
-          <BottomSheetView style={{ flex: 1 }}>
             <PublishModalInner
               title={title}
               body={storyBody}
@@ -1366,12 +1248,13 @@ export default function EditorScreen() {
               onComplete={handlePublishFlowComplete}
               onPublished={handlePublishCreated}
             />
-          </BottomSheetView>
         </BottomSheetModal>
         <BottomSheetModal
           ref={draftsSheetRef}
           topInset={getSheetTopInset(modalInsets?.top ?? 0)}
           snapPoints={['75%']}
+          handleStyle={SHEET_HEADER_HANDLE_STYLE}
+          enableDynamicSizing={false}
           enablePanDownToClose
           keyboardBehavior="interactive"
           keyboardBlurBehavior="restore"
@@ -1381,9 +1264,9 @@ export default function EditorScreen() {
           handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
           backgroundStyle={{ backgroundColor: COLORS.background }}
         >
-          <BottomSheetView style={{ paddingHorizontal: 16, paddingBottom: getSheetBottomPadding(modalInsets?.bottom ?? 0, 16) }}>
-            <DraftsSheet />
-          </BottomSheetView>
+          <View style={{ flex: 1, paddingBottom: getSheetBottomPadding(modalInsets?.bottom ?? 0, 16) }}>
+            <DraftsSheet onClose={() => draftsSheetRef.current?.dismiss()} />
+          </View>
         </BottomSheetModal>
           </>
         )}

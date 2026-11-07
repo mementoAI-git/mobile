@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import { Image, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -38,6 +39,7 @@ const wait = (milliseconds: number) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 export function ExportArchiveSheet({onClose}: ExportArchiveSheetProps) {
+  const COLORS = useThemeColors();
   const [isExporting, setIsExporting] = useState(false);
   const [status, setStatus] = useState<ArchiveExportStatus | null>(null);
   const isMountedRef = useRef(true);
@@ -121,7 +123,7 @@ export function ExportArchiveSheet({onClose}: ExportArchiveSheetProps) {
     : 0;
 
   return (
-    <View className="flex-grow px-5 pb-8 pt-2">
+    <View className="flex-grow pb-8 pt-2">
       <View className="mb-4 flex-row items-center justify-between">
         <View className="flex-row items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1">
           <View className="size-1.5 rounded-full bg-brand" />

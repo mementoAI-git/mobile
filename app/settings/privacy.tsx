@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback } from 'react';
 import {
   ImageBackground,
@@ -22,6 +23,7 @@ import { TYPE } from '@/constants/typography';
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 export default function PrivacySettingsScreen() {
+  const COLORS = useThemeColors();
   const router = useRouter();
   const openSheet = useUiStore((state) => state.openSheet);
   const deleteAccount = useDeleteAccount();

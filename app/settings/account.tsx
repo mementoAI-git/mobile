@@ -1,3 +1,5 @@
+import type { ThemeColors } from '@/constants/tokens';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ImageBackground,
@@ -36,6 +38,8 @@ import { useAuthStore, useUiStore, useUserStore } from '@/store';
 const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 export default function SecuritySettingsScreen() {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const router = useRouter();
   const openSheet = useUiStore((state) => state.openSheet);
   const auth = useAuthStore((state) => state.token);
@@ -327,7 +331,7 @@ export default function SecuritySettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
   content: { paddingTop: 16, paddingBottom: 48 },
   sectionHeaderBox: {

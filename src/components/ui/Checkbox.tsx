@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -31,6 +32,7 @@ export function Checkbox({
   size = 20,
   className,
 }: CheckboxProps) {
+  const COLORS = useThemeColors();
   const scaledSize = ms(size, 0.2);
   const hitPadding = Math.max(12, Math.round((44 - scaledSize) / 2));
 
@@ -55,7 +57,7 @@ export function Checkbox({
           'items-center justify-center border',
           checked
             ? 'border-brand bg-brand'
-            : 'border-stroke-weak bg-white',
+            : 'border-stroke-weak bg-card',
           className,
         )}
         style={{

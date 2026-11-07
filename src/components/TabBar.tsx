@@ -1,3 +1,4 @@
+import { useThemeColors, useThemeStyles, useResolvedAppearance } from '@/hooks/use-theme-colors';
 /**
  * TabBar — Dynamic Dock
  *
@@ -5,14 +6,17 @@
  *   [  main pill: Overview · Chat · Stories · Explore · Capsule  ]  [○ Search]
  *
  * • Main pill: rounded-full, frosted glass surface, absolute positioned bottom-center
- * • Active tab: expands with Reanimated spring, nested opaque pill bg, icon + label stacked
- * • Inactive tab: transparent, icon only, 44px touch target, label hidden
+ * • All tabs: content-sized icon + label stacks; active tab gets a semantic fill
+ * • Inactive tab: transparent surface, persistent label, at least 44px touch target
  * • Search: detached 56×56 circle, same glass surface, opens search-memory sheet
  * • Haptics on every press
  * • Tab bar hidden on chat/[id] and stories/[id] detail screens
  */
 
 import React, { useCallback, memo, useRef } from 'react';
+import { BlurView } from 'expo-blur';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   View,
   Text,
@@ -25,45 +29,35 @@ import {
 import { Pressable } from '@/components/ui/Touchable';
 import Timer from 'lucide-react-native/icons/timer';
 import Settings from 'lucide-react-native/icons/settings';
-import Search from 'lucide-react-native/icons/search';
 import Home from 'lucide-react-native/icons/house';
 import MessageCircle from 'lucide-react-native/icons/message-circle';
 import BookOpen from 'lucide-react-native/icons/book-open';
 import Compass from 'lucide-react-native/icons/compass';
-import { COLORS } from '@/constants/tokens';
+import { TAB_ICONS as ICONS } from '@/constants/tab-icons';
+import { type ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter, usePathname } from 'expo-router';
+import { useRouter, usePathname, type Href } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { resolveTabSwipeTarget } from '@/lib/tab-swipe';
-import { getTabBarItemWidths } from '@/features/navigation/tab-bar-layout';
-import { iconSize, minTouchTarget, responsiveSpace } from '@/constants/responsive';
+import { getTabEntryParams } from '@/features/navigation/tab-reset-policy';
+import { iconSize, minTouchTarget } from '@/constants/responsive';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withTiming,
-  FadeIn,
-  FadeOut,
 } from 'react-native-reanimated';
 
 // ─── Assets ────────────────────────────────────────────────────────────────────
 
-const ICONS = {
-  overview: require('../../assets/images/icons/tab_overview.png'),
-  chat:     require('../../assets/images/icons/tab_chat.webp'),
-  stories:  require('../../assets/images/icons/tab_stories.webp'),
-  explore:  require('../../assets/images/icons/tab_explore.webp'),
-  search:   require('../../assets/images/icons/tab_search.webp'),
-  // tab_capsule.webp — add when ready; falls back to Lucide Timer
-} as const;
+
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
 const TAB_LABELS: Record<string, string> = {
   overview: 'Overview',
   chat:     'Chat',
-  stories:  'Memories',
+  stories:  'Stories',
   explore:  'Explore',
   // capsule:  'Capsule', // Hidden in Dock UI
 };
@@ -78,15 +72,10 @@ const GLASS_BG = Platform.select({
 
 // ─── Spring config ────────────────────────────────────────────────────────────
 
-const SPRING = { damping: 22, stiffness: 280, mass: 0.8 };
 
-// Widths
-// Keep the tab dock within its original visual width and let the touch target
-// stretch via minHeight/padding instead of inflating the entire tab width.
-const BASE_INACTIVE_W = Platform.OS === 'android' ? 64 : 60;
-const BASE_ACTIVE_W   = 96;  // expanded pill with label
-const PILL_H     = Platform.OS === 'android' ? 60 : 58;
-const ICON_SIZE  = iconSize(26);
+
+const PILL_H     = Platform.OS === 'android' ? 66 : 64;
+const ICON_SIZE  = iconSize(24);
 
 type TabRoute = {
   key: string;
@@ -99,7 +88,7 @@ type TabNavigation = {
     target: string;
     canPreventDefault: true;
   }) => { defaultPrevented: boolean };
-  navigate: (routeName: string) => void;
+  navigate: (routeName: string, params?: { screen: 'index' }) => void;
 };
 
 type TabBarProps = {
@@ -119,8 +108,6 @@ interface TabItemProps {
   isFocused: boolean;
   label: string;
   onPress: (routeName: string, routeKey: string, isFocused: boolean) => void;
-  activeWidth: number;
-  inactiveWidth: number;
 }
 
 const TabItem = memo(function TabItem({
@@ -130,20 +117,9 @@ const TabItem = memo(function TabItem({
   isFocused,
   label,
   onPress,
-  activeWidth,
-  inactiveWidth,
 }: TabItemProps) {
-
-  // ── Width animation ───────────────────────────────────────────────────────
-  const width = useSharedValue(isFocused ? activeWidth : inactiveWidth);
-
-  React.useEffect(() => {
-    width.value = withSpring(isFocused ? activeWidth : inactiveWidth, SPRING);
-  }, [isFocused, activeWidth, inactiveWidth, width]);
-
-  const containerStyle = useAnimatedStyle(() => ({
-    width: width.value,
-  }));
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handlePress = useCallback(() => {
@@ -155,7 +131,7 @@ const TabItem = memo(function TabItem({
   const iconSource = ICONS[tabKey as keyof typeof ICONS] ?? null;
 
   return (
-    <Animated.View style={[styles.tabWrapper, containerStyle]}>
+    <View style={styles.tabWrapper}>
       <Pressable
         onPress={handlePress}
         accessibilityRole="button"
@@ -203,48 +179,34 @@ const TabItem = memo(function TabItem({
           />
         )}
 
-        {/* Label — only rendered for focused tab */}
-        {isFocused && (
-          <Animated.Text
-            entering={FadeIn.duration(160)}
-            exiting={FadeOut.duration(100)}
-            style={styles.tabLabel}
-            numberOfLines={1}
-          >
-            {label}
-          </Animated.Text>
-        )}
+        <Text
+          style={[styles.tabLabel, { color: isFocused ? COLORS.textStrong : COLORS.textBase }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          maxFontSizeMultiplier={1.2}
+        >
+          {label}
+        </Text>
       </Pressable>
-    </Animated.View>
+    </View>
   );
 });
 
 // ─── Main TabBar ──────────────────────────────────────────────────────────────
 
 export function TabBar({ state, navigation }: TabBarProps) {
+  const dark = useResolvedAppearance() === 'dark';
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const pathname = usePathname();
 
-  // Count how many tabs are currently mapped into the UI
-  const visibleTabsCount = state.routes.filter(r => !!TAB_LABELS[r.name.split('/')[0]]).length;
-  
-  const { activeWidth, inactiveWidth } = getTabBarItemWidths({
-    screenWidth,
-    visibleTabsCount,
-    maxActiveWidth: BASE_ACTIVE_W,
-    maxInactiveWidth: BASE_INACTIVE_W,
-  });
-
-  // Host Chat owns the full bottom interaction area; detail screens do as well.
-  const isHidden =
-    pathname === '/chat' ||
-    !!pathname.match(/^\/chat\/[^/]+$/) ||
-    !!pathname.match(/^\/stories\/[^/]+$/) ||
-    pathname === '/account' ||
-    pathname === '/settings' ||
-    !!pathname.match(/^\/settings\/[^/]+$/);
+  const settingsSelected = pathname === '/settings' || pathname.startsWith('/settings/');
+  const isHidden = pathname === '/chat' ||
+    /^\/chat\/[^/]+$/.test(pathname) ||
+    /^\/stories\/[^/]+$/.test(pathname);
 
   // ── Swipe responder (retained from original TabBar) ──────────────────────
   const stateRef = useRef(state);
@@ -274,7 +236,7 @@ export function TabBar({ state, navigation }: TabBarProps) {
         );
         if (target !== null && visibleRoutes[target]) {
           Haptics.selectionAsync();
-          navRef.current.navigate(visibleRoutes[target].name);
+          navRef.current.navigate(visibleRoutes[target].name, getTabEntryParams(visibleRoutes[target].name));
         }
       },
     }),
@@ -289,15 +251,15 @@ export function TabBar({ state, navigation }: TabBarProps) {
     });
     if (isFocused || event.defaultPrevented) return;
 
-    navigation.navigate(routeName);
+    navigation.navigate(routeName, getTabEntryParams(routeName));
   }, [navigation]);
 
   const handleSettingsPress = useCallback(() => {
     Haptics.selectionAsync();
-    router.push('/settings');
-  }, [router]);
+    if (!settingsSelected) router.navigate('/settings');
+  }, [router, settingsSelected]);
 
-  const bottomPad = insets.bottom ? insets.bottom + 24 : 36;
+  const bottomPad = insets.bottom ? insets.bottom + 16 : 32;
 
   // Keep the view always mounted — avoid the remount/race-condition that causes
   // the bar to freeze on returning from a hidden screen. Animate via shared value.
@@ -316,12 +278,31 @@ export function TabBar({ state, navigation }: TabBarProps) {
 
   return (
     <Animated.View
-      style={[styles.root, { bottom: bottomPad }, visibilityStyle]}
+      style={[styles.root, { bottom: bottomPad, left: 16, right: 16, gap: 12 }, visibilityStyle]}
       pointerEvents={isHidden ? 'none' : 'box-none'}
       {...swipeResponder.panHandlers}
     >
+      <MaskedView
+        pointerEvents="none"
+        accessible={false}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={{ position: 'absolute', left: -20, right: -20, top: -PILL_H / 2 - 64, bottom: -bottomPad, overflow: 'hidden' }}
+        maskElement={
+          <LinearGradient
+            colors={['transparent', COLORS.textInverse, COLORS.textInverse]}
+            locations={[0, 64 / (bottomPad + PILL_H / 2 + 64), 1]}
+            style={{ flex: 1 }}
+          />
+        }
+      >
+        {Platform.OS === 'ios' && (
+          <BlurView tint={dark ? 'dark' : 'light'} intensity={90} style={StyleSheet.absoluteFill} />
+        )}
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: Platform.OS === 'ios' ? COLORS.glass : COLORS.card }]} />
+      </MaskedView>
       {/* ── Main pill ── */}
-      <View style={styles.pill}>
+      <View style={[styles.pill, { backgroundColor: COLORS.card, borderColor: COLORS.strokeWeak, borderWidth: 1 }]}>
         {state.routes.map((route, index) => {
           const isFocused = state.index === index;
           const tabKey = route.name.split('/')[0];
@@ -337,8 +318,6 @@ export function TabBar({ state, navigation }: TabBarProps) {
               isFocused={isFocused}
               label={label}
               onPress={handleTabPress}
-              activeWidth={activeWidth}
-              inactiveWidth={inactiveWidth}
             />
           );
         })}
@@ -349,13 +328,40 @@ export function TabBar({ state, navigation }: TabBarProps) {
         onPress={handleSettingsPress}
         accessibilityRole="button"
         accessibilityLabel="Settings"
-        style={styles.searchCircle}
+        accessibilityState={{ selected: settingsSelected }}
+        style={[styles.searchCircle, { width: screenWidth < 360 ? 48 : minTouchTarget(56), height: screenWidth < 360 ? 48 : minTouchTarget(56), backgroundColor: settingsSelected ? COLORS.fillWeak : COLORS.card, borderColor: COLORS.strokeWeak, borderWidth: 1 }]}
         android_ripple={{ color: COLORS.brandSubtle, borderless: true, radius: 28 }}
       >
         <Settings size={iconSize(22)} color={COLORS.textBase} strokeWidth={1.8} />
       </Pressable>
     </Animated.View>
   );
+}
+
+const DOCK_ROUTES = Object.keys(TAB_LABELS).map((name) => ({ key: name, name }));
+const DOCK_PATHS: Record<string, Href> = {
+  overview: '/(tabs)/overview',
+  chat: '/(tabs)/chat',
+  stories: '/(tabs)/stories',
+  explore: '/(tabs)/explore',
+};
+
+export function AppTabBar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const section = pathname.split('/')[1];
+  const navigate = useCallback((name: string) => {
+    const path = DOCK_PATHS[name];
+    if (path) router.navigate({ pathname: path, params: getTabEntryParams(name) } as Href);
+  }, [router]);
+  const navigation = React.useMemo(() => ({
+    emit: () => ({ defaultPrevented: false }),
+    navigate,
+  }), [navigate]);
+
+  if (!['overview', 'stories', 'explore', 'settings', 'capsule'].includes(section)) return null;
+
+  return <TabBar state={{ routes: DOCK_ROUTES, index: DOCK_ROUTES.findIndex((route) => route.name === section) }} navigation={navigation} />;
 }
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
@@ -372,7 +378,7 @@ const PILL_SHADOW = Platform.select({
   default: {},
 });
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   // height: 0 collapses the React Navigation wrapper to nothing so its
   // background disappears. The pill + circle float via position: absolute
   // and don't need the parent to have any height.
@@ -393,12 +399,13 @@ const styles = StyleSheet.create({
   // Glass pill — flexShrink so it doesn't crowd out the search circle
   pill: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     height: PILL_H,
     borderRadius: 999,
     backgroundColor: GLASS_BG,
-    paddingHorizontal: 6,
+    padding: 4,
     gap: 4,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(23,11,0,0.08)',
@@ -407,28 +414,30 @@ const styles = StyleSheet.create({
 
   // Each tab — animated width wrapper
   tabWrapper: {
-    height: PILL_H - 8,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 44,
+    height: '100%',
     overflow: 'hidden',
     borderRadius: 999,
-    minHeight: minTouchTarget(52),
+    minHeight: minTouchTarget(48),
   },
 
   // Pressable inside wrapper
   tabPressable: {
     flex: 1,
-    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 999,
-    paddingHorizontal: 10,
-    gap: 3,
-    minHeight: minTouchTarget(52),
+    paddingHorizontal: 6,
+    gap: 2,
+    minHeight: minTouchTarget(48),
   },
 
   // Active tab gets opaque nested pill bg
   tabPressableActive: {
-    backgroundColor: 'rgba(23,11,0,0.07)',
-    paddingHorizontal: 12,
+    backgroundColor: COLORS.fillWeak,
+    paddingHorizontal: 10,
   },
 
   // Tab icon

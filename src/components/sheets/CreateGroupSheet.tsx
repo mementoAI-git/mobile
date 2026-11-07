@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -21,6 +22,7 @@ interface Props {
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
+  const COLORS = useThemeColors();
   return (
     <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>
       {children}
@@ -29,6 +31,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function CreateGroupSheet({ onClose, editData }: Props) {
+  const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
   const isEdit = Boolean(editData?._id);
   const [name, setName] = useState(editData?.name ?? '');
@@ -98,7 +101,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
     <View style={{ flex: 1 }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ flex: 1 }}>
-          <View style={{ minHeight: 68, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ minHeight: 44, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
               {isEdit ? 'Group Settings' : 'Create Group'}
             </Text>

@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { StyleProp, Text, TextStyle, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -17,6 +18,7 @@ export const SettingsSubpageHeader = React.memo(function SettingsSubpageHeader({
   title,
   onBack,
 }: SettingsSubpageHeaderProps) {
+  const COLORS = useThemeColors();
   return (
     <View
       style={{

@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -68,6 +69,8 @@ export function AppleSvgIcon({ size = 20 }: { size?: number }) {
 }
 
 export default function RegisterScreen() {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const { width } = useWindowDimensions();
   const isCompact = width <= 360;
 
@@ -418,13 +421,13 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   screenBg: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 24,
     paddingBottom: 32,
   },

@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -18,6 +19,7 @@ interface ConversationBarProps {
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 function RecentActivityIcon({ size = 40 }: { size?: number }) {
+  const COLORS = useThemeColors();
   return (
     <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
       <Path
@@ -105,7 +107,7 @@ export function ConversationBar({ memory, onPress, index = 0 }: ConversationBarP
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={0.9}
-        className="flex-row items-center gap-4 px-5 py-4 bg-white rounded-[24px] border border-stroke-weaker"
+        className="flex-row items-center gap-4 px-5 py-4 bg-card rounded-[24px] border border-stroke-weaker"
         style={animatedStyle}
       >
         {/* Premium Multi-Color Vector Svg Icon */}

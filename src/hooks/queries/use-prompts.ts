@@ -1,9 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { fetchCollection, fetchEntity, fetchPaginated } from '@/api/domain-fetchers';
 import dayjs from 'dayjs';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import { useAuthStore } from '@/store';
+import { getCategoryTopicsUrl, getNextTopicsPage } from '@/features/explore/category-topics';
+import { resolveExploreCategorySlug } from '@/features/explore/category-identity';
+import type { ExploreCategory } from '@/features/explore/explore-catalog';
 import type { IPrompt, IDashboardPromptSlot } from '@/types';
 
 export function usePrompts(params?: { category?: string; limit?: number }) {
@@ -41,7 +44,7 @@ export function usePromptCategories() {
 
   return useQuery({
     queryKey: queryKeys.promptCategories,
-    queryFn: () => fetchCollection<any>(endpoint.promptCategories),
+    queryFn: () => fetchCollection<ExploreCategory>(endpoint.exploreCategories),
     enabled: !!token,
     staleTime: 300_000,
   });
@@ -58,23 +61,27 @@ export function useOverviewPrompts() {
   });
 }
 
-export function useCategoryDetailsPrompts(slug: string, answered?: boolean) {
+export function useCategoryDetailsPrompts(slug: string, answered?: boolean, enabled = true) {
   const token = useAuthStore((s) => s.token?.access_token);
+  const canonicalSlug = resolveExploreCategorySlug(slug);
 
+  return useInfiniteQuery({
+    queryKey: queryKeys.categoryDetailsPrompts(canonicalSlug || '', answered),
+    queryFn: ({ pageParam }) =>
+      fetchPaginated<IPrompt>(getCategoryTopicsUrl(canonicalSlug || '', pageParam, answered)!),
+    getNextPageParam: getNextTopicsPage,
+    initialPageParam: 1,
+    enabled: !!token && !!canonicalSlug && enabled,
+    staleTime: 60_000,
+  });
+}
+
+export function usePromptDetails(promptId: string) {
+  const token = useAuthStore((s) => s.token?.access_token);
   return useQuery({
-    queryKey: queryKeys.categoryDetailsPrompts(slug, answered),
-    queryFn: () => {
-      const qs = new URLSearchParams();
-      if (answered !== undefined) {
-        qs.set('answered', String(answered));
-      }
-      const query = qs.toString() ? `?${qs.toString()}` : '';
-      return fetchPaginated<any>(`${endpoint.promptCategories}${slug}${query}`).then((page) => ({
-        prompts: page.docs,
-        totalDocs: page.totalDocs,
-      }));
-    },
-    enabled: !!token && !!slug,
+    queryKey: ['prompt-details', promptId],
+    queryFn: () => fetchEntity<IPrompt>(`${endpoint.promptDetails}${encodeURIComponent(promptId)}`),
+    enabled: !!token && /^[0-9a-fA-F]{24}$/.test(promptId),
     staleTime: 60_000,
   });
 }

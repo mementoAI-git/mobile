@@ -1,40 +1,39 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo } from 'react';
 import { useVoiceContent } from '@/features/voice-control/hooks';
-import { View, FlatList, RefreshControl, ScrollView, ImageBackground } from 'react-native';
+import { View, RefreshControl, ScrollView } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Plus from 'lucide-react-native/icons/plus';
 import Search from 'lucide-react-native/icons/search';
-// import LayoutGrid from 'lucide-react-native/icons/layout-grid';
-import List from 'lucide-react-native/icons/list'; // list mode toggled off for now
+import LayoutGrid from 'lucide-react-native/icons/layout-grid';
+import List from 'lucide-react-native/icons/list';
 import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
 import { MasonryMemoryGrid } from '@/components/memory/MasonryMemoryGrid';
-import { StatCard, DashboardHeader, TextInput, StoriesSkeleton, EmptyState, Spinner } from '@/components/ui';
+import { Button, DashboardHeader, TextInput, StoriesSkeleton, EmptyState, Spinner } from '@/components/ui';
 import { useGuardianLensStore } from '@/store/guardian-lens.store';
-import { COLORS } from '@/constants/tokens';
+import { BRAND_BUTTON_GRADIENT } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { minTouchTarget, radius, iconSize } from '@/constants/responsive';
 import * as Haptics from 'expo-haptics';
 import Animated, {
-  FadeInDown,
   useSharedValue,
   useAnimatedStyle,
   interpolate,
   Extrapolation,
-  withTiming,
+  useAnimatedScrollHandler,
 } from 'react-native-reanimated';
 import { useStoriesLogic } from '@/hooks/use-stories-logic';
 import { useRouter } from 'expo-router';
+import type { IMemory } from '@/types';
 import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 
-const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
-const MEMORIES_BG = require('../../../assets/images/backgrounds/memories_card_bg.png');
-const STREAK_BG = require('../../../assets/images/backgrounds/streak_card_bg.png');
 const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.webp');
 
-const FILTERS = ['All', 'Bookmarked', 'Deleted', 'Pending'];
+const FILTERS = ['All', 'Bookmarked', 'Deleted'];
 
 export default function StoriesScreen() {
+  const COLORS = useThemeColors();
   React.useEffect(() => {
     runtimeDiagnostics.record('screen', 'mount', { screen: 'stories' });
     return () => runtimeDiagnostics.record('screen', 'unmount', { screen: 'stories' });
@@ -146,101 +145,48 @@ export default function StoriesScreen() {
 
   // Stable renderItem for FlatList — uses same MasonryMemoryCard as grid for visual consistency
   const renderListItem = useCallback(
-    ({ item }: { item: any }) => (
-      <MasonryMemoryCard
-        memory={item}
-        variant="list"
-        onPress={() => handleMemoryPress(item._id)}
-      />
+    ({ item }: { item: IMemory }) => (
+      <StoryListItem memory={item} onOpen={handleMemoryPress} />
     ),
     [handleMemoryPress],
   );
 
-  const listHeader = useMemo(
-    () => {
-      const countMap: Record<string, number | undefined> = {
-        All: stats?.stories_count,
-        Bookmarked: stats?.bookmark_count,
-        Deleted: stats?.stories_deleted_count,
-        Pending: stats?.quick_capture_pending_count,
-      };
-      return (
-      <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-4 gap-6 px-5">
-        <Animated.Text className="text-text-weak" style={TYPE.body}>
-          A secure archive for your most cherished moments and personal reflections.
-        </Animated.Text>
+  const handleSwitchView = useCallback(() => {
+    handleToggleView(viewMode === 'grid' ? 'list' : 'grid');
+    scrollY.value = 0;
+  }, [handleToggleView, viewMode, scrollY]);
 
-        {/* Stat cards row */}
-        {stats && (
-          <View className="gap-4">
-            <View className="flex-row gap-4">
-              <StatCard label="Memories" value={stats.stories_count ?? 0} variant="blue" bg={MEMORIES_BG} onPress={() => setActiveFilter('All')} />
-              <StatCard label="Bookmarks" value={stats.bookmark_count ?? 0} variant="orange" bg={STREAK_BG} onPress={() => setActiveFilter('Bookmarked')} />
-            </View>
-          </View>
-        )}
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => { scrollY.value = event.contentOffset.y; },
+  });
 
-          {/* Search & Layout Control */}
-          <View className="gap-4">
-            <View className="flex-row items-center gap-3">
-              <TextInput
-                placeholder="Search memories"
-                value={search}
-                onChangeText={handleSearchChange}
-                onSubmitEditing={handleSearchSubmit}
-                returnKeyType="search"
-                containerClassName="flex-1"
-                textContentType="none"
-                autoComplete="off"
-                autoCorrect={false}
-                spellCheck={false}
-                leftElement={<Search size={18} color={COLORS.textWeak} />}
-                rightElement={
-                  isFetching && Boolean(debouncedSearch) ? (
-                    <Spinner size="small" />
-                  ) : search ? (
-                    <TouchableOpacity onPress={handleClearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <View className="size-5 bg-text-muted/10 rounded-full items-center justify-center">
-                        <Plus size={12} color={COLORS.textWeak} style={{ transform: [{ rotate: '45deg' }] }} />
-                      </View>
-                    </TouchableOpacity>
-                  ) : null
-                }
-                placeholderTextColor={COLORS.textMuted}
-              />
-            </View>
+  const filterTabs = useMemo(() => {
+    const counts: Record<string, number | undefined> = {
+      All: stats?.stories_count,
+      Bookmarked: stats?.bookmark_count,
+      Deleted: stats?.stories_deleted_count,
+    };
+    return FILTERS.map((filter) => ({
+      key: filter,
+      label: counts[filter] ? `${filter} (${counts[filter]})` : filter,
+    }));
+  }, [stats]);
 
-          {/* Filter Pills */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2.5">
-            {FILTERS.map((f) => {
-              const count = countMap[f];
-              const label = (count && count > 0) ? `${f} (${count})` : f;
-              return (
-                <TouchableOpacity
-                  key={f}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setActiveFilter(f);
-                  }}
-                  activeOpacity={0.7}
-                  className={`px-6 py-2.5 rounded-full ${activeFilter === f ? 'bg-brand' : 'bg-fill-weaker'}`}
-                >
-                  <Animated.Text
-                    className={activeFilter === f ? 'text-white' : 'text-text-base'}
-                    style={TYPE.metadata}
-                  >
-                    {label}
-                  </Animated.Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      </Animated.View>
-    );
-    },
-    [stats, search, debouncedSearch, isFetching, activeFilter, setActiveFilter, handleClearSearch, handleSearchChange, handleSearchSubmit],
-  );
+  const listHeader = useMemo(() => (
+    <View className="px-4 pt-2 pb-10">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2.5">
+        {filterTabs.map((filter) => (
+          <StoryFilterButton
+            key={filter.key}
+            filter={filter.key}
+            label={filter.label}
+            active={activeFilter === filter.key}
+            onSelect={setActiveFilter}
+          />
+        ))}
+      </ScrollView>
+    </View>
+  ), [filterTabs, activeFilter, setActiveFilter]);
 
   const emptyState = (
     <EmptyState
@@ -288,12 +234,47 @@ export default function StoriesScreen() {
       )}
 
       <View className="flex-1">
-        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
+
+
+        <View className="flex-row items-center gap-3 px-4 pt-4 pb-3">
+          <TextInput
+            accessibilityLabel="Search stories"
+            placeholder="Search stories"
+            value={search}
+            onChangeText={handleSearchChange}
+            onSubmitEditing={handleSearchSubmit}
+            returnKeyType="search"
+            containerClassName="flex-1"
+            textContentType="none"
+            autoComplete="off"
+            autoCorrect={false}
+            spellCheck={false}
+            leftElement={<Search size={18} color={COLORS.textWeak} />}
+            rightElement={isFetching && Boolean(debouncedSearch) ? <Spinner size="small" /> : search ? (
+              <Button variant="ghost" iconOnly size="sm" accessibilityLabel="Clear search" onPress={handleClearSearch}>
+                <Plus size={16} color={COLORS.textWeak} style={{ transform: [{ rotate: '45deg' }] }} />
+              </Button>
+            ) : null}
+            placeholderTextColor={COLORS.textMuted}
+          />
+          <Button
+            variant="secondary"
+            iconOnly
+            size="lg"
+            className="w-14"
+            accessibilityLabel={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+            onPress={handleSwitchView}
+          >
+            {viewMode === 'grid' ? <List size={20} color={COLORS.textStrong} /> : <LayoutGrid size={20} color={COLORS.textStrong} />}
+          </Button>
+        </View>
 
         {isLoading && !stories.length && !debouncedSearch ? (
-          <StoriesSkeleton />
-        ) : (
-          /* ── Masonry grid view (list mode commented out) ──────────── */
+          <>
+            {listHeader}
+            <StoriesSkeleton viewMode={viewMode} />
+          </>
+        ) : viewMode === 'grid' ? (
           <MasonryMemoryGrid
             memories={displayedStories}
             ListHeaderComponent={listHeader}
@@ -305,36 +286,26 @@ export default function StoriesScreen() {
             onRefresh={refetch}
             scrollY={scrollY}
           />
-          /* List view — commented out for now
         ) : (
           <Animated.FlatList
-            data={stories}
-            keyExtractor={(item) => item._id}
+            data={displayedStories}
+            keyExtractor={storyKey}
             initialNumToRender={8}
             maxToRenderPerBatch={5}
             windowSize={5}
             removeClippedSubviews
             ListHeaderComponent={listHeader}
             renderItem={renderListItem}
-            contentContainerClassName="gap-4 pb-24"
+            contentContainerClassName="pb-40"
             showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.brand} />
-            }
+            refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.brand} />}
             onScroll={scrollHandler}
             scrollEventThrottle={16}
-            onEndReached={() => hasNextPage && fetchNextPage()}
+            onEndReached={handleGridEndReached}
             onEndReachedThreshold={0.3}
-            ListFooterComponent={
-              isFetchingNextPage ? (
-                <View className="py-6">
-                  <Spinner size="small" />
-                </View>
-              ) : null
-            }
+            ListFooterComponent={isFetchingNextPage ? <View className="py-6"><Spinner size="small" /></View> : null}
             ListEmptyComponent={emptyState}
           />
-          */
         )}
 
         {/* Floating Action Button - morphs width and contents on scroll */}
@@ -348,7 +319,8 @@ export default function StoriesScreen() {
               height: minTouchTarget(44),
               borderRadius: radius(22),
               backgroundColor: COLORS.brand,
-              shadowColor: '#170B00',
+              experimental_backgroundImage: BRAND_BUTTON_GRADIENT,
+              shadowColor: COLORS.shadow,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.15,
               shadowRadius: 8,
@@ -397,3 +369,36 @@ export default function StoriesScreen() {
     </SafeAreaView>
   );
 }
+
+function storyKey(story: IMemory) { return story._id; }
+
+const StoryFilterButton = React.memo(function StoryFilterButton({ filter, label, active, onSelect }: {
+  filter: string;
+  label: string;
+  active: boolean;
+  onSelect: (filter: string) => void;
+}) {
+  const handlePress = useCallback(() => onSelect(filter), [onSelect, filter]);
+  return (
+    <Button
+      variant={active ? 'primary' : 'secondary'}
+      size="md"
+      accessibilityLabel={`${label}${active ? ', selected' : ''}`}
+      onPress={handlePress}
+    >
+      {label}
+    </Button>
+  );
+});
+
+const StoryListItem = React.memo(function StoryListItem({ memory, onOpen }: {
+  memory: IMemory;
+  onOpen: (id: string) => void;
+}) {
+  const handlePress = useCallback(() => onOpen(memory._id), [onOpen, memory._id]);
+  return (
+    <View className="px-4 pb-4">
+      <MasonryMemoryCard memory={memory} variant="list" onPress={handlePress} />
+    </View>
+  );
+});

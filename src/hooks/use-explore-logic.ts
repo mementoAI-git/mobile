@@ -2,18 +2,9 @@ import { useRouter } from 'expo-router';
 import { usePromptCategories, useDailyPrompts } from '@/hooks/queries/use-prompts';
 import { useStartConversation } from '@/hooks/mutations/use-memory-mutations';
 import { useCallback, useMemo } from 'react';
-import type { IMemory, IPrompt } from '@/types';
-
-const STATIC_CATEGORIES = [
-  { _id: 'career', slug: 'career', name: 'Career & Ambition' },
-  { _id: 'family', slug: 'family', name: 'Family Life' },
-  { _id: 'relationship', slug: 'relationship', name: 'Love & Relationships' },
-  { _id: 'belief', slug: 'belief', name: 'Worldviews & Beliefs' },
-  { _id: 'purpose', slug: 'purpose', name: 'Finding Purpose' },
-  { _id: 'life-transition', slug: 'life-transition', name: 'Life Transitions' },
-  { _id: 'wellbeing', slug: 'wellbeing', name: 'Wellbeing & Daily Life' },
-  { _id: 'identity', slug: 'identity', name: 'Identity & Self-Discovery' },
-];
+import { resolveExploreCatalog } from '@/features/explore/explore-catalog';
+import { getExploreCategoryTitle } from '@/features/explore/question-presentation';
+import type { IPrompt } from '@/types';
 
 export function useExploreLogic() {
   const router = useRouter();
@@ -50,7 +41,7 @@ export function useExploreLogic() {
   const handlePromptPress = useCallback((prompt: IPrompt) => {
     router.push({
       pathname: '/chat/[id]',
-      params: { id: prompt._id || '', type: 'prompt', promptTitle: prompt.title || '' },
+      params: { id: prompt._id || '', type: 'prompt', promptTitle: prompt.title || '', promptLabel: getExploreCategoryTitle(prompt.category) },
     });
   }, [router]);
 
@@ -58,10 +49,7 @@ export function useExploreLogic() {
     router.replace('/(tabs)/overview');
   }, [router]);
 
-  const displayCategories = useMemo(
-    () => categories && (categories as any[]).length > 0 ? categories : STATIC_CATEGORIES,
-    [categories],
-  );
+  const catalog = useMemo(() => resolveExploreCatalog(categories), [categories]);
 
   const refetch = useCallback(() => {
     void refetchCategories();
@@ -76,7 +64,8 @@ export function useExploreLogic() {
   return useMemo(
     () => ({
       router,
-      categories: displayCategories,
+      categories: catalog.categories,
+      usingBundledCatalog: catalog.usingBundledCatalog,
       staticPrompts,
       isLoading: (categoriesLoading && (!categories || (categories as any[]).length === 0)) || promptsLoading,
       isStartingConversation,
@@ -89,7 +78,7 @@ export function useExploreLogic() {
     }),
     [
       router,
-      displayCategories,
+      catalog,
       staticPrompts,
       categoriesLoading,
       categories,

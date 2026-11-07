@@ -17,6 +17,8 @@ export type NativeVoicePlaybackOptions = {
   startupBufferMs?: number;
   recoveryBufferMs?: number;
   maxBufferedMs?: number;
+  /** The session's first audio rises from silence over this long (0: off). */
+  warmupRampMs?: number;
 };
 
 export type NativeVoicePlaybackSnapshot = {
@@ -72,6 +74,7 @@ const DEFAULT_OPTIONS: Required<NativeVoicePlaybackOptions> = {
   startupBufferMs: 180,
   recoveryBufferMs: 240,
   maxBufferedMs: 5_000,
+  warmupRampMs: 0,
 };
 
 let installationAttempted = false;

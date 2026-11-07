@@ -1,3 +1,4 @@
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 /**
  * StoryRichEditor — Tiptap-powered WYSIWYG body editor for story mode.
  *
@@ -7,6 +8,7 @@
 
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
+import type { WebViewMessageEvent } from 'react-native-webview';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import {
   RichText,
@@ -26,14 +28,18 @@ import Heading2 from 'lucide-react-native/icons/heading-2';
 import List from 'lucide-react-native/icons/list';
 import ListOrdered from 'lucide-react-native/icons/list-ordered';
 import Quote from 'lucide-react-native/icons/quote';
-import { COLORS } from '@/constants/tokens';
-import { TYPE_METRICS } from '@/constants/typography';
+import type { ThemeColors } from '@/constants/tokens';
+import { BEGIN_DICTATION_BOOKMARK, insertDictationScript } from '@/features/editor/dictation-insertion';
+import { buildEditorThemeCSS } from '@/features/editor/editor-theme';
+// Typography metrics are resolved centrally by buildEditorThemeCSS.
 import { minTouchTarget, radius, iconSize } from '@/constants/responsive';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface StoryRichEditorRef {
   getHTML: () => Promise<string>;
+  beginDictation: () => void;
+  insertDictation: (text: string) => Promise<string>;
   focus: () => void;
   setContent: (html: string) => void;
   /** Expose the editor bridge so the parent can render FormattingToolbar */
@@ -52,16 +58,18 @@ interface Props {
 
 function IconBtn({
   active,
-  onPressIn,
+  onPress,
   children,
 }: {
   active?: boolean;
-  onPressIn: () => void;
+  onPress: () => void;
   children: React.ReactNode;
 }) {
+  const styles = useThemeStyles(createStyles);
   return (
     <TouchableOpacity
-      onPressIn={() => { Haptics.selectionAsync(); onPressIn(); }}
+      // On release, because a touch that starts a swipe along the toolbar must not format.
+      onPress={() => { Haptics.selectionAsync(); onPress(); }}
       activeOpacity={0.7}
       hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
       style={[styles.toolBtn, active && styles.toolBtnActive]}
@@ -74,6 +82,8 @@ function IconBtn({
 // ─── Formatting toolbar (exported — rendered by editor.tsx above EditorActionBar) ─
 
 export function FormattingToolbar({ editor }: { editor: EditorBridge }) {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const s = useBridgeState(editor);
   const activeColor = COLORS.brand;
   const inactiveColor = COLORS.textBase;
@@ -87,40 +97,40 @@ export function FormattingToolbar({ editor }: { editor: EditorBridge }) {
         contentContainerStyle={styles.toolbarContent}
         keyboardShouldPersistTaps="always"
       >
-        <IconBtn active={s.headingLevel === 1} onPressIn={() => editor.toggleHeading(1)}>
+        <IconBtn active={s.headingLevel === 1} onPress={() => editor.toggleHeading(1)}>
           <Heading1 size={sz} color={s.headingLevel === 1 ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
-        <IconBtn active={s.headingLevel === 2} onPressIn={() => editor.toggleHeading(2)}>
+        <IconBtn active={s.headingLevel === 2} onPress={() => editor.toggleHeading(2)}>
           <Heading2 size={sz} color={s.headingLevel === 2 ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
 
         <View style={styles.divider} />
 
-        <IconBtn active={s.isBoldActive} onPressIn={() => editor.toggleBold()}>
+        <IconBtn active={s.isBoldActive} onPress={() => editor.toggleBold()}>
           <Bold size={sz} color={s.isBoldActive ? activeColor : inactiveColor} strokeWidth={s.isBoldActive ? 2.5 : 2} />
         </IconBtn>
-        <IconBtn active={s.isItalicActive} onPressIn={() => editor.toggleItalic()}>
+        <IconBtn active={s.isItalicActive} onPress={() => editor.toggleItalic()}>
           <Italic size={sz} color={s.isItalicActive ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
-        <IconBtn active={s.isUnderlineActive} onPressIn={() => editor.toggleUnderline()}>
+        <IconBtn active={s.isUnderlineActive} onPress={() => editor.toggleUnderline()}>
           <UnderlineIcon size={sz} color={s.isUnderlineActive ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
-        <IconBtn active={s.isStrikeActive} onPressIn={() => editor.toggleStrike()}>
+        <IconBtn active={s.isStrikeActive} onPress={() => editor.toggleStrike()}>
           <Strikethrough size={sz} color={s.isStrikeActive ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
 
         <View style={styles.divider} />
 
-        <IconBtn active={s.isBulletListActive} onPressIn={() => editor.toggleBulletList()}>
+        <IconBtn active={s.isBulletListActive} onPress={() => editor.toggleBulletList()}>
           <List size={sz} color={s.isBulletListActive ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
-        <IconBtn active={s.isOrderedListActive} onPressIn={() => editor.toggleOrderedList()}>
+        <IconBtn active={s.isOrderedListActive} onPress={() => editor.toggleOrderedList()}>
           <ListOrdered size={sz} color={s.isOrderedListActive ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
 
         <View style={styles.divider} />
 
-        <IconBtn active={s.isBlockquoteActive} onPressIn={() => editor.toggleBlockquote()}>
+        <IconBtn active={s.isBlockquoteActive} onPress={() => editor.toggleBlockquote()}>
           <Quote size={sz} color={s.isBlockquoteActive ? activeColor : inactiveColor} strokeWidth={2} />
         </IconBtn>
       </ScrollView>
@@ -132,39 +142,40 @@ export function FormattingToolbar({ editor }: { editor: EditorBridge }) {
 
 export const StoryRichEditor = forwardRef<StoryRichEditorRef, Props>(
   function StoryRichEditor({ initialContent = '', onChange, onBridgeReady, scrollEnabled = true }, ref) {
+    const styles = useThemeStyles(createStyles);
+    const insertionSequence = useRef(0);
+    const pendingInsertions = useRef(new Map<string, { resolve: (html: string) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>());
+    const handleEditorMessage = React.useCallback((event: WebViewMessageEvent) => {
+      let message: { type?: string; requestId?: string; html?: string; error?: string };
+      try { message = JSON.parse(event.nativeEvent.data); } catch { return; }
+      if (message.type !== 'memento-dictation-result' || !message.requestId) return;
+      const pending = pendingInsertions.current.get(message.requestId);
+      if (!pending) return;
+      clearTimeout(pending.timer);
+      pendingInsertions.current.delete(message.requestId);
+      if (typeof message.html === 'string') pending.resolve(message.html);
+      else pending.reject(new Error(message.error || 'Could not insert the transcript. Your recording is saved for retry.'));
+    }, []);
+    React.useEffect(() => {
+      const pending = pendingInsertions.current;
+      return () => {
+        pending.forEach(request => { clearTimeout(request.timer); request.reject(new Error('The editor closed. Your recording is saved for retry.')); });
+        pending.clear();
+      };
+    }, []);
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
 
-    // Static CSS extension — bundled into the initial WebView HTML so it
-    // applies on first render, before any isReady event fires.
-    const mementoTheme = React.useMemo(() => new BridgeExtension({
-      extendCSS: `
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; padding: 0; background: #ffffff; }
-        .tiptap, .ProseMirror {
-          padding: 8px 20px 20px 20px !important;
-          font-size: ${TYPE_METRICS.body.fontSize}px;
-          line-height: ${TYPE_METRICS.body.lineHeight}px;
-          color: rgba(23,11,0,0.65);
-          font-family: -apple-system, sans-serif;
-          outline: none;
-          word-break: break-word;
-        }
-        .tiptap p, .ProseMirror p { margin: 0 0 8px 0; }
-        .tiptap h1, .ProseMirror h1 { font-size: ${TYPE_METRICS.screenTitle.fontSize}px; line-height: ${TYPE_METRICS.screenTitle.lineHeight}px; font-weight: 700; margin: 0 0 8px 0; color: rgba(23,11,0,0.9); }
-        .tiptap h2, .ProseMirror h2 { font-size: ${TYPE_METRICS.sectionTitle.fontSize}px; line-height: ${TYPE_METRICS.sectionTitle.lineHeight}px; font-weight: 600; margin: 0 0 8px 0; color: rgba(23,11,0,0.9); }
-        .tiptap u, .ProseMirror u { text-decoration: underline; text-decoration-color: rgba(23,11,0,0.4); text-underline-offset: 3px; }
-        .tiptap strong, .ProseMirror strong { color: rgba(23,11,0,0.9); }
-        .tiptap em, .ProseMirror em { color: rgba(23,11,0,0.65); }
-        .tiptap s, .ProseMirror s { text-decoration: line-through; color: rgba(23,11,0,0.4); }
-        .tiptap ul, .ProseMirror ul, .tiptap ol, .ProseMirror ol { padding-left: 20px; margin: 0 0 8px 0; }
-        .tiptap blockquote, .ProseMirror blockquote { border-left: 3px solid #E98246; padding-left: 12px; margin: 0 0 8px 0; color: rgba(23,11,0,0.45); font-style: italic; }
-        .tiptap .ProseMirror-focused { outline: none; }
-        .ProseMirror-placeholder { color: rgba(23,11,0,0.2); pointer-events: none; }
-      `,
-    }), []);
+    const colors = useThemeColors();
+    const themeCSS = React.useMemo(() => buildEditorThemeCSS(colors), [colors]);
+    const [mementoTheme] = React.useState(() => new BridgeExtension({ extendCSS: themeCSS }));
 
+    const editorTheme = React.useMemo(() => ({
+      webview: { backgroundColor: colors.background },
+      webviewContainer: { backgroundColor: colors.background },
+    }), [colors.background]);
     const editor = useEditorBridge({
+      theme: editorTheme,
       autofocus: false,
       initialContent,
       bridgeExtensions: [...TenTapStartKit, mementoTheme],
@@ -175,6 +186,13 @@ export const StoryRichEditor = forwardRef<StoryRichEditorRef, Props>(
       },
     });
 
+    const { isReady } = useBridgeState(editor);
+    const editorRef = useRef(editor);
+    editorRef.current = editor;
+    React.useEffect(() => {
+      if (isReady) editorRef.current.injectCSS(themeCSS, 'memento-theme');
+    }, [isReady, themeCSS]);
+
     // Expose the bridge to the parent so it can render FormattingToolbar
     React.useEffect(() => {
       onBridgeReady?.(editor);
@@ -184,6 +202,16 @@ export const StoryRichEditor = forwardRef<StoryRichEditorRef, Props>(
 
     useImperativeHandle(ref, () => ({
       getHTML: () => editor.getHTML(),
+      beginDictation: () => editor.injectJS(BEGIN_DICTATION_BOOKMARK),
+      insertDictation: (text: string) => new Promise<string>((resolve, reject) => {
+        const requestId = `dictation-${++insertionSequence.current}`;
+        const timer = setTimeout(() => {
+          pendingInsertions.current.delete(requestId);
+          reject(new Error('The editor did not confirm insertion. Your recording is saved for retry.'));
+        }, 10000);
+        pendingInsertions.current.set(requestId, { resolve, reject, timer });
+        editor.injectJS(insertDictationScript(text, requestId));
+      }),
       focus: () => editor.focus('end'),
       setContent: (html: string) => editor.setContent(html),
       getEditorBridge: () => editor,
@@ -193,6 +221,8 @@ export const StoryRichEditor = forwardRef<StoryRichEditorRef, Props>(
       <View style={scrollEnabled ? styles.container : styles.containerExpand}>
         <RichText
           editor={editor}
+          onMessage={handleEditorMessage}
+          exclusivelyUseCustomOnMessage={false}
           style={scrollEnabled ? styles.richText : styles.richTextExpand}
           scrollEnabled={scrollEnabled}
         />
@@ -203,7 +233,7 @@ export const StoryRichEditor = forwardRef<StoryRichEditorRef, Props>(
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   // scrollEnabled=true (default) — WebView fills remaining space
   container: { flex: 1 },
   richText: {

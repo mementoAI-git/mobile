@@ -1,3 +1,4 @@
+import { useThemedStyles } from '@/hooks/use-theme-colors';
 /**
  * VideoThumbnail — extracts the first frame of a video URI and renders it as a
  * thumbnail with a centred ▶ play button overlay.
@@ -83,6 +84,7 @@ export function VideoThumbnail({
   borderRadius = radius(14),
   onPress,
 }: VideoThumbnailProps) {
+  const styles = useThemedStyles(stylesBase);
   const fillParent = !width || !height;
   const mediaAttachment = useMemo<SignedMediaAttachment>(
     () => attachment ?? { _id: uri, url: uri },
@@ -239,10 +241,10 @@ export function VideoThumbnail({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   container: {
     overflow: 'hidden',
-    backgroundColor: COLORS.textStrong,
+    backgroundColor: COLORS.mediaSurface,
     alignItems: 'center',
     justifyContent: 'center',
   },

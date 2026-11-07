@@ -217,8 +217,20 @@ size_t VoicePlaybackSession::render(
     }
   }
   if (written > 0) noteRenderedFrames(written);
+  applyWarmupRamp(output, written);
   finishRender(output, written, frameCount, conceal);
   return written;
+}
+
+void VoicePlaybackSession::applyWarmupRamp(float *output, size_t written) noexcept {
+  const uint64_t total = thresholdFrames(options_.warmupRampMs);
+  if (warmupFramesDone_ >= total) return;
+  const size_t ramped =
+      static_cast<size_t>(std::min<uint64_t>(written, total - warmupFramesDone_));
+  for (size_t i = 0; i < ramped; ++i) {
+    output[i] *= static_cast<float>(warmupFramesDone_ + i) / static_cast<float>(total);
+  }
+  warmupFramesDone_ += ramped;
 }
 
 void VoicePlaybackSession::finishRender(

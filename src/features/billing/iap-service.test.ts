@@ -74,10 +74,10 @@ describe('IAP Service and Hook contracts', () => {
 
   test('handled purchase verification failures do not trigger development LogBox overlays', () => {
     expect(iapServiceSource).toContain(
-      "logger.warn('[IAPService] purchase verification failed:', err)",
+      "logger.handledError('[IAPService] purchase verification failed:', err)",
     );
     expect(billingFlowSource).toContain(
-      "logger.warn('[BillingFlow] Native IAP checkout error:', err)",
+      "logger.handledError('[BillingFlow] Native IAP checkout error:', err)",
     );
     expect(iapServiceSource).not.toContain(
       "logger.error('[IAPService] purchase verification failed:', err)",

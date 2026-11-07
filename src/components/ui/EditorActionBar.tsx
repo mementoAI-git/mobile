@@ -1,8 +1,9 @@
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 /**
  * EditorActionBar — bottom toolbar for the story editor and quick-capture screens.
  *
  * STORY MODE (new layout matching the reference design):
- *   [ ⊕ upload ]  [ H1 · H2 · B · I · U · S · List · Quote … ] ← scrollable
+ *   [ ⊕ upload ]  [ mic · B · I · U · S · Lists · Quote … ] ← scrollable
  *
  *   • The ⊕ button expands a mini upload-menu above the bar (Gallery, Camera, Mic, File).
  *   • All text-formatting tools are the primary content of the bar.
@@ -26,13 +27,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BookOpen from 'lucide-react-native/icons/book-open';
 import Pencil from 'lucide-react-native/icons/pencil';
-import PlusCircle from 'lucide-react-native/icons/circle-plus';
+import Plus from 'lucide-react-native/icons/plus';
 import ImageIcon from 'lucide-react-native/icons/image';
-import ImagePlus from 'lucide-react-native/icons/image-plus';
+import Camera from 'lucide-react-native/icons/camera';
 import AudioLines from 'lucide-react-native/icons/audio-lines';
-import Music from 'lucide-react-native/icons/music';
-import Heading1 from 'lucide-react-native/icons/heading-1';
-import Heading2 from 'lucide-react-native/icons/heading-2';
+import Paperclip from 'lucide-react-native/icons/paperclip';
 import Bold from 'lucide-react-native/icons/bold';
 import Italic from 'lucide-react-native/icons/italic';
 import UnderlineIcon from 'lucide-react-native/icons/underline';
@@ -41,7 +40,7 @@ import List from 'lucide-react-native/icons/list';
 import ListOrdered from 'lucide-react-native/icons/list-ordered';
 import Quote from 'lucide-react-native/icons/quote';
 import * as Haptics from 'expo-haptics';
-import { COLORS } from '@/constants/tokens';
+import type { ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, radius, minTouchTarget } from '@/constants/responsive';
 import { MediaPickerMenu } from './MediaPickerMenu';
@@ -67,6 +66,7 @@ interface EditorActionBarProps {
   onAudio?: () => void;
   onFile?: () => void;
   isRecording?: boolean;
+  audioDisabled?: boolean;
   /** Tiptap bridge — required for story mode formatting buttons */
   editor?: EditorBridge | null;
 }
@@ -76,17 +76,23 @@ interface EditorActionBarProps {
 function FmtBtn({
   active,
   onPress,
+  label,
   children,
 }: {
   active?: boolean;
+  label: string;
   onPress: () => void;
   children: React.ReactNode;
 }) {
+  const fmtStyles = useThemeStyles(createFmtStyles);
   return (
     <TouchableOpacity
-      onPress={() => { Haptics.selectionAsync(); onPress(); }}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: Boolean(active) }}
+      onPressIn={() => { Haptics.selectionAsync(); onPress(); }}
       activeOpacity={0.7}
-      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+      hitSlop={6}
       style={[fmtStyles.btn, active && fmtStyles.btnActive]}
     >
       {children}
@@ -94,16 +100,16 @@ function FmtBtn({
   );
 }
 
-const fmtStyles = StyleSheet.create({
+const createFmtStyles = (COLORS: ThemeColors) => StyleSheet.create({
   btn: {
-    width: minTouchTarget(36),
-    height: minTouchTarget(36),
+    width: 32,
+    height: 32,
     borderRadius: radius(8),
     alignItems: 'center',
     justifyContent: 'center',
   },
   btnActive: {
-    backgroundColor: `${COLORS.brand}18`,
+    backgroundColor: COLORS.fillWeak,
   },
 });
 
@@ -111,39 +117,32 @@ const fmtStyles = StyleSheet.create({
 
 // Inner component that always has a real bridge — avoids conditional hook call
 function StoryFormattingTools({ editor }: { editor: EditorBridge }) {
+  const COLORS = useThemeColors();
   const s = useBridgeState(editor);
-  const activeColor = COLORS.brand;
+  const activeColor = COLORS.textStrong;
   const inactiveColor = COLORS.textBase;
   const sz = iconSize(18);
   return (
     <>
-      <FmtBtn active={s.headingLevel === 1} onPress={() => editor.toggleHeading(1)}>
-        <Heading1 size={sz} color={s.headingLevel === 1 ? activeColor : inactiveColor} strokeWidth={2} />
-      </FmtBtn>
-      <FmtBtn active={s.headingLevel === 2} onPress={() => editor.toggleHeading(2)}>
-        <Heading2 size={sz} color={s.headingLevel === 2 ? activeColor : inactiveColor} strokeWidth={2} />
-      </FmtBtn>
-      <View style={styles.fmtDivider} />
-      <FmtBtn active={s.isBoldActive} onPress={() => editor.toggleBold()}>
+      <FmtBtn label="Bold" active={s.isBoldActive} onPress={() => editor.toggleBold()}>
         <Bold size={sz} color={s.isBoldActive ? activeColor : inactiveColor} strokeWidth={s.isBoldActive ? 2.5 : 2} />
       </FmtBtn>
-      <FmtBtn active={s.isItalicActive} onPress={() => editor.toggleItalic()}>
+      <FmtBtn label="Italic" active={s.isItalicActive} onPress={() => editor.toggleItalic()}>
         <Italic size={sz} color={s.isItalicActive ? activeColor : inactiveColor} strokeWidth={2} />
       </FmtBtn>
-      <FmtBtn active={s.isUnderlineActive} onPress={() => editor.toggleUnderline()}>
+      <FmtBtn label="Underline" active={s.isUnderlineActive} onPress={() => editor.toggleUnderline()}>
         <UnderlineIcon size={sz} color={s.isUnderlineActive ? activeColor : inactiveColor} strokeWidth={2} />
       </FmtBtn>
-      <FmtBtn active={s.isStrikeActive} onPress={() => editor.toggleStrike()}>
+      <FmtBtn label="Strikethrough" active={s.isStrikeActive} onPress={() => editor.toggleStrike()}>
         <Strikethrough size={sz} color={s.isStrikeActive ? activeColor : inactiveColor} strokeWidth={2} />
       </FmtBtn>
-      <View style={styles.fmtDivider} />
-      <FmtBtn active={s.isBulletListActive} onPress={() => editor.toggleBulletList()}>
+      <FmtBtn label="Bulleted list" active={s.isBulletListActive} onPress={() => editor.toggleBulletList()}>
         <List size={sz} color={s.isBulletListActive ? activeColor : inactiveColor} strokeWidth={2} />
       </FmtBtn>
-      <FmtBtn active={s.isOrderedListActive} onPress={() => editor.toggleOrderedList()}>
+      <FmtBtn label="Numbered list" active={s.isOrderedListActive} onPress={() => editor.toggleOrderedList()}>
         <ListOrdered size={sz} color={s.isOrderedListActive ? activeColor : inactiveColor} strokeWidth={2} />
       </FmtBtn>
-      <FmtBtn active={s.isBlockquoteActive} onPress={() => editor.toggleBlockquote()}>
+      <FmtBtn label="Quote" active={s.isBlockquoteActive} onPress={() => editor.toggleBlockquote()}>
         <Quote size={sz} color={s.isBlockquoteActive ? activeColor : inactiveColor} strokeWidth={2} />
       </FmtBtn>
     </>
@@ -157,28 +156,49 @@ function StoryToolbar({
   onToggleUpload,
   onSwitchMode,
   disableModeSwitch,
+  onAudio,
+  audioDisabled,
+  isRecording,
 }: {
   editor?: EditorBridge | null;
   uploadOpen: boolean;
   onToggleUpload: () => void;
   onSwitchMode?: () => void;
   disableModeSwitch?: boolean;
+  onAudio?: () => void;
+  isRecording?: boolean;
+  audioDisabled?: boolean;
 }) {
+  const COLORS = useThemeColors();
+  const fmtStyles = useThemeStyles(createFmtStyles);
+  const styles = useThemeStyles(createStyles);
   return (
     <View style={styles.storyRow}>
+      <View style={styles.captureTools}>
       {/* ⊕ Upload toggle */}
       <TouchableOpacity
         onPress={onToggleUpload}
         activeOpacity={0.75}
-        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-        style={[styles.uploadBtn, uploadOpen && styles.uploadBtnActive]}
+        hitSlop={6}
+        accessibilityLabel="Add attachment"
+        style={[styles.uploadBtn, styles.addButton]}
       >
-        <PlusCircle
+        <Plus
           size={iconSize(22)}
-          color={uploadOpen ? COLORS.brand : COLORS.textBase}
+          color={COLORS.activeText}
           strokeWidth={2}
         />
       </TouchableOpacity>
+
+      <RecordingIconButton
+        hitSlop={6}
+        disabled={audioDisabled}
+        neutral
+        onPress={onAudio}
+        active={isRecording}
+        style={styles.uploadBtn}
+      />
+      </View>
 
       {/* Divider */}
       <View style={styles.vertDivider} />
@@ -194,7 +214,7 @@ function StoryToolbar({
         {editor ? (
           <StoryFormattingTools editor={editor} />
         ) : (
-          [Heading1, Heading2, Bold, Italic, UnderlineIcon, Strikethrough, List, ListOrdered, Quote].map((Icon, i) => (
+          [Bold, Italic, UnderlineIcon, Strikethrough, List, ListOrdered, Quote].map((Icon, i) => (
             <View key={i} style={[fmtStyles.btn, { opacity: 0.3 }]}>
               <Icon size={18} color={COLORS.textMuted} strokeWidth={2} />
             </View>
@@ -230,9 +250,12 @@ export function EditorActionBar({
   onCamera,
   onAudio,
   onFile,
+  audioDisabled,
   isRecording = false,
   editor,
 }: EditorActionBarProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const [showTooltip, setShowTooltip] = useState(false);
   const tooltipOpacity = useRef(new Animated.Value(0)).current;
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -309,6 +332,9 @@ export function EditorActionBar({
           <StoryToolbar
             editor={editor}
             uploadOpen={uploadOpen}
+            onAudio={onAudio}
+            audioDisabled={audioDisabled}
+            isRecording={isRecording}
             onToggleUpload={toggleUpload}
             onSwitchMode={handleSwitchMode}
             disableModeSwitch={disableModeSwitch}
@@ -355,7 +381,7 @@ export function EditorActionBar({
           <ImageIcon size={20} color={COLORS.textBase} strokeWidth={1.8} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onCamera?.(); }} activeOpacity={0.75} style={styles.mediaBtn}>
-          <ImagePlus size={20} color={COLORS.textBase} strokeWidth={1.8} />
+          <Camera size={20} color={COLORS.textBase} strokeWidth={1.8} />
         </TouchableOpacity>
         <RecordingIconButton
           onPress={() => { Haptics.selectionAsync(); onAudio?.(); }}
@@ -365,7 +391,7 @@ export function EditorActionBar({
           <AudioLines size={20} color={isRecording ? COLORS.textInverse : COLORS.textBase} strokeWidth={1.8} />
         </RecordingIconButton>
         <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onFile?.(); }} activeOpacity={0.75} style={styles.mediaBtn}>
-          <Music size={20} color={COLORS.textBase} strokeWidth={1.8} />
+          <Paperclip size={20} color={COLORS.textBase} strokeWidth={1.8} />
         </TouchableOpacity>
       </View>
     </View>
@@ -374,7 +400,7 @@ export function EditorActionBar({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: {
     paddingHorizontal: 12,
     paddingTop: 8,
@@ -388,30 +414,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     height: 44,
-    gap: 4,
+    gap: 12,
+  },
+  captureTools: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   uploadBtn: {
-    width: minTouchTarget(36),
-    height: minTouchTarget(36),
-    borderRadius: radius(18),
+    width: 32,
+    height: 32,
+    borderRadius: radius(10),
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  uploadBtnActive: {
-    backgroundColor: `${COLORS.brand}15`,
+  addButton: {
+    backgroundColor: COLORS.activeFill,
   },
   vertDivider: {
     width: 1,
     height: 20,
     backgroundColor: COLORS.strokeWeaker,
-    marginHorizontal: 4,
     flexShrink: 0,
   },
   fmtScroll: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 12,
     paddingRight: 8,
   },
   fmtDivider: {
@@ -483,11 +513,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.success,
   },
   modePillStory: {
-    backgroundColor: COLORS.textStrong,
+    backgroundColor: COLORS.mediaSurface,
   },
   modePillText: {
     ...TYPE.buttonSmall,
-    color: COLORS.textInverse,
+    color: COLORS.mediaText,
   },
   mediaBtn: {
     width: minTouchTarget(44),
@@ -504,23 +534,23 @@ const styles = StyleSheet.create({
     left: 12,
     right: 12,
     marginBottom: 12,
-    backgroundColor: COLORS.textStrong,
+    backgroundColor: COLORS.mediaSurface,
     borderRadius: 14,
     padding: 14,
     zIndex: 100,
   },
   tooltipText: {
     ...TYPE.bodySmall,
-    color: COLORS.textInverse,
+    color: COLORS.mediaText,
     lineHeight: 20,
   },
   tooltipBold: {
     ...TYPE.buttonSmall,
-    color: COLORS.textInverse,
+    color: COLORS.mediaText,
   },
   tooltipDismiss: {
     ...TYPE.metadata,
-    color: 'rgba(255,255,255,0.5)',
+    color: COLORS.mediaTextWeak,
     marginTop: 6,
   },
   tooltipArrow: {
@@ -529,7 +559,7 @@ const styles = StyleSheet.create({
     left: 20,
     width: 12,
     height: 12,
-    backgroundColor: COLORS.textStrong,
+    backgroundColor: COLORS.mediaSurface,
     transform: [{ rotate: '45deg' }],
     borderRadius: 2,
   },

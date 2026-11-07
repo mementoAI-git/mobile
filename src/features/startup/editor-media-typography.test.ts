@@ -18,7 +18,7 @@ const editorMediaSurfaces = [
 
 describe('editor and media typography', () => {
   test.each(editorMediaSurfaces.map((file) => [file]))('%s uses semantic typography roles', (file) => {
-    const source = readFileSync(file, 'utf8');
+    const source = readFileSync(file, 'utf8') + (file.endsWith('StoryRichEditor.tsx') ? readFileSync('src/features/editor/editor-theme.ts', 'utf8') : '');
     const rendersNativeText = /<(?:Animated\.)?Text\b/.test(source);
 
     expect(source).toContain("@/constants/typography");
@@ -30,7 +30,7 @@ describe('editor and media typography', () => {
 
   test('rich editor metrics come from the global typography authority', () => {
     const typography = readFileSync('src/constants/typography.ts', 'utf8');
-    const richEditor = readFileSync('src/components/ui/StoryRichEditor.tsx', 'utf8');
+    const richEditor = readFileSync('src/features/editor/editor-theme.ts', 'utf8');
 
     expect(typography).toContain('TYPE_METRICS');
     expect(richEditor).toContain('TYPE_METRICS.body');

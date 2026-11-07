@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useUiStore } from '@/store';
 import { useStories, useMemoriesStats } from '@/hooks/queries/use-memories';
 
@@ -10,7 +10,13 @@ export function useStoriesLogic() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  // ?filter=bookmarked opens the Bookmarked tab (voice "show my bookmarks"),
+  // also when the tab is already open.
+  const { filter: filterParam } = useLocalSearchParams<{ filter?: string }>();
+  useEffect(() => {
+    if (filterParam === 'bookmarked') setActiveFilter('Bookmarked');
+  }, [filterParam]);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     const timer = setTimeout(() => {

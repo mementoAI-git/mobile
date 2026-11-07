@@ -59,6 +59,7 @@ export default {
   replyPrompt: '/prompts/reply',
   promptDetails: '/prompts/',
   promptCategories: '/prompts/categories/',
+  exploreCategories: '/prompts/categories',
   overviewPrompt: '/prompts/suggestions/overview',
 
   // memories
@@ -87,6 +88,7 @@ export default {
   voiceTurns: '/ai/voice/turns',
   voiceMemorySearch: '/ai/voice/memory-search',
   voiceTool: (name: string) => `/ai/voice/tools/${encodeURIComponent(name)}`,
+  chatAction: (name: string) => `/ai/chat/actions/${encodeURIComponent(name)}`,
   voiceCallEnd: '/ai/voice/calls/:sessionId/end',
   voiceCallSummary: '/ai/voice/calls/:sessionId/summary',
   generateTags: '/ai/generate-tags',

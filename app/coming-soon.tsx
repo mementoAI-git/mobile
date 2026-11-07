@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo } from 'react';
 import {
   Image,
@@ -44,6 +45,8 @@ const BENEFIT_ICONS = {
 } as const;
 
 function BenefitRow({ benefit }: { benefit: ComingSoonBenefit }) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const Icon = BENEFIT_ICONS[benefit.icon];
   return (
     <View style={styles.benefitRow}>
@@ -67,6 +70,8 @@ export default function ComingSoonScreen() {
 }
 
 function ComingSoonContent() {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const { feature } = useLocalSearchParams<{ feature?: string }>();
   const content = useMemo(() => resolveComingSoonFeature(feature), [feature]);
   const illustration = FEATURE_ILLUSTRATIONS[content.key] ?? FEATURE_ILLUSTRATIONS.generic;
@@ -149,7 +154,7 @@ function ComingSoonContent() {
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
   scroll: getBoundedModalScrollStyle(),
   gradient: { ...StyleSheet.absoluteFill },
@@ -172,7 +177,7 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
     paddingBottom: 28,
-    paddingHorizontal: 28,
+    paddingHorizontal: 16,
   },
   hero: {
     alignItems: 'center',
@@ -260,5 +265,5 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: 2,
   },
-  footer: { paddingHorizontal: 24, paddingTop: 12 },
+  footer: { paddingHorizontal: 16, paddingTop: 12 },
 });

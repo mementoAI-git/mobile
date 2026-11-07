@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useMemo } from 'react';
 import { ScrollView, View, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -56,6 +57,7 @@ export function HostChatJumpPills({
   onJump,
   onCategoryPill,
 }: HostChatJumpPillsProps) {
+  const COLORS = useThemeColors();
   const hasPills = monthKeys.length > 0 || categoryPills.length > 0;
   if (!hasPills) return null;
 

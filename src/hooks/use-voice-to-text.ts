@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { logger } from '@/lib/logger';
+import { SpeechSession } from '@/features/editor/speech-session';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 
 // ─── Graceful Expo Go fallback ────────────────────────────────────────────────
@@ -26,221 +27,172 @@ const SpeechModule = _module?.ExpoSpeechRecognitionModule;
 const useSpeechRecognitionEvent = _module?.useSpeechRecognitionEvent;
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type VoiceToTextStatus = 'idle' | 'recording' | 'error';
+export type VoiceToTextStatus = 'idle' | 'starting' | 'recording' | 'error';
 
+export interface UseVoiceToTextOptions {
+  onPartial: (text: string) => void;
+  onTranscript: (text: string) => void;
+  onError?: (err: Error) => void;
+  onPermissionDenied?: (permission: PermissionLike) => void;
+  /** Story dictation stays open across pauses; short chat dictation retains its default. */
+  continuous?: boolean;
+}
 export interface UseVoiceToTextResult {
   status: VoiceToTextStatus;
   isRecording: boolean;
-  /** true when the native speech module is unavailable (Expo Go) */
+  isStarting: boolean;
   isUnavailable: boolean;
-  /** Elapsed seconds since recording started */
   duration: number;
-  /** Begin live speech recognition — partial results stream via onPartial */
+  levels: number[];
   start: () => Promise<void>;
-  /** Finish recognition — fires onTranscript with the final committed text */
   stop: () => void;
-  /** Cancel without committing any text */
   cancel: () => void;
 }
 
-export interface UseVoiceToTextOptions {
-  /**
-   * Called continuously with live partial text as the user speaks.
-   * Use this to update your TextInput value in real time.
-   */
-  onPartial: (text: string) => void;
-  /**
-   * Called once with the final committed text when recognition ends
-   * (either stop() was called or the OS stopped listening).
-   */
-  onTranscript: (text: string) => void;
-  /** Called on a real recognition error (silence is NOT an error). */
-  onError?: (err: Error) => void;
-  /** Called when the OS denies microphone or speech-recognition access. */
-  onPermissionDenied?: (permission: PermissionLike) => void;
-}
-
-/**
- * useVoiceToText — on-device live speech-to-text using iOS Speech framework.
- *
- * Architecture:
- *  - Uses expo-speech-recognition (wraps Apple Speech / Android SpeechRecognizer)
- *  - NO audio file, NO server upload, NO race conditions
- *  - Partial results stream instantly into the TextInput via onPartial
- *  - Final committed text delivered via onTranscript when done
- *  - Gracefully degrades to a no-op in Expo Go (native module not available)
- *
- * Usage in ChatInput:
- *   const { isRecording, isUnavailable, start, stop } = useVoiceToText({
- *     onPartial: (live) => setText(textBeforeDictation + live),
- *     onTranscript: (final) => setText(textBeforeDictation + final),
- *   });
- */
-export function useVoiceToText({
-  onPartial,
-  onTranscript,
-  onError,
-  onPermissionDenied,
-}: UseVoiceToTextOptions): UseVoiceToTextResult {
+/** Live native speech recognition; recording is confirmed by the audio-start event. */
+export function useVoiceToText(options: UseVoiceToTextOptions): UseVoiceToTextResult {
   const [status, setStatus] = useState<VoiceToTextStatus>('idle');
   const [duration, setDuration] = useState(0);
+  const session = useRef(new SpeechSession()).current;
+  const [levels, setLevels] = useState(session.levels);
+  const callbacks = useRef(options);
+  callbacks.current = options;
+  const mounted = useRef(true);
+  const pendingStart = useRef(false);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isMountedRef = useRef(true);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Text that has been confirmed final during this dictation session.
-  const committedRef = useRef('');
+  const clearTimers = useCallback(() => {
+    if (timer.current) clearInterval(timer.current);
+    if (startupTimer.current) clearTimeout(startupTimer.current);
+    timer.current = null;
+    startupTimer.current = null;
+  }, []);
 
   useEffect(() => {
+    mounted.current = true;
     return () => {
-      isMountedRef.current = false;
-      if (timerRef.current) clearInterval(timerRef.current);
+      mounted.current = false;
+      if (session.active) { session.cancel(); SpeechModule?.abort(); }
+      pendingStart.current = false;
+      clearTimers();
     };
-  }, []);
+  }, [session, clearTimers]);
 
-  const clearTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
+  const fail = useCallback((message: string) => {
+    if (!mounted.current) return;
+    session.cancel();
+    pendingStart.current = false;
+    clearTimers();
+    setStatus('error');
+    setDuration(0);
+    callbacks.current.onError?.(new Error(message));
+  }, [clearTimers, session]);
 
-  // ─── Recognition event listeners ─────────────────────────────────────────
-  // We always call the hook unconditionally (Rules of Hooks) but guard the
-  // callback body so it no-ops when the module is unavailable.
+  const handleAudioStart = useCallback(() => {
+    if (!mounted.current || !session.audioStarted()) return;
+    if (startupTimer.current) clearTimeout(startupTimer.current);
+    startupTimer.current = null;
+    setStatus('recording');
+    timer.current = setInterval(() => {
+      if (mounted.current && session.capturing) setDuration(value => value + 1);
+    }, 1000);
+  }, [session]);
 
-  const noop = useCallback(() => {}, []);
+  const handleResult = useCallback((event: { results: { transcript: string }[]; isFinal: boolean }) => {
+    if (!mounted.current) return;
+    const text = session.result(event.results?.[0]?.transcript ?? '', event.isFinal);
+    if (text !== null) callbacks.current.onPartial(text);
+  }, [session]);
 
-  const handleResult = useCallback(
-    (event: any) => {
-      if (!isMountedRef.current || !_moduleAvailable) return;
-      const segment: string = event.results?.[0]?.transcript ?? '';
-      if (event.isFinal) {
-        committedRef.current = committedRef.current
-          ? `${committedRef.current} ${segment}`
-          : segment;
-        onPartial(committedRef.current);
-      } else {
-        const live = committedRef.current
-          ? `${committedRef.current} ${segment}`
-          : segment;
-        onPartial(live);
-      }
-    },
-    [onPartial],
-  );
+  const handleVolume = useCallback((event: { value: number }) => {
+    if (!mounted.current) return;
+    const next = session.volume(event.value);
+    if (next) setLevels(next);
+  }, [session]);
 
   const handleEnd = useCallback(() => {
-    if (!isMountedRef.current) return;
-    clearTimer();
-    const final = committedRef.current.trim();
-    committedRef.current = '';
-    if (final) onTranscript(final);
+    if (!mounted.current) return;
+    const text = session.finish();
+    if (text === null) return;
+    clearTimers();
+    if (text) callbacks.current.onTranscript(text);
     setStatus('idle');
     setDuration(0);
-  }, [clearTimer, onTranscript]);
+  }, [clearTimers, session]);
 
-  const handleError = useCallback(
-    (event: any) => {
-      if (!isMountedRef.current) return;
-      clearTimer();
-      committedRef.current = '';
-      if (event?.error === 'no-speech') {
-        setStatus('idle');
-        setDuration(0);
-        return;
-      }
-      setStatus('error');
-      setDuration(0);
-      setTimeout(() => {
-        if (isMountedRef.current) setStatus('idle');
-      }, 2000);
-      onError?.(
-        new Error(event?.message ?? event?.error ?? 'Speech recognition error'),
-      );
-    },
-    [clearTimer, onError],
-  );
+  const handleError = useCallback((event: { error: string; message?: string }) => {
+    if (!session.active) return;
+    logger.warn('[VoiceToText] Recognition stopped', { code: event.error });
+    const message = event.error === 'no-speech'
+      ? 'No speech was detected. Check your microphone input and try again.'
+      : event.error === 'audio-capture'
+        ? 'The microphone could not start. Check microphone access and try again.'
+        : event.message || 'Speech recognition stopped. Please try again.';
+    fail(message);
+  }, [fail, session]);
 
-  // Conditionally register event listeners only when module is available.
-  // We must call the hook unconditionally — so we pass a no-op when unavailable.
   if (useSpeechRecognitionEvent) {
+    // The native-module availability is fixed for this app build.
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    useSpeechRecognitionEvent('result', _moduleAvailable ? handleResult : noop);
+    useSpeechRecognitionEvent('audiostart', handleAudioStart);
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    useSpeechRecognitionEvent('end', _moduleAvailable ? handleEnd : noop);
+    useSpeechRecognitionEvent('result', handleResult);
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    useSpeechRecognitionEvent('error', _moduleAvailable ? handleError : noop);
+    useSpeechRecognitionEvent('volumechange', handleVolume);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useSpeechRecognitionEvent('end', handleEnd);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useSpeechRecognitionEvent('error', handleError);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-
   const start = useCallback(async () => {
-    if (!_moduleAvailable || !SpeechModule) {
-      logger.warn('[VoiceToText] ExpoSpeechRecognition not available. Use a dev build.');
-      return;
-    }
-    if (status !== 'idle') return;
+    if (session.active || pendingStart.current) return;
+    if (!SpeechModule) { fail('Voice typing needs the latest app build.'); return; }
+    pendingStart.current = true;
+    setStatus('starting');
     try {
       const permission = await SpeechModule.requestPermissionsAsync();
+      if (!mounted.current || !pendingStart.current) return;
+      pendingStart.current = false;
       if (!isPermissionGranted(permission)) {
-        onPermissionDenied?.(permission);
+        setStatus('idle');
+        callbacks.current.onPermissionDenied?.(permission);
         return;
       }
-      if (!isMountedRef.current) return;
-
-      committedRef.current = '';
-
+      session.begin();
+      setLevels(session.levels);
+      setDuration(0);
+      startupTimer.current = setTimeout(() => {
+        if (session.active && !session.capturing) {
+          fail('The microphone did not start. Please try again.');
+          SpeechModule?.abort();
+        }
+      }, 8000);
       SpeechModule.start({
         lang: 'en-US',
         interimResults: true,
         maxAlternatives: 1,
-        continuous: false,
+        continuous: callbacks.current.continuous ?? false,
         requiresOnDeviceRecognition: false,
+        addsPunctuation: true,
+        volumeChangeEventOptions: { enabled: true, intervalMillis: 100 },
       });
+    } catch (error) { fail(error instanceof Error ? error.message : 'Could not start speech recognition.'); }
+  }, [fail, session]);
 
-      setStatus('recording');
-      setDuration(0);
-      timerRef.current = setInterval(() => {
-        if (isMountedRef.current) setDuration((d) => d + 1);
-      }, 1000);
-    } catch (err: any) {
-      committedRef.current = '';
-      if (isMountedRef.current) setStatus('error');
-      setTimeout(() => {
-        if (isMountedRef.current) setStatus('idle');
-      }, 2000);
-      onError?.(err instanceof Error ? err : new Error(String(err)));
-    }
-  }, [status, onError, onPermissionDenied]);
-
-  const stop = useCallback(() => {
-    if (!_moduleAvailable || !SpeechModule) return;
-    SpeechModule.stop();
-  }, []);
-
+  const stop = useCallback(() => { if (session.active) SpeechModule?.stop(); }, [session]);
   const cancel = useCallback(() => {
-    committedRef.current = '';
-    clearTimer();
-    if (_moduleAvailable && SpeechModule) {
-      SpeechModule.abort();
-    }
-    if (isMountedRef.current) {
-      setStatus('idle');
-      setDuration(0);
-    }
-  }, [clearTimer]);
+    const wasActive = session.active;
+    session.cancel();
+    pendingStart.current = false;
+    clearTimers();
+    if (wasActive) SpeechModule?.abort();
+    if (mounted.current) { setStatus('idle'); setDuration(0); }
+  }, [clearTimers, session]);
 
-  return useMemo(
-    () => ({
-      status,
-      isRecording: status === 'recording',
-      isUnavailable: !_moduleAvailable,
-      duration,
-      start,
-      stop,
-      cancel,
-    }),
-    [status, duration, start, stop, cancel],
-  );
+  return useMemo(() => ({
+    status, isRecording: status === 'recording', isStarting: status === 'starting',
+    isUnavailable: !_moduleAvailable, duration, levels, start, stop, cancel,
+  }), [status, duration, levels, start, stop, cancel]);
 }

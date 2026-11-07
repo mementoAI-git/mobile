@@ -1,3 +1,5 @@
+import { Avatar } from "@/components/ui/Avatar";
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Image } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -37,6 +39,7 @@ const INSIGHT_CATEGORY_LABELS: Record<string, string> = {
 };
 
 export function MemoryInsightsSheet() {
+  const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] = useState(SUMMARY_TAB_KEY);
   const closeSheet = useUiStore((s) => s.closeSheet);
@@ -88,7 +91,7 @@ export function MemoryInsightsSheet() {
   const aiSummary = summaryRes?.summary?.trim() || null;
 
   return (
-    <View className="px-5 pt-2" style={{ flex: 1 }}>
+    <View className="px-5" style={{ flex: 1 }}>
       <View className="flex-row items-center justify-between mb-4 border-b border-stroke-weaker pb-3">
         <Text className="text-text-strong" style={TYPE.sectionTitle}>
           Memory Insights
@@ -123,13 +126,7 @@ export function MemoryInsightsSheet() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-4">
             {beneficiaries.map((b: any) => (
               <View key={b._id} className="items-center gap-1.5 w-14">
-                <View className="size-12 rounded-full bg-fill-weak items-center justify-center overflow-hidden">
-                  {b.user?.picture_url ? (
-                    <Image source={{ uri: b.user.picture_url }} className="size-full" />
-                  ) : (
-                    <Text className="text-text-strong" style={TYPE.label}>{b.name[0]}</Text>
-                  )}
-                </View>
+                <Avatar uri={b.user?.picture_url} userId={b.user?._id} seed={b.user?.email || b.email} name={b.name} size="lg" />
                 <Text className="text-text-strong text-center truncate w-full" style={TYPE.eyebrow}>
                   {b.name.split(' ')[0]}
                 </Text>

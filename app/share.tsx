@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 /**
  * app/share.tsx — Share Intent receiver
  *
@@ -54,6 +55,7 @@ function getMimeCategory(mimeType?: string): 'image' | 'video' | 'audio' | 'file
 }
 
 function FilePreview({ uri, mimeType, name }: { uri: string; mimeType?: string; name?: string }) {
+  const COLORS = useThemeColors();
   const cat = getMimeCategory(mimeType);
 
   if (cat === 'image') {
@@ -86,7 +88,7 @@ function FilePreview({ uri, mimeType, name }: { uri: string; mimeType?: string; 
     }}>
       {icons[cat]}
       {name ? (
-        <Text style={{ ...TYPE.label, color: COLORS.textWeak, textAlign: 'center', paddingHorizontal: 20 }} numberOfLines={2}>
+        <Text style={{ ...TYPE.label, color: COLORS.textWeak, textAlign: 'center', paddingHorizontal: 16 }} numberOfLines={2}>
           {name}
         </Text>
       ) : null}
@@ -105,6 +107,7 @@ export default function ShareScreen() {
 }
 
 function ShareContent() {
+  const COLORS = useThemeColors();
   const router = useRouter();
   const { shareIntent, resetShareIntent, hasShareIntent } = useShareIntent();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -199,7 +202,7 @@ function ShareContent() {
       <ImageBackground source={PATTERN} style={{ flex: 1 }} imageStyle={{ opacity: 0.03 }}>
 
         {/* Header */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 }}>
           <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
             Save to Memento
           </Text>
@@ -213,7 +216,7 @@ function ShareContent() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40, gap: 20 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 20 }}>
 
           {/* File preview */}
           <Animated.View entering={FadeInDown.duration(400)}>

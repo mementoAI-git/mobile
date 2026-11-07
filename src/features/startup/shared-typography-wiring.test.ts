@@ -34,7 +34,7 @@ describe('shared component typography wiring', () => {
   test('core primitives own their semantic roles', () => {
     expect(readFileSync('src/components/ui/Button.tsx', 'utf8')).toMatch(/TYPE\.(?:button|buttonSmall)/);
     expect(readFileSync('src/components/ui/TextInput.tsx', 'utf8')).toContain('TYPE.input');
-    expect(readFileSync('src/components/ui/DashboardHeader.tsx', 'utf8')).toContain('TYPE.screenTitle');
+    expect(readFileSync('src/components/ui/DashboardHeader.tsx', 'utf8')).toContain('TYPE.dashboardTitle');
     const empty = readFileSync('src/components/ui/EmptyState.tsx', 'utf8');
     expect(empty).toContain('TYPE.cardTitle');
     expect(empty).toContain('TYPE.bodySmall');

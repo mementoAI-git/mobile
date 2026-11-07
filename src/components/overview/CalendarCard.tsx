@@ -1,3 +1,5 @@
+import type { ThemeColors } from '@/constants/tokens';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useMemo } from "react";
 import {
     StyleSheet,
@@ -5,6 +7,8 @@ import {
     View,
 } from "react-native";
 import { Pressable } from "@/components/ui/Touchable";
+import { isFutureCalendarDay } from '@/features/overview/calendar-selection';
+import Check from 'lucide-react-native/icons/check';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import * as Haptics from "expo-haptics";
@@ -47,6 +51,8 @@ export function CalendarCard({
     onDatePress,
     onTimePress,
 }: CalendarCardProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
     const eventSet = useMemo(
         () => new Set(eventDates),
         [eventDates],
@@ -59,7 +65,7 @@ export function CalendarCard({
         month: "long",
     });
 
-    const today = useMemo(() => new Date(), []);
+    const today = new Date();
     const isCurrentMonth =
         year === today.getFullYear() && monthIndex === today.getMonth();
     const todayDate = isCurrentMonth ? today.getDate() : null;
@@ -203,14 +209,19 @@ export function CalendarCard({
                                 );
                             }
 
+                            const isFuture = isFutureCalendarDay(new Date(year, monthIndex, day), today);
                             const isToday = day === todayDate;
-                            const isSelected = selectedDate != null && day === selectedDate && !isToday;
+                            const isSelected = selectedDate != null && day === selectedDate && !isToday && !isFuture;
                             const hasEvent = eventSet.has(day);
 
                             return (
                                 <Pressable
                                     key={day}
+                                    disabled={isFuture}
+                                    accessibilityState={{ disabled: isFuture }}
                                     onPress={() => handleDatePress(day)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`${monthName} ${day}, ${year}${hasEvent ? ", stories added" : ""}`}
                                     hitSlop={3}
                                     style={styles.dayCell}
                                 >
@@ -226,6 +237,7 @@ export function CalendarCard({
                                                 styles.dayNumber,
                                                 isToday && styles.todayDayNumber,
                                                 isSelected && styles.selectedDayNumber,
+                                                isFuture && { color: COLORS.textWeak },
                                             ]}
                                         >
                                             {day}
@@ -233,7 +245,7 @@ export function CalendarCard({
                                     </View>
 
                                     {hasEvent && (
-                                        <View style={styles.eventDot} />
+                                        <Check size={12} color={COLORS.success} strokeWidth={3} style={styles.eventDot} />
                                     )}
                                 </Pressable>
                             );
@@ -261,7 +273,7 @@ export function CalendarCard({
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     card: {
         width: "100%",
 
@@ -414,12 +426,7 @@ const styles = StyleSheet.create({
         position: "absolute",
         top: 40,
 
-        width: 4,
-        height: 4,
 
-        borderRadius: 2,
-
-        backgroundColor: COLORS.linkPreview,
     },
 
     // ─────────────────────────────

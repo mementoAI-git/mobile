@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { View, Image, ImageSourcePropType } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -27,6 +28,7 @@ export function EmptyState({
   onAction,
   className,
 }: EmptyStateProps) {
+  const COLORS = useThemeColors();
   const artworkSize = ms(240, 0.2);
 
   return (

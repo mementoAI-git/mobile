@@ -6,20 +6,20 @@ export function ExploreSkeleton() {
   return (
     <ScrollView 
       showsVerticalScrollIndicator={false} 
-      contentContainerClassName="px-6 pt-4 pb-24"
+      contentContainerClassName="px-4 pt-4 pb-24"
     >
       {/* Editorial Intro Description */}
-      <View className="gap-2 mb-6">
+      <View className="gap-2 mb-10">
         <Skeleton className="h-4 w-full rounded-md" />
         <Skeleton className="h-4 w-4/5 rounded-md" />
       </View>
 
       {/* Continue Reflecting Section */}
-      <View className="mb-6 gap-4">
+      <View className="mb-10 gap-4">
         <Skeleton className="h-6 w-44 rounded-lg" />
         <View className="flex-row gap-3">
-          <Skeleton className="h-[96px] w-[200px] rounded-[20px]" />
-          <Skeleton className="h-[96px] w-[200px] rounded-[20px]" />
+          <Skeleton className="h-[220px] w-[280px] rounded-[24px]" />
+          <Skeleton className="h-[220px] w-[280px] rounded-[24px]" />
         </View>
       </View>
 
@@ -28,7 +28,7 @@ export function ExploreSkeleton() {
 
       {/* Category Cards (~340px each, rounded-[32px]) */}
       <View className="gap-5">
-        <View className="w-full rounded-[32px] overflow-hidden bg-white border border-stroke-weaker">
+        <View className="w-full rounded-[32px] overflow-hidden bg-card border border-stroke-weaker">
           <Skeleton className="w-full h-52 rounded-none" />
           <View className="p-7 gap-3">
             <View className="flex-row items-center justify-between">
@@ -40,7 +40,7 @@ export function ExploreSkeleton() {
           </View>
         </View>
 
-        <View className="w-full rounded-[32px] overflow-hidden bg-white border border-stroke-weaker">
+        <View className="w-full rounded-[32px] overflow-hidden bg-card border border-stroke-weaker">
           <Skeleton className="w-full h-52 rounded-none" />
           <View className="p-7 gap-3">
             <View className="flex-row items-center justify-between">

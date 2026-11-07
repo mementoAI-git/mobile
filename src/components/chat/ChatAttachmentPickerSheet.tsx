@@ -1,3 +1,4 @@
+import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
 import React, { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -31,7 +32,7 @@ import Music from 'lucide-react-native/icons/music';
 import Play from 'lucide-react-native/icons/play';
 import X from 'lucide-react-native/icons/x';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getSheetTopInset } from '@/features/layout/sheet-safe-area';
+import { getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
 import { PermissionRecoveryState } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -67,7 +68,7 @@ interface ChatAttachmentPickerSheetProps {
 
 const GRID_COLUMNS = 4;
 const GRID_GAP = 3;
-const SHEET_HORIZONTAL = 16;
+const SHEET_HORIZONTAL = 20;
 const PAGE_SIZE = 80;
 
 // ─── Asset cache — bounded and short-lived to avoid retaining large media lists ────
@@ -133,6 +134,8 @@ function getGranularPermissions(mode: PickerMode): MediaLibrary.GranularPermissi
 
 export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttachmentPickerSheetProps>(
   function ChatAttachmentPickerSheet({ onCamera, onDocs, onAudio, onConfirm }, ref) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
     const insets = useSafeAreaInsets();
     const [mode, setMode] = useState<PickerMode>('gallery');
     const [assets, setAssets] = useState<MediaLibrary.Asset[]>([]);
@@ -424,6 +427,7 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
         enablePanDownToClose
         onChange={handleSheetChange}
         onDismiss={handleDismiss}
+        handleStyle={SHEET_HEADER_HANDLE_STYLE}
         handleIndicatorStyle={styles.handle}
         backgroundStyle={styles.sheetBackground}
       >
@@ -561,6 +565,8 @@ const AssetTile = React.memo(function AssetTile({
   isSelected: boolean;
   onToggle: (asset: MediaLibrary.Asset) => void;
 }) {
+  const COLORS = useThemeColors();
+  const styles = useThemedStyles(stylesBase);
   const isVideo = asset.mediaType === MediaLibrary.MediaType.video;
   const isAudio = asset.mediaType === MediaLibrary.MediaType.audio;
 
@@ -610,6 +616,7 @@ function PickerAction({
   onPress: () => void;
   active?: boolean;
 }) {
+  const styles = useThemedStyles(stylesBase);
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -624,7 +631,7 @@ function PickerAction({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   sheetBackground: {
     backgroundColor: COLORS.background,
     borderTopLeftRadius: 28,
@@ -644,7 +651,7 @@ const styles = StyleSheet.create({
   // Header
   header: {
     paddingHorizontal: SHEET_HORIZONTAL,
-    paddingTop: 18,
+    paddingTop: 0,
     paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',

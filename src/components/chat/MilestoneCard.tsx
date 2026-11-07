@@ -1,3 +1,4 @@
+import { useThemedStyles } from '@/hooks/use-theme-colors';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import Animated, {
@@ -26,6 +27,7 @@ interface MilestoneCardProps {
  * Appears as a floating celebratory toast that auto-dismisses after 4.5 seconds.
  */
 export function MilestoneCard({ enrichmentDelta, milestoneLabel }: MilestoneCardProps) {
+  const styles = useThemedStyles(stylesBase);
   const scale = useSharedValue(1);
   const [visible, setVisible] = useState(true);
 
@@ -76,7 +78,7 @@ export function MilestoneCard({ enrichmentDelta, milestoneLabel }: MilestoneCard
   );
 }
 
-const styles = StyleSheet.create({
+const stylesBase = StyleSheet.create({
   container: {
     position: 'absolute',
     top: 12,

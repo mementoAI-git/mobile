@@ -1,3 +1,4 @@
+import type { VoiceLanguageCode } from './voice-language';
 import type { LiveConnectConfig, Modality } from '@google/genai/web';
 
 /**
@@ -106,10 +107,11 @@ export function parseVoiceLiveToken(
  * real session config on the server (prompt, voice, turn detection, tools),
  * and Gemini ignores this one, so it only names the voice and transcription.
  */
-export function buildGeminiLiveConfig(voiceName: string): LiveConnectConfig {
+export function buildGeminiLiveConfig(voiceName: string, languageCode?: VoiceLanguageCode): LiveConnectConfig {
   return {
     responseModalities: AUDIO_MODALITY,
     speechConfig: {
+      ...(languageCode ? { languageCode } : {}),
       voiceConfig: {
         prebuiltVoiceConfig: { voiceName },
       },

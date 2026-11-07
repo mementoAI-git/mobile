@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
+import { toast } from '@/components/ui/Toast';
 import { logger } from '@/lib/logger';
 
 interface FeedAudioPlaybackState {
@@ -59,7 +60,8 @@ export const useFeedAudioPlaybackStore = create<FeedAudioPlaybackState>((set, ge
           set({ isPlaying: true });
         }
       } catch (err) {
-        logger.warn('Failed to toggle playback on active player', { err });
+        logger.handledError('Failed to toggle playback on active player', { err });
+        toast('We couldn’t play this recording. Please try again.', 'error');
       }
       return;
     }
@@ -117,7 +119,8 @@ export const useFeedAudioPlaybackStore = create<FeedAudioPlaybackState>((set, ge
 
       player.play();
     } catch (err) {
-      logger.error('Failed to initialize inline feed audio player', { memoryId, audioUrl, err });
+      logger.handledError('Failed to initialize inline feed audio player', { memoryId, audioUrl, err });
+      toast('We couldn’t play this recording. Please try again.', 'error');
       cleanupCurrentPlayer();
       set({
         activeMemoryId: null,

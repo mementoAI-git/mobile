@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, {useCallback, useState} from 'react';
 import { Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -25,6 +26,7 @@ export interface BillingDetailsForm {
 }
 
 function Field({label, value, onChangeText, multiline, select}: {label: string; value: string; onChangeText: (value: string) => void; multiline?: boolean; select?: boolean}) {
+  const COLORS = useThemeColors();
   return (
     <View style={{gap: 8}}>
       <Text style={{...TYPE.label, color: COLORS.textStrong}}>{label}</Text>
@@ -75,6 +77,7 @@ export function EditBillingDetailsSheet({
   canManage?: boolean;
   onUpgrade?: () => void;
 }) {
+  const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
   const address = profile.address;
   const [values, setValues] = useState<BillingDetailsForm>({
@@ -139,7 +142,7 @@ export function EditBillingDetailsSheet({
       </BottomSheetScrollView>
       <View style={{flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(getSheetBottomPadding(insets.bottom, 12), 16), backgroundColor: COLORS.background}}>
         <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={onClose}>Dismiss</Button>
-        <Button size="lg" className="h-14 flex-1 bg-text-strong" loading={saving} onPress={() => void submit()}>Save Changes</Button>
+        <Button size="lg" className="h-14 flex-1 bg-media-surface" loading={saving} onPress={() => void submit()}>Save Changes</Button>
       </View>
     </View>
   );

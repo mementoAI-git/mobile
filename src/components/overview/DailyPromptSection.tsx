@@ -1,187 +1,138 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useVoiceContent } from '@/features/voice-control/hooks';
-import { View, Text } from 'react-native';
-import { TouchableOpacity } from '@/components/ui/Touchable';
-import Square from 'lucide-react-native/icons/square';
-import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
-import { COLORS, FONTS } from '@/constants/tokens';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, ScrollView, type ImageSourcePropType } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { useIsMutating } from '@tanstack/react-query';
+import Shuffle from 'lucide-react-native/icons/shuffle';
+import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { TYPE } from '@/constants/typography';
+import { getCategoryMeta } from '@/constants/categories';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Button } from '@/components/ui/Button';
+import { ContinueReflectingCard } from '@/components/explore/ContinueReflectingCard';
 import { useDailyPrompts } from '@/hooks/queries/use-prompts';
-import { useAudioRecorder } from '@/hooks/use-audio-recorder';
-import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
-import { type PermissionLike } from '@/lib/permission-recovery';
-import { toast } from '@/components/ui/Toast';
-import {
-  formatRecordingDuration,
-  buildPromptAudioReflectionTarget,
-} from '@/features/prompts/prompt-audio-capture';
+import { useReflectionShuffleUsage } from '@/hooks/queries/use-reflection-shuffle';
+import { useReflectionShuffle } from '@/hooks/mutations/use-reflection-shuffle';
+import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useUiStore } from '@/store';
+import { useVoiceContent } from '@/features/voice-control/hooks';
+import { canShuffleReflections, reflectionCapture, reflectionShuffleKey, rotateReflections } from '@/features/prompts/daily-reflections';
+import { getPromptReplyCounts } from '@/features/prompts/prompt-reply-count';
+import { avatarsForCard, createAvatarOrder, refreshAvatarOrder } from '@/features/prompts/reflection-avatars';
 import type { IDashboardPromptSlot } from '@/types';
-import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 
-export function DailyPromptSection() {
-  const { data: dailyPrompts, isLoading } = useDailyPrompts();
-  const prompts = dailyPrompts || [];
-  const router = useRouter();
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isFinishingAudio, setIsFinishingAudio] = useState(false);
-
-  const handleMicrophonePermissionDenied = useCallback((permission: PermissionLike) => {
-    showPermissionRecoveryAlert({
-      permission,
-      title: 'Microphone is off',
-      description: 'Allow microphone access to record your voice reflection.',
-      settingsDescription: 'Microphone access is turned off in Settings. Turn it back on to record your voice reflection.',
-    });
-  }, []);
-
-  const handleRecordingError = useCallback((err: unknown) => {
-    toast('Could not start recording. Opening reflection chat…', 'info');
-  }, []);
-
-  const { start: startRecording, stop: stopRecording, isRecording, duration } = useAudioRecorder({
-    onPermissionDenied: handleMicrophonePermissionDenied,
-    onError: handleRecordingError,
-  });
-
-  useEffect(() => {
-    if (prompts.length > 0 && activeIndex >= prompts.length) {
-      setActiveIndex(0);
-    }
-  }, [prompts.length, activeIndex]);
-
-  const activeRow = prompts[activeIndex];
-  const promptText = activeRow?.slot_kind === 'ai' ? activeRow.ai_prompt_text : activeRow?.prompt?.title;
-  // "Read me the prompt": Memento reads what the card shows.
-  useVoiceContent("Today's prompt", () => promptText ?? '', Boolean(promptText));
-
-  const handleCapture = useCallback(() => {
-    if (!activeRow || activeRow.answered) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const target = buildPromptAudioReflectionTarget(
-      activeRow.prompt?._id || 'new',
-      promptText || ''
-    );
-    router.push(target as any);
-  }, [activeRow, promptText, router]);
-
-  const handleToggleVoice = useCallback(async () => {
-    if (!activeRow || activeRow.answered || isFinishingAudio) return;
-
-    if (isRecording) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      setIsFinishingAudio(true);
-      try {
-        const audioUri = await stopRecording();
-        const target = buildPromptAudioReflectionTarget(
-          activeRow.prompt?._id || 'new',
-          promptText || '',
-          audioUri || undefined
-        );
-        router.push(target as any);
-      } finally {
-        setIsFinishingAudio(false);
-      }
-    } else {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      const started = await startRecording();
-      if (!started) {
-        // If recording couldn't start (e.g. simulator without audio input), smoothly navigate to chat
-        handleCapture();
-      }
-    }
-  }, [activeRow, handleCapture, isFinishingAudio, isRecording, promptText, router, startRecording, stopRecording]);
-
-  const handleSelectPrompt = useCallback((index: number) => {
-    Haptics.selectionAsync();
-    setActiveIndex(index);
-  }, []);
-
-  if (isLoading) {
-    return <Skeleton className="h-[200px] rounded-3xl" />;
-  }
-
-  if (prompts.length === 0) return null;
+const DailyReflectionCard = React.memo(function DailyReflectionCard({ row, replyCount, avatars }: {
+  row: IDashboardPromptSlot;
+  replyCount: number;
+  avatars: ImageSourcePropType[];
+}) {
+  const title = row.slot_kind === 'ai' ? row.ai_prompt_text : row.prompt.title;
+  const category = row.slot_kind === 'static' ? getCategoryMeta(row.prompt.category) : null;
+  const handlePress = useCallback(() => {
+    const daily_prompt = reflectionCapture(row);
+    if (daily_prompt) useUiStore.getState().openSheet('quick-capture', { daily_prompt });
+  }, [row]);
 
   return (
-    <Animated.View entering={FadeInDown.delay(200)} className="gap-4">
-      <View className="flex-row items-center justify-between px-1">
-        <Animated.Text
-          className="text-text-strong"
-          style={TYPE.uiTitle}
-        >
-          Continue <Animated.Text
-            className="text-text-weak"
-            style={{ ...TYPE.sectionTitle, fontStyle: 'italic' }}
-          >
-            reflecting
-          </Animated.Text>
-        </Animated.Text>
+    <ContinueReflectingCard
+      title={title}
+      categoryLabel={category?.title || row.display_label || 'Who I am'}
+      personal={row.slot_kind === 'ai'}
+      answered={row.answered}
+      replyCount={replyCount}
+      avatars={avatars}
+      onPress={row.slot_kind === 'static' && !row.prompt._id ? undefined : handlePress}
+    />
+  );
+});
+
+export function DailyPromptSection() {
+  const colors = useThemeColors();
+  const reducedMotion = useReducedMotion();
+  const { data: prompts, isLoading, error, refetch } = useDailyPrompts();
+  const { data: usage, error: usageError, refetch: refreshUsage } = useReflectionShuffleUsage();
+  const { mutate: shuffle } = useReflectionShuffle();
+  const shuffling = useIsMutating({ mutationKey: reflectionShuffleKey }) > 0;
+  const [avatarOrder, setAvatarOrder] = useState(createAvatarOrder);
+  const previousUsage = useRef<string | undefined>(undefined);
+  const scrollRef = useRef<ScrollView>(null);
+  const pressGuard = useRef(false);
+  const revision = usage ? `${usage.resets_at}:${usage.used}` : 'loading';
+
+  useFocusEffect(useCallback(() => {
+    void refreshUsage();
+    void refetch();
+  }, [refreshUsage, refetch]));
+
+  useEffect(() => {
+    if (!usage) return;
+    if (previousUsage.current && previousUsage.current !== revision) {
+      setAvatarOrder(refreshAvatarOrder);
+      scrollRef.current?.scrollTo({ x: 0, animated: !reducedMotion });
+    }
+    previousUsage.current = revision;
+  }, [usage, revision, reducedMotion]);
+
+  const cards = useMemo(() => {
+    const rows = prompts ?? [];
+    const counts = getPromptReplyCounts(rows);
+    return rotateReflections(rows.map((row, index) => ({
+      row,
+      key: `${row.slot_kind}-${row.reflection_day_key}-${row.slot_kind === 'static' ? row.prompt._id : index}`,
+      replyCount: counts[index],
+      avatars: avatarsForCard(avatarOrder, index),
+    })), usage?.used ?? 0);
+  }, [prompts, usage?.used, avatarOrder]);
+
+  const firstRow = cards[0]?.row;
+  const promptText = firstRow ? (firstRow.slot_kind === 'ai' ? firstRow.ai_prompt_text : firstRow.prompt.title) : '';
+  // "Read me the prompt": Memento reads what the first card shows.
+  useVoiceContent("Today's prompt", () => promptText ?? '', Boolean(promptText));
+
+  const allowed = canShuffleReflections(cards.length, usage, shuffling || isLoading);
+  const handleShuffle = useCallback(() => {
+    if (!allowed || pressGuard.current) return;
+    pressGuard.current = true;
+    shuffle(undefined, { onSettled: () => { pressGuard.current = false; } });
+  }, [allowed, shuffle]);
+  const retryPrompts = useCallback(() => { void refetch(); }, [refetch]);
+  const retryUsage = useCallback(() => { void refreshUsage(); }, [refreshUsage]);
+
+  return (
+    <Animated.View entering={reducedMotion ? undefined : FadeInDown.duration(300)} className="gap-4">
+      <View className="flex-row items-start justify-between gap-2">
+        <View className="flex-1 gap-0">
+          <Text className="text-text-strong" style={TYPE.sectionTitle}>
+            Continue <Text className="text-text-weak" style={TYPE.sectionTitleWeak}>reflecting</Text>
+          </Text>
+          {usage ? (
+            <Text accessibilityLiveRegion="polite" className="text-text-weak" style={TYPE.bodySmall}>
+              {usage.remaining === 0 ? 'Daily shuffle limit reached. Resets at midnight UTC.' : `${usage.remaining} ${usage.remaining === 1 ? 'shuffle' : 'shuffles'} left today`}
+            </Text>
+          ) : usageError ? (
+            <Button variant="ghost" onPress={retryUsage}>Retry shuffle availability</Button>
+          ) : <Text className="text-text-weak" style={TYPE.bodySmall}>Checking shuffle allowance…</Text>}
+        </View>
+        <Button variant="ghost" iconOnly size="md" accessibilityLabel="Shuffle reflections"
+          disabled={!allowed} loading={shuffling} onPress={handleShuffle}>
+          <Shuffle size={22} color={usage?.remaining === 0 ? colors.iconDisabled : colors.textStrong} />
+        </Button>
       </View>
-
-      <View className="bg-white border border-stroke-weaker rounded-[32px] p-6">
-        {prompts.length > 1 && (
-          <View className="flex-row flex-wrap gap-2 mb-6">
-            {prompts.map((p, i) => (
-              <TouchableOpacity
-                key={i}
-                onPress={() => handleSelectPrompt(i)}
-                activeOpacity={0.7}
-                className={`px-4 py-2 rounded-full border ${activeIndex === i ? 'bg-brand border-brand' : 'bg-fill-weaker border-stroke-weaker'
-                  }`}
-              >
-                <Animated.Text
-                  className={activeIndex === i ? 'text-white' : 'text-text-strong'}
-                  style={TYPE.metadata}
-                >
-                  {p.display_label || `Prompt ${i + 1}`}
-                </Animated.Text>
-              </TouchableOpacity>
-            ))}
+      <ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false}>
+        {isLoading ? (
+          <View className="flex-row gap-4">
+            <Skeleton className="h-[220px] w-[280px] rounded-[24px]" />
+            <Skeleton className="h-[220px] w-[280px] rounded-[24px]" />
           </View>
-        )}
-
-        <Animated.Text
-          className="text-text-strong leading-[26px] mb-8"
-          style={TYPE.cardTitle}
-        >
-          {promptText}
-        </Animated.Text>
-
-        {activeRow.answered ? (
-          <View className="flex-row items-center gap-2">
-            <View className="size-2 rounded-full bg-success" />
-            <Animated.Text className="text-text-weak" style={TYPE.label}>
-              You've already shared a reflection today.
-            </Animated.Text>
-          </View>
-        ) : isRecording ? (
-          <TouchableOpacity
-            onPress={handleToggleVoice}
-            activeOpacity={0.8}
-            className="flex-row items-center justify-center gap-3 bg-text-strong rounded-full h-12 px-6 self-start"
-          >
-            <View className="size-3 rounded-full bg-white animate-pulse" />
-            <Animated.Text className="text-white" style={TYPE.label}>
-              Recording ({formatRecordingDuration(duration || 0)}) • Tap to send
-            </Animated.Text>
-            <Square size={14} color="white" fill="white" />
-          </TouchableOpacity>
         ) : (
-          <View className="flex-row items-center gap-3">
-            <TouchableOpacity
-              onPress={handleCapture}
-              activeOpacity={0.7}
-              className="flex-row items-center justify-center gap-2 bg-text-strong rounded-full h-12 px-5"
-            >
-              <Animated.Text className="text-white" style={TYPE.label}>
-                Reply Prompt →
-              </Animated.Text>
-            </TouchableOpacity>
-          </View>
+          <Animated.View key={revision} entering={reducedMotion ? undefined : FadeIn.duration(200)} className="flex-row">
+            {cards.map(({ key, ...props }) => <DailyReflectionCard key={key} {...props} />)}
+          </Animated.View>
         )}
-      </View>
+      </ScrollView>
+      {!!error && <Button variant="outline" onPress={retryPrompts}>Retry loading reflections</Button>}
+      {!error && !isLoading && cards.length === 0 && (
+        <Text className="text-text-weak" style={TYPE.body}>No reflections available today. Explore more topics below.</Text>
+      )}
     </Animated.View>
   );
 }

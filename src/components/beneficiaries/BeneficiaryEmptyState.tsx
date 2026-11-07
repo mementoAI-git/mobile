@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { Text, View, Image } from 'react-native';
 import { Button } from '@/components/ui';
@@ -14,6 +15,7 @@ export function BeneficiaryEmptyState({
   mode: 'people' | 'groups';
   onAction: () => void;
 }) {
+  const COLORS = useThemeColors();
   return (
     <View
       className="min-h-[520px] items-center justify-center bg-fill-weaker px-6"

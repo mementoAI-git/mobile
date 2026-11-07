@@ -1,22 +1,27 @@
-import React, { useEffect, useCallback, useMemo } from 'react';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
+import React, { useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, Image, Linking, StyleSheet } from 'react-native';
-import { TouchableOpacity } from '@/components/ui/Touchable';
-import * as Clipboard from 'expo-clipboard';
+import { Pressable, TouchableOpacity } from '@/components/ui/Touchable';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import type { IMessage } from '@/types';
 import dayjs from 'dayjs';
-import { COLORS, FONTS } from '@/constants/tokens';
-import { TYPE } from '@/constants/typography';
-import { tokenizeMessageMarkdown } from '@/features/chat/message-markdown';
-import CornerDownRight from 'lucide-react-native/icons/corner-down-right';
+import { COLORS, FONTS, type ThemeColors } from '@/constants/tokens';
+import { TYPE, TYPE_METRICS } from '@/constants/typography';
+import { splitMessageBlocks, tokenizeMessageMarkdown } from '@/features/chat/message-markdown';
+import { collectReplySources, mementoRoute, parseMementoPath, splitConfirmations } from '@/features/chat/memento-links';
+import { ChatConfirmCard } from './ChatConfirmCard';
+import { ChatStoryCard } from './ChatStoryCard';
+import { router } from 'expo-router';
 import FileText from 'lucide-react-native/icons/file-text';
 import Music from 'lucide-react-native/icons/music';
 import Play from 'lucide-react-native/icons/play';
 import ExternalLink from 'lucide-react-native/icons/external-link';
-import Copy from 'lucide-react-native/icons/copy';
-import Mic from 'lucide-react-native/icons/mic';
-import * as Haptics from 'expo-haptics';
+import { useMessageActions } from './MessageActionsProvider';
+import { MESSAGE_LONG_PRESS_MS, getMessageReactionKey } from '@/features/chat/message-actions';
+import { getChatMessageKey } from '@/features/chat/message-list';
+import { useAuthStore } from '@/store/auth.store';
+import { useMessageReactionsStore } from '@/store/message-reactions.store';
 import type { PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
@@ -26,8 +31,6 @@ import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-typ
 import { getAttachmentPreviewKind } from '@/features/media/media-runtime-policy';
 import type { SignedMediaAccessMetadata } from '@/features/media/signed-media-access';
 import { iconSize, radius, minTouchTarget, responsiveSpace, ms } from '@/constants/responsive';
-import { isVoiceCallMessage } from '@/features/chat/voice-transcript-parser';
-import { VoiceCallCard } from './VoiceCallCard';
 
 // ─── Backward-compat helpers for old messages ────────────────────────────────
 
@@ -97,6 +100,7 @@ function AttachmentTile({ attachment, onPress }: {
   attachment: ChatAttachment;
   onPress: () => void;
 }) {
+  const COLORS = useThemeColors();
   const cat = getMediaCategory({ mimeType: attachment.type, name: attachment.name, uri: attachment.url });
   const previewKind = getAttachmentPreviewKind({ category: cat, uri: attachment.url });
 
@@ -198,7 +202,7 @@ function isMessageOnlyUrl(text: string): boolean {
   return regex.test(trimmed);
 }
 
-export function parseFormattedMessage(text: string, _isUser?: boolean): React.ReactNode[] {
+export function parseFormattedMessage(text: string, isUser?: boolean, styles = createStyles(COLORS)): React.ReactNode[] {
   const tokens = tokenizeMessageMarkdown(text);
   if (tokens.length === 0) {
     return [text];
@@ -218,21 +222,21 @@ export function parseFormattedMessage(text: string, _isUser?: boolean): React.Re
 
       case 'bold':
         return (
-          <Text key={index} style={styles.markdownBold}>
+          <Text key={index} style={[styles.markdownBold, isUser && TYPE_METRICS.bodyLarge]}>
             {token.text}
           </Text>
         );
 
       case 'bold_italic':
         return (
-          <Text key={index} style={styles.markdownBoldItalic}>
+          <Text key={index} style={[styles.markdownBoldItalic, isUser && TYPE_METRICS.bodyLarge]}>
             {token.text}
           </Text>
         );
 
       case 'code':
         return (
-          <Text key={index} style={styles.markdownCode}>
+          <Text key={index} style={[styles.markdownCode, isUser && TYPE_METRICS.bodyLarge]}>
             {token.text}
           </Text>
         );
@@ -251,16 +255,22 @@ export function parseFormattedMessage(text: string, _isUser?: boolean): React.Re
           </Text>
         );
 
-      case 'link':
+      case 'link': {
+        const memento = parseMementoPath(token.url);
         return (
           <Text
             key={index}
-            style={styles.markdownLink}
-            onPress={() => Linking.openURL(token.url).catch(() => {})}
+            style={memento ? styles.mementoLink : styles.markdownLink}
+            accessibilityRole="link"
+            accessibilityLabel={memento ? `Open ${memento.kind}: ${token.label}` : undefined}
+            onPress={() =>
+              memento ? router.push(mementoRoute(memento)) : Linking.openURL(token.url).catch(() => {})
+            }
           >
             {token.label}
           </Text>
         );
+      }
 
       case 'url': {
         const shortened = shortenUrl(token.url);
@@ -283,7 +293,84 @@ export function parseFormattedMessage(text: string, _isUser?: boolean): React.Re
 
 const parseTextWithLinks = parseFormattedMessage;
 
+type BubbleStyles = ReturnType<typeof createStyles>;
+
+/** A message as Markdown blocks: paragraphs, headings, lists and quotes. */
+function FormattedMessage({
+  content,
+  isUser,
+  styles,
+  textStyle,
+  numberOfLines,
+}: {
+  content: string;
+  isUser: boolean;
+  styles: BubbleStyles;
+  textStyle: React.ComponentProps<typeof Text>['style'];
+  numberOfLines?: number;
+}) {
+  const blocks = splitMessageBlocks(content);
+  if (blocks.length <= 1 && (!blocks[0] || blocks[0].type === 'paragraph')) {
+    return (
+      <Text style={textStyle} numberOfLines={numberOfLines}>
+        {parseFormattedMessage(content, isUser, styles)}
+      </Text>
+    );
+  }
+  return (
+    <View style={styles.blocks}>
+      {blocks.map((block, index) => {
+        const inline = parseFormattedMessage(block.text, isUser, styles);
+        switch (block.type) {
+          case 'heading':
+            return (
+              <Text key={index} accessibilityRole="header" style={[textStyle, styles.markdownBold, block.level <= 2 && styles.heading]}>
+                {inline}
+              </Text>
+            );
+          case 'bullet':
+          case 'ordered':
+            return (
+              <View key={index} style={[styles.listRow, { paddingLeft: block.depth * 14 }]}>
+                <Text style={[textStyle, styles.listMarker]} accessibilityElementsHidden importantForAccessibility="no">
+                  {block.type === 'bullet' ? '\u2022' : block.marker}
+                </Text>
+                <Text style={[textStyle, styles.listText]}>{inline}</Text>
+              </View>
+            );
+          case 'quote':
+            return (
+              <View key={index} style={styles.quoteBlock}>
+                <Text style={[textStyle, styles.markdownItalic]}>{inline}</Text>
+              </View>
+            );
+          default:
+            return (
+              <Text key={index} style={textStyle}>
+                {inline}
+              </Text>
+            );
+        }
+      })}
+    </View>
+  );
+}
+
+/** The stories and conversations a reply pointed to, as cards under it. */
+function ReplySources({ text, styles }: { text: string; styles: BubbleStyles }) {
+  const sources = collectReplySources(text);
+  if (!sources.length) return null;
+  return (
+    <View style={styles.sourcesRow} accessibilityLabel="Sources">
+      {sources.map((source) => (
+        <ChatStoryCard key={source.id} source={source} />
+      ))}
+    </View>
+  );
+}
+
 function LinkPreviewChip({ preview }: { preview: LinkPreviewData }) {
+  const COLORS = useThemeColors();
   const handlePress = useCallback(() => {
     Linking.openURL(preview.url).catch(() => {});
   }, [preview.url]);
@@ -353,14 +440,46 @@ function LinkPreviews({ text }: { text: string }) {
   );
 }
 
-// ─── Image strip grid (always horizontal, max 3 visible) ─────────────────────
+// ─── Chat media layouts ──────────────────────────────────────────────────────
 //
-// 1 image  → full bubble width, 4:3
-// 2 images → two equal tiles side-by-side
-// 3+ images → grid tiles, +N counter on the final darkened tile for overflow
+// 1-3 images or videos → tilted stack outside the bubble, first item in front
+// 4+ images → 2×2 grid in the bubble, +N counter on the final darkened tile
 
 const BUBBLE_MAX_W = 260;
 const GRID_GAP = 3;
+const MAX_STACKED_MEDIA = 3;
+const STACK_W = 240;
+const STACK_TILE_SIZE = Math.round(STACK_W * 0.58);
+const STACK_TILE_RADIUS = 18;
+const SINGLE_TILE_W = 220;
+
+// Offsets are fractions of the stack size. They leave room for the rotated corners.
+const STACK_LAYOUTS: Record<number, { height: number; slots: { left: number; top: number; rotate: string }[] }> = {
+  2: {
+    height: STACK_W,
+    slots: [
+      { left: 0.05, top: 0.36, rotate: '-6deg' },
+      { left: 0.37, top: 0.05, rotate: '8deg' },
+    ],
+  },
+  3: {
+    height: Math.round(STACK_W * (4 / 3)),
+    slots: [
+      { left: 0.05, top: 0.26, rotate: '-6deg' },
+      { left: 0.37, top: 0.03, rotate: '8deg' },
+      { left: 0.36, top: 0.52, rotate: '8deg' },
+    ],
+  },
+};
+
+function isVisualAttachment(attachment: ChatAttachment) {
+  return ['image', 'video'].includes(getMediaCategory({ mimeType: attachment.type, name: attachment.name, uri: attachment.url }));
+}
+
+function getStackedMedia(attachments: ChatAttachment[]) {
+  const media = attachments.filter(isVisualAttachment);
+  return media.length <= MAX_STACKED_MEDIA ? media : [];
+}
 
 function AttachmentPlaceholder({
   name,
@@ -373,6 +492,7 @@ function AttachmentPlaceholder({
   height: number;
   borderRadius: number;
 }) {
+  const COLORS = useThemeColors();
   return (
     <View style={{
       width,
@@ -447,47 +567,102 @@ const MediaPreviewTile = React.memo(function MediaPreviewTile({
   );
 });
 
+function StackTile({
+  attachment,
+  width,
+  height,
+  rotate,
+  position,
+  zIndex,
+  onPress,
+}: {
+  attachment: ChatAttachment;
+  width: number;
+  height: number;
+  rotate: string;
+  position?: { left: number; top: number };
+  zIndex?: number;
+  onPress: () => void;
+}) {
+  const styles = useThemeStyles(createStyles);
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${attachment.name || 'attachment'}`}
+      style={[
+        styles.stackTile,
+        { width, height, transform: [{ rotate }] },
+        position && { position: 'absolute', ...position, zIndex, elevation: zIndex ? 6 : 3 },
+      ]}
+    >
+      <MediaPreviewTile attachment={attachment} width={width} height={height} borderRadius={STACK_TILE_RADIUS} onPress={onPress} />
+      <View pointerEvents="none" style={styles.stackTileEdge} />
+    </TouchableOpacity>
+  );
+}
+
+function AttachmentStack({ attachments, onTap }: {
+  attachments: ChatAttachment[];
+  onTap: (index: number) => void;
+}) {
+  const media = getStackedMedia(attachments);
+  if (media.length === 0) return null;
+
+  if (media.length === 1) {
+    const origIdx = attachments.indexOf(media[0]);
+    return (
+      <View style={{ padding: 8 }}>
+        <StackTile
+          attachment={media[0]}
+          width={SINGLE_TILE_W}
+          height={Math.round(SINGLE_TILE_W * (3 / 4))}
+          rotate="-2deg"
+          onPress={() => onTap(origIdx)}
+        />
+      </View>
+    );
+  }
+
+  const layout = STACK_LAYOUTS[media.length];
+  return (
+    <View style={{ width: STACK_W, height: layout.height }}>
+      {media.map((a, i) => {
+        const origIdx = attachments.indexOf(a);
+        const slot = layout.slots[i];
+        return (
+          <StackTile
+            key={a._id ?? origIdx}
+            attachment={a}
+            width={STACK_TILE_SIZE}
+            height={STACK_TILE_SIZE}
+            rotate={slot.rotate}
+            position={{ left: slot.left * STACK_W, top: slot.top * layout.height }}
+            zIndex={i === 0 ? 1 : 0}
+            onPress={() => onTap(origIdx)}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
 function AttachmentGrid({ attachments, onTap }: {
   attachments: ChatAttachment[];
   onTap: (index: number) => void;
 }) {
-  if (attachments.length === 0) return null;
-
-  const mediaItems = attachments.filter(a => ['image', 'video'].includes(getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url })));
-  const fileItems = attachments.filter(a => !['image', 'video'].includes(getMediaCategory({ mimeType: a.type, name: a.name, uri: a.url })));
+  const mediaItems = attachments.filter(isVisualAttachment);
+  const fileItems = attachments.filter(a => !isVisualAttachment(a));
   const count = mediaItems.length;
-  const fullW = BUBBLE_MAX_W;
+  const showGrid = count > MAX_STACKED_MEDIA;
+  if (!showGrid && fileItems.length === 0) return null;
 
   let imageSection: React.ReactNode = null;
 
-  if (count === 1) {
-    // Single image/video — full width, 4:3
-    const a = mediaItems[0];
-    const origIdx = attachments.indexOf(a);
-    imageSection = (
-      <TouchableOpacity onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
-        <MediaPreviewTile attachment={a} width={fullW} height={Math.round(fullW * (3 / 4))} borderRadius={12} onPress={() => onTap(origIdx)} />
-      </TouchableOpacity>
-    );
-  } else if (count <= 3) {
-    // 2-3 media items — horizontal strip, equal tiles
-    const tileW = Math.floor((fullW - GRID_GAP * (count - 1)) / count);
-    const tileH = Math.round(tileW * (3 / 4));
-    imageSection = (
-      <View style={{ flexDirection: 'row', gap: GRID_GAP }}>
-        {mediaItems.map((a, i) => {
-          const origIdx = attachments.indexOf(a);
-          return (
-            <TouchableOpacity key={a._id ?? origIdx} onPress={() => onTap(origIdx)} activeOpacity={0.85} style={{ position: 'relative' }}>
-              <MediaPreviewTile attachment={a} width={tileW} height={tileH} borderRadius={10} onPress={() => onTap(origIdx)} />
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    );
-  } else {
+  if (showGrid) {
     // 4+ images — 2×2 grid, first 4 visible, +N counter on the 4th tile overlay
-    const tileW = Math.floor((fullW - GRID_GAP) / 2);
+    const tileW = Math.floor((BUBBLE_MAX_W - GRID_GAP) / 2);
     const tileH = Math.round(tileW * (3 / 4));
     const visible = mediaItems.slice(0, 4);
     const overflow = count - 4;
@@ -539,6 +714,8 @@ export const MessageBubble = React.memo(function MessageBubble({
   highlighted = false,
   animated = false,
 }: MessageBubbleProps) {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const isUser = message.role === 'user';
   const rawAttachments: ChatAttachment[] =
     (message as any).attachments ?? (message as any).attatchments ?? [];
@@ -546,18 +723,33 @@ export const MessageBubble = React.memo(function MessageBubble({
   const rawContent = message.text || (message as any).content || '';
   const replyQuote: { role: string; text: string } | null =
     (message as any).replyTo ?? (isUser ? extractReplyQuote(rawContent) : null);
-  const content = isUser ? stripReplyWrapper(rawContent) : rawContent;
+  // Memento's confirmation cards are shown as buttons, not as text.
+  const { text: content, cards } = useMemo(
+    () => (isUser ? { text: stripReplyWrapper(rawContent), cards: [] } : splitConfirmations(rawContent)),
+    [isUser, rawContent],
+  );
+  const surfaceRef = useRef<View>(null);
+  const openActions = useMessageActions();
+  const userId = useAuthStore((state) => state.user?._id ?? 'guest');
+  const reactionKey = getMessageReactionKey(userId, getChatMessageKey({ ...message, text: rawContent }));
+  const reaction = useMessageReactionsStore((state) => state.reactions[reactionKey]);
+  const handleOpenActions = useCallback(() => {
+    if (!surfaceRef.current) return;
+    openActions?.({ view: surfaceRef.current, text: content, reactionKey, onReply });
+  }, [content, onReply, openActions, reactionKey]);
+  const handleAccessibilityAction = useCallback((event: { nativeEvent: { actionName: string } }) => {
+    if (event.nativeEvent.actionName === 'activate' || event.nativeEvent.actionName === 'longpress') handleOpenActions();
+  }, [handleOpenActions]);
   const responseTime = 'created_at' in message && message.created_at
     ? dayjs(message.created_at).format('h:mma')
     : null;
-  const isVoice = Boolean((message as any).is_voice);
 
   const previewAttachments: PreviewAttachment[] = useMemo(
     () => rawAttachments.map(toPreviewAttachment),
     [rawAttachments],
   );
 
-  const hasContent = content.trim().length > 0 || rawAttachments.length > 0;
+  const hasContent = content.trim().length > 0 || rawAttachments.length > 0 || cards.length > 0;
   const isOnlyUrl = content.trim().length > 0 && isMessageOnlyUrl(content);
 
   // Must be declared before any early return (Rules of Hooks)
@@ -567,19 +759,16 @@ export const MessageBubble = React.memo(function MessageBubble({
 
   if (!hasContent) return null;
 
-  if (isVoiceCallMessage(content, isVoice)) {
-    const Container = animated ? Animated.View : View;
-    const containerProps = animated ? { entering: FadeIn.duration(150) } : {};
-    return (
-      <Container {...containerProps} style={styles.voiceCallWrapper}>
-        <VoiceCallCard
-          message={message as any}
-          onReply={onReply}
-          highlighted={highlighted}
-        />
-      </Container>
-    );
-  }
+  const stackedMedia = getStackedMedia(rawAttachments);
+  const hasStack = stackedMedia.length > 0;
+  const hasInlineAttachments = rawAttachments.length > stackedMedia.length;
+  const surfaceStyle = [
+    styles.messageSurface,
+    isUser ? styles.userSurface : styles.assistantSurface,
+    isOnlyUrl && isUser && { backgroundColor: 'transparent', paddingHorizontal: 0, paddingVertical: 0 },
+  ];
+  const showSurface = !hasStack || Boolean(replyQuote?.text) || hasInlineAttachments || content.trim().length > 0 || cards.length > 0;
+
 
   const Container = animated ? Animated.View : View;
   const containerProps = animated
@@ -596,14 +785,22 @@ export const MessageBubble = React.memo(function MessageBubble({
         isUser && rawAttachments.length > 0 && styles.userAttachmentContainer,
       ]}
     >
-        <View
-          style={[
-            styles.messageSurface,
-            isUser ? styles.userSurface : styles.assistantSurface,
-            isOnlyUrl && { backgroundColor: 'transparent', paddingHorizontal: 0, paddingVertical: 0 }
-          ]}
+        <Pressable
+          ref={surfaceRef}
+          collapsable={false}
+          accessible={Boolean(onReply)}
+          accessibilityLabel={content || 'Message attachment'}
+          onLongPress={onReply ? handleOpenActions : undefined}
+          delayLongPress={MESSAGE_LONG_PRESS_MS}
+          accessibilityHint="Touch and hold for reply, copy, and reactions"
+          accessibilityActions={[{ name: 'longpress', label: 'Message actions' }]}
+          onAccessibilityAction={handleAccessibilityAction}
+          style={hasStack ? [styles.stackSurface, isUser ? styles.stackSurfaceUser : styles.stackSurfaceAssistant] : surfaceStyle}
         >
+          {hasStack && <AttachmentStack attachments={rawAttachments} onTap={handleAttachmentTap} />}
 
+          {showSurface && (
+          <View style={hasStack ? surfaceStyle : undefined}>
           {/* Reply quote */}
           {replyQuote && replyQuote.text && (
             <TouchableOpacity
@@ -618,68 +815,55 @@ export const MessageBubble = React.memo(function MessageBubble({
           )}
 
           {/* Attachments */}
-          {rawAttachments.length > 0 && (
+          {hasInlineAttachments && (
             <AttachmentGrid attachments={rawAttachments} onTap={handleAttachmentTap} />
           )}
 
           {/* Message text */}
           {content.trim().length > 0 && !isOnlyUrl && (
-            <Text
-              style={[styles.messageText, { marginTop: rawAttachments.length > 0 ? 4 : 0 }]}
-              numberOfLines={isMessageOnlyUrl(content) ? 1 : undefined}
-            >
-              {parseFormattedMessage(content, isUser)}
-            </Text>
+            <View style={{ marginTop: hasInlineAttachments ? 4 : 0 }}>
+              <FormattedMessage
+                content={content}
+                isUser={isUser}
+                styles={styles}
+                textStyle={[styles.messageText, isUser && TYPE.bodyLarge]}
+                numberOfLines={isMessageOnlyUrl(content) ? 1 : undefined}
+              />
+            </View>
           )}
 
           {/* Link preview chips */}
           {content.trim().length > 0 && <LinkPreviews text={content} />}
-        </View>
+
+          {cards.map((card) => (
+            <ChatConfirmCard key={String(card.args.confirmation ?? card.text)} card={card} />
+          ))}
+          </View>
+          )}
+        </Pressable>
+
+        {!isUser && content.trim().length > 0 && <ReplySources text={content} styles={styles} />}
+
+        {reaction && (
+          <Pressable
+            onPress={handleOpenActions}
+            accessibilityRole="button"
+            accessibilityLabel={`Your reaction ${reaction}. Change reaction`}
+            style={{ alignSelf: isUser ? 'flex-end' : 'flex-start', minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak, borderRadius: 10, marginTop: 4 }}
+          >
+            <Text style={[TYPE.uiTitle, { transform: [{ scale: 0.8 }] }]}>{reaction}</Text>
+          </Pressable>
+        )}
 
         {/* Meta row */}
         <View style={[styles.metaRow, isUser ? styles.metaRowUser : styles.metaRowAssistant]}>
-          {isVoice && (
-            <View style={styles.voiceIndicator}>
-              <Mic size={iconSize(12)} color={COLORS.textWeak} strokeWidth={2} />
-              <Text style={styles.voiceLabel}>Spoken</Text>
-            </View>
-          )}
           {responseTime && <Text style={styles.timeLabel}>{responseTime}</Text>}
-          {content.trim().length > 0 && (
-            <TouchableOpacity
-              accessibilityLabel="Copy message"
-              accessibilityRole="button"
-              onPress={() => {
-                Haptics.selectionAsync();
-                Clipboard.setStringAsync(content.trim()).catch(() => {});
-              }}
-              activeOpacity={0.7}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={styles.metaIconButton}
-            >
-              <Copy size={iconSize(17)} color={COLORS.textStrong} strokeWidth={2} />
-            </TouchableOpacity>
-          )}
-          {onReply && (
-            <TouchableOpacity
-              accessibilityLabel="Reply to message"
-              accessibilityRole="button"
-              onPress={onReply}
-              activeOpacity={0.7}
-              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
-              style={styles.replyButton}
-            >
-              <CornerDownRight size={iconSize(18)} color={COLORS.textStrong} strokeWidth={2} />
-              <Text style={styles.replyLabel}>Reply</Text>
-            </TouchableOpacity>
-          )}
         </View>
     </Container>
   );
 });
 
-const styles = StyleSheet.create({
-  voiceCallWrapper: { alignSelf: 'stretch', width: '100%', marginBottom: 8 },
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   messageContainer: { marginBottom: 14 },
   messageContainerHighlighted: {
     backgroundColor: COLORS.brandSubtle,
@@ -690,15 +874,33 @@ const styles = StyleSheet.create({
   },
   userMessageContainer: { alignSelf: 'flex-end', maxWidth: '64%' },
   userAttachmentContainer: { maxWidth: '78%' },
-  assistantMessageContainer: { alignSelf: 'stretch' },
+  assistantMessageContainer: { alignSelf: 'flex-start', maxWidth: '88%' },
   messageSurface: { overflow: 'hidden' },
+  stackSurface: { gap: 6 },
+  stackSurfaceUser: { alignItems: 'flex-end' },
+  stackSurfaceAssistant: { alignItems: 'flex-start' },
+  stackTile: {
+    borderRadius: STACK_TILE_RADIUS,
+    backgroundColor: COLORS.background,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+  stackTileEdge: {
+    ...StyleSheet.absoluteFill,
+    borderColor: COLORS.strokeWeaker,
+    borderRadius: STACK_TILE_RADIUS,
+    borderWidth: 1,
+  },
   userSurface: {
-    backgroundColor: COLORS.fillWeak,
-    borderRadius: radius(6),
-    paddingHorizontal: 6,
+    backgroundColor: COLORS.fillChatUser,
+    borderRadius: 14,
+    paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  assistantSurface: { backgroundColor: COLORS.background },
+  assistantSurface: { backgroundColor: COLORS.fillWeak, borderRadius: 14, padding: 10 },
   messageText: {
     color: COLORS.textStrong,
     ...TYPE.body,
@@ -729,6 +931,18 @@ const styles = StyleSheet.create({
     color: COLORS.linkPreview,
     textDecorationLine: 'underline',
   },
+  mementoLink: {
+    ...TYPE.bodyStrong,
+    color: COLORS.linkPreview,
+    textDecorationLine: 'underline',
+  },
+  blocks: { gap: 6 },
+  heading: { ...TYPE.bodyStrong },
+  listRow: { flexDirection: 'row', gap: 6 },
+  listMarker: { minWidth: 14 },
+  listText: { flex: 1 },
+  quoteBlock: { borderLeftWidth: 3, borderLeftColor: COLORS.strokeWeak, paddingLeft: 8 },
+  sourcesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6, maxWidth: '100%' },
   replyQuote: {
     backgroundColor: COLORS.strokeWeaker,
     borderLeftColor: COLORS.info,
@@ -757,31 +971,5 @@ const styles = StyleSheet.create({
     ...TYPE.bodySmall,
     lineHeight: 18,
   },
-  metaIconButton: {
-    alignItems: 'center',
-    height: 24,
-    justifyContent: 'center',
-    width: 24,
-  },
-  replyButton: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 5,
-    minHeight: 24,
-  },
-  replyLabel: {
-    color: COLORS.textStrong,
-    ...TYPE.bodySmall,
-    lineHeight: 18,
-  },
-  voiceIndicator: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 3,
-  },
-  voiceLabel: {
-    color: COLORS.textWeak,
-    ...TYPE.metadata,
-    lineHeight: 14,
-  },
+
 });

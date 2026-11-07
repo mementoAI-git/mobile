@@ -1,74 +1,123 @@
-import React from 'react';
-import { View, Image } from 'react-native';
+import { useThemeColors } from '@/hooks/use-theme-colors';
+import React, { useCallback } from 'react';
+import { View, Text, Image, useWindowDimensions, type ImageSourcePropType } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import * as Haptics from 'expo-haptics';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Check from 'lucide-react-native/icons/check';
+import Animated, { useSharedValue, useAnimatedStyle, useReducedMotion, withSpring } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
-import ArrowUpRight from 'lucide-react-native/icons/arrow-up-right';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-
-const QUESTION_ICON = require('../../../assets/images/question-2.png');
+import { ms } from '@/constants/responsive';
+import { getPromptAccent } from '@/features/prompts/prompt-accent';
 
 interface ContinueReflectingCardProps {
   title: string;
+  categoryLabel?: string;
+  personal?: boolean;
+  answered?: boolean;
+  replyCount?: number;
+  avatars?: ImageSourcePropType[];
   onPress?: () => void;
   className?: string;
 }
 
-export function ContinueReflectingCard({ title, onPress, className }: ContinueReflectingCardProps) {
+export const ContinueReflectingCard = React.memo(function ContinueReflectingCard({
+  title,
+  categoryLabel = 'Who I am',
+  personal = false,
+  answered = false,
+  replyCount,
+  avatars = [],
+  onPress,
+  className,
+}: ContinueReflectingCardProps) {
+  const COLORS = useThemeColors();
+  const { width } = useWindowDimensions();
+  const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const accent = getPromptAccent(title);
+  const disabled = answered || !onPress;
+  const hasReplyCount = typeof replyCount === 'number' && Number.isSafeInteger(replyCount) && replyCount >= 0;
 
-  const handlePressIn = () => { if (onPress) scale.value = withSpring(0.97); };
-  const handlePressOut = () => { if (onPress) scale.value = withSpring(1); };
+  const handlePressIn = useCallback(() => {
+    if (!disabled && !reducedMotion) scale.value = withSpring(0.97);
+  }, [disabled, reducedMotion, scale]);
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1);
+  }, [scale]);
+  const handlePress = useCallback(() => {
+    if (disabled) return;
+    Haptics.selectionAsync();
+    onPress?.();
+  }, [disabled, onPress]);
 
   return (
-    <Animated.View style={[animStyle]}>
+    <Animated.View style={animStyle}>
       <TouchableOpacity
-        onPress={() => {
-          Haptics.selectionAsync();
-          onPress?.();
-        }}
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityHint={answered ? 'Answered' : 'Open this reflection'}
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        activeOpacity={0.9}
-        className={cn(
-          'flex-row items-center rounded-2xl bg-white border border-stroke-weaker p-4 mr-4 w-[280px] h-[100px]',
-          className
-        )}
+        activeOpacity={reducedMotion ? 1 : 0.9}
+        style={{ width: Math.min(300, width - 64) }}
+        className={cn('min-h-[220px] justify-between gap-8 rounded-[24px] border border-stroke-weak bg-fill-weaker p-5 mr-4', className)}
       >
-        {/* Left icon container */}
-        <View className="size-14 items-center justify-center mr-3 bg-fill-weaker rounded-xl shrink-0">
-          <Image
-            source={QUESTION_ICON}
-            className="size-10"
-            resizeMode="contain"
-          />
-        </View>
+        <Text className="text-text-strong" style={TYPE.cardTitle}>
+          {accent ? (
+            <>
+              {title.slice(0, accent.start)}
+              <Text className="text-brand italic">{title.slice(accent.start, accent.end)}</Text>
+              {title.slice(accent.end)}
+            </>
+          ) : title}
+        </Text>
 
-        {/* Text content */}
-        <View className="flex-1 justify-between gap-2">
-          <Animated.Text
-            numberOfLines={2}
-            className="text-text-strong"
-            style={TYPE.cardTitle}
-          >
-            {title}
-          </Animated.Text>
-          <View className="flex-row items-center gap-1">
-            <Animated.Text
-              className="text-text-weak"
-              style={TYPE.metadata}
-            >
-              Continue
-            </Animated.Text>
-            <ArrowUpRight size={14} color={COLORS.textWeak} />
+        {answered ? (
+          <View className="flex-row items-center gap-1.5">
+            <Check size={ms(16)} color={COLORS.success} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+            <Text style={[TYPE.bodySmall, { color: COLORS.textWeak, flex: 1 }]}>
+              You’ve already shared a reflection for this one today.
+            </Text>
           </View>
-        </View>
+        ) : (
+          <View className="flex-row items-center justify-between gap-2">
+            <View className="flex-row items-center gap-1 rounded-full bg-fill-weak px-2 py-1 shrink min-w-0">
+              <View
+                className="size-2 rounded-full"
+                style={{ backgroundColor: categoryLabel.toLowerCase() === 'people i love' ? COLORS.success : COLORS.warning }}
+              />
+              <Text numberOfLines={1} className="text-text-strong shrink" style={TYPE.metadata}>
+                {categoryLabel}
+              </Text>
+            </View>
+            {personal ? (
+              <Text className="text-text-base" style={TYPE.metadata}>For you</Text>
+            ) : (
+              <View className="flex-row items-center gap-1.5 shrink-0">
+                <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" className="flex-row pl-2.5">
+                  {avatars.map((source, index) => (
+                    <Image
+                      key={index}
+                      source={source}
+                      style={{ width: ms(20), height: ms(20) }}
+                      className="-ml-2.5 rounded-full border border-stroke-weak"
+                    />
+                  ))}
+                </View>
+                {hasReplyCount && (
+                  <Text className="text-text-base" style={TYPE.metadata}>{replyCount.toLocaleString('en-US')} people</Text>
+                )}
+              </View>
+            )}
+          </View>
+        )}
       </TouchableOpacity>
     </Animated.View>
   );
-}
+});

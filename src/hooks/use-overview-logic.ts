@@ -1,3 +1,4 @@
+import { getGreeting } from '@/features/overview/greeting';
 import { useMemo, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -8,15 +9,6 @@ import { useActivities } from '@/hooks/queries/use-activities';
 import { useStartConversation } from '@/hooks/mutations/use-memory-mutations';
 import type { IMemory } from '@/types';
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour >= 4 && hour < 7) return "Up early today,";
-  if (hour >= 7 && hour < 12) return "Good morning,";
-  if (hour >= 12 && hour < 17) return "Good afternoon,";
-  if (hour >= 17 && hour < 21) return "Good evening,";
-  if (hour >= 21) return "Night owl mode,";
-  return "Still going,";
-}
 
 export function useOverviewLogic() {
   const router = useRouter();

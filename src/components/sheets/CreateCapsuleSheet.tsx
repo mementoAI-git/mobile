@@ -227,7 +227,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
   return (
     <>
       {/* Header */}
-      <View className="px-5 pt-4 pb-4 border-b border-stroke-weaker flex-row items-center justify-between">
+      <View className="px-5 pb-4 border-b border-stroke-weaker flex-row items-center justify-between">
         <Text className="text-text-strong" style={TYPE.sectionTitle}>
           {isEdit ? 'Edit Capsule' : 'Create Capsule'}
         </Text>
@@ -260,7 +260,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
             Select recipient(s)
           </Text>
 
-          <View className="border border-stroke-weaker rounded-xl p-2 min-h-[44px] flex-row flex-wrap gap-2 items-center bg-white">
+          <View className="border border-stroke-weaker rounded-xl p-2 min-h-[44px] flex-row flex-wrap gap-2 items-center bg-card">
             {recipientIds.map(id => {
               const b = beneficiaries.find((x: any) => x._id === id);
               const displayName = b ? b.name : id;
@@ -310,7 +310,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
                       onPress={() => toggleRecipient(b._id, b.email)}
                       className="items-center w-16 gap-2"
                     >
-                      <View className={`size-12 rounded-full items-center justify-center border-2 ${selected ? 'border-brand bg-brand' : 'border-transparent bg-white shadow-sm'}`}>
+                      <View className={`size-12 rounded-full items-center justify-center border-2 ${selected ? 'border-brand bg-brand' : 'border-transparent bg-card shadow-sm'}`}>
                         <Text className={selected ? 'text-white' : 'text-text-strong'} style={TYPE.label}>
                           {b.name[0]?.toUpperCase()}
                         </Text>
@@ -353,7 +353,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
                 <Text className="text-text-weak text-center mb-2" style={TYPE.metadata}>
                   Supports JPG, PNG, MP4, MP3, PDF,{'\n'}DOC, TXT. Max file size: 120mb
                 </Text>
-                <Button variant="outline" onPress={handleBrowseFiles} className="rounded-full bg-white border-stroke-weak pointer-events-none">
+                <Button variant="outline" onPress={handleBrowseFiles} className="rounded-full bg-card border-stroke-weak pointer-events-none">
                   <Text className="text-text-strong" style={TYPE.label}>Browse files</Text>
                 </Button>
               </>
@@ -448,7 +448,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
           </Text>
           <TouchableOpacity
             onPress={() => dateModalRef.current?.present()}
-            className="flex-row items-center justify-between p-4 bg-white border border-stroke-weaker rounded-xl"
+            className="flex-row items-center justify-between p-4 bg-card border border-stroke-weaker rounded-xl"
           >
             <Text className="text-text-strong" style={TYPE.label}>
               {scheduleDate
@@ -606,7 +606,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
                 setScheduleDate(dayjs().add(preset.days, 'day').toDate());
                 dateModalRef.current?.dismiss();
               }}
-              className="p-4 rounded-xl border border-stroke-weaker bg-white"
+              className="p-4 rounded-xl border border-stroke-weaker bg-card"
             >
               <Text className="text-text-strong" style={TYPE.body}>{preset.label}</Text>
             </TouchableOpacity>
@@ -616,7 +616,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
               dateModalRef.current?.dismiss();
               setTimeout(() => setShowNativePicker(true), 300);
             }}
-            className="p-4 rounded-xl border border-stroke-weaker bg-white mt-4"
+            className="p-4 rounded-xl border border-stroke-weaker bg-card mt-4"
           >
             <Text className="text-brand text-center" style={TYPE.body}>Pick Custom Date...</Text>
           </TouchableOpacity>

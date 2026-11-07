@@ -1,3 +1,5 @@
+import type { ThemeColors } from '@/constants/tokens';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, ImageBackground, StyleSheet } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -26,6 +28,8 @@ const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const layout = getSettingsHeaderLayout();
 
 export default function BeneficiaryDetailScreen() {
+  const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const openSheet = useUiStore((s) => s.openSheet);
@@ -124,7 +128,7 @@ export default function BeneficiaryDetailScreen() {
         <View style={styles.header}>
           <View style={styles.backButton}><Skeleton style={{ width: '100%', height: '100%', borderRadius: 22 }} /></View>
         </View>
-        <View style={{ padding: 24, gap: 16 }}>
+        <View style={{ paddingVertical: 24, paddingHorizontal: 16, gap: 16 }}>
           <Skeleton style={{ height: 120, width: '100%', borderRadius: 24 }} />
           <Skeleton style={{ height: 80, width: '100%', borderRadius: 24, marginTop: 24 }} />
           <Skeleton style={{ height: 80, width: '100%', borderRadius: 24 }} />
@@ -200,12 +204,13 @@ export default function BeneficiaryDetailScreen() {
         <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
         <ScrollView 
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 48 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 48 }}
         >
           {/* ── User Banner Card ── */}
           <View style={styles.heroBanner}>
             <View style={{ marginRight: 16 }}>
               <Avatar
+                userId={beneficiary.user?._id} seed={beneficiary.user?.email || beneficiary.email}
                 uri={beneficiary.avatar || beneficiary.user?.picture_url}
                 name={name}
                 size="lg"
@@ -332,7 +337,7 @@ export default function BeneficiaryDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   header: {
     height: layout.height,
     flexDirection: 'row',

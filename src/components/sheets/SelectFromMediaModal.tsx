@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { forwardRef, useState, useCallback, useMemo } from 'react';
 import { View, Text, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
@@ -16,7 +17,7 @@ import { Button, Spinner, Skeleton } from '@/components/ui';
 import { iconSize, radius, minTouchTarget } from '@/constants/responsive';
 import { useFiles } from '@/hooks/queries/use-files';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getSheetTopInset } from '@/features/layout/sheet-safe-area';
+import { getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
 
 interface SelectFromMediaModalProps {
   selectedIds: string[];
@@ -35,6 +36,7 @@ type MediaFileItem = {
 
 export const SelectFromMediaModal = React.memo(
   forwardRef<BottomSheetModal, SelectFromMediaModalProps>((props, ref) => {
+  const COLORS = useThemeColors();
     const { selectedIds, onConfirm } = props;
     const { width: screenWidth } = useWindowDimensions();
     const itemWidth = useMemo(() => (screenWidth - 56) / 2, [screenWidth]);
@@ -147,10 +149,11 @@ export const SelectFromMediaModal = React.memo(
         }}
         keyboardBehavior="interactive"
         keyboardBlurBehavior="restore"
+        handleStyle={SHEET_HEADER_HANDLE_STYLE}
         handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
         backgroundStyle={{ backgroundColor: COLORS.background }}
       >
-        <View className="flex-1 px-5 pt-4 pb-8" style={{ paddingBottom: insets.bottom ? insets.bottom + 12 : 32 }}>
+        <View className="flex-1 px-5 pb-8" style={{ paddingBottom: insets.bottom ? insets.bottom + 12 : 32 }}>
           {/* Header */}
           <View className="flex-row justify-between items-center mb-4">
             <Text className="text-text-strong" style={TYPE.sectionTitle}>Select Media</Text>
@@ -206,7 +209,7 @@ export const SelectFromMediaModal = React.memo(
 
           {/* Footer Actions */}
           <View className="absolute bottom-5 left-5 right-5 flex-row gap-4 bg-background pt-4 border-t border-stroke-weaker">
-            <Button variant="outline" onPress={handleClose} className="flex-1 rounded-full border-stroke-weak bg-white">
+            <Button variant="outline" onPress={handleClose} className="flex-1 rounded-full border-stroke-weak bg-card">
               <Text className="text-text-strong" style={TYPE.buttonSmall}>Cancel</Text>
             </Button>
             <Button

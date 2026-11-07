@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { forwardRef, useState, useCallback, useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -13,7 +14,7 @@ import { Button, Skeleton } from '@/components/ui';
 import { useMemories } from '@/hooks/queries/use-memories';
 import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getSheetTopInset } from '@/features/layout/sheet-safe-area';
+import { getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
 import type { IMemory } from '@/types';
 
 interface SelectFromMemoryModalProps {
@@ -23,6 +24,7 @@ interface SelectFromMemoryModalProps {
 
 export const SelectFromMemoryModal = React.memo(
   forwardRef<BottomSheetModal, SelectFromMemoryModalProps>((props, ref) => {
+  const COLORS = useThemeColors();
     const { selectedIds, onConfirm } = props;
 
     const [localSelected, setLocalSelected] = useState<string[]>([]);
@@ -106,10 +108,11 @@ export const SelectFromMemoryModal = React.memo(
         }}
         keyboardBehavior="interactive"
         keyboardBlurBehavior="restore"
+        handleStyle={SHEET_HEADER_HANDLE_STYLE}
         handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
         backgroundStyle={{ backgroundColor: COLORS.background }}
       >
-        <View className="flex-1 px-5 pt-4 pb-8" style={{ paddingBottom: insets.bottom ? insets.bottom + 12 : 32 }}>
+        <View className="flex-1 px-5 pb-8" style={{ paddingBottom: insets.bottom ? insets.bottom + 12 : 32 }}>
           {/* Header */}
           <View className="flex-row justify-between items-center mb-4">
             <Text className="text-text-strong" style={TYPE.sectionTitle}>Link Memory</Text>
@@ -166,7 +169,7 @@ export const SelectFromMemoryModal = React.memo(
 
           {/* Footer Actions */}
           <View className="absolute bottom-5 left-5 right-5 flex-row gap-4 bg-background pt-4 border-t border-stroke-weaker">
-            <Button variant="outline" onPress={handleClose} className="flex-1 rounded-full border-stroke-weak bg-white">
+            <Button variant="outline" onPress={handleClose} className="flex-1 rounded-full border-stroke-weak bg-card">
               <Text className="text-text-strong" style={TYPE.buttonSmall}>Cancel</Text>
             </Button>
             <Button

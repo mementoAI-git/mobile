@@ -29,7 +29,7 @@ describe('Settings typography', () => {
       'utf8',
     );
 
-    expect(hubRow).toContain('style={[TYPE.body, { flex: 1 }]}');
+    expect(hubRow).toContain('style={[TYPE.body, { flex: 1, color: COLORS.textStrong }]}');
     expect(profile).toContain('TYPE.body');
     expect(billingDetails).not.toContain('TYPE.sectionTitle');
     expect(billingDetails).toContain('Billing details');
