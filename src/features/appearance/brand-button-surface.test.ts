@@ -34,7 +34,9 @@ describe('web brand button surface parity', () => {
     const painted = withPressableBrandSurface(style);
     expect(typeof painted).toBe('function');
     if (typeof painted !== 'function') throw new Error('Missing press-state function');
-    expect(painted({pressed: false, hovered: false})).toEqual(style({pressed: false}));
-    expect(painted({pressed: true, hovered: false})).toEqual([style({pressed: true}), {experimental_backgroundImage: BRAND_BUTTON_GRADIENT}]);
+    const idle = {pressed: false, hovered: false};
+    const pressed = {pressed: true, hovered: false};
+    expect(painted(idle)).toEqual(style({pressed: false}));
+    expect(painted(pressed)).toEqual([style({pressed: true}), {experimental_backgroundImage: BRAND_BUTTON_GRADIENT}]);
   });
 });
