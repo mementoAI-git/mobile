@@ -70,6 +70,13 @@ export function ChatConfirmCard({ card }: { card: ChatConfirmation }) {
   return (
     <View style={styles.card} accessibilityLabel="Confirm this action">
       <Text style={styles.text}>{card.text}</Text>
+      {card.tool === 'edit_story' && card.args.mode === 'replace' && typeof card.args.text === 'string' && (
+        <View style={styles.preview} accessibilityLabel="The new text">
+          <Text style={styles.previewText} numberOfLines={12}>
+            {card.args.text}
+          </Text>
+        </View>
+      )}
       {settled ? (
         <View style={styles.statusRow} accessibilityLiveRegion="polite">
           {state.kind === 'done' && <Check size={16} color={COLORS.textWeak} />}
@@ -113,4 +120,6 @@ const createStyles = (COLORS: ThemeColors) =>
     statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     status: { ...TYPE.body, color: COLORS.textWeak, flexShrink: 1 },
     failed: { color: COLORS.error },
+    preview: { borderLeftWidth: 3, borderLeftColor: COLORS.strokeWeak, paddingLeft: 8 },
+    previewText: { ...TYPE.body, color: COLORS.textWeak },
   });

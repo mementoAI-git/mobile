@@ -6,6 +6,7 @@ import endpoint from '@/api/endpoint';
 import { useAuthStore } from '@/store';
 import { API_BASE_URL } from '@/lib/env';
 import { getMementoClientHeaders } from '@/api/client-runtime-metadata';
+import { CHAT_FEATURES_HEADER, createChatFrameReader } from '@/features/chat/stream-frames';
 import type { ChatMode, LifeDimension } from '@/constants/enrichment';
 import { buildPromptWithReplyQuote, type ChatReplyQuote } from '@/lib/utils';
 import type { IMessageAttachment } from '@/types';
@@ -44,6 +45,8 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
   const [messages, setMessages] = useState<StreamMessage[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
+  /** What Memento says it is doing before the reply starts. */
+  const [replyStatus, setReplyStatus] = useState<string>();
   const abortRef = useRef<AbortController | null>(null);
   const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
   const isMountedRef = useRef(true);
@@ -153,6 +156,7 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
           headers: {
             'Content-Type': 'application/json',
             ...getMementoClientHeaders(),
+            ...CHAT_FEATURES_HEADER,
             ...currentDigitalMindHeaders(),
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
@@ -187,11 +191,18 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
         readerRef.current = reader;
         const decoder = new TextDecoder();
         let accumulated = '';
+        setReplyStatus(undefined);
+        const readFrames = createChatFrameReader({
+          status: (text) => {
+            if (isMountedRef.current && !controller.signal.aborted) setReplyStatus(text);
+          },
+        });
 
         while (true) {
           const { done, value } = await reader.read();
           if (done || !isMountedRef.current || controller.signal.aborted) break;
-          const chunk = decoder.decode(value, { stream: true });
+          const chunk = readFrames(decoder.decode(value, { stream: true }));
+          if (!chunk) continue;
           if (chunk.length && firstChunkMs === null) firstChunkMs = Date.now() - streamStartedAt;
           streamChunkCount += 1;
           runtimeDiagnostics.rate('chat', 'stream-chunks');
@@ -283,7 +294,7 @@ export function useStreamChat(memoryId?: string, promptId?: string) {
   }, []);
 
   return useMemo(
-    () => ({ messages, streaming, streamingText, send, abort, clear }),
-    [messages, streaming, streamingText, send, abort, clear],
+    () => ({ messages, streaming, streamingText, replyStatus, send, abort, clear }),
+    [messages, streaming, streamingText, replyStatus, send, abort, clear],
   );
 }

@@ -189,6 +189,7 @@ export default function ChatScreen() {
     isFetchingOlderMessages,
     streaming,
     streamingText,
+    replyStatus,
     send,
     stop,
     handleBack,
@@ -504,9 +505,9 @@ export default function ChatScreen() {
     return streamingText ? (
       <MessageBubble message={{ role: 'assistant', text: streamingText } as any} animated />
     ) : (
-      <TypingIndicator />
+      <TypingIndicator status={replyStatus} />
     );
-  }, [isActuallyStreaming, streamingText]);
+  }, [isActuallyStreaming, streamingText, replyStatus]);
 
   const promptHeaderComponent = React.useMemo(() => {
     const displayTitle = promptTitle || promptMemory?.title || '';
