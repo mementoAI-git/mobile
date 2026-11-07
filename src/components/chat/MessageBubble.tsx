@@ -9,10 +9,10 @@ import dayjs from 'dayjs';
 import { COLORS, FONTS, type ThemeColors } from '@/constants/tokens';
 import { TYPE, TYPE_METRICS } from '@/constants/typography';
 import { splitMessageBlocks, tokenizeMessageMarkdown } from '@/features/chat/message-markdown';
-import { collectReplySources, mementoRoute, parseMementoPath } from '@/features/chat/memento-links';
+import { collectReplySources, mementoRoute, parseMementoPath, splitConfirmations } from '@/features/chat/memento-links';
+import { ChatConfirmCard } from './ChatConfirmCard';
+import { ChatStoryCard } from './ChatStoryCard';
 import { router } from 'expo-router';
-import BookOpen from 'lucide-react-native/icons/book-open';
-import MessageCircle from 'lucide-react-native/icons/message-circle';
 import FileText from 'lucide-react-native/icons/file-text';
 import Music from 'lucide-react-native/icons/music';
 import Play from 'lucide-react-native/icons/play';
@@ -356,31 +356,15 @@ function FormattedMessage({
   );
 }
 
-/** "Sources" under a reply: the stories and conversations it linked to. */
+/** The stories and conversations a reply pointed to, as cards under it. */
 function ReplySources({ text, styles }: { text: string; styles: BubbleStyles }) {
-  const COLORS = useThemeColors();
   const sources = collectReplySources(text);
   if (!sources.length) return null;
   return (
     <View style={styles.sourcesRow} accessibilityLabel="Sources">
-      <Text style={styles.sourcesLabel}>Sources</Text>
-      {sources.map((source) => {
-        const Icon = source.kind === 'story' ? BookOpen : MessageCircle;
-        return (
-          <Pressable
-            key={source.id}
-            onPress={() => router.push(mementoRoute(source))}
-            accessibilityRole="link"
-            accessibilityLabel={`Open ${source.kind}: ${source.label}`}
-            style={styles.sourceChip}
-          >
-            <Icon size={14} color={COLORS.textWeak} strokeWidth={1.8} />
-            <Text style={styles.sourceChipText} numberOfLines={1}>
-              {source.label}
-            </Text>
-          </Pressable>
-        );
-      })}
+      {sources.map((source) => (
+        <ChatStoryCard key={source.id} source={source} />
+      ))}
     </View>
   );
 }
@@ -739,7 +723,11 @@ export const MessageBubble = React.memo(function MessageBubble({
   const rawContent = message.text || (message as any).content || '';
   const replyQuote: { role: string; text: string } | null =
     (message as any).replyTo ?? (isUser ? extractReplyQuote(rawContent) : null);
-  const content = isUser ? stripReplyWrapper(rawContent) : rawContent;
+  // Memento's confirmation cards are shown as buttons, not as text.
+  const { text: content, cards } = useMemo(
+    () => (isUser ? { text: stripReplyWrapper(rawContent), cards: [] } : splitConfirmations(rawContent)),
+    [isUser, rawContent],
+  );
   const surfaceRef = useRef<View>(null);
   const openActions = useMessageActions();
   const userId = useAuthStore((state) => state.user?._id ?? 'guest');
@@ -761,7 +749,7 @@ export const MessageBubble = React.memo(function MessageBubble({
     [rawAttachments],
   );
 
-  const hasContent = content.trim().length > 0 || rawAttachments.length > 0;
+  const hasContent = content.trim().length > 0 || rawAttachments.length > 0 || cards.length > 0;
   const isOnlyUrl = content.trim().length > 0 && isMessageOnlyUrl(content);
 
   // Must be declared before any early return (Rules of Hooks)
@@ -779,7 +767,7 @@ export const MessageBubble = React.memo(function MessageBubble({
     isUser ? styles.userSurface : styles.assistantSurface,
     isOnlyUrl && isUser && { backgroundColor: 'transparent', paddingHorizontal: 0, paddingVertical: 0 },
   ];
-  const showSurface = !hasStack || Boolean(replyQuote?.text) || hasInlineAttachments || content.trim().length > 0;
+  const showSurface = !hasStack || Boolean(replyQuote?.text) || hasInlineAttachments || content.trim().length > 0 || cards.length > 0;
 
 
   const Container = animated ? Animated.View : View;
@@ -846,6 +834,10 @@ export const MessageBubble = React.memo(function MessageBubble({
 
           {/* Link preview chips */}
           {content.trim().length > 0 && <LinkPreviews text={content} />}
+
+          {cards.map((card) => (
+            <ChatConfirmCard key={String(card.args.confirmation ?? card.text)} card={card} />
+          ))}
           </View>
           )}
         </Pressable>
@@ -950,20 +942,7 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   listMarker: { minWidth: 14 },
   listText: { flex: 1 },
   quoteBlock: { borderLeftWidth: 3, borderLeftColor: COLORS.strokeWeak, paddingLeft: 8 },
-  sourcesRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 6, maxWidth: '100%' },
-  sourcesLabel: { ...TYPE.metadata, color: COLORS.textWeak },
-  sourceChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    minHeight: 32,
-    maxWidth: 220,
-    paddingHorizontal: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeak,
-  },
-  sourceChipText: { ...TYPE.metadata, color: COLORS.textStrong, flexShrink: 1 },
+  sourcesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6, maxWidth: '100%' },
   replyQuote: {
     backgroundColor: COLORS.strokeWeaker,
     borderLeftColor: COLORS.info,

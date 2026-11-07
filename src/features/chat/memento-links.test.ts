@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { collectReplySources, mementoRoute, parseMementoPath } from './memento-links';
+import { collectReplySources, mementoRoute, parseMementoPath, splitConfirmations } from './memento-links';
 import { splitMessageBlocks, tokenizeMessageMarkdown } from './message-markdown';
 
 const LAGOS = '64b7f0c2a1b2c3d4e5f60711';
@@ -47,5 +47,20 @@ describe('message blocks', () => {
 
   test('does not mistake a bold word at the start for a bullet', () => {
     expect(splitMessageBlocks('**Bold** start')[0].type).toBe('paragraph');
+  });
+});
+
+describe('confirmation cards', () => {
+  const card = { tool: 'delete_story', memory: CHAT, args: { query: 'Lagos', confirmation: 'ABCDEFGH' }, text: 'Delete the story "Trip to Lagos".' };
+  const reply = (kind = 'memento-confirm') => `Want me to delete it?\n\n\`\`\`${kind}\n${JSON.stringify(card)}\n\`\`\``;
+
+  test("takes cards out of the reply's words", () => {
+    expect(splitConfirmations(reply())).toEqual({ text: 'Want me to delete it?', cards: [{ ...card, confirmed: false }] });
+    expect(splitConfirmations(reply('memento-confirmed')).cards[0].confirmed).toBe(true);
+  });
+
+  test('hides a card still streaming in, and drops one that is not valid', () => {
+    expect(splitConfirmations('Sure.\n\n```memento-confirm\n{"tool":"del').text).toBe('Sure.');
+    expect(splitConfirmations('```memento-confirm\nnot json\n```')).toEqual({ text: '', cards: [] });
   });
 });
