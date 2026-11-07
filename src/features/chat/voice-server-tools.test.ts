@@ -123,6 +123,18 @@ describe('parseVoiceToolEffects', () => {
     ]);
   });
 
+  test('keeps observation refreshes, so remembered or forgotten facts show up', () => {
+    expect(
+      parseVoiceToolEffects([
+        { type: 'refresh', what: 'observations' },
+        { type: 'refresh', what: 'beneficiaries' },
+      ]),
+    ).toEqual([
+      { type: 'refresh', what: 'observations' },
+      { type: 'refresh', what: 'beneficiaries' },
+    ]);
+  });
+
   test('handles a missing or malformed list', () => {
     expect(parseVoiceToolEffects(undefined)).toEqual([]);
     expect(parseVoiceToolEffects({})).toEqual([]);

@@ -1535,8 +1535,12 @@ export function useVoiceMode({
               } else if (effect.what === 'capsules') {
                 void queryClient.invalidateQueries({ queryKey: ['capsules'] });
                 void queryClient.invalidateQueries({ queryKey: queryKeys.capsuleStats });
-              } else {
+              } else if (effect.what === 'beneficiaries') {
                 void queryClient.invalidateQueries({ queryKey: queryKeys.beneficiaries });
+              } else if (effect.what === 'observations') {
+                // What Memento keeps about the host: the persona (and its summary) and their context.
+                void queryClient.invalidateQueries({ queryKey: queryKeys.persona });
+                void queryClient.invalidateQueries({ queryKey: queryKeys.userContext });
               }
             } else if (effect.type === 'open') {
               const destination = resolveVoiceDestination(effect.destination);
