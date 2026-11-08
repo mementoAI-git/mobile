@@ -1,12 +1,10 @@
-import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
-import { TouchableOpacity } from '@/components/ui/Touchable';
-import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
-import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { Button, Avatar } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
 import { useRouter } from 'expo-router';
 import { useStories } from '@/hooks/queries/use-memories';
 import { useCapsules } from '@/hooks/queries/use-capsules';
@@ -22,7 +20,6 @@ export function GuardianLensSheet({
   beneficiary,
   onClose,
 }: GuardianLensSheetProps) {
-  const COLORS = useThemeColors();
   const { data: storiesData } = useStories({ limit: 50 });
   const { data: capsulesData } = useCapsules();
 
@@ -61,46 +58,20 @@ export function GuardianLensSheet({
   };
 
   return (
-    <View className="flex-grow pb-8 pt-2">
-      {/* Top Bar with Simulation Pill & 44x44 Close Button */}
-      <View className="flex-row items-center justify-between mb-4">
-        <View className="flex-row items-center gap-1.5 bg-brand/10 rounded-full px-3 py-1">
-          <View className="size-1.5 rounded-full bg-brand" />
-          <Text className="text-brand uppercase tracking-wider" style={TYPE.metadata}>
-            Guardian Lens Simulation
-          </Text>
-        </View>
+    <View style={{ gap: SHEET_GROUP_GAP, paddingBottom: 8 }}>
+      <SheetHeader
+        title={`${beneficiary.name}’s view`}
+        onClose={handleDismiss}
+        closeLabel="Close Guardian Lens preview"
+      />
 
-        <TouchableOpacity
-          onPress={handleDismiss}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Close Guardian Lens preview"
-          className="size-11 rounded-full bg-fill-weaker items-center justify-center"
-        >
-          <X size={18} color={COLORS.textWeak} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Header Profile Info */}
-      <View className="flex-row items-center gap-3.5 mb-5">
-        <Avatar userId={beneficiary.user?._id} seed={beneficiary.user?.email || beneficiary.email} uri={beneficiary.user?.picture_url} name={beneficiary.name} size="lg" />
-        <View className="flex-1">
-          <Text className="text-text-strong" style={TYPE.sectionTitle}>
-            {beneficiary.name}’s View
-          </Text>
-          <Text className="text-text-weak" style={TYPE.bodySmall}>
-            {beneficiary.relationship || 'Designated Beneficiary'} · {beneficiary.email}
-          </Text>
-        </View>
-      </View>
-
-      <Text className="text-text-weak mb-5" style={TYPE.body}>
+      <View style={{ gap: SHEET_SECTION_GAP }}>
+      <Text className="text-text-weak" style={TYPE.body}>
         This simulation previews what {beneficiary.name} can access in your legacy vault according to your sharing permissions.
       </Text>
 
       {/* Breakdown Grid */}
-      <View className="gap-3 mb-6">
+      <View className="gap-3">
         {/* Unlocked / Shared Card */}
         <View className="rounded-3xl bg-fill-weaker border border-stroke-weaker p-4">
           <View className="flex-row items-center justify-between mb-3">
@@ -152,10 +123,12 @@ export function GuardianLensSheet({
       </View>
 
       {/* Security Assurance */}
-      <View className="bg-brand/5 border-l-2 border-brand rounded-r-2xl p-4 mb-6">
+      <View className="bg-brand/5 border-l-2 border-brand rounded-r-2xl p-4">
         <Text className="text-text-weak" style={TYPE.bodySmall}>
           Zero-knowledge privacy protects all unshared personal memories until you explicitly grant access.
         </Text>
+      </View>
+
       </View>
 
       {/* Action Buttons */}
@@ -163,6 +136,7 @@ export function GuardianLensSheet({
         <Button
           variant="primary"
           size="lg"
+          rounded="full"
           className="h-14 w-full"
           onPress={handleSimulateInFeed}
         >
@@ -171,6 +145,7 @@ export function GuardianLensSheet({
         <Button
           variant="secondary"
           size="lg"
+          rounded="full"
           className="h-14 w-full"
           onPress={handleDismiss}
         >

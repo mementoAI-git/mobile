@@ -21,7 +21,7 @@ describe('global typography system', () => {
       bodyLarge: {fontFamily: FONTS.sans, fontSize: 16, lineHeight: 25},
       body: {fontFamily: FONTS.sans, fontSize: 15, lineHeight: 24},
       bodyStrong: {fontFamily: FONTS.bodyBold, fontWeight: '700', fontSize: 15, lineHeight: 24},
-      bodySmall: {fontFamily: FONTS.sans, fontSize: 13, lineHeight: 19},
+      bodySmall: {fontFamily: FONTS.sans, fontSize: 14, lineHeight: 20},
       label: {fontFamily: FONTS.sansMedium, fontSize: 14, lineHeight: 20},
       button: {fontFamily: FONTS.sansSemi, fontSize: 16, lineHeight: 23},
       buttonSmall: {fontFamily: FONTS.sansSemi, fontSize: 14, lineHeight: 20},
@@ -29,15 +29,16 @@ describe('global typography system', () => {
       eyebrow: {fontFamily: FONTS.sansBold, fontSize: 10, lineHeight: 14},
       input: {fontFamily: FONTS.sans, fontSize: 16, lineHeight: 23},
       stat: {fontFamily: FONTS.sansBold, fontSize: 21, lineHeight: 27},
-      mono: {fontFamily: FONTS.mono, fontSize: 13, lineHeight: 19},
+      mono: {fontFamily: FONTS.mono, fontSize: 14, lineHeight: 20},
     });
   });
 
   test('exposes only the approved role names', () => {
     expect(Object.keys(TYPE).sort()).toEqual([
-      'body', 'bodyLarge', 'bodySmall', 'bodyStrong', 'button', 'buttonSmall', 'cardTitle',
-      'dashboardTitle', 'dashboardTitleSmall', 'displayStat', 'displayTitle', 'editorTitle', 'eyebrow', 'greeting', 'greetingName', 'input', 'label',
-      'calendarWheel', 'metadata', 'mono', 'musicCaption', 'musicTrack', 'musicVolume', 'publishSuccessAction', 'publishSuccessTitle', 'screenTitle', 'sectionTitle', 'sectionTitleWeak', 'sheetTitle', 'stat', 'uiTitle', 'voicePickerTitle',
+      'body', 'bodyLarge', 'bodyLargeSemi', 'bodySmall', 'bodySmallStrong', 'bodyStrong', 'button', 'buttonSmall', 'captureInput', 'cardTitle', 'cardTitleAccent',
+      'dashboardTitle', 'dashboardTitleSmall', 'displayStat', 'displayTitle', 'editorTitle', 'eyebrow', 'greeting', 'greetingName', 'input', 'insightStat', 'label',
+      'calendarWheel', 'metadata', 'mono', 'musicCaption', 'musicTrack', 'musicVolume',
+      'planPrice', 'profileName', 'publishSuccessAction', 'publishSuccessTitle', 'reflectionTitle', 'reflectionTitleAccent', 'screenTitle', 'screenTitleAccent', 'sectionTitle', 'sectionTitleWeak', 'sheetTitle', 'stat', 'streakCount', 'uiTitle', 'voicePickerTitle',
     ].sort());
   });
 

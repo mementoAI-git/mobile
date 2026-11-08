@@ -12,12 +12,16 @@ describe('voice call route contract', () => {
     expect(chat).not.toContain('VoiceModeOverlay');
   });
 
-  test('supports first-time selection and returning-user ready state', async () => {
+  test('shows the intro until a voice is saved, then starts the call and closes', async () => {
     const route = await Bun.file(new URL('../../../app/voice-call.tsx', import.meta.url)).text();
+    expect(route).toContain("setStage('intro')");
     expect(route).toContain("setStage('choosing')");
-    expect(route).toContain("setStage('ready')");
-    expect(route).toContain('providerVoiceName');
-    expect(route).toContain("getVoiceCallTransition(stage, 'connection-failed')");
+    expect(route).toContain('<VoiceIntro onChooseVoice={openPicker} onDismiss={dismiss} />');
+    expect(route).toContain('startCall({ memoryId: effectiveMemoryId, voiceName: choice.providerVoiceName });');
     expect(route).toContain('useVoiceCall()');
+    // Select voice: a 48px pill.
+    expect(route).toContain('rounded="full"');
+    expect(route).toContain('style={{ height: 48, minHeight: 48 }}');
   });
+
 });

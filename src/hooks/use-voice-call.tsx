@@ -22,6 +22,13 @@ type VoiceCallContextValue = {
   voice: ReturnType<typeof useVoiceMode>;
   /** Set which conversation and voice the next call uses. Ignored during a call. */
   configure(config: VoiceCallConfig): void;
+  /** The conversation and voice the call uses. */
+  config: VoiceCallConfig;
+  /**
+   * Starts a call with this conversation and voice. The call runs here, in the
+   * provider, and shows as the floating call over every screen.
+   */
+  startCall(config: VoiceCallConfig): void;
 };
 
 const VoiceCallContext = createContext<VoiceCallContextValue | null>(null);
@@ -128,7 +135,35 @@ export function VoiceCallProvider({ children }: { children: React.ReactNode }) {
     return () => subscription?.remove();
   }, [callActivity]);
 
-  const value = useMemo(() => ({ voice, configure }), [voice, configure]);
+  // Connect once the new conversation and voice reach useVoiceMode: connect()
+  // reads them from the render that applied them.
+  const [pendingStart, setPendingStart] = useState(false);
+  const startCall = useCallback((next: VoiceCallConfig) => {
+    setConfig((current) =>
+      current.memoryId === next.memoryId && current.voiceName === next.voiceName ? current : next,
+    );
+    setPendingStart(true);
+  }, []);
+  const { connect } = voice;
+  useEffect(() => {
+    if (!pendingStart) return;
+    setPendingStart(false);
+    void connect();
+  }, [connect, pendingStart]);
+
+  // The call starts from the main app, so a plan that doesn't include voice
+  // reopens the voice page, which explains the upgrade.
+  const failureKind = voice.connectionFailure?.kind;
+  useEffect(() => {
+    if (failureKind === 'upgrade-required' && pathnameRef.current !== VOICE_CALL_PATH) {
+      router.push(VOICE_CALL_PATH as never);
+    }
+  }, [failureKind]);
+
+  const value = useMemo(
+    () => ({ voice, configure, config, startCall }),
+    [voice, configure, config, startCall],
+  );
   return <VoiceCallContext.Provider value={value}>{children}</VoiceCallContext.Provider>;
 }
 

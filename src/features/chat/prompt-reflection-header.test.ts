@@ -23,11 +23,11 @@ describe('PromptReflectionHeader component', () => {
     expect(source).not.toMatch(/text-gray-|text-slate-/);
   });
 
-  test('keeps the Prompt title and shows the customizable digital mind for host conversations', async () => {
+  test('titles reflection conversations Reflection and shows the customizable digital mind for host conversations', async () => {
     const screen = await Bun.file(
       new URL('../../screens/ChatScreen.tsx', import.meta.url),
     ).text();
 
-    expect(screen).toContain('style={styles.headerTitle}>Prompt</Text> : <DigitalMindHeader />');
+    expect(screen).toContain('style={styles.headerTitle}>Reflection</Text> : <DigitalMindHeader />');
   });
 });

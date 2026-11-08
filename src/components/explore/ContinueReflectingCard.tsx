@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { ms } from '@/constants/responsive';
+import { reflectionCardWidth } from '@/features/prompts/reflection-card-size';
 import { getPromptAccent } from '@/features/prompts/prompt-accent';
 
 interface ContinueReflectingCardProps {
@@ -21,6 +22,9 @@ interface ContinueReflectingCardProps {
   onPress?: () => void;
   className?: string;
 }
+
+/** Prompt lines that fit the fixed card height above the footer. */
+export const REFLECTION_CARD_LINES = 4;
 
 export const ContinueReflectingCard = React.memo(function ContinueReflectingCard({
   title,
@@ -38,7 +42,7 @@ export const ContinueReflectingCard = React.memo(function ContinueReflectingCard
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const accent = getPromptAccent(title);
-  const disabled = answered || !onPress;
+  const disabled = !onPress;
   const hasReplyCount = typeof replyCount === 'number' && Number.isSafeInteger(replyCount) && replyCount >= 0;
 
   const handlePressIn = useCallback(() => {
@@ -58,21 +62,24 @@ export const ContinueReflectingCard = React.memo(function ContinueReflectingCard
       <TouchableOpacity
         accessibilityRole="button"
         accessibilityLabel={title}
-        accessibilityHint={answered ? 'Answered' : 'Open this reflection'}
+        accessibilityHint={answered ? 'Answered today. Opens this reflection' : 'Opens this reflection'}
         accessibilityState={{ disabled }}
         disabled={disabled}
         onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={reducedMotion ? 1 : 0.9}
-        style={{ width: Math.min(300, width - 64) }}
-        className={cn('min-h-[220px] justify-between gap-8 rounded-[24px] border border-stroke-weak bg-fill-weaker p-5 mr-4', className)}
+        // Web mobile overview: w-[min(78vw,320px)] h-[267px] gap-10 rounded-3xl p-[23px].
+        // Fixed height so every card in the row matches; long prompts are truncated
+        // (the full text is on the reflection page).
+        style={{ width: reflectionCardWidth(width), padding: 23 }}
+        className={cn('h-[267px] justify-between gap-10 overflow-hidden rounded-[24px] border border-stroke-weak bg-fill-weaker', className)}
       >
-        <Text className="text-text-strong" style={TYPE.cardTitle}>
+        <Text className="text-text-strong" style={[TYPE.reflectionTitle, { flexShrink: 1 }]} numberOfLines={REFLECTION_CARD_LINES} ellipsizeMode="tail">
           {accent ? (
             <>
               {title.slice(0, accent.start)}
-              <Text className="text-brand italic">{title.slice(accent.start, accent.end)}</Text>
+              <Text className="text-brand" style={TYPE.reflectionTitleAccent}>{title.slice(accent.start, accent.end)}</Text>
               {title.slice(accent.end)}
             </>
           ) : title}
@@ -81,37 +88,37 @@ export const ContinueReflectingCard = React.memo(function ContinueReflectingCard
         {answered ? (
           <View className="flex-row items-center gap-1.5">
             <Check size={ms(16)} color={COLORS.success} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
-            <Text style={[TYPE.bodySmall, { color: COLORS.textWeak, flex: 1 }]}>
+            <Text style={[TYPE.label, { color: COLORS.textWeak, flex: 1 }]}>
               You’ve already shared a reflection for this one today.
             </Text>
           </View>
         ) : (
           <View className="flex-row items-center justify-between gap-2">
-            <View className="flex-row items-center gap-1 rounded-full bg-fill-weak px-2 py-1 shrink min-w-0">
+            <View className="flex-row items-center gap-1 rounded-full bg-fill-weak shrink min-w-0" style={{ paddingHorizontal: 7, paddingVertical: 2 }}>
               <View
-                className="size-2 rounded-full"
-                style={{ backgroundColor: categoryLabel.toLowerCase() === 'people i love' ? COLORS.success : COLORS.warning }}
+                className="rounded-full"
+                style={{ width: 9, height: 9, backgroundColor: categoryLabel.toLowerCase() === 'people i love' ? COLORS.success : COLORS.warning }}
               />
-              <Text numberOfLines={1} className="text-text-strong shrink" style={TYPE.metadata}>
+              <Text numberOfLines={1} className="text-text-strong shrink" style={TYPE.label}>
                 {categoryLabel}
               </Text>
             </View>
             {personal ? (
-              <Text className="text-text-base" style={TYPE.metadata}>For you</Text>
+              <Text className="text-text-weak" style={TYPE.label}>For you</Text>
             ) : (
-              <View className="flex-row items-center gap-1.5 shrink-0">
+              <View className="flex-row items-center gap-2 shrink-0">
                 <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" className="flex-row pl-2.5">
                   {avatars.map((source, index) => (
                     <Image
                       key={index}
                       source={source}
-                      style={{ width: ms(20), height: ms(20) }}
+                      style={{ width: 24, height: 24 }}
                       className="-ml-2.5 rounded-full border border-stroke-weak"
                     />
                   ))}
                 </View>
                 {hasReplyCount && (
-                  <Text className="text-text-base" style={TYPE.metadata}>{replyCount.toLocaleString('en-US')} people</Text>
+                  <Text className="text-text-weak" style={TYPE.label}>{replyCount.toLocaleString('en-US')} people</Text>
                 )}
               </View>
             )}

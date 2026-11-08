@@ -42,7 +42,7 @@ export function Select({
   options,
   value,
   onValueChange,
-  placeholder = 'Select an option',
+  placeholder = 'Choose',
   disabled = false,
   label,
   className,
@@ -55,7 +55,7 @@ export function Select({
   const handlePress = () => {
     if (disabled) return;
     Haptics.selectionAsync();
-    openSheet('select', { options, value, onValueChange, placeholder });
+    openSheet('select', { options, value, onValueChange, title: label || placeholder });
   };
 
   return (

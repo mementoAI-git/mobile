@@ -4,14 +4,16 @@ import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import Check from 'lucide-react-native/icons/check';
-import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
 import { toast } from '@/components/ui/Toast';
 
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { INPUT_RADIUS } from '@/components/ui/TextInput';
 import { buildGroupPayload, GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
 import { useCreateGroup, useUpdateGroup } from '@/hooks/mutations/use-group-mutations';
 import type { IGroup } from '@/types';
@@ -79,15 +81,15 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
       paddingHorizontal: 20,
       paddingTop: 12,
       paddingBottom: Math.max(insets.bottom, 12) + 8,
-      backgroundColor: COLORS.background,
+      backgroundColor: COLORS.sheet,
     }}>
-      <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={close}>
+      <Button variant="secondary" size="lg" rounded="full" className="h-14 flex-1" onPress={close}>
         Dismiss
       </Button>
       <Button
         size="lg"
-        className="h-14 flex-1 bg-fill-strong"
-        textClassName="text-white"
+        rounded="full"
+        className="h-14 flex-1"
         loading={isPending}
         disabled={!payload || isPending}
         onPress={() => void submit()}
@@ -101,20 +103,18 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
     <View style={{ flex: 1 }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ flex: 1 }}>
-          <View style={{ minHeight: 44, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
-              {isEdit ? 'Group Settings' : 'Create Group'}
-            </Text>
-            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); close(); }} accessibilityRole="button" accessibilityLabel="Close create group" style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak }}>
-              <X size={22} color={COLORS.textStrong} />
-            </TouchableOpacity>
-          </View>
+          <SheetHeader
+            title={isEdit ? 'Group settings' : 'Create group'}
+            onClose={close}
+            closeLabel="Close create group"
+            style={{ paddingHorizontal: 20 }}
+          />
 
           <BottomSheetScrollView
             style={{ flex: 1 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28, gap: 20 }}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: SHEET_GROUP_GAP - 12, gap: SHEET_SECTION_GAP }}
           >
             <View style={{ gap: 8 }}>
               <FieldLabel>Group name</FieldLabel>
@@ -123,7 +123,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
                 onChangeText={setName}
                 autoCapitalize="words"
                 placeholderTextColor={COLORS.textMuted}
-                style={{ height: 56, borderRadius: 999, backgroundColor: COLORS.fillWeaker, paddingHorizontal: 20, ...TYPE.input, color: COLORS.textStrong }}
+                style={{ height: 56, borderRadius: INPUT_RADIUS, borderWidth: 1, borderColor: COLORS.strokeWeak, backgroundColor: COLORS.fillWeaker, paddingHorizontal: 20, ...TYPE.input, color: COLORS.textStrong }}
               />
             </View>
 
@@ -135,11 +135,11 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
                 placeholder="Enter description here"
                 placeholderTextColor={COLORS.textMuted}
                 multiline
-                style={{ minHeight: 112, borderRadius: 16, backgroundColor: COLORS.fillWeaker, paddingHorizontal: 16, paddingVertical: 14, ...TYPE.input, color: COLORS.textStrong, textAlignVertical: 'top' }}
+                style={{ minHeight: 112, borderRadius: INPUT_RADIUS, borderWidth: 1, borderColor: COLORS.strokeWeak, backgroundColor: COLORS.fillWeaker, paddingHorizontal: 16, paddingVertical: 14, ...TYPE.input, color: COLORS.textStrong, textAlignVertical: 'top' }}
               />
             </View>
 
-            <View style={{ gap: 14 }}>
+            <View style={{ gap: 12 }}>
               <FieldLabel>Group colour</FieldLabel>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 {GROUP_COLOR_PALETTE.map((swatch) => {

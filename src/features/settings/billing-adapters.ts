@@ -23,6 +23,10 @@ export interface SubscriptionSummary {
   trial_ends_at?: string | null;
   current_period_end?: string | null;
   cancel_at_period_end?: boolean;
+  /** True once the member has had a subscription; they get no further trial (web). */
+  has_used_trial?: boolean;
+  /** Whether there is a recurring subscription the member can change or cancel (web). */
+  can_manage_subscription?: boolean;
   provider?: 'polar' | 'apple' | 'google';
   currency?: 'USD' | 'NGN';
   interval?: 'monthly' | 'annual';
@@ -161,6 +165,10 @@ export function normalizeSubscriptionSummary(payload: unknown): SubscriptionSumm
     current_period_end: typeof raw.current_period_end === 'string' ? raw.current_period_end : null,
     cancel_at_period_end: typeof raw.cancel_at_period_end === 'boolean'
       ? raw.cancel_at_period_end
+      : undefined,
+    has_used_trial: typeof raw.has_used_trial === 'boolean' ? raw.has_used_trial : undefined,
+    can_manage_subscription: typeof raw.can_manage_subscription === 'boolean'
+      ? raw.can_manage_subscription
       : undefined,
     provider: (
       raw.provider === 'apple' || raw.payment_provider === 'apple' || raw.provider === 'storekit' ? 'apple' :

@@ -7,6 +7,7 @@ import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import { logger } from '@/lib/logger';
 import { toast } from '@/components/ui/Toast';
+import { useUiStore } from '@/store/ui.store';
 import { iapService } from '@/features/billing/iap-service';
 import { isAlreadyOwnedPurchaseError } from '@/features/billing/iap-errors';
 import { extractBillingUrl } from './billing-adapters';
@@ -75,6 +76,8 @@ export async function launchBillingCheckout({
       );
       if (purchased) {
         await invalidateBillingQueries(queryClient);
+        // Celebrate the upgrade (web checkout returns via Overview `?checkout=success`).
+        if (tier === 'pro') useUiStore.getState().openSheet('upgrade-success');
         return true;
       }
       return false;

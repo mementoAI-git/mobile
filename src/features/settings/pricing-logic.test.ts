@@ -29,7 +29,7 @@ describe('Pricing logic', () => {
   test('disables checkout when the selected native store product is unavailable', () => {
     expect(logic).toContain('purchaseAvailable');
     expect(logic).toContain('localizedProduct.storeAvailable');
-    expect(screen).toContain('Purchases unavailable');
-    expect(screen).toContain('purchaseAvailable');
+    expect(readFileSync('src/features/billing/plan-state.ts', 'utf8')).toContain('Purchases unavailable');
+    expect(screen).toContain('canCheckout: purchaseAvailable');
   });
 });

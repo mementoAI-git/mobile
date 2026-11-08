@@ -27,3 +27,19 @@ export function reflectionCapture(row: IDashboardPromptSlot): IDailyPromptCaptur
   if (!row.prompt._id) return null;
   return { pinned_text: row.prompt.title, prompt_type: 'static', prompt_id: row.prompt._id, reflection_day_key: row.reflection_day_key };
 }
+
+/**
+ * Route params for a reflection card: the full prompt conversation, opened the
+ * same way as topic cards (`/chat/[id]`, `type: 'prompt'`). AI prompts have no
+ * prompt id, so they open as `new` and the chat creates the conversation from
+ * the prompt text on first send. Answered cards open too, like web.
+ */
+export function reflectionRouteParams(row: IDashboardPromptSlot, categoryLabel: string) {
+  const isStatic = row.slot_kind === 'static';
+  return {
+    id: isStatic && row.prompt._id ? row.prompt._id : 'new',
+    type: 'prompt',
+    promptTitle: (isStatic ? row.prompt.title : row.ai_prompt_text) || '',
+    promptLabel: isStatic ? categoryLabel : 'For you',
+  };
+}

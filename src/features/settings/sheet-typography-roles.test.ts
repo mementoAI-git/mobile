@@ -26,12 +26,13 @@ describe('sheet typography roles', () => {
 
     for (const source of utilitySheets) {
       expect(source).not.toContain('TYPE.screenTitle');
-      expect(source).toContain('TYPE.sectionTitle');
+      // Standard sheets use the shared SheetHeader; alert-style confirmations keep their centred title.
+      expect(source.includes('<SheetHeader') || source.includes('TYPE.sectionTitle')).toBe(true);
     }
 
     const capsuleSheet = read('src/components/sheets/CreateCapsuleSheet.tsx');
     expect(capsuleSheet).not.toContain('style={TYPE.bodyLarge}>Delivery Date');
-    expect(capsuleSheet).toContain('style={TYPE.sectionTitle}>Delivery Date');
+    expect(capsuleSheet).toContain('title="Delivery date"');
   });
 
   test('keeps list names and setup steps compact inside sheets', () => {
@@ -44,7 +45,7 @@ describe('sheet typography roles', () => {
 
     expect(setupTwoFactor).not.toContain('TYPE.cardTitle');
     expect(setupTwoFactor).not.toContain('TYPE.bodyLarge');
-    expect(setupTwoFactor).toContain('style={TYPE.label}>Step 1');
+    expect(setupTwoFactor).toContain('style={[TYPE.label, styles.stepTitle]}>1. Choose an authenticator');
   });
 
   test('renders cancellation explanation as standard body copy', () => {

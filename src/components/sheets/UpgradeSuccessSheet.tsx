@@ -1,115 +1,64 @@
-import { useThemeColors } from '@/hooks/use-theme-colors';
-import React, { useEffect } from 'react';
-import { View, Text, Image } from 'react-native';
-import { TouchableOpacity } from '@/components/ui/Touchable';
-import X from 'lucide-react-native/icons/x';
+import React from 'react';
+import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS } from '@/constants/tokens';
-import { TYPE } from '@/constants/typography';
+import Check from 'lucide-react-native/icons/check';
 import { Button } from '@/components/ui';
+import { TYPE } from '@/constants/typography';
+import { PRO_FEATURES } from '@/features/billing/plan-state';
+import { useThemeColors } from '@/hooks/use-theme-colors';
+import { CelebrationSheet, CelebrationSheetCard } from './CelebrationSheet';
 
 const STREAK_FLAME = require('../../../assets/images/illustrations/streak_flame.webp');
+
+/** What Pro adds, from the plans page catalog (web `plan-catalog.ts`). */
+const UNLOCKED = PRO_FEATURES.filter((feature) => feature !== 'Everything in Free');
 
 interface UpgradeSuccessSheetProps {
   onClose?: () => void;
 }
 
-const UNLOCKED_PERKS = [
-  {
-    title: 'Unlimited Time Capsules',
-    desc: 'Send messages across years and decades without limits.',
-  },
-  {
-    title: '10 GB Vault Storage',
-    desc: 'Store original-resolution photographs, documents, and voice journals.',
-  },
-  {
-    title: 'Custom AI Voice & Tone',
-    desc: 'Calibrate your companion to speak in your exact cadence and style.',
-  },
-  {
-    title: 'Deep Emotional Insights',
-    desc: 'Discover life themes, sentiment trends, and reflective breakthroughs.',
-  },
-];
-
+/** Shown once a Pro purchase is confirmed (store purchase or web checkout return). */
 export function UpgradeSuccessSheet({ onClose }: UpgradeSuccessSheetProps) {
-  const COLORS = useThemeColors();
-  useEffect(() => {
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  }, []);
-
-  const handleDismiss = () => {
-    void Haptics.selectionAsync();
-    onClose?.();
-  };
-
+  const colors = useThemeColors();
   return (
-    <View className="flex-grow pb-8 pt-2">
-      {/* Top Bar with 44x44 Close Button */}
-      <View className="flex-row items-center justify-end mb-2">
-        <TouchableOpacity
-          onPress={handleDismiss}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Close upgrade celebration"
-          className="size-11 rounded-full bg-fill-weaker items-center justify-center"
+    <CelebrationSheet
+      image={STREAK_FLAME}
+      title="Welcome to Memento Pro"
+      description="Your archive is fully unlocked. Here’s what’s new for you."
+      closeLabel="Close"
+      onClose={onClose}
+      actions={
+        <Button
+          variant="primary"
+          className="h-14 w-full"
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            onClose?.();
+          }}
         >
-          <X size={18} color={COLORS.textWeak} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Hero Illustration */}
-      <View className="items-center justify-center pt-1 pb-6">
-        <Image
-          source={STREAK_FLAME}
-          style={{ width: 88, height: 88, marginBottom: 16 }}
-          resizeMode="contain"
-        />
-
-        <Text
-          className="text-center text-text-strong mb-2.5"
-          style={TYPE.sectionTitle}
-        >
-          Welcome to Memento Pro
-        </Text>
-        <Text
-          className="text-center text-text-weak px-4 leading-relaxed"
-          style={TYPE.body}
-        >
-          Your personal archive is fully unlocked. Every chapter, voice memory, and future capsule is permanently preserved.
-        </Text>
-      </View>
-
-      {/* Perks List */}
-      <View className="bg-fill-weaker rounded-3xl border border-stroke-weaker p-5 gap-4 mb-8">
-        {UNLOCKED_PERKS.map((perk, index) => (
-          <View key={index} className="flex-row items-start gap-3.5">
-            <View className="size-2 rounded-full bg-brand mt-2" />
-            <View className="flex-1">
-              <Text className="text-text-strong" style={TYPE.label}>
-                {perk.title}
-              </Text>
-              <Text className="text-text-weak mt-0.5" style={TYPE.metadata}>
-                {perk.desc}
-              </Text>
+          Continue
+        </Button>
+      }
+    >
+      <CelebrationSheetCard>
+        {UNLOCKED.map((feature) => (
+          <View key={feature} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 12,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.brandTint,
+              }}
+            >
+              <Check size={14} color={colors.brand} strokeWidth={2.4} />
             </View>
+            <Text style={[TYPE.label, { color: colors.textStrong, flex: 1 }]}>{feature}</Text>
           </View>
         ))}
-      </View>
-
-      {/* Primary CTA */}
-      <Button
-        variant="primary"
-        size="lg"
-        className="h-14 w-full"
-        onPress={() => {
-          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          onClose?.();
-        }}
-      >
-        Explore Your Vault
-      </Button>
-    </View>
+      </CelebrationSheetCard>
+    </CelebrationSheet>
   );
 }

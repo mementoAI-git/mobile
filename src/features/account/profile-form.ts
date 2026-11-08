@@ -13,7 +13,6 @@ export interface ProfileFormValues {
   phone: string;
   country: string;
   location: string;
-  bio: string;
 }
 
 export interface ProfileUpdatePayload {
@@ -38,7 +37,6 @@ export function formatProfileBirthday(value: unknown): string {
 
 export function normalizeProfileForm(
   profile: Partial<IUser> | null | undefined,
-  biography?: string | null,
 ): ProfileFormValues {
   return {
     email: profile?.email ?? '',
@@ -49,14 +47,10 @@ export function normalizeProfileForm(
     phone: profile?.phone_number ?? '',
     country: profile?.country ?? '',
     location: profile?.location ?? '',
-    bio: biography ?? profile?.context?.self_description ?? '',
   };
 }
 
-export function toProfileUpdatePayload(
-  values: ProfileFormValues,
-  currentContext?: any,
-): ProfileUpdatePayload {
+export function toProfileUpdatePayload(values: ProfileFormValues): ProfileUpdatePayload {
   const birthday = dayjs(values.birthday.trim(), 'DD/MM/YYYY', true);
 
   return {
@@ -67,9 +61,25 @@ export function toProfileUpdatePayload(
     phone_number: values.phone.trim(),
     country: values.country.trim(),
     location: values.location.trim(),
+  };
+}
+
+/** The About me text, edited on its own from the personal info pages. */
+export function normalizeAboutMe(
+  profile: Partial<IUser> | null | undefined,
+  biography?: string | null,
+): string {
+  return biography ?? profile?.context?.self_description ?? '';
+}
+
+export function toAboutMeUpdatePayload(
+  biography: string,
+  currentContext?: any,
+): Pick<ProfileUpdatePayload, 'context'> {
+  return {
     context: {
       ...(currentContext && typeof currentContext === 'object' ? currentContext : {}),
-      self_description: (values.bio ?? '').trim(),
+      self_description: biography.trim(),
     },
   };
 }

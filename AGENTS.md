@@ -22,7 +22,7 @@ Memento is a **premium personal legacy app** — it should feel like a high-end 
 
 ### 1. Color System
 
-**Appearance:** The menu Appearance control supports System, Light, Dark, and Deep Sky and persists the device preference. For live UI, read semantic colors with `useThemeColors()`; use `useThemeStyles(createStyles)` with an explicit `(colors: ThemeColors)` factory for module-level styles. The older `useThemedStyles()` value mapper is legacy-only; identical light values can represent different semantic roles. NativeWind semantic classes resolve through `AppearanceProvider`. Static `COLORS` remains the light palette for artwork and style definitions; never mutate it. Keep inverse text on colored banners. The white background rule below applies to Light mode; Dark uses `DARK_COLORS.background` (`#12131a`, matching web). Dark semantic ink, strokes and status colors mirror `Web/memento-web/src/index.css`. Use paired `activeFill`/`activeText` for selected tabs, `mediaSurface`/`mediaText` for fixed media overlays, and `ThemedCardBackground` for decorative raster card washes.
+**Appearance:** The menu Appearance control supports System, Light, Dark, and Deep Sky and persists the device preference. For live UI, read semantic colors with `useThemeColors()`; use `useThemeStyles(createStyles)` with an explicit `(colors: ThemeColors)` factory for module-level styles. The older `useThemedStyles()` value mapper is legacy-only; identical light values can represent different semantic roles. NativeWind semantic classes resolve through `AppearanceProvider`. Static `COLORS` remains the light palette for artwork and style definitions; never mutate it. Keep inverse text on colored banners. The white background rule below applies to Light mode; Dark uses `DARK_COLORS.background` (`#12131a`, matching web). Dark semantic ink, strokes and status colors mirror `Web/memento-web/src/index.css`. In Deep Sky, `card`/`cardRaised`/`bg-card` resolve to `fillWeak` so on-page cards, buttons and tags never show a deep grey slab; anything floating over content uses `popover`. Use paired `activeFill`/`activeText` for selected tabs, `mediaSurface`/`mediaText` for fixed media overlays, and `ThemedCardBackground` for decorative raster card washes.
 
 All colors come from `COLORS` in `src/constants/tokens.ts` and the Tailwind config in `tailwind.config.ts`. **Never hardcode hex values except for the explicitly approved exceptions below.**
 
@@ -34,6 +34,8 @@ All colors come from `COLORS` in `src/constants/tokens.ts` and the Tailwind conf
 | Onboarding screens | `COLORS.onboardingCream` | `#FAF7F2` | `bg-onboarding-cream` |
 | Elevated fill | `COLORS.fillWeak` | `rgba(23,11,0,0.04)` | `bg-fill-weak` |
 | Subtle fill | `COLORS.fillWeaker` | `rgba(23,11,0,0.02)` | `bg-fill-weaker` |
+| Floating surface | `COLORS.popover` | `#ffffff` (dark `#1d1e26`, Deep Sky `#191e2c`) | `bg-popover` — toasts, menus, dropdowns, tab bar |
+| Media viewer backdrop | `COLORS.mediaViewer` | `#EFEDEA` (dark `#0b0c10`, Deep Sky canvas) | — (full-screen photo/video viewer) |
 
 > ⚠️ **Page background is `COLORS.background` (`#ffffff`), enforced by startup tests.** Warm journal cream lives on `sand-1` (`#fefbf8`) and `COLORS.onboardingCream` — use those for onboarding and textured washes, not as the default screen fill.
 
@@ -155,15 +157,19 @@ import { TYPE } from '@/constants/typography';
 | `displayStat` | `FONTS.serif` | 48 / 54 | Hero numerics |
 | `displayTitle` | `FONTS.serif` | 36 / 42 | Hero titles |
 | `screenTitle` | `FONTS.serif` | 28 / 34 | Every screen's primary title |
+| `screenTitleAccent` | `FONTS.serifItalic` | 28 / 34 | The italic word in a screen title ("My *insights*") |
+| `captureInput` | `FONTS.serif` | 24 / 34 | Overview capture card writing area |
+| `reflectionTitle` / `reflectionTitleAccent` | `FONTS.serif` / `FONTS.serifItalic` | 24 / 31 | Continue reflecting card prompt; its orange highlighted words |
 | `greeting` / `greetingName` | `FONTS.serif` / `FONTS.serifItalic` | 24 / 32 | Overview greeting and the host's name |
 | `sectionTitle` / `sectionTitleWeak` | `FONTS.serif` / `FONTS.serifItalic` | 22 / 28 | Section headers; muted words within them |
 | `cardTitle` | `FONTS.serifMedium` | 20 / 26 | Card titles |
 | `uiTitle` | `FONTS.sansSemi` | 20 / 26 | Non-editorial UI titles |
 | `sheetTitle` | `FONTS.sans` 600 on iOS, `FONTS.sansSemi` elsewhere | 20 / 32 (fixed) | Bottom sheet titles |
 | `bodyLarge` | `FONTS.sans` | 16 / 24 | Lead paragraphs |
+| `bodyLargeSemi` | `FONTS.sans` 600 on iOS, `FONTS.sansSemi` elsewhere | 16 / 24 | Account enrichment strength word |
 | `body` | `FONTS.sans` | 15 / 23 | Body copy |
 | `bodyStrong` | `FONTS.bodyBold` 700 | 15 / 23 | Emphasised body copy |
-| `bodySmall` | `FONTS.sans` | 13 / 19 | Secondary copy |
+| `bodySmall` | `FONTS.sans` | 14 / 20 | Secondary copy and body descriptions (no 13px text) |
 | `label` | `FONTS.sansMedium` | 14 / 20 | Labels, list rows |
 | `button` | `FONTS.sansSemi` | 16 / 22 | Standard button text |
 | `buttonSmall` | `FONTS.sansSemi` | 14 / 20 | Compact button text |
@@ -171,7 +177,11 @@ import { TYPE } from '@/constants/typography';
 | `eyebrow` | `FONTS.sansBold` | 10 / 14 | Uppercase tracking labels |
 | `input` | `FONTS.sans` | 16 / 22 | Text inputs |
 | `stat` | `FONTS.sansBold` | 20 / 26 | Inline stat numerics |
-| `mono` | `FONTS.mono` | 13 / 19 | Code / mono |
+| `insightStat` | `FONTS.sans` 600 on iOS, `FONTS.sansSemi` elsewhere | 20 / 26 | Insights statistics tiles (all four the same size, no shrink-to-fit) |
+| `streakCount` | `FONTS.sansSemi` | 28 / 36 | Streak card day count (web streak card B) |
+| `bodySmallStrong` | `FONTS.sansSemi` | 14 / 20 | Bold figures inside small copy |
+| `planPrice` | `FONTS.sansSemi` | 36 / 40 | Plan prices on the plans page |
+| `mono` | `FONTS.mono` | 14 / 20 | Code / mono |
 
 `typography.ts` also holds single-purpose roles (`dashboardTitle`, `editorTitle`, `voicePickerTitle`, the music and publish-success roles, and others). Read the file for those rather than copying their values.
 
@@ -197,6 +207,7 @@ The only exception is capsule theme previews, marked with a `typography-exceptio
 ### Mobile shape standard (updated October 17, 2026)
 
 - Cards and buttons default to **10px radius** (`rounded-[10px]`). This supersedes the older card and pill defaults below. Shared `Card` and `Button` use this default; explicit specialized shapes remain opt-in (for example circular icon buttons).
+- The side menu sits on `COLORS.sheet` (the bottom-sheet surface) with no texture pattern. The Explore section is called **Topics** everywhere people see it (routes stay `/explore`).
 - Side-menu navigation and Search use **48px height**, **10px radius**, and **12px horizontal padding**; content is centered vertically. The active item uses `fillWeak` with neutral text.
 - Side-menu Settings uses **48px height**, **100px radius**, and responsive 24px base horizontal padding.
 - The side-menu profile and Search share a container, with a 32px gap before navigation. The profile uses the Overview prompt blue gradient.
@@ -204,18 +215,22 @@ The only exception is capsule theme previews, marked with a `typography-exceptio
 
 ### 3. Layout & Spacing
 
+- Account page cards (profile, music, streak, enrichment) share **20px radius and 20px padding**. The profile card is white with light-mode ink on Dark and Deep Sky.
+
 - Page content and headers use **16px** left/right gutters. Bottom sheets use **20px** total left/right gutters; avoid adding the sheet manager gutter twice. Internal card/control padding stays component-specific.
 
 - Bottom sheets use three main groups: header (drag handle, title, close control), body, and actions. Keep **8px** from the visible drag indicator to the header row, **32px** between the main groups, and **24px** between sections inside the body. Sheet titles use **20px** SF Pro Rounded semibold with **32px** line height. The Publish post sheet implements this structure with a shared native handle/header component.
 
 - Main-screen sections use **40px** separation (`gap-10`, `mb-10`, or `pb-10` at list-header boundaries). Keep related controls, list rows, and content inside a section at their component spacing.
 - The Overview greeting and primary action card are separate sections with **40px** between them.
+- Continue Reflecting cards match web mobile: `min(78vw, 320px)` wide, 267px min height, 23px padding, 40px inner gap, 16px between cards, scrolling edge to edge and snapping to the 16px gutter.
 - Continue Reflecting groups its title and shuffle status in a zero-gap text column beside the shuffle button, with **16px** from the complete header group to the cards.
 
 #### Border Radius System
 | Shape | Value | Use case |
 |-------|-------|----------|
-| Pill (full round) | `rounded-full` | All buttons, inputs, tags, metadata pills |
+| Pill (full round) | `rounded-full` | Buttons, tags, metadata pills (never inputs) |
+| Input field | 12px (`INPUT_RADIUS`) | Every text input, single or multi-line |
 | Large card | `rounded-[32px]` or `rounded-4xl` | Hero cards, primary feed cards |
 | Standard card | `rounded-[24px]` | Standard list cards, sheets |
 | Medium | `rounded-2xl` (16px) | Inner cards, secondary surfaces |
@@ -267,7 +282,7 @@ Overlay pill:    bg-black/50, rounded-full, px-2.5 py-1 (for on-image overlays)
 
 #### Inputs
 ```
-Container:  bg-fill-weaker, border-stroke-weaker, rounded-full (pill shape)
+Container:  bg-fill-weaker, border-stroke-weaker, 12px radius (`INPUT_RADIUS` in TextInput — never pill or large rounded corners)
 Focus:      border-brand
 Height:     h-14 (standard), h-12 (compact)
 Text:       TYPE.input, text-text-strong
@@ -302,9 +317,15 @@ Body text:   TYPE.bodySmall, text-text-base — user's own words only
 #### Sheets (Bottom Sheets)
 ```
 Provider:      @gorhom/bottom-sheet via SheetManager
-Header:        serif title left, X button right (size-8 rounded-full bg-fill-weaker)
-Handle:        backgroundColor: COLORS.strokeStrong, opacity: 0.3
-Background:    COLORS.card (#ffffff)
+Header:        <SheetHeader title onClose /> (no description line under the title) (src/components/sheets/SheetHeader.tsx): TYPE.sheetTitle left, 44px close right.
+               32px (SHEET_GROUP_GAP) between header, body and actions; 24px (SHEET_SECTION_GAP) between body sections.
+               Alert-style confirmations and celebration sheets keep their centred layout.
+Chrome:        useSheetChrome() (src/components/sheets/use-sheet-chrome.ts) on every BottomSheetModal — matches web phone sheets:
+               top radius 20px; max height 92% of screen (8% top gap, never under the status bar);
+               min height min(524px, 92%) (compact: true for short confirmations, like web alert dialogs);
+               grabber 36×4, strokeStrong at 35%; backdrop light rgba(94,94,94,0.5), dark/Deep Sky rgba(0,0,0,0.72)
+Background:    colors.sheet from useThemeColors() — web --bg-sheet (#ffffff light, #12131a dark, #191e2c Deep Sky)
+Backdrop:      backdropComponent={SheetBackdrop} (black 0.55 light, 0.72 dark/Deep Sky = web .dark --overlay-backdrop)
 Trigger:       useUiStore.getState().openSheet() — never use local Modal state
 ```
 
@@ -477,7 +498,10 @@ Empty state titles should be warm and inviting, not system-speak (e.g., "Your st
 ## 📐 Tab-by-Tab Reference
 
 ### Overview Tab
-- Hero: 2 large `ImageBackground` cards (`rounded-[32px]`), `p-7`, editorial serif title
+- Primary action: `OverviewCaptureCard` ("What's on your mind today?"), ported from web `overview-capture-card.tsx`. Tapping the card opens the add-story editor, carrying any draft. Default actions: Add story, Talk and record. With a draft (voice notes or a saved text): Save now, Use as story (editor `initialDraft` handoff), Discuss (chat `discussText`), clear and record more.
+- Add story (`app/editor.tsx`, new stories only) sits on web mobile's album paper via `StoryComposerBackdrop`: light/dark artwork by resolved appearance (Deep Sky uses dark), 10% paper grain on light; the rich-text WebView is transparent.
+- Reflection cards open the full reflection conversation on the topic route (`/chat/[id]`, `type: 'prompt'`), including answered cards — never a sheet.
+- Enrichment score: `EnrichmentSummaryCard`, matching web chat settings `enrichment-summary.tsx` (strength word, View Insight pill, `fillWeaker` surface, `strokeWeak` border). The enrichment card and the journey stat cards use the calendar card's 20px radius. No Memory Spotlight on Overview.
 - Stats: 4 `OverviewJourneyCard` items with background images from `/assets/images/backgrounds/`
 - Chart: `SplineChart` with touch-drag interaction and haptic feedback
 - Greeting: `TYPE.greeting`, `getGreeting()` + the user's nickname in `TYPE.greetingName` (serif italic), success green
@@ -487,6 +511,7 @@ Empty state titles should be warm and inviting, not system-speak (e.g., "Your st
 - Chat screen: `FlatList inverted`, `TypingIndicator` when streaming, `MilestoneCard` for enrichment milestones
 - Input: `ChatInput` floating pill with glassmorphism background on iOS
 - Deep Dive: `DeepDiveBanner` + `DeepDiveNudge` surface contextually — never persistently
+- Chat settings (`app/chat/settings.tsx`): full-screen with the warm gradient; sections 32px apart. Enrichment summary (20px padding and radius) + "Shared media & links" row; AI Voice: Voice narration switch, then two-column voice cards; Background Ambience: volume slider, then two-column tune cards. Voice narration (`useSpokenRepliesStore`, `useSpokenReplies`) reads each finished reply aloud via `/ai/spoken-reply`; the chat header speaker button toggles the same setting.
 
 ### Memories (Stories) Tab
 - **Grid mode**: `MasonryMemoryGrid` with 2-column column-balancing algorithm
@@ -498,6 +523,12 @@ Empty state titles should be warm and inviting, not system-speak (e.g., "Your st
 - Category cards: full-bleed `CategoryCard` with cover image, EBGaramond title, chevron right
 - Prompt pills: horizontal `ScrollView`, `ContinueReflectingCard`
 - `useFocusEffect` to refetch on tab focus
+
+### Insights Screen (`app/insights.tsx`)
+- Ported from web `src/pages/dashboard/insights` + `src/features/insights`: title, `MemoryStatistics` and the sections tabs 40px apart; sections Observations, Insights, Preferences, Enrichment fields, and Milestones (web has the same five tabs). Milestones is the milestone cards only, with no heading or "X of Y reached" count, like the other tabs (`MILESTONE_CATALOGUE`, closest unreached first, brand-orange ticks, green Unlocked pill, counts on multi-step goals; Future Messenger dimmed as Coming soon while capsules are paused; plan in `docs/milestones-plan.md`) — no ritual row, streak card or ceremony lab. The Enrichment score tile uses the enrichment card scale (`features/overview/enrichment-strength.ts`).
+- Celebration sheets (`CelebrationSheet`): `first-story-milestone` opens once per account after the first story's publish success page closes (`celebrateFirstStory`); `upgrade-success` opens after a confirmed Pro store purchase or the web checkout return (`/overview?checkout=success`).
+- Detail pages (insight, note, enrichment field) open in place with their memory sources; Android back steps out of them first. `/insights?observation=<id>` opens that note.
+- Note options (Sources, Edit, Forget) use the `observation-note` sheet. Field colors and copy live in `src/features/insights/insights-model.ts`, mirroring web `insights.css` / `enrichment-fields.ts`.
 
 ### Capsule Tab
 - Card variants: `grid` (default) and `list` layout modes

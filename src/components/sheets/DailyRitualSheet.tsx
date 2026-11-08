@@ -12,7 +12,6 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import X from 'lucide-react-native/icons/x';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
@@ -25,6 +24,8 @@ import {
   type DailyRitualSettings,
 } from '@/features/rituals/ritual-scheduler';
 import { useUserStore } from '@/store';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 
 const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -207,13 +208,8 @@ export function DailyRitualSheet({ onClose, onSaved }: DailyRitualSheetProps) {
     }
   };
 
-  const handleClose = useCallback(() => {
-    void Haptics.selectionAsync();
-    onClose?.();
-  }, [onClose]);
-
   return (
-    <View className="flex-grow pb-8">
+    <View className="flex-grow pb-2" style={{ gap: SHEET_GROUP_GAP }}>
       <View pointerEvents="none" className="absolute inset-0">
         <ImageBackground
           source={PATTERN}
@@ -223,30 +219,14 @@ export function DailyRitualSheet({ onClose, onSaved }: DailyRitualSheetProps) {
         />
       </View>
 
-      {/* Header Row: Editorial Serif Title & Standard Circular Close Button */}
-      <View className="flex-row items-center justify-between mb-2">
-        <Text className="text-text-strong" style={TYPE.sectionTitle}>
-          Daily Reflection Ritual
-        </Text>
-
-        <TouchableOpacity
-          onPress={handleClose}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Close daily ritual sheet"
-          className="size-11 rounded-full bg-fill-weaker items-center justify-center"
-        >
-          <X size={18} color={COLORS.textWeak} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Warm Companion Subtitle */}
-      <Text className="text-text-weak mb-6" style={TYPE.body}>
-        Choose a quiet moment each day to pause, reflect, and capture what matters most.
-      </Text>
+      <SheetHeader
+        title="Daily Reflection Ritual"
+        onClose={() => onClose?.()}
+        closeLabel="Close daily ritual sheet"
+      />
 
       {/* Choice Options List - Plain Smooth Cards */}
-      <View className="gap-3 mb-6">
+      <View className="gap-3">
         {/* Morning Preset */}
         <RitualChoiceCard
           eyebrow="Morning"
@@ -328,6 +308,7 @@ export function DailyRitualSheet({ onClose, onSaved }: DailyRitualSheetProps) {
       <Button
         variant="primary"
         size="lg"
+        rounded="full"
         className="h-14 w-full"
         loading={isSaving}
         onPress={handleSave}

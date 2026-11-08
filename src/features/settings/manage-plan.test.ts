@@ -18,12 +18,13 @@ describe('manage-plan flow', () => {
     expect(CANCELLATION_REASONS).toHaveLength(6);
   });
 
-  test('uses subscription state for tier-aware plan actions', () => {
+  test('uses subscription state for tier-aware plan actions (web plan-state)', () => {
     const screen = read('app/pricing.tsx');
-    expect(screen).toContain('isProOrAbove');
-    expect(screen).toContain('Downgrade to Free');
-    expect(screen).toContain('Current plan');
-    expect(screen).toContain('Start 14-day trial');
+    const planState = read('src/features/billing/plan-state.ts');
+    expect(screen).toContain('getPlanState(');
+    expect(planState).toContain('Downgrade to free');
+    expect(planState).toContain('Current plan');
+    expect(planState).toContain('Start 14-day trial');
     expect(screen).not.toContain('Legacy Plan');
   });
 

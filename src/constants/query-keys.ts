@@ -4,10 +4,15 @@ export const queryKeys = {
   userContext: ['user-context'] as const,
   persona: ['persona'] as const,
   personaMemoryInsightsSummary: ['persona', 'summary'] as const,
+  observations: ['persona', 'observations'] as const,
+  insights: ['insights'] as const,
+  /** Keyed by the full sources URL, which already names the insight, note or field. */
+  insightSources: (url: string) => ['insight-sources', url] as const,
 
   memories: (params?: object) => ['memories', params] as const,
   memory: (id: string) => ['memory', id] as const,
   memoriesStats: ['memories-stats'] as const,
+  memorySearch: (query: string) => ['memory-search', query] as const,
   conversations: (params?: object) => ['conversations', params] as const,
   stories: (params?: object) => ['stories', params] as const,
 

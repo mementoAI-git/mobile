@@ -1,7 +1,7 @@
 import type { ThemeColors } from '@/constants/tokens';
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, ImageBackground, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -24,7 +24,6 @@ import { TYPE } from '@/constants/typography';
 import { minTouchTarget, radius } from '@/constants/responsive';
 import { getSettingsHeaderLayout } from '@/features/settings/settings-header-layout';
 
-const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const layout = getSettingsHeaderLayout();
 
 export default function BeneficiaryDetailScreen() {
@@ -201,7 +200,6 @@ export default function BeneficiaryDetailScreen() {
       </View>
 
       <View className="flex-1">
-        <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
         <ScrollView 
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 48 }}
@@ -373,7 +371,7 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.settingsCard,
     borderRadius: 24,
   },
   pendingAlertCard: {
@@ -411,7 +409,7 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   fieldValueContainer: {
     minHeight: 56,
     justifyContent: 'center',
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.settingsCard,
     borderRadius: radius(16),
     paddingHorizontal: 16,
   },

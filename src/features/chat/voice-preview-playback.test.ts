@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { VOICE_CATALOG, type VoiceId } from './voice-catalog';
+import { pickVoicePreviewClip, VOICE_PREVIEW_CLIPS, VOICE_PREVIEW_LINES } from './voice-preview-assets';
 import { getVoicePageIndex, VoicePreviewPlayback, VOICE_PICKER_DOT_GAP, VOICE_PICKER_ORB_SIZE, type VoicePreviewPlayer, type VoicePreviewStatus } from './voice-preview-playback';
 
 function harness(prepare: () => Promise<void> = async () => {}) {
@@ -101,20 +102,29 @@ describe('voice picker previews', () => {
     playback.stop();
   });
 
-  test('every voice has its own valid, short bundled PCM audio sample', () => {
+  test('every voice has bundled MP3 samples copied from web, one per recorded line', () => {
     const hashes = new Set<string>();
     for (const voice of VOICE_CATALOG) {
-      const bytes = readFileSync(`assets/audio/voice-previews/${voice.id}.wav`);
-      expect(bytes.toString('ascii', 0, 4)).toBe('RIFF');
-      expect(bytes.toString('ascii', 8, 12)).toBe('WAVE');
-      const rate = bytes.readUInt32LE(24);
-      const length = bytes.readUInt32LE(40);
-      expect(bytes.length).toBe(length + 44);
-      expect(rate).toBe(24000);
-      expect(length / (rate * 2)).toBeGreaterThan(1);
-      expect(length / (rate * 2)).toBeLessThan(8);
-      hashes.add(createHash('sha256').update(bytes).digest('hex'));
+      const clips = VOICE_PREVIEW_CLIPS[voice.id];
+      expect(clips.length).toBeGreaterThan(0);
+      for (const { line } of clips) {
+        expect(VOICE_PREVIEW_LINES[line]).toBeTruthy();
+        const bytes = readFileSync(`assets/audio/voice-previews/${voice.id}-${line}.mp3`);
+        // ID3 tag or an MPEG frame sync.
+        expect(bytes.toString('ascii', 0, 3) === 'ID3' || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0)).toBe(true);
+        hashes.add(createHash('sha256').update(bytes).digest('hex'));
+      }
     }
-    expect(hashes.size).toBe(VOICE_CATALOG.length);
+    expect(hashes.size).toBe(Object.values(VOICE_PREVIEW_CLIPS).flat().length);
+  });
+
+  test('picks a different sentence than the one just played, like web', () => {
+    const first = pickVoicePreviewClip('denver', null, () => 0);
+    expect(first?.line).toBe(0);
+    for (let i = 0; i < 20; i += 1) {
+      expect(pickVoicePreviewClip('denver', 0)?.line).not.toBe(0);
+    }
+    // Only one line recorded: it still plays.
+    expect(pickVoicePreviewClip('leo', 0)?.line).toBe(0);
   });
 });

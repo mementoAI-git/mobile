@@ -70,7 +70,7 @@ export default function CategoryPromptsScreen() {
         <TouchableOpacity
           onPress={handleBackPress}
           accessibilityRole="button"
-          accessibilityLabel="Back to Explore"
+          accessibilityLabel="Back to Topics"
           activeOpacity={0.7}
           className="size-11 rounded-full bg-fill-weaker border border-stroke-weaker items-center justify-center -ml-2"
         >
@@ -90,7 +90,7 @@ export default function CategoryPromptsScreen() {
 
         {isPending && (
           <View className="absolute inset-0 bg-black/10 items-center justify-center z-50">
-            <View className="bg-card p-6 rounded-2xl shadow-lg border border-stroke-weaker items-center gap-3">
+            <View className="bg-popover p-6 rounded-2xl shadow-lg border border-stroke-weaker items-center gap-3">
               <Spinner size="large" color={COLORS.brand} />
               <Animated.Text className="text-text-strong" style={TYPE.label}>Starting your reflection…</Animated.Text>
             </View>
@@ -150,7 +150,8 @@ export default function CategoryPromptsScreen() {
                   {!usingBundledCatalog && id && !isError && (
                   <View className="flex-row">
                     <View className="px-3 py-1.5 rounded-full bg-fill-weaker border border-stroke-weaker flex-row items-center gap-1.5">
-                      <View className="size-2 rounded-full bg-brand" />
+                      {/* Web: bg-fill-info-strong (blue-1000) */}
+                      <View className="size-2 rounded-full" style={{ backgroundColor: COLORS.info }} />
                       <Animated.Text className="text-text-strong" style={TYPE.metadata}>
                         {totalDocs} {totalDocs === 1 ? 'topic' : 'topics'}
                       </Animated.Text>
@@ -174,8 +175,8 @@ export default function CategoryPromptsScreen() {
               <EmptyState
                 icon={Inbox}
                 title={!id ? 'Find a new path' : usingBundledCatalog || isError ? 'A little pause in exploring' : activeTab === 'answered' ? 'Your reflections start here' : 'More stories to discover'}
-                description={!id ? 'Choose a category to keep exploring your story.' : usingBundledCatalog ? 'Questions are temporarily unavailable while Explore is being updated. Please try again shortly.' : isError ? 'We couldn’t load your topics. Give it another try.' : activeTab === 'answered' ? 'The topics you answer in this category will appear here.' : 'New topics will appear here when they’re ready.'}
-                actionLabel={!id ? 'Back to Explore' : usingBundledCatalog || isError ? 'Try again' : undefined}
+                description={!id ? 'Choose a category to keep exploring your story.' : usingBundledCatalog ? 'Questions are temporarily unavailable while Topics is being updated. Please try again shortly.' : isError ? 'We couldn’t load your topics. Give it another try.' : activeTab === 'answered' ? 'The topics you answer in this category will appear here.' : 'New topics will appear here when they’re ready.'}
+                actionLabel={!id ? 'Back to Topics' : usingBundledCatalog || isError ? 'Try again' : undefined}
                 onAction={!id ? handleBackPress : handleRetryPress}
               />
             }

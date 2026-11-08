@@ -18,6 +18,8 @@ interface PasswordInputProps extends Omit<TextInputProps, 'secureTextEntry'> {
   rounded?: 'full' | 'xl' | 'lg' | number;
   containerClassName?: string;
   InputComponent?: React.ElementType<TextInputProps>;
+  /** Weak neutral stroke at rest (Settings inputs). */
+  bordered?: boolean;
 }
 
 // Eye / EyeOff icon toggle + AlertCircle on validation error
@@ -28,6 +30,7 @@ export function PasswordInput({
   variant,
   rounded,
   containerClassName,
+  bordered,
   ...props
 }: PasswordInputProps) {
   const COLORS = useThemeColors();
@@ -42,6 +45,7 @@ export function PasswordInput({
       variant={variant}
       rounded={rounded}
       containerClassName={containerClassName}
+      bordered={bordered}
       secureTextEntry={!show}
       rightElement={
         error ? (

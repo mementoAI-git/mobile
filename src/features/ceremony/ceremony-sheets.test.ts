@@ -34,10 +34,11 @@ describe('Ceremony & Retention Features Registration', () => {
     expect(await Bun.file(new URL('../../components/sheets/VoiceDebriefSheet.tsx', import.meta.url)).exists()).toBe(false);
   });
 
-  test('wires guardian-lens trigger into BeneficiaryActionsSheet', async () => {
+  test('the person sheet shows their card with Edit and Remove only', async () => {
     const actionsSheet = await Bun.file(new URL('../../components/sheets/BeneficiaryActionsSheet.tsx', import.meta.url)).text();
-    expect(actionsSheet).toContain("'guardian-lens'");
-    expect(actionsSheet).toContain('Preview Beneficiary Access');
+    expect(actionsSheet).toContain('<PersonCard');
+    expect(actionsSheet).not.toContain('Preview their access');
+    expect(actionsSheet).toContain('onClose(open)');
   });
 
   test('wires export-archive trigger into PrivacySettingsScreen', async () => {
@@ -46,10 +47,39 @@ describe('Ceremony & Retention Features Registration', () => {
     expect(privacy).toContain('Export your archive');
   });
 
-  test('wires MemorySpotlightCard into OverviewScreen', async () => {
+  test('keeps Memory Spotlight off the OverviewScreen', async () => {
     const overview = await Bun.file(new URL('../../../app/(tabs)/overview/index.tsx', import.meta.url)).text();
-    expect(overview).toContain('MemorySpotlightCard');
-    expect(overview).toContain('spotlight={statsData?.spotlight}');
-    expect(overview).toContain('fallbackStory={fallbackStory}');
+    expect(overview).not.toContain('MemorySpotlightCard');
+    expect(overview).not.toContain('statsData?.spotlight');
+  });
+});
+
+describe('celebration sheets', () => {
+  test('first story and Pro upgrade share the standard celebration layout', async () => {
+    const first = await Bun.file(new URL('../../components/sheets/FirstStoryMilestoneSheet.tsx', import.meta.url)).text();
+    const upgrade = await Bun.file(new URL('../../components/sheets/UpgradeSuccessSheet.tsx', import.meta.url)).text();
+    const layout = await Bun.file(new URL('../../components/sheets/CelebrationSheet.tsx', import.meta.url)).text();
+    expect(first).toContain('<CelebrationSheet');
+    expect(upgrade).toContain('<CelebrationSheet');
+    expect(upgrade).toContain('PRO_FEATURES');
+    expect(layout).toContain('SHEET_GROUP_GAP');
+    expect(layout).toContain('SHEET_CLOSE_BUTTON_STYLE');
+    expect(layout).toContain('TYPE.sheetTitle');
+  });
+
+  test('first story opens after the publish success page; Pro after a store purchase', async () => {
+    const editor = await Bun.file(new URL('../../../app/editor.tsx', import.meta.url)).text();
+    const billing = await Bun.file(new URL('../settings/billing-flow.ts', import.meta.url)).text();
+    const dismiss = editor.slice(editor.indexOf('const handleDismissPublishedSuccess'));
+    expect(dismiss.slice(0, dismiss.indexOf('}, ['))).toContain('celebrateFirstStory(');
+    expect(billing).toContain("openSheet('upgrade-success')");
+  });
+
+  test('only a person with no stories before publishing gets the first story sheet', async () => {
+    const { isFirstStory } = await import('./first-story');
+    expect(isFirstStory(0)).toBe(true);
+    expect(isFirstStory('0')).toBe(true);
+    expect(isFirstStory(3)).toBe(false);
+    expect(isFirstStory(undefined)).toBe(false);
   });
 });

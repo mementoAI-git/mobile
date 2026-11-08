@@ -8,6 +8,12 @@ export const DARK_COLORS: typeof COLORS = {
   background: '#12131a',
   card: '#12131a',
   cardRaised: '#1d1e26',
+  popover: '#1d1e26',
+  // Deeper than the page, so photos stand out.
+  mediaViewer: '#0b0c10',
+  settingsCard: 'rgba(255,255,255,0.06)',
+  // Web .dark --bg-sheet: sheets share the page canvas; the backdrop separates them.
+  sheet: '#12131a',
   publishRayStart: '#24282A',
   cardOverlay: 'rgba(29,30,38,0.85)',
   activeFill: '#FFFFFF',
@@ -51,7 +57,9 @@ export const APPEARANCE_VARIABLES = {
   '--surface-background': 'background',
   '--surface-card': 'card',
   '--surface-raised': 'cardRaised',
+  '--surface-popover': 'popover',
   '--surface-overlay': 'cardOverlay',
+  '--surface-settings-card': 'settingsCard',
   '--active-fill': 'activeFill',
   '--active-text': 'activeText',
   '--semantic-success': 'success',
@@ -91,8 +99,14 @@ export const DEEP_SKY = {
 export const DEEP_SKY_COLORS: typeof COLORS = {
   ...DARK_COLORS,
   background: 'transparent',
-  card: DEEP_SKY.surface,
-  cardRaised: DEEP_SKY.surface,
+  // Cards, buttons and tags sit on the sky as a weak fill, not a deep grey slab.
+  card: DARK_COLORS.fillWeak,
+  cardRaised: DARK_COLORS.fillWeak,
+  // Floating surfaces stay opaque so they read over content.
+  popover: DEEP_SKY.surface,
+  mediaViewer: DEEP_SKY.canvas,
+  // Web .deep-sky --bg-sheet.
+  sheet: DEEP_SKY.surface,
   cardOverlay: 'rgba(25,30,44,0.92)',
   glass: 'rgba(17,23,40,0.9)',
 };

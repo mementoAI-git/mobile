@@ -20,7 +20,7 @@ import { useUiStore } from '@/store';
 import { useUserStats, useMemoriesStats, useCapsuleStats } from '@/hooks/queries/use-overview';
 import { useStories } from '@/hooks/queries/use-memories';
 import { useUserStore } from '@/store';
-import { DashboardHeader, OverviewSkeleton, GradientText, GreetingIcon, JourneyStatIcon, Button } from '@/components/ui';
+import { DashboardHeader, OverviewSkeleton, GreetingIcon, JourneyStatIcon } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE, TYPE_METRICS } from '@/constants/typography';
 import { useProfile } from '@/hooks/queries/use-profile';
@@ -30,7 +30,6 @@ import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 import { DailyPromptSection } from '@/components/overview/DailyPromptSection';
 import { useCalendarStories } from '@/hooks/queries/use-calendar-stories';
 import { storyDaysInMonth } from '@/features/overview/story-calendar';
-import { MemorySpotlightCard } from '@/components/overview/MemorySpotlightCard';
 import { BrowseTopicsSection } from '@/components/overview/BrowseTopicsSection';
 import * as Haptics from 'expo-haptics';
 import Animated, {
@@ -38,7 +37,8 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withSpring,
   useAnimatedScrollHandler, interpolate, Extrapolation,
 } from 'react-native-reanimated';
-import { MemoryPromptCard } from '@/components/overview/MemoryPromptCard';
+import { OverviewCaptureCard } from '@/components/overview/OverviewCaptureCard';
+import { EnrichmentSummaryCard } from '@/components/overview/EnrichmentSummaryCard';
 import { CalendarCard } from '@/components/overview/CalendarCard';
 import { useVoiceScroll } from '@/features/voice-control/hooks';
 
@@ -47,6 +47,9 @@ const WELCOME_BG = require('../../../assets/images/backgrounds/welcome_bg.png');
 
 
 
+
+/** All memories / Beneficiaries / Streak count cards are hidden on Overview for now. */
+const SHOW_JOURNEY_STATS = false;
 
 interface OverviewJourneyCardProps {
   label: string;
@@ -117,7 +120,7 @@ const OverviewJourneyCard = React.memo(function OverviewJourneyCard({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={0.9}
-        className="w-full min-h-[96px] rounded-2xl border border-stroke-weak bg-fill-weak flex-row items-center justify-between overflow-hidden"
+        className="w-full min-h-[96px] rounded-[20px] border border-stroke-weak bg-fill-weak flex-row items-center justify-between overflow-hidden"
       >
         {content}
       </TouchableOpacity>
@@ -209,12 +212,10 @@ export default function OverviewScreen() {
   const { data: statsData, refetch: refetchStats, isLoading: statsLoading } = useUserStats();
   const { data: memoriesStats, refetch: refetchMemories, isLoading: memoriesLoading } = useMemoriesStats();
   const { data: capsuleStats, refetch: refetchCapsule, isLoading: capsuleLoading } = useCapsuleStats();
-  // Stories power two client fallbacks only: the weekly count when stats
-  // lack it, and the spotlight story when the server provides none. When
-  // stats already cover both, skip the 50-doc fetch on launch entirely.
+  // Stories power one client fallback only: the weekly count when stats
+  // lack it. When stats cover it, skip the 50-doc fetch on launch entirely.
   const needsStories =
-    !statsData?.spotlight ||
-    (statsData?.week_count == null && (statsData as any)?.weekly_count == null);
+    statsData?.week_count == null && (statsData as any)?.weekly_count == null;
   const { data: recentStoriesData } = useStories({ limit: 50 }, { enabled: needsStories });
 
   // Manual pull-to-refresh: invalidate all caches to trigger global background updates
@@ -254,17 +255,10 @@ export default function OverviewScreen() {
     }).length;
   }, [recentStoriesData]);
 
-  const fallbackStory = useMemo(() => {
-    const stories = recentStoriesData?.pages?.flatMap((p) => p?.docs ?? []) ?? [];
-    if (stories.length > 1) {
-      return stories[Math.min(stories.length - 1, 3)];
-    }
-    return stories[0] ?? null;
-  }, [recentStoriesData]);
-
   const stats = statsData ?? {};
   const streakCount = Number(user?.streak) || Number(stats.streak_count) || 0;
-  const enrichmentScore = Number(stats.enrichment_score) || 0;
+  const rawEnrichmentScore = Number(stats.enrichment_score);
+  const enrichmentScore = statsData && Number.isFinite(rawEnrichmentScore) ? rawEnrichmentScore : undefined;
   const memoriesCount = memoriesStats?.stories_count ?? 0;
   const weeklyMemories =
     Number(memoriesStats?.week_count ?? memoriesStats?.weekly_count) ||
@@ -353,6 +347,8 @@ export default function OverviewScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerClassName="px-4 pt-6 pb-32 gap-10"
             onScroll={scrollHandler}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             scrollEventThrottle={16}
             refreshControl={
               <RefreshControl refreshing={manualRefreshing} onRefresh={handleManualRefresh} tintColor={COLORS.brand} />
@@ -384,7 +380,7 @@ export default function OverviewScreen() {
               </Animated.View>
 
               <Animated.View entering={FadeInDown.delay(100)}>
-                <MemoryPromptCard onAddStory={handleAddStory} />
+                <OverviewCaptureCard key={user?._id ?? 'guest'} userId={user?._id} onAddStory={handleAddStory} />
               </Animated.View>
 
               {/* ── Quick-Capture Status ─────────────────────────────── */}
@@ -413,7 +409,8 @@ export default function OverviewScreen() {
           </Animated.View> */}
             {/* Hidden — story trends not tracking meaningful data yet. Restore when data is reliable. */}
 
-            {/* ── Stat Column (Web Parity Stack) ────────────────────────── */}
+            {/* ── Stat Column (Web Parity Stack) ── hidden for now; flip SHOW_JOURNEY_STATS to restore. */}
+            {SHOW_JOURNEY_STATS ? (
             <View className="gap-3">
               {/* <View className="px-1">
                 <Text className="text-text-strong" style={TYPE.sectionTitle}>Your Journey</Text>
@@ -459,51 +456,12 @@ export default function OverviewScreen() {
                 icon={<JourneyStatIcon type="streak" />}
               />
             </View>
+            ) : null}
 
-            {/* Card 2: Enrichment Hero */}
+            {/* ── Enrichment score (web chat-settings summary layout) ── */}
             <Animated.View entering={FadeInDown.delay(200)}>
-              <View className="bg-fill-weak rounded-2xl overflow-hidden p-5 gap-3">
-                  <View className="flex-row items-center justify-between gap-3">
-                    <Text className="flex-1 text-text-strong tracking-widest" style={TYPE.buttonSmall}>
-                      Enrichment score
-                    </Text>
-                    <Button
-                      onPress={handleViewInsights}
-                      size="sm"
-                      variant="ghost"
-                      className="bg-active-fill shrink-0"
-                      textClassName="text-active-text"
-                      style={{ borderRadius: 100, height: 32, minHeight: 32 }}
-                      hitSlop={{ top: 6, bottom: 6, left: 0, right: 0 }}
-                    >
-                      View Insight
-                    </Button>
-                  </View>
-
-                  <View className="flex-row items-center gap-4">
-                    <GradientText
-                      colors={[COLORS.brand, COLORS.onboardingAmberLight]}
-                      style={TYPE.displayStat}
-                    >
-                      {enrichmentScore}%
-                    </GradientText>
-
-                    <Text
-                      className="flex-1 text-text-weak"
-                      style={[TYPE.body, { flexShrink: 1 }]}
-                    >
-                      Share stories & files to build context. Link apps to enrich your Memento.
-                    </Text>
-                  </View>
-
-              </View>
+              <EnrichmentSummaryCard score={enrichmentScore} onViewInsight={handleViewInsights} />
             </Animated.View>
-
-            {/* ── Memory Spotlight ─────────────────────────────────── */}
-            <MemorySpotlightCard
-              spotlight={statsData?.spotlight}
-              fallbackStory={fallbackStory}
-            />
 
             <CalendarCard
               month={calendarMonth}

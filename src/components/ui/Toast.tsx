@@ -110,7 +110,7 @@ export function ToastViewport() {
                 paddingHorizontal: responsiveSpace(16),
                 paddingVertical: responsiveSpace(14),
                 borderRadius: radius(14),
-                backgroundColor: colors.cardRaised,
+                backgroundColor: colors.popover,
                 borderWidth: 1,
                 borderColor: colors.strokeWeak,
                 // subtle shadow so it lifts off the content beneath

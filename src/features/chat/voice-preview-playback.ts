@@ -1,6 +1,5 @@
 import type { VoiceId } from './voice-catalog';
 
-export const VOICE_PREVIEW_TEXT = 'My good opinion once lost, is lost for ever.';
 export const VOICE_PICKER_ORB_SIZE = 230;
 export const VOICE_PICKER_DOT_SIZE = 10;
 export const VOICE_PICKER_DOT_GAP = 8;

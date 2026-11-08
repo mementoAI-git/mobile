@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, type ImageSourcePropType } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { View, Text, ScrollView, useWindowDimensions, type ImageSourcePropType } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useIsMutating } from '@tanstack/react-query';
 import Shuffle from 'lucide-react-native/icons/shuffle';
 import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-reanimated';
@@ -13,34 +13,39 @@ import { useDailyPrompts } from '@/hooks/queries/use-prompts';
 import { useReflectionShuffleUsage } from '@/hooks/queries/use-reflection-shuffle';
 import { useReflectionShuffle } from '@/hooks/mutations/use-reflection-shuffle';
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import { useUiStore } from '@/store';
 import { useVoiceContent } from '@/features/voice-control/hooks';
-import { canShuffleReflections, reflectionCapture, reflectionShuffleKey, rotateReflections } from '@/features/prompts/daily-reflections';
+import { canShuffleReflections, reflectionRouteParams, reflectionShuffleKey, rotateReflections } from '@/features/prompts/daily-reflections';
 import { getPromptReplyCounts } from '@/features/prompts/prompt-reply-count';
 import { avatarsForCard, createAvatarOrder, refreshAvatarOrder } from '@/features/prompts/reflection-avatars';
 import type { IDashboardPromptSlot } from '@/types';
+import { REFLECTION_CARD_GAP, reflectionCardWidth } from '@/features/prompts/reflection-card-size';
+
+/** Matches the Overview page gutter, so cards scroll edge to edge and snap to it. */
+const PAGE_GUTTER = 16;
 
 const DailyReflectionCard = React.memo(function DailyReflectionCard({ row, replyCount, avatars }: {
   row: IDashboardPromptSlot;
   replyCount: number;
   avatars: ImageSourcePropType[];
 }) {
+  const router = useRouter();
   const title = row.slot_kind === 'ai' ? row.ai_prompt_text : row.prompt.title;
   const category = row.slot_kind === 'static' ? getCategoryMeta(row.prompt.category) : null;
+  const categoryLabel = category?.title || row.display_label || 'Who I am';
+  // Opens the full reflection conversation, the same route topic cards use.
   const handlePress = useCallback(() => {
-    const daily_prompt = reflectionCapture(row);
-    if (daily_prompt) useUiStore.getState().openSheet('quick-capture', { daily_prompt });
-  }, [row]);
+    router.push({ pathname: '/chat/[id]', params: reflectionRouteParams(row, categoryLabel) });
+  }, [router, row, categoryLabel]);
 
   return (
     <ContinueReflectingCard
       title={title}
-      categoryLabel={category?.title || row.display_label || 'Who I am'}
+      categoryLabel={categoryLabel}
       personal={row.slot_kind === 'ai'}
       answered={row.answered}
       replyCount={replyCount}
       avatars={avatars}
-      onPress={row.slot_kind === 'static' && !row.prompt._id ? undefined : handlePress}
+      onPress={handlePress}
     />
   );
 });
@@ -48,6 +53,8 @@ const DailyReflectionCard = React.memo(function DailyReflectionCard({ row, reply
 export function DailyPromptSection() {
   const colors = useThemeColors();
   const reducedMotion = useReducedMotion();
+  const { width: windowWidth } = useWindowDimensions();
+  const cardWidth = reflectionCardWidth(windowWidth);
   const { data: prompts, isLoading, error, refetch } = useDailyPrompts();
   const { data: usage, error: usageError, refetch: refreshUsage } = useReflectionShuffleUsage();
   const { mutate: shuffle } = useReflectionShuffle();
@@ -117,14 +124,23 @@ export function DailyPromptSection() {
           <Shuffle size={22} color={usage?.remaining === 0 ? colors.iconDisabled : colors.textStrong} />
         </Button>
       </View>
-      <ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ marginHorizontal: -PAGE_GUTTER }}
+        contentContainerStyle={{ paddingHorizontal: PAGE_GUTTER, gap: REFLECTION_CARD_GAP }}
+        snapToInterval={cardWidth + REFLECTION_CARD_GAP}
+        snapToAlignment="start"
+        decelerationRate="fast"
+      >
         {isLoading ? (
-          <View className="flex-row gap-4">
-            <Skeleton className="h-[220px] w-[280px] rounded-[24px]" />
-            <Skeleton className="h-[220px] w-[280px] rounded-[24px]" />
+          <View className="flex-row" style={{ gap: REFLECTION_CARD_GAP }}>
+            <Skeleton className="h-[267px] rounded-[24px]" style={{ width: cardWidth }} />
+            <Skeleton className="h-[267px] rounded-[24px]" style={{ width: cardWidth }} />
           </View>
         ) : (
-          <Animated.View key={revision} entering={reducedMotion ? undefined : FadeIn.duration(200)} className="flex-row">
+          <Animated.View key={revision} entering={reducedMotion ? undefined : FadeIn.duration(200)} className="flex-row" style={{ gap: REFLECTION_CARD_GAP }}>
             {cards.map(({ key, ...props }) => <DailyReflectionCard key={key} {...props} />)}
           </Animated.View>
         )}

@@ -1,19 +1,17 @@
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useEffect } from 'react';
 import { Keyboard, Text, View } from 'react-native';
-import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import X from 'lucide-react-native/icons/x';
 import { Controller, useForm } from 'react-hook-form';
 import * as Haptics from 'expo-haptics';
 import { Button, PasswordInput, TextInput } from '@/components/ui';
 import { TYPE } from '@/constants/typography';
-import { COLORS, FONTS } from '@/constants/tokens';
 import { useChangePassword } from '@/hooks/mutations/use-auth-mutations';
 import { useProfile } from '@/hooks/queries/use-profile';
-import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SheetHeader } from './SheetHeader';
 
 interface PasswordValues {
   oldPassword: string;
@@ -70,20 +68,9 @@ export function ChangePasswordSheet({
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      <View style={sheetStyles.header}>
-        <Text style={TYPE.sectionTitle}>Change password</Text>
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.selectionAsync();
-            onClose?.();
-          }}
-          style={sheetStyles.close}
-        >
-          <X size={22} color={COLORS.textStrong} />
-        </TouchableOpacity>
-      </View>
+      <SheetHeader title="Change password" onClose={() => onClose?.()} style={{ paddingHorizontal: 20 }} />
       <View style={sheetStyles.form}>
-        <TextInput
+        <TextInput bordered
           label="Email address"
           value={profile?.email ?? ''}
           editable={false}
@@ -95,7 +82,7 @@ export function ChangePasswordSheet({
           name="oldPassword"
           rules={{ required: 'Old password is required' }}
           render={({ field: { value, onChange, onBlur } }) => (
-            <PasswordInput
+            <PasswordInput bordered
               label="Current password"
               InputComponent={BottomSheetTextInput}
               onFocus={expandSheet}
@@ -111,7 +98,7 @@ export function ChangePasswordSheet({
           name="newPassword"
           rules={{ required: 'New password is required', minLength: { value: 8, message: 'At least 8 characters' } }}
           render={({ field: { value, onChange, onBlur } }) => (
-            <PasswordInput
+            <PasswordInput bordered
               label="New password"
               InputComponent={BottomSheetTextInput}
               onFocus={expandSheet}
@@ -130,7 +117,7 @@ export function ChangePasswordSheet({
             validate: (value) => value === watch('newPassword') || 'Passwords do not match',
           }}
           render={({ field: { value, onChange, onBlur } }) => (
-            <PasswordInput
+            <PasswordInput bordered
               label="Confirm new password"
               InputComponent={BottomSheetTextInput}
               onFocus={expandSheet}
@@ -142,14 +129,14 @@ export function ChangePasswordSheet({
           )}
         />
         {changePassword.isError && (
-          <Text style={sheetStyles.error}>We couldn&apos;t update your password. Check the old password and try again.</Text>
+          <Text style={[sheetStyles.error, { color: COLORS.error }]}>We couldn&apos;t update your password. Check the old password and try again.</Text>
         )}
       </View>
-      <View style={[sheetStyles.actions, {paddingBottom: getSheetBottomPadding(insets.bottom, 12)}]}>
-        <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={onClose}>
+      <View style={[sheetStyles.actions, { backgroundColor: COLORS.sheet, paddingBottom: getSheetBottomPadding(insets.bottom, 12) }]}>
+        <Button variant="secondary" size="lg" rounded="full" className="h-14 flex-1" onPress={onClose}>
           Dismiss
         </Button>
-        <Button size="lg" className="h-14 flex-1" loading={changePassword.isPending} onPress={submit}>
+        <Button size="lg" rounded="full" className="h-14 flex-1" loading={changePassword.isPending} onPress={submit}>
           Save password
         </Button>
       </View>
@@ -158,33 +145,16 @@ export function ChangePasswordSheet({
 }
 
 const sheetStyles = {
-  header: {
-    minHeight: 44,
-    paddingHorizontal: 20,
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
-  },
-  close: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    backgroundColor: COLORS.fillWeak,
-  },
   form: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    gap: 16,
+    paddingTop: SHEET_GROUP_GAP,
+    gap: SHEET_SECTION_GAP,
   },
   actions: {
     flexDirection: 'row' as const,
     gap: 12,
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 20,
-    backgroundColor: COLORS.background,
+    paddingTop: SHEET_GROUP_GAP,
   },
-  error: { ...TYPE.bodySmall, color: COLORS.error },
+  error: { ...TYPE.bodySmall },
 };

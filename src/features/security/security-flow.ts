@@ -1,5 +1,5 @@
 export type SecurityLoginMethod = 'passkey' | 'biometric-fallback' | 'unenrolled';
-export type PasskeyErrorKind = 'cancelled' | 'unsupported' | 'unavailable' | 'failed';
+export type PasskeyErrorKind = 'cancelled' | 'unsupported' | 'unavailable' | 'configuration' | 'duplicate' | 'failed';
 
 interface SecurityEnrollmentState {
   hasNativePasskey: boolean;
@@ -23,5 +23,14 @@ export function classifyPasskeyError(error: unknown): PasskeyErrorKind {
   if (code === 'UserCancelled' || code === 'Cancelled') return 'cancelled';
   if (code === 'NotSupported') return 'unsupported';
   if (code === 'NoCredentials' || code === 'NoCreateOption') return 'unavailable';
+  if (code === 'CredentialAlreadyExists') return 'duplicate';
+  // iOS refuses passkeys when the app isn't associated with the RP ID domain
+  // (missing webcredentials entry or apple-app-site-association file).
+  const message = typeof error === 'object' && error !== null && 'message' in error
+    ? String((error as { message?: unknown }).message)
+    : '';
+  if (code === 'BadConfiguration' || /not associated with domain|RP ID|relying party/i.test(message)) {
+    return 'configuration';
+  }
   return 'failed';
 }

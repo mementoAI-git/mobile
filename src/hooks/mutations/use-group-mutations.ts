@@ -82,3 +82,22 @@ export function useRemoveGroupMember() {
     },
   });
 }
+
+/** Saves a group's membership in one go: adds the new people, removes the unticked ones. */
+export function useSetGroupMembers(groupId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ add, remove }: { add: string[]; remove: string[] }) => {
+      if (add.length) await post(endpoint.groupMembers.replace(':id', groupId), { beneficiaryIds: add });
+      await Promise.all(remove.map((beneficiaryId) =>
+        del(endpoint.groupMember.replace(':id', groupId).replace(':beneficiaryId', beneficiaryId))));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.groups });
+      queryClient.invalidateQueries({ queryKey: queryKeys.beneficiaries });
+    },
+    onSuccess: () => toast('Group members saved.', 'success'),
+    onError: () => toast('Couldn’t save the group members. Try again.', 'error'),
+  });
+}

@@ -4,7 +4,6 @@ import { Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import {BottomSheetScrollView, BottomSheetTextInput} from '@gorhom/bottom-sheet';
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
-import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Button} from '@/components/ui';
@@ -12,7 +11,8 @@ import {Button} from '@/components/ui';
 import {COLORS} from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import type {BillingProfile} from '@/features/settings/billing-adapters';
-import {getSheetBottomPadding} from '@/features/layout/sheet-safe-area';
+import {getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP} from '@/features/layout/sheet-safe-area';
+import {SheetHeader} from './SheetHeader';
 
 export interface BillingDetailsForm {
   email: string;
@@ -40,7 +40,7 @@ function Field({label, value, onChangeText, multiline, select}: {label: string; 
           style={{
             minHeight: multiline ? 88 : 48,
             height: multiline ? 88 : 48,
-            borderRadius: 12,
+            borderRadius: 12 /* INPUT_RADIUS */,
             borderWidth: 1,
             borderColor: COLORS.strokeWeak,
             backgroundColor: COLORS.card,
@@ -112,26 +112,13 @@ export function EditBillingDetailsSheet({
 
   return (
     <View style={{flex: 1}}>
-      <View style={{minHeight: 64, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
-        <Text style={{...TYPE.sectionTitle, color: COLORS.textStrong}}>Edit Billing Details</Text>
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Close billing details"
-          onPress={() => {
-            Haptics.selectionAsync();
-            onClose();
-          }}
-          style={{width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak}}
-        >
-          <X size={20} color={COLORS.textStrong}/>
-        </TouchableOpacity>
-      </View>
+      <SheetHeader title="Edit billing details" onClose={onClose} closeLabel="Close billing details" style={{paddingHorizontal: 20}}/>
       <BottomSheetScrollView
         style={{flex: 1}}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         onScrollBeginDrag={expandSheet}
-        contentContainerStyle={{paddingHorizontal: 20, paddingTop: 4, paddingBottom: 48, gap: 16}}
+        contentContainerStyle={{paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: SHEET_GROUP_GAP - 12, gap: SHEET_SECTION_GAP}}
       >
         <Field label="Billing email address" value={values.email} onChangeText={value => set('email', value)}/>
         <Field label="Full name" value={values.name} onChangeText={value => set('name', value)}/>
@@ -140,9 +127,9 @@ export function EditBillingDetailsSheet({
         <Field label="Postal code" value={values.postalCode} onChangeText={value => set('postalCode', value)}/>
         <Field label="Country" value={values.country} onChangeText={value => set('country', value)} select/>
       </BottomSheetScrollView>
-      <View style={{flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(getSheetBottomPadding(insets.bottom, 12), 16), backgroundColor: COLORS.background}}>
-        <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={onClose}>Dismiss</Button>
-        <Button size="lg" className="h-14 flex-1 bg-media-surface" loading={saving} onPress={() => void submit()}>Save Changes</Button>
+      <View style={{flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(getSheetBottomPadding(insets.bottom, 12), 16), backgroundColor: COLORS.sheet}}>
+        <Button variant="secondary" size="lg" rounded="full" className="h-14 flex-1" onPress={onClose}>Dismiss</Button>
+        <Button size="lg" rounded="full" className="h-14 flex-1" loading={saving} onPress={() => void submit()}>Save changes</Button>
       </View>
     </View>
   );

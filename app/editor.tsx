@@ -24,6 +24,7 @@ import {
   Image,
   ActivityIndicator,
   Keyboard,
+  DeviceEventEmitter,
 } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView, SafeAreaInsetsContext, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,6 +50,7 @@ import Animated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { CAPTURE_HANDED_OFF_EVENT, parseStoryHandoff, type CaptureHandedOffEvent } from '@/features/overview/capture-draft';
 import { minTouchTarget, radius, iconSize } from '@/constants/responsive';
 import {
   getDraftButtonDotColor,
@@ -60,13 +62,15 @@ import { useCreateMemory, useUpdateMemory } from '@/hooks/mutations/use-memory-m
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useGroups } from '@/hooks/queries/use-groups';
+import { useMemoriesStats } from '@/hooks/queries/use-memories';
+import { celebrateFirstStory, isFirstStory } from '@/features/ceremony/first-story';
 import { useStoryRecording } from '@/hooks/use-story-recording';
 import { Button } from '@/components/ui/Button';
 import { StoryRecordingPanel } from '@/components/editor/StoryRecordingPanel';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import { extractUrls } from '@/hooks/use-link-preview';
 import { useToast, ToastViewport } from '@/components/ui/Toast';
-import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetModalProvider, BottomSheetScrollView, BottomSheetTextInput, type BottomSheetHandleProps } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetView, BottomSheetModalProvider, BottomSheetScrollView, BottomSheetTextInput, type BottomSheetHandleProps } from '@gorhom/bottom-sheet';
 import { upsertDraft, saveLocalDraft, loadDrafts, readLocalDrafts, deleteDraft, DraftsSheet, type StoryDraft, type StoryDraftAttachment } from '@/components/sheets/DraftsSheet';
 import { File, Paths, Directory } from 'expo-file-system';
 import { saveDraftAndExit, snapshotEditorBody } from '@/features/editor/exit-editor';
@@ -79,6 +83,7 @@ import { RecordingStatus } from '@/components/ui/RecordingStatus';
 import { useVoiceTextField } from '@/features/voice-control/hooks';
 import { plainTextToStoryHtml, storyHtmlToPlainText } from '@/features/voice-control/story-text';
 import { StoryRichEditor, FormattingToolbar, type StoryRichEditorRef } from '@/components/ui/StoryRichEditor';
+import { StoryComposerBackdrop } from '@/components/editor/StoryComposerBackdrop';
 import { LinkPreviews } from '@/components/ui/LinkPreview';
 import type { EditorBridge } from '@10play/tentap-editor';
 import client from '@/api/client';
@@ -91,7 +96,7 @@ import { singleLineTitle } from '@/features/editor/title-input';
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
-import { getSheetBottomPadding, getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
 import {
   DOCUMENT_PICKER_MIME_TYPES,
   MAX_ATTACHMENT_FILE_MB,
@@ -105,6 +110,7 @@ import {
   type UploadAttachment,
 } from '@/features/media/attachment-upload-state';
 import { useAttachmentUploads } from '@/features/media/use-attachment-uploads';
+import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -140,7 +146,7 @@ function PublishModalInner({
   attachmentIds: string[];
   onClose: () => void;
   onComplete: () => void;
-  onPublished: (url: string) => void;
+  onPublished: (url: string, memoryId: string) => void;
   memoryId?: string;
   draftId?: string;
   userEmail?: string | null;
@@ -224,7 +230,7 @@ function PublishModalInner({
             .catch(() => undefined);
         }
         const id = res?.data?._id ?? res?.data?.data?._id ?? targetMemoryId ?? '';
-        onPublished(publishedPostUrl(id));
+        onPublished(publishedPostUrl(id), id);
       }
     };
     const onError = (err: any) => toast(err?.message ?? 'Could not publish. Try again.', 'error');
@@ -304,15 +310,24 @@ function PublishModalInner({
 
 export default function EditorScreen() {
   const COLORS = useThemeColors();
+  const sheetChrome = useSheetChrome();
   const router = useRouter();
-  const { mode: rawMode, memoryId, initialData, lockMode } = useLocalSearchParams<{
+  const { mode: rawMode, memoryId, initialData, lockMode, initialDraft, autoRecord } = useLocalSearchParams<{
     mode?: string; memoryId?: string; initialData?: string; lockMode?: string;
+    /** Overview capture card "Use as story" handoff (new stories only). */
+    initialDraft?: string;
+    /** Overview capture card mic: start recording as soon as the page is ready. */
+    autoRecord?: string;
   }>();
   const mode = (rawMode === 'quick-capture' ? 'quick-capture' : 'story') as 'story' | 'quick-capture';
   const isStory = mode === 'story';
   const isEditing = !!memoryId;
+  const showComposerPaper = isStory && !isEditing;
 
   const user = useUserStore(s => s.user);
+  const { data: memoriesStats } = useMemoriesStats();
+  // The person's first story, celebrated once the success page closes.
+  const firstStoryRef = useRef<{ memoryId: string; title: string } | null>(null);
 
   const initialParsedData = useMemo(() => {
     if (isEditing && initialData) {
@@ -350,6 +365,14 @@ export default function EditorScreen() {
   const isMountedRef = useRef(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exitingRef = useRef(false);
+  // Set when this story came from the Overview capture card, so the card can let go of it.
+  const handoffIdRef = useRef<string | null>(null);
+  const emitHandedOff = useCallback((outcome: CaptureHandedOffEvent['outcome']) => {
+    const handoffId = handoffIdRef.current;
+    if (!handoffId) return;
+    handoffIdRef.current = null;
+    DeviceEventEmitter.emit(CAPTURE_HANDED_OFF_EVENT, { handoffId, outcome } satisfies CaptureHandedOffEvent);
+  }, []);
 
   // Multi-draft: each new story session gets its own id so up to 10 drafts can coexist
   const draftIdRef = useRef<string>(isEditing ? '' : `draft_${Date.now()}_${Math.random().toString(36).slice(2)}`);
@@ -477,6 +500,30 @@ export default function EditorScreen() {
       } catch { /* ignore malformed JSON */ }
       setIsDraftLoaded(true);
     } else if (!isEditing) {
+      // Seed a new story handed over from the Overview capture card.
+      const handoff = parseStoryHandoff(initialDraft);
+      if (handoff) {
+        handoffIdRef.current = handoff.handoffId;
+        if (handoff.body) {
+          setStoryBody(handoff.body);
+          latestBodyRef.current = handoff.body;
+          const hasContent = hasMeaningfulStoryBodyContent(handoff.body);
+          storyHasContentRef.current = hasContent;
+          setStoryHasContent(hasContent);
+        }
+        if (handoff.attachments.length) {
+          setAttachments(handoff.attachments.map((a: any) => ({
+            clientId: a.id || `handoff_${Math.random().toString(36).slice(2)}`,
+            fileId: a.id || '',
+            uri: a.url || '',
+            name: a.name || '',
+            mimeType: a.type || 'audio/m4a',
+            isVoice: Boolean(a.isVoice),
+            duration: a.duration,
+            isUploading: false,
+          })));
+        }
+      }
       // Load QC draft and refresh the draft count badge in parallel
       Promise.all([
         loadDrafts(user?.email).then(d => {
@@ -589,6 +636,15 @@ export default function EditorScreen() {
     Keyboard.dismiss();
     await startRecording();
   }, [isRecording, stopRecording, isTranscribing, canRetry, retryRecording, editorBridge, isStory, startRecording]);
+
+  // The Overview mic opens this page and records here, exactly as the toolbar mic does.
+  const autoRecordStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoRecord !== 'true' || autoRecordStartedRef.current) return;
+    if (!isStory || isEditing || !isDraftLoaded || !editorBridge) return;
+    autoRecordStartedRef.current = true;
+    void handleVoice();
+  }, [autoRecord, isStory, isEditing, isDraftLoaded, editorBridge, handleVoice]);
 
   const attachmentGroups = useMemo(() => {
     const mediaAttachments: AttachmentItem[] = [];
@@ -784,14 +840,19 @@ export default function EditorScreen() {
       onFailure: () => toast('Could not save your draft. Please try again.', 'error'),
     });
     if (!saved) exitingRef.current = false;
-  }, [editorBridge, isStory, qcBody, attachments, router, user?.email, setStoryDrafts, toast, title]);
+    else if (hasContent && isStory) emitHandedOff('draft');
+  }, [editorBridge, isStory, qcBody, attachments, router, user?.email, setStoryDrafts, toast, title, emitHandedOff]);
 
 
-  const handlePublishCreated = useCallback((url: string) => {
+  const handlePublishCreated = useCallback((url: string, publishedId: string) => {
+    emitHandedOff('published');
+    if (!isEditing && publishedId && !firstStoryRef.current && isFirstStory(memoriesStats?.stories_count)) {
+      firstStoryRef.current = { memoryId: publishedId, title: latestTitleRef.current };
+    }
     pendingPublishedUrlRef.current = url;
     setShowPublish(false);
     publishSheetRef.current?.dismiss();
-  }, []);
+  }, [emitHandedOff, isEditing, memoriesStats?.stories_count]);
 
   const successExitingRef = useRef(false);
   const handleDismissPublishedSuccess = useCallback(() => {
@@ -802,7 +863,11 @@ export default function EditorScreen() {
     } else {
       router.back();
     }
-  }, [isEditing, lockMode, router]);
+    // First story: the celebration sheet follows the success page.
+    const firstStory = firstStoryRef.current;
+    firstStoryRef.current = null;
+    if (firstStory) void celebrateFirstStory({ ...firstStory, email: user?.email });
+  }, [isEditing, lockMode, router, user?.email]);
 
   const handlePublishAddAnother = useCallback(() => {
     setPublishedUrl(null);
@@ -837,7 +902,10 @@ export default function EditorScreen() {
 
   return (
     <NativeModalSafeAreaBoundary>
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+      {/* Add story sits on web mobile's album paper; editing keeps the plain page. */}
+      <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      {showComposerPaper && <StoryComposerBackdrop />}
+      <SafeAreaView style={{ flex: 1, backgroundColor: showComposerPaper ? 'transparent' : COLORS.background }}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
 
           {/* ── Header ── */}
@@ -1056,6 +1124,7 @@ export default function EditorScreen() {
                     onChange={handleStoryBodyChange}
                     onBridgeReady={handleBridgeReady}
                     scrollEnabled={true}
+                    transparent={showComposerPaper}
                   />
                   {/* OpenGraph link preview cards */}
                   <LinkPreviews variant="composer" text={storyLinkText.split('\n').filter(url => !dismissedLinks.includes(url)).join('\n')} onRemove={url => setDismissedLinks(previous => [...previous, url])} style={{ marginHorizontal: 20, marginBottom: 8 }} />
@@ -1184,6 +1253,7 @@ export default function EditorScreen() {
           />
         </KeyboardAvoidingView>
       </SafeAreaView>
+      </View>
 
       {/* Media previewer */}
       <MediaPreviewModal
@@ -1212,8 +1282,8 @@ export default function EditorScreen() {
           <>
         <BottomSheetModal
           ref={publishSheetRef}
-          topInset={getSheetTopInset(modalInsets?.top ?? 0)}
-          snapPoints={['92%']}
+          {...sheetChrome.props}
+          snapPoints={sheetChrome.snapPoints(['92%'])}
           enablePanDownToClose
           onDismiss={() => {
             setShowPublish(false);
@@ -1226,12 +1296,7 @@ export default function EditorScreen() {
           keyboardBehavior="fillParent"
           keyboardBlurBehavior="restore"
           android_keyboardInputMode="adjustResize"
-          backdropComponent={(props: any) => (
-            <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.4} pressBehavior="close" />
-          )}
           handleComponent={renderPublishHeader}
-          handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
-          backgroundStyle={{ backgroundColor: COLORS.background }}
         >
             <PublishModalInner
               title={title}
@@ -1251,18 +1316,12 @@ export default function EditorScreen() {
         </BottomSheetModal>
         <BottomSheetModal
           ref={draftsSheetRef}
-          topInset={getSheetTopInset(modalInsets?.top ?? 0)}
-          snapPoints={['75%']}
-          handleStyle={SHEET_HEADER_HANDLE_STYLE}
+          {...sheetChrome.props}
+          snapPoints={sheetChrome.snapPoints(['75%'])}
           enableDynamicSizing={false}
           enablePanDownToClose
           keyboardBehavior="interactive"
           keyboardBlurBehavior="restore"
-          backdropComponent={(props: any) => (
-            <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.4} pressBehavior="close" />
-          )}
-          handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
-          backgroundStyle={{ backgroundColor: COLORS.background }}
         >
           <View style={{ flex: 1, paddingBottom: getSheetBottomPadding(modalInsets?.bottom ?? 0, 16) }}>
             <DraftsSheet onClose={() => draftsSheetRef.current?.dismiss()} />

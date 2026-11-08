@@ -10,7 +10,7 @@ describe('editor publish sheet', () => {
   test('uses a local bottom sheet for the publish flow instead of a full-screen modal', () => {
     expect(editor).toContain('const publishSheetRef = useRef<BottomSheetModal>(null);');
     expect(editor).toContain('publishSheetRef.current?.present()');
-    expect(editor).toContain('snapPoints={[\'92%\']}');
+    expect(editor).toContain("snapPoints={sheetChrome.snapPoints(['92%'])}");
     expect(editor).toContain('<PublishModalInner');
     expect(editor).not.toContain('function PublishModal(');
   });

@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   clampEnrichmentScore,
   deriveAccountWeek,
+  deriveStreakWeek,
   normalizeEnrichmentDimensions,
 } from './account-overview';
 
@@ -21,6 +22,17 @@ describe('account overview derivation', () => {
     expect(week.map((day) => day.date)).toEqual([20, 21, 22, 23, 24, 25, 26]);
     expect(week.filter((day) => day.isCompleted).map((day) => day.date)).toEqual([20, 21]);
     expect(week.find((day) => day.isToday)?.date).toBe(22);
+  });
+
+  test('marks the streak that ends on the last active day, as the web streak card does', () => {
+    const today = new Date(2026, 10, 7, 12); // Saturday, November 7
+    const week = deriveStreakWeek(today, 3, new Date(2026, 10, 7, 9).toISOString());
+    expect(week.map((day) => day.label)).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+    expect(week.filter((day) => day.isCompleted).map((day) => day.date)).toEqual([5, 6, 7]);
+    expect(week.find((day) => day.isToday)?.fullDate).toBe('November 7');
+    // Without a last active day, the streak ends yesterday.
+    expect(deriveStreakWeek(today, 2).filter((day) => day.isCompleted).map((day) => day.date)).toEqual([5, 6]);
+    expect(deriveStreakWeek(today, 0).some((day) => day.isCompleted)).toBe(false);
   });
 
   test('normalizes enrichment category scores in the reference display order', () => {

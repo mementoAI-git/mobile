@@ -10,15 +10,17 @@ import {
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import {
   BottomSheetModal,
-  BottomSheetBackdrop,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import type { ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import { getSheetBottomPadding, getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
 import { EMOJI_CATEGORIES, type EmojiCategory } from '@/features/chat/emoji-data';
+import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
+import { SheetHeader } from '@/components/sheets/SheetHeader';
+import { SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
 
 interface EmojiPickerSheetProps {
   onSelectEmoji: (emoji: string) => void;
@@ -31,6 +33,7 @@ const NUM_COLUMNS = 7;
 export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetProps>(
   function EmojiPickerSheet({ onSelectEmoji, onClose, managed = false }, ref) {
   const styles = useThemeStyles(createStyles);
+  const sheetChrome = useSheetChrome();
     const { width: windowWidth } = useWindowDimensions();
     const insets = useSafeAreaInsets();
     const emojiSize = useMemo(() => {
@@ -40,17 +43,6 @@ export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetPro
     const snapPoints = useMemo(() => ['42%', '65%'], []);
     const [activeCategoryId, setActiveCategoryId] = useState<string>(EMOJI_CATEGORIES[0].id);
 
-    const renderBackdrop = useCallback(
-      (props: any) => (
-        <BottomSheetBackdrop
-          {...props}
-          appearsOnIndex={0}
-          disappearsOnIndex={-1}
-          opacity={0.3}
-        />
-      ),
-      []
-    );
 
     const handleSelectEmoji = useCallback(
       (emoji: string) => {
@@ -73,11 +65,15 @@ export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetPro
       );
     }, [activeCategoryId]);
 
+    const close = useCallback(() => {
+      if (managed) onClose?.();
+      else if (ref && typeof ref !== 'function') ref.current?.dismiss();
+    }, [managed, onClose, ref]);
+
     const content = (
         <View style={styles.container}>
-          {/* Header */}
+          <SheetHeader title="Emoji" onClose={close} closeLabel="Close emoji picker" />
           <View style={styles.header}>
-            <Text style={styles.title}>Emoji</Text>
             {/* Category tabs */}
             <ScrollView
               horizontal
@@ -132,12 +128,8 @@ export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetPro
     return (
       <BottomSheetModal
         ref={ref}
-        topInset={getSheetTopInset(insets.top)}
-        snapPoints={snapPoints}
-        backdropComponent={renderBackdrop}
-        handleStyle={SHEET_HEADER_HANDLE_STYLE}
-        handleIndicatorStyle={styles.handleIndicator}
-        backgroundStyle={styles.sheetBackground}
+        {...sheetChrome.props}
+        snapPoints={sheetChrome.snapPoints(snapPoints)}
         onDismiss={onClose}
       >
         {content}
@@ -148,7 +140,7 @@ export const EmojiPickerSheet = forwardRef<BottomSheetModal, EmojiPickerSheetPro
 
 const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   sheetBackground: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.sheet,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -162,18 +154,11 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 20,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 0,
+    marginTop: SHEET_SECTION_GAP,
     paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.strokeWeaker,
     gap: 12,
-  },
-  title: {
-    ...TYPE.cardTitle,
-    color: COLORS.textStrong,
   },
   tabContainer: {
     flexDirection: 'row',

@@ -66,7 +66,7 @@ describe('Settings sheet footer layout', () => {
 
     expect(editProfile).not.toContain('sheetFooterBottomInset');
     expect(editProfile).not.toContain('EDIT_PROFILE_FOOTER_HEIGHT');
-    expect(editProfile).toMatch(/paddingBottom:\s*20/);
+    expect(editProfile).toContain('paddingTop: SHEET_GROUP_GAP');
     expect(editProfile).not.toContain('enableFooterMarginAdjustment');
     expect(manager).not.toContain('sheetFooterBottomInset={insets.bottom}');
   });
@@ -97,7 +97,8 @@ describe('Settings sheet footer layout', () => {
     expect(manager).not.toMatch(/verticalScale\(/);
     expect(manager).not.toMatch(/\bvs\(/);
     expect(manager).not.toMatch(/mvs\(/);
-    expect(manager).toContain('topInset={getSheetTopInset(insets.top)}');
+    // Top inset comes from the shared chrome (web's 8% gap, never under the status bar).
+    expect(manager).toContain('{...chrome.props}');
     expect(manager).toContain('getSheetBottomPadding(insets.bottom');
   });
 

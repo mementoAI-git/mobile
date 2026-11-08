@@ -1,231 +1,134 @@
+/**
+ * SearchMemorySheet — mobile port of web's phone search sheet
+ * (Web/memento-web/src/components/modal/memory/search/search-modal-v2.tsx).
+ *
+ * - One search field in a divided header (8px input radius, no title).
+ * - Empty field: "Recently opened" memories (the last five opened).
+ * - With a query: description search via /memories/search, falling back to a
+ *   word search, with a status line and "Memories · N results".
+ * - Rows: picture (or DiceBear art), title and preview with matches marked, date.
+ */
 import type { ThemeColors } from '@/constants/tokens';
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
-/**
- * SearchMemorySheet — full-featured search bottom sheet
- *
- * Empty state:  Suggested conversations (from overviewPrompts) + Recent searches + Clear all
- * Active state: Server-side search via useStories({ search }) with 300ms debounce
- *
- * Recent search history is persisted in SecureStore keyed by user email (max 8 entries).
- */
-
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Keyboard,
-} from 'react-native';
-import { TouchableOpacity } from '@/components/ui/Touchable';
-import { BottomSheetView, BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import Search from 'lucide-react-native/icons/search';
-import X from 'lucide-react-native/icons/x';
-import Clock from 'lucide-react-native/icons/clock';
-import ChevronRight from 'lucide-react-native/icons/chevron-right';
-import Compass from 'lucide-react-native/icons/compass';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Keyboard, StyleSheet, Text, View } from 'react-native';
+import { BottomSheetScrollView, BottomSheetTextInput, BottomSheetView } from '@gorhom/bottom-sheet';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import { useUiStore, useUserStore } from '@/store';
-import { useStories } from '@/hooks/queries/use-memories';
-import { useOverviewPrompts } from '@/hooks/queries/use-prompts';
-import { secureStorage } from '@/lib/secure-storage';
-
-import { COLORS, FONTS } from '@/constants/tokens';
+import Search from 'lucide-react-native/icons/search';
+import X from 'lucide-react-native/icons/x';
+import CalendarDays from 'lucide-react-native/icons/calendar-days';
+import { TouchableOpacity } from '@/components/ui/Touchable';
+import { Button } from '@/components/ui/Button';
+import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
+import { INPUT_RADIUS } from '@/components/ui/TextInput';
 import { TYPE } from '@/constants/typography';
-import { Skeleton } from '@/components/ui/Skeleton';
-
-dayjs.extend(relativeTime);
-
-// ── Search history helpers ─────────────────────────────────────────────────
-const MAX_HISTORY = 8;
-
-function historyKey(email?: string | null): string {
-  return `search_history_${(email ?? 'anon').replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-}
-
-async function loadHistory(email?: string | null): Promise<string[]> {
-  try {
-    const raw = await secureStorage.getItem(historyKey(email));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-async function saveHistory(email: string | null | undefined, entries: string[]): Promise<void> {
-  try {
-    await secureStorage.setItem(historyKey(email), JSON.stringify(entries));
-  } catch {
-    // storage failure is non-fatal
-  }
-}
-
-async function pushToHistory(email: string | null | undefined, query: string): Promise<void> {
-  const trimmed = query.trim();
-  if (!trimmed) return;
-  const current = await loadHistory(email);
-  // Remove existing entry if present (move to front)
-  const deduped = current.filter((q) => q.toLowerCase() !== trimmed.toLowerCase());
-  const next = [trimmed, ...deduped].slice(0, MAX_HISTORY);
-  await saveHistory(email, next);
-}
-
+import { useUiStore, useUserStore } from '@/store';
+import { useMemorySearch } from '@/hooks/queries/use-memory-search';
+import { getRecentMemories, type RecentMemory } from '@/features/memories/recent-memories';
+import { getQuestionIdenticonUrl } from '@/features/explore/question-presentation';
 import { stripHtml } from '@/features/memories/strip-html';
+import { searchHighlightParts, searchPictureOf, searchStatusText } from '@/features/memories/search-presentation';
+
 export { stripHtml };
 
-const MemoryRow = React.memo(function MemoryRow({
-  memory,
-  onPress,
-}: {
-  memory: any;
-  onPress: () => void;
-}) {
-  const COLORS = useThemeColors();
-  const styles = useThemeStyles(createStyles);
-  const previewBody = stripHtml(memory.body);
+type SearchMemory = Pick<RecentMemory, '_id' | 'title' | 'type' | 'attachments' | 'body' | 'created_at'> & { _id: string };
+
+function Highlighted({ text, term, style, markStyle }: { text: string; term: string; style: any; markStyle: any }) {
+  const parts = searchHighlightParts(text, term);
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.7}
-      style={styles.resultRow}
-    >
-      <View style={styles.resultContent}>
-        <Text style={styles.resultTitle} numberOfLines={1}>
-          {memory.title || 'Untitled memory'}
-        </Text>
-        {previewBody ? (
-          <Text style={styles.resultBody} numberOfLines={1}>
-            {previewBody}
-          </Text>
-        ) : null}
-        <Text style={styles.resultDate}>
-          {dayjs(memory.created_at).fromNow()}
-        </Text>
-      </View>
-      <ChevronRight size={16} color={COLORS.textMuted} />
-    </TouchableOpacity>
+    <Text style={style} numberOfLines={1}>
+      {parts.map((part, index) => (part.match
+        ? <Text key={index} style={markStyle}>{part.text}</Text>
+        : part.text))}
+    </Text>
   );
-});
+}
 
-// Stable item wrapper — eliminates inline arrow in results .map()
-const MemoMemoryRowItem = React.memo(function MemoMemoryRowItem({
+const SearchRow = React.memo(function SearchRow({
   memory,
-  onResultPress,
-}: {
-  memory: any;
-  onResultPress: (m: any) => void;
-}) {
-  const handlePress = useCallback(() => onResultPress(memory), [memory, onResultPress]);
-  return <MemoryRow memory={memory} onPress={handlePress} />;
-});
-
-const RecentPill = React.memo(function RecentPill({
-  label,
-  onPress,
-  onRemove,
-}: {
-  label: string;
-  onPress: () => void;
-  onRemove: () => void;
-}) {
-  const COLORS = useThemeColors();
-  const styles = useThemeStyles(createStyles);
-  return (
-    <View style={styles.recentPill}>
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.recentPillText}>
-        <Clock size={12} color={COLORS.textWeak} style={{ marginRight: 5 }} />
-        <Text style={styles.recentLabel} numberOfLines={1}>{label}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={onRemove} activeOpacity={0.7} style={styles.recentPillRemove}>
-        <X size={11} color={COLORS.textMuted} />
-      </TouchableOpacity>
-    </View>
-  );
-});
-
-// Stable item wrappers — eliminate inline arrows in history and suggestion maps
-const MemoRecentPillItem = React.memo(function MemoRecentPillItem({
   term,
-  onHistoryPress,
-  onRemoveHistory,
+  onSelect,
 }: {
+  memory: SearchMemory;
   term: string;
-  onHistoryPress: (t: string) => void;
-  onRemoveHistory: (t: string) => void;
+  onSelect: (memory: SearchMemory) => void;
 }) {
-  const handlePress  = useCallback(() => onHistoryPress(term),  [term, onHistoryPress]);
-  const handleRemove = useCallback(() => onRemoveHistory(term), [term, onRemoveHistory]);
-  return <RecentPill label={term} onPress={handlePress} onRemove={handleRemove} />;
-});
-
-const MemoSuggestionRowItem = React.memo(function MemoSuggestionRowItem({
-  prompt,
-  onSuggestionPress,
-}: {
-  prompt: any;
-  onSuggestionPress: (p: any) => void;
-}) {
-  const COLORS = useThemeColors();
   const styles = useThemeStyles(createStyles);
-  const handlePress = useCallback(() => onSuggestionPress(prompt), [prompt, onSuggestionPress]);
+  const COLORS = useThemeColors();
+  const picture = searchPictureOf(memory.attachments);
+  const [pictureFailed, setPictureFailed] = useState(false);
+  const previewBody = stripHtml(memory.body);
+  const handlePress = useCallback(() => onSelect(memory), [memory, onSelect]);
   return (
     <TouchableOpacity
       onPress={handlePress}
       activeOpacity={0.7}
-      style={styles.suggestionRow}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${memory.title || 'memory'}`}
+      style={styles.row}
     >
-      <Text style={styles.suggestionText} numberOfLines={2}>{prompt.title}</Text>
-      <ChevronRight size={14} color={COLORS.textMuted} />
+      {picture && !pictureFailed ? (
+        <SignedAttachmentImage
+          attachment={{ _id: picture._id ?? picture.url, url: picture.url, thumbnail: picture.thumbnail, access: picture.access }}
+          preferThumbnail
+          style={styles.picture}
+          resizeMode="cover"
+          onError={() => setPictureFailed(true)}
+        />
+      ) : (
+        <Image source={{ uri: getQuestionIdenticonUrl(memory._id) }} style={styles.picture} contentFit="cover" accessibilityElementsHidden />
+      )}
+      <View style={styles.rowWords}>
+        <Highlighted text={memory.title || 'Untitled memory'} term={term} style={[TYPE.buttonSmall, styles.rowTitle]} markStyle={styles.mark} />
+        {previewBody ? (
+          <Highlighted text={previewBody} term={term} style={[TYPE.bodySmall, styles.rowBody]} markStyle={styles.mark} />
+        ) : null}
+      </View>
+      {memory.created_at ? (
+        <View style={styles.rowDate}>
+          <CalendarDays size={14} color={COLORS.textMuted} />
+          <Text style={[TYPE.metadata, styles.rowDateText]}>{dayjs(memory.created_at).format('MMM DD')}</Text>
+        </View>
+      ) : null}
     </TouchableOpacity>
   );
 });
 
-// ── Main component ─────────────────────────────────────────────────────────
 export function SearchMemorySheet() {
   const COLORS = useThemeColors();
   const styles = useThemeStyles(createStyles);
   const closeSheet = useUiStore((s) => s.closeSheet);
   const email = useUserStore((s) => s.user?.email);
+  const inputRef = useRef<any>(null);
 
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [history, setHistory] = useState<string[]>([]);
-  const inputRef = useRef<any>(null);
+  const [focused, setFocused] = useState(false);
+  const [recent, setRecent] = useState<RecentMemory[]>([]);
 
-  const [isFocused, setIsFocused] = useState(false);
-
-  // Load history on mount
   useEffect(() => {
-    loadHistory(email).then(setHistory);
+    void getRecentMemories(email).then(setRecent);
   }, [email]);
 
-  // Debounce query
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query.trim()), 300);
     return () => clearTimeout(t);
   }, [query]);
 
-  // Server-side search — only fires when debouncedQuery has content
-  const hasSearchQuery = debouncedQuery.trim().length > 0;
-  const { data: searchData, isFetching } = useStories(
-    hasSearchQuery ? { search: debouncedQuery, limit: 20 } : undefined,
-    { enabled: hasSearchQuery },
-  );
-  const results = hasSearchQuery
-    ? (searchData?.pages.flatMap((p) => p.docs) ?? [])
-    : [];
+  const { data, isLoading, isFetching, error, refetch } = useMemorySearch(debouncedQuery);
+  const showRecent = !query.trim();
+  const queryChanging = query.trim() !== debouncedQuery;
+  const searchError = !showRecent && !queryChanging && Boolean(error);
+  const isSearching = !showRecent && (queryChanging || isLoading || isFetching);
+  const results = useMemo(() => (data?.docs ?? []) as SearchMemory[], [data?.docs]);
+  const visible: SearchMemory[] = showRecent ? recent : queryChanging || isLoading ? [] : results;
+  const showEmpty = !isSearching && !searchError && visible.length === 0;
+  const term = showRecent ? '' : query.trim();
 
-  // Suggested conversations
-  const { data: overviewPromptsData } = useOverviewPrompts();
-  const suggestions = (overviewPromptsData ?? []).slice(0, 6);
-
-  const isEmpty = hasSearchQuery ? !isFetching && results.length === 0 : false;
-
-  // ── Navigate only after the keyboard has fully dismissed ──────────────
+  // Navigate once the keyboard is down, so the next screen lays out at full height.
   const navigateAfterKeyboard = useCallback((navigate: () => void) => {
     let done = false;
     const run = () => {
@@ -240,410 +143,169 @@ export function SearchMemorySheet() {
     const fallback = setTimeout(run, 600);
   }, []);
 
-  // ── Handlers ──────────────────────────────────────────────────────────
-  const handleResultPress = useCallback(async (memory: any) => {
-    Haptics.selectionAsync();
-    await pushToHistory(email, debouncedQuery);
-    setHistory(await loadHistory(email));
-    navigateAfterKeyboard(() => {
-      closeSheet();
-      router.push({ pathname: '/(tabs)/stories/[id]', params: { id: memory._id } });
-    });
-  }, [debouncedQuery, email, closeSheet, navigateAfterKeyboard]);
-
-  const handleHistoryPress = useCallback((term: string) => {
-    Haptics.selectionAsync();
-    setQuery(term);
-    setDebouncedQuery(term);
-  }, []);
-
-  const handleRemoveHistory = useCallback(async (term: string) => {
-    Haptics.selectionAsync();
-    const next = history.filter((h) => h !== term);
-    setHistory(next);
-    await saveHistory(email, next);
-  }, [history, email]);
-
-  const handleClearAll = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setHistory([]);
-    await saveHistory(email, []);
-  }, [email]);
-
-  const handleSuggestionPress = useCallback((prompt: any) => {
+  const handleSelect = useCallback((memory: SearchMemory) => {
     Haptics.selectionAsync();
     navigateAfterKeyboard(() => {
       closeSheet();
-      router.push({ pathname: '/chat/[id]', params: { id: prompt._id, type: 'prompt', promptTitle: prompt.title } });
+      if (memory.type === 'conversation') router.push({ pathname: '/chat/[id]', params: { id: memory._id } });
+      else router.push({ pathname: '/(tabs)/stories/[id]', params: { id: memory._id } });
     });
   }, [closeSheet, navigateAfterKeyboard]);
 
   const handleClear = useCallback(() => {
+    Haptics.selectionAsync();
     setQuery('');
     setDebouncedQuery('');
+    inputRef.current?.focus();
   }, []);
 
-  // ── Render ─────────────────────────────────────────────────────────────
+  const heading = showRecent
+    ? 'Recently opened'
+    : `Memories · ${results.length} ${results.length === 1 ? 'result' : 'results'}`;
+  const status = showRecent ? null : searchStatusText({ isSearching, failed: searchError, search: data?.search });
+
   return (
     <BottomSheetView style={styles.container}>
-      {/* ── Sheet Header ── */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Search</Text>
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.selectionAsync();
-            closeSheet();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Close search"
-          style={styles.closeBtn}
-          hitSlop={6}
-        >
-          <X size={16} color={COLORS.textStrong} />
-        </TouchableOpacity>
+        <View style={[styles.field, focused && styles.fieldFocused]}>
+          <Search size={16} color={COLORS.textWeak} />
+          <BottomSheetTextInput
+            ref={inputRef}
+            value={query}
+            onChangeText={setQuery}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder="Describe a memory, or search its words…"
+            placeholderTextColor={COLORS.textMuted}
+            maxLength={200}
+            autoFocus
+            returnKeyType="search"
+            autoCorrect={false}
+            textContentType="none"
+            autoComplete="off"
+            accessibilityLabel="Search memories"
+            selectionColor={COLORS.brand}
+            cursorColor={COLORS.brand}
+            style={[TYPE.input, styles.input]}
+          />
+          {isSearching ? (
+            <ActivityIndicator size="small" color={COLORS.textWeak} />
+          ) : query ? (
+            <TouchableOpacity onPress={handleClear} hitSlop={10} accessibilityRole="button" accessibilityLabel="Clear search" style={styles.clear}>
+              <X size={14} color={COLORS.textWeak} strokeWidth={1.75} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
 
-      {/* ── Search input ── */}
-      <View style={[styles.inputWrapper, isFocused && styles.inputWrapperFocused]}>
-        <Search size={18} color={isFocused ? COLORS.brand : COLORS.textWeak} strokeWidth={2} />
-        <BottomSheetTextInput
-          ref={inputRef}
-          value={query}
-          onChangeText={setQuery}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          placeholder="Search your memories"
-          placeholderTextColor={COLORS.textMuted}
-          autoFocus
-          style={styles.input}
-          returnKeyType="search"
-        />
-        {query.length > 0 && (
-          <TouchableOpacity onPress={handleClear} activeOpacity={0.7} style={styles.clearBtn} hitSlop={12}>
-            <X size={12} color={COLORS.textWeak} />
-          </TouchableOpacity>
-        )}
-      </View>
+      {status ? (
+        <Text accessibilityLiveRegion="polite" style={[TYPE.bodySmall, styles.status]}>{status}</Text>
+      ) : null}
+      {searchError ? (
+        <View style={styles.retry}>
+          <Button variant="outline" onPress={() => { void refetch(); }} disabled={isSearching}>Retry search</Button>
+        </View>
+      ) : null}
 
       <BottomSheetScrollView
-        showsVerticalScrollIndicator={false}
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.scrollContent}
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
       >
-        {/* ── EMPTY QUERY: suggestions + history ── */}
-        {!query.trim() && (
-          <>
-            {/* Suggested conversations */}
-            {suggestions.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <View style={styles.sectionTitleGroup}>
-                    <Compass size={14} color={COLORS.textWeak} strokeWidth={1.8} />
-                    <Text style={styles.sectionTitle}>Suggested for you</Text>
-                  </View>
-                </View>
-                <View style={styles.suggestionList}>
-                  {suggestions.map((s: any) => (
-                    <MemoSuggestionRowItem
-                      key={s._id}
-                      prompt={s}
-                      onSuggestionPress={handleSuggestionPress}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* Recent searches */}
-            {history.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <View style={styles.sectionTitleGroup}>
-                    <Clock size={14} color={COLORS.textWeak} />
-                    <Text style={styles.sectionTitle}>Recent searches</Text>
-                  </View>
-                  <TouchableOpacity onPress={handleClearAll} activeOpacity={0.7} hitSlop={8}>
-                    <Text style={styles.clearAllText}>Clear all</Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.pillRow}>
-                  {history.map((term) => (
-                    <MemoRecentPillItem
-                      key={term}
-                      term={term}
-                      onHistoryPress={handleHistoryPress}
-                      onRemoveHistory={handleRemoveHistory}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* No history + no suggestions */}
-            {suggestions.length === 0 && history.length === 0 && (
-              <View style={styles.emptyCenter}>
-                <Search size={36} color={COLORS.textMuted} strokeWidth={1.5} />
-                <Text style={styles.emptyTitle}>Search your memories</Text>
-                <Text style={styles.emptyBody}>
-                  Type anything to search across all your stories and conversations.
-                </Text>
-              </View>
-            )}
-          </>
-        )}
-
-        {/* ── ACTIVE QUERY: loading / results / empty ── */}
-        {query.trim() && (
-          <>
-            {isFetching ? (
-              // Loading skeletons
-              <View style={styles.section}>
-                {[1, 2, 3, 4].map((i) => (
-                  <View key={i} style={styles.skeletonRow}>
-                    <View style={{ flex: 1, gap: 8 }}>
-                      <Skeleton className="h-4 w-3/4 rounded-full" />
-                      <Skeleton className="h-3 w-full rounded-full" />
-                    </View>
-                  </View>
-                ))}
-              </View>
-            ) : isEmpty ? (
-              <View style={styles.emptyCenter}>
-                <Search size={36} color={COLORS.textMuted} strokeWidth={1.5} />
-                <Text style={styles.emptyTitle}>Nothing found</Text>
-                <Text style={styles.emptyBody}>
-                  No memories match &ldquo;{debouncedQuery}&rdquo;. Try different keywords.
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>
-                    {results.length} {results.length === 1 ? 'RESULT' : 'RESULTS'}
-                  </Text>
-                </View>
-                {results.map((memory: any) => (
-                  <MemoMemoryRowItem
-                    key={memory._id}
-                    memory={memory}
-                    onResultPress={handleResultPress}
-                  />
-                ))}
-              </View>
-            )}
-          </>
-        )}
+        {showEmpty ? (
+          <View style={styles.empty}>
+            <View style={styles.emptyIcon}>
+              <Search size={32} color={COLORS.textWeak} />
+            </View>
+            <Text style={[TYPE.button, styles.emptyTitle]}>
+              {showRecent ? 'No recent memories' : data?.search?.mode === 'keyword' ? 'No word matches' : 'No memories found'}
+            </Text>
+            <Text style={[TYPE.bodySmall, styles.emptyBody]}>
+              {showRecent ? 'Your recently opened memories will appear here.' : 'Try a different description, name, or word.'}
+            </Text>
+          </View>
+        ) : visible.length > 0 ? (
+          <View>
+            <Text style={[TYPE.eyebrow, styles.groupHeading]}>{heading.toUpperCase()}</Text>
+            <View style={styles.rows}>
+              {visible.map((memory) => (
+                <SearchRow key={memory._id} memory={memory} term={term} onSelect={handleSelect} />
+              ))}
+            </View>
+          </View>
+        ) : null}
       </BottomSheetScrollView>
     </BottomSheetView>
   );
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────────
 const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 0,
-    paddingBottom: 32,
-  },
+  container: { flex: 1 },
+  // Web: border-b, px-3 py-4.
   header: {
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.strokeWeak,
+  },
+  // Web CommandInput: h-11, 8px radius. Inputs never use pill corners.
+  field: {
+    height: 44,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  headerTitle: {
-    ...TYPE.sectionTitle,
-    color: COLORS.textStrong,
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.fillWeaker,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    height: 52,
-    borderRadius: 999,
-    backgroundColor: COLORS.fillWeaker,
+    gap: 8,
+    paddingHorizontal: 12,
+    borderRadius: INPUT_RADIUS,
     borderWidth: 1,
     borderColor: COLORS.strokeWeaker,
-    paddingHorizontal: 16,
-    gap: 10,
+    backgroundColor: COLORS.fillWeaker,
   },
-  inputWrapperFocused: {
-    borderColor: COLORS.brand,
-  },
+  fieldFocused: { borderColor: COLORS.brand },
   input: {
     flex: 1,
-    ...TYPE.input,
     color: COLORS.textStrong,
+    padding: 0,
+    margin: 0,
   },
-  clearBtn: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: COLORS.fillWeak,
+  clear: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  section: {
-    marginBottom: 24,
-    gap: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sectionTitleGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  sectionTitle: {
-    ...TYPE.eyebrow,
+  status: { color: COLORS.textWeak, paddingHorizontal: 24, paddingTop: 12 },
+  retry: { paddingHorizontal: 24, paddingVertical: 16 },
+  list: { flex: 1 },
+  listContent: { paddingHorizontal: 12, paddingTop: 12, paddingBottom: 24 },
+  groupHeading: {
     color: COLORS.textWeak,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    letterSpacing: 0.6,
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
-  clearAllText: {
-    ...TYPE.buttonSmall,
-    color: COLORS.brand,
-  },
-
-  // Suggestions
-  suggestionList: {
-    gap: 8,
-  },
-  suggestionRow: {
+  rows: { gap: 12 },
+  row: {
+    minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.fillWeaker,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
     gap: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
-  suggestionText: {
-    ...TYPE.label,
-    color: COLORS.textStrong,
-    flex: 1,
-    lineHeight: 20,
-  },
-
-  // Recent search pills
-  pillRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  recentPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.fillWeaker,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
-    borderRadius: 999,
-    paddingLeft: 12,
-    paddingRight: 8,
-    paddingVertical: 7,
-    gap: 6,
-    maxWidth: 220,
-  },
-  recentPillText: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
-  recentLabel: {
-    ...TYPE.bodySmall,
-    color: COLORS.textStrong,
-    flexShrink: 1,
-  },
-  recentPillRemove: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-
-  // Results
-  resultRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
-    gap: 12,
-    marginBottom: 8,
-  },
-  resultContent: {
-    flex: 1,
-    gap: 4,
-  },
-  resultTitle: {
-    ...TYPE.uiTitle,
-    color: COLORS.textStrong,
-  },
-  resultBody: {
-    ...TYPE.bodySmall,
-    color: COLORS.previewText,
-    lineHeight: 18,
-  },
-  resultDate: {
-    ...TYPE.eyebrow,
-    color: COLORS.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginTop: 2,
-  },
-
-  // Skeleton placeholder row
-  skeletonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.strokeWeaker,
-  },
-
-  // Empty state
-  emptyCenter: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-    gap: 10,
-  },
-  emptyTitle: {
-    ...TYPE.sectionTitle,
-    color: COLORS.textStrong,
-    marginTop: 8,
-  },
-  emptyBody: {
-    ...TYPE.bodySmall,
-    color: COLORS.textWeak,
-    textAlign: 'center',
-    maxWidth: 260,
-    lineHeight: 20,
-  },
+  picture: { width: 44, height: 44, borderRadius: 8, backgroundColor: COLORS.fillWeak },
+  rowWords: { flex: 1, minWidth: 0, gap: 2 },
+  rowTitle: { color: COLORS.textStrong },
+  rowBody: { color: COLORS.textWeak },
+  mark: { backgroundColor: COLORS.brandTint, color: COLORS.textStrong },
+  rowDate: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
+  rowDateText: { color: COLORS.textMuted },
+  empty: { minHeight: 256, alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
+  emptyIcon: { marginBottom: 12, padding: 12, borderRadius: 999, backgroundColor: COLORS.fillWeaker },
+  emptyTitle: { color: COLORS.textStrong, marginBottom: 8, textAlign: 'center' },
+  emptyBody: { color: COLORS.textWeak, maxWidth: 280, textAlign: 'center' },
 });

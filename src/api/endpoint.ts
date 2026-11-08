@@ -23,6 +23,12 @@ export default {
   userContext: '/users/context',
   persona: '/users/persona',
   personaMemoryInsightsSummary: '/users/persona/memory-insights-summary',
+  personaObservations: '/persona/observations',
+  personaObservation: '/persona/observations/:observationId',
+  /** Current rotating batch of insights */
+  insights: '/users/insights',
+  /** Memories behind an insight (?insight=) or enrichment field (?category=) */
+  insightSources: '/users/insights/sources',
   completeOnboarding: '/users/complete-onboarding',
   uploadPicture: '/users/upload-picture',
   changePassword: '/users/change-password',
@@ -64,6 +70,7 @@ export default {
 
   // memories
   memories: '/memories',
+  memorySearch: '/memories/search',
   memory: '/memories/:id',
   conversationAttachments: '/memories/:id/attachments',
   bookmarkMemory: '/memories/:id/bookmark',
@@ -84,6 +91,7 @@ export default {
   aiPromptMessage: '/ai/prompt/messages',
   transcription: '/ai/transcribe-audio',
   startConversation: '/ai/conversation/new',
+  spokenReply: '/ai/spoken-reply',
   ephemeralToken: '/ai/ephemeral-token',
   voiceTurns: '/ai/voice/turns',
   voiceMemorySearch: '/ai/voice/memory-search',

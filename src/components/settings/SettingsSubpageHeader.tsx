@@ -9,14 +9,20 @@ import { getSettingsHeaderLayout } from '@/features/settings/settings-header-lay
 
 interface SettingsSubpageHeaderProps {
   title: string;
+  /** Muted italic word after the title, like web's "People & <em>groups</em>". */
+  accent?: string;
   onBack: () => void;
+  /** Right-side control; an equal spacer keeps the title centred when absent. */
+  right?: React.ReactNode;
 }
 
 const layout = getSettingsHeaderLayout();
 
 export const SettingsSubpageHeader = React.memo(function SettingsSubpageHeader({
   title,
+  accent,
   onBack,
+  right,
 }: SettingsSubpageHeaderProps) {
   const COLORS = useThemeColors();
   return (
@@ -45,8 +51,11 @@ export const SettingsSubpageHeader = React.memo(function SettingsSubpageHeader({
       >
         <ArrowLeft size={layout.iconSize} color={COLORS.textBase} />
       </TouchableOpacity>
-      <Text style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>{title}</Text>
-      <View style={{ width: layout.actionSize, height: layout.actionSize }} />
+      <Text numberOfLines={1} style={{ ...TYPE.cardTitle, color: COLORS.textStrong, flexShrink: 1, textAlign: 'center' }}>
+        {title}
+        {accent ? <Text style={{ ...TYPE.cardTitleAccent, color: COLORS.textWeak }}> {accent}</Text> : null}
+      </Text>
+      {right ?? <View style={{ width: layout.actionSize, height: layout.actionSize }} />}
     </View>
   );
 });

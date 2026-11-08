@@ -1,10 +1,11 @@
 import type { ThemeColors } from '@/constants/tokens';
 import { TYPE_METRICS } from '@/constants/typography';
 
-export function buildEditorThemeCSS(colors: ThemeColors): string {
+/** `transparent` lets a page backdrop (the add-story album paper) show through the WebView. */
+export function buildEditorThemeCSS(colors: ThemeColors, { transparent = false }: { transparent?: boolean } = {}): string {
   return `
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; padding: 0; background: ${colors.background}; color: ${colors.textBase}; caret-color: ${colors.textStrong}; }
+        body { margin: 0; padding: 0; background: ${transparent ? 'transparent' : colors.background}; color: ${colors.textBase}; caret-color: ${colors.textStrong}; }
         .tiptap, .ProseMirror {
           padding: 8px 20px 20px 20px !important;
           font-size: ${TYPE_METRICS.body.fontSize}px;

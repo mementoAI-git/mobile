@@ -1,4 +1,6 @@
-import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useResolvedAppearance, useThemeColors } from '@/hooks/use-theme-colors';
+import { useAppearanceStore } from '@/store/appearance.store';
+import { COLORS as LIGHT_COLORS } from '@/constants/tokens';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ImageBackground,
@@ -15,22 +17,17 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import dayjs from 'dayjs';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { PlanSummaryBanner } from '@/components/subscription/PlanSummaryBanner';
 import { EnrichmentScoreCard } from '@/components/account/EnrichmentScoreCard';
 import { WeeklyProgressCard } from '@/components/account/WeeklyProgressCard';
-import { AboutMeCard } from '@/components/account/AboutMeCard';
 import { MusicControllerCard } from '@/components/account/MusicControllerCard';
 import { AccountSkeleton, Avatar, Button } from '@/components/ui';
 
-import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import {
   clampEnrichmentScore,
-  deriveAccountWeek,
+  deriveStreakWeek,
 } from '@/features/account/account-overview';
 import { useProfile } from '@/hooks/queries/use-profile';
-import { usePersona } from '@/hooks/queries/use-persona';
-import { useSubscription } from '@/hooks/queries/use-subscription';
 import { useUserStats } from '@/hooks/queries/use-overview';
 import { useUiStore } from '@/store';
 
@@ -38,10 +35,14 @@ const PATTERN = require('../assets/images/backgrounds/welcome_bg.png');
 
 export default function AccountOverviewScreen() {
   const COLORS = useThemeColors();
+  const appearance = useAppearanceStore((state) => state.preference);
+  const resolvedAppearance = useResolvedAppearance();
+  // The profile card is a white card on Dark and Deep Sky, with light-mode ink on it.
+  const profileOnWhite = appearance === 'deep-sky' || resolvedAppearance === 'dark';
+  const profileInk = profileOnWhite ? LIGHT_COLORS : COLORS;
   const router = useRouter();
   const openSheet = useUiStore((state) => state.openSheet);
   const [refreshing, setRefreshing] = useState(false);
-  const { data: persona, refetch: refetchPersona } = usePersona();
 
   const {
     data: profile,
@@ -55,12 +56,6 @@ export default function AccountOverviewScreen() {
     isError: statsError,
     refetch: refetchStats,
   } = useUserStats();
-  const {
-    isProOrAbove,
-    data: subscription,
-    isLoading: subscriptionLoading,
-    refetch: refetchSubscription,
-  } = useSubscription();
 
   const displayName = useMemo(
     () => (
@@ -71,7 +66,6 @@ export default function AccountOverviewScreen() {
     ),
     [profile],
   );
-  const biography = persona?.self_description ?? profile?.context?.self_description ?? '';
   const memberSince = useMemo(
     () => (profile?.created_at
       ? `Member since ${dayjs(profile.created_at).format('MMM YYYY')}`
@@ -80,7 +74,8 @@ export default function AccountOverviewScreen() {
   );
   const score = clampEnrichmentScore(stats?.enrichment_score);
   const streakCount = Number(profile?.streak) || Number(stats?.streak_count) || 0;
-  const weekDays = useMemo(() => deriveAccountWeek(new Date(), streakCount), [streakCount]);
+  const lastActive = profile?.last_task_date;
+  const weekDays = useMemo(() => deriveStreakWeek(new Date(), streakCount, lastActive), [streakCount, lastActive]);
   const isLoading = profileLoading || statsLoading;
   const hasError = profileError || statsError;
 
@@ -99,10 +94,6 @@ export default function AccountOverviewScreen() {
     navigateSettings();
   }, [navigateSettings]);
 
-  const handleUpgrade = useCallback(() => {
-    router.push('/settings/billing');
-  }, [router]);
-
   const openInsights = useCallback(() => {
     router.push('/insights');
   }, [router]);
@@ -112,9 +103,11 @@ export default function AccountOverviewScreen() {
     openInsights();
   }, [openInsights]);
 
-  const openEditProfile = useCallback(() => {
-    openSheet('edit-profile');
-  }, [openSheet]);
+  // The enrichment card opens Insights on its Enrichment fields tab.
+  const openEnrichment = useCallback(() => {
+    Haptics.selectionAsync();
+    router.push({ pathname: '/insights', params: { section: 'enrichment' } });
+  }, [router]);
 
   const handleWeeklyProgress = useCallback(() => {
     Haptics.selectionAsync();
@@ -127,14 +120,12 @@ export default function AccountOverviewScreen() {
     try {
       await Promise.all([
         refetchProfile(),
-        refetchPersona(),
         refetchStats(),
-        refetchSubscription(),
       ]);
     } finally {
       setRefreshing(false);
     }
-  }, [refetchProfile, refetchPersona, refetchStats, refetchSubscription]);
+  }, [refetchProfile, refetchStats]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
@@ -216,116 +207,108 @@ export default function AccountOverviewScreen() {
             <AccountSkeleton />
           ) : (
             <View style={{ paddingHorizontal: 16, gap: 24 }}>
-              <PlanSummaryBanner
-                isProOrAbove={isProOrAbove}
-                subscriptionKnown={Boolean(subscription) && !subscriptionLoading}
-                onPress={handleUpgrade}
-                tier={subscription?.tier}
-                status={subscription?.status}
-                cancelAtPeriodEnd={subscription?.cancel_at_period_end}
-              />
-
-              <Animated.View entering={FadeInDown.delay(160).duration(500)} style={{ gap: 14 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={{ flex: 1, gap: 5 }}>
-                    <Text
-                      numberOfLines={2}
-                      style={{
-                        color: COLORS.textStrong,
-                        ...TYPE.sectionTitle,
-                        lineHeight: 29,
-                        letterSpacing: -0.5,
-                      }}
-                    >
-                      {displayName}
-                    </Text>
-                    <Text
-                      numberOfLines={1}
-                      style={{
-                        color: COLORS.textStrong,
-                        ...TYPE.label,
-                        lineHeight: 19,
-                      }}
-                    >
-                      {profile?.email}
-                    </Text>
-                    {memberSince && (
-                      <Text
-                        style={{
-                          color: COLORS.textWeak,
-                          ...TYPE.bodySmall,
-                          lineHeight: 18,
-                        }}
-                      >
-                        {memberSince}
-                      </Text>
-                    )}
-                  </View>
-                  <Avatar
-                    uri={profile?.picture_url || profile?.picture}
-                    userId={profile?._id} seed={profile?.email}
-                    name={displayName}
-                    size="xl"
-                    className="h-16 w-16 border-0"
-                  />
-                </View>
-
-                {hasError && (
-                  <View
+              <Animated.View
+                entering={FadeInDown.duration(500)}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: 20,
+                  borderRadius: 20,
+                  backgroundColor: profileOnWhite ? LIGHT_COLORS.card : COLORS.fillWeak,
+                }}
+              >
+                <View style={{ flex: 1, gap: 5 }}>
+                  <Text
+                    numberOfLines={2}
                     style={{
-                      padding: 14,
-                      borderRadius: 16,
-                      backgroundColor: COLORS.brandSubtle,
+                      color: profileInk.textStrong,
+                      ...TYPE.sectionTitle,
+                      lineHeight: 29,
+                      letterSpacing: -0.5,
                     }}
                   >
+                    {displayName}
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      color: profileInk.textStrong,
+                      ...TYPE.label,
+                      lineHeight: 19,
+                    }}
+                  >
+                    {profile?.email}
+                  </Text>
+                  {memberSince && (
                     <Text
                       style={{
-                        color: COLORS.textBase,
+                        color: profileInk.textWeak,
                         ...TYPE.bodySmall,
-                        lineHeight: 19,
+                        lineHeight: 18,
                       }}
                     >
-                      A little of your account story is still loading. Pull down to try again.
+                      {memberSince}
                     </Text>
-                  </View>
-                )}
-
-                <AboutMeCard biography={biography} onEdit={openEditProfile} />
-
-                <View className="flex-row flex-wrap gap-3">
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    className="h-10 px-4"
-                    onPress={openEditProfile}
-                  >
-                    Edit Profile
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    className="h-10 px-4"
-                    onPress={openInsights}
-                  >
-                    View Insights
-                  </Button>
+                  )}
                 </View>
+                <Avatar
+                  uri={profile?.picture_url || profile?.picture}
+                  userId={profile?._id} seed={profile?.email}
+                  name={displayName}
+                  size="xl"
+                  className="h-16 w-16 border-0"
+                />
+              </Animated.View>
+
+              <Animated.View entering={FadeInDown.delay(40).duration(500)}>
+                <Button variant="secondary" size="lg" fullWidth className="h-14" onPress={handleInsights}>
+                  View insights
+                </Button>
+              </Animated.View>
+
+              {hasError && (
+                <View
+                  style={{
+                    padding: 14,
+                    borderRadius: 16,
+                    backgroundColor: COLORS.brandSubtle,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: COLORS.textBase,
+                      ...TYPE.bodySmall,
+                    }}
+                  >
+                    A little of your account story is still loading. Pull down to try again.
+                  </Text>
+                </View>
+              )}
+
+              <Animated.View entering={FadeInDown.delay(80).duration(500)}>
                 <MusicControllerCard />
               </Animated.View>
 
-              <EnrichmentScoreCard score={score} onPress={handleInsights} />
+              <Animated.View entering={FadeInDown.delay(160).duration(500)}>
+                <WeeklyProgressCard
+                  weekDays={weekDays}
+                  streakCount={streakCount}
+                  storiesCount={Number(stats?.stories_count) || 0}
+                  reflectionsCount={Number(stats?.reflections_count) || 0}
+                  onPress={handleWeeklyProgress}
+                />
+              </Animated.View>
 
-              <WeeklyProgressCard
-                weekDays={weekDays}
-                streakCount={streakCount}
-                storiesCount={Number(stats?.stories_count) || 0}
-                reflectionsCount={Number(stats?.reflections_count) || 0}
-                onPress={handleWeeklyProgress}
-              />
+              <Animated.View entering={FadeInDown.delay(240).duration(500)}>
+                <EnrichmentScoreCard score={score} onPress={openEnrichment} />
+              </Animated.View>
+
             </View>
           )}
         </ScrollView>
       </ImageBackground>
+
     </SafeAreaView>
   );
 }

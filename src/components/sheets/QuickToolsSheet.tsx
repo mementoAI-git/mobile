@@ -1,16 +1,15 @@
 import React, { useCallback, useId } from 'react';
 import { Image, Text, View } from 'react-native';
 import Svg, { Defs, Pattern, Path, Rect } from 'react-native-svg';
-import X from 'lucide-react-native/icons/x';
 import { Button } from '@/components/ui/Button';
 import { MusicControllerCard } from '@/components/account/MusicControllerCard';
-import { SHEET_CLOSE_BUTTON_STYLE } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SheetHeader } from './SheetHeader';
 import { TYPE } from '@/constants/typography';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useUiStore } from '@/store';
 
 export function QuickToolsSheet({ onClose }: { onClose: (afterDismiss?: () => void) => void }) {
-  const colors = useThemeColors();
   const openSheet = useUiStore((s) => s.openSheet);
   const close = useCallback(() => onClose(), [onClose]);
   const openQuickNote = useCallback(() => openSheet('quick-capture'), [openSheet]);
@@ -19,13 +18,9 @@ export function QuickToolsSheet({ onClose }: { onClose: (afterDismiss?: () => vo
   const addPeople = useCallback(() => onClose(openAddPeople), [onClose, openAddPeople]);
 
   return (
-    <View className="gap-4 pb-4">
-      <View className="flex-row items-center justify-between gap-3">
-        <Text accessibilityRole="header" style={TYPE.sectionTitle} className="text-text-strong">Quick tools</Text>
-        <Button iconOnly variant="secondary" rounded="full" style={SHEET_CLOSE_BUTTON_STYLE} accessibilityLabel="Close quick tools" onPress={close}>
-          <X size={18} color={colors.textStrong} />
-        </Button>
-      </View>
+    <View style={{ gap: SHEET_GROUP_GAP, paddingBottom: 8 }}>
+      <SheetHeader title="Quick tools" onClose={close} closeLabel="Close quick tools" />
+      <View style={{ gap: SHEET_SECTION_GAP }}>
       <MusicControllerCard compact />
       <View className="gap-2">
         <Text style={TYPE.label} className="text-text-base">Quick actions</Text>
@@ -41,6 +36,7 @@ export function QuickToolsSheet({ onClose }: { onClose: (afterDismiss?: () => vo
             <Text className="text-text-strong" style={TYPE.label}>Add people</Text>
           </Button>
         </View>
+      </View>
       </View>
     </View>
   );

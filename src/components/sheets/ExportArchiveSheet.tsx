@@ -1,12 +1,10 @@
-import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import { Image, Text, View } from 'react-native';
-import { TouchableOpacity } from '@/components/ui/Touchable';
-import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import {COLORS} from '@/constants/tokens';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
 import {TYPE} from '@/constants/typography';
 import {Button, toast} from '@/components/ui';
 import {get, post} from '@/api/mutations';
@@ -39,7 +37,6 @@ const wait = (milliseconds: number) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 export function ExportArchiveSheet({onClose}: ExportArchiveSheetProps) {
-  const COLORS = useThemeColors();
   const [isExporting, setIsExporting] = useState(false);
   const [status, setStatus] = useState<ArchiveExportStatus | null>(null);
   const isMountedRef = useRef(true);
@@ -123,40 +120,22 @@ export function ExportArchiveSheet({onClose}: ExportArchiveSheetProps) {
     : 0;
 
   return (
-    <View className="flex-grow pb-8 pt-2">
-      <View className="mb-4 flex-row items-center justify-between">
-        <View className="flex-row items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1">
-          <View className="size-1.5 rounded-full bg-brand" />
-          <Text className="uppercase tracking-wider text-brand" style={TYPE.metadata}>
-            Vault Exporter
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={handleDismiss}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Close export sheet"
-          className="size-11 items-center justify-center rounded-full bg-fill-weaker"
-        >
-          <X size={18} color={COLORS.textWeak} />
-        </TouchableOpacity>
-      </View>
+    <View style={{ gap: SHEET_GROUP_GAP, paddingBottom: 8 }}>
+      <SheetHeader title="Export your archive" onClose={handleDismiss} closeLabel="Close export sheet" />
 
-      <View className="mb-5 items-center">
+      <View style={{ gap: SHEET_SECTION_GAP }}>
+      <View className="items-center">
         <Image
           source={EMPTY_MEMORIES_IMG}
           style={{width: 88, height: 88, marginBottom: 12}}
           resizeMode="contain"
         />
-        <Text className="mb-1.5 text-center text-text-strong" style={TYPE.sectionTitle}>
-          Export Your Personal Archive
-        </Text>
         <Text className="px-2 text-center text-text-weak" style={TYPE.body}>
           Create a complete ZIP with every story, capsule, and readable attachment in your vault.
         </Text>
       </View>
 
-      <View className="mb-6 rounded-3xl border border-stroke-weaker bg-fill-weaker p-5">
+      <View className="rounded-3xl border border-stroke-weaker bg-fill-weaker p-5">
         <Text className="uppercase tracking-wider text-text-muted" style={TYPE.metadata}>
           {status ? status.status : 'Ready to prepare'}
         </Text>
@@ -169,10 +148,12 @@ export function ExportArchiveSheet({onClose}: ExportArchiveSheetProps) {
           The download link expires after 24 hours. Any unavailable attachments are listed as warnings in the export status.
         </Text>
       </View>
+      </View>
 
       <Button
         variant="primary"
         size="lg"
+        rounded="full"
         className="h-14 w-full"
         loading={isExporting}
         onPress={handleExport}

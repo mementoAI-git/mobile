@@ -68,16 +68,12 @@ describe('Gemini voice provider contract', () => {
     const connect = source.slice(source.indexOf('const connect = useCallback('));
     expect(connect.indexOf('warming.claimed = true')).toBeLessThan(connect.indexOf('await '));
     expect(connect.indexOf('await audioReady;')).toBeLessThan(connect.indexOf('warm.buffer.release('));
-    // Leaving the screen closes it.
-    expect(screen).toContain('useEffect(() => cancelPrefetch, [cancelPrefetch]);');
+    // The voice page starts the call straight away now, so it prepares nothing.
+    expect(screen).not.toContain('prefetch(');
   });
 
-  test('prefetches the session token from the call screen', async () => {
-    const screen = await Bun.file(new URL('../../../app/voice-call.tsx', import.meta.url)).text();
+  test('still takes a prefetched session token when one is ready', async () => {
     const source = await Bun.file(new URL('../../hooks/use-voice-mode.ts', import.meta.url)).text();
-
-    expect(screen).toContain("if (stage !== 'ready' || !voiceInSync) return;");
-    expect(screen).toContain('prefetch({ memoryId: effectiveMemoryId');
     expect(source).toContain('tokenPrefetchRef.current?.take(');
   });
 

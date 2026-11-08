@@ -14,9 +14,10 @@ describe('billing module consistency', () => {
     expect(billingScreen).not.toContain("queryKey: ['billing-usage']");
   });
 
-  test('period-end cancellation remains resumable while the plan is active', () => {
+  test('period-end cancellation remains resumable while the plan is active (on the Plans page)', () => {
     expect(billingHook).toContain("summary?.cancel_at_period_end");
-    expect(billingScreen).toContain("summary?.cancel_at_period_end || summary?.status === 'paused'");
+    const planState = readFileSync('src/features/billing/plan-state.ts', 'utf8');
+    expect(planState).toContain("action: store ? 'store' : 'resume'");
   });
 
   test('billing settings hook owns the shared billing orchestration', () => {

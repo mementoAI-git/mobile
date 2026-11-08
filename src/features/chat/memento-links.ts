@@ -19,8 +19,7 @@ export function parseMementoPath(url: string): MementoLink | null {
 
 /** Where the app opens a story or conversation. */
 export function mementoRoute(link: MementoLink) {
-  // This build's Insights screen lists observations rather than opening one.
-  if (link.kind === 'insight') return { pathname: '/insights' } as const;
+  if (link.kind === 'insight') return { pathname: '/insights', params: { observation: link.id } } as const;
   return link.kind === 'story'
     ? ({ pathname: '/(tabs)/stories/[id]', params: { id: link.id } } as const)
     : ({ pathname: '/chat/[id]', params: { id: link.id } } as const);

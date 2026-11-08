@@ -1,147 +1,128 @@
-import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, Platform, StyleSheet } from 'react-native';
+import { Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import X from 'lucide-react-native/icons/x';
 import Check from 'lucide-react-native/icons/check';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useUiStore } from '@/store';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
-import { useAddGroupMembers } from '@/hooks/mutations/use-group-mutations';
-
-import { COLORS, FONTS } from '@/constants/tokens';
+import { useGroups } from '@/hooks/queries/use-groups';
+import { useSetGroupMembers } from '@/hooks/mutations/use-group-mutations';
+import { normalizeCollection } from '@/features/beneficiaries/collections';
+import { isGroupMember, membershipChanges, personCardDetails } from '@/features/beneficiaries/people-cards';
 import { TYPE } from '@/constants/typography';
 import { Avatar, Button } from '@/components/ui';
+import type { IBeneficiary, IGroup } from '@/types';
 
 interface Props {
   groupId: string;
+  onClose?: () => void;
 }
 
-export function AddMemberToGroupSheet({ groupId }: Props) {
+/** Manage a group's members: every person with a checkbox; Save applies the changes. */
+export function AddMemberToGroupSheet({ groupId, onClose }: Props) {
   const COLORS = useThemeColors();
-  const styles = useThemedStyles(stylesBase);
   const insets = useSafeAreaInsets();
-  const closeSheet = useUiStore((s) => s.closeSheet);
   const { data: beneficiariesData } = useBeneficiaries();
-  const { mutate: addMembers, isPending } = useAddGroupMembers(groupId);
+  const { data: groupsData } = useGroups();
+  const saveMembers = useSetGroupMembers(groupId);
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const people = useMemo(() => normalizeCollection<IBeneficiary>(beneficiariesData).filter((p) => p._id), [beneficiariesData]);
+  const group = useMemo(
+    () => normalizeCollection<IGroup>(groupsData).find((item) => item._id === groupId) ?? null,
+    [groupsData, groupId],
+  );
+  const currentIds = useMemo(
+    () => new Set(people.filter((p) => isGroupMember(p, group, groupId)).map((p) => p._id as string)),
+    [people, group, groupId],
+  );
+  // null until the person first changes something, so it follows the loaded membership.
+  const [draft, setDraft] = useState<Set<string> | null>(null);
+  const selected = draft ?? currentIds;
+  const changes = membershipChanges(currentIds, selected);
+  const changeCount = changes.add.length + changes.remove.length;
 
-  // Filter for beneficiaries who are NOT in the group already
-  const nonMembers = useMemo(() => {
-    if (!beneficiariesData || !groupId) return [];
-    let list: any[] = [];
-    if (Array.isArray(beneficiariesData)) list = beneficiariesData;
-    else if (Array.isArray((beneficiariesData as any).docs)) list = (beneficiariesData as any).docs;
-
-    return list.filter((b) => {
-      if (!b.groups || !Array.isArray(b.groups)) return true;
-      return !b.groups.some((g: any) => g === groupId || g._id === groupId);
-    });
-  }, [beneficiariesData, groupId]);
-
-  const handleClose = useCallback(() => {
+  const toggle = useCallback((id: string) => {
     Haptics.selectionAsync();
-    closeSheet();
-  }, [closeSheet]);
-
-  const toggleSelection = useCallback((id: string) => {
-    Haptics.selectionAsync();
-    setSelectedIds(prev => {
-      const next = new Set(prev);
+    setDraft((prev) => {
+      const next = new Set(prev ?? currentIds);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  }, []);
+  }, [currentIds]);
 
-  const handleSubmit = useCallback(() => {
-    if (selectedIds.size === 0) return;
+  const save = useCallback(async () => {
+    if (!changeCount || saveMembers.isPending) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    addMembers(
-      { beneficiaryIds: Array.from(selectedIds) },
-      {
-        onSuccess: () => {
-          closeSheet();
-        },
-      }
-    );
-  }, [addMembers, selectedIds, closeSheet]);
+    try {
+      await saveMembers.mutateAsync(changes);
+      onClose?.();
+    } catch {
+      // The mutation shows the error toast; keep the sheet open to retry.
+    }
+  }, [changeCount, changes, onClose, saveMembers]);
 
   return (
     <View style={{ flex: 1 }}>
-      {/* ── Header ── */}
-      <View style={{ minHeight: 44, paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
-          Add Member to group
-        </Text>
-        <TouchableOpacity
-          onPress={handleClose}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak }}
-        >
-          <X size={22} color={COLORS.textStrong} />
-        </TouchableOpacity>
-      </View>
+      <SheetHeader title="Manage members" onClose={() => onClose?.()} style={{ paddingHorizontal: 20 }} />
 
-      {/* ── List ── */}
       <BottomSheetScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 28, gap: 12 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: SHEET_GROUP_GAP - 12, gap: 12 }}
         showsVerticalScrollIndicator={false}
       >
-        {nonMembers.length === 0 ? (
-          <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-            <Text style={{ ...TYPE.body, color: COLORS.textWeak, textAlign: 'center' }}>
-              All your beneficiaries are already in this group.
-            </Text>
-          </View>
+        {people.length === 0 ? (
+          <Text style={{ ...TYPE.body, color: COLORS.textWeak, textAlign: 'center', paddingVertical: 40 }}>
+            Invite someone first, then add them to this group.
+          </Text>
         ) : (
-          nonMembers.map(member => {
-            const name = member.name || member.email || 'Unknown';
-            const statusText = member.status === 'pending' ? 'Pending invite' : (member.relationship || 'Member');
-            const isSelected = selectedIds.has(member._id);
-
+          people.map((person) => {
+            const id = person._id as string;
+            const name = person.name || person.email || 'Unknown person';
+            const checked = selected.has(id);
             return (
               <TouchableOpacity
-                key={member._id}
-                onPress={() => toggleSelection(member._id)}
-                activeOpacity={0.7}
-                style={[
-                  styles.memberCard,
-                  isSelected && { borderColor: COLORS.brand }
-                ]}
+                key={id}
+                onPress={() => toggle(id)}
+                activeOpacity={0.76}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked }}
+                accessibilityLabel={name}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 16,
+                  padding: 20,
+                  borderRadius: 20,
+                  backgroundColor: COLORS.settingsCard,
+                }}
               >
-                <View style={{ marginRight: 16 }}>
-                  <Avatar
-                    uri={member.user?.picture_url || member.avatar}
-                    userId={member.user?._id} seed={member.user?.email || member.email}
-                    name={name}
-                    size="md"
-                  />
+                <View style={{ width: 48, height: 48, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.strokeWeak, backgroundColor: COLORS.fillWeak }}>
+                  <Avatar uri={person.user?.picture_url} userId={person.user?._id} seed={person.user?.email || person.email} name={name} size="lg" className="h-full w-full border-0" />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }} numberOfLines={1}>
-                    {name}
-                  </Text>
-                  {member.email && (
-                    <Text style={{ ...TYPE.label, color: COLORS.textWeak, marginTop: 2 }} numberOfLines={1}>
-                      {member.email}
-                    </Text>
-                  )}
-                  <Text style={{ ...TYPE.label, color: COLORS.textMuted, marginTop: 2 }}>
-                    {statusText}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={{ ...TYPE.bodyStrong, color: COLORS.textStrong }}>{name}</Text>
+                  <Text numberOfLines={1} style={{ ...TYPE.bodySmall, color: COLORS.textWeak, marginTop: 2 }}>
+                    {personCardDetails(person).join(' · ')}
                   </Text>
                 </View>
-                <View style={[
-                  styles.checkbox,
-                  isSelected && styles.checkboxSelected
-                ]}>
-                  {isSelected && <Check size={16} color="#FFFFFF" strokeWidth={3} />}
+                <View
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 6,
+                    borderWidth: 1.5,
+                    borderColor: checked ? COLORS.brand : COLORS.strokeStrong,
+                    backgroundColor: checked ? COLORS.brand : 'transparent',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {checked ? <Check size={16} color={COLORS.textInverse} strokeWidth={3} /> : null}
                 </View>
               </TouchableOpacity>
             );
@@ -149,52 +130,23 @@ export function AddMemberToGroupSheet({ groupId }: Props) {
         )}
       </BottomSheetScrollView>
 
-      {/* ── Footer ── */}
       <View style={{
-        flexDirection: 'row',
-        gap: 12,
-        paddingHorizontal: 24,
-        paddingTop: 16,
-        paddingBottom: Math.max(insets.bottom, 16),
-        backgroundColor: COLORS.background,
+        paddingHorizontal: 20,
+        paddingTop: 12,
+        paddingBottom: Math.max(insets.bottom, 12) + 8,
+        backgroundColor: COLORS.sheet,
       }}>
-        <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={handleClose}>
-          Dismiss
-        </Button>
         <Button
           size="lg"
-          className="h-14 flex-1 bg-media-surface"
-          textClassName="text-white"
-          loading={isPending}
-          disabled={selectedIds.size === 0 || isPending}
-          onPress={handleSubmit}
+          rounded="full"
+          className="h-14 w-full"
+          loading={saveMembers.isPending}
+          disabled={changeCount === 0 || saveMembers.isPending}
+          onPress={() => void save()}
         >
-          {selectedIds.size > 0 ? `Add ${selectedIds.size} ${selectedIds.size === 1 ? 'person' : 'people'}` : 'Add member'}
+          Save changes
         </Button>
       </View>
     </View>
   );
 }
-
-const stylesBase = StyleSheet.create({
-  memberCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: COLORS.card,
-    borderRadius: 24,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxSelected: {
-    backgroundColor: COLORS.brand,
-    borderColor: COLORS.brand,
-  }
-});

@@ -1,5 +1,4 @@
-import { DARK_CARD_SURFACES } from '@/constants/appearance';
-import { useThemeColors, useResolvedAppearance } from '@/hooks/use-theme-colors';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo, useEffect } from 'react';
 
 import { View, Text, Image, ImageBackground, ActivityIndicator } from 'react-native';
@@ -21,7 +20,7 @@ import Pause from 'lucide-react-native/icons/pause';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { useUiStore, useFeedAudioPlaybackStore } from '@/store';
-import { COLORS, CARD_PASTEL_SURFACES } from '@/constants/tokens';
+import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import type { IMemory } from '@/types';
 import { getMediaCategory } from '@/features/media/media-type';
@@ -343,9 +342,6 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
   // Seeded display properties — deterministic per memory._id
   const seed = stableHash(memory._id || memory.title || '');
   const aspectRatio = variant === 'list' ? 3 / 2 : MEDIA_ASPECT_RATIOS[seed % MEDIA_ASPECT_RATIOS.length];
-  const dark = useResolvedAppearance() === 'dark';
-  const surfaces = dark ? DARK_CARD_SURFACES : CARD_PASTEL_SURFACES;
-  const surface = surfaces[seed % surfaces.length];
   const storyTitle = memory.title || 'Untitled Memory';
   const textCardMinHeight = TEXT_CARD_MIN_HEIGHTS[seed % TEXT_CARD_MIN_HEIGHTS.length];
   const textBodyLines = TEXT_BODY_CLAMPS[seed % TEXT_BODY_CLAMPS.length];
@@ -461,9 +457,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
     return (
       <View
         style={{
-          backgroundColor: surface.bg,
-          borderColor: surface.border,
-          borderWidth: 1,
+          backgroundColor: COLORS.fillWeak,
           minHeight: textCardMinHeight,
         }}
         className="w-full rounded-[14px] p-4 gap-3 relative overflow-hidden"
@@ -480,19 +474,6 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
             {bodyText}
           </Text>
         ) : null}
-        {(memory.tags?.length ?? 0) > 0 && (
-          <View className="flex-row flex-wrap gap-1 mt-0.5">
-            {memory.tags!.slice(0, 4).map((tag) => (
-              <View
-                key={tag}
-                className="rounded-full px-2 py-0.5"
-                style={{ backgroundColor: COLORS.fillWeak, borderWidth: 1, borderColor: surface.border }}
-              >
-                <Text style={{ ...TYPE.eyebrow, color: COLORS.textWeak }}>#{tag}</Text>
-              </View>
-            ))}
-          </View>
-        )}
         <TouchableOpacity
           onPress={handleActions}
           hitSlop={8}
@@ -507,7 +488,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
       </View>
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [COLORS, bannerMedia, audioMedia, bodyText, aspectRatio, surface, textCardMinHeight, textBodyLines, memory, handleActions, handleVideoPress]);
+  }, [COLORS, bannerMedia, audioMedia, bodyText, aspectRatio, textCardMinHeight, textBodyLines, memory, handleActions, handleVideoPress]);
 
 
   if (variant === 'list') {
@@ -549,19 +530,6 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
                 {bodyText}
               </Text>
             ) : null}
-            {(memory.tags?.length ?? 0) > 0 && (
-              <View className="flex-row flex-wrap gap-1.5">
-                {memory.tags!.slice(0, 4).map((tag) => (
-                  <View
-                    key={tag}
-                    className="rounded-full px-2.5 py-0.5"
-                    style={{ backgroundColor: COLORS.fillWeak, borderWidth: 1, borderColor: surface.border }}
-                  >
-                    <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>#{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
           </View>
         </TouchableOpacity>
         <TouchableOpacity

@@ -1,35 +1,54 @@
 // @ts-nocheck
 import { describe, expect, test } from 'bun:test';
-import { calculateMilestones } from './milestone-celebrations';
+import { calculateMilestones, orderMilestones } from './milestone-celebrations';
 
 describe('milestone celebration helpers', () => {
-  test('correctly evaluates unlocked and locked milestones from stats', () => {
-    const milestones = calculateMilestones({
-      memoryCount: 1,
-      streakDays: 3,
-      capsuleCount: 0,
-      beneficiaryCount: 1,
-    });
-
-    const firstStory = milestones.find((m) => m.id === 'first-story');
-    expect(firstStory?.achieved).toBe(true);
-    expect(firstStory?.progressLabel).toBe('Unlocked');
-
-    const fiveStories = milestones.find((m) => m.id === 'story-five');
-    expect(fiveStories?.achieved).toBe(false);
-    expect(fiveStories?.progressLabel).toBe('1 / 5');
-
-    const habit = milestones.find((m) => m.id === 'streak-seven');
-    expect(habit?.achieved).toBe(false);
-    expect(habit?.progressLabel).toBe('3 / 7 days');
-
-    const contact = milestones.find((m) => m.id === 'legacy-contact');
-    expect(contact?.achieved).toBe(true);
-    expect(contact?.progressLabel).toBe('Unlocked');
+  test('measures each milestone against its own figure', () => {
+    const milestones = calculateMilestones({ memoryCount: 4, reflectionCount: 1, streakDays: 3, enrichmentScore: 72, beneficiaryCount: 0 });
+    const byId = Object.fromEntries(milestones.map((m) => [m.id, m]));
+    expect(byId['first-story'].progressLabel).toBe('Unlocked');
+    expect(byId['stories-ten'].progressLabel).toBe('4 / 10 stories');
+    expect(byId['stories-ten'].progress).toBeCloseTo(0.4);
+    expect(byId['first-reflection'].achieved).toBe(true);
+    expect(byId['streak-seven'].progressLabel).toBe('3 / 7 days');
+    expect(byId['enrichment-strong'].achieved).toBe(true);
+    // One-step goals have nothing to count.
+    expect(byId['legacy-contact'].progressLabel).toBe('Not yet');
+    expect(byId['legacy-contact'].progress).toBeUndefined();
   });
 
   test('handles empty stats gracefully', () => {
     const milestones = calculateMilestones({});
     expect(milestones.every((m) => !m.achieved)).toBe(true);
+  });
+
+  test('orders what is next first: closest unreached, then reached, then unavailable', () => {
+    const ordered = orderMilestones(calculateMilestones({ memoryCount: 8, streakDays: 1, beneficiaryCount: 1 })).map((m) => m.id);
+    expect(ordered[0]).toBe('stories-ten');
+    expect(ordered.indexOf('legacy-contact')).toBeGreaterThan(ordered.indexOf('first-reflection'));
+    expect(ordered.at(-1)).toBe('time-capsule');
+  });
+});
+
+describe('milestone presentation', () => {
+  test('Future Messenger is disabled while time capsules are paused', () => {
+    const capsule = calculateMilestones({ capsuleCount: 3 }).find((m) => m.id === 'time-capsule');
+    expect(capsule?.available).toBe(false);
+    expect(capsule?.achieved).toBe(false);
+    expect(capsule?.progressLabel).toBe('Coming soon');
+  });
+
+  test('ticks are brand orange and the score shows the enrichment card level', async () => {
+    const panel = await Bun.file(new URL('../../components/insights/MilestonesPanel.tsx', import.meta.url)).text();
+    const stats = await Bun.file(new URL('../../components/insights/MemoryStatistics.tsx', import.meta.url)).text();
+    expect(panel).toContain('<Check size={16} color={colors.brand}');
+    // Like the other tabs: the cards follow the tab row with no heading or count.
+    expect(panel).not.toContain('accessibilityRole="header"');
+    expect(panel).not.toContain(' reached\n');
+    expect(panel).not.toContain('>\n          Milestones\n');
+    expect(stats).toContain("from '@/features/overview/enrichment-strength'");
+    // Every stat tile uses TYPE.stat at full size; nothing shrinks to fit.
+    expect(stats).not.toContain('adjustsFontSizeToFit');
+    expect(stats).toContain('TYPE.insightStat');
   });
 });
