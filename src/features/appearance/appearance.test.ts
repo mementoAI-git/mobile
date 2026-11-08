@@ -34,8 +34,8 @@ test('dark styles preserve inverse text and distinguish border and text roles', 
   expect(input.page.backgroundColor).toBe(COLORS.background);
 });
 
-import { DEEP_SKY_COLORS } from '../../constants/appearance';
-import { appearanceLabel } from './appearance';
+import { DEEP_SKY_COLORS, LIGHT_SKY_COLORS } from '../../constants/appearance';
+import { appearanceLabel, skyAppearance } from './appearance';
 
 test('Deep Sky persists as its own choice and uses dark controls regardless of the OS', () => {
   expect(parseAppearance('deep-sky')).toBe('deep-sky');
@@ -63,4 +63,29 @@ test('floating surfaces use the opaque popover token, not the card fill', async 
   };
   for (const source of Object.values(files)) expect(source).toMatch(/(COLORS|colors)\.popover/);
   expect(files.tabBar).not.toContain('backgroundColor: COLORS.card');
+});
+
+test('Light Sky persists as its own choice and uses light controls regardless of the OS', () => {
+  expect(parseAppearance('light-sky')).toBe('light-sky');
+  expect(resolveAppearance('light-sky', 'dark')).toBe('light');
+  expect(resolveAppearance('light-sky', 'light')).toBe('light');
+  expect(appearanceLabel('light-sky')).toBe('Light Sky');
+  expect(skyAppearance('light-sky')).toBe('light-sky');
+  expect(skyAppearance('deep-sky')).toBe('deep-sky');
+  expect(skyAppearance('light')).toBeNull();
+  const styles = resolveThemedStyles({ page: { backgroundColor: COLORS.background }, label: { color: COLORS.textStrong } }, LIGHT_SKY_COLORS);
+  expect(styles.page.backgroundColor).toBe('transparent');
+  expect(styles.label.color).toBe('#1b1d23');
+  // Mirrors web .light-sky: translucent white cards, opaque white sheets and popovers.
+  expect(LIGHT_SKY_COLORS.card).toBe('rgba(255,255,255,0.68)');
+  expect(LIGHT_SKY_COLORS.sheet).toBe('#ffffff');
+  expect(LIGHT_SKY_COLORS.popover).toBe('#ffffff');
+});
+
+test('every theme has an opaque canvas behind its page', () => {
+  for (const palette of [COLORS, DARK_COLORS, DEEP_SKY_COLORS, LIGHT_SKY_COLORS]) {
+    expect(palette.canvas).toMatch(/^#[0-9a-f]{6}$/i);
+  }
+  expect(DEEP_SKY_COLORS.canvas).toBe('#0d1226');
+  expect(LIGHT_SKY_COLORS.canvas).toBe('#b3c4dc');
 });
