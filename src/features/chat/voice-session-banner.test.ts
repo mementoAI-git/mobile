@@ -7,7 +7,8 @@ describe('pinned voice session banner', () => {
     const banner = source.indexOf('{showInlineVoice && <VoiceChatComposer />}');
     expect(banner).toBeGreaterThan(source.indexOf('onPress={handleActions}'));
     expect(banner).toBeLessThan(source.indexOf('<View style={styles.messageList}>'));
-    expect(source).toContain('!showInlineVoice && !isPromptType && showDeepDiveNudge');
+    // The deep dive nudge card is removed from the app for now.
+    expect(source).not.toContain('DeepDiveNudge');
     expect(source).toContain('collapsedComposerHeight: COLLAPSED_COMPOSER_HEIGHT');
     expect(source.match(/<VoiceChatComposer\s*\/>/g)).toHaveLength(1);
   });

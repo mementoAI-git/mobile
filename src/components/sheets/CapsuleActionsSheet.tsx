@@ -11,8 +11,10 @@ import { useDeleteCapsule, useUpdateCapsule } from '@/hooks/mutations/use-capsul
 import { ICapsule } from '@/types';
 import { useUiStore } from '@/store';
 
-import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
+import { useThemeColors } from '@/hooks/use-theme-colors';
+import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
+import { SheetHeader } from './SheetHeader';
 import * as Haptics from 'expo-haptics';
 
 interface CapsuleActionsSheetProps {
@@ -21,6 +23,7 @@ interface CapsuleActionsSheetProps {
 }
 
 export function CapsuleActionsSheet({ capsule, onClose }: CapsuleActionsSheetProps) {
+  const COLORS = useThemeColors();
   const openSheet = useUiStore((s) => s.openSheet);
   const { mutate: deleteCapsule, isPending: isDeleting } = useDeleteCapsule();
   const { mutate: updateCapsule, isPending: isUpdating } = useUpdateCapsule(capsule._id ?? '');
@@ -101,7 +104,13 @@ export function CapsuleActionsSheet({ capsule, onClose }: CapsuleActionsSheetPro
   );
 
   return (
-    <View className="gap-2">
+    <View style={{ gap: SHEET_GROUP_GAP }}>
+      <SheetHeader
+        title={capsule.title?.trim() || 'Capsule options'}
+        onClose={onClose}
+        closeLabel="Close capsule options"
+      />
+      <View className="gap-2">
       {isDeleted ? (
         <ActionRow
           icon={<RotateCcw size={18} color={COLORS.brand} strokeWidth={1.5} />}
@@ -166,6 +175,7 @@ export function CapsuleActionsSheet({ capsule, onClose }: CapsuleActionsSheetPro
           )}
         </>
       )}
+      </View>
     </View>
   );
 }

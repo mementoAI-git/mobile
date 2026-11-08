@@ -1,12 +1,13 @@
 import React, { useCallback } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import Sun from 'lucide-react-native/icons/sun';
 import CloudMoon from 'lucide-react-native/icons/cloud-moon';
 import Moon from 'lucide-react-native/icons/moon';
 import Monitor from 'lucide-react-native/icons/monitor';
 import Check from 'lucide-react-native/icons/check';
 import { Button } from '@/components/ui/Button';
-import { TYPE } from '@/constants/typography';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useAppearanceStore } from '@/store/appearance.store';
 import type { AppearancePreference } from '@/features/appearance/appearance';
@@ -34,11 +35,12 @@ function AppearanceOption({ value, label, icon: Icon }: (typeof OPTIONS)[number]
 
 export function AppearanceSheet({ onClose }: { onClose: () => void }) {
   return (
-    <View className="gap-3">
-      <Text style={TYPE.sectionTitle} className="text-text-strong">Appearance</Text>
-      <Text style={TYPE.bodySmall} className="text-text-base mb-2">Choose your look, or follow your device with System.</Text>
-      {OPTIONS.map((option) => <AppearanceOption key={option.value} {...option} />)}
-      <Button variant="outline" size="menu" className="mt-3" onPress={onClose}>Done</Button>
+    <View style={{ gap: SHEET_GROUP_GAP, paddingBottom: 8 }}>
+      <SheetHeader title="Appearance" onClose={onClose} closeLabel="Close appearance" />
+      <View accessibilityRole="radiogroup" style={{ gap: 4 }}>
+        {OPTIONS.map((option) => <AppearanceOption key={option.value} {...option} />)}
+      </View>
+      <Button variant="outline" size="menu" rounded="full" onPress={onClose}>Done</Button>
     </View>
   );
 }

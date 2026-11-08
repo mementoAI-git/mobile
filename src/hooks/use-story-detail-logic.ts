@@ -2,10 +2,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useMemory } from '@/hooks/queries/use-memories';
 import { useBookmarkMemory, useDeleteMemory } from '@/hooks/mutations/use-memory-mutations';
-import { useUiStore } from '@/store';
+import { useUiStore, useUserStore } from '@/store';
 import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-type';
 import { buildStoryEditorSeed } from '@/features/memories/memory-audience';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+import { addToRecentMemories } from '@/features/memories/recent-memories';
 import { returnFromStory } from '@/features/navigation/story-navigation';
 
 export function useStoryDetailLogic() {
@@ -15,6 +16,12 @@ export function useStoryDetailLogic() {
   const { mutate: bookmark, isPending: bookmarking } = useBookmarkMemory();
   const { mutate: deleteMemory, isPending: deleting } = useDeleteMemory();
   const openSheet = useUiStore((s) => s.openSheet);
+  const email = useUserStore((s) => s.user?.email);
+
+  // Search's "Recently opened" list, like web.
+  useEffect(() => {
+    if (memory?._id) void addToRecentMemories(memory, email);
+  }, [memory?._id, email]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = useCallback(() => {
     if (!memory) return;

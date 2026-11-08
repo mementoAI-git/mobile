@@ -14,8 +14,9 @@ import Animated, {
 
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { iconSize, radius, responsiveSpace } from '@/constants/responsive';
+import { iconSize, radius } from '@/constants/responsive';
 import { clampEnrichmentScore } from '@/features/account/account-overview';
+import { enrichmentStrength } from '@/features/overview/enrichment-strength';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -41,6 +42,7 @@ export const EnrichmentScoreCard = React.memo(function EnrichmentScoreCard({
 ] as const;
   const styles = useThemeStyles(createStyles);
   const safeScore = clampEnrichmentScore(score);
+  const strength = enrichmentStrength(safeScore);
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -54,17 +56,15 @@ export const EnrichmentScoreCard = React.memo(function EnrichmentScoreCard({
         onPressOut={() => { scale.value = withSpring(1); }}
         style={[styles.card, animatedStyle]}
         accessibilityRole="button"
-        accessibilityLabel={`Enrichment score ${safeScore} percent. View memory insights.`}
+        accessibilityLabel={`Enrichment score: ${strength}. View memory insights.`}
       >
         <View style={styles.headingRow}>
-          <View style={{ flex: 1, paddingRight: 8 }}>
-            <Text style={styles.title}>My Enrichment score</Text>
-            <Text style={styles.description}>
-              Your Enrichment score reflects your memory health across 10 key life areas.
-            </Text>
-          </View>
-          <Text style={styles.score}>{safeScore}%</Text>
+          <Text style={styles.title} numberOfLines={1}>Enrichment score</Text>
+          <Text style={styles.score} numberOfLines={1}>{strength}</Text>
         </View>
+        <Text style={styles.description}>
+          Your Enrichment score reflects your memory health across 10 key life areas.
+        </Text>
 
         <View
           style={styles.progressTrack}
@@ -94,38 +94,38 @@ export const EnrichmentScoreCard = React.memo(function EnrichmentScoreCard({
 const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   card: {
     minHeight: 160,
-    borderRadius: radius(16),
+    borderRadius: 20,
     backgroundColor: COLORS.fillWeak,
-    paddingHorizontal: responsiveSpace(12),
-    paddingVertical: responsiveSpace(13),
+    padding: 20,
   },
   headingRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   title: {
+    flexShrink: 1,
     color: COLORS.textStrong,
-    ...TYPE.body,
-    lineHeight: 19,
+    ...TYPE.bodyLarge,
   },
   description: {
     color: COLORS.textBase,
-    ...TYPE.metadata,
-    lineHeight: 16,
-    marginTop: 5,
+    ...TYPE.bodySmall,
+    marginTop: 4,
   },
+  // The score as a word (Low, Medium, Strong), not a percentage.
   score: {
+    flexShrink: 0,
     color: COLORS.textStrong,
-    ...TYPE.displayTitle,
-    lineHeight: 46,
-    letterSpacing: -1.5,
+    ...TYPE.bodyLargeSemi,
   },
   progressTrack: {
     height: 24,
     borderRadius: 4,
     flexDirection: 'row',
     overflow: 'hidden',
-    marginTop: 12,
+    marginTop: 16,
     position: 'relative',
   },
   insightRow: {
@@ -133,7 +133,7 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 9,
-    marginTop: 7,
+    marginTop: 12,
   },
   insightIcon: {
     width: iconSize(20),
@@ -146,7 +146,6 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   insightText: {
     flex: 1,
     color: COLORS.textStrong,
-    ...TYPE.metadata,
-    lineHeight: 16,
+    ...TYPE.bodySmall,
   },
 });

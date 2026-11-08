@@ -22,7 +22,7 @@ export const VOICE_DESTINATIONS = {
   new_story: { href: '/editor?mode=story&lockMode=true', label: 'a new story' },
   quick_note: { href: '/editor?mode=quick-capture', label: 'a quick note' },
   time_capsules: { href: '/(tabs)/capsule', label: 'your time capsules' },
-  explore_prompts: { href: '/(tabs)/explore', label: 'explore prompts' },
+  explore_prompts: { href: '/(tabs)/explore', label: 'topics' },
   insights: { href: '/insights', label: 'insights' },
   account: { href: '/account', label: 'your account' },
   settings: { href: '/settings', label: 'settings' },

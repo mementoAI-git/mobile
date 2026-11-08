@@ -1,3 +1,4 @@
+import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
 import { useThemedStyles } from '@/hooks/use-theme-colors';
 /**
  * ConfirmDialog — on-brand replacement for React Native's Alert.alert()
@@ -30,14 +31,13 @@ import {
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import {
   BottomSheetModal,
-  BottomSheetBackdrop,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { getSheetBottomPadding, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
 import { minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -71,6 +71,8 @@ export function ConfirmDialog({
   onClose,
 }: ConfirmDialogProps) {
   const styles = useThemedStyles(stylesBase);
+  // A short confirmation: web alert dialogs keep their compact height.
+  const chrome = useSheetChrome({ compact: true });
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
 
@@ -82,17 +84,6 @@ export function ConfirmDialog({
     }
   }, [visible]);
 
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        {...props}
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        opacity={0.5}
-      />
-    ),
-    [],
-  );
 
   const handleButton = useCallback((btn: ConfirmButton) => {
     if (btn.disabled) return;
@@ -108,10 +99,7 @@ export function ConfirmDialog({
     <BottomSheetModal
       ref={bottomSheetRef}
       enableDynamicSizing
-      backdropComponent={renderBackdrop}
-      handleStyle={SHEET_HEADER_HANDLE_STYLE}
-        handleIndicatorStyle={styles.handleIndicator}
-      backgroundStyle={styles.sheetBackground}
+      {...chrome.props}
       onDismiss={onClose}
     >
       <BottomSheetView
@@ -171,18 +159,6 @@ export function ConfirmDialog({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const stylesBase = StyleSheet.create({
-  sheetBackground: {
-    backgroundColor: COLORS.background,
-    borderTopLeftRadius: radius(28),
-    borderTopRightRadius: radius(28),
-  },
-
-  handleIndicator: {
-    backgroundColor: COLORS.strokeStrong,
-    opacity: 0.3,
-    width: 36,
-  },
-
   card: {
     paddingHorizontal: responsiveSpace(20),
     paddingTop: 0,

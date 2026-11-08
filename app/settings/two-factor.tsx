@@ -1,7 +1,7 @@
 import { toast } from '@/components/ui/Toast';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useEffect } from 'react';
-import { View, ScrollView, ImageBackground, Text } from 'react-native';
+import { View, ScrollView, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -14,7 +14,6 @@ import { TYPE } from '@/constants/typography';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 
-const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 export default function TwoFactorScreen() {
   const COLORS = useThemeColors();
@@ -57,10 +56,9 @@ export default function TwoFactorScreen() {
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-16 gap-5">
-        <ImageBackground source={PATTERN} className="absolute inset-0 opacity-[0.03]" resizeMode="repeat" />
 
         {/* Status card */}
-        <Animated.View entering={FadeInDown.duration(500)} className="bg-card rounded-[24px] flex-row items-center gap-4 px-5 py-5">
+        <Animated.View entering={FadeInDown.duration(500)} className="bg-settings-card rounded-[24px] flex-row items-center gap-4 px-5 py-5">
           <View
             className="size-12 rounded-2xl items-center justify-center"
             style={{ backgroundColor: is2FAEnabled ? `${COLORS.success}10` : COLORS.fillWeak }}
@@ -102,7 +100,7 @@ export default function TwoFactorScreen() {
 
         {/* Setup flow */}
         {setupData && (
-          <Animated.View entering={FadeInDown.delay(150).duration(500)} className="bg-card rounded-[32px] p-6 gap-5">
+          <Animated.View entering={FadeInDown.delay(150).duration(500)} className="bg-settings-card rounded-[32px] p-6 gap-5">
             <View style={{ gap: 2 }}>
               <Text className="text-text-muted uppercase tracking-[2px]" style={TYPE.metadata}>
                 Setup
@@ -146,7 +144,7 @@ export default function TwoFactorScreen() {
               </TouchableOpacity>
             )}
 
-            <TextInput
+            <TextInput bordered
               label="Verification code"
               value={token}
               onChangeText={setToken}

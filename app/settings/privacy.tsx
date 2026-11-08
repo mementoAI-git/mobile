@@ -1,7 +1,6 @@
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback } from 'react';
 import {
-  ImageBackground,
   Linking,
   ScrollView,
   Text,
@@ -14,19 +13,16 @@ import { useRouter } from 'expo-router';
 import { ResponsiveScreen } from '@/components/ui';
 import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';
 import { UiShieldTick } from '@/components/ui/icons/SettingsIcons';
-import { useDeleteAccount } from '@/hooks/mutations/use-auth-mutations';
 import { PRIVACY_URL, TERMS_URL } from '@/lib/env';
 import { useUiStore } from '@/store';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 
-const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 export default function PrivacySettingsScreen() {
   const COLORS = useThemeColors();
   const router = useRouter();
   const openSheet = useUiStore((state) => state.openSheet);
-  const deleteAccount = useDeleteAccount();
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();
@@ -40,19 +36,15 @@ export default function PrivacySettingsScreen() {
   }, []);
 
   const requestDeletion = useCallback(() => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    openSheet('security-confirmation', {
-      kind: 'delete-account',
-      onConfirm: () => deleteAccount.mutateAsync(),
-    });
-  }, [deleteAccount, openSheet]);
+    Haptics.selectionAsync();
+    router.push('/settings/delete-account' as any);
+  }, [router]);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <SettingsSubpageHeader title="Privacy" onBack={handleBack} />
 
       <View className="flex-1">
-        <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
 
         <ResponsiveScreen maxWidth={720}>
           <ScrollView
@@ -77,7 +69,7 @@ export default function PrivacySettingsScreen() {
             {' '}pages for more details.
           </Text>
 
-          <View className="mt-6 rounded-[24px] bg-card p-5">
+          <View className="mt-6 rounded-[24px] bg-settings-card p-5">
             <View className="flex-row items-center gap-3">
               <View className="size-9 items-center justify-center rounded-full bg-success/10">
                 <UiShieldTick size={20} color={COLORS.success} strokeWidth={2.2} />
@@ -105,7 +97,7 @@ export default function PrivacySettingsScreen() {
             </View>
           </View>
 
-          <View className="mt-6 rounded-[24px] bg-card p-5">
+          <View className="mt-6 rounded-[24px] bg-settings-card p-5">
             <Text className="mb-2" style={{ ...TYPE.body, color: COLORS.textStrong }}>
               Privacy Settings
             </Text>
@@ -133,7 +125,6 @@ export default function PrivacySettingsScreen() {
               </Text>
               <TouchableOpacity
                 onPress={requestDeletion}
-                disabled={deleteAccount.isPending}
                 activeOpacity={0.76}
                 className="h-10 items-center justify-center rounded-full bg-error/5 px-4"
               >

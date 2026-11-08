@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import dayjs from 'dayjs';
 import BookOpen from 'lucide-react-native/icons/book-open';
 import MessageCircle from 'lucide-react-native/icons/message-circle';
+import { Image } from 'expo-image';
 import { Pressable } from '@/components/ui/Touchable';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { TYPE } from '@/constants/typography';
 import type { ThemeColors } from '@/constants/tokens';
 import { mementoRoute, type MementoLink } from '@/features/chat/memento-links';
+import { getQuestionIdenticonUrl } from '@/features/explore/question-presentation';
 import { useMemory } from '@/hooks/queries/use-memories';
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 
@@ -47,6 +49,9 @@ export function ChatStoryCard({ source }: { source: Source }) {
   const { data } = useMemory(source.kind === 'story' ? source.id : '');
   const memory = data as { title?: string; created_at?: string; attachments?: unknown } | undefined;
   const picture = pictureOf(memory?.attachments);
+  const [pictureFailed, setPictureFailed] = useState(false);
+  // Like web: stories without a working picture get the DiceBear art.
+  const showPicture = Boolean(picture) && !pictureFailed;
   const title = memory?.title?.trim() || source.label;
   const kind = source.kind === 'story' ? 'Story' : 'Conversation';
   const date = memory?.created_at && dayjs(memory.created_at).isValid() ? dayjs(memory.created_at).format('MMM D, YYYY') : null;
@@ -59,12 +64,20 @@ export function ChatStoryCard({ source }: { source: Source }) {
       style={styles.card}
     >
       <View style={styles.thumb}>
-        {picture ? (
+        {showPicture && picture ? (
           <SignedAttachmentImage
             attachment={{ _id: picture._id ?? picture.url!, url: picture.url!, thumbnail: picture.thumbnail, access: picture.access }}
             preferThumbnail
             style={styles.picture}
             resizeMode="cover"
+            onError={() => setPictureFailed(true)}
+          />
+        ) : source.kind === 'story' ? (
+          <Image
+            source={{ uri: getQuestionIdenticonUrl(source.id) }}
+            style={styles.picture}
+            contentFit="cover"
+            accessibilityElementsHidden
           />
         ) : (
           <Icon size={16} color={COLORS.textWeak} strokeWidth={1.8} />

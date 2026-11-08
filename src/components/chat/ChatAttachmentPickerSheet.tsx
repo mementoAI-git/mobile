@@ -12,7 +12,6 @@ import {
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { Image } from 'expo-image';
 import {
-  BottomSheetBackdrop,
   BottomSheetFlatList,
   BottomSheetFooter,
   BottomSheetModal,
@@ -30,9 +29,9 @@ import ImageIcon from 'lucide-react-native/icons/image';
 import ImageOff from 'lucide-react-native/icons/image-off';
 import Music from 'lucide-react-native/icons/music';
 import Play from 'lucide-react-native/icons/play';
-import X from 'lucide-react-native/icons/x';
+import { SheetHeader } from '@/components/sheets/SheetHeader';
+import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
 import { PermissionRecoveryState } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -45,6 +44,7 @@ import {
 } from '@/lib/permission-recovery';
 import { getPickerAssetUploadUri } from '@/features/media/picker-assets';
 import { MAX_ATTACHMENT_FILE_MB, isFileTooLarge } from '@/features/media/attachments';
+import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
 
 type PickerMode = 'gallery' | 'videos' | 'audio';
 
@@ -135,6 +135,7 @@ function getGranularPermissions(mode: PickerMode): MediaLibrary.GranularPermissi
 export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttachmentPickerSheetProps>(
   function ChatAttachmentPickerSheet({ onCamera, onDocs, onAudio, onConfirm }, ref) {
   const COLORS = useThemeColors();
+  const sheetChrome = useSheetChrome();
   const styles = useThemedStyles(stylesBase);
     const insets = useSafeAreaInsets();
     const [mode, setMode] = useState<PickerMode>('gallery');
@@ -367,18 +368,6 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
 
     const keyExtractor = useCallback((item: MediaLibrary.Asset) => item.id, []);
 
-    const renderBackdrop = useCallback(
-      (props: any) => (
-        <BottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          opacity={0.3}
-          pressBehavior="close"
-        />
-      ),
-      [],
-    );
 
     const renderAsset = useCallback(({ item }: { item: MediaLibrary.Asset }) => (
       <AssetTile
@@ -419,37 +408,22 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
     return (
       <BottomSheetModal
         ref={ref}
-        topInset={getSheetTopInset(insets.top)}
-        snapPoints={['60%', '92%']}
+        {...sheetChrome.props}
+        snapPoints={sheetChrome.snapPoints(['60%', '92%'])}
         enableDynamicSizing={false}
-        backdropComponent={renderBackdrop}
         footerComponent={renderFooter}
         enablePanDownToClose
         onChange={handleSheetChange}
         onDismiss={handleDismiss}
-        handleStyle={SHEET_HEADER_HANDLE_STYLE}
-        handleIndicatorStyle={styles.handle}
-        backgroundStyle={styles.sheetBackground}
       >
         <BottomSheetView style={styles.container}>
           {/* ── Header ── */}
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.title}>Attach media</Text>
-              {selectedCount > 0 && (
-                <Text style={styles.subtitle}>{selectedCount} {selectionLabel} selected</Text>
-              )}
-            </View>
-            <TouchableOpacity
-              onPress={dismiss}
-              activeOpacity={0.8}
-              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-              accessibilityLabel="Close attachment picker"
-              style={styles.closeButton}
-            >
-              <X size={iconSize(18)} color={COLORS.textBase} strokeWidth={2.2} />
-            </TouchableOpacity>
-          </View>
+          <SheetHeader
+            title="Attach media"
+            onClose={dismiss}
+            closeLabel="Close attachment picker"
+            style={styles.header}
+          />
 
           {/* ── Action row ── */}
           <View style={styles.actionRow}>
@@ -651,30 +625,7 @@ const stylesBase = StyleSheet.create({
   // Header
   header: {
     paddingHorizontal: SHEET_HORIZONTAL,
-    paddingTop: 0,
-    paddingBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  title: {
-    ...TYPE.sectionTitle,
-    color: COLORS.textStrong,
-  },
-  subtitle: {
-    ...TYPE.bodySmall,
-    color: COLORS.textWeak,
-    marginTop: 2,
-  },
-  closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: radius(18),
-    backgroundColor: COLORS.fillWeak,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
+    marginBottom: SHEET_GROUP_GAP,
   },
 
   // Action row

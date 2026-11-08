@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
-import X from 'lucide-react-native/icons/x';
 import Calendar from 'lucide-react-native/icons/calendar';
 import Users from 'lucide-react-native/icons/users';
 import Edit3 from 'lucide-react-native/icons/pen-line';
@@ -13,6 +12,7 @@ import Download from 'lucide-react-native/icons/download';
 import Bookmark from 'lucide-react-native/icons/bookmark';
 import dayjs from 'dayjs';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { SheetHeader } from './SheetHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -93,33 +93,19 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Header */}
-      <View className="px-5 pb-4 flex-row items-center justify-between border-b border-stroke-weaker">
-        <View>
-          <Text className="text-text-strong" style={TYPE.sectionTitle}>
-            {previewOnly ? 'View Capsule' : 'Capsule Details'}
-          </Text>
-          <Text className="text-text-weak" style={TYPE.metadata}>
-            Created {dayjs(initialCapsule.created_at).format('MMMM D, YYYY')}
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.selectionAsync();
-            onClose();
-          }}
-          className="size-11 rounded-full bg-fill-weaker items-center justify-center"
-        >
-          <X size={20} color={COLORS.textWeak} />
-        </TouchableOpacity>
-      </View>
+      <SheetHeader
+        title={previewOnly ? 'View capsule' : 'Capsule details'}
+        onClose={onClose}
+        closeLabel="Close capsule"
+        style={{ paddingHorizontal: 20 }}
+      />
 
       <BottomSheetScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom ? insets.bottom + 24 : 40 }}
       >
         {/* Themed Preview Card (Web Style - SVG Background like CapsulePreviewCard) */}
-        <View className="p-6">
+        <View className="px-5 pt-8 pb-6">
           <View
             className="w-full aspect-[560/697] rounded-2xl overflow-hidden border border-stroke-weaker shadow-lg relative"
             style={{ backgroundColor: bgColor }}

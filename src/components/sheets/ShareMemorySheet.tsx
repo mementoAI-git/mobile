@@ -3,7 +3,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Share } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import X from 'lucide-react-native/icons/x';
 import CheckCircle2 from 'lucide-react-native/icons/circle-check';
 import Copy from 'lucide-react-native/icons/copy';
 import ShareIcon from 'lucide-react-native/icons/share';
@@ -16,6 +15,8 @@ import { Button, toast } from '@/components/ui';
 import { useUiStore } from '@/store';
 import { logger } from '@/lib/logger';
 import { publishedPostUrl } from '@/lib/env';
+import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
+import { SheetHeader } from './SheetHeader';
 
 export function ShareMemorySheet() {
   const COLORS = useThemeColors();
@@ -67,38 +68,14 @@ export function ShareMemorySheet() {
 
   return (
     <View className="flex-1 pb-8">
-      <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-text-strong" style={TYPE.sectionTitle}>
-          Story added
-        </Text>
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.selectionAsync();
-            closeSheet();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Close share"
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: COLORS.fillWeak,
-          }}
-          activeOpacity={0.7}
-        >
-          <X size={20} color={COLORS.textStrong} />
-        </TouchableOpacity>
-      </View>
+      <SheetHeader
+        title="Story added"
+        onClose={closeSheet}
+        closeLabel="Close share"
+        style={{ marginBottom: SHEET_GROUP_GAP }}
+      />
 
-      <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 24 }}>
-        <View className="gap-2">
-          <Text className="text-text-weak" style={TYPE.bodySmall}>
-            You have added a new story to your Memento. You can share it with others using the link below.
-          </Text>
-        </View>
-
+      <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: SHEET_GROUP_GAP }}>
         <View className="bg-fill-weaker border border-stroke-weaker rounded-2xl p-5 gap-6">
           {/* Link Copy Box */}
           <View className="gap-2">
@@ -139,12 +116,17 @@ export function ShareMemorySheet() {
 
         {/* Footer Actions */}
         <View className="flex-row gap-3">
-          <Button variant="outline" className="flex-1 h-12 rounded-full border-stroke-weak" onPress={closeSheet}>
-            <Text className="text-text-strong" style={TYPE.button}>Dismiss</Text>
+          <Button variant="outline" size="lg" rounded="full" className="h-14 flex-1" onPress={closeSheet}>
+            Dismiss
           </Button>
-          <Button className="flex-1 h-12 bg-brand rounded-full" onPress={handleAddAnother}>
-            <Plus size={18} color="white" className="mr-1" />
-            <Text className="text-white" style={TYPE.button}>Add Story</Text>
+          <Button
+            size="lg"
+            rounded="full"
+            className="h-14 flex-1"
+            leftIcon={<Plus size={18} color={COLORS.textInverse} />}
+            onPress={handleAddAnother}
+          >
+            Add Story
           </Button>
         </View>
       </BottomSheetScrollView>

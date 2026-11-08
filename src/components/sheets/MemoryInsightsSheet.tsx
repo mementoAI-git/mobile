@@ -6,8 +6,6 @@ import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Plus from 'lucide-react-native/icons/plus';
-import X from 'lucide-react-native/icons/x';
-import * as Haptics from 'expo-haptics';
 import { useUiStore } from '@/store';
 import { usePersona, useMemoryInsightsSummary, useUserContext } from '@/hooks/queries/use-persona';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
@@ -16,7 +14,8 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/utils';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SheetHeader } from './SheetHeader';
 
 const EMPTY_EXPLORE = require('../../../assets/images/illustrations/empty_explore.webp');
 
@@ -92,32 +91,9 @@ export function MemoryInsightsSheet() {
 
   return (
     <View className="px-5" style={{ flex: 1 }}>
-      <View className="flex-row items-center justify-between mb-4 border-b border-stroke-weaker pb-3">
-        <Text className="text-text-strong" style={TYPE.sectionTitle}>
-          Memory Insights
-        </Text>
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.selectionAsync();
-            closeSheet();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Close insights"
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: COLORS.fillWeak,
-          }}
-          activeOpacity={0.7}
-        >
-          <X size={20} color={COLORS.textStrong} />
-        </TouchableOpacity>
-      </View>
+      <SheetHeader title="Memory insights" onClose={closeSheet} closeLabel="Close insights" />
 
-      <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 24, paddingBottom: getSheetBottomPadding(insets.bottom, 24) }}>
+      <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: SHEET_SECTION_GAP, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetBottomPadding(insets.bottom, 24) }}>
         {/* Beneficiaries section */}
         <View>
           <Text className="uppercase tracking-widest text-text-weak mb-3" style={TYPE.metadata}>

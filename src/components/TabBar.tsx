@@ -3,14 +3,14 @@ import { useThemeColors, useThemeStyles, useResolvedAppearance } from '@/hooks/u
  * TabBar — Dynamic Dock
  *
  * Split layout:
- *   [  main pill: Overview · Chat · Stories · Explore · Capsule  ]  [○ Search]
+ *   [  main pill: Overview · Chat · Stories · Topics · Capsule  ]  [○ Search]
  *
  * • Main pill: rounded-full, frosted glass surface, absolute positioned bottom-center
  * • All tabs: content-sized icon + label stacks; active tab gets a semantic fill
  * • Inactive tab: transparent surface, persistent label, at least 44px touch target
  * • Search: detached 56×56 circle, same glass surface, opens search-memory sheet
  * • Haptics on every press
- * • Tab bar hidden on chat/[id] and stories/[id] detail screens
+ * • Tab bar hidden on chat/[id], stories/[id] and Settings child screens
  */
 
 import React, { useCallback, memo, useRef } from 'react';
@@ -58,7 +58,7 @@ const TAB_LABELS: Record<string, string> = {
   overview: 'Overview',
   chat:     'Chat',
   stories:  'Stories',
-  explore:  'Explore',
+  explore:  'Topics',
   // capsule:  'Capsule', // Hidden in Dock UI
 };
 
@@ -204,7 +204,9 @@ export function TabBar({ state, navigation }: TabBarProps) {
   const pathname = usePathname();
 
   const settingsSelected = pathname === '/settings' || pathname.startsWith('/settings/');
+  // Settings child pages are full-screen, like Insights: back button, no dock.
   const isHidden = pathname === '/chat' ||
+    pathname.startsWith('/settings/') ||
     /^\/chat\/[^/]+$/.test(pathname) ||
     /^\/stories\/[^/]+$/.test(pathname);
 
@@ -299,10 +301,10 @@ export function TabBar({ state, navigation }: TabBarProps) {
         {Platform.OS === 'ios' && (
           <BlurView tint={dark ? 'dark' : 'light'} intensity={90} style={StyleSheet.absoluteFill} />
         )}
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: Platform.OS === 'ios' ? COLORS.glass : COLORS.card }]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: Platform.OS === 'ios' ? COLORS.glass : COLORS.popover }]} />
       </MaskedView>
       {/* ── Main pill ── */}
-      <View style={[styles.pill, { backgroundColor: COLORS.card, borderColor: COLORS.strokeWeak, borderWidth: 1 }]}>
+      <View style={[styles.pill, { backgroundColor: COLORS.popover, borderColor: COLORS.strokeWeak, borderWidth: 1 }]}>
         {state.routes.map((route, index) => {
           const isFocused = state.index === index;
           const tabKey = route.name.split('/')[0];

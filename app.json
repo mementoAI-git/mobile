@@ -13,7 +13,8 @@
       "appleTeamId": "LKYKU36B7W",
       "associatedDomains": [
         "applinks:app.mymemento.io",
-        "webcredentials:app.mymemento.io"
+        "webcredentials:app.mymemento.io",
+        "webcredentials:dev.mymemento.io"
       ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,

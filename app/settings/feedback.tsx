@@ -1,8 +1,7 @@
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
-  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,13 +10,14 @@ import {
 } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import ImagePlus from 'lucide-react-native/icons/image-plus';
+import Check from 'lucide-react-native/icons/check';
+import Paperclip from 'lucide-react-native/icons/paperclip';
 import RotateCcw from 'lucide-react-native/icons/rotate-ccw';
-import Trash2 from 'lucide-react-native/icons/trash';
+import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { Button, ResponsiveScreen, Select, TextInput } from '@/components/ui';
+import { Button, ResponsiveScreen, Select, Spinner, TextInput } from '@/components/ui';
 import type { SelectOption } from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';
@@ -26,17 +26,14 @@ import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { useUserStore } from '@/store';
-import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 
-const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
+// Same choices as web; values are the API's feedback types.
 const FEEDBACK_OPTIONS: (SelectOption & { value: FeedbackType })[] = [
-  { label: 'Report a bug', value: 'Bug' },
-  { label: 'Request a feature', value: 'Feature Request' },
-  { label: 'UI/UX issue', value: 'UI/UX Issue' },
+  { label: 'Bugs', value: 'Bug' },
+  { label: 'Feature requests', value: 'Feature Request' },
   { label: 'General feedback', value: 'General Feedback' },
-  { label: 'Other', value: 'Other' },
 ];
 
 type AttachmentStatus = 'uploading' | 'uploaded' | 'failed';
@@ -176,127 +173,167 @@ export default function FeedbackSettingsScreen() {
     }
   }, [attachments, canSubmit, message, router, submitFeedback, type, user?.email]);
 
-  const attachmentRows = useMemo(() => attachments.map((attachment) => (
-    <View key={attachment.clientId} className="min-h-[56px] flex-row items-center py-2">
-      <Image source={{ uri: attachment.uri }} className="size-12 rounded-xl bg-fill-weak" resizeMode="cover" />
-      <View className="ml-3 flex-1">
-        <Text numberOfLines={1} style={{ ...TYPE.body, color: COLORS.textStrong }}>
-          {attachment.name}
-        </Text>
-        <Text
-          style={{
-            ...TYPE.bodySmall,
-            color: attachment.status === 'failed' ? COLORS.error : COLORS.textWeak,
-            marginTop: 2,
-          }}
-        >
-          {attachment.status === 'failed' ? 'Upload failed' : `${attachment.progress}%`}
-        </Text>
-      </View>
-      {attachment.status === 'failed' && (
-        <TouchableOpacity
-          onPress={() => retryUpload(attachment.clientId)}
-          className="mr-1 size-10 items-center justify-center rounded-full bg-fill-weaker"
-        >
-          <RotateCcw size={18} color={COLORS.brand} />
-        </TouchableOpacity>
-      )}
-      <TouchableOpacity
-        onPress={() => removeAttachment(attachment.clientId)}
-        className="size-10 items-center justify-center rounded-full bg-fill-weaker"
-      >
-        <Trash2 size={18} color={COLORS.error} />
-      </TouchableOpacity>
-    </View>
-  )), [attachments, removeAttachment, retryUpload]);
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-      <SettingsSubpageHeader title="Send feedback" onBack={handleBack} />
+      <SettingsSubpageHeader title="Send" accent="feedback" onBack={handleBack} />
 
-      <View className="flex-1">
-        <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
-        <KeyboardAvoidingView
-          className="flex-1"
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
-        >
-          <ResponsiveScreen maxWidth={720}>
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingTop: 16, paddingBottom: 28 }}
-            >
-            {/* Main feedback form inside journal card */}
-            <View className="rounded-[24px] bg-card p-5 gap-5">
-              <Select
-                label="Feedback type"
-                options={FEEDBACK_OPTIONS}
-                value={type}
-                onValueChange={(value) => setType(value as FeedbackType)}
-                className="h-14 rounded-full"
-              />
-
-              <TextInput
-                label="Add a comment"
-                value={message}
-                onChangeText={setMessage}
-                placeholder="Tell us what happened or what would make Memento better"
-                multiline
-                textAlignVertical="top"
-                inputClassName="min-h-[160px]"
-              />
-            </View>
-
-            {/* Screenshots section inside journal card */}
-            <View className="mt-4 rounded-[24px] bg-card p-5">
-              <View className="flex-row items-center justify-between mb-1">
-                <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>
-                  Screenshots
-                </Text>
-                <Text style={{ ...TYPE.metadata, color: COLORS.textMuted }}>
-                  OPTIONAL
-                </Text>
-              </View>
-              <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak, marginBottom: 14 }}>
-                Attach images to help us diagnose the issue.
-              </Text>
-
-              <Button
-                variant="secondary"
-                size="md"
-                className="h-11 rounded-full px-5 self-start"
-                leftIcon={<ImagePlus size={18} color={COLORS.textStrong} />}
-                onPress={handlePickImages}
-              >
-                Choose images
-              </Button>
-
-              {attachments.length > 0 && (
-                <View className="mt-4 gap-1">
-                  {attachmentRows}
-                </View>
-              )}
-            </View>
-          </ScrollView>
-          </ResponsiveScreen>
-
-          <View
-            className="px-4 pt-3 bg-background"
-            style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+      >
+        <ResponsiveScreen maxWidth={720}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingTop: 16, paddingBottom: Math.max(insets.bottom, 16) + 32, gap: 40 }}
           >
+            {/* Web feedback page: description, then the form. */}
+            <Text style={{ ...TYPE.bodyLarge, color: COLORS.textWeak }}>
+              Share a bug, an idea, or something we could improve.
+            </Text>
+
+            <Select
+              label="Feedback type"
+              options={FEEDBACK_OPTIONS}
+              value={type}
+              onValueChange={(value) => setType(value as FeedbackType)}
+              className="h-12 rounded-[12px] border border-stroke-weak bg-fill-weak"
+            />
+
+            <TextInput
+              label="Message"
+              value={message}
+              onChangeText={setMessage}
+              placeholder="What happened, or what would you like to see?"
+              variant="filled"
+              multiline
+              textAlignVertical="top"
+              inputClassName="min-h-[128px]"
+            />
+
+            <View style={{ gap: 12 }}>
+              <TouchableOpacity
+                onPress={handlePickImages}
+                activeOpacity={0.78}
+                accessibilityRole="button"
+                accessibilityLabel="Add screenshots"
+                accessibilityHint="Choose images from your photos."
+                style={{
+                  minHeight: 76,
+                  paddingHorizontal: 24,
+                  paddingVertical: 16,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderStyle: 'dashed',
+                  borderColor: COLORS.strokeWeak,
+                  backgroundColor: COLORS.fillWeaker,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Paperclip size={16} color={COLORS.textStrong} />
+                  <Text style={{ ...TYPE.button, color: COLORS.textStrong }}>Add screenshots</Text>
+                </View>
+                <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak }}>
+                  Choose images from your photos.
+                </Text>
+              </TouchableOpacity>
+
+              {attachments.length > 0 ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                  {attachments.map((attachment) => (
+                    <View key={attachment.clientId} style={{ width: '47%', flexGrow: 1, maxWidth: '50%', gap: 6 }}>
+                      <View
+                        style={{
+                          aspectRatio: 16 / 9,
+                          borderRadius: 8,
+                          overflow: 'hidden',
+                          borderWidth: 1,
+                          borderColor: COLORS.strokeWeak,
+                          backgroundColor: COLORS.fillWeak,
+                        }}
+                      >
+                        <Image source={{ uri: attachment.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                        {attachment.status === 'uploading' ? (
+                          <View
+                            accessibilityRole="progressbar"
+                            accessibilityLabel={`Uploading ${attachment.name}`}
+                            style={{
+                              position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
+                              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                              backgroundColor: COLORS.mediaSurface,
+                            }}
+                          >
+                            <Spinner size="small" color={COLORS.mediaText} />
+                            <Text style={{ ...TYPE.metadata, color: COLORS.mediaText }}>{attachment.progress}%</Text>
+                          </View>
+                        ) : null}
+                        {attachment.status === 'failed' ? (
+                          <TouchableOpacity
+                            onPress={() => retryUpload(attachment.clientId)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Retry uploading ${attachment.name}`}
+                            style={{
+                              position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
+                              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                              backgroundColor: COLORS.mediaSurface,
+                            }}
+                          >
+                            <RotateCcw size={16} color={COLORS.mediaText} />
+                            <Text style={{ ...TYPE.metadata, color: COLORS.mediaText }}>Retry</Text>
+                          </TouchableOpacity>
+                        ) : null}
+                        {attachment.status === 'uploaded' ? (
+                          <View
+                            accessibilityLabel="Uploaded"
+                            style={{ position: 'absolute', left: 6, bottom: 6, padding: 4, borderRadius: 999, backgroundColor: COLORS.success }}
+                          >
+                            <Check size={12} color={COLORS.textInverse} strokeWidth={3} />
+                          </View>
+                        ) : null}
+                        <TouchableOpacity
+                          onPress={() => removeAttachment(attachment.clientId)}
+                          hitSlop={8}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Remove ${attachment.name}`}
+                          style={{
+                            position: 'absolute', top: 6, right: 6,
+                            width: 28, height: 28, borderRadius: 14,
+                            alignItems: 'center', justifyContent: 'center',
+                            backgroundColor: COLORS.background,
+                          }}
+                        >
+                          <X size={16} color={COLORS.textStrong} />
+                        </TouchableOpacity>
+                      </View>
+                      <Text
+                        numberOfLines={1}
+                        style={{ ...TYPE.metadata, color: attachment.status === 'failed' ? COLORS.error : COLORS.textWeak }}
+                      >
+                        {attachment.status === 'failed' ? 'Upload failed' : attachment.name}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+
             <Button
               size="lg"
+              rounded="full"
               className="h-14 w-full"
               onPress={handleSubmit}
               disabled={!canSubmit}
               loading={submitFeedback.isPending}
             >
-              Send feedback
+              {submitFeedback.isPending ? 'Sending…' : 'Send feedback'}
             </Button>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
+          </ScrollView>
+        </ResponsiveScreen>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

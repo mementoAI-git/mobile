@@ -1,14 +1,14 @@
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo } from 'react';
 import { useVoiceContent } from '@/features/voice-control/hooks';
-import { View, RefreshControl, ScrollView } from 'react-native';
+import { View, RefreshControl, ScrollView, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Plus from 'lucide-react-native/icons/plus';
 import Search from 'lucide-react-native/icons/search';
 import LayoutGrid from 'lucide-react-native/icons/layout-grid';
 import List from 'lucide-react-native/icons/list';
-import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
+import { StoryListRow } from '@/components/memory/StoryListRow';
 import { MasonryMemoryGrid } from '@/components/memory/MasonryMemoryGrid';
 import { Button, DashboardHeader, TextInput, StoriesSkeleton, EmptyState, Spinner } from '@/components/ui';
 import { useGuardianLensStore } from '@/store/guardian-lens.store';
@@ -31,6 +31,15 @@ import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.webp');
 
 const FILTERS = ['All', 'Bookmarked', 'Deleted'];
+
+/** The view toggle is a square matching the compact search field's height. */
+const SEARCH_CONTROL_HEIGHT = minTouchTarget(48);
+const SEARCH_CONTROL_SQUARE = {
+  width: SEARCH_CONTROL_HEIGHT,
+  height: SEARCH_CONTROL_HEIGHT,
+  minHeight: SEARCH_CONTROL_HEIGHT,
+  paddingHorizontal: 0,
+} as const;
 
 export default function StoriesScreen() {
   const COLORS = useThemeColors();
@@ -143,7 +152,7 @@ export default function StoriesScreen() {
     };
   });
 
-  // Stable renderItem for FlatList — uses same MasonryMemoryCard as grid for visual consistency
+  // Stable renderItem for FlatList — compact row with thumbnail or identicon
   const renderListItem = useCallback(
     ({ item }: { item: IMemory }) => (
       <StoryListItem memory={item} onOpen={handleMemoryPress} />
@@ -168,7 +177,8 @@ export default function StoriesScreen() {
     };
     return FILTERS.map((filter) => ({
       key: filter,
-      label: counts[filter] ? `${filter} (${counts[filter]})` : filter,
+      label: filter,
+      count: counts[filter] ?? 0,
     }));
   }, [stats]);
 
@@ -180,6 +190,7 @@ export default function StoriesScreen() {
             key={filter.key}
             filter={filter.key}
             label={filter.label}
+            count={filter.count}
             active={activeFilter === filter.key}
             onSelect={setActiveFilter}
           />
@@ -245,6 +256,7 @@ export default function StoriesScreen() {
             onSubmitEditing={handleSearchSubmit}
             returnKeyType="search"
             containerClassName="flex-1"
+            size="compact"
             textContentType="none"
             autoComplete="off"
             autoCorrect={false}
@@ -260,8 +272,8 @@ export default function StoriesScreen() {
           <Button
             variant="secondary"
             iconOnly
-            size="lg"
-            className="w-14"
+            size="md"
+            style={SEARCH_CONTROL_SQUARE}
             accessibilityLabel={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
             onPress={handleSwitchView}
           >
@@ -302,7 +314,7 @@ export default function StoriesScreen() {
             onScroll={scrollHandler}
             scrollEventThrottle={16}
             onEndReached={handleGridEndReached}
-            onEndReachedThreshold={0.3}
+            onEndReachedThreshold={0.5}
             ListFooterComponent={isFetchingNextPage ? <View className="py-6"><Spinner size="small" /></View> : null}
             ListEmptyComponent={emptyState}
           />
@@ -372,22 +384,39 @@ export default function StoriesScreen() {
 
 function storyKey(story: IMemory) { return story._id; }
 
-const StoryFilterButton = React.memo(function StoryFilterButton({ filter, label, active, onSelect }: {
+const StoryFilterButton = React.memo(function StoryFilterButton({ filter, label, count, active, onSelect }: {
   filter: string;
   label: string;
+  count: number;
   active: boolean;
   onSelect: (filter: string) => void;
 }) {
-  const handlePress = useCallback(() => onSelect(filter), [onSelect, filter]);
+  const COLORS = useThemeColors();
+  const handlePress = useCallback(() => {
+    void Haptics.selectionAsync();
+    onSelect(filter);
+  }, [onSelect, filter]);
+  const textColor = active ? COLORS.activeText : COLORS.textBase;
   return (
-    <Button
-      variant={active ? 'primary' : 'secondary'}
-      size="md"
-      accessibilityLabel={`${label}${active ? ', selected' : ''}`}
+    <TouchableOpacity
       onPress={handlePress}
+      activeOpacity={0.8}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`${label} ${count}`}
+      style={{
+        minHeight: minTouchTarget(44),
+        paddingHorizontal: 18,
+        borderRadius: 999,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: active ? COLORS.activeFill : COLORS.fillWeak,
+      }}
     >
-      {label}
-    </Button>
+      <Text style={[TYPE.label, { color: textColor }]}>{label}</Text>
+      <Text style={[TYPE.label, { color: textColor, opacity: 0.6 }]}>{count}</Text>
+    </TouchableOpacity>
   );
 });
 
@@ -395,10 +424,9 @@ const StoryListItem = React.memo(function StoryListItem({ memory, onOpen }: {
   memory: IMemory;
   onOpen: (id: string) => void;
 }) {
-  const handlePress = useCallback(() => onOpen(memory._id), [onOpen, memory._id]);
   return (
-    <View className="px-4 pb-4">
-      <MasonryMemoryCard memory={memory} variant="list" onPress={handlePress} />
+    <View className="px-4 pb-3">
+      <StoryListRow memory={memory} onOpen={onOpen} />
     </View>
   );
 });

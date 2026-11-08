@@ -17,9 +17,9 @@ import { TouchableOpacity } from '@/components/ui/Touchable';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
-import MoreHorizontal from 'lucide-react-native/icons/ellipsis';
+import SlidersHorizontal from 'lucide-react-native/icons/sliders-horizontal';
 import PhoneCall from 'lucide-react-native/icons/phone-call';
-import Volume2 from 'lucide-react-native/icons/volume-2';
+import { useSpokenReplies } from '@/hooks/use-spoken-replies';
 import X from 'lucide-react-native/icons/x';
 import {
   MessageBubble,
@@ -32,7 +32,6 @@ import { MessageActionsProvider } from '@/components/chat/MessageActionsProvider
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { ChatInput, type ChatSendPayload } from '@/components/chat/ChatInput';
 import { MilestoneCard } from '@/components/chat/MilestoneCard';
-import { DeepDiveNudge } from '@/components/chat/DeepDiveNudge';
 import { DeepDiveBanner } from '@/components/chat/DeepDiveBanner';
 import { PromptReflectionHeader } from '@/components/chat/PromptReflectionHeader';
 import { ChatSkeleton } from '@/components/ui';
@@ -167,12 +166,15 @@ export default function ChatScreen() {
     return () => runtimeDiagnostics.record('screen', 'unmount', { screen: 'chat' });
   }, []);
   // Route labels show immediately; the header resolves canonical metadata for direct links.
-  const { id: promptId, promptLabel, focusMessageId, focusAttachmentId, initialAudioUri } = useLocalSearchParams<{
+  const { id: promptId, promptLabel, focusMessageId, focusAttachmentId, initialAudioUri, discussText, discussId } = useLocalSearchParams<{
     id?: string;
     promptLabel?: string;
     focusMessageId?: string;
     focusAttachmentId?: string;
     initialAudioUri?: string;
+    /** Overview capture card "Discuss": sent once as the host's message. */
+    discussText?: string;
+    discussId?: string;
   }>();
 
   const {
@@ -189,13 +191,13 @@ export default function ChatScreen() {
     isFetchingOlderMessages,
     streaming,
     streamingText,
+    replyStatus,
     send,
     stop,
     handleBack,
     handleActions,
     chatMode,
     deepDiveDimension,
-    handleEnterDeepDive,
     handleExitDeepDive,
     enrichmentStats,
     activeChatId,
@@ -203,7 +205,7 @@ export default function ChatScreen() {
   } = useChatLogic();
   // What Memento can read on this screen: the prompt being answered, and
   // the last few messages.
-  useVoiceContent('Prompt', () => promptTitle || promptMemory?.title || '', Boolean(isPromptType));
+  useVoiceContent('Reflection', () => promptTitle || promptMemory?.title || '', Boolean(isPromptType));
   useVoiceContent('Latest messages', () =>
     [...(allMessages ?? [])]
       .filter((message) => message?.text)
@@ -222,7 +224,6 @@ export default function ChatScreen() {
   const [replyQuoteHeight, setReplyQuoteHeight] = useState(0);
   const [headerHeight, setHeaderHeight] = useState(DEFAULT_HEADER_HEIGHT);
   const [chatSurfaceHeight, setChatSurfaceHeight] = useState(0);
-  const [nudgeHidden, setNudgeHidden] = useState(false);
   const [attachmentPreview, setAttachmentPreview] = useState<ChatAttachmentPreviewRequest | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const completedFocusRef = useRef<string | null>(null);
@@ -292,6 +293,19 @@ export default function ChatScreen() {
     return () => { cancelled = true; };
   }, [initialAudioUri, isLoading, send, uploadFile]);
 
+  const sentDiscussionRef = useRef<string | null>(null);
+  React.useEffect(() => {
+    const message = discussText?.trim();
+    const identity = discussId ?? message;
+    if (!message || !identity || sentDiscussionRef.current === identity || isLoading || isActuallyStreaming) return;
+    sentDiscussionRef.current = identity;
+    router.setParams({ discussText: undefined, discussId: undefined });
+    void send(message).catch(() => {
+      toast('Could not start that conversation. Try again.', 'error');
+      sentDiscussionRef.current = null;
+    });
+  }, [discussText, discussId, isLoading, isActuallyStreaming, router, send]);
+
   React.useEffect(() => {
     const focusIdentity = focusMessageId ?? focusAttachmentId;
     if (!focusIdentity || completedFocusRef.current === focusIdentity) return;
@@ -338,37 +352,23 @@ export default function ChatScreen() {
     })
   ), [replyQuote, replyQuoteHeight]);
 
-  // Deep dive nudge visibility — destructure stable references to avoid
-  // capturing the whole enrichmentStats object in callbacks/deps.
-  const nudgeDimension = enrichmentStats.nudgeDimension;
-  const nudgeQuestion = enrichmentStats.nudgeQuestion;
-  const getDismissedNudges = enrichmentStats.getDismissedNudges;
-  const dismissNudge = enrichmentStats.dismissNudge;
-
-  // getDismissedNudges is a stable useCallback — safe to call during render.
-  const dismissedNudges = getDismissedNudges();
-  const showDeepDiveNudge =
-    chatMode === 'open' &&
-    !nudgeHidden &&
-    nudgeDimension !== null &&
-    !dismissedNudges.includes(nudgeDimension);
-
-  const handleDismissNudge = useCallback(async () => {
-    setNudgeHidden(true);
-    if (nudgeDimension) {
-      await dismissNudge(nudgeDimension);
+  // Voice narration is switched on in Chat settings → AI Voice.
+  const narration = useSpokenReplies(Boolean(voiceCall.isConnected || voiceCall.isConnecting));
+  // Read each reply aloud once it finishes streaming.
+  const lastStreamTextRef = useRef('');
+  const wasStreamingRef = useRef(false);
+  React.useEffect(() => {
+    if (streaming) {
+      wasStreamingRef.current = true;
+      if (streamingText) lastStreamTextRef.current = streamingText;
+      return;
     }
-  }, [nudgeDimension, dismissNudge]);
-
-  const handleStartDeepDiveFromNudge = useCallback(() => {
-    setNudgeHidden(true);
-    if (nudgeDimension) handleEnterDeepDive(nudgeDimension);
-  }, [nudgeDimension, handleEnterDeepDive]);
-
-  const handleNarration = useCallback(() => {
-    Haptics.selectionAsync();
-    router.push({ pathname: '/coming-soon', params: { feature: 'narration' } });
-  }, [router]);
+    if (!wasStreamingRef.current) return;
+    wasStreamingRef.current = false;
+    const text = lastStreamTextRef.current;
+    lastStreamTextRef.current = '';
+    if (text.trim()) void narration.speak(text);
+  }, [streaming, streamingText, narration.speak]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleVoiceCall = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -504,9 +504,9 @@ export default function ChatScreen() {
     return streamingText ? (
       <MessageBubble message={{ role: 'assistant', text: streamingText } as any} animated />
     ) : (
-      <TypingIndicator />
+      <TypingIndicator status={replyStatus} />
     );
-  }, [isActuallyStreaming, streamingText]);
+  }, [isActuallyStreaming, streamingText, replyStatus]);
 
   const promptHeaderComponent = React.useMemo(() => {
     const displayTitle = promptTitle || promptMemory?.title || '';
@@ -624,18 +624,9 @@ export default function ChatScreen() {
           <ArrowLeft size={21} color={COLORS.textStrong} strokeWidth={2.2} />
         </TouchableOpacity>
 
-        {isPromptType ? <Text numberOfLines={1} style={styles.headerTitle}>Prompt</Text> : <DigitalMindHeader />}
+        {isPromptType ? <Text numberOfLines={1} style={styles.headerTitle}>Reflection</Text> : <DigitalMindHeader />}
 
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            accessibilityLabel="Narration"
-            accessibilityRole="button"
-            activeOpacity={0.7}
-            onPress={handleNarration}
-            style={styles.headerButton}
-          >
-            <Volume2 size={20} color={COLORS.textStrong} strokeWidth={2.2} />
-          </TouchableOpacity>
           <TouchableOpacity
             accessibilityLabel="Start voice call"
             accessibilityRole="button"
@@ -652,7 +643,8 @@ export default function ChatScreen() {
             onPress={handleActions}
             style={styles.headerButton}
           >
-            <MoreHorizontal size={21} color={COLORS.textStrong} strokeWidth={2.5} />
+            {/* Web host chat header: SlidersHorizontal for Chat settings. */}
+            <SlidersHorizontal size={20} color={COLORS.textStrong} strokeWidth={1.75} />
           </TouchableOpacity>
         </View>
       </View>
@@ -673,16 +665,6 @@ export default function ChatScreen() {
 
 
         </View>
-      )}
-
-      {/* ── Deep Dive Nudge (floating above messages) ─────────────── */}
-      {!showInlineVoice && !isPromptType && showDeepDiveNudge && nudgeDimension && (
-        <DeepDiveNudge
-          dimension={nudgeDimension}
-          question={nudgeQuestion}
-          onDeepDive={handleStartDeepDiveFromNudge}
-          onDismiss={handleDismissNudge}
-        />
       )}
 
       {/* ── Messages ─────────────────────────────────────────────── */}
@@ -744,7 +726,7 @@ export default function ChatScreen() {
           {Platform.OS === 'ios' && (
             <BlurView tint={dark ? 'dark' : 'light'} intensity={90} style={StyleSheet.absoluteFill} />
           )}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: Platform.OS === 'ios' ? COLORS.glass : COLORS.card }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: Platform.OS === 'ios' ? COLORS.glass : COLORS.popover }]} />
         </MaskedView>
         {/* ── Reply Quote Preview Panel ────────────────────────────── */}
         {replyQuote && (

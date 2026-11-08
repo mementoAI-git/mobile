@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Pressable } from '@/components/ui/Touchable';
 import Check from 'lucide-react-native/icons/check';
-import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import { Button } from '@/components/ui/Button';
 import { VoiceLanguageSelect } from '@/components/chat/VoiceLanguageSelect';
@@ -13,6 +12,8 @@ import { VOICE_CATALOG, getVoiceById, type VoiceId } from '@/features/chat/voice
 import { useUiStore, useVoicePreferenceStore } from '@/store';
 import { useUpdateProfile } from '@/hooks/mutations/use-profile-mutation';
 import { saveCallVoice } from '@/features/chat/voice-call-voice';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
 
 interface VoiceCallSettingsSheetProps {
   selectedVoiceId: VoiceId;
@@ -55,20 +56,11 @@ export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: Vo
   }, [draft, language, selectedVoiceId, selectLanguage, onSaved, selectVoice, updateProfileAsync]);
 
   return (
-    <View className="pb-2">
-      <View className="mb-5 flex-row items-center justify-between">
-        <Text className="text-text-strong" style={TYPE.sectionTitle}>Settings</Text>
-        <Pressable
-          onPress={() => {
-            void Haptics.selectionAsync();
-            onClose();
-          }}
-          className="size-11 items-center justify-center rounded-full bg-fill-weaker"
-        >
-          <X size={20} color={COLORS.textBase} />
-        </Pressable>
-      </View>
+    <View style={{ gap: SHEET_GROUP_GAP, paddingBottom: 8 }}>
+      <SheetHeader title="Settings" onClose={onClose} closeLabel="Close voice settings" />
+      <View style={{ gap: SHEET_SECTION_GAP }}>
       <VoiceLanguageSelect value={language} onChange={setLanguage} disabled={saving} />
+      <View>
       <Text className="mb-3 text-text-strong" style={TYPE.label}>Change voice</Text>
       <View className="gap-3">
         {VOICE_CATALOG.map((voice) => {
@@ -90,15 +82,19 @@ export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: Vo
           );
         })}
       </View>
-      <View className="mt-5 flex-row gap-3">
-        <Button variant="secondary" className="h-14 flex-1" onPress={onClose}>Dismiss</Button>
-        <Button className="h-14 flex-1" loading={saving} onPress={() => void save()}>Save changes</Button>
       </View>
-      {saveFailed ? (
-        <Text className="mt-3 text-center text-error-strong" style={TYPE.bodySmall}>
-          We couldn’t save your settings. Check your connection and try again.
-        </Text>
-      ) : null}
+      </View>
+      <View style={{ gap: 12 }}>
+        <View className="flex-row gap-3">
+          <Button variant="secondary" size="lg" rounded="full" className="h-14 flex-1" onPress={onClose}>Dismiss</Button>
+          <Button size="lg" rounded="full" className="h-14 flex-1" loading={saving} onPress={() => void save()}>Save changes</Button>
+        </View>
+        {saveFailed ? (
+          <Text className="text-center text-error-strong" style={TYPE.bodySmall}>
+            We couldn’t save your settings. Check your connection and try again.
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }

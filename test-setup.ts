@@ -1,4 +1,13 @@
 import { mock } from 'bun:test';
+import { plugin } from 'bun';
+
+// Metro bundles audio assets; in tests a required clip is just its path.
+plugin({
+  name: 'audio-assets',
+  setup(build) {
+    build.onLoad({ filter: /\.(mp3|wav|m4a)$/ }, (args) => ({ exports: { default: args.path }, loader: 'object' }));
+  },
+});
 
 (globalThis as any).__DEV__ = true;
 if (!(globalThis as any).expo) {

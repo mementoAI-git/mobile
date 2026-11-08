@@ -1,3 +1,15 @@
+/**
+ * Chat settings — full-screen port of web's phone chat settings
+ * (Web/memento-web/src/components/modal/chat-settings: index.tsx,
+ * chat-preferences-panel.tsx, enrichment-summary.tsx, voices.tsx,
+ * background-music.tsx, volume-control.tsx). Mobile keeps its own warm
+ * gradient behind the page.
+ *
+ * Order: Enrichment summary + Shared media & links · AI Voice (Voice
+ * narration switch, then the voice cards) · Background Ambience (volume, then
+ * the tune cards). Sections sit 32px apart. Voices and tunes stay as tappable
+ * cards on the page rather than web's menu.
+ */
 import type { ThemeColors } from '@/constants/tokens';
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -13,60 +25,31 @@ import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
-import BarChart3 from 'lucide-react-native/icons/chart-column';
-import Check from 'lucide-react-native/icons/check';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
-import FileText from 'lucide-react-native/icons/file-text';
-import Film from 'lucide-react-native/icons/film';
+import Check from 'lucide-react-native/icons/check';
 import ImageIcon from 'lucide-react-native/icons/image';
-import Link2 from 'lucide-react-native/icons/link-2';
-import Music2 from 'lucide-react-native/icons/music-2';
 import VolumeX from 'lucide-react-native/icons/volume-x';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
-import { COLORS, FONTS } from '@/constants/tokens';
 import { DEEP_SKY } from '@/constants/appearance';
 import { TYPE } from '@/constants/typography';
-import { minTouchTarget, iconSize, radius, responsiveSpace } from '@/constants/responsive';
+import { minTouchTarget, radius } from '@/constants/responsive';
 import { getChatSettingsLayout } from '@/features/chat/chat-settings-layout';
+import { mapAttachmentsToShared } from '@/features/chat/shared-media';
 import { VoiceArtwork } from '@/components/chat/VoiceArtwork';
-import {
-  VOICE_CATALOG,
-  getVoiceById,
-  getVoiceByProviderName,
-  type VoiceId,
-} from '@/features/chat/voice-catalog';
+import { EnrichmentSummaryCard } from '@/components/overview/EnrichmentSummaryCard';
+import { VOICE_CATALOG, getVoiceById, getVoiceByProviderName, type VoiceId } from '@/features/chat/voice-catalog';
+import { Switch } from '@/components/ui/Switch';
+import { useSpokenRepliesStore } from '@/store/spoken-replies.store';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useAuthStore, useVoicePreferenceStore } from '@/store';
 import { MusicPlayerIcon } from '@/components/ui/icons/ChatIcons';
 import { useBackgroundMusic } from '@/hooks/use-background-music';
-import {
-  BACKGROUND_TRACKS,
-  getBackgroundTrack,
-  type BackgroundTrackKey,
-} from '@/features/audio/background-music';
+import { type BackgroundTrackKey } from '@/features/audio/background-music';
 import { useUpdateProfile } from '@/hooks/mutations/use-profile-mutation';
+import { useConversationAttachments } from '@/hooks/queries/use-memories';
 import { useToast } from '@/components/ui/Toast';
-
-
-
-const getScoreColors = (COLORS: ThemeColors) => [
-  COLORS.info,
-  COLORS.beneficiaryGroupBlue,
-  COLORS.beneficiaryGroupGreen,
-  COLORS.onboardingGreenSoft,
-  COLORS.beneficiaryGroupYellow,
-  COLORS.warning,
-  COLORS.onboardingAmber,
-  COLORS.brandWeak,
-];
-
-type IconComponent = typeof ImageIcon;
+import { useVoiceSampleClips } from '@/hooks/use-voice-sample-clips';
 
 function RoundButton({
   children,
@@ -96,71 +79,7 @@ function RoundButton({
   );
 }
 
-function MediaTile({
-  icon: Icon,
-  label,
-  onPress,
-  width,
-}: {
-  icon: IconComponent;
-  label: string;
-  onPress: () => void;
-  width: number;
-}) {
-  const COLORS = useThemeColors();
-  const styles = useThemeStyles(createStyles);
-  const handlePress = useCallback(() => {
-    Haptics.selectionAsync();
-    onPress();
-  }, [onPress]);
-
-  return (
-    <TouchableOpacity
-      accessibilityLabel={`View shared ${label.toLowerCase()}`}
-      accessibilityRole="button"
-      activeOpacity={0.74}
-      onPress={handlePress}
-      style={[styles.mediaTile, { width }]}
-    >
-      <Icon size={24} color={COLORS.textStrong} strokeWidth={2} />
-      <Text style={styles.mediaLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function InsightCard({
-  copy,
-  icon: Icon,
-  title,
-  width,
-}: {
-  copy: string;
-  icon: IconComponent;
-  title: string;
-  width: number;
-}) {
-  const COLORS = useThemeColors();
-  const styles = useThemeStyles(createStyles);
-  const handlePress = useCallback(() => {
-    Haptics.selectionAsync();
-  }, []);
-
-  return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      activeOpacity={0.74}
-      onPress={handlePress}
-      style={[styles.insightCard, { width }]}
-    >
-      <View style={styles.insightTitleRow}>
-        <Icon size={18} color={COLORS.textStrong} strokeWidth={2.2} />
-        <Text numberOfLines={1} style={styles.insightTitle}>{title}</Text>
-      </View>
-      <Text style={styles.insightCopy}>{copy}</Text>
-    </TouchableOpacity>
-  );
-}
-
+/** Voice and tune cards: two per row, outline only; the chosen one gets a weak fill and a tick. */
 function SelectionCard({
   children,
   label,
@@ -177,23 +96,15 @@ function SelectionCard({
   const COLORS = useThemeColors();
   const styles = useThemeStyles(createStyles);
   const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePress = useCallback(() => {
-    Haptics.selectionAsync();
-    onPress();
-  }, [onPress]);
-
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
     <Animated.View style={[{ width }, animatedStyle]}>
       <TouchableOpacity
         accessibilityLabel={label}
-        accessibilityRole="button"
-        accessibilityState={{ selected }}
+        accessibilityRole="radio"
+        accessibilityState={{ checked: selected }}
         activeOpacity={1}
-        onPress={handlePress}
+        onPress={onPress}
         onPressIn={() => { scale.value = withSpring(0.98); }}
         onPressOut={() => { scale.value = withSpring(1); }}
         style={[styles.selectionCard, selected && styles.selectionCardSelected]}
@@ -209,19 +120,8 @@ function SelectionCard({
   );
 }
 
-function RecordPlayerMark() {
-  return (
-    <MusicPlayerIcon />
-  );
-}
-
-function VolumeSlider({
-  onChange,
-  value,
-}: {
-  onChange: (value: number) => void;
-  value: number;
-}) {
+/** Web `volume-control.tsx`: "Volume", a track you tap or drag anywhere on, and the percentage. */
+function VolumeSlider({ onChange, value }: { onChange: (value: number) => void; value: number }) {
   const styles = useThemeStyles(createStyles);
   const [trackWidth, setTrackWidth] = useState(0);
   const updateValue = useCallback((x: number) => {
@@ -233,6 +133,7 @@ function VolumeSlider({
   updateValueRef.current = updateValue;
 
   const panResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: (_, gestureState) => (
       Math.abs(gestureState.dx) > 4 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy)
     ),
@@ -242,32 +143,40 @@ function VolumeSlider({
   })).current;
 
   return (
-    <View
-      accessibilityLabel="Background ambience volume"
-      accessibilityRole="adjustable"
-      onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
-      hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
-      style={styles.sliderHitArea}
-      {...panResponder.panHandlers}
-    >
-      <View style={styles.sliderTrack}>
-        <View style={[styles.sliderFill, { width: `${value}%` }]} />
+    <View style={styles.volumeRow}>
+      <Text style={[TYPE.bodySmall, styles.volumeLabel]} accessibilityElementsHidden>Volume</Text>
+      <View
+        accessible
+        accessibilityLabel="Background ambience volume"
+        accessibilityRole="adjustable"
+        accessibilityValue={{ min: 0, max: 100, now: value }}
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === 'increment') onChange(Math.min(100, value + 10));
+          if (event.nativeEvent.actionName === 'decrement') onChange(Math.max(0, value - 10));
+        }}
+        onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
+        hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+        style={styles.sliderHitArea}
+        {...panResponder.panHandlers}
+      >
+        <View style={styles.sliderTrack}>
+          <View style={[styles.sliderFill, { width: `${value}%` }]} />
+        </View>
+        <View style={[styles.sliderThumb, { left: `${value}%` }]} />
       </View>
-      <View style={[styles.sliderThumb, { left: `${value}%` }]} />
+      <Text style={[TYPE.bodySmall, styles.volumeValue]} accessibilityElementsHidden>{value}%</Text>
     </View>
   );
 }
 
-function parseScore(value?: string) {
-  if (!value) return 36;
-
+function parseScore(value?: string): number | undefined {
+  if (!value) return undefined;
   try {
     const score = JSON.parse(value)?.enrichment_score;
-    return typeof score === 'number'
-      ? Math.round(Math.max(0, Math.min(100, score)))
-      : 36;
+    return typeof score === 'number' ? Math.round(Math.max(0, Math.min(100, score))) : undefined;
   } catch {
-    return 36;
+    return undefined;
   }
 }
 
@@ -286,8 +195,19 @@ export default function ChatSettingsScreen() {
     setVolume,
     playTrack,
     stopTrack,
+    togglePlay,
     tracks: backgroundTracks,
   } = useBackgroundMusic();
+
+  // Shared files count, left out until it's known (web).
+  const attachmentsQuery = useConversationAttachments(chatId ?? '');
+  const fileCount = useMemo(() => {
+    if (!chatId || !attachmentsQuery.data) return undefined;
+    const data = attachmentsQuery.data;
+    const attachments = Array.isArray(data) ? data : data?.attachments ?? [];
+    const links = Array.isArray(data?.links) ? data.links : [];
+    return mapAttachmentsToShared(attachments).length + links.length;
+  }, [attachmentsQuery.data, chatId]);
 
   const user = useAuthStore((state) => state.user);
   const selectedVoice = useVoicePreferenceStore((state) => state.selectedVoiceId);
@@ -300,7 +220,7 @@ export default function ChatSettingsScreen() {
     if (hydratedForUser !== userKey) void hydrateVoice(userKey);
   }, [hydrateVoice, hydratedForUser, userKey]);
 
-  const activeVoiceId = useMemo(() => {
+  const activeVoiceId = useMemo<VoiceId>(() => {
     if (selectedVoice) return selectedVoice;
     if (user?.chat_voice) {
       const match = getVoiceByProviderName(user.chat_voice);
@@ -309,69 +229,76 @@ export default function ChatSettingsScreen() {
     return 'denver';
   }, [selectedVoice, user?.chat_voice]);
 
-  const handleVoicePress = useCallback(async (voiceId: VoiceId) => {
+  // Like web: the sample starts within the tap and doesn't wait for the save.
+  // Tapping the current voice plays it again.
+  const { play: playVoiceSample } = useVoiceSampleClips();
+  const handleVoicePress = useCallback((voiceId: VoiceId) => {
     Haptics.selectionAsync();
     const voice = getVoiceById(voiceId);
     if (!voice) return;
-
-    await selectVoice(voiceId);
+    playVoiceSample(voiceId);
+    if (voiceId === activeVoiceId) return;
+    void selectVoice(voiceId);
     updateProfile(
       { chat_voice: voice.providerVoiceName, chat_voice_provider: 'gemini' },
-      {
-        onSuccess: () => {
-          toast(`Voice set to ${voice.name}`, 'success');
-        },
-        onError: () => {
-          toast('Failed to save voice preference', 'error');
-        },
-      }
+      { onError: () => toast('Failed to save voice preference', 'error') },
     );
-  }, [selectVoice, updateProfile, toast]);
+  }, [activeVoiceId, playVoiceSample, selectVoice, updateProfile, toast]);
+
+  const narrationOn = useSpokenRepliesStore((state) => state.enabled);
+  const setNarration = useSpokenRepliesStore((state) => state.setEnabled);
+  const handleNarrationChange = useCallback((next: boolean) => {
+    Haptics.selectionAsync();
+    setNarration(next);
+  }, [setNarration]);
 
   const handleAmbiencePress = useCallback(async (trackKey: BackgroundTrackKey) => {
     Haptics.selectionAsync();
     if (trackKey === 'none') {
+      if (currentTrack === 'none') return;
       await stopTrack();
       updateProfile(
         { bg_music: null },
         {
-          onSuccess: () => toast('Background music turned off', 'success'),
-          onError: () => toast('Failed to update background music', 'error'),
-        }
+          onSuccess: () => toast('Background music disabled', 'success'),
+          onError: () => toast('Failed to update background music settings', 'error'),
+        },
       );
-    } else {
-      await playTrack(trackKey);
-      const track = getBackgroundTrack(trackKey);
-      updateProfile(
-        { bg_music: trackKey },
-        {
-          onSuccess: () => toast(`Background music enabled: ${track.name}`, 'success'),
-          onError: () => toast('Failed to update background music', 'error'),
-        }
-      );
+      return;
     }
-  }, [playTrack, stopTrack, updateProfile, toast]);
+    // Tapping the current tune pauses or resumes it, like web.
+    if (trackKey === currentTrack) {
+      await togglePlay();
+      return;
+    }
+    await playTrack(trackKey);
+    updateProfile(
+      { bg_music: trackKey },
+      {
+        onSuccess: () => toast('Background music updated', 'success'),
+        onError: () => toast('Failed to update background music', 'error'),
+      },
+    );
+  }, [currentTrack, playTrack, stopTrack, togglePlay, updateProfile, toast]);
 
   const goBack = useCallback(() => {
     if (router.canGoBack()) router.back();
     else router.replace('/(tabs)/chat');
   }, []);
 
-  const handleScorePress = useCallback(() => {
+  const handleViewInsight = useCallback(() => {
     Haptics.selectionAsync();
+    router.push({ pathname: '/insights', params: { section: 'enrichment' } });
   }, []);
-  const handleSharedPress = useCallback(() => {
-    Haptics.selectionAsync();
-    if (chatId) router.push({ pathname: '/chat/media', params: { chatId } });
-  }, [chatId]);
+
   const openAssetCollection = useCallback((tab: 'media' | 'docs' | 'links', assetType: 'all' | 'image' | 'video' | 'audio') => {
     if (chatId) router.push({ pathname: '/chat/media', params: { chatId, tab, assetType } });
   }, [chatId]);
-  const openImages = useCallback(() => openAssetCollection('media', 'image'), [openAssetCollection]);
-  const openVideos = useCallback(() => openAssetCollection('media', 'video'), [openAssetCollection]);
-  const openAudio = useCallback(() => openAssetCollection('media', 'audio'), [openAssetCollection]);
-  const openDocs = useCallback(() => openAssetCollection('docs', 'all'), [openAssetCollection]);
-  const openLinks = useCallback(() => openAssetCollection('links', 'all'), [openAssetCollection]);
+  const openSharedMedia = useCallback(() => {
+    Haptics.selectionAsync();
+    openAssetCollection('media', 'all');
+  }, [openAssetCollection]);
+
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
@@ -389,132 +316,66 @@ export default function ChatSettingsScreen() {
           <RoundButton label="Go back" onPress={goBack}>
             <ArrowLeft size={21} color={COLORS.textStrong} strokeWidth={2.2} />
           </RoundButton>
-          <Text style={styles.screenTitle}>Chat Settings</Text>
-          <View style={styles.headerSpacer} />
+          <Text accessibilityRole="header" style={[TYPE.cardTitle, styles.screenTitle]}>Chat settings</Text>
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.scoreCard}>
-            <View style={styles.scoreTopRow}>
-              <View style={styles.scoreCopy}>
-                <Text style={styles.scoreTitle}>My Enrichment score</Text>
-                <Text style={styles.scoreDescription}>
-                  Your Enrichment score reflects your memory health across 10 key life areas.
-                </Text>
-              </View>
-              <Text style={styles.scoreValue}>{score}%</Text>
-            </View>
-
-            <View style={styles.scoreBar}>
-              {getScoreColors(COLORS).map((color, index) => (
-                <View
-                  key={color}
-                  style={[
-                    styles.scoreSegment,
-                    {
-                      backgroundColor: color,
-                      flex: index === 0 ? 3.6 : index === 1 ? 1.5 : 0.9,
-                    },
-                  ]}
-                />
-              ))}
-            </View>
-
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {/* ── Enrichment summary + shared files (web enrichment-summary.tsx) ── */}
+          <View style={styles.group}>
+            <EnrichmentSummaryCard score={score} onViewInsight={handleViewInsight} style={styles.enrichmentCard} />
             <TouchableOpacity
               accessibilityRole="button"
-              activeOpacity={0.74}
-              onPress={handleScorePress}
-              style={styles.scoreAction}
+              accessibilityLabel={`Shared media and links${fileCount === undefined ? '' : `, ${fileCount}`}`}
+              activeOpacity={0.8}
+              disabled={!chatId}
+              onPress={openSharedMedia}
+              style={styles.sharedRow}
             >
-              <View style={styles.scoreActionIcon}>
-                <BarChart3 size={12} color={COLORS.textInverse} strokeWidth={2.5} />
-              </View>
-              <Text style={styles.scoreActionLabel}>Discover which areas need more context</Text>
-              <ChevronRight size={18} color={COLORS.textWeak} strokeWidth={2.4} />
+              <ImageIcon size={20} color={COLORS.textStrong} strokeWidth={1.75} />
+              <Text numberOfLines={1} style={[TYPE.label, styles.sharedLabel]}>
+                Shared media & links{fileCount === undefined ? '' : ` (${fileCount})`}
+              </Text>
+              <ChevronRight size={20} color={COLORS.textWeak} />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.mediaGrid}>
-            <MediaTile icon={ImageIcon} label="Images" onPress={openImages} width={layout.mediaTileWidth} />
-            <MediaTile icon={Film} label="Videos" onPress={openVideos} width={layout.mediaTileWidth} />
-            <MediaTile icon={Music2} label="Audio" onPress={openAudio} width={layout.mediaTileWidth} />
-            <MediaTile icon={FileText} label="Docs" onPress={openDocs} width={layout.mediaTileWidth} />
-            <MediaTile icon={Link2} label="Links" onPress={openLinks} width={layout.mediaTileWidth} />
-          </View>
-
-          {/* <TouchableOpacity
-            accessibilityRole="button"
-            activeOpacity={0.74}
-            onPress={handleSharedPress}
-            style={styles.sharedRow}
-          >
-            <ImageIcon size={22} color={COLORS.textStrong} strokeWidth={2} />
-            <Text numberOfLines={1} style={styles.sharedLabel}>
-              Shared Media, Links and Docs
-            </Text>
-            <ChevronRight size={20} color={COLORS.textWeak} strokeWidth={2.2} />
-          </TouchableOpacity> */}
-
-          {/* <View style={styles.deepDiveSection}>
-            <Text style={styles.sectionTitle}>Deep dive insights</Text>
-            <ScrollView
-              contentContainerStyle={styles.insightRow}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-            >
-              <InsightCard
-                copy="You have traveled to 6 countries but only mentioned 2 of them."
-                icon={Route}
-                title="Missing places"
-                width={layout.insightCardWidth}
+          {/* ── AI Voice ── */}
+          <View style={styles.section}>
+            <Text accessibilityRole="header" style={[TYPE.bodyLargeSemi, styles.sectionTitle]}>AI Voice</Text>
+            <View style={[styles.settingsCard, styles.narrationRow]}>
+              <View style={styles.narrationWords}>
+                <Text nativeID="voice-narration-label" style={[TYPE.label, styles.fieldLabel]}>Voice narration</Text>
+                <Text style={[TYPE.bodySmall, styles.optionSubtitle]}>Read new replies aloud.</Text>
+              </View>
+              <Switch
+                value={narrationOn}
+                onValueChange={handleNarrationChange}
+                accessibilityLabel="Voice narration"
+                accessibilityHint="Reads new chat replies aloud"
               />
-              <InsightCard
-                copy="You have mentioned your brother only twice in your stories."
-                icon={Users}
-                title="People/relationships"
-                width={layout.insightCardWidth}
-              />
-              <InsightCard
-                copy="You've shared very little details about your experiences in 2022."
-                icon={BarChart3}
-                title="The previous years."
-                width={layout.insightCardWidth}
-              />
-              <InsightCard
-                copy="You have traveled to 6 countries but only mentioned 2 of them."
-                icon={BarChart3}
-                title="Missing People."
-                width={layout.insightCardWidth}
-              />
-            </ScrollView>
-          </View> */}
-
-          <View style={styles.voiceSection}>
-            <Text style={styles.sectionTitle}>AI Voice (Voice Mode)</Text>
+            </View>
             <View style={styles.twoColumnGrid}>
               {VOICE_CATALOG.map((voice) => (
                 <SelectionCard
                   key={voice.id}
                   label={`${voice.name}, ${voice.subtitle}`}
-                  onPress={() => { void handleVoicePress(voice.id); }}
+                  onPress={() => handleVoicePress(voice.id)}
                   selected={activeVoiceId === voice.id}
                   width={layout.selectionCardWidth}
                 >
                   <VoiceArtwork voice={voice} size={32} />
                   <View style={styles.cardText}>
-                    <Text style={styles.cardTitle}>{voice.name}</Text>
-                    <Text style={styles.cardSubtitle}>{voice.subtitle}</Text>
+                    <Text style={[TYPE.label, styles.cardTitle]}>{voice.name}</Text>
+                    <Text style={[TYPE.bodySmall, styles.cardSubtitle]}>{voice.subtitle}</Text>
                   </View>
                 </SelectionCard>
               ))}
             </View>
           </View>
 
-          <View style={styles.ambienceSection}>
-            <Text style={styles.sectionTitle}>Background Ambience</Text>
+          {/* ── Background Ambience ── */}
+          <View style={styles.section}>
+            <Text accessibilityRole="header" style={[TYPE.bodyLargeSemi, styles.sectionTitle]}>Background Ambience</Text>
             <VolumeSlider onChange={setVolume} value={volume} />
             <View style={styles.twoColumnGrid}>
               {backgroundTracks.map((ambience) => (
@@ -530,11 +391,11 @@ export default function ChatSettingsScreen() {
                       <VolumeX size={17} color={COLORS.textStrong} strokeWidth={2} />
                     </View>
                   ) : (
-                    <RecordPlayerMark />
+                    <MusicPlayerIcon />
                   )}
                   <View style={styles.cardText}>
-                    <Text numberOfLines={1} style={styles.cardTitle}>{ambience.name}</Text>
-                    <Text style={styles.cardSubtitle}>{ambience.subtitle}</Text>
+                    <Text numberOfLines={1} style={[TYPE.label, styles.cardTitle]}>{ambience.name}</Text>
+                    <Text style={[TYPE.bodySmall, styles.cardSubtitle]}>{ambience.subtitle}</Text>
                   </View>
                 </SelectionCard>
               ))}
@@ -565,180 +426,65 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    // borderBottomColor: COLORS.strokeWeaker,
-    // borderBottomWidth: 1,
+    borderBottomColor: COLORS.strokeWeaker,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    height: 70,
-    justifyContent: 'space-between',
+    gap: 12,
     paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   roundButton: {
     alignItems: 'center',
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.fillWeak,
     borderRadius: radius(22),
     height: minTouchTarget(44),
     justifyContent: 'center',
     width: minTouchTarget(44),
   },
-  headerSpacer: { height: minTouchTarget(44), width: minTouchTarget(44) },
   screenTitle: {
     color: COLORS.textStrong,
-    ...TYPE.cardTitle,
-    lineHeight: 22,
+    flex: 1,
   },
+  // Sections sit 32px apart.
   content: {
+    gap: 40,
     paddingBottom: 88,
-    paddingHorizontal: 16,
-    paddingTop: 9,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
-  scoreCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    height: 160,
-    overflow: 'hidden',
-  },
-  scoreTopRow: {
-    flexDirection: 'row',
-    height: 81,
-    paddingHorizontal: 12,
-    paddingTop: 14,
-  },
-  scoreCopy: {
-    flex: 1,
-    paddingRight: 8,
-  },
-  scoreTitle: {
-    color: COLORS.textStrong,
-    ...TYPE.body,
-    lineHeight: 20,
-    marginBottom: 6,
-  },
-  scoreDescription: {
-    color: COLORS.textStrong,
-    ...TYPE.bodySmall,
-    lineHeight: 17,
-  },
-  scoreValue: {
-    color: COLORS.textStrong,
-    ...TYPE.displayStat,
-    lineHeight: 57,
-  },
-  scoreBar: {
-    borderRadius: 4,
-    flexDirection: 'row',
-    height: 24,
-    marginHorizontal: 12,
-    overflow: 'hidden',
-  },
-  scoreSegment: {
-    height: '100%',
-  },
-  scoreAction: {
-    alignItems: 'center',
+  group: { gap: 16 },
+  section: { gap: 12 },
+  sectionTitle: { color: COLORS.textStrong },
+  enrichmentCard: {
     backgroundColor: COLORS.fillWeaker,
-    bottom: 0,
-    flexDirection: 'row',
-    gap: 9,
-    height: 34,
-    left: 0,
-    paddingHorizontal: 12,
-    position: 'absolute',
-    right: 0,
+    borderRadius: 20,
+    borderWidth: 0,
+    // Per side: the card's own side paddings would otherwise win over `padding`.
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
   },
-  scoreActionIcon: {
-    alignItems: 'center',
-    backgroundColor: COLORS.mediaSurface,
-    borderRadius: 2,
-    height: 15,
-    justifyContent: 'center',
-    width: 15,
-  },
-  scoreActionLabel: {
-    color: COLORS.textStrong,
-    flex: 1,
-    ...TYPE.bodySmall,
-    lineHeight: 16,
-  },
-  mediaGrid: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: 24,
-  },
-  mediaTile: {
-    alignItems: 'center',
-    backgroundColor: COLORS.fillWeak,
-    borderRadius: 8,
-    gap: 7,
-    height: 64,
-    justifyContent: 'center',
-  },
-  mediaLabel: {
-    color: COLORS.textStrong,
-    ...TYPE.metadata,
-    lineHeight: 14,
+  // Web chatSettingsCard: rounded-[12px] bg-fill-neutral-weaker p-3.
+  settingsCard: {
+    backgroundColor: COLORS.fillWeaker,
+    borderRadius: 12,
+    padding: 12,
   },
   sharedRow: {
     alignItems: 'center',
-    backgroundColor: COLORS.fillWeak,
-    borderRadius: 8,
+    backgroundColor: COLORS.fillWeaker,
+    borderRadius: 12,
     flexDirection: 'row',
-    gap: 8,
-    height: 48,
-    marginTop: 24,
-    paddingHorizontal: 12,
-  },
-  sharedLabel: {
-    color: COLORS.textStrong,
-    flex: 1,
-    ...TYPE.cardTitle,
-    lineHeight: 22,
-  },
-  deepDiveSection: {
-    gap: 14,
-    marginTop: 27,
-  },
-  voiceSection: {
-    gap: 14,
-    marginTop: 26,
-  },
-  ambienceSection: {
     gap: 12,
-    marginTop: 25,
+    minHeight: 44,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  sectionTitle: {
-    color: COLORS.textStrong,
-    ...TYPE.cardTitle,
-    lineHeight: 22,
-  },
-  insightRow: {
-    gap: 12,
-    paddingRight: 16,
-  },
-  insightCard: {
-    backgroundColor: COLORS.card,
-    borderColor: COLORS.strokeWeak,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 8,
-    height: 96,
-    padding: 12,
-  },
-  insightTitleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 7,
-  },
-  insightTitle: {
-    color: COLORS.textStrong,
-    flex: 1,
-    ...TYPE.bodySmall,
-    lineHeight: 17,
-  },
-  insightCopy: {
-    color: COLORS.textStrong,
-    ...TYPE.bodySmall,
-    lineHeight: 16,
-  },
+  sharedLabel: { color: COLORS.textStrong, flex: 1 },
+  narrationRow: { alignItems: 'center', flexDirection: 'row', gap: 16 },
+  narrationWords: { flex: 1, minWidth: 0 },
+  fieldLabel: { color: COLORS.textStrong },
+  optionSubtitle: { color: COLORS.textWeak },
   twoColumnGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -746,70 +492,31 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
   selectionCard: {
     alignItems: 'center',
-    backgroundColor: COLORS.card,
-    borderColor: COLORS.strokeWeak,
-    borderRadius: 8,
+    backgroundColor: 'transparent',
+    borderColor: COLORS.fillWeak,
+    borderRadius: 20,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 12,
-    height: 64,
-    paddingHorizontal: 12,
+    padding: 20,
   },
   selectionCardSelected: {
-    borderColor: COLORS.brand,
-    borderWidth: 2,
+    backgroundColor: COLORS.fillWeak,
   },
   selectedMark: {
     alignItems: 'center',
-    // backgroundColor: COLORS.onboardingAmber,
     backgroundColor: COLORS.brandWeak,
     borderRadius: 8,
     height: 16,
     justifyContent: 'center',
     position: 'absolute',
-    right: 7,
-    top: 7,
+    right: 10,
+    top: 10,
     width: 16,
   },
-  cardText: {
-    flex: 1,
-  },
-  cardTitle: {
-    color: COLORS.textStrong,
-    ...TYPE.label,
-    lineHeight: 18,
-  },
-  cardSubtitle: {
-    color: COLORS.textBase,
-    ...TYPE.bodySmall,
-    lineHeight: 17,
-  },
-  sliderHitArea: {
-    height: 44,
-    justifyContent: 'center',
-  },
-  sliderTrack: {
-    backgroundColor: COLORS.fillWeak,
-    borderRadius: 3,
-    height: 6,
-    overflow: 'hidden',
-  },
-  sliderFill: {
-    backgroundColor: COLORS.brandWeak,
-    // backgroundColor: "#E98246",
-    borderRadius: 3,
-    height: '100%',
-  },
-  sliderThumb: {
-    backgroundColor: COLORS.card,
-    borderColor: COLORS.textBase,
-    borderRadius: 8,
-    borderWidth: 3,
-    height: 16,
-    marginLeft: -8,
-    position: 'absolute',
-    width: 16,
-  },
+  cardText: { flex: 1 },
+  cardTitle: { color: COLORS.textStrong },
+  cardSubtitle: { color: COLORS.textBase },
   noneIcon: {
     alignItems: 'center',
     backgroundColor: COLORS.fillWeak,
@@ -818,35 +525,37 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     justifyContent: 'center',
     width: 32,
   },
-  recordPlayer: {
-    alignItems: 'center',
-    backgroundColor: COLORS.brandTint,
-    borderColor: COLORS.onboardingAmber,
-    borderRadius: 8,
-    borderWidth: 1,
-    height: 30,
+  // Web volume control: stroke-neutral-weak track, icon-neutral-strong range and thumb
+  // (white on dark themes).
+  volumeRow: { alignItems: 'center', flexDirection: 'row', gap: 12 },
+  volumeLabel: { color: COLORS.textWeak },
+  volumeValue: { color: COLORS.textStrong, fontVariant: ['tabular-nums'], minWidth: 40, textAlign: 'right' },
+  sliderHitArea: {
+    flex: 1,
+    height: 44,
     justifyContent: 'center',
-    width: 32,
   },
-  recordDisc: {
-    alignItems: 'center',
-    backgroundColor: COLORS.info,
-    borderColor: COLORS.textInverse,
-    borderRadius: 10,
-    borderWidth: 2,
-    height: 20,
-    justifyContent: 'center',
-    width: 20,
-  },
-  recordLabel: {
-    backgroundColor: COLORS.brand,
+  sliderTrack: {
+    backgroundColor: COLORS.strokeWeak,
     borderRadius: 3,
     height: 6,
-    width: 6,
+    overflow: 'hidden',
   },
-  recordNote: {
+  sliderFill: {
+    backgroundColor: COLORS.textStrong,
+    borderRadius: 3,
+    height: '100%',
+  },
+  sliderThumb: {
+    backgroundColor: COLORS.textStrong,
+    borderRadius: 8,
+    height: 16,
+    marginLeft: -8,
     position: 'absolute',
-    right: -3,
-    top: -5,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    width: 16,
   },
 });

@@ -15,8 +15,7 @@ type ConfirmationKind =
   | 'logout-all-devices'
   | 'logout-current-device'
   | 'remove-beneficiary'
-  | 'remove-member'
-  | 'delete-account';
+  | 'remove-member';
 
 interface SecurityConfirmationSheetProps {
   kind: ConfirmationKind;
@@ -82,12 +81,6 @@ const COPY: Record<ConfirmationKind, {
     confirm: 'Remove',
     destructive: true,
   },
-  'delete-account': {
-    title: 'Delete your account permanently?',
-    description: 'Your access ends immediately and deletion cannot be undone. Secure cleanup may finish in the background. Capsules already delivered can remain with their recipients, without a link to your profile.',
-    confirm: 'Delete account',
-    destructive: true,
-  },
 };
 
 export function SecurityConfirmationSheet({
@@ -146,6 +139,7 @@ export function SecurityConfirmationSheet({
           style={{
             maxWidth: 320,
             ...TYPE.body,
+            color: COLORS.textWeak,
             textAlign: 'center',
             marginTop: 12,
           }}
@@ -171,6 +165,7 @@ export function SecurityConfirmationSheet({
         <Button
           variant="secondary"
           size="lg"
+          rounded="full"
           className="h-14 flex-1"
           onPress={onClose}
         >
@@ -179,7 +174,8 @@ export function SecurityConfirmationSheet({
         <Button
           variant={copy?.destructive ? 'destructive' : 'primary'}
           size="lg"
-          className={copy?.destructive ? 'h-14 flex-1' : 'h-14 flex-1 bg-media-surface'}
+          rounded="full"
+          className="h-14 flex-1"
           loading={loading}
           onPress={confirm}
         >

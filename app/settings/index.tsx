@@ -1,7 +1,6 @@
 import type { ThemeColors } from '@/constants/tokens';
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
-import React, { useCallback, useState } from 'react';
-import { OnboardingCelebrationOverlay } from '@/components/onboarding/OnboardingCelebrationOverlay';
+import React, { useCallback } from 'react';
 import {
   Image,
   Linking,
@@ -13,14 +12,12 @@ import {
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
-import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import MessageCircle from 'lucide-react-native/icons/message-circle';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Avatar, ResponsiveScreen } from '@/components/ui';
 import { useUiStore } from '@/store';
 import {
-  UiClock01,
   UiCreditCard01,
   UiEye,
   UiLogOut01,
@@ -64,17 +61,12 @@ export default function SettingsIndex() {
     summary,
     isLoading: subscriptionLoading,
   } = useSubscription();
-  const [showVaultCelebration, setShowVaultCelebration] = useState(false);
   const router = useRouter();
-  const displayName = profile?.fullname?.trim()
-    || `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim()
-    || profile?.nickname
-    || 'Your account';
+  // Same name and joined-date rules as web settings-profile-header.tsx.
+  const rawDisplayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
+  const displayName = rawDisplayName || profile?.nickname?.trim() || 'Your name';
   const memberSince = profile?.created_at
-    ? `Member since ${new Date(profile.created_at).toLocaleDateString('en-US', {
-      month: 'short',
-      year: 'numeric',
-    })}`
+    ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     : null;
 
   // Lets voice scroll this screen ("scroll down", "go to the top").
@@ -120,7 +112,7 @@ export default function SettingsIndex() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
         >
-        <View style={{ marginBottom: 16 }}>
+        <View style={styles.topCards}>
           <PlanSummaryBanner
             isProOrAbove={isProOrAbove}
             subscriptionKnown={Boolean(summary) && !subscriptionLoading}
@@ -130,31 +122,41 @@ export default function SettingsIndex() {
             cancelAtPeriodEnd={summary?.cancel_at_period_end}
             provider={summary?.provider}
           />
+
+          <TouchableOpacity
+            onPress={() => {
+              void Haptics.selectionAsync();
+              push('/settings/profile');
+            }}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`${displayName}, personal information`}
+            style={styles.profileCard}
+          >
+            <Avatar
+              uri={profile?.picture_url || profile?.picture}
+              userId={profile?._id} seed={profile?.email}
+              name={rawDisplayName || undefined}
+              size="xl"
+              className="h-16 w-16 border-0"
+            />
+            <View style={styles.profileCopy}>
+              <Text style={[TYPE.profileName, { color: COLORS.textStrong }]}>{displayName}</Text>
+              {/* Web joins these with a dot on one line; a phone card is too narrow, so they stack. */}
+              {profile?.email ? (
+                <Text numberOfLines={1} style={[TYPE.bodySmall, styles.profileMetaText]}>{profile.email}</Text>
+              ) : null}
+              {memberSince ? (
+                <Text style={[TYPE.bodySmall, styles.profileMetaText]}>Joined {memberSince}</Text>
+              ) : null}
+            </View>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          onPress={() => push('/settings/profile')}
-          activeOpacity={0.8}
-          style={styles.profileCard}
-        >
-          <Avatar
-            uri={profile?.picture_url || profile?.picture}
-            userId={profile?._id} seed={profile?.email}
-            name={displayName}
-            size="xl"
-            className="h-14 w-14 border-0"
-          />
-          <View style={{ flex: 1 }}>
-            <Text numberOfLines={1} style={[TYPE.cardTitle, { color: COLORS.textStrong }]}>{displayName}</Text>
-            <Text numberOfLines={1} style={styles.profileEmail}>{profile?.email}</Text>
-            {memberSince && <Text style={styles.memberSince}>{memberSince}</Text>}
-          </View>
-          <ChevronRight size={21} color={COLORS.textBase} strokeWidth={2.2} />
-        </TouchableOpacity>
-
-        <View style={{ marginTop: 20 }}>
+        {/* Labels and order match web settings-hub.tsx. */}
+        <View>
           <SettingsHubRow
-            label="Personal information"
+            label="Personal info"
             icon={<UiUserCircle size={24} color={COLORS.textBase} />}
             onPress={() => push('/settings/profile')}
           />
@@ -164,14 +166,14 @@ export default function SettingsIndex() {
             onPress={() => push('/settings/account')}
           />
           <SettingsHubRow
-            label="Privacy"
-            icon={<UiEye size={24} color={COLORS.textBase} />}
-            onPress={() => push('/settings/privacy')}
-          />
-          <SettingsHubRow
-            label="Beneficiaries"
+            label="People & Groups"
             icon={<UiUsers01 size={24} color={COLORS.textBase} />}
             onPress={() => push('/settings/beneficiaries')}
+          />
+          <SettingsHubRow
+            label="Privacy & Account"
+            icon={<UiEye size={24} color={COLORS.textBase} />}
+            onPress={() => push('/settings/privacy')}
           />
           <SettingsHubRow
             label="Billing"
@@ -179,12 +181,7 @@ export default function SettingsIndex() {
             onPress={() => push('/settings/billing')}
           />
           <SettingsHubRow
-            label="Daily reflection ritual"
-            icon={<UiClock01 size={24} color={COLORS.textBase} />}
-            onPress={() => openSheet('daily-ritual')}
-          />
-          <SettingsHubRow
-            label="Send feedback"
+            label="Send Feedback"
             icon={<UiMessageChatSquare size={24} color={COLORS.textBase} />}
             onPress={() => push('/settings/feedback')}
             showChevron={false}
@@ -201,7 +198,7 @@ export default function SettingsIndex() {
           style={styles.logout}
         >
           <UiLogOut01 size={24} color={COLORS.error} />
-          <Text style={[TYPE.label, { color: COLORS.error }]}>Log out</Text>
+          <Text style={[TYPE.label, { color: COLORS.error }]}>Logout</Text>
         </TouchableOpacity>
 
         <Text style={[TYPE.metadata, styles.communityLabel]}>JOIN OUR COMMUNITY</Text>
@@ -214,7 +211,12 @@ export default function SettingsIndex() {
               style={styles.communityCard}
             >
               {item.icon ? (
-                <Image source={item.icon} style={styles.communityIcon} resizeMode="contain" />
+                <Image
+                  source={item.icon}
+                  // The X mark is monochrome black artwork; tint it so it reads in every theme.
+                  style={[styles.communityIcon, item.label === 'X (Twitter)' && { tintColor: COLORS.textStrong }]}
+                  resizeMode="contain"
+                />
               ) : (
                 <MessageCircle size={28} color={COLORS.info} fill={COLORS.info} />
               )}
@@ -224,90 +226,9 @@ export default function SettingsIndex() {
         </View>
         <Text style={styles.version}>Memento AI v1.0</Text>
 
-        {__DEV__ && (
-          <View className="mt-8 p-4 rounded-3xl bg-fill-weaker border border-stroke-weaker">
-            <View className="flex-row items-center gap-2 mb-3">
-              <View className="size-2 rounded-full bg-brand" />
-              <Text className="text-text-strong uppercase tracking-wider" style={TYPE.metadata}>
-                Ceremonial Experience Lab
-              </Text>
-            </View>
-            <View className="flex-row flex-wrap gap-2">
-              <TouchableOpacity
-                onPress={() => {
-                  void Haptics.selectionAsync();
-                  openSheet('first-story-milestone');
-                }}
-                className="bg-card border border-stroke-weaker px-3 py-2 rounded-full"
-              >
-                <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
-                  📖 First Story
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  void Haptics.selectionAsync();
-                  openSheet('capsule-sealed', {
-                    title: 'Letters for Graduation',
-                    scheduledDate: '2035-10-14',
-                    recipientsCount: 2,
-                  });
-                }}
-                className="bg-card border border-stroke-weaker px-3 py-2 rounded-full"
-              >
-                <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
-                  ⏳ Capsule Sealed
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  void Haptics.selectionAsync();
-                  openSheet('upgrade-success');
-                }}
-                className="bg-card border border-stroke-weaker px-3 py-2 rounded-full"
-              >
-                <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
-                  👑 Pro Upgrade
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  void Haptics.selectionAsync();
-                  openSheet('daily-ritual');
-                }}
-                className="bg-card border border-stroke-weaker px-3 py-2 rounded-full"
-              >
-                <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
-                  ⏰ Reflection Window
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  void Haptics.selectionAsync();
-                  setShowVaultCelebration(true);
-                }}
-                className="bg-card border border-stroke-weaker px-3 py-2 rounded-full"
-              >
-                <Text style={{ ...TYPE.buttonSmall, color: COLORS.brand }}>
-                  🏛️ Vault Celebration
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
       </Animated.ScrollView>
       </ResponsiveScreen>
 
-      <OnboardingCelebrationOverlay
-        visible={showVaultCelebration}
-        interactiveLabMode
-        preferredName={profile?.nickname || profile?.first_name || 'Friend'}
-        onClose={() => setShowVaultCelebration(false)}
-      />
     </SafeAreaView>
   );
 }
@@ -329,25 +250,18 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     backgroundColor: COLORS.fillWeak,
   },
   content: { paddingTop: 28, paddingBottom: 24 },
+  // Web: profile header and plan card stack with gap-4, then gap-10 to the section list.
+  topCards: { gap: 16, marginBottom: 40 },
   profileCard: {
-    minHeight: 80,
-    borderRadius: 16,
-    paddingHorizontal: 12,
+    borderRadius: 20,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
     backgroundColor: COLORS.fillWeak,
   },
-  profileEmail: {
-    color: COLORS.textStrong,
-    ...TYPE.bodySmall,
-    marginTop: 2,
-  },
-  memberSince: {
-    color: COLORS.textWeak,
-    ...TYPE.metadata,
-    marginTop: 2,
-  },
+  profileCopy: { flex: 1, minWidth: 0, gap: 4 },
+  profileMetaText: { color: COLORS.textBase },
   logout: {
     minHeight: 56,
     paddingHorizontal: 12,
@@ -358,6 +272,7 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
   communityLabel: {
     marginTop: 48,
+    color: COLORS.textWeak,
   },
   communityRow: {
     flexDirection: 'row',
@@ -367,6 +282,8 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   communityCard: {
     flex: 1,
     minHeight: 64,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',

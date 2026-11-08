@@ -16,7 +16,6 @@ import { ResponsiveScreen } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 
-const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 const EMPTY_MEMORIES_IMG = require('../../assets/images/illustrations/empty_memories.webp');
 const PAGE_SIZE = 20;
 
@@ -35,7 +34,7 @@ function EditorialHeroCard({ totalDocs }: { totalDocs: number }) {
   return (
     <Animated.View
       entering={FadeInDown.duration(500)}
-      style={{ marginBottom: 20, borderRadius: 32, overflow: 'hidden', backgroundColor: COLORS.card }}
+      style={{ marginBottom: 20, borderRadius: 32, overflow: 'hidden', backgroundColor: COLORS.settingsCard }}
     >
       <ImageBackground source={WELCOME_BG} style={{ padding: 24, gap: 12 }} imageStyle={{ opacity: 0.04 }} resizeMode="repeat">
         <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong, lineHeight: 28 }}>
@@ -74,7 +73,7 @@ function StatsBanner({ totalDocs, docs }: { totalDocs: number; docs: Activity[] 
       style={{
         flexDirection: 'row',
         marginBottom: 20,
-        backgroundColor: COLORS.card,
+        backgroundColor: COLORS.settingsCard,
         borderRadius: 24,
         overflow: 'hidden',
       }}
@@ -153,7 +152,6 @@ export default function ActivitiesScreen() {
         </View>
 
         <View style={{ flex: 1 }}>
-          <ImageBackground source={PATTERN} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} imageStyle={{ opacity: 0.03 }} resizeMode="repeat" />
 
           {isLoading && displayDocs.length === 0 ? (
             <ScrollView
@@ -175,7 +173,7 @@ export default function ActivitiesScreen() {
               {/* Activity items card skeleton */}
               <View
                 style={{
-                  backgroundColor: COLORS.card,
+                  backgroundColor: COLORS.settingsCard,
                   borderRadius: 24,
                   padding: 16,
                   gap: 16,
@@ -219,7 +217,7 @@ export default function ActivitiesScreen() {
               {/* Activity items — unified card list */}
               <View
                 style={{
-                  backgroundColor: COLORS.card,
+                  backgroundColor: COLORS.settingsCard,
                   borderRadius: 24,
                   overflow: 'hidden',
                 }}

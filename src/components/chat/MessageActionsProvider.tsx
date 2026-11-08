@@ -119,7 +119,7 @@ export function MessageActionsProvider({ children }: PropsWithChildren) {
               onLayout={(event) => setMenuHeight(event.nativeEvent.layout.height)}
               entering={FadeIn.duration(150).reduceMotion(ReduceMotion.System)}
               exiting={FadeOut.duration(150).reduceMotion(ReduceMotion.System)}
-              style={[{ position: 'absolute', ...position, backgroundColor: colors.cardRaised, borderColor: colors.strokeWeak, borderWidth: 1, borderRadius: 14, padding: 8, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 16, elevation: 3 }]}
+              style={[{ position: 'absolute', ...position, backgroundColor: colors.popover, borderColor: colors.strokeWeak, borderWidth: 1, borderRadius: 14, padding: 8, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 16, elevation: 3 }]}
             >
               <View ref={menuRef} accessibilityLabel="Message actions" accessibilityViewIsModal onAccessibilityEscape={dismiss}>
                 <Button variant="ghost" size="menu" fullWidth className="justify-start" onPress={handleReply} disabled={!menu.onReply} leftIcon={<Reply size={18} color={colors.textWeak} />}>

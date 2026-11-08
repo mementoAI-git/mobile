@@ -1,7 +1,8 @@
 import type { ThemeColors } from '@/constants/tokens';
-import { useThemeStyles } from '@/hooks/use-theme-colors';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { Pressable } from '@/components/ui/Touchable';
 import Animated, {
   FadeInDown,
@@ -10,13 +11,10 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
-import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { iconSize, radius, responsiveSpace } from '@/constants/responsive';
+import { iconSize } from '@/constants/responsive';
 import type { AccountWeekDay } from '@/features/account/account-overview';
 import { ZapIconWarm } from '../ui';
-import { CompletedCheckmarkIcon } from '../ui/icons/CompletedCheckmarkIcon';
-const STREAK_FLAME = require('../../../assets/images/illustrations/streak_flame.webp');
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -28,31 +26,39 @@ interface WeeklyProgressCardProps {
   onPress: () => void;
 }
 
+/** Web `check-icon.tsx`. */
+function CheckMark({ color }: { color: string }) {
+  return (
+    <Svg width={11} height={11} viewBox="0 0 10 7" fill="none">
+      <Path d="M9 1L3.5 6.5L1 4" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 function WeekCell({ day }: { day: AccountWeekDay }) {
+  const colors = useThemeColors();
   const styles = useThemeStyles(createStyles);
   return (
     <View style={styles.dayCell}>
-      <Text style={[styles.dayLabel, day.isToday && styles.todayLabel]}>
-        {day.isToday ? 'TODAY' : day.label}
-      </Text>
-      {day.isCompleted ? (
-        <View style={styles.completedCircle}>
-          <CompletedCheckmarkIcon containerSize={iconSize(22)} />
+      <Text style={[styles.dayLabel, day.isToday && styles.todayLabel]}>{day.label}</Text>
+      <View
+        accessible
+        accessibilityRole="image"
+        accessibilityLabel={`${day.fullDate ?? day.date}: ${day.isCompleted ? 'active' : 'no activity'}`}
+        style={[
+          styles.ring,
+          day.isCompleted ? styles.ringActive : day.isToday ? styles.ringToday : styles.ringIdle,
+        ]}
+      >
+        <View style={styles.ringInner}>
+          {day.isCompleted ? <CheckMark color={colors.brand} /> : null}
         </View>
-      ) : day.isToday ? (
-        <View style={styles.todayValue}>
-          <ZapIconWarm size={iconSize(16)} />
-          <Text style={styles.todayDate}>{day.date}</Text>
-        </View>
-      ) : (
-        <View style={styles.dateCircle}>
-          <Text style={styles.dateText}>{day.date}</Text>
-        </View>
-      )}
+      </View>
     </View>
   );
 }
 
+/** Web streak card B (`streak-tracker.tsx`): weekly streak, Monday to Sunday, then reflections and stories. */
 export const WeeklyProgressCard = React.memo(function WeeklyProgressCard({
   weekDays,
   streakCount,
@@ -65,6 +71,7 @@ export const WeeklyProgressCard = React.memo(function WeeklyProgressCard({
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
+  const days = `${streakCount} ${streakCount === 1 ? 'day' : 'days'}`;
 
   return (
     <Animated.View entering={FadeInDown.delay(320).duration(500)}>
@@ -74,29 +81,25 @@ export const WeeklyProgressCard = React.memo(function WeeklyProgressCard({
         onPressOut={() => { scale.value = withSpring(1); }}
         style={[styles.card, animatedStyle]}
         accessibilityRole="button"
-        accessibilityLabel={`Weekly progress. ${streakCount} day streak, ${storiesCount} stories, ${reflectionsCount} reflections.`}
+        accessibilityLabel={`Weekly streak, ${days}. ${reflectionsCount} reflections, ${storiesCount} stories.`}
       >
         <View style={styles.titleRow}>
-          <Image source={STREAK_FLAME} style={{ width: iconSize(22), height: iconSize(22) }} resizeMode="contain" />
-          <Text style={styles.title}>Weekly Progress</Text>
+          <ZapIconWarm size={iconSize(20)} />
+          <Text style={styles.title}>Weekly streak</Text>
         </View>
+
+        <Text style={styles.count}>{days}</Text>
 
         <View style={styles.weekRow}>
           {weekDays.map((day) => <WeekCell key={day.key} day={day} />)}
         </View>
 
-        <View style={styles.statsRow}>
-          {[
-            { label: 'Streak', value: `${streakCount} days` },
-            { label: 'Stories', value: `${storiesCount} captured` },
-            { label: 'Reflections', value: `${reflectionsCount} engaged` },
-          ].map((stat) => (
-            <View key={stat.label} style={styles.stat}>
-              <Text style={styles.statLabel}>{stat.label}</Text>
-              <Text style={styles.statValue} numberOfLines={1}>{stat.value}</Text>
-            </View>
-          ))}
-        </View>
+        <Text style={styles.totals}>
+          <Text style={styles.totalValue}>{reflectionsCount}</Text>
+          {` ${reflectionsCount === 1 ? 'reflection' : 'reflections'}     `}
+          <Text style={styles.totalValue}>{storiesCount}</Text>
+          {` ${storiesCount === 1 ? 'story' : 'stories'}`}
+        </Text>
       </AnimatedPressable>
     </Animated.View>
   );
@@ -104,25 +107,33 @@ export const WeeklyProgressCard = React.memo(function WeeklyProgressCard({
 
 const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   card: {
-    minHeight: 180,
-    borderRadius: radius(16),
-    backgroundColor: COLORS.backgroundInverse,
-    paddingHorizontal: responsiveSpace(12),
-    paddingVertical: responsiveSpace(13),
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeak,
+    backgroundColor: COLORS.fillWeak,
+    padding: 20,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    gap: 6,
   },
   title: {
-    color: COLORS.textInverse,
-    ...TYPE.body,
-    lineHeight: 20,
+    color: COLORS.textStrong,
+    ...TYPE.buttonSmall,
+  },
+  count: {
+    marginTop: 12,
+    color: COLORS.textStrong,
+    ...TYPE.streakCount,
   },
   weekRow: {
     flexDirection: 'row',
-    marginTop: 24,
+    marginTop: 12,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: COLORS.strokeWeak,
   },
   dayCell: {
     flex: 1,
@@ -130,62 +141,47 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     gap: 8,
   },
   dayLabel: {
-    color: COLORS.textInverse,
-    opacity: 0.72,
+    color: COLORS.textBase,
     ...TYPE.metadata,
-    lineHeight: 14,
   },
   todayLabel: {
     color: COLORS.brand,
-    opacity: 1,
-    ...TYPE.eyebrow,
   },
-  completedCircle: {
-    width: iconSize(22),
-    height: iconSize(22),
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.success,
-  },
-  todayValue: {
-    height: 22,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  todayDate: {
-    color: COLORS.brand,
-    ...TYPE.body,
-  },
-  dateCircle: {
-    width: iconSize(22),
-    height: iconSize(22),
+  ring: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dateText: {
-    color: COLORS.textInverse,
-    opacity: 0.76,
-    ...TYPE.label,
+  ringActive: {
+    backgroundColor: COLORS.brand,
   },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
+  ringToday: {
+    backgroundColor: COLORS.fillWeak,
+    borderWidth: 1,
+    borderColor: COLORS.brand,
   },
-  stat: {
-    flex: 1,
-    gap: 4,
+  ringIdle: {
+    backgroundColor: COLORS.fillWeak,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeak,
   },
-  statLabel: {
-    color: COLORS.textInverse,
-    opacity: 0.56,
-    ...TYPE.metadata,
+  ringInner: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.sheet,
   },
-  statValue: {
-    color: COLORS.textInverse,
+  totals: {
+    marginTop: 12,
+    color: COLORS.textBase,
     ...TYPE.bodySmall,
+  },
+  totalValue: {
+    color: COLORS.textStrong,
+    ...TYPE.bodySmallStrong,
   },
 });

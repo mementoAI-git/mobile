@@ -29,7 +29,7 @@ interface TabsProps extends ViewProps {
   tabs: TabItem[];
   activeKey: string;
   onTabChange: (key: string) => void;
-  /** 'pill' (default) — active tab gets brand-orange filled pill.
+  /** 'pill' (default) — active tab gets the strong neutral pill (`activeFill`).
    *  'underline' — active tab gets a brand-orange bottom border. */
   variant?: 'pill' | 'underline';
   /** Allow horizontal scrolling for many tabs. Default: false */
@@ -41,8 +41,8 @@ interface TabsProps extends ViewProps {
  * Tabs — horizontal tab bar, mirrors web shadcn `<Tabs />`.
  *
  * Variants:
- * - `pill` (default): `bg-fill-weak` track, active tab gets `bg-brand` pill
- *   with white text — matches web's `.mem-tags` / pill tab pattern.
+ * - `pill` (default): `bg-fill-weak` track, active tab gets the `bg-active-fill`
+ *   pill with `activeText` — white with dark ink in dark mode, like web.
  * - `underline`: flat tabs with brand-orange bottom indicator line.
  *
  * Usage:
@@ -94,13 +94,14 @@ export function Tabs({
               activeOpacity={0.8}
               className={cn(
                 'flex-1 items-center justify-center rounded-full py-2 px-3',
-                isActive ? 'bg-brand' : 'bg-transparent',
+                // Web ToggleGroup: strong neutral fill — white with dark ink in dark mode.
+                isActive ? 'bg-active-fill' : 'bg-transparent',
               )}
             >
               <Text
                 style={{
                   ...(isActive ? TYPE.buttonSmall : TYPE.label),
-                  color: isActive ? COLORS.textInverse : COLORS.textWeak,
+                  color: isActive ? COLORS.activeText : COLORS.textWeak,
                 }}
                 numberOfLines={1}
               >

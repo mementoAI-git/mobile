@@ -5,4 +5,6 @@ export const TAB_ICONS = {
   stories: require('../../assets/images/icons/tab_stories.webp'),
   explore: require('../../assets/images/icons/tab_explore.webp'),
   search: require('../../assets/images/icons/tab_search.webp'),
+  /** Web sidebar Insights icon (`light-bulb.svg`), rendered to PNG. */
+  insights: require('../../assets/images/icons/tab_insights.png'),
 } as const;

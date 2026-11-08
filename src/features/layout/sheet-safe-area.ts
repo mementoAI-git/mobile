@@ -23,3 +23,7 @@ export const SHEET_CLOSE_BUTTON_STYLE = {
   paddingVertical: 0,
   flexShrink: 0,
 } as const;
+
+// Sheet structure: header, body and actions are 32px apart; sections inside the body 24px.
+export const SHEET_GROUP_GAP = 32;
+export const SHEET_SECTION_GAP = 24;

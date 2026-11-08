@@ -52,6 +52,8 @@ interface Props {
   onBridgeReady?: (bridge: EditorBridge) => void;
   /** Set false to disable internal scroll so an outer ScrollView can scroll everything */
   scrollEnabled?: boolean;
+  /** Paint no page colour, so a backdrop behind the editor shows through. */
+  transparent?: boolean;
 }
 
 // ─── Toolbar button ────────────────────────────────────────────────────────────
@@ -141,7 +143,7 @@ export function FormattingToolbar({ editor }: { editor: EditorBridge }) {
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export const StoryRichEditor = forwardRef<StoryRichEditorRef, Props>(
-  function StoryRichEditor({ initialContent = '', onChange, onBridgeReady, scrollEnabled = true }, ref) {
+  function StoryRichEditor({ initialContent = '', onChange, onBridgeReady, scrollEnabled = true, transparent = false }, ref) {
     const styles = useThemeStyles(createStyles);
     const insertionSequence = useRef(0);
     const pendingInsertions = useRef(new Map<string, { resolve: (html: string) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>());
@@ -167,13 +169,14 @@ export const StoryRichEditor = forwardRef<StoryRichEditorRef, Props>(
     onChangeRef.current = onChange;
 
     const colors = useThemeColors();
-    const themeCSS = React.useMemo(() => buildEditorThemeCSS(colors), [colors]);
+    const themeCSS = React.useMemo(() => buildEditorThemeCSS(colors, { transparent }), [colors, transparent]);
     const [mementoTheme] = React.useState(() => new BridgeExtension({ extendCSS: themeCSS }));
 
+    const pageColor = transparent ? 'transparent' : colors.background;
     const editorTheme = React.useMemo(() => ({
-      webview: { backgroundColor: colors.background },
-      webviewContainer: { backgroundColor: colors.background },
-    }), [colors.background]);
+      webview: { backgroundColor: pageColor },
+      webviewContainer: { backgroundColor: pageColor },
+    }), [pageColor]);
     const editor = useEditorBridge({
       theme: editorTheme,
       autofocus: false,
@@ -223,7 +226,7 @@ export const StoryRichEditor = forwardRef<StoryRichEditorRef, Props>(
           editor={editor}
           onMessage={handleEditorMessage}
           exclusivelyUseCustomOnMessage={false}
-          style={scrollEnabled ? styles.richText : styles.richTextExpand}
+          style={[scrollEnabled ? styles.richText : styles.richTextExpand, transparent && styles.transparent]}
           scrollEnabled={scrollEnabled}
         />
       </View>
@@ -249,6 +252,9 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   richTextExpand: {
     minHeight: 200,
     backgroundColor: COLORS.background,
+  },
+  transparent: {
+    backgroundColor: 'transparent',
   },
 
   // Toolbar (used by FormattingToolbar exported above)

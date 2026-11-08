@@ -1,391 +1,198 @@
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import Check from 'lucide-react-native/icons/check';
-import Pencil from 'lucide-react-native/icons/pencil';
-import X from 'lucide-react-native/icons/x';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { toast } from '@/components/ui/Toast';
-
-import { COLORS, FONTS } from '@/constants/tokens';
+import { COLORS as LIGHT_COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { buildBeneficiaryInvitePayload, GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
+import { INPUT_RADIUS } from '@/components/ui/TextInput';
 import {
-  VAULT_ACCESS_OPTIONS,
-  type VaultAccessScope,
-} from '@/features/beneficiaries/vault-permissions';
-import { isPermissionGranted } from '@/lib/permission-recovery';
-import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
-import { useAddBeneficiary } from '@/hooks/mutations/use-beneficiary-mutations';
-import { useFileUpload } from '@/hooks/use-file-upload';
+  buildBeneficiaryInvitePayload,
+  buildBeneficiaryUpdatePayload,
+  GROUP_COLOR_PALETTE,
+} from '@/features/beneficiaries/sheet-forms';
+import { isInvitePending } from '@/features/beneficiaries/people-cards';
+import { normalizeCollection } from '@/features/beneficiaries/collections';
+import { useAddBeneficiary, useUpdateBeneficiary } from '@/hooks/mutations/use-beneficiary-mutations';
 import { useGroups } from '@/hooks/queries/use-groups';
 import type { IBeneficiary, IGroup } from '@/types';
-import { useUpdateBeneficiary } from '@/hooks/mutations/use-beneficiary-mutations';
 
 interface Props {
   onClose: () => void;
   editData?: IBeneficiary;
 }
 
-interface PickedAvatar {
-  uri: string;
-  name: string;
-  mimeType: string;
-}
-
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  const COLORS = useThemeColors();
-  return (
-    <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>
-      {children}
-    </Text>
-  );
-}
-
-function SheetInput({
-  multiline,
-  style,
+function Field({
+  label,
   ...props
-}: React.ComponentProps<typeof BottomSheetTextInput>) {
+}: { label: string } & React.ComponentProps<typeof BottomSheetTextInput>) {
   const COLORS = useThemeColors();
   return (
-    <BottomSheetTextInput
-      {...props}
-      multiline={multiline}
-      placeholderTextColor={COLORS.textMuted}
-      style={[
-        {
-          minHeight: multiline ? 132 : 56,
-          borderRadius: multiline ? 16 : 999,
-          backgroundColor: COLORS.fillWeaker,
-          paddingHorizontal: multiline ? 16 : 20,
-          paddingVertical: multiline ? 14 : 0,
-          ...TYPE.input,
-          color: COLORS.textStrong,
-          textAlignVertical: multiline ? 'top' : 'center',
-        },
-        style,
-      ]}
-    />
+    <View style={{ gap: 8 }}>
+      <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>{label}</Text>
+      <BottomSheetTextInput
+        {...props}
+        accessibilityLabel={label}
+        placeholderTextColor={COLORS.textMuted}
+        style={[
+          {
+            height: 52,
+            borderRadius: INPUT_RADIUS,
+            borderWidth: 1,
+            borderColor: COLORS.strokeWeak,
+            backgroundColor: COLORS.fillWeaker,
+            paddingHorizontal: 16,
+            ...TYPE.input,
+            color: props.editable === false ? COLORS.textMuted : COLORS.textStrong,
+          },
+          props.style,
+        ]}
+      />
+    </View>
   );
 }
 
+/**
+ * Mirrors web "Invite person" (add-beneficiary, connection mode) and
+ * "Edit beneficiary": name, email and relationship, plus groups when inviting.
+ */
 export function AddBeneficiarySheet({ onClose, editData }: Props) {
   const COLORS = useThemeColors();
-  const isEdit = Boolean(editData?._id || editData?.email);
   const insets = useSafeAreaInsets();
+  const isEdit = Boolean(editData?._id);
+  // Web locks the email once the person has accepted.
+  const emailLocked = isEdit && !isInvitePending(editData ?? {});
   const [email, setEmail] = useState(editData?.email || '');
   const [name, setName] = useState(editData?.name || '');
   const [relationship, setRelationship] = useState(editData?.relationship || '');
-  const [about, setAbout] = useState(editData?.about || '');
-  const [groupSearch, setGroupSearch] = useState('');
-
-  const initialGroups = useMemo(() => {
-    if (!editData?.groups) return [];
-    return editData.groups.map(g => typeof g === 'string' ? g : (g as any)._id).filter(Boolean);
-  }, [editData]);
-
-  const [accessScope, setAccessScope] = useState<VaultAccessScope>(
-    (editData as any)?.access_scope || 'full_vault'
-  );
-  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(initialGroups);
-  const [avatar, setAvatar] = useState<PickedAvatar | null>(null);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const addBeneficiary = useAddBeneficiary();
-  const { mutateAsync: updateBeneficiary } = useUpdateBeneficiary();
-  const { uploadFile, isUploading } = useFileUpload();
+  const updateBeneficiary = useUpdateBeneficiary();
   const { data: groupsData } = useGroups();
-
-  const groups = useMemo<IGroup[]>(() => {
-    if (Array.isArray(groupsData)) return groupsData;
-    return Array.isArray((groupsData as any)?.docs) ? (groupsData as any).docs : [];
-  }, [groupsData]);
-
-  const filteredGroups = useMemo(() => {
-    const query = groupSearch.trim().toLowerCase();
-    if (!query) return groups;
-    return groups.filter((group) => group.name.toLowerCase().includes(query));
-  }, [groupSearch, groups]);
-
-  const close = useCallback(() => {
-    onClose();
-  }, [onClose]);
-
-  const pickAvatar = useCallback(async () => {
-    Haptics.selectionAsync();
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!isPermissionGranted(permission)) {
-      showPermissionRecoveryAlert({
-        permission,
-        title: 'Your photos are tucked away',
-        description: 'Allow photo access to choose a beneficiary picture.',
-        settingsDescription: 'Photo access is turned off in Settings. Turn it back on to choose a beneficiary picture.',
-      });
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.82,
-    });
-    if (result.canceled || !result.assets.length) return;
-    const asset = result.assets[0];
-    setAvatar({
-      uri: asset.uri,
-      name: asset.fileName ?? `beneficiary-${Date.now()}.jpg`,
-      mimeType: asset.mimeType ?? 'image/jpeg',
-    });
-  }, []);
+  const groups = useMemo(() => normalizeCollection<IGroup>(groupsData), [groupsData]);
 
   const toggleGroup = useCallback((groupId: string) => {
     Haptics.selectionAsync();
     setSelectedGroupIds((current) => (
-      current.includes(groupId)
-        ? current.filter((id) => id !== groupId)
-        : [...current, groupId]
+      current.includes(groupId) ? current.filter((id) => id !== groupId) : [...current, groupId]
     ));
   }, []);
 
-  const [isUpdating, setIsUpdating] = useState(false);
-  const isPending = addBeneficiary.isPending || isUploading || isUpdating;
-  const canSubmit = Boolean(buildBeneficiaryInvitePayload({
-    email,
-    name,
-    relationship,
-    about,
-    groupIds: selectedGroupIds,
-  }));
+  const payload = isEdit
+    ? buildBeneficiaryUpdatePayload({ email, name, relationship })
+    : buildBeneficiaryInvitePayload({ email, name, relationship, groupIds: selectedGroupIds });
+  const isPending = addBeneficiary.isPending || updateBeneficiary.isPending;
 
   const submit = useCallback(async () => {
-    const basePayload = buildBeneficiaryInvitePayload({
-      email,
-      name,
-      relationship,
-      about,
-      groupIds: selectedGroupIds,
-    });
-    if (!basePayload) {
-      toast('Add a valid email, name, and relationship.', 'error');
+    if (!payload || isPending) {
+      toast('Add a name, a valid email and a relationship.', 'error');
       return;
     }
-
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    let avatarFileId: string | undefined;
-    if (avatar) {
-      const uploaded = await uploadFile(avatar.uri, avatar.mimeType, avatar.name);
-      if (!uploaded?._id) return;
-      avatarFileId = uploaded._id;
-    }
-
-    const payload = buildBeneficiaryInvitePayload({
-      email,
-      name,
-      relationship,
-      about,
-      avatarFileId,
-      groupIds: selectedGroupIds,
-      accessScope,
-    });
-    if (!payload) return;
-
     try {
       if (isEdit) {
-        setIsUpdating(true);
-        // Ensure email isn't accidentally modified in payload for edits
-        await updateBeneficiary({ ...payload, id: editData?._id ?? editData?.email ?? '' });
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onClose();
+        await updateBeneficiary.mutateAsync({ ...payload, id: editData?._id ?? '' });
+        toast('Changes saved.', 'success');
       } else {
         await addBeneficiary.mutateAsync(payload);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onClose();
+        toast(`Invite sent to ${payload.name}.`, 'success');
       }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onClose();
     } catch (error: any) {
-      toast(error?.message || 'Couldn’t save beneficiary. Try again.', 'error');
-    } finally {
-      setIsUpdating(false);
+      toast(error?.message || 'Couldn’t save this person. Try again.', 'error');
     }
-  }, [about, accessScope, addBeneficiary, updateBeneficiary, isEdit, editData, avatar, email, name, onClose, relationship, selectedGroupIds, uploadFile]);
-
-  const footer = (
-    <View style={{
-      flexDirection: 'row',
-      gap: 12,
-      paddingHorizontal: 20,
-      paddingTop: 12,
-      paddingBottom: Math.max(insets.bottom, 12) + 8,
-      backgroundColor: COLORS.background,
-    }}>
-      <Button variant="secondary" size="lg" className="h-14 flex-1" onPress={close}>
-        Dismiss
-      </Button>
-      <Button
-        size="lg"
-        className="h-14 flex-1 bg-fill-strong"
-        textClassName="text-white"
-        loading={isPending}
-        disabled={!canSubmit || isPending}
-        onPress={() => void submit()}
-      >
-        {isEdit ? 'Save changes' : 'Send invite'}
-      </Button>
-    </View>
-  );
+  }, [addBeneficiary, editData?._id, isEdit, isPending, onClose, payload, updateBeneficiary]);
 
   return (
     <View style={{ flex: 1 }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={{ flex: 1 }}>
-          <View style={{ minHeight: 44, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong }}>
-              {isEdit ? 'Edit Beneficiary' : 'Invite Beneficiary'}
-            </Text>
-            <TouchableOpacity onPress={() => { Haptics.selectionAsync(); close(); }} accessibilityRole="button" accessibilityLabel="Close invite beneficiary" style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak }}>
-              <X size={22} color={COLORS.textStrong} />
-            </TouchableOpacity>
-          </View>
+        <SheetHeader
+          title={isEdit ? 'Edit person' : 'Invite person'}
+          onClose={onClose}
+          style={{ paddingHorizontal: 20 }}
+        />
 
-          <BottomSheetScrollView
-            style={{ flex: 1 }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28, gap: 20 }}
-          >
-            <TouchableOpacity onPress={pickAvatar} activeOpacity={0.82} style={{ width: 74, height: 74, borderRadius: 14, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fillWeak }}>
-              {avatar ? (
-                <Image source={{ uri: avatar.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-              ) : isEdit && (editData as any)?.avatar ? (
-                <Image source={{ uri: (editData as any).avatar }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-              ) : (
-                <Pencil size={24} color={COLORS.textStrong} strokeWidth={1.8} />
-              )}
-            </TouchableOpacity>
+        <BottomSheetScrollView
+          style={{ flex: 1 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: SHEET_GROUP_GAP - 12, gap: SHEET_SECTION_GAP }}
+        >
+          <Field label="Name" value={name} onChangeText={setName} placeholder="John Doe" autoCapitalize="words" textContentType="name" />
+          <Field
+            label="Email address"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="example@gmail.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="emailAddress"
+            editable={!emailLocked}
+          />
+          <Field
+            label={isEdit ? 'Relationship (this person to you)' : 'Relationship'}
+            value={relationship}
+            onChangeText={setRelationship}
+            placeholder="Brother, Friend, Spouse…"
+            autoCapitalize="words"
+          />
 
-            <View style={{ gap: 8 }}>
-              <FieldLabel>Email address</FieldLabel>
-              <SheetInput
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isEdit}
-                style={isEdit ? { color: COLORS.textMuted } : undefined}
-              />
-            </View>
-            <View style={{ gap: 8 }}>
-              <FieldLabel>Beneficiary name</FieldLabel>
-              <SheetInput value={name} onChangeText={setName} autoCapitalize="words" />
-            </View>
-            <View style={{ gap: 8 }}>
-              <FieldLabel>Relationship</FieldLabel>
-              <SheetInput value={relationship} onChangeText={setRelationship} autoCapitalize="words" />
-            </View>
-            <View style={{ gap: 8 }}>
-              <FieldLabel>About</FieldLabel>
-              <SheetInput value={about} onChangeText={setAbout} multiline placeholder="Enter a short description of this person here" />
-            </View>
-
-            <View style={{ gap: 10 }}>
-              <FieldLabel>Vault access level</FieldLabel>
-              <View style={{ gap: 8 }}>
-                {VAULT_ACCESS_OPTIONS.map((option) => {
-                  const selected = accessScope === option.value;
+          {!isEdit && groups.length > 0 ? (
+            <View style={{ gap: 12 }} accessibilityRole="list" accessibilityLabel="Add to groups">
+              <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>Add to groups</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {groups.map((group) => {
+                  const selected = selectedGroupIds.includes(group._id);
+                  const color = GROUP_COLOR_PALETTE[group.color ?? 1]?.color ?? GROUP_COLOR_PALETTE[1].color;
                   return (
                     <TouchableOpacity
-                      key={option.value}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        setAccessScope(option.value);
-                      }}
-                      activeOpacity={0.76}
-                      style={{
-                        padding: 14,
-                        borderRadius: 16,
-                        backgroundColor: selected ? COLORS.brandSubtle : COLORS.fillWeaker,
-                        gap: 3,
-                      }}
+                      key={group._id}
+                      onPress={() => toggleGroup(group._id)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: selected }}
+                      style={{ minHeight: 36, paddingHorizontal: 12, borderRadius: 999, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color }}
                     >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Text
-                          style={{
-                            ...TYPE.body,
-                            color: selected ? COLORS.brand : COLORS.textStrong,
-                          }}
-                        >
-                          {option.title}
-                        </Text>
-                        <View
-                          style={{
-                            width: 18,
-                            height: 18,
-                            borderRadius: 9,
-                            borderWidth: 1.5,
-                            borderColor: selected ? COLORS.brand : COLORS.strokeWeak,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          {selected ? (
-                            <View
-                              style={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: 4,
-                                backgroundColor: COLORS.brand,
-                              }}
-                            />
-                          ) : null}
-                        </View>
-                      </View>
-                      <Text
-                        style={{
-                          ...TYPE.bodySmall,
-                          color: COLORS.textWeak,
-                          lineHeight: 18,
-                        }}
-                      >
-                        {option.description}
-                      </Text>
+                      {selected ? <Check size={14} color={LIGHT_COLORS.textStrong} strokeWidth={2.5} /> : null}
+                      {/* Web --group-on-color: dark ink on the pastel group colours. */}
+                      <Text style={{ ...TYPE.buttonSmall, color: LIGHT_COLORS.textStrong }}>{group.name}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
             </View>
+          ) : null}
+        </BottomSheetScrollView>
 
-            <View style={{ gap: 8 }}>
-              <FieldLabel>Add to group(s)</FieldLabel>
-              <View style={{ minHeight: 132, borderRadius: 16, backgroundColor: COLORS.fillWeaker, padding: 12, gap: 10 }}>
-                <BottomSheetTextInput
-                  value={groupSearch}
-                  onChangeText={setGroupSearch}
-                  placeholder="Search group name to add user to"
-                  placeholderTextColor={COLORS.textMuted}
-                  style={{ minHeight: 38, padding: 0, ...TYPE.body, color: COLORS.textStrong }}
-                />
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {filteredGroups.slice(0, 6).map((group) => {
-                    const selected = selectedGroupIds.includes(group._id);
-                    const color = GROUP_COLOR_PALETTE[group.color ?? 1]?.color ?? GROUP_COLOR_PALETTE[1].color;
-                    return (
-                      <TouchableOpacity key={group._id} onPress={() => toggleGroup(group._id)} style={{ minHeight: 34, paddingHorizontal: 12, borderRadius: 999, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: selected ? color : COLORS.fillWeak }}>
-                        {selected ? <Check size={14} color={COLORS.textStrong} strokeWidth={2.5} /> : null}
-                        <Text style={{ ...TYPE.metadata, color: COLORS.textStrong }}>{group.name}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            </View>
-          </BottomSheetScrollView>
-
-          {footer}
+        <View style={{
+          flexDirection: 'row',
+          gap: 12,
+          paddingHorizontal: 20,
+          paddingTop: 12,
+          paddingBottom: Math.max(insets.bottom, 12) + 8,
+          backgroundColor: COLORS.sheet,
+        }}>
+          <Button variant="secondary" size="lg" rounded="full" className="h-14 flex-1" onPress={onClose}>
+            Cancel
+          </Button>
+          <Button
+            size="lg"
+            rounded="full"
+            className="h-14 flex-1"
+            loading={isPending}
+            disabled={!payload || isPending}
+            onPress={() => void submit()}
+          >
+            {isEdit ? 'Save changes' : 'Send invite'}
+          </Button>
         </View>
       </KeyboardAvoidingView>
     </View>

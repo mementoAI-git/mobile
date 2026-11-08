@@ -37,7 +37,7 @@ export const ExploreQuestionCard = React.memo(function ExploreQuestionCard({ pro
   }, [prompt._id, feedback.isPending, feedback.mutate]);
   const handleOptions = useCallback(() => {
     useUiStore.getState().openSheet('select', {
-      placeholder: 'Topic options',
+      title: 'Topic options',
       options: [{ label: 'Not relevant to me', value: 'not-relevant' }],
       onValueChange: handleFeedback,
     });
@@ -55,7 +55,7 @@ export const ExploreQuestionCard = React.memo(function ExploreQuestionCard({ pro
         accessibilityLabel={`Reflect on: ${prompt.title}`}
         activeOpacity={0.9}
       >
-        <Image source={{ uri: getQuestionIdenticonUrl(prompt._id || prompt.title) }} style={{ width: 72, height: 80, borderRadius: 12, backgroundColor: COLORS.fillWeak }} contentFit="cover" accessibilityElementsHidden />
+        <Image source={{ uri: getQuestionIdenticonUrl(prompt._id || prompt.title) }} style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: COLORS.fillWeak }} contentFit="cover" accessibilityElementsHidden />
         <View className="flex-1 gap-4">
           <Text className="text-text-strong" style={TYPE.cardTitle}>{prompt.title}</Text>
           <Badge variant="outline" label={getQuestionSourceLabel(prompt.source)} />

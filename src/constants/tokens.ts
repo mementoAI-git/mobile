@@ -18,11 +18,19 @@ export const COLORS = {
   dynamicIsland: '#000000',
   card: '#ffffff',
   cardRaised: '#ffffff',
+  /** Opaque floating surfaces (toasts, menus, dropdowns, the tab bar). Web --popover. */
+  popover: '#ffffff',
+  // Settings and its child screens: white cards in light, fillWeak in Dark and Deep Sky.
+  settingsCard: '#ffffff',
+  // Bottom sheet fill. Web --bg-raised / --bg-sheet in Web/memento-web/src/index.css.
+  sheet: '#ffffff',
   publishRayStart: '#c9eff9',
   cardOverlay: 'rgba(255,255,255,0.8)',
   activeFill: 'rgba(23,11,0,0.9)',
   activeText: '#FFFFFF',
   mediaSurface: '#12131A',
+  /** Full-screen media viewer backdrop: a soft warm grey, so photos don't sit on glaring white. */
+  mediaViewer: '#EFEDEA',
   mediaText: '#FFFFFF',
   mediaTextWeak: 'rgba(255,255,255,0.78)',
   mediaFill: 'rgba(255,255,255,0.15)',
@@ -233,6 +241,16 @@ export const FONTS = {
 export const MEMORY_PROMPT_GRADIENT = {
   colors: ['#0B8EEA', '#159EEA', '#54C5F5', '#79DDFB'] as const,
   locations: [0, 0.34, 0.74, 1] as const,
+  start: { x: 0.5, y: 0 },
+  end: { x: 0.5, y: 1 },
+};
+
+/** Plan summary banner: web .insights-plan-free
+ * linear-gradient(to top, #e6ad6a, #ee7a1c 80.173%), drawn top to bottom.
+ */
+export const PLAN_FREE_GRADIENT = {
+  colors: ['#EE7A1C', '#E6AD6A'] as const,
+  locations: [0.19827, 1] as const,
   start: { x: 0.5, y: 0 },
   end: { x: 0.5, y: 1 },
 };

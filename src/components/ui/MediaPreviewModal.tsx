@@ -3,11 +3,11 @@ import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
  * MediaPreviewModal — full-screen attachment previewer
  *
  * Design:
- *  - White background (COLORS.background)
+ *  - Theme-adaptive backdrop (COLORS.mediaViewer) with raised header buttons
  *  - Header: default Share chrome or composer close-only chrome
  *  - Images: rounded corners, horizontal padding, peek of next image
  *  - Media vertically centered
- *  - Dot pagination — brand orange active, stroke-weak inactive
+ *  - Dot pagination — brand orange active, stroke-strong inactive
  *  - Horizontal swipe between attachments
  */
 
@@ -628,7 +628,7 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
             {innerContent}
           </ImageBackground>
         ) : artworkUri ? (
-          <View style={{ flex: 1, backgroundColor: COLORS.background, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 24, gap: 20 }}>
+          <View style={{ flex: 1, backgroundColor: COLORS.cardRaised, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 24, gap: 20 }}>
             <Image
               source={{ uri: artworkUri }}
               style={{ width: 220, height: 220, borderRadius: 24, alignSelf: 'center', backgroundColor: COLORS.fillWeak }}
@@ -637,7 +637,7 @@ function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boo
             {innerContent}
           </View>
         ) : (
-          <View style={{ flex: 1, backgroundColor: COLORS.background, justifyContent: 'center' }}>
+          <View style={{ flex: 1, backgroundColor: COLORS.cardRaised, justifyContent: 'center' }}>
             {innerContent}
           </View>
         )}
@@ -760,7 +760,7 @@ function Dots({ count, active }: { count: number; active: number }) {
             styles.dot,
             i === active
               ? { backgroundColor: COLORS.brand, width: 10, height: 10 }
-              : { backgroundColor: COLORS.strokeWeak, width: 8, height: 8 },
+              : { backgroundColor: COLORS.strokeStrong, width: 8, height: 8 },
           ]}
         />
       ))}
@@ -1022,14 +1022,14 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
   }, [deleteCandidate, isDeleting, onClose, onDeletePersisted]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <View style={[styles.container, { backgroundColor: COLORS.mediaViewer, paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       {/* ── Header ── */}
       <View style={styles.header}>
         {isGallery ? (
           <>
             <TouchableOpacity
               onPress={() => { Haptics.selectionAsync(); onClose(); }}
-              style={styles.galleryHeaderButton}
+              style={[styles.galleryHeaderButton, { backgroundColor: COLORS.cardRaised }]}
               activeOpacity={0.8}
               hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
               accessibilityLabel="Back"
@@ -1040,7 +1040,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
               <TouchableOpacity
                 disabled={!currentItem?.persistedFileId || !onDeletePersisted}
                 onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); if (currentItem) setDeleteCandidate(currentItem); }}
-                style={styles.galleryHeaderButton}
+                style={[styles.galleryHeaderButton, { backgroundColor: COLORS.cardRaised }]}
                 activeOpacity={0.8}
                 hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                 accessibilityLabel="Delete attachment"
@@ -1049,7 +1049,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => void handleSaveOrExport()}
-                style={styles.galleryHeaderButton}
+                style={[styles.galleryHeaderButton, { backgroundColor: COLORS.cardRaised }]}
                 activeOpacity={0.8}
                 hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                 accessibilityLabel="Save or export"
@@ -1059,7 +1059,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
               <TouchableOpacity
                 disabled={!currentItem?.sourceMessageId || !onViewMessage}
                 onPress={() => currentItem && onViewMessage?.(currentItem)}
-                style={styles.galleryViewMessage}
+                style={[styles.galleryViewMessage, { backgroundColor: COLORS.cardRaised }]}
                 activeOpacity={0.8}
                 hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                 accessibilityLabel="View message"
@@ -1074,7 +1074,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
             <View style={styles.headerSpacer} />
             <TouchableOpacity
               onPress={() => { Haptics.selectionAsync(); onClose(); }}
-              style={styles.iconBtn}
+              style={[styles.iconBtn, { backgroundColor: COLORS.cardRaised }]}
               activeOpacity={0.8}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               accessibilityLabel="Close"
@@ -1086,7 +1086,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
           <>
             <TouchableOpacity
               onPress={() => { Haptics.selectionAsync(); onClose(); }}
-              style={styles.iconBtn}
+              style={[styles.iconBtn, { backgroundColor: COLORS.cardRaised }]}
               activeOpacity={0.8}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               accessibilityLabel="Back"
@@ -1095,7 +1095,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleShareButtonPress}
-              style={styles.sharePill}
+              style={[styles.sharePill, { backgroundColor: COLORS.cardRaised }]}
               activeOpacity={0.8}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               accessibilityLabel="Share"

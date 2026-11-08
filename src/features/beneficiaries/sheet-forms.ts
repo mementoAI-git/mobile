@@ -12,37 +12,40 @@ export const GROUP_COLOR_PALETTE = [
   { id: 5, color: COLORS.beneficiaryGroupMagenta },
 ] as const;
 
-export interface BeneficiaryInviteFormValues {
+export interface PersonFormValues {
   email: string;
   name: string;
   relationship: string;
-  about: string;
-  avatarFileId?: string;
-  groupIds: string[];
-  accessScope?: string;
 }
 
-export function buildBeneficiaryInvitePayload(
-  values: BeneficiaryInviteFormValues,
-): CreateBeneficiaryBody | null {
+function normalizePerson(values: PersonFormValues) {
   const email = values.email.trim().toLowerCase();
   const name = values.name.trim();
   const relationship = values.relationship.trim();
   if (!name || !relationship || !EMAIL_PATTERN.test(email)) return null;
+  return { email, name, relationship };
+}
 
-  const about = values.about.trim();
-  const avatarFileId = values.avatarFileId?.trim();
-  const groupIds = [...new Set(values.groupIds.map((id) => id.trim()).filter(Boolean))];
-
+/**
+ * Web "Invite person" (add-beneficiary connection mode): name, email,
+ * relationship and optional groups. People are invited with shared-only access.
+ */
+export function buildBeneficiaryInvitePayload(
+  values: PersonFormValues & { groupIds: string[] },
+): CreateBeneficiaryBody | null {
+  const person = normalizePerson(values);
+  if (!person) return null;
+  const groups = [...new Set(values.groupIds.map((id) => id.trim()).filter(Boolean))];
   return {
-    email,
-    name,
-    relationship,
-    ...(about ? { about } : {}),
-    ...(avatarFileId ? { avatar_file_id: avatarFileId } : {}),
-    ...(groupIds.length ? { group_ids: groupIds } : {}),
-    ...(values.accessScope ? { access_scope: values.accessScope } : {}),
+    ...person,
+    ...(groups.length ? { groups } : {}),
+    access_scope: 'shared_only',
   };
+}
+
+/** Web update-beneficiary: the editable person details. */
+export function buildBeneficiaryUpdatePayload(values: PersonFormValues): CreateBeneficiaryBody | null {
+  return normalizePerson(values);
 }
 
 export interface GroupFormValues {

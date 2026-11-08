@@ -120,13 +120,13 @@ export default function ChatMediaScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
       <View className="flex-row items-center gap-3 px-4 py-3">
-        <Pressable onPress={goBack} className="size-11 items-center justify-center rounded-full bg-fill-weaker"><ArrowLeft size={22} color={COLORS.textStrong} /></Pressable>
+        <Pressable onPress={goBack} className="size-11 items-center justify-center rounded-full bg-fill-weak"><ArrowLeft size={22} color={COLORS.textStrong} /></Pressable>
         {([['media', 'Media', ImageIcon], ['docs', 'Docs', FileText], ['links', 'Links', Link2]] as const).map(([id, label, Icon]) => {
           const active = tab === id;
           return (
-            <Pressable key={id} onPress={() => { Haptics.selectionAsync(); setPreviewIndex(null); setTab(id); if (id !== 'media') setAssetType('all'); }} className="h-11 flex-1 flex-row items-center justify-center gap-2 rounded-xl" style={{ backgroundColor: active ? COLORS.textStrong : COLORS.fillWeak }}>
-              <Icon size={18} color={active ? COLORS.textInverse : COLORS.textBase} />
-              <Text style={[TYPE.buttonSmall, {color: active ? COLORS.textInverse : COLORS.textStrong}]}>{label}</Text>
+            <Pressable key={id} onPress={() => { Haptics.selectionAsync(); setPreviewIndex(null); setTab(id); if (id !== 'media') setAssetType('all'); }} className="h-11 flex-1 flex-row items-center justify-center gap-2 rounded-xl" style={{ backgroundColor: active ? COLORS.activeFill : COLORS.fillWeak }}>
+              <Icon size={18} color={active ? COLORS.activeText : COLORS.textBase} />
+              <Text style={[TYPE.buttonSmall, {color: active ? COLORS.activeText : COLORS.textStrong}]}>{label}</Text>
             </Pressable>
           );
         })}

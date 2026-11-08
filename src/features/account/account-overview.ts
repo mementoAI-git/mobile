@@ -25,6 +25,8 @@ export interface AccountWeekDay {
   date: number;
   isToday: boolean;
   isCompleted: boolean;
+  /** "November 7", for screen readers. */
+  fullDate?: string;
 }
 
 export interface EnrichmentDimension {
@@ -57,6 +59,42 @@ export function deriveAccountWeek(today: Date, streakCount: number): AccountWeek
       date: day.getDate(),
       isToday: index === todayIndex,
       isCompleted: streakCount > 0 && index < todayIndex && index >= completedStart,
+    };
+  });
+}
+
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+/**
+ * The current week for the web streak card (`streak-tracker.tsx`, card B):
+ * a day is active when it falls in the streak that ends on the last active day.
+ * Without a last active day, the streak is taken to end yesterday.
+ */
+export function deriveStreakWeek(
+  today: Date,
+  streakCount: number,
+  lastActive?: string | null,
+): AccountWeekDay[] {
+  const startOfToday = startOfDay(today);
+  const todayIndex = toMondayFirstIndex(startOfToday.getDay());
+  const parsed = lastActive ? new Date(lastActive) : null;
+  const end = parsed && !Number.isNaN(parsed.getTime())
+    ? startOfDay(parsed)
+    : new Date(startOfToday.getFullYear(), startOfToday.getMonth(), startOfToday.getDate() - 1);
+  const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - Math.max(0, streakCount - 1));
+
+  return WEEKDAY_LABELS.map((label, index) => {
+    const day = new Date(startOfToday.getFullYear(), startOfToday.getMonth(), startOfToday.getDate() + index - todayIndex);
+    return {
+      key: `${day.getFullYear()}-${day.getMonth() + 1}-${day.getDate()}`,
+      label,
+      date: day.getDate(),
+      isToday: index === todayIndex,
+      isCompleted: streakCount > 0 && day.getTime() <= end.getTime() && day.getTime() >= start.getTime(),
+      fullDate: `${MONTH_NAMES[day.getMonth()]} ${day.getDate()}`,
     };
   });
 }

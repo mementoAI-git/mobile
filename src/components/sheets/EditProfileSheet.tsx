@@ -13,14 +13,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import CalendarDays from 'lucide-react-native/icons/calendar-days';
 import Camera from 'lucide-react-native/icons/camera';
-import X from 'lucide-react-native/icons/x';
 import { Controller, useForm } from 'react-hook-form';
 import * as Haptics from 'expo-haptics';
 import { Avatar, Button, TextInput } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { TYPE } from '@/constants/typography';
-import { COLORS, FONTS } from '@/constants/tokens';
 import {
   normalizeProfileForm,
   toProfileUpdatePayload,
@@ -28,8 +26,8 @@ import {
 } from '@/features/account/profile-form';
 import { useUpdateProfile, useUploadProfilePicture } from '@/hooks/mutations/use-profile-mutation';
 import { useProfile } from '@/hooks/queries/use-profile';
-import { usePersona } from '@/hooks/queries/use-persona';
-import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SheetHeader } from './SheetHeader';
 
 interface EditProfileSheetProps {
   onClose?: () => void;
@@ -43,7 +41,6 @@ export function EditProfileSheet({
   const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
   const { data: profile } = useProfile();
-  const { data: persona } = usePersona();
   const updateProfile = useUpdateProfile();
   const uploadProfilePicture = useUploadProfilePicture();
   const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
@@ -57,12 +54,12 @@ export function EditProfileSheet({
     reset,
     formState: { errors },
   } = useForm<ProfileFormValues>({
-    defaultValues: normalizeProfileForm(profile, persona?.self_description),
+    defaultValues: normalizeProfileForm(profile),
   });
 
   useEffect(() => {
-    reset(normalizeProfileForm(profile, persona?.self_description));
-  }, [profile, persona?.self_description, reset]);
+    reset(normalizeProfileForm(profile));
+  }, [profile, reset]);
 
   const handlePickAvatar = useCallback(async () => {
     Haptics.selectionAsync();
@@ -108,7 +105,7 @@ export function EditProfileSheet({
 
   const submit = handleSubmit(async (values) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await updateProfile.mutateAsync(toProfileUpdatePayload(values, profile?.context));
+    await updateProfile.mutateAsync(toProfileUpdatePayload(values));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onClose?.();
   });
@@ -126,12 +123,13 @@ export function EditProfileSheet({
           paddingHorizontal: 20,
           paddingTop: 12,
           paddingBottom: Math.max(getSheetBottomPadding(insets.bottom, 12), 20),
-          backgroundColor: COLORS.background,
+          backgroundColor: COLORS.sheet,
         }}
       >
         <Button
           variant="secondary"
           size="lg"
+          rounded="full"
           className="h-14 flex-1"
           onPress={onClose}
         >
@@ -139,6 +137,7 @@ export function EditProfileSheet({
         </Button>
         <Button
           size="lg"
+          rounded="full"
           className="h-14 flex-1"
           loading={updateProfile.isPending}
           onPress={submitFromFooter}
@@ -147,7 +146,7 @@ export function EditProfileSheet({
         </Button>
       </View>
     ),
-    [insets.bottom, onClose, submitFromFooter, updateProfile.isPending],
+    [COLORS.sheet, insets.bottom, onClose, submitFromFooter, updateProfile.isPending],
   );
 
   const field = (
@@ -159,8 +158,6 @@ export function EditProfileSheet({
       rightElement?: React.ReactNode;
       leftElement?: React.ReactNode;
       rules?: Record<string, unknown>;
-      multiline?: boolean;
-      numberOfLines?: number;
     },
   ) => (
     <Controller
@@ -169,7 +166,7 @@ export function EditProfileSheet({
       name={name}
       rules={options?.rules}
       render={({ field: { onChange, onBlur, value } }) => (
-        <TextInput
+        <TextInput bordered
           label={label}
           value={value}
           onChangeText={onChange}
@@ -181,9 +178,6 @@ export function EditProfileSheet({
           leftElement={options?.leftElement}
           error={errors[name]?.message}
           inputClassName={options?.disabled ? 'text-text-weak' : undefined}
-          multiline={options?.multiline}
-          numberOfLines={options?.numberOfLines}
-          textAlignVertical={options?.multiline ? 'top' : undefined}
         />
       )}
     />
@@ -196,35 +190,12 @@ export function EditProfileSheet({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={{ flex: 1 }}>
-          <View
-            style={{
-              minHeight: 44,
-              paddingHorizontal: 20,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Text style={TYPE.sectionTitle}>
-              Edit profile
-            </Text>
-            <TouchableOpacity
-              onPress={close}
-              activeOpacity={0.78}
-              accessibilityRole="button"
-              accessibilityLabel="Close edit profile"
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: COLORS.fillWeak,
-              }}
-            >
-              <X size={22} color={COLORS.textStrong} />
-            </TouchableOpacity>
-          </View>
+          <SheetHeader
+            title="Edit profile"
+            onClose={() => onClose?.()}
+            closeLabel="Close edit profile"
+            style={{ paddingHorizontal: 20 }}
+          />
 
           <BottomSheetScrollView
             style={{ flex: 1 }}
@@ -233,13 +204,13 @@ export function EditProfileSheet({
             onScrollBeginDrag={expandSheet}
             contentContainerStyle={{
               paddingHorizontal: 20,
-              paddingTop: 8,
-              paddingBottom: 20,
-              gap: 16,
+              paddingTop: SHEET_GROUP_GAP,
+              paddingBottom: SHEET_GROUP_GAP - 12,
+              gap: SHEET_SECTION_GAP,
             }}
           >
             {/* Avatar / Profile Photo Section */}
-            <View style={{ alignItems: 'center', marginVertical: 8 }}>
+            <View style={{ alignItems: 'center' }}>
               <TouchableOpacity
                 onPress={handlePickAvatar}
                 activeOpacity={0.82}
@@ -350,7 +321,6 @@ export function EditProfileSheet({
             })}
             {field('country', 'Country')}
             {field('location', 'City/Location')}
-            {field('bio', 'About me', { multiline: true, numberOfLines: 3 })}
 
             {updateProfile.isError && (
               <Text style={[TYPE.bodySmall, { color: COLORS.error }]}>

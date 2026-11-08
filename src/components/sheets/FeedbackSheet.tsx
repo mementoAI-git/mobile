@@ -4,8 +4,6 @@ import { View, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { Button, TextInput, Spinner } from '@/components/ui';
 import ImageIcon from 'lucide-react-native/icons/image';
-import X from 'lucide-react-native/icons/x';
-import * as Haptics from 'expo-haptics';
 import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useUiStore, useUserStore } from '@/store';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
@@ -13,7 +11,8 @@ import * as ImagePicker from 'expo-image-picker';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import { useToast } from '@/components/ui/Toast';
-import { COLORS, FONTS } from '@/constants/tokens';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
 import { TYPE } from '@/constants/typography';
 import { logger } from '@/lib/logger';
 import { isPermissionGranted } from '@/lib/permission-recovery';
@@ -113,46 +112,26 @@ export function FeedbackSheet() {
   };
 
   return (
-    <BottomSheetScrollView showsVerticalScrollIndicator={false} className="gap-4">
-      <View className="flex-row items-center justify-between mb-2">
-        <Text
-          className="text-text-strong"
-          style={TYPE.sectionTitle}
-        >
-          Send feedback
-        </Text>
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.selectionAsync();
-            closeSheet();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Close feedback"
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: COLORS.fillWeak,
-          }}
-          activeOpacity={0.7}
-        >
-          <X size={20} color={COLORS.textStrong} />
-        </TouchableOpacity>
-      </View>
+    <BottomSheetScrollView
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{ gap: SHEET_GROUP_GAP }}
+    >
+      <SheetHeader title="Send feedback" onClose={closeSheet} closeLabel="Close feedback" />
 
-      <View className="mb-2">
+      <View style={{ gap: SHEET_SECTION_GAP }}>
+      <View>
         <Text className="text-text-strong mb-1.5" style={TYPE.label}>Type</Text>
         <TouchableOpacity
           onPress={() => setShowTypeSelect(!showTypeSelect)}
-          className="border border-stroke-weaker bg-card rounded-xl px-3 py-3"
+          accessibilityRole="button"
+          className="min-h-[52px] justify-center rounded-[8px] bg-fill-weaker px-4"
         >
           <Text className="text-text-strong" style={TYPE.label}>{type}</Text>
         </TouchableOpacity>
 
         {showTypeSelect && (
-          <View className="mt-2 bg-fill-weak rounded-xl border border-stroke-weaker overflow-hidden">
+          <View className="mt-2 overflow-hidden rounded-[8px] bg-fill-weak">
             {FEEDBACK_OPTIONS.map((opt) => (
               <TouchableOpacity
                 key={opt}
@@ -193,12 +172,12 @@ export function FeedbackSheet() {
         />
       )}
 
-      <View className="mt-2">
+      <View>
         <Text className="text-text-strong mb-1.5" style={TYPE.label}>Screenshots (optional)</Text>
         <TouchableOpacity
           onPress={handlePickImage}
           disabled={isUploading}
-          className={`self-start flex-row items-center justify-center py-2 px-4 rounded-full border ${attachments.length > 0 ? 'bg-brand-tint border-brand-weak' : 'bg-fill-weaker border-stroke-weaker'}`}
+          className={`min-h-[44px] self-start flex-row items-center justify-center py-2 px-4 rounded-full border ${attachments.length > 0 ? 'bg-brand-tint border-brand-weak' : 'bg-fill-weaker border-stroke-weaker'}`}
         >
           {isUploading ? (
              <Spinner size="small" />
@@ -213,15 +192,19 @@ export function FeedbackSheet() {
         </TouchableOpacity>
       </View>
 
-      <View className="flex-row gap-3 mt-4">
-        <Button variant="outline" onPress={closeSheet} className="flex-1">
+      </View>
+
+      <View className="flex-row gap-3">
+        <Button variant="secondary" size="lg" rounded="full" onPress={closeSheet} className="h-14 flex-1">
           Cancel
         </Button>
         <Button
           onPress={handleSend}
           loading={isSubmitting}
           disabled={!message.trim() || isUploading || isSubmitting}
-          className="flex-1"
+          size="lg"
+          rounded="full"
+          className="h-14 flex-1"
         >
           Send feedback
         </Button>

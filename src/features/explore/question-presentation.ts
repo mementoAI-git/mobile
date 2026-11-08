@@ -5,9 +5,12 @@ import endpoint from '@/api/endpoint';
 export type ExploreQuestionSource = 'starter' | 'ai-generated' | 'legacy';
 export type ExploreQuestionStatus = 'unanswered' | 'answered' | 'skipped' | 'not-relevant';
 
-/** Same artwork seed and service as the web list and conversation header. */
-export function getQuestionIdenticonUrl(questionId: string, format: 'svg' | 'png' = 'svg'): string {
-  return `https://api.dicebear.com/10.x/disco/${format}?seed=${encodeURIComponent(questionId)}`;
+/**
+ * Same artwork seed and service as web. Always PNG: the native image view only
+ * paints the disco SVG's background, leaving a flat coloured square.
+ */
+export function getQuestionIdenticonUrl(seed: string): string {
+  return `https://api.dicebear.com/10.x/disco/png?seed=${encodeURIComponent(seed)}`;
 }
 
 export function getQuestionSourceLabel(source?: ExploreQuestionSource): string {
@@ -17,7 +20,7 @@ export function getQuestionSourceLabel(source?: ExploreQuestionSource): string {
 
 export function getExploreCategoryTitle(value?: string | null): string {
   const slug = resolveExploreCategorySlug(value);
-  return catalog.find(category => category.slug === slug)?.title || value?.trim() || 'Explore topics';
+  return catalog.find(category => category.slug === slug)?.title || value?.trim() || 'Topics';
 }
 
 export function getQuestionFeedbackRequest(questionId: string, status: 'skipped' | 'not-relevant') {

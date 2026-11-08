@@ -93,7 +93,7 @@ export function useChatLogic() {
     isLoading: isLoadingMessages,
   } = useConversationMessages(activeChatId ?? '');
 
-  const { messages, streaming, streamingText, send: streamSend, abort: stop, clear: clearStreamMessages } = useStreamChat(
+  const { messages, streaming, streamingText, replyStatus, send: streamSend, abort: stop, clear: clearStreamMessages } = useStreamChat(
     activeChatId ?? undefined,
     isPromptType ? id : undefined,
   );
@@ -338,6 +338,7 @@ export function useChatLogic() {
       isFetchingOlderMessages,
       streaming,
       streamingText,
+      replyStatus,
       send,
       stop,
       handleBack,
@@ -366,6 +367,7 @@ export function useChatLogic() {
       isFetchingOlderMessages,
       streaming,
       streamingText,
+      replyStatus,
       send,
       stop,
       handleBack,

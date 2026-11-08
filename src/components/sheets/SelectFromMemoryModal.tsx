@@ -1,12 +1,10 @@
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { forwardRef, useState, useCallback, useMemo } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomSheetFlatList } from '@gorhom/bottom-sheet';
-import X from 'lucide-react-native/icons/x';
+import { BottomSheetModal, BottomSheetTextInput, BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import Search from 'lucide-react-native/icons/search';
 import Check from 'lucide-react-native/icons/check';
-import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize } from '@/constants/responsive';
@@ -14,8 +12,10 @@ import { Button, Skeleton } from '@/components/ui';
 import { useMemories } from '@/hooks/queries/use-memories';
 import { MasonryMemoryCard } from '@/components/memory/MasonryMemoryCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
 import type { IMemory } from '@/types';
+import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
+import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
+import { SheetHeader } from './SheetHeader';
 
 interface SelectFromMemoryModalProps {
   selectedIds: string[];
@@ -25,6 +25,7 @@ interface SelectFromMemoryModalProps {
 export const SelectFromMemoryModal = React.memo(
   forwardRef<BottomSheetModal, SelectFromMemoryModalProps>((props, ref) => {
   const COLORS = useThemeColors();
+  const sheetChrome = useSheetChrome();
     const { selectedIds, onConfirm } = props;
 
     const [localSelected, setLocalSelected] = useState<string[]>([]);
@@ -43,12 +44,6 @@ export const SelectFromMemoryModal = React.memo(
       ));
     }, [query, memories]);
 
-    const renderBackdrop = useCallback(
-      (backdropProps: any) => (
-        <BottomSheetBackdrop {...backdropProps} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.4} />
-      ),
-      []
-    );
 
     const handleClose = useCallback(() => {
       if (ref && 'current' in ref && ref.current) {
@@ -98,9 +93,8 @@ export const SelectFromMemoryModal = React.memo(
     return (
       <BottomSheetModal
         ref={ref}
-        topInset={getSheetTopInset(insets.top)}
-        snapPoints={['90%']}
-        backdropComponent={renderBackdrop}
+        {...sheetChrome.props}
+        snapPoints={sheetChrome.snapPoints(['90%'])}
         onAnimate={(fromIndex, toIndex) => {
           if (fromIndex === -1 && toIndex === 0) {
             handlePresent();
@@ -108,30 +102,17 @@ export const SelectFromMemoryModal = React.memo(
         }}
         keyboardBehavior="interactive"
         keyboardBlurBehavior="restore"
-        handleStyle={SHEET_HEADER_HANDLE_STYLE}
-        handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
-        backgroundStyle={{ backgroundColor: COLORS.background }}
       >
         <View className="flex-1 px-5 pb-8" style={{ paddingBottom: insets.bottom ? insets.bottom + 12 : 32 }}>
-          {/* Header */}
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-text-strong" style={TYPE.sectionTitle}>Link Memory</Text>
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.selectionAsync();
-                handleClose();
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Close link memory"
-              className="size-11 items-center justify-center rounded-full bg-fill-weaker"
-              activeOpacity={0.7}
-            >
-              <X size={iconSize(20)} color={COLORS.textStrong} />
-            </TouchableOpacity>
-          </View>
+          <SheetHeader
+            title="Link memory"
+            onClose={handleClose}
+            closeLabel="Close link memory"
+            style={{ marginBottom: SHEET_GROUP_GAP }}
+          />
 
           {/* Search Input */}
-          <View className="flex-row items-center bg-fill-weak border border-stroke-weaker rounded-full px-4 h-12 mb-4">
+          <View className="flex-row items-center bg-fill-weak border border-stroke-weaker rounded-lg px-4 h-12 mb-6">
             <Search size={iconSize(18)} color={COLORS.textWeak} className="mr-2" />
             <BottomSheetTextInput
               placeholder="Search memories..."
@@ -144,6 +125,7 @@ export const SelectFromMemoryModal = React.memo(
           </View>
 
           {/* List */}
+          <View style={{ flex: 1 }}>
           {isLoading && !memories.length ? (
             <View className="flex-row gap-4">
               <View className="flex-1 gap-4">
@@ -162,23 +144,19 @@ export const SelectFromMemoryModal = React.memo(
               renderItem={renderItem}
               numColumns={2}
               columnWrapperStyle={{ justifyContent: 'space-between' }}
-              contentContainerStyle={{ paddingBottom: 80 }}
+              contentContainerStyle={{ paddingBottom: 16 }}
               showsVerticalScrollIndicator={false}
             />
           )}
+          </View>
 
           {/* Footer Actions */}
-          <View className="absolute bottom-5 left-5 right-5 flex-row gap-4 bg-background pt-4 border-t border-stroke-weaker">
-            <Button variant="outline" onPress={handleClose} className="flex-1 rounded-full border-stroke-weak bg-card">
-              <Text className="text-text-strong" style={TYPE.buttonSmall}>Cancel</Text>
+          <View className="flex-row gap-3 pt-4" style={{ backgroundColor: COLORS.sheet }}>
+            <Button variant="outline" size="lg" rounded="full" className="h-14 flex-1" onPress={handleClose}>
+              Cancel
             </Button>
-            <Button
-              onPress={handleConfirm}
-              className="flex-1 bg-brand rounded-full"
-            >
-              <Text className="text-white" style={TYPE.buttonSmall}>
-                {localSelected.length > 0 ? `Add ${localSelected.length} to capsule` : 'Add to capsule'}
-              </Text>
+            <Button size="lg" rounded="full" className="h-14 flex-1" onPress={handleConfirm}>
+              {localSelected.length > 0 ? `Add ${localSelected.length} to capsule` : 'Add to capsule'}
             </Button>
           </View>
         </View>

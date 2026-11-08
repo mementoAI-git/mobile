@@ -1,17 +1,18 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import Check from 'lucide-react-native/icons/check';
-import X from 'lucide-react-native/icons/x';
+import { SheetHeader } from '@/components/sheets/SheetHeader';
 import { CAPSULE_THEMES, Theme } from '@/constants/themes';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize } from '@/constants/responsive';
-import { getSheetBottomPadding, getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding, SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 import { useCapsuleThemeFonts } from '@/hooks/use-capsule-theme-fonts';
+import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
 
 interface StylePickerProps {
   currentThemeId?: string;
@@ -28,18 +29,13 @@ export function StylePicker({
 }: StylePickerProps) {
   useCapsuleThemeFonts();
   const insets = useSafeAreaInsets();
+  const sheetChrome = useSheetChrome();
   const currentTheme = CAPSULE_THEMES.find(t => t.id === currentThemeId) || CAPSULE_THEMES[0];
   const sizes = ['1x', '2x', '3x'];
 
   const themeModalRef = useRef<BottomSheetModal>(null);
   const sizeModalRef = useRef<BottomSheetModal>(null);
 
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.4} pressBehavior="close" />
-    ),
-    []
-  );
 
   const handleStylePress = () => themeModalRef.current?.present();
   const handleSizePress = () => sizeModalRef.current?.present();
@@ -120,19 +116,15 @@ export function StylePicker({
       {/* Theme Selection Modal */}
       <BottomSheetModal
         ref={themeModalRef}
-        topInset={getSheetTopInset(insets.top)}
-        snapPoints={['50%']}
-        backdropComponent={renderBackdrop}
-        handleStyle={SHEET_HEADER_HANDLE_STYLE}
-        handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
+        {...sheetChrome.props}
+        snapPoints={sheetChrome.snapPoints(['50%'])}
       >
-        <View className="px-5 pb-4 border-b border-stroke-weaker flex-row justify-between items-center">
-          <Text style={TYPE.uiTitle}>Select Theme</Text>
-          <TouchableOpacity onPress={() => themeModalRef.current?.dismiss()} hitSlop={12}>
-            <X size={iconSize(20)} color={COLORS.textWeak} />
-          </TouchableOpacity>
-        </View>
-        <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 12 }}>
+        <SheetHeader
+          title="Choose a theme"
+          onClose={() => themeModalRef.current?.dismiss()}
+          style={{ paddingHorizontal: 20 }}
+        />
+        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 12 }}>
           {CAPSULE_THEMES.map((theme) => {
             const isSelected = theme.id === currentThemeId;
             return (
@@ -155,19 +147,15 @@ export function StylePicker({
       {/* Size Selection Modal */}
       <BottomSheetModal
         ref={sizeModalRef}
-        topInset={getSheetTopInset(insets.top)}
-        snapPoints={['40%']}
-        backdropComponent={renderBackdrop}
-        handleStyle={SHEET_HEADER_HANDLE_STYLE}
-        handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
+        {...sheetChrome.props}
+        snapPoints={sheetChrome.snapPoints(['40%'])}
       >
-        <View className="px-5 pb-4 border-b border-stroke-weaker flex-row justify-between items-center">
-          <Text style={TYPE.uiTitle}>Select Size</Text>
-          <TouchableOpacity onPress={() => sizeModalRef.current?.dismiss()} hitSlop={12}>
-            <X size={iconSize(20)} color={COLORS.textWeak} />
-          </TouchableOpacity>
-        </View>
-        <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 12 }}>
+        <SheetHeader
+          title="Choose a size"
+          onClose={() => sizeModalRef.current?.dismiss()}
+          style={{ paddingHorizontal: 20 }}
+        />
+        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 12 }}>
           {sizes.map((size) => {
             const isSelected = size === fontSize;
             return (

@@ -55,12 +55,31 @@ describe('confirmation cards', () => {
   const reply = (kind = 'memento-confirm') => `Want me to delete it?\n\n\`\`\`${kind}\n${JSON.stringify(card)}\n\`\`\``;
 
   test("takes cards out of the reply's words", () => {
-    expect(splitConfirmations(reply())).toEqual({ text: 'Want me to delete it?', cards: [{ ...card, confirmed: false }] });
+    expect(splitConfirmations(reply())).toEqual({ text: 'Want me to delete it?', cards: [{ ...card, confirmed: false }], dones: [] });
     expect(splitConfirmations(reply('memento-confirmed')).cards[0].confirmed).toBe(true);
   });
 
   test('hides a card still streaming in, and drops one that is not valid', () => {
     expect(splitConfirmations('Sure.\n\n```memento-confirm\n{"tool":"del').text).toBe('Sure.');
-    expect(splitConfirmations('```memento-confirm\nnot json\n```')).toEqual({ text: '', cards: [] });
+    expect(splitConfirmations('```memento-confirm\nnot json\n```')).toEqual({ text: '', cards: [], dones: [] });
+  });
+});
+
+describe('done cards', () => {
+  const done = { tool: 'rename_story', memory: CHAT, text: 'Done: renamed "A" to "B".', action: '64b7f0c2a1b2c3d4e5f60999' };
+  test('takes done and undone cards out of the reply', () => {
+    const reply = `Renamed it.\n\n\`\`\`memento-done\n${JSON.stringify(done)}\n\`\`\``;
+    expect(splitConfirmations(reply)).toEqual({ text: 'Renamed it.', cards: [], dones: [{ ...done, undone: false }] });
+    expect(splitConfirmations(reply.replace('memento-done', 'memento-undone')).dones[0].undone).toBe(true);
+  });
+});
+
+describe('insight links', () => {
+  test('open that note on Insights, and are not listed as story sources', () => {
+    const link = parseMementoPath('/insights?observation=64b7f0c2a1b2c3d4e5f60aaa');
+    expect(link).toEqual({ kind: 'insight', id: '64b7f0c2a1b2c3d4e5f60aaa' });
+    expect(mementoRoute(link!)).toEqual({ pathname: '/insights', params: { observation: '64b7f0c2a1b2c3d4e5f60aaa' } });
+    expect(collectReplySources('[Early riser](/insights?observation=64b7f0c2a1b2c3d4e5f60aaa)')).toEqual([]);
+    expect(tokenizeMessageMarkdown('[Early riser](/insights?observation=64b7f0c2a1b2c3d4e5f60aaa)')[0]).toMatchObject({ type: 'link' });
   });
 });

@@ -1,5 +1,6 @@
 const REFERENCE_MAX_WIDTH = 520;
-const CONTENT_INSET = 16;
+// Matches the screen's 20px side padding, so two cards fit on a row.
+const CONTENT_INSET = 20;
 const MEDIA_GAP = 4;
 const SELECTION_GAP = 12;
 

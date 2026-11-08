@@ -17,11 +17,11 @@ describe('account, overview, and billing sizing', () => {
     expect(statSource).not.toContain("from 'react-native-size-matters'");
   });
 
-  test('MemoryPromptCard preserves native font scaling and guarantees 44dp minimum touch height', () => {
-    const promptSource = readFileSync('src/components/overview/MemoryPromptCard.tsx', 'utf8');
+  test('OverviewCaptureCard preserves native font scaling and guarantees 44dp minimum touch height', () => {
+    const captureSource = readFileSync('src/components/overview/OverviewCaptureCard.tsx', 'utf8');
 
-    expect(promptSource).not.toContain('allowFontScaling={false}');
-    expect(promptSource).toContain('minTouchTarget');
+    expect(captureSource).not.toContain('allowFontScaling={false}');
+    expect(captureSource).toContain('minTouchTarget');
   });
 
   test('WeeklyProgressCard divides days using flex: 1 across available width', () => {
@@ -31,30 +31,26 @@ describe('account, overview, and billing sizing', () => {
     expect(weeklySource).toContain("from '@/constants/responsive'");
   });
 
-  test('EnrichmentScoreCard and InsightsContentCard use responsive metrics and unscaled flex weights for segments', () => {
+  test('EnrichmentScoreCard uses responsive metrics and unscaled flex weights for segments', () => {
     const enrichmentSource = readFileSync('src/components/account/EnrichmentScoreCard.tsx', 'utf8');
-    const insightsSource = readFileSync('src/components/account/InsightsContentCard.tsx', 'utf8');
 
     expect(enrichmentSource).toContain("from '@/constants/responsive'");
     expect(enrichmentSource).toContain('flex: segment.flex');
-    expect(insightsSource).toContain("from '@/constants/responsive'");
   });
 
   test('Billing cards guarantee 44dp touch targets for actions', () => {
-    const detailsSource = readFileSync('src/components/billing/BillingDetailsSection.tsx', 'utf8');
-    const methodsSource = readFileSync('src/components/billing/BillingPaymentMethodsSection.tsx', 'utf8');
     const storageSource = readFileSync('src/components/billing/BillingStorageCard.tsx', 'utf8');
 
-    expect(detailsSource).toContain('minTouchTarget');
-    expect(methodsSource).toContain('minTouchTarget');
     expect(storageSource).toContain("from '@/constants/responsive'");
   });
 
   test('Overview components use responsive metrics', () => {
     const activitySource = readFileSync('src/components/overview/ActivityListItem.tsx', 'utf8');
-    const spotlightSource = readFileSync('src/components/overview/MemorySpotlightCard.tsx', 'utf8');
+    const captureSource = readFileSync('src/components/overview/OverviewCaptureCard.tsx', 'utf8');
+    const enrichmentSource = readFileSync('src/components/overview/EnrichmentSummaryCard.tsx', 'utf8');
 
     expect(activitySource).toContain("from '@/constants/responsive'");
-    expect(spotlightSource).toContain("from '@/constants/responsive'");
+    expect(captureSource).toContain("from '@/constants/responsive'");
+    expect(enrichmentSource).toContain("from '@/constants/responsive'");
   });
 });

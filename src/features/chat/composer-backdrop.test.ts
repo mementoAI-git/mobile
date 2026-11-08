@@ -15,7 +15,7 @@ describe('chat composer backdrop', () => {
     expect(source).toContain("const dark = useResolvedAppearance() === 'dark'");
     expect(source).toContain("colors={['transparent', COLORS.textInverse]}");
     expect(source).toContain('top: -64');
-    expect(source).toContain("Platform.OS === 'ios' ? COLORS.glass : COLORS.card");
+    expect(source).toContain("Platform.OS === 'ios' ? COLORS.glass : COLORS.popover");
     expect(source).toContain('style={[styles.composerBackdrop, { bottom: -insets.bottom }]}');
     expect(source).toContain('pointerEvents="none"');
   });

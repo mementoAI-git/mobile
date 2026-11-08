@@ -24,7 +24,7 @@ export function useCategoryPromptsLogic() {
   const categoryMeta = useMemo(() => {
     const meta = getCategoryMeta(canonicalSlug);
     return {
-      title: category?.title || meta?.title || 'Explore topics',
+      title: category?.title || meta?.title || 'Topics',
       subtitle: category?.description || meta?.subtitle || '',
       image: meta?.image ?? null,
     };
@@ -50,7 +50,7 @@ export function useCategoryPromptsLogic() {
       pathname: '/chat/[id]',
       // promptTitle is passed so the chat screen can display the question card
       // immediately — before the async useMemoryByPrompt query resolves.
-      // Use the same category title that appears in Explore.
+      // Use the same category title that appears in Topics.
       params: { id: prompt._id || '', type: 'prompt', promptTitle: prompt.title || '', promptLabel: categoryMeta.title },
     });
   }, [categoryMeta.title, router]);

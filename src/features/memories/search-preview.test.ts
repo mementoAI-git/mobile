@@ -45,10 +45,10 @@ describe('Search & Stories refinements', () => {
     expect(billingTabsSource).toContain('Invoices');
   });
 
-  test('Beneficiaries CountTab includes accessible tab role and attributes', () => {
+  test('People & groups tabs include accessible tab role and selected state', () => {
     const beneficiariesSource = readFileSync('app/settings/beneficiaries.tsx', 'utf8');
     expect(beneficiariesSource).toContain('accessibilityRole="tab"');
-    expect(beneficiariesSource).toContain('accessibilityLabel={`${label}, ${count}`}');
-    expect(beneficiariesSource).toContain('accessibilityState={{ selected: active }}');
+    expect(beneficiariesSource).toContain('accessibilityRole="tablist"');
+    expect(beneficiariesSource).toContain('accessibilityState={{ selected }}');
   });
 });

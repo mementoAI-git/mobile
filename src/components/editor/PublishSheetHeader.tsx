@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/Button';
 import { TYPE } from '@/constants/typography';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { SHEET_HEADER_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GRABBER } from '@/features/layout/sheet-presentation';
 
 /** One draggable header contains the indicator, title and close action. */
 export function PublishSheetHeader({ onClose, ...handleProps }: BottomSheetHandleProps & { onClose: () => void }) {
   const colors = useThemeColors();
   return <BottomSheetHandle {...handleProps} accessible={false}
     style={{ paddingTop: 8, paddingBottom: 0, paddingHorizontal: 0 }}
-    indicatorStyle={{ height: 4, backgroundColor: colors.strokeStrong, opacity: 0.3 }}>
+    indicatorStyle={{ ...SHEET_GRABBER, backgroundColor: colors.strokeStrong }}>
     <View style={{ marginTop: SHEET_HEADER_GAP, paddingHorizontal: 20, minHeight: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
       <Text style={{ ...TYPE.sheetTitle, color: colors.textStrong }}>Publish post</Text>
       <Button variant="ghost" iconOnly rounded="full" hitSlop={6} onPress={onClose} accessibilityLabel="Close publish sheet"

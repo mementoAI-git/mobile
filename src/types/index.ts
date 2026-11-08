@@ -91,6 +91,8 @@ export interface IUser {
   picture_url?: string;
   last_seen: string;
   streak: number;
+  /** Day of the last activity that counted toward the streak (web streak card). */
+  last_task_date?: string | null;
   bg_music?: string;
   chat_voice?: string | null;
   fullname?: string | null;
@@ -172,9 +174,9 @@ export type CreateBeneficiaryBody = {
   name: string;
   email: string;
   relationship: string;
-  about?: string;
-  avatar_file_id?: string;
-  group_ids?: string[];
+  /** Group ids, as web add-beneficiary sends them. */
+  groups?: string[];
+  access_scope?: 'shared_only';
 };
 
 export interface IGroupMember {

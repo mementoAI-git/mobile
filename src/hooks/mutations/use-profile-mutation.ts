@@ -14,13 +14,14 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: async (payload: ProfileUpdatePayload) => {
       const { context, ...profileData } = payload;
-      const promises: Promise<any>[] = [
-        put<IUser>(endpoint.profile, profileData),
-      ];
-      if (context?.self_description !== undefined) {
-        promises.push(put(endpoint.persona, { self_description: context.self_description }));
-      }
-      const [profileRes] = await Promise.all(promises);
+      // About me saves on its own, so a context-only payload skips the profile PUT.
+      const hasProfileFields = Object.keys(profileData).length > 0;
+      const [profileRes] = await Promise.all([
+        hasProfileFields ? put<IUser>(endpoint.profile, profileData) : Promise.resolve(undefined),
+        context?.self_description !== undefined
+          ? put(endpoint.persona, { self_description: context.self_description })
+          : Promise.resolve(undefined),
+      ]);
       return profileRes;
     },
     onSuccess: (response, payload) => {
