@@ -1,46 +1,22 @@
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
-import { Text, View, Image } from 'react-native';
-import { Button } from '@/components/ui';
-import { COLORS } from '@/constants/tokens';
+import { Text, View } from 'react-native';
 import { TYPE } from '@/constants/typography';
-import { hs, radius } from '@/constants/responsive';
 
-const EMPTY_IMG = require('../../../assets/images/illustrations/empty_memories.webp');
+const COPY = {
+  people: { title: 'No people yet', description: 'Invite someone to start sharing memories together.' },
+  groups: { title: 'No groups yet', description: 'Create a group to organize your people.' },
+  members: { title: 'No members yet', description: 'Add people from your connections.' },
+} as const;
 
-export function BeneficiaryEmptyState({
-  mode,
-  onAction,
-}: {
-  mode: 'people' | 'groups';
-  onAction: () => void;
-}) {
+/** Web settings empty card; the screen's header pill holds the action. */
+export function BeneficiaryEmptyState({ mode }: { mode: keyof typeof COPY }) {
   const COLORS = useThemeColors();
+  const copy = COPY[mode];
   return (
-    <View
-      className="min-h-[520px] items-center justify-center bg-fill-weaker px-6"
-      style={{ borderRadius: radius(24) }}
-    >
-      <Image
-        source={EMPTY_IMG}
-        style={{ width: hs(88), height: hs(88), marginBottom: 12 }}
-        resizeMode="contain"
-      />
-      <Text className="mt-4 text-center" style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>
-        {mode === 'people' ? 'No beneficiary invited yet' : 'No group created yet'}
-      </Text>
-      <Text className="mt-3 max-w-[310px] text-center" style={{ ...TYPE.body, color: COLORS.textWeak }}>
-        {mode === 'people'
-          ? "You haven’t added any beneficiaries to your Memento yet."
-          : 'Create a group to organize the people who matter most.'}
-      </Text>
-      <Button
-        onPress={onAction}
-        size="lg"
-        className="mt-6 h-14 w-full max-w-[360px]"
-      >
-        {mode === 'people' ? 'Invite Beneficiary' : 'Create Group'}
-      </Button>
+    <View style={{ borderRadius: 24, paddingHorizontal: 16, paddingVertical: 40, alignItems: 'center', backgroundColor: COLORS.settingsCard }}>
+      <Text style={{ ...TYPE.label, color: COLORS.textStrong, textAlign: 'center' }}>{copy.title}</Text>
+      <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak, textAlign: 'center', marginTop: 4 }}>{copy.description}</Text>
     </View>
   );
 }

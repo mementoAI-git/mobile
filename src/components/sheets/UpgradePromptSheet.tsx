@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, Image } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
-import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { Button } from '@/components/ui';
 import * as Haptics from 'expo-haptics';
@@ -10,6 +9,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { launchBillingCheckout } from '@/features/settings/billing-flow';
 import { useIAP } from '@/features/billing/use-iap';
 import { IAP_DISCLOSURE_COPY, IAP_LEGAL_URLS } from '@/features/billing';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
 
 const STREAK_FLAME = require('../../../assets/images/illustrations/streak_flame.webp');
 
@@ -63,28 +64,24 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
   const monthlyPrice = products.monthly.localizedPrice || '$9.99';
 
   return (
-    <View className="flex-grow px-4 pb-6">
-      {/* Hero Illustration */}
-      <View className="items-center justify-center pt-2 pb-6 relative">
+    <View className="flex-grow pb-2" style={{ gap: SHEET_GROUP_GAP }}>
+      <SheetHeader
+        title="Unlock Premium Memento"
+        onClose={onClose}
+        closeLabel="Close upgrade prompt"
+      />
+
+      <View style={{ gap: SHEET_SECTION_GAP }}>
+      <View className="items-center">
         <Image
           source={STREAK_FLAME}
-          style={{ width: 84, height: 84, marginBottom: 16 }}
+          style={{ width: 72, height: 72 }}
           resizeMode="contain"
         />
-        <Text
-          className="text-center text-text-strong mb-2"
-          style={TYPE.sectionTitle}>
-          Unlock Premium Memento
-        </Text>
-        <Text
-          className="text-center text-text-weak px-4 leading-relaxed"
-          style={TYPE.label}>
-          You have reached the free tier limit of 5 time capsules. Upgrade to Pro to preserve more future memories.
-        </Text>
       </View>
 
       {/* Features List */}
-      <View className="bg-fill-weaker rounded-3xl border border-stroke-weaker p-5 gap-4 mb-8">
+      <View className="bg-fill-weaker rounded-3xl border border-stroke-weaker p-5 gap-4">
         {premiumFeatures.map((f, i) => (
           <View key={i} className="flex-row items-start gap-3">
             <View className="size-2 rounded-full bg-brand mt-2" />
@@ -101,7 +98,7 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
       </View>
 
       {/* Subscription Pricing Option */}
-      <View className="bg-card border border-brand/30 rounded-3xl p-5 shadow-md flex-row items-center justify-between mb-8 relative overflow-hidden">
+      <View className="bg-card border border-brand/30 rounded-3xl p-5 shadow-md flex-row items-center justify-between relative overflow-hidden">
         {/* Abstract subtle accent glow */}
         <View className="absolute right-0 top-0 size-24 bg-brand/5 rounded-full blur-2xl -mr-6 -mt-6 pointer-events-none" />
 
@@ -118,12 +115,15 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
         </View>
       </View>
 
+      </View>
+
       {/* Bottom Actions */}
       <View className="gap-3">
         <Button
           onPress={handleUpgrade}
           loading={loading || purchasing}
           size="lg"
+          rounded="full"
           className="h-14 w-full"
         >
           Upgrade Now
@@ -134,26 +134,27 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
           loading={restoring}
           variant="ghost"
           size="md"
+          rounded="full"
           className="h-11 w-full"
           textClassName="text-text-base"
         >
           Restore Purchases
         </Button>
 
-        <TouchableOpacity
+        <Button
           onPress={onClose}
           disabled={loading || purchasing}
-          activeOpacity={0.7}
-          className="h-12 items-center justify-center"
+          variant="ghost"
+          size="md"
+          rounded="full"
+          className="h-11 w-full"
+          textClassName="text-text-weak"
         >
-          <Text className="text-text-weak" style={TYPE.label}>
-            Maybe Later
-          </Text>
-        </TouchableOpacity>
-      </View>
+          Maybe Later
+        </Button>
 
-      {/* Disclosures & Legal */}
-      <View className="mt-6 pt-4 border-t border-stroke-weaker items-center">
+        {/* Disclosures & Legal */}
+        <View className="mt-3 pt-4 border-t border-stroke-weaker items-center">
         <Text className="text-center text-text-weak leading-relaxed" style={TYPE.metadata}>
           {IAP_DISCLOSURE_COPY}
         </Text>
@@ -169,6 +170,7 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
               Privacy Policy
             </Text>
           </TouchableOpacity>
+        </View>
         </View>
       </View>
     </View>

@@ -1,17 +1,11 @@
-import { useThemeColors } from '@/hooks/use-theme-colors';
-import React, { useCallback, useMemo, useState } from 'react';
-import {
-  ImageBackground,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import type { ThemeColors } from '@/constants/tokens';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
+import React, { useCallback, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import FolderPlus from 'lucide-react-native/icons/folder-plus';
-import UserRoundPlus from 'lucide-react-native/icons/user-round-plus';
+import UserPlus from 'lucide-react-native/icons/user-plus';
 import * as Haptics from 'expo-haptics';
 import { Button, ResponsiveScreen, Skeleton } from '@/components/ui';
 import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';
@@ -19,67 +13,19 @@ import { BeneficiaryEmptyState } from '@/components/beneficiaries/BeneficiaryEmp
 import { BeneficiaryGroupRow } from '@/components/beneficiaries/BeneficiaryGroupRow';
 import { BeneficiaryPersonRow } from '@/components/beneficiaries/BeneficiaryPersonRow';
 import { useBeneficiariesSettingsLogic } from '@/hooks/use-beneficiaries-settings-logic';
-import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import {
-  filterBeneficiaries,
-  type BeneficiaryFilterTab,
-} from '@/features/beneficiaries/vault-permissions';
-import type { IBeneficiary, IGroup } from '@/types';
+import type { IBeneficiary } from '@/types';
 
-const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
-type BeneficiaryTab = 'people' | 'groups';
+type PeopleTab = 'people' | 'groups';
+const TABS: { key: PeopleTab; label: string }[] = [
+  { key: 'people', label: 'People' },
+  { key: 'groups', label: 'Groups' },
+];
 
-function CollectionSkeleton() {
-  return (
-    <View className="gap-3 px-4 pt-6">
-      {[1, 2, 3].map((item) => (
-        <Skeleton key={item} className="h-24 w-full rounded-[24px]" />
-      ))}
-    </View>
-  );
-}
-
-function CountTab({
-  label,
-  count,
-  active,
-  onPress,
-}: {
-  label: string;
-  count: number;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.78}
-      accessibilityRole="tab"
-      accessibilityLabel={`${label}, ${count}`}
-      accessibilityState={{ selected: active }}
-      className={`h-11 flex-row items-center rounded-full px-5 ${active ? 'bg-active-fill' : 'bg-fill-weaker'}`}
-    >
-      <Text
-        className={active ? 'text-active-text' : 'text-text-strong'}
-        style={TYPE.buttonSmall}
-      >
-        {label}
-      </Text>
-      <View className={`ml-2.5 rounded-full px-2 py-0.5 ${active ? 'bg-fill-weak' : 'bg-fill-weak'}`}>
-        <Text
-          className={active ? 'text-active-text' : 'text-text-weak'}
-          style={TYPE.metadata}
-        >
-          {count > 99 ? '99+' : count}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-export default function BeneficiariesSettingsScreen() {
+/** Mirrors web settings "People & groups" (beneficiary&group/index.tsx), with native sheets. */
+export default function PeopleAndGroupsScreen() {
   const COLORS = useThemeColors();
+  const styles = useThemeStyles(createStyles);
   const {
     beneficiaries,
     groups,
@@ -91,14 +37,8 @@ export default function BeneficiariesSettingsScreen() {
     openSheet,
     router,
   } = useBeneficiariesSettingsLogic();
-  const [tab, setTab] = useState<BeneficiaryTab>('people');
-  const [filterTab, setFilterTab] = useState<BeneficiaryFilterTab>('all');
+  const [tab, setTab] = useState<PeopleTab>('people');
   const [refreshing, setRefreshing] = useState(false);
-
-  const filteredBeneficiaries = useMemo(
-    () => filterBeneficiaries(beneficiaries, filterTab),
-    [beneficiaries, filterTab]
-  );
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();
@@ -106,30 +46,29 @@ export default function BeneficiariesSettingsScreen() {
     else router.replace('/settings');
   }, [router]);
 
-  const selectTab = useCallback((nextTab: BeneficiaryTab) => {
+  const selectTab = useCallback((next: PeopleTab) => {
     Haptics.selectionAsync();
-    setTab(nextTab);
+    setTab(next);
   }, []);
 
   const invite = useCallback(() => {
+    Haptics.selectionAsync();
     openSheet('add-beneficiary');
   }, [openSheet]);
 
   const createGroup = useCallback(() => {
+    Haptics.selectionAsync();
     openSheet('create-group');
   }, [openSheet]);
 
-  const showPerson = useCallback((beneficiary: IBeneficiary) => {
+  const showPersonOptions = useCallback((beneficiary: IBeneficiary) => {
+    Haptics.selectionAsync();
     openSheet('beneficiary-actions', {
       beneficiary,
       onResend: handleResend,
       onRemove: handleRemove,
     });
   }, [handleRemove, handleResend, openSheet]);
-
-  const editGroup = useCallback((group: IGroup) => {
-    openSheet('create-group', { editData: group });
-  }, [openSheet]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -140,109 +79,124 @@ export default function BeneficiariesSettingsScreen() {
     }
   }, [refetch]);
 
-  const hasItems = tab === 'people' ? beneficiaries.length > 0 : groups.length > 0;
-
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <ResponsiveScreen maxWidth={720}>
-        <SettingsSubpageHeader title="Beneficiaries" onBack={handleBack} />
+      {/* Same layout as Security: a full-width header, then the page column. */}
+      <SettingsSubpageHeader title="People &" accent="groups" onBack={handleBack} />
 
-        <View className="pb-4 pt-1">
-          <Text style={{ ...TYPE.body, color: COLORS.textWeak }}>
-            Invite the people who matter most. They’ll be able to receive your memories and interact with your Memento Agent.
-          </Text>
-          <View className="mt-5 flex-row gap-3">
-            <CountTab label="People" count={beneficiaries.length} active={tab === 'people'} onPress={() => selectTab('people')} />
-            <CountTab label="Groups" count={groups.length} active={tab === 'groups'} onPress={() => selectTab('groups')} />
-          </View>
-        </View>
-
-        <View className="flex-1">
-          <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
-          {isLoading ? (
-            <CollectionSkeleton />
-          ) : isError ? (
-            <View className="flex-1 items-center justify-center px-4">
-              <Text className="text-center" style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>
-                Your trusted circle needs a refresh
-              </Text>
-              <Text className="mt-2 text-center" style={{ ...TYPE.body, color: COLORS.textWeak }}>
-                We couldn’t load these details right now.
-              </Text>
-              <Button onPress={refresh} size="lg" className="mt-5 h-14 px-9">Try again</Button>
+      <View className="flex-1">
+        <ResponsiveScreen maxWidth={720}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={COLORS.brand} />}
+            contentContainerStyle={styles.content}
+          >
+            <View style={styles.toolbar}>
+              <View style={styles.tabs} accessibilityRole="tablist">
+                {TABS.map((item) => {
+                  const selected = tab === item.key;
+                  return (
+                    <TouchableOpacity
+                      key={item.key}
+                      onPress={() => selectTab(item.key)}
+                      activeOpacity={0.78}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected }}
+                      style={[styles.tab, selected && styles.activeTab]}
+                    >
+                      <Text style={[styles.tabText, selected && styles.activeTabText]}>{item.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <Button
+                variant="secondary"
+                rounded="full"
+                className="h-11 px-4"
+                leftIcon={tab === 'people'
+                  ? <UserPlus size={20} color={COLORS.textStrong} />
+                  : <FolderPlus size={20} color={COLORS.textStrong} />}
+                onPress={tab === 'people' ? invite : createGroup}
+              >
+                {tab === 'people' ? 'Invite person' : 'New group'}
+              </Button>
             </View>
-          ) : (
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={COLORS.brand} />}
-              contentContainerStyle={{ paddingTop: 20, paddingBottom: 48 }}
-            >
-            {!hasItems ? (
-              <BeneficiaryEmptyState mode={tab} onAction={tab === 'people' ? invite : createGroup} />
-            ) : (
-              <View className="gap-3">
-                {tab === 'people' && beneficiaries.length > 0 && (
-                  <View className="mb-2 flex-row gap-2">
-                    {(['all', 'active', 'pending'] as const).map((subTab) => (
-                      <TouchableOpacity
-                        key={subTab}
-                        onPress={() => {
-                          Haptics.selectionAsync();
-                          setFilterTab(subTab);
-                        }}
-                        activeOpacity={0.7}
-                        className={`rounded-full px-4 py-2 ${filterTab === subTab
-                            ? 'bg-brand/10'
-                            : 'bg-fill-weaker'
-                          }`}
-                      >
-                        <Text
-                          style={{
-                            ...TYPE.metadata,
-                            color: filterTab === subTab ? COLORS.brand : COLORS.textWeak,
-                            textTransform: 'capitalize',
-                          }}
-                        >
-                          {subTab}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
 
-                {tab === 'people'
-                  ? filteredBeneficiaries.map((beneficiary: IBeneficiary) => (
+            <View style={styles.list}>
+              {isLoading ? (
+                [0, 1].map((key) => (
+                  <Skeleton key={key} className="h-[96px] w-full rounded-[20px]" />
+                ))
+              ) : isError ? (
+                <>
+                  <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak }}>
+                    {tab === 'people'
+                      ? 'We couldn’t load your people. Please try again.'
+                      : 'We couldn’t load your groups. Please try again.'}
+                  </Text>
+                  <Button variant="outline" rounded="full" className="h-11 self-start px-5" onPress={refresh}>
+                    Try again
+                  </Button>
+                </>
+              ) : tab === 'people' ? (
+                beneficiaries.length === 0 ? (
+                  <BeneficiaryEmptyState mode="people" />
+                ) : (
+                  beneficiaries.map((beneficiary: IBeneficiary) => (
                     <BeneficiaryPersonRow
                       key={beneficiary._id ?? beneficiary.email}
                       beneficiary={beneficiary}
-                      onPress={() => router.push(`/settings/beneficiary/${beneficiary._id ?? beneficiary.email}` as any)}
+                      onOptions={() => showPersonOptions(beneficiary)}
                     />
                   ))
-                  : groups.map((group, index) => (
-                    <BeneficiaryGroupRow
-                      key={group._id}
-                      group={group}
-                      index={index}
-                      onPress={() => router.push(`/settings/group/${group._id}` as any)}
-                    />
-                  ))}
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  className="mt-2 h-14"
-                  leftIcon={tab === 'people'
-                    ? <UserRoundPlus size={21} color={COLORS.textStrong} />
-                    : <FolderPlus size={21} color={COLORS.textStrong} />}
-                  onPress={tab === 'people' ? invite : createGroup}
-                >
-                  {tab === 'people' ? 'Invite new Beneficiary' : 'Create New Group'}
-                </Button>
-              </View>
-            )}
+                )
+              ) : groups.length === 0 ? (
+                <BeneficiaryEmptyState mode="groups" />
+              ) : (
+                groups.map((group) => (
+                  <BeneficiaryGroupRow
+                    key={group._id}
+                    group={group}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      router.push(`/settings/group/${group._id}` as any);
+                    }}
+                  />
+                ))
+              )}
+            </View>
           </ScrollView>
-        )}
+        </ResponsiveScreen>
       </View>
-      </ResponsiveScreen>
     </SafeAreaView>
   );
 }
+
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  // Security's spacing: content starts 16px below the header; the section
+  // header (tabs + action) sits 24px above its rows.
+  content: { paddingTop: 16, paddingBottom: 48 },
+  toolbar: {
+    marginBottom: 24,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  // Same tab pills as Insights (web .insights-tabs).
+  tabs: { flexDirection: 'row', gap: 8 },
+  tab: {
+    height: 40,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.strokeWeak,
+  },
+  activeTab: { backgroundColor: colors.activeFill, borderColor: 'transparent' },
+  tabText: { color: colors.textBase, ...TYPE.label },
+  activeTabText: { color: colors.activeText },
+  list: { gap: 16 },
+});

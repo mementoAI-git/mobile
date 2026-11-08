@@ -19,13 +19,10 @@ describe('Privacy settings screen', () => {
     expect(screen).not.toContain('ComingSoonRow');
   });
 
-  test('uses the real deletion mutation through a styled confirmation', () => {
-    expect(screen).toContain('useDeleteAccount');
-    expect(screen).toContain("kind: 'delete-account'");
-    expect(confirmation).toContain("| 'delete-account'");
-    expect(confirmation).toContain('Your access ends immediately');
-    expect(confirmation).toContain('finish in the background');
-    expect(confirmation).toContain('without a link to your profile');
+  test('opens the delete account flow, which uses the real deletion mutation', () => {
+    const flow = require('node:fs').readFileSync('app/settings/delete-account.tsx', 'utf8');
+    expect(screen).toContain("router.push('/settings/delete-account'");
+    expect(flow).toContain('useDeleteAccount');
     expect(screen).not.toContain('Alert.alert(');
   });
 });

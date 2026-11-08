@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { hs, radius, responsiveSpace, vs } from '@/constants/responsive';
 
-import { COLORS } from '@/constants/tokens';
+import { COLORS, PLAN_FREE_GRADIENT } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import {
   getBillingTierPresentation,
@@ -23,6 +23,8 @@ interface PlanSummaryBannerProps {
   status?: SubscriptionSummary['status'];
   cancelAtPeriodEnd?: boolean;
   provider?: SubscriptionSummary['provider'];
+  /** "Renews Dec 7, 2026", "Trial ends …" or "Access until …", beside Manage plan (web). */
+  periodLabel?: string | null;
 }
 
 function statusBadgeLabel(
@@ -47,6 +49,7 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
   status,
   cancelAtPeriodEnd,
   provider,
+  periodLabel,
 }: PlanSummaryBannerProps) {
   const COLORS = useThemeColors();
   const styles = useThemeStyles(createStyles);
@@ -58,11 +61,12 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
     return (
       <Animated.View entering={FadeInDown.delay(80).duration(500)}>
         <LinearGradient
-          colors={[COLORS.brand, COLORS.statYellow]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          colors={PLAN_FREE_GRADIENT.colors}
+          locations={PLAN_FREE_GRADIENT.locations}
+          start={PLAN_FREE_GRADIENT.start}
+          end={PLAN_FREE_GRADIENT.end}
           style={{
-            borderRadius: 24,
+            borderRadius: 20,
             padding: 20,
             overflow: 'hidden',
           }}
@@ -100,7 +104,8 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
               : presentation.subtitle}
           </Text>
 
-          {/* Bottom row: Manage plan button */}
+          {/* Bottom row: Manage plan button, then the renewal date */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginTop: 14 }}>
           <TouchableOpacity
             accessibilityRole="button"
             accessibilityLabel={presentation.actionLabel}
@@ -113,13 +118,16 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
               paddingHorizontal: 16,
               paddingVertical: 8,
               alignSelf: 'flex-start',
-              marginTop: 14,
             }}
           >
             <Text style={{ ...TYPE.buttonSmall, color: COLORS.textInverse }}>
               {presentation.actionLabel}
             </Text>
           </TouchableOpacity>
+          {periodLabel ? (
+            <Text style={{ ...TYPE.metadata, color: COLORS.textInverse }}>{periodLabel}</Text>
+          ) : null}
+          </View>
         </LinearGradient>
       </Animated.View>
     );
@@ -129,14 +137,12 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
   return (
     <Animated.View entering={FadeInDown.delay(80).duration(500)}>
       <LinearGradient
-        colors={[
-          COLORS.blue7,
-          COLORS.blue6,
-        ]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        colors={PLAN_FREE_GRADIENT.colors}
+        locations={PLAN_FREE_GRADIENT.locations}
+        start={PLAN_FREE_GRADIENT.start}
+        end={PLAN_FREE_GRADIENT.end}
         style={{
-          borderRadius: 24,
+          borderRadius: 20,
           padding: 20,
           overflow: 'hidden',
           justifyContent: 'center',

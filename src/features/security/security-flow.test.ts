@@ -26,5 +26,11 @@ describe('security credential flow', () => {
     expect(classifyPasskeyError({ error: 'NotSupported' })).toBe('unsupported');
     expect(classifyPasskeyError({ error: 'NoCredentials' })).toBe('unavailable');
     expect(classifyPasskeyError(new Error('network failed'))).toBe('failed');
+    expect(classifyPasskeyError({ error: 'CredentialAlreadyExists' })).toBe('duplicate');
+    expect(classifyPasskeyError({ error: 'BadConfiguration' })).toBe('configuration');
+    expect(classifyPasskeyError({
+      error: 'RequestFailed',
+      message: 'Application with identifier LKYKU36B7W.io.mymemento.app is not associated with domain app.mymemento.io',
+    })).toBe('configuration');
   });
 });

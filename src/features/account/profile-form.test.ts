@@ -1,16 +1,32 @@
 // @ts-nocheck
 import { describe, expect, test } from 'bun:test';
 import {
+  normalizeAboutMe,
   normalizeProfileForm,
+  toAboutMeUpdatePayload,
   toProfileUpdatePayload,
 } from './profile-form';
 
 describe('edit profile form', () => {
   test('edits the same biography shown by the account About me card', () => {
     const profile = { context: { self_description: 'Older profile introduction' } } as any;
-    expect(normalizeProfileForm(profile, 'Current introduction').bio).toBe('Current introduction');
-    expect(normalizeProfileForm(profile, '').bio).toBe('');
-    expect(normalizeProfileForm(profile, undefined).bio).toBe('Older profile introduction');
+    expect(normalizeAboutMe(profile, 'Current introduction')).toBe('Current introduction');
+    expect(normalizeAboutMe(profile, '')).toBe('');
+    expect(normalizeAboutMe(profile, undefined)).toBe('Older profile introduction');
+  });
+
+  test('saves About me on its own without touching profile fields', () => {
+    expect(toAboutMeUpdatePayload(' A lifelong learner ', { goals: 'x' })).toEqual({
+      context: { goals: 'x', self_description: 'A lifelong learner' },
+    });
+  });
+
+  test('keeps About me out of the Edit profile sheet', async () => {
+    const editSheet = await Bun.file(
+      new URL('../../components/sheets/EditProfileSheet.tsx', import.meta.url),
+    ).text();
+    expect(editSheet).not.toContain("'About me'");
+    expect(editSheet).not.toContain('self_description');
   });
   test('normalizes profile values and dates for display', () => {
     expect(normalizeProfileForm({
@@ -31,7 +47,6 @@ describe('edit profile form', () => {
       phone: '+234 894 284 0001',
       country: 'Nigeria',
       location: 'Lagos',
-      bio: '',
     });
   });
 
@@ -45,7 +60,6 @@ describe('edit profile form', () => {
       phone: ' +234 894 284 0001 ',
       country: ' Nigeria ',
       location: ' Lagos ',
-      bio: ' A lifelong learner ',
     })).toEqual({
       nickname: 'Groot',
       first_name: 'Wisdom',
@@ -54,9 +68,6 @@ describe('edit profile form', () => {
       phone_number: '+234 894 284 0001',
       country: 'Nigeria',
       location: 'Lagos',
-      context: {
-        self_description: 'A lifelong learner',
-      },
     });
   });
 

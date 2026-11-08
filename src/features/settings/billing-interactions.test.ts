@@ -46,8 +46,9 @@ describe('billing reference interactions', () => {
   test('routes billing actions to the real provider', () => {
     const screen = read('app/settings/billing.tsx');
     const logic = read('src/hooks/use-billing-settings-logic.ts');
-    expect(screen).toContain('Manage billing');
-    expect(screen).toContain('handlePortal');
+    // Store subscribers manage payment in the store; nothing links out to web billing.
+    expect(screen).toContain('onPress={openStoreManagement}');
+    expect(screen).not.toContain('openPortal');
     expect(logic).not.toContain("openSheet('edit-billing-details'");
     expect(logic).not.toContain("openSheet('add-payment-method'");
   });

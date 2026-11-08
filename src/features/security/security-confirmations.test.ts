@@ -30,7 +30,8 @@ describe('Security confirmations', () => {
     expect(sheet).toContain('Keep the sheet open when an async confirmation fails');
     expect(twoFactorLogic).toContain("kind: 'disable-two-factor'");
     expect(twoFactorLogic).not.toContain('Alert.alert(');
-    expect(accountLogic).toContain("kind: 'delete-account'");
+    // Account deletion has its own flow (app/settings/delete-account.tsx), not a one-tap confirmation.
+    expect(accountLogic).not.toContain("kind: 'delete-account'");
     expect(accountLogic).not.toContain('Alert.alert(');
     expect(settings).toContain("kind: 'logout-current-device'");
   });

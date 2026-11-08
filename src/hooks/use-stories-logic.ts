@@ -4,6 +4,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useUiStore } from '@/store';
 import { useStories, useMemoriesStats } from '@/hooks/queries/use-memories';
 
+/** Stories load 25 at a time; scrolling near the end loads the next 25. */
+export const STORIES_PAGE_SIZE = 25;
+
 export function useStoriesLogic() {
   const router = useRouter();
   const openSheet = useUiStore((s) => s.openSheet);
@@ -48,6 +51,7 @@ export function useStoriesLogic() {
     refetch,
     isRefetching,
   } = useStories({
+    limit: STORIES_PAGE_SIZE,
     filter: activeFilter === 'All' ? undefined : activeFilter.toLowerCase(),
     search: debouncedSearch || undefined,
   });

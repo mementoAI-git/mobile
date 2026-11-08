@@ -5,7 +5,7 @@ import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useBackgroundMusic } from './use-background-music';
 import { useFeedAudioPlaybackStore } from '@/store/audio-playback.store';
 import { VoicePreviewPlayback, type VoicePreviewStatus } from '@/features/chat/voice-preview-playback';
-import { VOICE_PREVIEW_ASSETS } from '@/features/chat/voice-preview-assets';
+import { pickVoicePreviewClip } from '@/features/chat/voice-preview-assets';
 import type { VoiceId } from '@/features/chat/voice-catalog';
 
 export function useVoicePreview(voiceId: VoiceId, enabled: boolean) {
@@ -15,9 +15,16 @@ export function useVoicePreview(voiceId: VoiceId, enabled: boolean) {
   const music = useBackgroundMusic();
   const musicRef = useRef(music);
   musicRef.current = music;
+  // Each play reads a different sentence than the one just heard, like web.
+  const lastLineRef = useRef<number | null>(null);
   const playback = useMemo(() => new VoicePreviewPlayback({
     prepare: () => setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false, shouldPlayInBackground: false }),
-    createPlayer: (id) => createAudioPlayer(VOICE_PREVIEW_ASSETS[id], { updateInterval: 100 }),
+    createPlayer: (id) => {
+      const clip = pickVoicePreviewClip(id, lastLineRef.current);
+      if (!clip) throw new Error(`No preview recorded for ${id}`);
+      lastLineRef.current = clip.line;
+      return createAudioPlayer(clip.asset, { updateInterval: 100 });
+    },
     onStatus: (next) => { if (mountedRef.current) setStatus(next); },
   }), []);
 

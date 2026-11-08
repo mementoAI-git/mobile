@@ -26,7 +26,7 @@ export const MusicControllerCard = React.memo(function MusicControllerCard({ com
   }, [isPlaying, reducedMotion, rotation]);
   const controlStyle = compact ? { width: 28, height: 28, minHeight: 28, borderRadius: 14, paddingHorizontal: 0, paddingVertical: 0 } : undefined;
   return (
-    <View className="border border-stroke-weak bg-fill-weak" style={compact ? { borderRadius: 14, padding: 16, gap: 12 } : { borderRadius: 24, padding: 20, gap: 8 }}>
+    <View className="border border-stroke-weak bg-fill-weak" style={compact ? { borderRadius: 14, padding: 16, gap: 12 } : { borderRadius: 20, padding: 20, gap: 8 }}>
       <View className={compact ? "flex-row items-center gap-3" : "flex-row items-center gap-4"}>
         <View accessible={false} className="size-16 rounded-full bg-media-surface items-center justify-center shrink-0">
           <Animated.View style={discStyle}>

@@ -3,7 +3,7 @@ import { View, Text, Image } from 'react-native';
 import { cn, getInitials } from '@/lib/utils';
 import { TYPE } from '@/constants/typography';
 import { resolveFileUrl } from '@/features/account/profile-form';
-import { defaultAvatarUrl } from '@/features/account/avatar-source';
+import { avatarSourceUrl, defaultAvatarUrl } from '@/features/account/avatar-source';
 
 interface AvatarProps {
   uri?: string | null;
@@ -31,7 +31,7 @@ export function Avatar({ uri, name, seed, userId, size = 'md', className }: Avat
   const [failedUris, setFailedUris] = React.useState<Set<string>>(() => new Set());
   const s = sizeMap[size];
   const initials = name?.trim() ? getInitials(name) : '';
-  const resolvedUri = resolveFileUrl(uri);
+  const resolvedUri = avatarSourceUrl(resolveFileUrl(uri), seed, name, userId);
 
   const effectiveUri = [resolvedUri, defaultAvatarUrl(seed, name, userId)].find(uri => uri && !failedUris.has(uri));
   const handleImageError = React.useCallback(() => {
@@ -52,7 +52,6 @@ export function Avatar({ uri, name, seed, userId, size = 'md', className }: Avat
           source={{ uri: effectiveUri }}
           className="w-full h-full"
           resizeMode="cover"
-          style={effectiveUri.startsWith('https://api.dicebear.com/10.x/critters/') ? { transform: [{ scale: 1.5 }] } : undefined}
           key={effectiveUri}
           onError={handleImageError}
         />

@@ -16,8 +16,8 @@ describe('publish privacy sheet production safety', () => {
 
   test('keeps every close action large enough to tap reliably', () => {
     const source = readFileSync('src/components/sheets/PublishPrivacySheet.tsx', 'utf8');
-    expect(source).toContain('width: 44');
-    expect(source).toContain('height: 44');
+    // The shared SheetHeader close button is 44px.
+    expect(source).toContain('<SheetHeader');
   });
 });
 

@@ -59,18 +59,14 @@ export default function ExploreScreen() {
   const listHeader = useMemo(
     () => (
       <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-6">
-        <Animated.Text className="text-text-weak mb-10" style={TYPE.body}>
-          Discover prompts that help you explore the depths of your story and find new ways to connect.
-        </Animated.Text>
-
         <View className="mb-10"><DailyPromptSection /></View>
 
         <Animated.Text className="text-text-strong mb-4" style={TYPE.sectionTitle}>
-          Explore categories
+          Categories
         </Animated.Text>
         {usingBundledCatalog && !isLoading && (
           <Text accessibilityRole="text" className="text-text-weak" style={TYPE.body}>
-            Questions are temporarily unavailable while Explore is being updated. Pull down to try again.
+            Questions are temporarily unavailable while Topics is being updated. Pull down to try again.
           </Text>
         )}
       </Animated.View>
@@ -87,14 +83,14 @@ export default function ExploreScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-      <DashboardHeader title="Explore" />
+      <DashboardHeader title="Topics" />
 
       <View className="flex-1 relative">
 
 
         {isStartingConversation && (
           <View className="absolute inset-0 bg-black/10 items-center justify-center z-50">
-            <View className="bg-card p-6 rounded-2xl shadow-lg border border-stroke-weaker items-center gap-3">
+            <View className="bg-popover p-6 rounded-2xl shadow-lg border border-stroke-weaker items-center gap-3">
               <Spinner size="large" color={COLORS.brand} />
               <Animated.Text className="text-text-strong" style={TYPE.label}>Starting reflect session...</Animated.Text>
             </View>

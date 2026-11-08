@@ -25,27 +25,25 @@ describe('app-wide voice call', () => {
     expect(provider).toContain('onModelEndedCall: leaveCallScreen');
   });
 
-  test('the call indicator floats over screens without moving them', async () => {
-    const indicator = await read('src/components/chat/CallIndicator.tsx');
-
-    expect(indicator).toContain('shouldShowCallIndicator({');
-    expect(indicator).toContain('callIndicatorVariant(Platform.OS, insets.top)');
-    expect(indicator).toContain('islandCapsuleFrame(topInset)');
-    expect(indicator).toContain('backgroundColor: COLORS.dynamicIsland');
-    expect(indicator).not.toContain('SafeAreaInsetsContext');
-    expect(indicator).toContain('maxFontSizeMultiplier={1.2}');
+  test('the floating call floats over every screen, sheet and native full-screen page', async () => {
+    const indicator = await Bun.file(new URL('../../components/chat/CallIndicator.tsx', import.meta.url)).text();
+    const floating = await Bun.file(new URL('../../components/chat/FloatingVoiceCall.tsx', import.meta.url)).text();
+    expect(indicator).toContain('<FloatingVoiceCall />');
+    expect(floating).toContain('<FullWindowOverlay>');
+    expect(floating).toContain('resolveFloatingCallRelease(');
+    expect(floating).toContain('accessibilityLabel={`Show voice call');
   });
 
-  test('the call screen is a view onto the provider call', async () => {
-    const screen = await read('app/voice-call.tsx');
 
+  test('the voice page and floating call are views onto the provider call', async () => {
+    const screen = await Bun.file(new URL('../../../app/voice-call.tsx', import.meta.url)).text();
+    const floating = await Bun.file(new URL('../../components/chat/FloatingVoiceCall.tsx', import.meta.url)).text();
     expect(screen).toContain('useVoiceCall()');
-    expect(screen).toContain("? 'Reconnecting…'");
     expect(screen).not.toContain('useVoiceMode(');
-    expect(screen).not.toContain('useBackgroundMusic');
-    expect(screen).toContain('accessibilityLabel="Minimize call"');
-    expect(screen).toContain("return voice.isMuted ? 'muted' : 'live';");
+    expect(floating).toContain("return 'Reconnecting…';");
+    expect(floating).not.toContain('useVoiceMode(');
   });
+
   test('the provider mirrors the call into the iOS Live Activity', async () => {
     const provider = await read('src/hooks/use-voice-call.tsx');
 
@@ -56,18 +54,12 @@ describe('app-wide voice call', () => {
   });
 
   test('call surfaces hide the moment the call is hung up', async () => {
-    const hook = await read('src/hooks/use-voice-mode.ts');
-    const provider = await read('src/hooks/use-voice-call.tsx');
-    const indicator = await read('src/components/chat/CallIndicator.tsx');
-
-    const disconnect = hook.indexOf('const disconnect = useCallback(');
-    const ending = hook.indexOf('setIsEnding(true)', disconnect);
-    const teardown = hook.indexOf('await engine?.stop()', disconnect);
-    expect(ending).toBeGreaterThan(disconnect);
-    expect(ending).toBeLessThan(teardown);
+    const provider = await Bun.file(new URL('../../hooks/use-voice-call.tsx', import.meta.url)).text();
+    const floating = await Bun.file(new URL('../../components/chat/FloatingVoiceCall.tsx', import.meta.url)).text();
     expect(provider).toContain('isConnected: callLive,');
-    expect(indicator).toContain('isConnected: isCallLive(voice),');
+    expect(floating).toContain('voice.isConnecting || voice.isReconnecting || isCallLive(voice)');
   });
+
 
   test('a Live Activity button with no live call clears the card', async () => {
     const provider = await read('src/hooks/use-voice-call.tsx');
@@ -77,22 +69,20 @@ describe('app-wide voice call', () => {
   });
 
   test('tells the user when a call could not start instead of silently resetting', async () => {
-    const screen = await Bun.file(new URL('../../../app/voice-call.tsx', import.meta.url)).text();
-
-    expect(screen).toContain("voice.connectionFailure?.kind === 'connection-error' && !voice.isConnecting");
-    expect(screen).toContain('We couldn’t start your call. Check your connection and try again.');
+    const provider = await Bun.file(new URL('../../hooks/use-voice-call.tsx', import.meta.url)).text();
+    expect(provider).toContain("voice.connectionFailure?.kind === 'connection-error'");
+    // A plan without voice reopens the voice page, which explains the upgrade.
+    expect(provider).toContain("failureKind === 'upgrade-required'");
   });
+
 
   test('saves the chosen voice to the profile before a call token is built for it', async () => {
     const screen = await Bun.file(new URL('../../../app/voice-call.tsx', import.meta.url)).text();
-    const sheet = await Bun.file(
-      new URL('../../components/sheets/VoiceCallSettingsSheet.tsx', import.meta.url),
-    ).text();
-
+    const sheet = await Bun.file(new URL('../../components/sheets/VoiceCallSettingsSheet.tsx', import.meta.url)).text();
     expect(screen).toContain('if (!choice || !(await persistVoice(choice))) return;');
-    expect(screen).toContain("if (stage !== 'ready' || !voiceInSync) return;");
-    expect(screen).toContain('profileUsesVoice(userStoreUser ?? user, selectedVoice)');
+    expect(screen.indexOf('await persistVoice(choice);')).toBeLessThan(screen.indexOf('startCall({'));
     expect(sheet).toContain('await saveCallVoice(voice, { saveProfile: updateProfileAsync, saveLocal: selectVoice });');
     expect(sheet).not.toContain('updateProfile({ chat_voice');
   });
+
 });

@@ -22,6 +22,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
+import { StoryComposerBackdrop } from '@/components/editor/StoryComposerBackdrop';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import Pencil from 'lucide-react-native/icons/pencil';
@@ -447,7 +448,10 @@ export default function StoryDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+    {/* Same album paper as the add-story page, light or dark by appearance. */}
+    <StoryComposerBackdrop />
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
 
       {/* ── Header ── */}
       <View style={styles.header}>
@@ -634,6 +638,7 @@ export default function StoryDetailScreen() {
         onClose={closePreview}
       />
     </SafeAreaView>
+    </View>
   );
 }
 

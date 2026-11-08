@@ -2,9 +2,8 @@ import { useRouter } from 'expo-router';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useChangePassword, useDeleteAccount } from '@/hooks/mutations/use-auth-mutations';
+import { useChangePassword } from '@/hooks/mutations/use-auth-mutations';
 import * as Haptics from 'expo-haptics';
-import { useUiStore } from '@/store';
 
 const schema = z.object({
   current_password: z.string().min(1, 'Required'),
@@ -19,9 +18,7 @@ export type AccountFormData = z.infer<typeof schema>;
 
 export function useAccountSettingsLogic() {
   const router = useRouter();
-  const openSheet = useUiStore((s) => s.openSheet);
   const { mutate: changePassword, isPending, error, isSuccess } = useChangePassword();
-  const { mutateAsync: deleteAccount, isPending: deleting } = useDeleteAccount();
 
   const form = useForm<AccountFormData>({
     resolver: zodResolver(schema),
@@ -48,22 +45,12 @@ export function useAccountSettingsLogic() {
     );
   };
 
-  const handleDelete = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    openSheet('security-confirmation', {
-      kind: 'delete-account',
-      onConfirm: () => deleteAccount(),
-    });
-  };
-
   return {
     form,
     isPending,
     error,
     isSuccess,
-    deleting,
     onSubmit: form.handleSubmit(onSubmit),
-    handleDelete,
     router,
   };
 }

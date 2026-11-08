@@ -33,6 +33,8 @@ export function useAddBeneficiary() {
         // Fallback if server doesn't return the new item
         queryClient.invalidateQueries({ queryKey: queryKeys.beneficiaries });
       }
+      // Invites can add the person to groups, so member counts change too.
+      queryClient.invalidateQueries({ queryKey: queryKeys.groups });
     },
   });
 }

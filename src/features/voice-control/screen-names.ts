@@ -12,7 +12,7 @@ const EXACT: Record<string, string> = {
   '/chat/settings': 'Chat settings',
   '/stories': 'Your stories',
   '/capsule': 'Time capsules',
-  '/explore': 'Explore prompts',
+  '/explore': 'Topics',
   '/insights': 'Insights',
   '/account': 'Account',
   '/settings': 'Settings',

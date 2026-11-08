@@ -1,13 +1,13 @@
+import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
 import { CalendarDateSheet, CalendarStoriesSheet } from './CalendarSheets';
-import { useThemeColors } from '@/hooks/use-theme-colors';
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
-  BottomSheetBackdrop,
   BottomSheetModal,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import { useUiStore } from '@/store';
 import { useRootNavigationState, useSegments } from 'expo-router';
+import { useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CreateMemorySheet } from './CreateMemorySheet';
 import { CreateCapsuleSheet } from './CreateCapsuleSheet';
@@ -24,9 +24,11 @@ import { FeedbackSheet } from './FeedbackSheet';
 import { CapsuleDetailSheet } from './CapsuleDetailSheet';
 import { UpgradePromptSheet } from './UpgradePromptSheet';
 import { SelectSheet } from './SelectSheet';
+import { DeleteAccountReasonSheet } from './DeleteAccountReasonSheet';
 import { StreakSheet } from './StreakSheet';
 import { DraftsSheet } from './DraftsSheet';
 import { EditProfileSheet } from './EditProfileSheet';
+import { EditAboutMeSheet } from './EditAboutMeSheet';
 import { ChangePasswordSheet } from './ChangePasswordSheet';
 import { SetupTwoFactorSheet } from './SetupTwoFactorSheet';
 import { SecurityConfirmationSheet } from './SecurityConfirmationSheet';
@@ -43,9 +45,9 @@ import { ExportArchiveSheet } from './ExportArchiveSheet';
 import { QuickToolsSheet } from './QuickToolsSheet';
 import { AppearanceSheet } from './AppearanceSheet';
 import { DailyRitualSheet } from './DailyRitualSheet';
+import { ObservationNoteSheet } from './ObservationNoteSheet';
 import { EmojiPickerSheet } from '@/components/chat/EmojiPickerSheet';
-import { COLORS } from '@/constants/tokens';
-import { getSheetBottomPadding, getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
 
 const SHEET_CONFIGS: Record<string, {
   component: React.ComponentType<any>;
@@ -55,6 +57,10 @@ const SHEET_CONFIGS: Record<string, {
   keyboardBehavior?: 'interactive' | 'fillParent' | 'extend';
   keyboardBlurBehavior?: 'restore' | 'dismiss' | 'none';
   androidKeyboardInputMode?: 'adjustPan' | 'adjustResize';
+  /** Short confirmation: skips the minimum sheet height, like web alert dialogs. */
+  compact?: boolean;
+  /** Fixed height as a share of the screen, like web's `h-[80dvh]` search sheet. */
+  screenHeightRatio?: number;
 }> = {
   'calendar-date': { component: CalendarDateSheet, dynamic: true },
   'calendar-stories': { component: CalendarStoriesSheet, dynamic: false, snapPoints: ['65%'] },
@@ -69,7 +75,7 @@ const SHEET_CONFIGS: Record<string, {
   'create-group': { component: CreateGroupSheet, snapPoints: ['78%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
   'quick-capture': { component: QuickCaptureSheet, dynamic: true, keyboardBlurBehavior: 'none' },
   'memory-insights': { component: MemoryInsightsSheet, snapPoints: ['88%'] },
-  'search-memory': { component: SearchMemorySheet, horizontalPadding: 0, snapPoints: ['90%'], keyboardBehavior: 'extend', keyboardBlurBehavior: 'none' },
+  'search-memory': { component: SearchMemorySheet, horizontalPadding: 0, screenHeightRatio: 0.8, dynamic: false, keyboardBehavior: 'extend', keyboardBlurBehavior: 'none' },
   'feedback': { component: FeedbackSheet, snapPoints: ['90%'], dynamic: true, keyboardBehavior: 'fillParent' },
   'capsule-detail': { component: CapsuleDetailSheet, snapPoints: ['92%'] },
   'upgrade-prompt': { component: UpgradePromptSheet, dynamic: true },
@@ -77,21 +83,24 @@ const SHEET_CONFIGS: Record<string, {
   'capsule-sealed': { component: CapsuleSealedSheet, dynamic: true },
   'first-story-milestone': { component: FirstStoryMilestoneSheet, dynamic: true },
   'select': { component: SelectSheet, dynamic: true },
+  'delete-account-reason': { component: DeleteAccountReasonSheet, snapPoints: ['92%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
   'streak': { component: StreakSheet, dynamic: true },
   'story-drafts': { component: DraftsSheet, dynamic: false, snapPoints: ['75%'], keyboardBehavior: 'interactive' },
+  'edit-about-me': { component: EditAboutMeSheet, dynamic: true, keyboardBehavior: 'interactive', androidKeyboardInputMode: 'adjustResize' },
   'edit-profile': { component: EditProfileSheet, snapPoints: ['100%'], dynamic: false, keyboardBehavior: 'fillParent' },
-  'cancel-subscription-confirmation': { component: CancelSubscriptionConfirmationSheet, horizontalPadding: 0, dynamic: true },
+  'cancel-subscription-confirmation': { component: CancelSubscriptionConfirmationSheet, horizontalPadding: 0, dynamic: true, compact: true },
   'change-password': { component: ChangePasswordSheet, snapPoints: ['100%'], dynamic: true, keyboardBehavior: 'interactive', keyboardBlurBehavior: 'restore', androidKeyboardInputMode: 'adjustResize' },
   'setup-two-factor': { component: SetupTwoFactorSheet, snapPoints: ['92%'], dynamic: false, keyboardBehavior: 'fillParent' },
-  'security-confirmation': { component: SecurityConfirmationSheet, horizontalPadding: 0, dynamic: true },
+  'security-confirmation': { component: SecurityConfirmationSheet, horizontalPadding: 0, dynamic: true, compact: true },
   'digital-mind': { component: DigitalMindSheet, dynamic: true },
   'voice-call-settings': { component: VoiceCallSettingsSheet, dynamic: true },
-  'end-voice-session': { component: EndVoiceSessionSheet, dynamic: true },
+  'end-voice-session': { component: EndVoiceSessionSheet, dynamic: true, compact: true },
   'guardian-lens': { component: GuardianLensSheet, dynamic: true },
   'export-archive': { component: ExportArchiveSheet, dynamic: true },
   'appearance': { component: AppearanceSheet, dynamic: true },
   'quick-tools': { component: QuickToolsSheet, dynamic: true, horizontalPadding: 20 },
   'daily-ritual': { component: DailyRitualSheet, dynamic: true },
+  'observation-note': { component: ObservationNoteSheet, dynamic: true, keyboardBehavior: 'interactive', androidKeyboardInputMode: 'adjustResize' },
   'emoji-picker': { component: EmojiPickerSheet, dynamic: false, snapPoints: ['42%', '65%'] },
 };
 
@@ -102,7 +111,7 @@ const SELF_MANAGED = new Set([
   'create-memory', 'create-group', 'add-beneficiary', 'streak',
   'edit-profile', 'add-member-to-group',
   'change-password', 'setup-two-factor',
-  'emoji-picker', 'story-drafts',
+  'emoji-picker', 'story-drafts', 'delete-account-reason',
 ]);
 
 const MODAL_SEGMENTS = new Set([
@@ -120,7 +129,6 @@ const MODAL_SEGMENTS = new Set([
  * component tree, above the tab bar and any other absolutely-positioned elements.
  */
 export function SheetManager({ isModal = false }: { isModal?: boolean }) {
-  const COLORS = useThemeColors();
   const activeSheet = useUiStore((s) => s.activeSheet);
   const sheetProps = useUiStore((s) => s.sheetProps);
   const closeSheet = useUiStore((s) => s.closeSheet);
@@ -176,21 +184,15 @@ export function SheetManager({ isModal = false }: { isModal?: boolean }) {
     modalRef.current?.snapToIndex(0);
   }, []);
 
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.4}
-        pressBehavior="close"
-      />
-    ),
-    [],
-  );
 
   const config = activeSheet ? SHEET_CONFIGS[activeSheet] : null;
   const SheetContent = config?.component ?? null;
+  const chrome = useSheetChrome({ compact: config?.compact });
+  const { height: windowHeight } = useWindowDimensions();
+  const snapPoints = useMemo(() => {
+    if (config?.screenHeightRatio) return chrome.snapPoints([Math.round(windowHeight * config.screenHeightRatio)]);
+    return config?.snapPoints ? chrome.snapPoints(config.snapPoints) : undefined;
+  }, [chrome, config?.snapPoints, config?.screenHeightRatio, windowHeight]);
 
   if (!navigationReady) return null;
 
@@ -202,19 +204,15 @@ export function SheetManager({ isModal = false }: { isModal?: boolean }) {
     <BottomSheetModal
       key={activeSheet ?? 'none'}
       ref={modalRef}
-      topInset={getSheetTopInset(insets.top)}
-      snapPoints={config?.snapPoints}
+      {...chrome.props}
+      snapPoints={snapPoints}
       enableDynamicSizing={config?.dynamic ?? true}
       enableContentPanningGesture={activeSheet !== 'calendar-date'}
       enablePanDownToClose
       onDismiss={handleDismiss}
-      backdropComponent={renderBackdrop}
       keyboardBehavior={(config?.keyboardBehavior as any) ?? 'interactive'}
       keyboardBlurBehavior={(config?.keyboardBlurBehavior as any) ?? 'restore'}
       android_keyboardInputMode={config?.androidKeyboardInputMode ?? 'adjustPan'}
-      handleStyle={SHEET_HEADER_HANDLE_STYLE}
-      handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
-      backgroundStyle={{ backgroundColor: COLORS.card }}
     >
       {SheetContent && activeSheet ? (
         SELF_MANAGED.has(activeSheet) ? (
@@ -225,7 +223,7 @@ export function SheetManager({ isModal = false }: { isModal?: boolean }) {
             collapseSheet={collapseSheet}
           />
         ) : (
-          <BottomSheetView style={{ paddingHorizontal: config?.horizontalPadding ?? 20, paddingBottom: getSheetBottomPadding(insets.bottom, 12) }}>
+          <BottomSheetView style={{ ...(config?.screenHeightRatio ? { flex: 1 } : { minHeight: chrome.minContentHeight }), paddingHorizontal: config?.horizontalPadding ?? 20, paddingBottom: getSheetBottomPadding(insets.bottom, 12) }}>
             <SheetContent {...sheetProps} onClose={animateClose} />
           </BottomSheetView>
         )

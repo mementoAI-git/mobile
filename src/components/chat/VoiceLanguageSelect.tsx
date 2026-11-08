@@ -19,7 +19,7 @@ export function VoiceLanguageSelect({ value, onChange, disabled }: {
   const select = useCallback((code: VoiceLanguageCode) => {
     void Haptics.selectionAsync(); onChange(code); setOpen(false);
   }, [onChange]);
-  return <View className="mb-5" style={{ zIndex: 10 }}>
+  return <View style={{ zIndex: 10 }}>
     <Text className="mb-2 text-text-strong" style={TYPE.label}>Language</Text>
     <Pressable accessibilityRole="button" accessibilityLabel={`Language, ${VOICE_LANGUAGES.find(language => language.code === value)?.label}`}
       accessibilityState={{ expanded: open, disabled }} disabled={disabled} onPress={toggle}
@@ -28,7 +28,7 @@ export function VoiceLanguageSelect({ value, onChange, disabled }: {
       <ChevronDown size={18} color={colors.textBase} style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }} />
     </Pressable>
     {open && <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(120)}
-      style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, borderRadius: 10, borderWidth: 1, borderColor: colors.strokeWeak, backgroundColor: colors.cardRaised, overflow: 'hidden' }}>
+      style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, borderRadius: 10, borderWidth: 1, borderColor: colors.strokeWeak, backgroundColor: colors.popover, overflow: 'hidden' }}>
       {VOICE_LANGUAGES.map(language => <Pressable key={language.code} accessibilityRole="radio" accessibilityState={{ checked: language.code === value }}
         onPress={() => select(language.code)} className="min-h-11 flex-row items-center justify-between px-4"
         style={{ backgroundColor: language.code === value ? colors.fillWeak : 'transparent' }}>

@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import * as Device from 'expo-device';
 import * as SecureStore from 'expo-secure-store';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Passkey } from 'react-native-passkey';
@@ -8,8 +9,9 @@ import { queryKeys } from '@/constants/query-keys';
 import { storageKeys } from '@/constants/storage-keys';
 import { useUserStore } from '@/store';
 
+/** Shown in the passkey list on web and mobile, e.g. "iPhone 15 Pro". */
 function getDeviceName(): string {
-  return Platform.OS === 'ios' ? 'Apple device' : 'Android device';
+  return Device.modelName || (Platform.OS === 'ios' ? 'iPhone' : 'Android device');
 }
 
 export function useRegisterPasskey() {
@@ -18,10 +20,15 @@ export function useRegisterPasskey() {
   return useMutation({
     mutationFn: async () => {
       const begin = await post<any>(endpoint.passkeyRegisterBegin);
-      const credential = await Passkey.create(begin.data);
+      // iOS: a platform key goes straight to Face ID / Touch ID and saves to iCloud Keychain,
+      // skipping the security-key and other-device choices.
+      const credential = Platform.OS === 'ios'
+        ? await Passkey.createPlatformKey(begin.data)
+        : await Passkey.create(begin.data);
 
       await post(endpoint.passkeyRegisterComplete, {
-        response: credential,
+        // Match the browser's RegistrationResponseJSON (web uses @simplewebauthn/browser).
+        response: { clientExtensionResults: {}, ...credential },
         device_name: getDeviceName(),
       });
 

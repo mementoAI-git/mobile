@@ -20,7 +20,7 @@ for (const [name, colors] of Object.entries({ light: COLORS, dark: DARK_COLORS, 
 describe('theme changes preserve an open draft', () => {
   test('updates CSS after the WebView is ready without replacing story content', () => {
     const source = readFileSync('src/components/ui/StoryRichEditor.tsx', 'utf8');
-    expect(source).toContain('buildEditorThemeCSS(colors)');
+    expect(source).toContain('buildEditorThemeCSS(colors, { transparent })');
     expect(source).toContain("injectCSS(themeCSS, 'memento-theme')");
     expect(source).toContain('[isReady, themeCSS]');
     expect(source).not.toContain('background: #ffffff');

@@ -2,7 +2,6 @@ import type { ThemeColors } from '@/constants/tokens';
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback } from 'react';
 import {
-  ImageBackground,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,7 +19,6 @@ import { useProfile } from '@/hooks/queries/use-profile';
 import { useUserContext } from '@/hooks/queries/use-persona';
 import { useUiStore } from '@/store';
 
-const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 const DETAILS = [
   { key: 'email', label: 'Email address' },
@@ -60,6 +58,10 @@ export default function PersonalInfoScreen() {
     openSheet('edit-profile');
   }, [openSheet]);
 
+  const handleEditAboutMe = useCallback(() => {
+    openSheet('edit-about-me');
+  }, [openSheet]);
+
   const rawBio = profile?.context?.self_description ?? userContext?.self_description;
   const aboutMeText = formatAboutMe(rawBio);
 
@@ -77,27 +79,35 @@ export default function PersonalInfoScreen() {
       <SettingsSubpageHeader title="Personal information" onBack={handleBack} />
 
       <View className="flex-1">
-        <ImageBackground
-          source={PATTERN}
-          className="absolute inset-0"
-          style={{ opacity: 0.03 }}
-          resizeMode="repeat"
-        />
 
         <ResponsiveScreen maxWidth={720}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-          <View style={styles.aboutCard}>
+          <View style={styles.sectionHeader}>
             <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>About me</Text>
-            <Text style={{ ...TYPE.body, color: COLORS.textWeak, marginTop: 6, lineHeight: 22 }}>
+            <Button
+              variant="secondary"
+              size="sm"
+              rounded="full"
+              className="h-10 px-4"
+              onPress={handleEditAboutMe}
+              accessibilityLabel="Edit About me"
+            >
+              Edit
+            </Button>
+          </View>
+
+          <View style={styles.aboutCard}>
+            <Text style={{ ...TYPE.body, color: COLORS.textWeak, lineHeight: 22 }}>
               {aboutMeText}
             </Text>
           </View>
 
-          <View style={styles.detailsHeader}>
+          <View style={[styles.sectionHeader, { marginTop: 20 }]}>
             <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>Profile details</Text>
             <Button
               variant="secondary"
               size="sm"
+              rounded="full"
               className="h-10 px-4"
               onPress={handleEdit}
             >
@@ -148,19 +158,18 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   aboutCard: {
     borderRadius: 24,
     padding: 20,
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.settingsCard,
   },
-  detailsHeader: {
+  sectionHeader: {
     minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 20,
     marginBottom: 12,
     paddingHorizontal: 4,
   },
   card: {
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.settingsCard,
     borderRadius: 24,
     overflow: 'hidden',
   },

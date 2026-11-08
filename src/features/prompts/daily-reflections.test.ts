@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { canShuffleReflections, reflectionCapture, rotateReflections } from './daily-reflections';
+import { canShuffleReflections, reflectionCapture, reflectionRouteParams, rotateReflections } from './daily-reflections';
 import { getPromptReplyCounts } from './prompt-reply-count';
 import { avatarsForCard, shuffleAvatarOrder, refreshAvatarOrder } from './reflection-avatar-order';
 import type { IDashboardPromptSlot } from '@/types';
@@ -65,5 +65,19 @@ describe('daily reflection web parity', () => {
     for (let i = 0; i < 3; i++) {
       expect(avatarsForCard(refreshed, i).every((face) => !avatarsForCard(order, i).includes(face))).toBe(true);
     }
+  });
+});
+
+describe('reflection card navigation', () => {
+  test('opens a catalog reflection on the topic conversation route', () => {
+    expect(reflectionRouteParams(catalog('abc'), 'People I love')).toEqual({
+      id: 'abc', type: 'prompt', promptTitle: 'Reflect on abc', promptLabel: 'People I love',
+    });
+  });
+
+  test('opens an AI reflection as a new prompt conversation, including answered ones', () => {
+    expect(reflectionRouteParams({ ...ai, answered: true }, 'Daily')).toEqual({
+      id: 'new', type: 'prompt', promptTitle: 'What brings you joy?', promptLabel: 'For you',
+    });
   });
 });

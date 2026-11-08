@@ -6,26 +6,26 @@ import {
   BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetTextInput,
-  BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
 import Check from 'lucide-react-native/icons/check';
 import Lock from 'lucide-react-native/icons/lock';
 import Search from 'lucide-react-native/icons/search';
 import Users from 'lucide-react-native/icons/users';
-import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useGroups } from '@/hooks/queries/use-groups';
 import type { IBeneficiary, IGroup } from '@/types';
 
-import { Skeleton, TextInput } from '@/components/ui';
+import { Button, Skeleton, TextInput } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { normalizeCollection } from '@/features/beneficiaries/collections';
 import { buildAudienceRecipientItems, type AudienceRecipientItem } from '@/features/memories/audience-recipient-items';
 import { canApplyMemoryAudience } from '@/features/memories/memory-audience';
+import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
+import { SheetHeader } from '@/components/sheets/SheetHeader';
+import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 
 export type PrivacyMode = 'private' | 'all' | 'specific';
 
@@ -53,6 +53,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
 }, ref) {
   const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
+  const sheetChrome = useSheetChrome();
   const [search, setSearch] = useState('');
 
   // Draft states so Dismiss vs Apply changes function cleanly
@@ -165,68 +166,35 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
     onClose,
   ]);
 
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.4} pressBehavior="close" />
-    ),
-    []
-  );
 
   return (
     <BottomSheetModal
       ref={ref}
-      topInset={getSheetTopInset(insets.top)}
+      {...sheetChrome.props}
       index={0}
-      snapPoints={['92%']}
+      snapPoints={sheetChrome.snapPoints(['92%'])}
       enableDynamicSizing={false}
       stackBehavior="push"
       enablePanDownToClose
       onDismiss={resetDraft}
-      backdropComponent={renderBackdrop}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
-      handleStyle={SHEET_HEADER_HANDLE_STYLE}
-        handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3, width: 42, height: 4, borderRadius: 2 }}
-      backgroundStyle={{ backgroundColor: COLORS.background, borderTopLeftRadius: 28, borderTopRightRadius: 28 }}
     >
-      <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <View style={{ flex: 1, backgroundColor: COLORS.sheet }}>
         {/* ── Header ── */}
-        <View
-          style={{
-            paddingHorizontal: 20,
-            paddingTop: 0,
-            paddingBottom: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Text style={{ ...TYPE.sheetTitle, color: COLORS.textStrong, flex: 1, marginRight: 12 }}>
-            Who can see this story?
-          </Text>
-          <TouchableOpacity
-            onPress={handleDismiss}
-            activeOpacity={0.7}
-            hitSlop={8}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: COLORS.fillWeak,
-            }}
-          >
-            <X size={18} color={COLORS.textBase} strokeWidth={2} />
-          </TouchableOpacity>
-        </View>
+        <SheetHeader
+          title="Who can see this story?"
+          onClose={() => { resetDraft(); onClose(); }}
+          closeLabel="Close audience settings"
+          style={{ paddingHorizontal: 20 }}
+        />
 
         <BottomSheetScrollView
           style={{ flex: 1 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: 8, paddingBottom: 24 }}
+          contentContainerStyle={{ paddingTop: SHEET_GROUP_GAP, paddingBottom: 24 }}
         >
           {/* ── Top Two Cards: Private & Everyone ── */}
           <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20 }}>
@@ -527,61 +495,17 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
             paddingHorizontal: 20,
             paddingTop: 12,
             paddingBottom: Math.max(insets.bottom + 6, 20),
-            backgroundColor: COLORS.background,
+            backgroundColor: COLORS.sheet,
             borderTopWidth: 1,
             borderTopColor: COLORS.strokeWeaker,
           }}
         >
-          <TouchableOpacity
-            onPress={handleDismiss}
-            activeOpacity={0.8}
-            style={{
-              flex: 1,
-              height: 52,
-              borderRadius: 26,
-              backgroundColor: COLORS.fillWeak,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text
-              style={{
-                ...TYPE.body,
-                color: COLORS.textStrong,
-              }}
-            >
-              Dismiss
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleApply}
-            disabled={!canApply}
-            activeOpacity={0.85}
-            style={{
-              flex: 1.2,
-              height: 52,
-              borderRadius: 26,
-              backgroundColor: COLORS.brand,
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: COLORS.shadow,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.2,
-              shadowRadius: 8,
-              elevation: 4,
-              opacity: canApply ? 1 : 0.45,
-            }}
-          >
-            <Text
-              style={{
-                ...TYPE.body,
-                color: COLORS.textInverse,
-              }}
-            >
-              Apply changes
-            </Text>
-          </TouchableOpacity>
+          <Button variant="secondary" size="lg" rounded="full" className="h-14 flex-1" onPress={handleDismiss}>
+            Dismiss
+          </Button>
+          <Button size="lg" rounded="full" className="h-14 flex-1" disabled={!canApply} onPress={handleApply}>
+            Apply changes
+          </Button>
         </View>
       </View>
     </BottomSheetModal>

@@ -4,8 +4,11 @@ import { TextInput as RNTextInput, View, Text, TextInputProps, Animated, Platfor
 import { cn } from '@/lib/utils';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { minTouchTarget, mvs, radius as responsiveRadius, responsiveSpace } from '@/constants/responsive';
+import { minTouchTarget, mvs, responsiveSpace } from '@/constants/responsive';
 import { useVoiceTextField } from '@/features/voice-control/hooks';
+
+/** Every input field in the app uses 12px corners. */
+export const INPUT_RADIUS = 12;
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -18,7 +21,11 @@ interface InputProps extends TextInputProps {
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode;
   InputComponent?: any;
-  variant?: 'pill' | 'rounded';
+  /** `filled`: fillWeak with a strokeWeak border (form pages like Feedback). */
+  variant?: 'pill' | 'rounded' | 'filled';
+  /** Weak neutral stroke at rest, keeping the variant's fill (Settings inputs). */
+  bordered?: boolean;
+  /** @deprecated Inputs always use INPUT_RADIUS (12px); this prop is ignored. */
   rounded?: 'full' | 'xl' | 'lg' | number;
   /** What the host calls this field by voice; `false` keeps voice out. */
   voiceLabel?: string | false;
@@ -30,9 +37,10 @@ export function TextInput({
   hint,
   size = 'default',
   variant = 'pill',
-  rounded,
+  rounded: _rounded,
   containerClassName,
   inputClassName,
+  bordered = false,
   rightElement,
   leftElement,
   InputComponent,
@@ -54,6 +62,7 @@ export function TextInput({
     { enabled: props.editable !== false },
   );
   const isRounded = variant === 'rounded';
+  const isOutlined = isRounded || variant === 'filled' || bordered;
 
   // Animate from 0 (rest) to 1 (focused)
   const focusAnim = useRef(new Animated.Value(0)).current;
@@ -71,7 +80,7 @@ export function TextInput({
     ? COLORS.error
     : focusAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [isRounded ? COLORS.strokeWeak : COLORS.strokeWeaker, COLORS.brand],
+        outputRange: [isOutlined ? COLORS.strokeWeak : COLORS.strokeWeaker, COLORS.brand],
       });
 
   // Border width: 1 at rest for rounded → 1.5 on focus / always visible for errors
@@ -79,22 +88,15 @@ export function TextInput({
     ? 1.5
     : focusAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [isRounded ? 1 : 0, 1.5],
+        outputRange: [isOutlined ? 1 : 0, 1.5],
       });
 
   const inputHeight = isRounded
     ? (size === 'compact' ? minTouchTarget(46) : minTouchTarget(50))
     : (size === 'compact' ? minTouchTarget(48) : minTouchTarget(56));
 
-  const resolvedRadius = rounded
-    ? (typeof rounded === 'number'
-        ? (rounded >= 999 ? 999 : responsiveRadius(rounded))
-        : rounded === 'xl'
-          ? responsiveRadius(12)
-          : rounded === 'lg'
-            ? responsiveRadius(10)
-            : 999)
-    : (isRounded ? responsiveRadius(12) : (props.multiline ? responsiveRadius(20) : 999));
+  // Input fields always use 12px corners, never pill or large rounded shapes.
+  const resolvedRadius = INPUT_RADIUS;
 
   return (
     <View className={cn('gap-1.5', containerClassName)}>
@@ -116,7 +118,7 @@ export function TextInput({
           {
             flexDirection: 'row',
             alignItems: props.multiline ? 'flex-start' : 'center',
-            backgroundColor: isRounded ? COLORS.card : COLORS.fillWeaker,
+            backgroundColor: isRounded ? COLORS.card : variant === 'filled' ? COLORS.fillWeak : COLORS.fillWeaker,
             borderWidth,
             borderColor,
             borderRadius: resolvedRadius,

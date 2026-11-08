@@ -29,7 +29,7 @@ describe('create group sheet runtime safety', () => {
   test('uses Group copy and the functional persisted colour palette without member selection', () => {
     expect(createGroupSheet).toContain('GROUP_COLOR_PALETTE');
     expect(createGroupSheet).toContain('buildGroupPayload');
-    expect(createGroupSheet).toContain('Create Group');
+    expect(createGroupSheet).toContain('Create group');
     expect(createGroupSheet).not.toContain('Select Members');
     expect(createGroupSheet).not.toContain('useBeneficiaries');
     expect(createGroupSheet).not.toContain('Create Circle');

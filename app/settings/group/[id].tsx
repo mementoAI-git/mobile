@@ -1,63 +1,53 @@
 import type { ThemeColors } from '@/constants/tokens';
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, ImageBackground, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import ArrowLeft from 'lucide-react-native/icons/arrow-left';
-import UserRoundPlus from 'lucide-react-native/icons/user-round-plus';
-import Settings from 'lucide-react-native/icons/settings';
-import Trash2 from 'lucide-react-native/icons/trash';
-import FolderHeart from 'lucide-react-native/icons/folder-heart';
+import Settings2 from 'lucide-react-native/icons/settings-2';
+import Users from 'lucide-react-native/icons/users';
 import * as Haptics from 'expo-haptics';
 import { useUiStore } from '@/store';
 import { useGroups } from '@/hooks/queries/use-groups';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useRemoveGroupMember } from '@/hooks/mutations/use-group-mutations';
-import { COLORS, FONTS } from '@/constants/tokens';
-import { Avatar, Skeleton, EmptyState } from '@/components/ui';
+import { COLORS as LIGHT_COLORS } from '@/constants/tokens';
+import { Button, ResponsiveScreen, Skeleton } from '@/components/ui';
+import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';
+import { PersonCard } from '@/components/beneficiaries/PersonCard';
+import { BeneficiaryEmptyState } from '@/components/beneficiaries/BeneficiaryEmptyState';
+import { normalizeCollection } from '@/features/beneficiaries/collections';
+import { groupCardDetails, isGroupMember } from '@/features/beneficiaries/people-cards';
 import { GROUP_COLOR_PALETTE } from '@/features/beneficiaries/sheet-forms';
 import { TYPE } from '@/constants/typography';
-import { radius } from '@/constants/responsive';
-import { getSettingsHeaderLayout } from '@/features/settings/settings-header-layout';
+import type { IBeneficiary, IGroup } from '@/types';
 
-const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
-const layout = getSettingsHeaderLayout();
+// Web --group-on-color: dark ink on the pastel group colours in every theme.
+const GROUP_ON_COLOR = LIGHT_COLORS.textStrong;
 
+/** Mirrors web group-detail-page.tsx: coloured summary, "Group members" and member cards. */
 export default function GroupDetailScreen() {
   const COLORS = useThemeColors();
   const styles = useThemeStyles(createStyles);
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const openSheet = useUiStore((s) => s.openSheet);
-  
+
   const { data: groupsData, isLoading: loadingGroups } = useGroups();
   const { data: beneficiariesData, isLoading: loadingBeneficiaries } = useBeneficiaries();
-  
-  const { mutate: removeGroupMember } = useRemoveGroupMember();
+  const { mutateAsync: removeGroupMember } = useRemoveGroupMember();
 
-  // Find the specific group
-  const group = useMemo(() => {
-    if (!groupsData || !id) return null;
-    let list: any[] = [];
-    if (Array.isArray(groupsData)) list = groupsData;
-    else if (Array.isArray((groupsData as any).docs)) list = (groupsData as any).docs;
-    return list.find(g => g._id === id);
-  }, [groupsData, id]);
+  const group = useMemo(
+    () => normalizeCollection<IGroup>(groupsData).find((item) => item._id === id) ?? null,
+    [groupsData, id],
+  );
 
-  // Find members of this group
+  // People whose groups include this one, plus anyone the group lists directly.
   const members = useMemo(() => {
-    if (!beneficiariesData || !id) return [];
-    let list: any[] = [];
-    if (Array.isArray(beneficiariesData)) list = beneficiariesData;
-    else if (Array.isArray((beneficiariesData as any).docs)) list = (beneficiariesData as any).docs;
-    
-    return list.filter((b) => {
-      if (!b.groups || !Array.isArray(b.groups)) return false;
-      return b.groups.some((g: any) => g === id || g._id === id);
-    });
-  }, [beneficiariesData, id]);
+    const people = normalizeCollection<IBeneficiary>(beneficiariesData);
+    return id ? people.filter((person) => isGroupMember(person, group, id)) : [];
+  }, [beneficiariesData, group, id]);
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();
@@ -76,244 +66,117 @@ export default function GroupDetailScreen() {
     openSheet('create-group', { editData: group });
   }, [openSheet, group]);
 
-  const handleRemoveMember = useCallback((memberId: string, memberName: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const handleRemoveMember = useCallback((member: IBeneficiary) => {
+    Haptics.selectionAsync();
+    const name = member.name || member.email || 'this person';
     openSheet('security-confirmation', {
       kind: 'remove-member',
-      title: 'Remove member?',
-      description: `Are you sure you want to remove ${memberName} from this group?`,
-      confirmLabel: 'Remove',
-      isDestructive: true,
+      title: `Remove ${name} from this group?`,
+      confirmLabel: 'Remove from group',
       onConfirm: async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        await new Promise<void>((resolve, reject) => {
-          // Trigger the mutation to remove the group from this beneficiary
-          removeGroupMember(
-            { beneficiaryId: memberId, groupId: id },
-            {
-              onSuccess: () => {
-                useUiStore.getState().closeSheet();
-                resolve();
-              },
-              onError: reject,
-            }
-          );
-        });
-      }
+        if (!member._id || !id) return;
+        await removeGroupMember({ beneficiaryId: member._id, groupId: id });
+      },
     });
   }, [id, openSheet, removeGroupMember]);
 
-  if (loadingGroups || loadingBeneficiaries) {
-    return (
-      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-        <View style={styles.header}>
-          <View style={styles.backButton}><Skeleton style={{ width: '100%', height: '100%', borderRadius: 22 }} /></View>
-        </View>
-        <View style={{ paddingVertical: 24, paddingHorizontal: 16, gap: 16 }}>
-          <Skeleton style={{ height: 120, width: '100%', borderRadius: 24 }} />
-          <Skeleton style={{ height: 80, width: '100%', borderRadius: 24, marginTop: 24 }} />
-          <Skeleton style={{ height: 80, width: '100%', borderRadius: 24 }} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!group) {
-    return (
-      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={handleBack}
-            activeOpacity={0.78}
-            style={styles.backButton}
-            accessibilityLabel="Go back"
-          >
-            <ArrowLeft size={23} color={COLORS.textBase} />
-          </TouchableOpacity>
-        </View>
-        <EmptyState
-          icon={FolderHeart}
-          title="Group not found"
-          description="This group may have been removed or no longer exists."
-          actionLabel="Back to groups"
-          onAction={handleBack}
-        />
-      </SafeAreaView>
-    );
-  }
-
-  const swatchColor = GROUP_COLOR_PALETTE[group.color ?? 1]?.color ?? COLORS.info;
-  const createdDate = group.created_at 
-    ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(group.created_at))
-    : null;
+  const loading = loadingGroups || loadingBeneficiaries;
+  const swatchColor = group ? GROUP_COLOR_PALETTE[group.color ?? 1]?.color ?? COLORS.info : COLORS.info;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBack}
-          activeOpacity={0.78}
-          style={styles.backButton}
-          accessibilityLabel="Go back"
-        >
-          <ArrowLeft size={layout.iconSize} color={COLORS.textBase} />
-        </TouchableOpacity>
-        
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity
-            onPress={handleAddMember}
-            activeOpacity={0.78}
-            style={styles.actionPill}
-          >
-            <UserRoundPlus size={16} color={COLORS.textStrong} style={{ marginRight: 6 }} />
-            <Text style={{ ...TYPE.label, color: COLORS.textStrong }}>Add member</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            onPress={handleEditGroup}
-            activeOpacity={0.78}
-            style={styles.iconButton}
-          >
-            <Settings size={20} color={COLORS.textStrong} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <SettingsSubpageHeader title={group?.name || 'Group'} onBack={handleBack} />
+      <ResponsiveScreen maxWidth={720}>
 
-      <View className="flex-1">
-        <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
-        <ScrollView 
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 48 }}
-        >
-          {/* ── Hero Banner ── */}
-          <View style={[styles.heroBanner, { backgroundColor: swatchColor }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ ...TYPE.sectionTitle, color: COLORS.textInverse, marginBottom: 4 }}>
-                {group.name}
-              </Text>
-              {createdDate && (
-                <Text style={{ ...TYPE.label, color: 'rgba(255,255,255,0.8)' }}>
-                  Created {createdDate}
+        {loading ? (
+          <View style={{ gap: 16, paddingTop: 8 }}>
+            <Skeleton className="h-[96px] w-full rounded-[20px]" />
+            <Skeleton className="h-[96px] w-full rounded-[20px]" />
+          </View>
+        ) : !group ? (
+          <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak, paddingTop: 8 }}>
+            This group no longer exists.
+          </Text>
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: 8, paddingBottom: 48, gap: 40 }}>
+            <View style={[styles.summary, { backgroundColor: swatchColor }]} accessibilityLabel="Group summary">
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text numberOfLines={1} style={{ ...TYPE.profileName, color: GROUP_ON_COLOR }}>{group.name}</Text>
+                <Text style={{ ...TYPE.bodySmall, color: GROUP_ON_COLOR, marginTop: 4 }}>
+                  {groupCardDetails(group, members.length).join('  ·  ')}
                 </Text>
+              </View>
+              <TouchableOpacity
+                onPress={handleEditGroup}
+                activeOpacity={0.78}
+                accessibilityRole="button"
+                accessibilityLabel="Group settings"
+                style={styles.settingsButton}
+              >
+                <Settings2 size={20} color={GROUP_ON_COLOR} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ gap: 16 }}>
+              <View style={styles.membersHeader}>
+                <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>Group members</Text>
+                <Button
+                  variant="secondary"
+                  rounded="full"
+                  className="h-11 px-4"
+                  leftIcon={<Users size={20} color={COLORS.textStrong} />}
+                  onPress={handleAddMember}
+                >
+                  Manage
+                </Button>
+              </View>
+
+              {members.length === 0 ? (
+                <BeneficiaryEmptyState mode="members" />
+              ) : (
+                members.map((member) => (
+                  <PersonCard
+                    key={member._id}
+                    name={member.name || member.email || 'Unknown person'}
+                    email={member.email}
+                    user={member.user}
+                    details={member.relationship ? [member.relationship.charAt(0).toUpperCase() + member.relationship.slice(1)] : []}
+                    onOptions={() => handleRemoveMember(member)}
+                  />
+                ))
               )}
             </View>
-            <Text style={{ ...TYPE.body, color: COLORS.textInverse }}>
-              {members.length} {members.length === 1 ? 'Person' : 'People'}
-            </Text>
-          </View>
-
-          {/* ── Members List ── */}
-          <Text style={{ ...TYPE.body, color: COLORS.textStrong, marginTop: 32, marginBottom: 16, paddingHorizontal: 4 }}>
-            Group members
-          </Text>
-
-          {members.length === 0 ? (
-            <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-              <Text style={{ ...TYPE.body, color: COLORS.textWeak }}>
-                No members in this group yet.
-              </Text>
-            </View>
-          ) : (
-            <View style={{ gap: 12 }}>
-              {members.map(member => {
-                const name = member.name || member.email || 'Unknown';
-                const statusText = member.status === 'pending' ? 'Pending invite' : (member.relationship || 'Member');
-                
-                return (
-                  <View key={member._id} style={styles.memberCard}>
-                    <View style={{ marginRight: 16 }}>
-                      <Avatar
-                        uri={member.user?.picture_url || member.avatar}
-                    userId={member.user?._id} seed={member.user?.email || member.email}
-                        name={name}
-                        size="md"
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ ...TYPE.body, color: COLORS.textStrong }} numberOfLines={1}>
-                        {name}
-                      </Text>
-                      {member.email && (
-                        <Text style={{ ...TYPE.label, color: COLORS.textWeak, marginTop: 2 }} numberOfLines={1}>
-                          {member.email}
-                        </Text>
-                      )}
-                      <Text style={{ ...TYPE.label, color: COLORS.textMuted, marginTop: 2 }}>
-                        {statusText}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => handleRemoveMember(member._id, name)}
-                      activeOpacity={0.7}
-                      style={styles.deleteButton}
-                    >
-                      <Trash2 size={20} color={COLORS.error} strokeWidth={1.8} />
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-        </ScrollView>
-      </View>
+          </ScrollView>
+        )}
+      </ResponsiveScreen>
     </SafeAreaView>
   );
 }
 
-const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
-  header: {
-    height: layout.height,
+const createStyles = (_colors: ThemeColors) => StyleSheet.create({
+  summary: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: layout.horizontalPadding,
+    gap: 16,
+    padding: 20,
+    borderRadius: 20,
   },
-  backButton: {
+  settingsButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.fillWeak,
+    // Web: color-mix(group-on-color 10%, transparent).
+    backgroundColor: LIGHT_COLORS.strokeWeak,
   },
-  actionPill: {
+  membersHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    height: 44,
-    paddingHorizontal: 16,
-    borderRadius: 22,
-    backgroundColor: COLORS.fillWeak,
-  },
-  iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.fillWeak,
-  },
-  heroBanner: {
-    flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-    borderRadius: radius(24),
+    gap: 12,
   },
-  memberCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: COLORS.card,
-    borderRadius: radius(24),
-  },
-  deleteButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 22,
-    backgroundColor: COLORS.fillWeaker,
-  }
 });

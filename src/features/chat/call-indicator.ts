@@ -1,43 +1,13 @@
-/**
- * Routes iOS presents as native full-screen modals. They cover the whole
- * window, including the call indicator, so it is not drawn under them.
- * Android draws these routes inside the navigator, so they keep it.
- */
-export const IOS_FULL_SCREEN_MODAL_PATHS: ReadonlySet<string> = new Set([
-  '/coming-soon',
-  '/share',
-  '/editor',
-  '/create',
-  '/article',
-]);
-
-export function shouldShowCallIndicator({
-  isConnected,
-  pathname,
-  platform,
-  callPath,
-}: {
-  isConnected: boolean;
-  pathname: string;
-  platform: string;
-  callPath: string;
-}): boolean {
-  if (!isConnected || pathname === callPath) return false;
-  return !(platform === 'ios' && IOS_FULL_SCREEN_MODAL_PATHS.has(pathname));
-}
-
 /** Live means connected and not hanging up. Call surfaces show only then. */
 export function isCallLive(voice: { isConnected: boolean; isEnding: boolean }): boolean {
   return voice.isConnected && !voice.isEnding;
 }
 
-export type CallIndicatorVariant = 'island' | 'statusBar';
-
 /** iPhones with a Dynamic Island have a top safe-area inset of 59pt or more. */
 export const ISLAND_MIN_TOP_INSET = 54;
 
-export function callIndicatorVariant(platform: string, topInset: number): CallIndicatorVariant {
-  return platform === 'ios' && topInset >= ISLAND_MIN_TOP_INSET ? 'island' : 'statusBar';
+export function hasDynamicIsland(platform: string, topInset: number): boolean {
+  return platform === 'ios' && topInset >= ISLAND_MIN_TOP_INSET;
 }
 
 /**
@@ -55,9 +25,4 @@ export function islandCapsuleFrame(topInset: number) {
     radius: 24,
     rowHeight: 22,
   };
-}
-
-export function callIndicatorStatus(voice: { isMuted: boolean; isAiSpeaking: boolean }): string {
-  if (voice.isMuted) return 'Muted';
-  return voice.isAiSpeaking ? 'Memento is speaking' : 'Listening';
 }

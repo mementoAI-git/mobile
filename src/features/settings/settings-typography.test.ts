@@ -8,14 +8,6 @@ describe('Settings typography', () => {
       new URL('../../components/settings/SettingsHubRow.tsx', import.meta.url),
       'utf8',
     );
-    const billingDetails = readFileSync(
-      new URL('../../components/billing/BillingDetailsSection.tsx', import.meta.url),
-      'utf8',
-    );
-    const paymentMethods = readFileSync(
-      new URL('../../components/billing/BillingPaymentMethodsSection.tsx', import.meta.url),
-      'utf8',
-    );
     const invoices = readFileSync(
       new URL('../../components/billing/BillingInvoicesPanel.tsx', import.meta.url),
       'utf8',
@@ -31,12 +23,6 @@ describe('Settings typography', () => {
 
     expect(hubRow).toContain('style={[TYPE.body, { flex: 1, color: COLORS.textStrong }]}');
     expect(profile).toContain('TYPE.body');
-    expect(billingDetails).not.toContain('TYPE.sectionTitle');
-    expect(billingDetails).toContain('Billing details');
-    expect(billingDetails).toContain('Billing email');
-    expect(paymentMethods).not.toContain('TYPE.sectionTitle');
-    expect(paymentMethods).toContain('Payment methods');
-    expect(paymentMethods).not.toContain('className="h-12 px-4"');
     expect(tabs).not.toContain('h-8');
     expect(tabs).not.toContain('rounded-lg');
     expect(invoices.match(/TYPE\.cardTitle/g)).toHaveLength(1);
@@ -57,7 +43,7 @@ describe('Settings typography', () => {
       '../../../app/settings/activities.tsx',
       '../../components/settings/SettingsHubRow.tsx',
       '../../components/security/SecurityCredentialRow.tsx',
-      '../../components/beneficiaries/BeneficiaryPersonRow.tsx',
+      '../../components/beneficiaries/PersonCard.tsx',
       '../../components/beneficiaries/BeneficiaryGroupRow.tsx',
       '../../components/beneficiaries/BeneficiaryEmptyState.tsx',
       '../../components/settings/SettingsSubpageHeader.tsx',
@@ -86,8 +72,8 @@ describe('Settings typography', () => {
     ].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8'));
 
     for (const source of settingsSheets) {
-      expect(source).toContain("@/constants/typography");
-      expect(source).toMatch(/TYPE\.(?:uiTitle|sectionTitle|cardTitle|label|body|bodySmall)/);
+      expect(source.includes("@/constants/typography") || source.includes('<SheetHeader')).toBe(true);
+      if (!source.includes('<SheetHeader')) expect(source).toMatch(/TYPE\.(?:uiTitle|sectionTitle|cardTitle|label|body|bodySmall)/);
       expect(source).not.toContain('settings-typography');
       expect(source).not.toContain('SETTINGS_TYPE');
     }
@@ -125,7 +111,8 @@ describe('Settings typography', () => {
     expect(groupDetail).not.toContain('...TYPE.bodyLarge, color: COLORS.textInverse');
     expect(groupDetail).not.toContain('...TYPE.bodyLarge, color: COLORS.textStrong, marginTop: 32');
     expect(groupDetail).not.toContain('...TYPE.cardTitle, color: COLORS.textStrong }} numberOfLines={1}');
-    expect(groupDetail).toContain('...TYPE.body, color: COLORS.textStrong }} numberOfLines={1}');
+    expect(groupDetail).toContain('...TYPE.profileName, color: GROUP_ON_COLOR');
+    expect(groupDetail).toContain('<PersonCard');
   });
 
   test('uses screenTitle for top-level screen headers', () => {
@@ -141,13 +128,13 @@ describe('Settings typography', () => {
     expect(account).toContain('...TYPE.screenTitle');
     expect(account).not.toContain('...TYPE.sectionTitle,\n              lineHeight: 28,\n            }}\n          >\n            Account');
 
-    expect(insights).toContain('...TYPE.screenTitle');
+    expect(insights).toContain('TYPE.screenTitle');
     expect(insights).not.toContain('...TYPE.sectionTitle,\n    lineHeight: 28,\n  },\n  biography:');
   });
 
   test('beneficiary list rows and screen layout use semantic typography and single header', () => {
     const personRow = readFileSync(
-      new URL('../../components/beneficiaries/BeneficiaryPersonRow.tsx', import.meta.url),
+      new URL('../../components/beneficiaries/PersonCard.tsx', import.meta.url),
       'utf8',
     );
     const groupRow = readFileSync(
@@ -160,13 +147,13 @@ describe('Settings typography', () => {
     );
 
     expect(personRow).not.toContain('style={TYPE.cardTitle}');
-    expect(personRow).toContain('...TYPE.body, color: COLORS.textStrong');
+    expect(personRow).toContain('...TYPE.profileName, color: COLORS.textStrong');
     expect(personRow).toContain('...TYPE.bodySmall, color: COLORS.textWeak');
 
     expect(groupRow).not.toContain('style={TYPE.cardTitle}');
-    expect(groupRow).toContain('...TYPE.body, color: COLORS.textStrong');
+    expect(groupRow).toContain('...TYPE.profileName, color: COLORS.textStrong');
 
-    expect(beneficiariesScreen).toContain('<SettingsSubpageHeader title="Beneficiaries"');
+    expect(beneficiariesScreen).toContain('<SettingsSubpageHeader title="People &" accent="groups"');
     expect(beneficiariesScreen).not.toContain('Beneficiaries and groups');
   });
 
@@ -224,14 +211,6 @@ describe('Settings typography', () => {
   });
 
   test('billing overview cards and tabs use journal cards and semantic tokens', () => {
-    const billingDetails = readFileSync(
-      new URL('../../components/billing/BillingDetailsSection.tsx', import.meta.url),
-      'utf8',
-    );
-    const paymentMethods = readFileSync(
-      new URL('../../components/billing/BillingPaymentMethodsSection.tsx', import.meta.url),
-      'utf8',
-    );
     const storageCard = readFileSync(
       new URL('../../components/billing/BillingStorageCard.tsx', import.meta.url),
       'utf8',
@@ -245,12 +224,6 @@ describe('Settings typography', () => {
       'utf8',
     );
 
-    expect(billingDetails).toContain('rounded-[24px]');
-    expect(billingDetails).not.toContain('border border-stroke-weaker');
-    expect(billingDetails).not.toContain('border-t border-stroke-weak');
-    expect(paymentMethods).toContain('rounded-[24px]');
-    expect(paymentMethods).not.toContain('border border-stroke-weaker');
-    expect(paymentMethods).not.toContain('border-t border-stroke-weak');
     expect(storageCard).toContain('rounded-[24px]');
     expect(storageCard).not.toContain('border border-stroke-weaker');
     expect(tabs).toContain('rounded-full');
@@ -258,21 +231,53 @@ describe('Settings typography', () => {
     expect(banner).not.toContain('COLORS.info, COLORS.blue6');
   });
 
-  test('feedback settings screen uses journal cards and shared subpage header', () => {
+  test('feedback settings screen mirrors the web feedback page', () => {
     const feedbackScreen = readFileSync(
       new URL('../../../app/settings/feedback.tsx', import.meta.url),
       'utf8',
     );
 
-    expect(feedbackScreen).toContain('<SettingsSubpageHeader title="Send feedback"');
-    expect(feedbackScreen).not.toContain('h-[88px]');
-    expect(feedbackScreen).toContain('rounded-[24px]');
-    expect(feedbackScreen).not.toContain('border border-stroke-weaker');
-    expect(feedbackScreen).not.toContain('border-t border-stroke-weaker');
-    expect(feedbackScreen).toContain('className="h-14 rounded-full"');
-    expect(feedbackScreen).not.toContain('rounded-2xl bg-card');
+    expect(feedbackScreen).toContain('<SettingsSubpageHeader title="Send" accent="feedback"');
+    expect(feedbackScreen).toContain('Share a bug, an idea, or something we could improve.');
+    expect(feedbackScreen).toContain('label="Message"');
+    expect(feedbackScreen).toContain('Add screenshots');
+    expect(feedbackScreen).toContain('border border-stroke-weak bg-fill-weak');
+    expect(feedbackScreen).toContain('variant="filled"');
+    expect(feedbackScreen).not.toContain('Cancel');
+    expect(feedbackScreen).not.toContain('bg-settings-card');
+    expect(feedbackScreen).not.toContain('OPTIONAL');
     expect(feedbackScreen).toContain('COLORS.textStrong');
     expect(feedbackScreen).toContain('COLORS.textWeak');
-    expect(feedbackScreen).toContain('COLORS.textMuted');
+  });
+});
+
+describe('settings subpage background', () => {
+  test('every settings page sits on the same plain page background as the hub, with no texture overlay', () => {
+    const { readdirSync, readFileSync, statSync } = require('node:fs');
+    const { join } = require('node:path');
+    const walk = (dir: string): string[] => readdirSync(dir).flatMap((name: string) => {
+      const path = join(dir, name);
+      return statSync(path).isDirectory() ? walk(path) : path.endsWith('.tsx') ? [path] : [];
+    });
+    for (const file of walk('app/settings')) {
+      const source = readFileSync(file, 'utf8');
+      expect({ file, overlay: /source=\{PATTERN\}/.test(source) }).toEqual({ file, overlay: false });
+    }
+  });
+});
+
+describe('People & groups layout', () => {
+  test('matches Security: full-width header, then the page column with the tabs as the list section header', () => {
+    const { readFileSync } = require('node:fs');
+    const security = readFileSync('app/settings/account.tsx', 'utf8');
+    const people = readFileSync('app/settings/beneficiaries.tsx', 'utf8');
+    const group = readFileSync('app/settings/group/[id].tsx', 'utf8');
+    for (const source of [security, people, group]) {
+      expect(source.indexOf('<SettingsSubpageHeader')).toBeLessThan(source.indexOf('<ResponsiveScreen'));
+    }
+    expect(security).toContain('content: { paddingTop: 16, paddingBottom: 48 }');
+    expect(people).toContain('content: { paddingTop: 16, paddingBottom: 48 }');
+    expect(people).toContain('toolbar: {\n    marginBottom: 24,');
+    expect(people.indexOf('styles.toolbar')).toBeGreaterThan(people.indexOf('<ScrollView'));
   });
 });

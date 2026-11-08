@@ -21,6 +21,8 @@ export function useBillingSettingsLogic() {
   const { summary, isLoading: subLoading, isProOrAbove, refetch: refetchSub } = useSubscription();
   const { data: invoices = [], isLoading: invoicesLoading, refetch: refetchInvoices } = useBillingInvoices(activeTab === 'invoices');
   const { data: usage, isLoading: usageLoading, refetch: refetchUsage } = useBillingUsage();
+  // Store purchases keep their card and address in the store.
+  const storeBilled = summary?.provider === 'apple' || summary?.provider === 'google';
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const openSheet = useUiStore((state) => state.openSheet);
@@ -50,17 +52,23 @@ export function useBillingSettingsLogic() {
     }
   };
 
-  const renewLabel = () => {
-    if (!summary) return '—';
-    if (summary.trial_ends_at && summary.status === 'trialing') {
-      const d = dayjs(summary.trial_ends_at);
-      return d.isValid() ? `Trial ends ${d.format('MMM D, YYYY')}` : 'Trial active';
-    }
-    if (summary.current_period_end) {
-      const d = dayjs(summary.current_period_end);
-      return d.isValid() ? `Renews ${d.format('MMM D, YYYY')}` : '—';
-    }
-    return '—';
+  /** Web billing: "Trial ends", "Access until" or "Renews", with the date. */
+  const periodLabel = (() => {
+    if (!summary || !isProOrAbove) return null;
+    const trialing = summary.status === 'trialing';
+    const end = dayjs(trialing ? summary.trial_ends_at : summary.current_period_end);
+    if (!end.isValid() || !(trialing ? summary.trial_ends_at : summary.current_period_end)) return null;
+    const prefix = trialing
+      ? 'Trial ends'
+      : summary.status === 'cancelled' || summary.cancel_at_period_end
+        ? 'Access until'
+        : 'Renews';
+    return `${prefix} ${end.format('MMM D, YYYY')}`;
+  })();
+
+  const openStoreManagement = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    void iapService.openSubscriptionManagement(undefined, summary?.provider === 'google' ? 'google' : 'apple');
   };
 
   const [restoreBusy, setRestoreBusy] = useState(false);
@@ -157,8 +165,10 @@ export function useBillingSettingsLogic() {
     resumeBusy,
     handleRefresh,
     refreshing,
-    renewLabel,
+    periodLabel,
     handlePortal,
+    openStoreManagement,
+    storeBilled,
     handlePromo,
     handleCancel,
     handleResume,

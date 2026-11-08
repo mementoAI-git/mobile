@@ -1,149 +1,128 @@
-import { ThemedCardBackground } from '@/components/ui/ThemedCardBackground';
-import type { ThemeColors } from '@/constants/tokens';
-import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
-import React, { useCallback, useMemo, useState } from 'react';
-import {
-  ImageBackground,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
-import { TouchableOpacity } from '@/components/ui/Touchable';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BackHandler, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { useQueryClient } from '@tanstack/react-query';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import Settings from 'lucide-react-native/icons/settings';
-import Award from 'lucide-react-native/icons/award';
-import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
+import Archive from 'lucide-react-native/icons/archive';
+import { TouchableOpacity } from '@/components/ui/Touchable';
+import { EnrichmentFieldsList } from '@/components/insights/EnrichmentFieldsList';
 import {
-  InsightsContentCard,
-  type InsightsTab,
-} from '@/components/account/InsightsContentCard';
-
-import { COLORS, FONTS } from '@/constants/tokens';
+  EnrichmentFieldDetail,
+  InsightDetail,
+  ObservationDetail,
+} from '@/components/insights/InsightDetailViews';
+import { InsightsMessage } from '@/components/insights/InsightsPrimitives';
+import { InsightsPanel } from '@/components/insights/InsightsPanel';
+import { MemoryStatistics } from '@/components/insights/MemoryStatistics';
+import { MilestonesPanel } from '@/components/insights/MilestonesPanel';
+import { ObservationList } from '@/components/insights/ObservationList';
+import type { EnrichmentCategory } from '@/constants/enrichment';
+import { queryKeys } from '@/constants/query-keys';
+import type { ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { Skeleton } from '@/components/ui';
-import { calculateMilestones } from '@/features/insights/milestone-celebrations';
-import { useProfile } from '@/hooks/queries/use-profile';
-import { useUserStats, useCapsuleStats, useMemoriesStats } from '@/hooks/queries/use-overview';
-import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
-import { useUserStore } from '@/store';
 import {
-  usePersona,
-  useUserContext,
-} from '@/hooks/queries/use-persona';
+  INSIGHTS_SECTIONS,
+  getEnrichmentField,
+  isPreference,
+  toObservationItem,
+  type Insight,
+  type InsightSource,
+  type InsightsSection,
+  type ObservationItem,
+} from '@/features/insights/insights-model';
+import { mementoRoute } from '@/features/chat/memento-links';
+import { useObservations } from '@/hooks/queries/use-insights';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 
-const PATTERN = require('../assets/images/backgrounds/welcome_bg.png');
-const STREAK_BG = require('../assets/images/backgrounds/streak_card_bg.png');
+type DetailView =
+  | { kind: 'insight'; insight: Insight }
+  | { kind: 'observation'; item: ObservationItem }
+  | { kind: 'field'; field: EnrichmentCategory };
 
-const TABS: { key: InsightsTab; label: string }[] = [
-  { key: 'enrichment', label: 'Enrichment score' },
-  { key: 'insights', label: 'Insights' },
-  { key: 'notes', label: 'Notes' },
-  { key: 'preferences', label: 'Preferences' },
-];
-
-function InsightsSkeleton() {
-  return (
-    <View style={{ paddingHorizontal: 16, marginTop: 24, gap: 18 }}>
-      <Skeleton className="h-[280px] w-full rounded-[24px]" />
-      <Skeleton className="h-[300px] w-full rounded-[24px]" />
-    </View>
-  );
+function toSection(value: unknown): InsightsSection | undefined {
+  return INSIGHTS_SECTIONS.find((entry) => entry.key === value)?.key;
 }
 
 export default function InsightsScreen() {
-  const COLORS = useThemeColors();
+  const colors = useThemeColors();
   const styles = useThemeStyles(createStyles);
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<InsightsTab>('enrichment');
-  const user = useUserStore((s) => s.user);
-  const { data: profile } = useProfile();
-  const { data: stats, isLoading: statsLoading } = useUserStats();
-  const { data: memoriesStats } = useMemoriesStats();
-  const { data: capsuleStats } = useCapsuleStats();
-  const { data: beneficiariesRaw } = useBeneficiaries();
-  const { data: persona } = usePersona();
-  const { data: context } = useUserContext();
+  const queryClient = useQueryClient();
+  const params = useLocalSearchParams<{ observation?: string; section?: string }>();
+  // ?section= opens a tab directly, as the Account enrichment card does.
+  const [section, setSection] = useState<InsightsSection>(() => toSection(params.section) ?? 'observations');
+  const [history, setHistory] = useState<DetailView[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const view = history.at(-1);
 
-  const insightSource = persona ?? context;
-  const insights = useMemo(
-    () => [
-      ...(insightSource?.goals_and_aspirations ?? []),
-      ...(insightSource?.emotional_state_trends ?? []),
-      ...(insightSource?.current_priority ?? []),
-    ],
-    [insightSource],
-  );
-  const notes = insightSource?.important_notes ?? [];
-  const preferences = insightSource?.key_preferences ?? [];
-  const nickname = user?.nickname?.trim() || profile?.nickname?.trim();
-  const firstName = user?.first_name?.trim() || profile?.first_name?.trim();
-  const gender = user?.gender || profile?.gender;
+  const { data, error, isLoading, refetch } = useObservations();
+  const loaded = data != null;
+  const generating = Boolean(data?.generating);
+  const all = useMemo(() => data?.observations ?? [], [data?.observations]);
+  const observations = useMemo(() => all.filter((item) => !isPreference(item)).map(toObservationItem), [all]);
+  const preferences = useMemo(() => all.filter(isPreference).map(toObservationItem), [all]);
 
-  const pronounSubject = gender === 'female' ? 'She' : gender === 'male' ? 'He' : 'They';
-  const pronounSubjectLower = gender === 'female' ? 'she' : gender === 'male' ? 'he' : 'they';
-  const pronounPossessive = gender === 'female' ? 'Her' : gender === 'male' ? 'His' : 'Their';
-  const pronounPossessiveLower = gender === 'female' ? 'her' : gender === 'male' ? 'his' : 'their';
-
-  // Resolved identity: nickname > first name > third-person pronoun
-  const resolvedName = nickname || firstName;
-
-  const sanitizeText = useCallback((text: string) => {
-    if (!text) return '';
-    if (resolvedName) {
-      return text
-        .replace(/\bThe user's\b/g, `${resolvedName}'s`)
-        .replace(/\bthe user's\b/g, `${resolvedName}'s`)
-        .replace(/\bThe user\b/g, resolvedName)
-        .replace(/\bthe user\b/g, resolvedName);
-    }
-    return text
-      .replace(/\bThe user's\b/g, pronounPossessive)
-      .replace(/\bthe user's\b/g, pronounPossessiveLower)
-      .replace(/\bThe user\b/g, pronounSubject)
-      .replace(/\bthe user\b/g, pronounSubjectLower);
-  }, [resolvedName, pronounPossessive, pronounPossessiveLower, pronounSubject, pronounSubjectLower]);
-
-  const sanitizedInsights = useMemo(() => {
-    return insights.map(sanitizeText);
-  }, [insights, sanitizeText]);
-
-  const sanitizedNotes = useMemo(() => {
-    return notes.map((note: string) => sanitizeText(note));
-  }, [notes, sanitizeText]);
-
-  const sanitizedPreferences = useMemo(() => {
-    return preferences.map(sanitizeText);
-  }, [preferences, sanitizeText]);
-
-  const { milestoneStats, milestones } = useMemo(() => {
-    const memoryCount = Number(stats?.stories_count ?? memoriesStats?.stories_count) || 0;
-    const streakDays = Number(user?.streak ?? stats?.streak_count ?? profile?.streak) || 0;
-    const capsuleCount = Number(capsuleStats?.scheduled_count ?? capsuleStats?.delivered_count) || 0;
-    const beneficiaryCount = (() => {
-      if (stats?.beneficiary_count != null && Number(stats.beneficiary_count) > 0) {
-        return Number(stats.beneficiary_count);
-      }
-      if (Array.isArray(beneficiariesRaw)) return beneficiariesRaw.length;
-      if ((beneficiariesRaw as any)?.totalDocs != null) return Number((beneficiariesRaw as any).totalDocs);
-      if ((beneficiariesRaw as any)?.docs) return (beneficiariesRaw as any).docs.length;
-      return 0;
-    })();
-
-    const list = calculateMilestones({
-      memoryCount,
-      streakDays,
-      capsuleCount,
-      enrichmentScore: Number(stats?.enrichment_score) || 0,
-      beneficiaryCount,
+  // Memento can forget a note while it is open, so its page closes with it.
+  useEffect(() => {
+    if (!loaded) return;
+    const ids = new Set(all.map((item) => item.id));
+    setHistory((current) => {
+      const kept = current.filter((entry) => entry.kind !== 'observation' || ids.has(entry.item.id));
+      return kept.length === current.length ? current : kept;
     });
+  }, [all, loaded]);
 
-    return {
-      milestoneStats: { memoryCount, streakDays, capsuleCount, beneficiaryCount },
-      milestones: list,
-    };
-  }, [stats, memoriesStats, user, profile, capsuleStats, beneficiariesRaw]);
+  // ?observation=<id> opens that note, as chat links and voice do.
+  const requested = typeof params.observation === 'string' ? params.observation : undefined;
+  useEffect(() => {
+    if (!loaded || !requested) return;
+    const found = all.find((entry) => entry.id === requested);
+    if (!found) return;
+    const item = toObservationItem(found);
+    setSection(isPreference(found) ? 'preferences' : 'observations');
+    setHistory((current) => {
+      const top = current.at(-1);
+      return top?.kind === 'observation' && top.item.id === item.id ? current : [...current, { kind: 'observation', item }];
+    });
+    router.setParams({ observation: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, requested]);
+
+  useEffect(() => {
+    const requestedSection = toSection(params.section);
+    if (!requestedSection) return;
+    setSection(requestedSection);
+    setHistory([]);
+    router.setParams({ section: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.section]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [history.length]);
+
+  const openView = useCallback((next: DetailView) => setHistory((current) => [...current, next]), []);
+  const goBack = useCallback(() => {
+    Haptics.selectionAsync();
+    setHistory((current) => current.slice(0, -1));
+  }, []);
+
+  // Android back steps out of a details page before leaving Insights.
+  useFocusEffect(
+    useCallback(() => {
+      if (!history.length) return undefined;
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        setHistory((current) => current.slice(0, -1));
+        return true;
+      });
+      return () => subscription.remove();
+    }, [history.length]),
+  );
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync();
@@ -156,215 +135,173 @@ export default function InsightsScreen() {
     router.push('/settings');
   }, [router]);
 
-  const selectTab = useCallback((tab: InsightsTab) => {
+  const selectSection = useCallback((next: InsightsSection) => {
     Haptics.selectionAsync();
-    setActiveTab(tab);
+    setSection(next);
   }, []);
 
-  const achievedCount = useMemo(
-    () => milestones.filter((m) => m.achieved).length,
-    [milestones],
+  const openObservation = useCallback((item: ObservationItem) => openView({ kind: 'observation', item }), [openView]);
+  const openInsight = useCallback((insight: Insight) => openView({ kind: 'insight', insight }), [openView]);
+  const openField = useCallback((field: EnrichmentCategory) => openView({ kind: 'field', field }), [openView]);
+
+  const viewSource = useCallback(
+    (source: InsightSource) => {
+      router.push(mementoRoute({ kind: source.type === 'conversation' ? 'conversation' : 'story', id: source.id }));
+    },
+    [router],
   );
 
+  const reflectOn = useCallback(
+    (field: EnrichmentCategory) => {
+      router.push({
+        pathname: '/(tabs)/chat',
+        params: {
+          discussText: `I’d like to reflect on ${getEnrichmentField(field).label.toLowerCase()}.`,
+          discussId: `${Date.now()}`,
+        },
+      });
+    },
+    [router],
+  );
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.allSettled([
+      queryClient.invalidateQueries({ queryKey: queryKeys.observations }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.insights }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.userStats }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.memoriesStats }),
+      queryClient.invalidateQueries({ queryKey: ['insight-sources'] }),
+    ]);
+    setRefreshing(false);
+  }, [queryClient]);
+
+  const renderNotes = (items: ObservationItem[], emptyTitle: string, emptyBody: string) => {
+    if (error && !loaded) {
+      return <InsightsMessage body="Couldn’t load your insights." actionLabel="Retry insights" onAction={() => void refetch()} />;
+    }
+    if ((isLoading || generating) && !items.length) {
+      return <InsightsMessage loading body={generating ? 'Going through what you’ve shared…' : 'Loading your insights…'} />;
+    }
+    if (!items.length) {
+      return <InsightsMessage icon={<Archive size={32} color={colors.textWeak} />} title={emptyTitle} body={emptyBody} />;
+    }
+    return <ObservationList items={items} onOpen={openObservation} />;
+  };
+
+  const renderSection = () => {
+    switch (section) {
+      case 'observations':
+        return renderNotes(
+          observations,
+          'Your observations are taking shape',
+          'Keep saving memories and reflecting. What Memento notices about you will appear here.',
+        );
+      case 'insights':
+        return <InsightsPanel onOpen={openInsight} />;
+      case 'preferences':
+        return renderNotes(
+          preferences,
+          'No preferences yet',
+          'As you share what you like and dislike, your preferences will appear here.',
+        );
+      case 'enrichment':
+        return <EnrichmentFieldsList onExplore={openField} />;
+      case 'milestones':
+        return <MilestonesPanel />;
+    }
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-      <ImageBackground
-        source={PATTERN}
-        style={{ flex: 1 }}
-        imageStyle={{ opacity: 0.03 }}
-        resizeMode="repeat"
-      >
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={handleBack}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            activeOpacity={0.78}
-            style={styles.headerButton}
-          >
-            <ArrowLeft size={22} color={COLORS.textBase} strokeWidth={2.2} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Insights</Text>
-          <TouchableOpacity
-            onPress={handleSettings}
-            accessibilityRole="button"
-            accessibilityLabel="Open settings"
-            activeOpacity={0.78}
-            style={styles.headerButton}
-          >
-            <Settings size={22} color={COLORS.textBase} strokeWidth={2.2} />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 32 }}
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={handleBack}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          activeOpacity={0.78}
+          style={styles.headerButton}
         >
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabs}
-          >
-            {TABS.map((tab) => {
-              const selected = activeTab === tab.key;
-              return (
-                <TouchableOpacity
-                  key={tab.key}
-                  onPress={() => selectTab(tab.key)}
-                  activeOpacity={0.8}
-                  style={[styles.tab, selected && styles.activeTab]}
-                >
-                  <Text style={[styles.tabText, selected && styles.activeTabText]}>
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+          <ArrowLeft size={22} color={colors.textBase} strokeWidth={2.2} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleSettings}
+          accessibilityRole="button"
+          accessibilityLabel="Open settings"
+          activeOpacity={0.78}
+          style={styles.headerButton}
+        >
+          <Settings size={22} color={colors.textBase} strokeWidth={2.2} />
+        </TouchableOpacity>
+      </View>
 
-          {statsLoading && !stats ? (
-            <InsightsSkeleton />
-          ) : (
-            <View style={{ paddingHorizontal: 16, marginTop: 24, gap: 18 }}>
-              <InsightsContentCard
-                activeTab={activeTab}
-                score={Number(stats?.enrichment_score) || 0}
-                categoryScores={stats?.category_scores}
-                insights={sanitizedInsights}
-                notes={sanitizedNotes}
-                preferences={sanitizedPreferences}
-              />
-
-            {/* Milestones & Achievements */}
-            <View
-              style={{
-                backgroundColor: COLORS.card,
-                borderRadius: 24,
-                borderWidth: 1,
-                borderColor: COLORS.strokeWeaker,
-                overflow: 'hidden',
-                shadowColor: COLORS.shadow,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.05,
-                shadowRadius: 16,
-                elevation: 2,
-              }}
-            >
-              <ThemedCardBackground
-                source={STREAK_BG}
-                style={{ width: '100%', padding: 20, gap: 16 }}
-                resizeMode="cover"
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <View
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: COLORS.brandSubtle,
-                        borderWidth: 1,
-                        borderColor: COLORS.brandTint,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Award size={18} color={COLORS.brand} strokeWidth={2.2} />
-                    </View>
-                    <Text style={{ ...TYPE.cardTitle, color: COLORS.textStrong }}>
-                      Milestones & Streaks
-                    </Text>
-                  </View>
-                  <View
-                    style={{
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      borderRadius: 999,
-                      backgroundColor: COLORS.brandSubtle,
-                      borderWidth: 1,
-                      borderColor: COLORS.brandTint,
-                    }}
-                  >
-                    <Text style={{ ...TYPE.bodyStrong, color: COLORS.brand }}>
-                      {achievedCount} of {milestones.length}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={{ gap: 10 }}>
-                  {milestones.map((milestone) => (
-                    <View
-                      key={milestone.id}
-                      style={{
-                        backgroundColor: milestone.achieved
-                          ? COLORS.successFill
-                          : COLORS.cardOverlay,
-                        borderRadius: 16,
-                        borderWidth: 1,
-                        borderColor: milestone.achieved
-                          ? COLORS.successStroke
-                          : COLORS.strokeWeaker,
-                        paddingHorizontal: 16,
-                        paddingVertical: 14,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 16,
-                      }}
-                    >
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <Text
-                          style={{
-                            ...TYPE.bodyStrong,
-                            color: COLORS.textStrong,
-                          }}
-                        >
-                          {milestone.title}
-                        </Text>
-                        <Text
-                          style={{
-                            ...TYPE.metadata,
-                            color: COLORS.textWeak,
-                            lineHeight: 16,
-                          }}
-                        >
-                          {milestone.description}
-                        </Text>
-                      </View>
-
-                      <View
-                        style={{
-                          paddingHorizontal: 10,
-                          paddingVertical: 4,
-                          borderRadius: 999,
-                          backgroundColor: milestone.achieved
-                            ? COLORS.successFill
-                            : COLORS.fillWeak,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            ...TYPE.metadata,
-                            color: milestone.achieved ? COLORS.success : COLORS.textWeak,
-                          }}
-                        >
-                          {milestone.progressLabel}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              </ThemedCardBackground>
-            </View>
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.brand} />}
+      >
+        {view ? (
+          <View key={history.length}>
+            {view.kind === 'insight' ? (
+              <InsightDetail insight={view.insight} onBack={goBack} onView={viewSource} />
+            ) : view.kind === 'observation' ? (
+              <ObservationDetail item={view.item} onBack={goBack} onView={viewSource} />
+            ) : (
+              <EnrichmentFieldDetail field={view.field} onBack={goBack} onView={viewSource} onReflect={reflectOn} />
+            )}
           </View>
-          )}
-        </ScrollView>
-      </ImageBackground>
+        ) : (
+          <>
+            <Animated.Text
+              entering={FadeInDown.duration(600)}
+              accessibilityRole="header"
+              style={[TYPE.screenTitle, { color: colors.textStrong }]}
+            >
+              My <Text style={TYPE.screenTitleAccent}>insights</Text>
+            </Animated.Text>
+
+            <Animated.View entering={FadeInDown.duration(600).delay(100)}>
+              <MemoryStatistics />
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.duration(600).delay(200)} style={{ gap: 24 }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.tabsScroller}
+                contentContainerStyle={styles.tabs}
+                accessibilityRole="tablist"
+              >
+                {INSIGHTS_SECTIONS.map((tab) => {
+                  const selected = section === tab.key;
+                  return (
+                    <TouchableOpacity
+                      key={tab.key}
+                      onPress={() => selectSection(tab.key)}
+                      activeOpacity={0.8}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected }}
+                      style={[styles.tab, selected && styles.activeTab]}
+                    >
+                      <Text style={[styles.tabText, selected && styles.activeTabText]}>{tab.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              <Animated.View key={section} entering={FadeIn.duration(300)}>
+                {renderSection()}
+              </Animated.View>
+            </Animated.View>
+          </>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-const createStyles = (COLORS: ThemeColors) => ({
+const createStyles = (colors: ThemeColors) => ({
   header: {
     minHeight: 62,
     paddingHorizontal: 16,
@@ -378,47 +315,43 @@ const createStyles = (COLORS: ThemeColors) => ({
     borderRadius: 22,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
+    borderColor: colors.strokeWeaker,
   },
-  headerTitle: {
-    position: 'absolute' as const,
-    left: 76,
-    right: 76,
-    textAlign: 'center' as const,
-    color: COLORS.textStrong,
-    ...TYPE.screenTitle,
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 64,
+    // Title, statistics and the sections tabs sit 40px apart (main-screen sections).
+    gap: 40,
+  },
+  // The tabs scroll edge to edge while lining up with the 16px gutter.
+  tabsScroller: {
+    marginHorizontal: -16,
   },
   tabs: {
     paddingHorizontal: 16,
     gap: 8,
-    marginTop: 14,
   },
   tab: {
-    minHeight: 40,
-    paddingHorizontal: 16,
-    borderRadius: 10,
+    height: 40,
+    paddingHorizontal: 18,
+    borderRadius: 999,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    backgroundColor: COLORS.fillWeak,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: colors.strokeWeak,
   },
   activeTab: {
-    backgroundColor: COLORS.activeFill,
-    borderColor: COLORS.activeFill,
+    backgroundColor: colors.activeFill,
+    borderColor: 'transparent',
   },
   tabText: {
-    color: COLORS.textStrong,
+    color: colors.textBase,
     ...TYPE.label,
   },
   activeTabText: {
-    color: COLORS.activeText,
+    color: colors.activeText,
   },
 });

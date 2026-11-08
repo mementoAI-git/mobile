@@ -1,18 +1,17 @@
-import React, { forwardRef, useCallback } from 'react';
+import React, { forwardRef } from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import { TouchableOpacity } from '@/components/ui/Touchable';
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import X from 'lucide-react-native/icons/x';
-import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { StylePicker } from '@/components/capsule/StylePicker';
 import { getThemeById } from '@/constants/themes';
 import type { IBeneficiary } from '@/types';
 import { useUserStore } from '@/store';
 import {TYPE} from '@/constants/typography';
-import { getSheetBottomPadding, getSheetTopInset, SHEET_HEADER_HANDLE_STYLE } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SheetHeader } from './SheetHeader';
 import { useCapsuleThemeFonts } from '@/hooks/use-capsule-theme-fonts';
+import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
 
 interface PreviewCapsuleModalProps {
   title: string;
@@ -30,6 +29,7 @@ interface PreviewCapsuleModalProps {
 export const PreviewCapsuleModal = forwardRef<BottomSheetModal, PreviewCapsuleModalProps>((props, ref) => {
   useCapsuleThemeFonts();
   const insets = useSafeAreaInsets();
+  const sheetChrome = useSheetChrome();
   const {
     title,
     body,
@@ -43,12 +43,6 @@ export const PreviewCapsuleModal = forwardRef<BottomSheetModal, PreviewCapsuleMo
     beneficiaries,
   } = props;
 
-  const renderBackdrop = useCallback(
-    (backdropProps: any) => (
-      <BottomSheetBackdrop {...backdropProps} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.4} />
-    ),
-    []
-  );
 
   const selectedTheme = getThemeById(themeId);
   const Background = selectedTheme.Background;
@@ -74,40 +68,24 @@ export const PreviewCapsuleModal = forwardRef<BottomSheetModal, PreviewCapsuleMo
   return (
     <BottomSheetModal
       ref={ref}
-      topInset={getSheetTopInset(insets.top)}
+      {...sheetChrome.props}
       index={0}
-      snapPoints={['95%']}
-      backdropComponent={renderBackdrop}
+      snapPoints={sheetChrome.snapPoints(['95%'])}
       enablePanDownToClose
-      handleStyle={SHEET_HEADER_HANDLE_STYLE}
-        handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
-      backgroundStyle={{ backgroundColor: COLORS.background }}
     >
       <View style={{ flex: 1 }}>
-        {/* Header */}
-        <View className="px-5 pb-4 flex-row items-center justify-between">
-          <Text className="text-text-strong" style={TYPE.sectionTitle}>
-            Preview Capsule
-          </Text>
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.selectionAsync();
-              handleClose();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Close preview"
-            className="size-11 items-center justify-center rounded-full bg-fill-weaker"
-            activeOpacity={0.7}
-          >
-            <X size={20} color={COLORS.textStrong} />
-          </TouchableOpacity>
-        </View>
+        <SheetHeader
+          title="Preview capsule"
+          onClose={handleClose}
+          closeLabel="Close preview"
+          style={{ paddingHorizontal: 20 }}
+        />
 
         {/* Content */}
-        <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 16 }}>
+        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: SHEET_SECTION_GAP }}>
 
           {/* Controls */}
-          <View className="bg-fill-weaker rounded-2xl border border-stroke-weaker p-1 mb-2">
+          <View className="bg-fill-weaker rounded-2xl border border-stroke-weaker p-1">
              <StylePicker
                 currentThemeId={themeId}
                 fontSize={fontSize}

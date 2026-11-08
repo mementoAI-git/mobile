@@ -10,12 +10,13 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import X from 'lucide-react-native/icons/x';
 import { Button, EmptyState, Spinner } from '@/components/ui';
 import { TYPE } from '@/constants/typography';
 import { useThemeColors, useResolvedAppearance } from '@/hooks/use-theme-colors';
 import { useCalendarStories } from '@/hooks/queries/use-calendar-stories';
 import type { IMemory } from '@/types';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 
 export function CalendarDateSheet({ date, onSelect, onClose }: { date: Date; onSelect: (date: Date) => void; onClose?: () => void }) {
   const colors = useThemeColors();
@@ -34,13 +35,13 @@ export function CalendarDateSheet({ date, onSelect, onClose }: { date: Date; onS
     if (choosingMonth) { setChoosingMonth(false); return; }
     onSelect(selected); onClose?.();
   }, [choosingMonth, selected, onSelect, onClose]);
-  return <View className="gap-4 pb-4">
-    <Text style={[TYPE.sectionTitle, { color: colors.textStrong }]}>Choose a date</Text>
-    {choosingMonth ? <>
+  return <View style={{ gap: SHEET_GROUP_GAP, paddingBottom: 8 }}>
+    <SheetHeader title="Choose a date" onClose={onClose} closeLabel="Close date picker" />
+    {choosingMonth ? <View style={{ gap: 16 }}>
       <Text style={[TYPE.button, { color: colors.brand }]}>{selected.toLocaleString('en-US', { month: 'long', year: 'numeric' })}</Text>
       <MonthYearPicker value={selected} onChange={setSelected} />
-    </> : <DateTimePicker value={selected} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'} onChange={change} themeVariant={appearance === 'light' ? 'light' : 'dark'} accentColor={colors.brand} />}
-    {(choosingMonth || Platform.OS !== 'android') && <Button onPress={apply}>Done</Button>}
+    </View> : <DateTimePicker value={selected} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'} onChange={change} themeVariant={appearance === 'light' ? 'light' : 'dark'} accentColor={colors.brand} />}
+    {(choosingMonth || Platform.OS !== 'android') && <Button size="lg" rounded="full" className="h-14" onPress={apply}>Done</Button>}
   </View>;
 }
 
@@ -54,7 +55,7 @@ const DayStoryRow = React.memo(function DayStoryRow({ story, onSelect }: { story
   return <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.strokeWeak }}>
     {thumbnail && !imageFailed
       ? <SignedAttachmentImage attachment={thumbnail} context={{ memory_id: story._id }} preferThumbnail style={imageStyle} resizeMode="cover" onError={failImage} />
-      : <Image source={{ uri: getQuestionIdenticonUrl(story._id, 'png') }} style={imageStyle} contentFit="cover" />}
+      : <Image source={{ uri: getQuestionIdenticonUrl(story._id) }} style={imageStyle} contentFit="cover" />}
     <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
       <Text numberOfLines={1} style={[TYPE.buttonSmall, { color: colors.textStrong }]}>{story.title?.trim() || 'Untitled story'}</Text>
       <Text numberOfLines={1} style={[TYPE.metadata, { color: colors.textBase }]}>{dayjs(story.created_at).format('M/D/YYYY, h:mm A')}</Text>
@@ -75,10 +76,12 @@ export function CalendarStoriesSheet({ date, onClose }: { date: Date; onClose?: 
   }, [onClose, router]);
   const retry = useCallback(() => { void refetch(); }, [refetch]);
   return <View className="flex-1 px-5 pb-8">
-    <View className="flex-row items-center justify-between mb-4">
-      <Text style={[TYPE.sectionTitle, { color: colors.textStrong }]}>{date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</Text>
-      <Button variant="ghost" iconOnly onPress={onClose} accessibilityLabel="Close stories"><X size={20} color={colors.textBase} /></Button>
-    </View>
+    <SheetHeader
+      title={date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+      onClose={onClose ? () => onClose() : undefined}
+      closeLabel="Close stories"
+      style={{ marginBottom: SHEET_GROUP_GAP }}
+    />
     <BottomSheetScrollView contentContainerStyle={{ gap: 8, paddingBottom: 24 }}>
       {isPending ? <Spinner /> : isError ? <EmptyState title="Your stories couldn’t load" description="Please try again." actionLabel="Try again" onAction={retry} /> : stories.length ? stories.map(story => <DayStoryRow key={story._id} story={story} onSelect={select} />) : <EmptyState title="A quiet day" description="No stories were added on this date." />}
     </BottomSheetScrollView>

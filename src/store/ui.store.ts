@@ -24,9 +24,11 @@ export type SheetName =
   | 'feedback'
   | 'upgrade-prompt'
   | 'select'
+  | 'delete-account-reason'
   | 'streak'
   | 'story-drafts'
   | 'edit-profile'
+  | 'edit-about-me'
   | 'cancel-subscription-confirmation'
   | 'change-password'
   | 'setup-two-factor'
@@ -40,6 +42,7 @@ export type SheetName =
   | 'guardian-lens'
   | 'export-archive'
   | 'daily-ritual'
+  | 'observation-note'
   | null;
 
 interface UiState {

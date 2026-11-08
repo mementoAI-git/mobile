@@ -1,7 +1,7 @@
 import { appearanceLabel } from '@/features/appearance/appearance';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { BackHandler, Image, ImageBackground, Platform, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { BackHandler, Image, Platform, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import Animated, { FadeIn, FadeOut, SlideInLeft, SlideOutLeft, ReduceMotion } from 'react-native-reanimated';
@@ -24,12 +24,13 @@ import { TYPE } from '@/constants/typography';
 import { useUiStore, useUserStore } from '@/store';
 import { canSwipeOpenMenu, MENU_SWIPE_EDGE_WIDTH, shouldOpenMenuFromSwipe } from '@/features/navigation/menu-swipe';
 
-const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const DESTINATIONS = [
   { label: 'Overview', path: '/(tabs)/overview', segment: '/overview', icon: TAB_ICONS.overview },
   { label: 'Chat', path: '/(tabs)/chat', segment: '/chat', icon: TAB_ICONS.chat },
   { label: 'My Stories', path: '/(tabs)/stories', segment: '/stories', icon: TAB_ICONS.stories },
-  { label: 'Explore', path: '/(tabs)/explore', segment: '/explore', icon: TAB_ICONS.explore },
+  { label: 'Topics', path: '/(tabs)/explore', segment: '/explore', icon: TAB_ICONS.explore },
+  // After the main destinations, as in the web sidebar.
+  { label: 'Insights', path: '/insights', segment: '/insights', icon: TAB_ICONS.insights },
 ] as const;
 
 function MenuDestination({ item }: { item: (typeof DESTINATIONS)[number] }) {
@@ -142,12 +143,12 @@ function AppMenu() {
         />
       </Animated.View>
       <Animated.View
-        className="absolute left-0 top-0 bottom-0 bg-card rounded-r-[32px] overflow-hidden"
-        style={{ width: Math.min(360, width * 0.86) }}
+        className="absolute left-0 top-0 bottom-0 rounded-r-[32px] overflow-hidden"
+        // Same surface as bottom sheets (web --bg-raised / --bg-sheet), with no pattern.
+        style={{ width: Math.min(360, width * 0.86), backgroundColor: COLORS.sheet }}
         entering={SlideInLeft.duration(280).reduceMotion(ReduceMotion.System)}
         exiting={SlideOutLeft.duration(220).reduceMotion(ReduceMotion.System)}
       >
-        <ImageBackground source={PATTERN} className="absolute inset-0" imageStyle={{ opacity: 0.03 }} resizeMode="repeat" />
         <View ref={panelRef} className="flex-1 px-5" style={{ paddingTop: insets.top + 16, paddingBottom: Math.max(insets.bottom, 16) }}>
           <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
             <View className="gap-3">

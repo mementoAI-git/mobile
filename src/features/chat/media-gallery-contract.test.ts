@@ -17,9 +17,9 @@ describe('chat media gallery contract', () => {
     const settings = await Bun.file(new URL('../../../app/chat/settings.tsx', import.meta.url)).text();
     const gallery = await Bun.file(new URL('../../../app/chat/media.tsx', import.meta.url)).text();
     expect(settings).toContain("pathname: '/chat/media'");
-    expect(settings).toContain("openAssetCollection('media', 'image')");
-    expect(settings).toContain("openAssetCollection('media', 'video')");
-    expect(settings).toContain("openAssetCollection('media', 'audio')");
+    // Web chat settings: one "Shared media & links" row opening the gallery on media.
+    expect(settings).toContain("openAssetCollection('media', 'all')");
+    expect(settings).toContain('Shared media & links');
     expect(gallery).toContain('presentation="gallery"');
     expect(settings).not.toContain('(154)');
     expect(gallery).not.toContain('available here soon');

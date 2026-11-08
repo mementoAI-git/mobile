@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Keyboard, Text, View } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import X from 'lucide-react-native/icons/x';
 import Check from 'lucide-react-native/icons/check';
 import * as Haptics from 'expo-haptics';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +12,8 @@ import { useAuthStore, useUserStore } from '@/store';
 import { DEFAULT_DIGITAL_MIND, DIGITAL_MIND_COLOURS, DIGITAL_MIND_NAME_LIMIT, DIGITAL_MIND_SHAPES, normalizeDigitalMind, type DigitalMindColour, type DigitalMindShape } from '@/features/chat/digital-mind';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { TYPE } from '@/constants/typography';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
 
 export function DigitalMindSheet({ userId, onClose }: { userId: string; onClose: () => void }) {
   const colors = useThemeColors();
@@ -34,11 +35,9 @@ export function DigitalMindSheet({ userId, onClose }: { userId: string; onClose:
     if (!userId) return;
     Keyboard.dismiss(); saveProfile(userId, preview); onClose();
   }, [userId, saveProfile, preview, onClose]);
-  return <View className="gap-6 pb-2">
-    <View className="flex-row items-center justify-between gap-3">
-      <Text className="flex-1 text-text-strong" style={TYPE.sheetTitle}>Your digital mind</Text>
-      <Button iconOnly variant="secondary" rounded="full" onPress={onClose} accessibilityLabel="Close digital mind customization" style={{ width: 44, height: 44, minHeight: 44, paddingHorizontal: 0 }}><X size={20} color={colors.textBase} /></Button>
-    </View>
+  return <View className="pb-2" style={{ gap: SHEET_GROUP_GAP }}>
+    <SheetHeader title="Your digital mind" onClose={onClose} closeLabel="Close digital mind customization" />
+    <View style={{ gap: SHEET_SECTION_GAP }}>
     <View className="items-center py-2">
       <DigitalMindAvatar profile={preview} size={128} userImage={account?.picture_url || account?.picture} userName={account?.fullname || account?.first_name} userId={userId} userSeed={account?.email} />
     </View>
@@ -63,6 +62,7 @@ export function DigitalMindSheet({ userId, onClose }: { userId: string; onClose:
           </View>
         </Pressable>)}
       </View>
+    </View>
     </View>
     <Button onPress={save} disabled={!userId} fullWidth variant="ghost" accessibilityLabel="Save" style={{ height: 48, minHeight: 48, borderRadius: 100, paddingVertical: 0, backgroundColor: colors.activeFill }}>
       <Text style={[TYPE.button, { color: colors.activeText }]}>Save</Text>

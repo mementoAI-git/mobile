@@ -44,7 +44,7 @@ describe('navigation and tab bar sizing', () => {
   test('shared settings and beneficiary rows allow titles to shrink and guarantee 44dp touch targets', () => {
     const hubRow = readFileSync('src/components/settings/SettingsHubRow.tsx', 'utf8');
     const securityRow = readFileSync('src/components/security/SecurityCredentialRow.tsx', 'utf8');
-    const personRow = readFileSync('src/components/beneficiaries/BeneficiaryPersonRow.tsx', 'utf8');
+    const personRow = readFileSync('src/components/beneficiaries/PersonCard.tsx', 'utf8');
     const groupRow = readFileSync('src/components/beneficiaries/BeneficiaryGroupRow.tsx', 'utf8');
 
     // Hub row has flex: 1 and minHeight >= 44
@@ -54,8 +54,8 @@ describe('navigation and tab bar sizing', () => {
     // Security row delete button touch target >= 44
     expect(securityRow).toContain('minTouchTarget');
 
-    // Beneficiary rows have flex-1 and min-h >= 44
-    expect(personRow).toContain('flex-1');
-    expect(groupRow).toContain('flex-1');
+    // Person and group cards let their text column shrink beside the avatar/swatch.
+    expect(personRow).toContain('flex: 1, minWidth: 0');
+    expect(groupRow).toContain('flex: 1, minWidth: 0');
   });
 });

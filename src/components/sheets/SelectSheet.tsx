@@ -9,16 +9,19 @@ import { TouchableOpacity } from '@/components/ui/Touchable';
 import * as Haptics from 'expo-haptics';
 import Check from 'lucide-react-native/icons/check';
 
-import { FONTS, COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import type { SelectOption } from '@/components/ui/Select';
 import { Separator } from '@/components/ui/Separator';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 
 interface SelectSheetProps {
   options: SelectOption[];
   value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
+  /** Sheet title; the trigger passes its label. */
+  title?: string;
   onClose: () => void;
 }
 
@@ -36,6 +39,7 @@ export function SelectSheet({
   value,
   onValueChange,
   placeholder,
+  title,
   onClose,
 }: SelectSheetProps) {
   const COLORS = useThemeColors();
@@ -55,7 +59,9 @@ export function SelectSheet({
         <TouchableOpacity
           onPress={() => handleSelect(item)}
           activeOpacity={0.7}
-          className="flex-row items-center justify-between py-3.5 px-1"
+          accessibilityRole="radio"
+          accessibilityState={{ checked: isSelected }}
+          className="min-h-[52px] flex-row items-center justify-between py-3.5"
         >
           <View className="flex-1 gap-0.5">
             <Text
@@ -87,15 +93,8 @@ export function SelectSheet({
   };
 
   return (
-    <View className="gap-2">
-      {/* Handle label / title */}
-      {placeholder && (
-        <Text
-          className="uppercase tracking-widest text-text-weak mb-1"
-          style={TYPE.metadata}>
-          {placeholder}
-        </Text>
-      )}
+    <View style={{ gap: SHEET_GROUP_GAP - 14 }}>
+      <SheetHeader title={title || placeholder || 'Choose'} onClose={onClose} />
 
       <FlatList
         data={options}

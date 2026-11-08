@@ -20,7 +20,10 @@ import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal } from '@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SelectFromMediaModal } from './SelectFromMediaModal';
 import * as Haptics from 'expo-haptics';
-import { useUiStore } from '@/store';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { useUiStore, useUserStore } from '@/store';
+import { celebrateFirstStory, isFirstStory } from '@/features/ceremony/first-story';
 import type { IMemory } from '@/types';
 import { PublishPrivacySheet, type PrivacyMode } from './PublishPrivacySheet';
 import {
@@ -179,17 +182,11 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
         if (!editData && finalStatus === 'save') {
           const newId = res?.data?._id || res?._id || res?.data?.data?._id;
           if (newId) {
-            const isFirstStory = (memoriesStats?.stories_count ?? 0) === 0;
-            setTimeout(() => {
-              if (isFirstStory) {
-                openSheet('first-story-milestone', {
-                  memoryId: newId,
-                  title: title.trim() || 'Untitled Memory',
-                });
-              } else {
-                openSheet('share-memory', { id: newId });
-              }
-            }, 300);
+            if (isFirstStory(memoriesStats?.stories_count)) {
+              void celebrateFirstStory({ memoryId: newId, title: title.trim(), email: useUserStore.getState().user?.email, delayMs: 300 });
+            } else {
+              setTimeout(() => openSheet('share-memory', { id: newId }), 300);
+            }
           }
         }
       },
@@ -209,36 +206,26 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
 
   return (
     <>
+      <SheetHeader
+        title={editData ? 'Edit memory' : 'New memory'}
+        onClose={onClose}
+        closeLabel="Close memory"
+        style={{ paddingHorizontal: 20 }}
+      />
       <BottomSheetScrollView
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
-          paddingHorizontal: 24,
-          paddingTop: 0,
+          paddingHorizontal: 20,
+          paddingTop: SHEET_GROUP_GAP,
           paddingBottom: insets.bottom ? insets.bottom + 24 : 48,
-          gap: 24
+          gap: SHEET_GROUP_GAP,
         }}
       >
-        {/* ── Header ── */}
-        <View className="flex-row items-center justify-between">
-          <Text className="text-text-strong" style={TYPE.sectionTitle}>
-            {editData ? 'Edit Memory' : 'New Memory'}
-          </Text>
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.selectionAsync();
-              onClose();
-            }}
-            hitSlop={8}
-            className="size-11 rounded-full bg-fill-weaker items-center justify-center"
-          >
-            <X size={18} color={COLORS.textWeak} />
-          </TouchableOpacity>
-        </View>
-
-        <View className="gap-5">
+        <View style={{ gap: SHEET_SECTION_GAP }}>
           {/* Title */}
           <View className="gap-2">
-            <Text className="text-text-muted uppercase tracking-widest ml-1" style={TYPE.label}>
+            <Text className="text-text-strong" style={TYPE.label}>
               Title
             </Text>
             <BottomSheetTextInput
@@ -246,14 +233,14 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
               onChangeText={setTitle}
               placeholder="What's this memory about?"
               placeholderTextColor={COLORS.textMuted}
-              className="h-14 bg-fill-weaker border border-stroke-weaker rounded-2xl px-4 text-text-strong"
+              className="h-14 bg-fill-weaker border border-stroke-weaker rounded-lg px-4 text-text-strong"
               style={TYPE.input}
             />
           </View>
 
           {/* Body */}
           <View className="gap-2">
-            <Text className="text-text-muted uppercase tracking-widest ml-1" style={TYPE.label}>
+            <Text className="text-text-strong" style={TYPE.label}>
               The Story
             </Text>
             <BottomSheetTextInput
@@ -263,7 +250,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
               placeholderTextColor={COLORS.textMuted}
               multiline
               numberOfLines={6}
-              className="min-h-[160px] bg-fill-weaker border border-stroke-weaker rounded-2xl px-4 py-4 text-text-strong"
+              className="min-h-[160px] bg-fill-weaker border border-stroke-weaker rounded-lg px-4 py-4 text-text-strong"
               style={[TYPE.body, {textAlignVertical: 'top'}]}
             />
             <LinkPreviews text={body} />
@@ -271,10 +258,10 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
 
           {/* Tags */}
           <View className="gap-2">
-            <Text className="text-text-muted uppercase tracking-widest ml-1" style={TYPE.label}>
+            <Text className="text-text-strong" style={TYPE.label}>
               Tags
             </Text>
-            <View className="bg-fill-weaker border border-stroke-weaker rounded-2xl px-2 py-2 min-h-14 flex-row flex-wrap items-center gap-2">
+            <View className="bg-fill-weaker border border-stroke-weaker rounded-lg px-2 py-2 min-h-14 flex-row flex-wrap items-center gap-2">
               {tags.map((tag) => (
                 <MemoTagPillItem key={tag} tag={tag} onRemove={removeTag} />
               ))}
@@ -343,20 +330,17 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
           </TouchableOpacity>
         </View>
 
-        {/* ── Footer ── */}
-        <View className="mt-4 gap-4">
-          <Button
-            onPress={handleSave}
-            loading={isCreating || isUpdatingMemory}
-            disabled={!title.trim() || isUploading || isCreating || isUpdatingMemory}
-            size="lg"
-            className="h-14 bg-brand rounded-full"
-          >
-            <Text className="text-white" style={TYPE.button}>
-              {editData ? 'Save Changes' : 'Save Memory'}
-            </Text>
-          </Button>
-        </View>
+        {/* ── Actions ── */}
+        <Button
+          onPress={handleSave}
+          loading={isCreating || isUpdatingMemory}
+          disabled={!title.trim() || isUploading || isCreating || isUpdatingMemory}
+          size="lg"
+          rounded="full"
+          className="h-14"
+        >
+          {editData ? 'Save Changes' : 'Save Memory'}
+        </Button>
 
         <SelectFromMediaModal
           ref={mediaModalRef}

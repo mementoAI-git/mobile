@@ -19,7 +19,7 @@ import { useFonts } from 'expo-font';
 import { getQuestionIdenticonUrl } from '@/features/explore/question-presentation';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import X from 'lucide-react-native/icons/x';
+import { SheetHeader } from './SheetHeader';
 import * as Haptics from 'expo-haptics';
 import { useUiStore } from '@/store';
 
@@ -179,19 +179,9 @@ export function DraftsSheet({ onClose }: { onClose?: () => void } = {}) {
     for (const id of ids) void deleteDraft(email, id).catch(() => undefined);
   }, [email, setStoryDrafts]);
 
-  const handleClose = useCallback(() => {
-    Haptics.selectionAsync();
-    dismiss();
-  }, [dismiss]);
-
   return (
-    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingBottom: 10 }}>
-        <Text style={{ ...TYPE.sheetTitle, color: COLORS.textStrong, flex: 1 }}>Drafts</Text>
-        <Button variant="ghost" iconOnly onPress={handleClose} accessibilityLabel="Close drafts" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.fillWeaker }}>
-          <X size={18} color={COLORS.textBase} />
-        </Button>
-      </View>
+    <View style={{ flex: 1, backgroundColor: COLORS.sheet }}>
+      <SheetHeader title="Drafts" onClose={dismiss} closeLabel="Close drafts" style={{ paddingHorizontal: 20, paddingBottom: 12 }} />
       <View style={{ height: 1, backgroundColor: COLORS.strokeWeak }}>
         <Image source={require('../../../assets/images/drafts/divider.svg')} contentFit="fill" tintColor={COLORS.textStrong} style={{ width: '100%', height: 1 }} />
       </View>
@@ -240,7 +230,7 @@ const DraftRow = React.memo(function DraftRow({ draft, font, onLoad, onDelete }:
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.strokeWeak }}>
       <Button variant="ghost" iconOnly onPress={handleLoad} accessibilityLabel={`Open draft: ${draft.title.trim() || 'Untitled draft'}`} style={{ flex: 1, justifyContent: 'flex-start', paddingHorizontal: 0, gap: 12, minHeight: 44 }}>
-        <Image source={{ uri: getQuestionIdenticonUrl(draft.id, 'png') }} style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, backgroundColor: colors.fillWeak }} contentFit="cover" />
+        <Image source={{ uri: getQuestionIdenticonUrl(draft.id) }} style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, backgroundColor: colors.fillWeak }} contentFit="cover" />
         <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
           <Text numberOfLines={1} style={{ ...draftType.action, color: colors.textStrong }}>{draft.title.trim() || 'Untitled draft'}</Text>
           <Text numberOfLines={1} style={{ ...draftType.date, color: colors.textBase }}>{dayjs(draft.updatedAt).format('M/D/YYYY, h:mm A')}</Text>

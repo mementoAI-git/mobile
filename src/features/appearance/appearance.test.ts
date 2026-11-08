@@ -45,5 +45,22 @@ test('Deep Sky persists as its own choice and uses dark controls regardless of t
   const styles = resolveThemedStyles({ page: { backgroundColor: COLORS.background }, label: { color: COLORS.textStrong } }, DEEP_SKY_COLORS);
   expect(styles.page.backgroundColor).toBe('transparent');
   expect(styles.label.color).toBe(DEEP_SKY_COLORS.textStrong);
-  expect(DEEP_SKY_COLORS.card).toBe('#191e2c');
+  // Cards, buttons and tags use the weak fill on the sky; floating surfaces stay opaque.
+  expect(DEEP_SKY_COLORS.card).toBe(DEEP_SKY_COLORS.fillWeak);
+  expect(DEEP_SKY_COLORS.cardRaised).toBe(DEEP_SKY_COLORS.fillWeak);
+  expect(DEEP_SKY_COLORS.popover).toBe('#191e2c');
+});
+
+test('floating surfaces use the opaque popover token, not the card fill', async () => {
+  const read = (path: string) => Bun.file(new URL(path, import.meta.url)).text();
+  const files = {
+    toast: await read('../../components/ui/Toast.tsx'),
+    actions: await read('../../components/chat/MessageActionsProvider.tsx'),
+    language: await read('../../components/chat/VoiceLanguageSelect.tsx'),
+    picker: await read('../../components/ui/MediaPickerMenu.tsx'),
+    editorBar: await read('../../components/ui/EditorActionBar.tsx'),
+    tabBar: await read('../../components/TabBar.tsx'),
+  };
+  for (const source of Object.values(files)) expect(source).toMatch(/(COLORS|colors)\.popover/);
+  expect(files.tabBar).not.toContain('backgroundColor: COLORS.card');
 });

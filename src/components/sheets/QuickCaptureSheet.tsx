@@ -5,8 +5,8 @@ import { TouchableOpacity } from '@/components/ui/Touchable';
 import Mic from 'lucide-react-native/icons/mic';
 import Send from 'lucide-react-native/icons/send';
 import ImageIcon from 'lucide-react-native/icons/image';
-import X from 'lucide-react-native/icons/x';
-import * as Haptics from 'expo-haptics';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useUiStore } from '@/store';
@@ -178,24 +178,17 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
 
   return (
     <View className="pb-8">
-      {/* Header */}
-      <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-text-strong" style={TYPE.sectionTitle}>
-          {dailyPrompt ? "Today's Reflection" : 'Quick Capture'}
-        </Text>
-        <TouchableOpacity
-          onPress={() => { Haptics.selectionAsync(); onClose ? onClose() : closeSheet(); }}
-          hitSlop={8}
-          className="size-11 rounded-full bg-fill-weaker items-center justify-center"
-        >
-          <X size={18} color={COLORS.textWeak} />
-        </TouchableOpacity>
-      </View>
+      <SheetHeader
+        title={dailyPrompt ? "Today's reflection" : 'Quick capture'}
+        onClose={() => (onClose ? onClose() : closeSheet())}
+        closeLabel="Close quick capture"
+        style={{ marginBottom: SHEET_GROUP_GAP }}
+      />
 
       {/* Prompt question card — only shown when opened from a daily prompt */}
       {dailyPrompt?.pinned_text ? (
         <View
-          className="bg-card rounded-[20px] border border-stroke-weaker px-4 py-4 mb-4 gap-2"
+          className="bg-card rounded-[20px] border border-stroke-weaker px-4 py-4 mb-6 gap-2"
           style={{ shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 }}
         >
           <View

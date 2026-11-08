@@ -277,7 +277,7 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     card: {
         width: "100%",
 
-        backgroundColor: COLORS.card,
+        backgroundColor: COLORS.fillWeak,
 
         borderRadius: 20,
         borderWidth: 1,

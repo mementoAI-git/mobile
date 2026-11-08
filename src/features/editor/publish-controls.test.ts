@@ -14,11 +14,11 @@ describe('story publishing controls', () => {
   });
   test('opens the audience sheet at its full snap point with a scrollable body', () => {
     expect(privacy).toContain('enableDynamicSizing={false}');
-    expect(privacy).toContain("snapPoints={['92%']}");
+    expect(privacy).toContain("snapPoints={sheetChrome.snapPoints(['92%'])}");
     expect(privacy).toContain('style={{ flex: 1 }}');
   });
   test('leaves room around selection checks and gives each selected card a tinted border', () => {
-    expect(privacy).toContain('paddingTop: 8, paddingBottom: 24');
+    expect(privacy).toContain('paddingTop: SHEET_GROUP_GAP, paddingBottom: 24');
     expect(privacy).toContain("draftMode === 'private' ? `${COLORS.error}40`");
     expect(privacy).toContain("draftMode === 'all' ? `${COLORS.info}40`");
     expect(privacy).toContain("maxWidth: '80%'");

@@ -3,6 +3,7 @@ import { post, del } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import type { IAuth, IUser } from '@/types';
 import { establishSession, terminateSession } from '@/features/auth/session-coordinator';
+import type { DeleteAccountPayload } from '@/features/account-deletion/deletion';
 import { completeAuthResponse } from '@/features/auth/auth-completion';
 
 interface LoginPayload {
@@ -101,7 +102,9 @@ export function useChangePassword() {
 
 export function useDeleteAccount() {
   return useMutation({
-    mutationFn: () => del(endpoint.deleteAccount),
+    // Reason, details and export preference go in the body; servers that don't read them ignore them.
+    mutationFn: (payload?: DeleteAccountPayload) =>
+      del(endpoint.deleteAccount, payload ? { data: payload } : undefined),
     onSuccess: async () => {
       await terminateSession('deleted');
     },

@@ -17,21 +17,20 @@ export function OverviewSkeleton() {
             <Skeleton className="h-7 w-32 rounded-lg" />
           </View>
         </View>
-        <Skeleton className="h-[170px] w-full rounded-[18px]" />
+        <Skeleton className="h-[178px] w-full rounded-[24px]" />
       </View>
 
-      <Skeleton className="h-[220px] w-full rounded-[24px]" />
+      <Skeleton className="h-[267px] w-full rounded-[24px]" />
 
-      {/* Journey Stat Cards (Vertical Stack of 4 full-width cards) */}
+      {/* Journey stat cards (3 full-width cards) */}
       <View className="gap-3">
-        <Skeleton className="h-[96px] w-full rounded-2xl" />
-        <Skeleton className="h-[96px] w-full rounded-2xl" />
-        <Skeleton className="h-[96px] w-full rounded-2xl" />
-        <Skeleton className="h-[96px] w-full rounded-2xl" />
+        <Skeleton className="h-[96px] w-full rounded-[20px]" />
+        <Skeleton className="h-[96px] w-full rounded-[20px]" />
+        <Skeleton className="h-[96px] w-full rounded-[20px]" />
       </View>
 
-      {/* Enrichment Hero Card (Placed after stat cards) */}
-      <Skeleton className="h-[140px] w-full rounded-2xl" />
+      {/* Enrichment score summary (after stat cards) */}
+      <Skeleton className="h-[92px] w-full rounded-[20px]" />
 
       {/* Calendar Card Skeleton (~340px) */}
       <Skeleton className="h-[340px] w-full rounded-[24px]" />

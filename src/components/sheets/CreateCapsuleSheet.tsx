@@ -7,9 +7,10 @@ import {
   Keyboard,
 } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
-import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getSheetBottomPadding, getSheetTopInset } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SheetHeader } from './SheetHeader';
 import { useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -40,6 +41,7 @@ import { useToast } from '../ui/Toast';
 import { resolveCapsuleRecipientInputs } from '@/features/capsules/capsule-contract';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { useCapsuleThemeFonts } from '@/hooks/use-capsule-theme-fonts';
+import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
 
 interface Props {
   onClose: () => void;
@@ -49,6 +51,7 @@ interface Props {
 export function CreateCapsuleSheet({ onClose, editData }: Props) {
   useCapsuleThemeFonts();
   const isEdit = !!editData?._id;
+  const sheetChrome = useSheetChrome();
   const insets = useSafeAreaInsets();
 
   // ── Form state ──────────────────────────────────────────────────────────────
@@ -128,12 +131,6 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
 
   const { data: recentMedia, isLoading: loadingMedia } = useFiles<any>({ limit: 10 });
 
-  const renderBackdrop = useCallback(
-    (backdropProps: any) => (
-      <BottomSheetBackdrop {...backdropProps} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.4} pressBehavior="close" />
-    ),
-    []
-  );
 
   const toggleRecipient = useCallback((id: string, email?: string) => {
     setRecipientIds((prev) =>
@@ -226,33 +223,14 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
 
   return (
     <>
-      {/* Header */}
-      <View className="px-5 pb-4 border-b border-stroke-weaker flex-row items-center justify-between">
-        <Text className="text-text-strong" style={TYPE.sectionTitle}>
-          {isEdit ? 'Edit Capsule' : 'Create Capsule'}
-        </Text>
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.selectionAsync();
-            onClose();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Close capsule"
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: COLORS.fillWeak,
-          }}
-          activeOpacity={0.7}
-        >
-          <X size={20} color={COLORS.textStrong} />
-        </TouchableOpacity>
-      </View>
+      <SheetHeader
+        title={isEdit ? 'Edit capsule' : 'Create capsule'}
+        onClose={onClose}
+        closeLabel="Close capsule"
+        style={{ paddingHorizontal: 20 }}
+      />
 
-      <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: (insets.bottom ? insets.bottom + 24 : 40) + keyboardHeight, gap: 32 }}>
+      <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: (insets.bottom ? insets.bottom + 24 : 40) + keyboardHeight, gap: SHEET_SECTION_GAP }}>
 
         {/* Recipients */}
         <View className="gap-3">
@@ -543,22 +521,27 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
           </View>
         </View>
 
-        {/* Footer moved inside scroll view */}
-        <View className="flex-row gap-3 pt-6 pb-8">
+        {/* Actions: 32px below the body (8px here + the 24px section gap). */}
+        <View className="flex-row gap-3 pt-2">
           <Button
             variant="outline"
+            size="lg"
+            rounded="full"
+            className="h-14 flex-1"
             onPress={() => handleSubmit('draft')}
             disabled={isPending}
-            className="flex-1 rounded-full border-stroke-weak"
           >
-            <Text className="text-text-strong" style={TYPE.label}>Save as Draft</Text>
+            Save as Draft
           </Button>
           <Button
+            size="lg"
+            rounded="full"
+            className="h-14 flex-1"
             onPress={() => handleSubmit('scheduled')}
+            loading={isPending}
             disabled={isPending || !scheduleDate || !title.trim() || !body.trim() || recipientIds.length === 0}
-            className="flex-1 bg-brand rounded-full"
           >
-            {isPending ? <Spinner color="white" /> : <Text className="text-white" style={TYPE.label}>{isEdit ? 'Update Capsule' : 'Schedule Capsule'}</Text>}
+            {isEdit ? 'Update Capsule' : 'Schedule Capsule'}
           </Button>
         </View>
 
@@ -581,18 +564,16 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
       {/* Date Options Modal */}
       <BottomSheetModal
         ref={dateModalRef}
-        topInset={getSheetTopInset(insets.top)}
-        snapPoints={['50%']}
-        backdropComponent={renderBackdrop}
-        handleIndicatorStyle={{ backgroundColor: COLORS.strokeStrong, opacity: 0.3 }}
+        {...sheetChrome.props}
+        snapPoints={sheetChrome.snapPoints(['50%'])}
       >
-        <View className="px-5 py-4 border-b border-stroke-weaker flex-row justify-between items-center">
-          <Text className="text-text-strong" style={TYPE.sectionTitle}>Delivery Date</Text>
-          <TouchableOpacity onPress={() => dateModalRef.current?.dismiss()} hitSlop={12}>
-            <X size={20} color={COLORS.textWeak} />
-          </TouchableOpacity>
-        </View>
-        <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 12 }}>
+        <SheetHeader
+          title="Delivery date"
+          onClose={() => dateModalRef.current?.dismiss()}
+          closeLabel="Close delivery date"
+          style={{ paddingHorizontal: 20 }}
+        />
+        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 12 }}>
           {[
             { label: 'In 3 days', days: 3 },
             { label: 'In 1 week', days: 7 },
@@ -616,7 +597,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
               dateModalRef.current?.dismiss();
               setTimeout(() => setShowNativePicker(true), 300);
             }}
-            className="p-4 rounded-xl border border-stroke-weaker bg-card mt-4"
+            className="p-4 rounded-xl border border-stroke-weaker bg-card mt-3"
           >
             <Text className="text-brand text-center" style={TYPE.body}>Pick Custom Date...</Text>
           </TouchableOpacity>

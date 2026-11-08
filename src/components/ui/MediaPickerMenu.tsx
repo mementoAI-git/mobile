@@ -123,7 +123,7 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     bottom: '100%',
     left: 0,
     flexDirection: 'row',
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.popover,
     borderRadius: radius(16),
     borderWidth: 1,
     borderColor: COLORS.strokeWeaker,

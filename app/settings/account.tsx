@@ -2,7 +2,6 @@ import type { ThemeColors } from '@/constants/tokens';
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ImageBackground,
   Platform,
   NativeModules,
   ScrollView,
@@ -13,7 +12,6 @@ import {
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Fingerprint from 'lucide-react-native/icons/fingerprint-pattern';
-import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import { Passkey } from 'react-native-passkey';
 import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
@@ -35,7 +33,17 @@ import { useTwoFactorSettingsLogic } from '@/hooks/use-two-factor-settings-logic
 import { useVaultLockStore } from '@/features/security/vault-lock.store';
 import { useAuthStore, useUiStore, useUserStore } from '@/store';
 
-const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
+
+// On iPhone a passkey is created with Face ID and saved to iCloud Keychain, so we name it after Face ID.
+const IS_IOS = Platform.OS === 'ios';
+const FACE_ID_LABEL = IS_IOS ? 'Face ID sign-in' : 'Passkey';
+
+function formatAddedDate(value?: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export default function SecuritySettingsScreen() {
   const COLORS = useThemeColors();
@@ -87,10 +95,12 @@ export default function SecuritySettingsScreen() {
     } catch (error) {
       const kind = classifyPasskeyError(error);
       if (kind === 'cancelled') return;
-      if (kind === 'unsupported' || kind === 'unavailable') {
+      if (kind === 'duplicate') {
+        setMessage(`${FACE_ID_LABEL} is already set up on this device.`);
+      } else if (kind === 'unsupported' || kind === 'unavailable' || kind === 'configuration') {
         setFallbackOffered(true);
       } else {
-        setMessage('Passkey setup could not be completed. Check your credential provider and try again.');
+        setMessage(`${FACE_ID_LABEL} setup couldn’t be completed. Try again.`);
       }
     }
   }, [registerPasskey]);
@@ -132,7 +142,6 @@ export default function SecuritySettingsScreen() {
       <SettingsSubpageHeader title="Security" onBack={handleBack} />
 
       <View className="flex-1">
-        <ImageBackground source={PATTERN} className="absolute inset-0" style={{ opacity: 0.03 }} resizeMode="repeat" />
         <ResponsiveScreen maxWidth={720}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <View style={styles.sectionHeaderBox}>
@@ -143,6 +152,7 @@ export default function SecuritySettingsScreen() {
             <Button
               variant="secondary"
               size="sm"
+              rounded="full"
               className="h-10 px-4"
               onPress={() => openSheet('change-password')}
             >
@@ -151,13 +161,34 @@ export default function SecuritySettingsScreen() {
           </View>
 
           <View style={[styles.card, { marginTop: 24 }]}>
-            <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>
-              Two-factor authentication
-            </Text>
+            <View style={styles.titleRow}>
+              <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>
+                Two-factor authentication
+              </Text>
+              <View
+                style={[styles.badge, { backgroundColor: twoFactor.is2FAEnabled ? COLORS.successFill : COLORS.errorFill }]}
+              >
+                <Text style={{ ...TYPE.metadata, color: twoFactor.is2FAEnabled ? COLORS.success : COLORS.error }}>
+                  {twoFactor.is2FAEnabled ? 'On' : 'Off'}
+                </Text>
+              </View>
+            </View>
             <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak, marginTop: 6, lineHeight: 20 }}>
-              Add a verification step each time you try to sign in on a new device.
+              {twoFactor.is2FAEnabled
+                ? 'You’ll enter a code from your authenticator app when you sign in on a new device.'
+                : 'Add a verification step each time you try to sign in on a new device.'}
             </Text>
-            {!twoFactor.is2FAEnabled && (
+            {twoFactor.is2FAEnabled ? (
+              <Button
+                variant="secondary"
+                size="md"
+                className="mt-4 h-11 self-start"
+                loading={twoFactor.loading}
+                onPress={twoFactor.handleDisable}
+              >
+                Turn off 2FA
+              </Button>
+            ) : (
               <Button
                 variant="secondary"
                 size="md"
@@ -168,19 +199,9 @@ export default function SecuritySettingsScreen() {
                 Set up authenticator
               </Button>
             )}
-            {twoFactor.is2FAEnabled && (
-              <View style={{ marginTop: 14 }}>
-                <SecurityCredentialRow
-                  icon={<ShieldCheck size={22} color={COLORS.success} />}
-                  title="2FA Setup"
-                  subtitle="Authenticator enabled"
-                  onDelete={() => openSheet('security-confirmation', {
-                    kind: 'disable-two-factor',
-                    onConfirm: twoFactor.disableNow,
-                  })}
-                />
-              </View>
-            )}
+            {twoFactor.error && !twoFactor.setupData ? (
+              <Text style={{ ...TYPE.bodySmall, color: COLORS.error, marginTop: 10 }}>{twoFactor.error}</Text>
+            ) : null}
           </View>
 
           <View style={[styles.card, { marginTop: 16 }]}>
@@ -228,35 +249,43 @@ export default function SecuritySettingsScreen() {
           </View>
 
           <View style={[styles.card, { marginTop: 16 }]}>
-            <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>
-              Passkeys
-            </Text>
+            <View style={styles.titleRow}>
+              <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>
+                {IS_IOS ? 'Face ID' : 'Passkeys'}
+              </Text>
+              {passkeys.length > 0 ? (
+                <View style={[styles.badge, styles.brandBadge]}>
+                  <Text style={{ ...TYPE.metadata, color: COLORS.brand }}>{passkeys.length} added</Text>
+                </View>
+              ) : null}
+            </View>
             <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak, marginTop: 6, lineHeight: 20 }}>
-              Sign in without a password using Fingerprint, Face ID, or your device lock.
+              {IS_IOS
+                ? 'Sign in with Face ID instead of your password. It’s saved as a passkey in iCloud Keychain, so it works on your other Apple devices too.'
+                : 'Sign in without a password using your fingerprint, face, or screen lock.'}
             </Text>
             <Button
               variant="secondary"
               size="md"
               className="mt-4 h-11 self-start"
               loading={registerPasskey.isPending}
+              disabled={deletePasskey.isPending}
               onPress={handleAddPasskey}
             >
-              Add a Passkey
+              {IS_IOS ? 'Set up Face ID' : 'Add a passkey'}
             </Button>
 
             {(passkeys.length > 0 || fallbackEnabled) && (
               <View style={{ gap: 10, marginTop: 14 }}>
                 {passkeys.map((passkey, index) => {
                   const credentialId = passkey.credential_id || passkey.id || '';
-                  const createdAt = passkey.created_at
-                    ? new Date(passkey.created_at).toLocaleDateString('en-GB')
-                    : null;
+                  const createdAt = formatAddedDate(passkey.created_at);
                   return (
                     <SecurityCredentialRow
                       key={credentialId || `passkey-${index}`}
                       icon={<Fingerprint size={22} color={COLORS.brand} />}
                       title={passkey.device_name || passkey.name || `${Platform.OS} passkey`}
-                      subtitle={createdAt ? `Added ${createdAt}` : 'Native passkey'}
+                      subtitle={createdAt ? `Added ${createdAt}` : 'Passkey'}
                       onDelete={credentialId ? () => requestDeletePasskey(credentialId) : undefined}
                     />
                   );
@@ -285,12 +314,16 @@ export default function SecuritySettingsScreen() {
 
             {fallbackOffered && (
               <View style={styles.fallbackCard}>
-                <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>Passkeys aren&apos;t available here</Text>
+                <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>
+                  {IS_IOS ? 'Use Face ID on this iPhone' : 'Passkeys aren’t available here'}
+                </Text>
                 <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak, marginTop: 4 }}>
-                  You can still protect quick sign-in with Face ID or Touch ID on this device.
+                  {IS_IOS
+                    ? 'We couldn’t save a passkey, but you can still sign in with Face ID on this iPhone.'
+                    : 'You can still protect quick sign-in with your fingerprint or face on this device.'}
                 </Text>
                 <Button variant="secondary" size="md" className="mt-3 h-10 self-start" onPress={enableFallback}>
-                  Enable biometric fallback
+                  {IS_IOS ? 'Turn on Face ID' : 'Turn on biometric sign-in'}
                 </Button>
               </View>
             )}
@@ -340,8 +373,8 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
   passwordRow: {
     minHeight: 56,
-    borderRadius: 999,
-    backgroundColor: COLORS.card,
+    borderRadius: 24,
+    backgroundColor: COLORS.settingsCard,
     paddingLeft: 20,
     paddingRight: 8,
     flexDirection: 'row',
@@ -354,10 +387,13 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     ...TYPE.mono,
     letterSpacing: 4,
   },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2 },
+  brandBadge: { borderWidth: 1, borderColor: COLORS.brand },
   card: {
     borderRadius: 24,
     padding: 20,
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.settingsCard,
   },
   fallbackCard: {
     borderRadius: 16,
@@ -369,7 +405,7 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     marginTop: 24,
     padding: 20,
     borderRadius: 24,
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.settingsCard,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

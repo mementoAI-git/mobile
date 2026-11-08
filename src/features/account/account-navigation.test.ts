@@ -15,7 +15,15 @@ describe('account overview navigation', () => {
     expect(root).toContain('name="account"');
     expect(account).toContain("router.push('/settings')");
     expect(account).toContain("router.push('/insights')");
-    expect(account).toContain("openSheet('edit-profile')");
+    // Account starts with the profile card; plan, About me and Edit Profile live elsewhere.
+    expect(account).not.toContain("openSheet('edit-profile')");
+    expect(account).not.toContain('AboutMeCard');
+    const order = ['<Avatar', 'View insights', '<MusicControllerCard', '<WeeklyProgressCard', '<EnrichmentScoreCard'].map((s) => account.indexOf(s));
+    expect(order.every((index) => index > -1)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(account).toContain('borderRadius: 20');
+    expect(account).toContain("<EnrichmentScoreCard score={score} onPress={openEnrichment} />");
+    expect(account).toContain("params: { section: 'enrichment' }");
     expect(account).toContain("router.replace('/(tabs)/overview')");
     expect(account).toContain("openSheet('streak')");
     expect(header).toContain("openSheet('quick-tools')");

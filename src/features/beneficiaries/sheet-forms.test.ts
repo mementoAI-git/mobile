@@ -1,51 +1,41 @@
 import { describe, expect, test } from 'bun:test';
 import {
   buildBeneficiaryInvitePayload,
+  buildBeneficiaryUpdatePayload,
   buildGroupPayload,
   GROUP_COLOR_PALETTE,
 } from './sheet-forms';
 
-describe('beneficiary sheet form contracts', () => {
-  test('normalizes every functional invite field for the atomic API payload', () => {
+describe('person sheet form contracts (web parity)', () => {
+  test('normalizes the invite fields and sends groups with shared-only access', () => {
     expect(buildBeneficiaryInvitePayload({
       email: '  HERRGROOT@GMAIL.COM ',
       name: '  Nsiyy Uwem ',
       relationship: ' Friend ',
-      about: ' Close friend from university. ',
-      avatarFileId: ' file_123 ',
       groupIds: ['group_1', 'group_2', 'group_1', ''],
     })).toEqual({
       email: 'herrgroot@gmail.com',
       name: 'Nsiyy Uwem',
       relationship: 'Friend',
-      about: 'Close friend from university.',
-      avatar_file_id: 'file_123',
-      group_ids: ['group_1', 'group_2'],
+      groups: ['group_1', 'group_2'],
+      access_scope: 'shared_only',
     });
   });
 
-  test('omits empty optional invite fields', () => {
+  test('omits groups when none are chosen', () => {
     expect(buildBeneficiaryInvitePayload({
-      email: 'person@example.com',
-      name: 'Person',
-      relationship: 'Friend',
-      about: ' ',
-      avatarFileId: '',
-      groupIds: [],
-    })).toEqual({
-      email: 'person@example.com',
-      name: 'Person',
-      relationship: 'Friend',
-    });
+      email: 'person@example.com', name: 'Person', relationship: 'Friend', groupIds: [],
+    })).toEqual({ email: 'person@example.com', name: 'Person', relationship: 'Friend', access_scope: 'shared_only' });
   });
 
   test('rejects incomplete and invalid invite values', () => {
-    expect(buildBeneficiaryInvitePayload({
-      email: 'not-an-email', name: 'Person', relationship: 'Friend', about: '', groupIds: [],
-    })).toBeNull();
-    expect(buildBeneficiaryInvitePayload({
-      email: 'person@example.com', name: ' ', relationship: 'Friend', about: '', groupIds: [],
-    })).toBeNull();
+    expect(buildBeneficiaryInvitePayload({ email: 'not-an-email', name: 'Person', relationship: 'Friend', groupIds: [] })).toBeNull();
+    expect(buildBeneficiaryInvitePayload({ email: 'person@example.com', name: ' ', relationship: 'Friend', groupIds: [] })).toBeNull();
+  });
+
+  test('builds the edit payload from name, email and relationship', () => {
+    expect(buildBeneficiaryUpdatePayload({ email: ' A@B.CO ', name: ' Ann ', relationship: ' Sister ' }))
+      .toEqual({ email: 'a@b.co', name: 'Ann', relationship: 'Sister' });
   });
 });
 

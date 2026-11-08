@@ -25,7 +25,6 @@ const primarySurfaces = [
   'src/components/chat/MessageBubble.tsx',
   'src/components/chat/TypingIndicator.tsx',
   'src/components/chat/DeepDiveBanner.tsx',
-  'src/components/chat/DeepDiveNudge.tsx',
   'src/components/chat/HostChatJumpPills.tsx',
   'src/components/chat/MilestoneCard.tsx',
   'src/components/chat/PromptReflectionHeader.tsx',
@@ -128,12 +127,12 @@ describe('primary surface typography', () => {
     }
   });
 
-  test('the Overview conversational hero uses the shared prompt card typography', () => {
+  test('the Overview capture card writes in the serif capture role', () => {
     const overview = readFileSync('app/(tabs)/overview/index.tsx', 'utf8');
-    const prompt = readFileSync('src/components/overview/MemoryPromptCard.tsx', 'utf8');
-    expect(overview).toContain('<MemoryPromptCard');
-    expect(prompt).toContain('...TYPE.cardTitle');
-    expect(prompt).toContain('...TYPE.button');
+    const capture = readFileSync('src/components/overview/OverviewCaptureCard.tsx', 'utf8');
+    expect(overview).toContain('<OverviewCaptureCard');
+    expect(capture).toContain('TYPE.captureInput');
+    expect(capture).toContain('What’s on your mind today?');
   });
 });
 

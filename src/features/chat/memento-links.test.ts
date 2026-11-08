@@ -75,10 +75,10 @@ describe('done cards', () => {
 });
 
 describe('insight links', () => {
-  test('open Insights, and are not listed as story sources', () => {
+  test('open that note on Insights, and are not listed as story sources', () => {
     const link = parseMementoPath('/insights?observation=64b7f0c2a1b2c3d4e5f60aaa');
     expect(link).toEqual({ kind: 'insight', id: '64b7f0c2a1b2c3d4e5f60aaa' });
-    expect(mementoRoute(link!)).toEqual({ pathname: '/insights' });
+    expect(mementoRoute(link!)).toEqual({ pathname: '/insights', params: { observation: '64b7f0c2a1b2c3d4e5f60aaa' } });
     expect(collectReplySources('[Early riser](/insights?observation=64b7f0c2a1b2c3d4e5f60aaa)')).toEqual([]);
     expect(tokenizeMessageMarkdown('[Early riser](/insights?observation=64b7f0c2a1b2c3d4e5f60aaa)')[0]).toMatchObject({ type: 'link' });
   });

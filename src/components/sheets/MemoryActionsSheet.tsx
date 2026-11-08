@@ -37,6 +37,8 @@ import { TYPE } from '@/constants/typography';
 import { toast } from '@/components/ui/Toast';
 import { publishedPostUrl } from '@/lib/env';
 import { PublishPrivacySheet, type PrivacyMode } from './PublishPrivacySheet';
+import { SheetHeader } from './SheetHeader';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
 import {
   buildMemoryAudiencePayload,
   deriveMemoryAudience,
@@ -277,13 +279,12 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{ paddingBottom: 24 }}
     >
-      {/* Header */}
-      <View style={s.header}>
-        <Text style={s.headerTitle}>Actions</Text>
-        <TouchableOpacity onPress={handleClose} style={s.closeBtn} activeOpacity={0.7}>
-          <X size={16} color={COLORS.textBase} strokeWidth={2.5} />
-        </TouchableOpacity>
-      </View>
+      <SheetHeader
+        title={memory.title?.trim() || 'Story options'}
+        onClose={handleClose}
+        closeLabel="Close story options"
+        style={{ marginBottom: SHEET_GROUP_GAP }}
+      />
 
       {/* Share now */}
       <TouchableOpacity onPress={handleShare} style={s.actionRow} activeOpacity={0.8}>
@@ -366,16 +367,6 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const createStyles = (COLORS: ThemeColors) => ({
-  header: {
-    flexDirection: 'row' as const, alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
-    marginBottom: 20, paddingHorizontal: 2,
-  },
-  headerTitle: { ...TYPE.sectionTitle, color: COLORS.textStrong },
-  closeBtn: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.fillWeak,
-    alignItems: 'center' as const, justifyContent: 'center' as const,
-  },
   actionRow: {
     flexDirection: 'row' as const, alignItems: 'center' as const, gap: 14,
     padding: 16, backgroundColor: COLORS.fillWeak, borderRadius: 16,
@@ -383,7 +374,7 @@ const createStyles = (COLORS: ThemeColors) => ({
   },
   actionLabel: { ...TYPE.body, color: COLORS.textStrong },
   visibilityCard: {
-    backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16, marginBottom: 16, gap: 12,
+    backgroundColor: COLORS.fillWeak, borderRadius: 16, padding: 16, marginTop: SHEET_SECTION_GAP - 10, marginBottom: SHEET_SECTION_GAP, gap: 12,
   },
   visibilityTitle: { ...TYPE.body, color: COLORS.textStrong },
   visibilitySubtitle: {
@@ -395,7 +386,7 @@ const createStyles = (COLORS: ThemeColors) => ({
     paddingHorizontal: 14, paddingVertical: 13,
   },
   visibilityLabel: { flex: 1, ...TYPE.label, color: COLORS.textStrong },
-  tagsSection: { marginBottom: 24, gap: 8 },
+  tagsSection: { marginBottom: SHEET_GROUP_GAP, gap: 8 },
   tagsLabel: { ...TYPE.body, color: COLORS.textStrong, paddingHorizontal: 2 },
   tagsArea: {
     backgroundColor: COLORS.card, borderRadius: 16,
