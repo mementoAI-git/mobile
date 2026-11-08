@@ -6,11 +6,12 @@ import { ThemeProvider, DarkTheme, DefaultTheme } from 'expo-router';
 import { useThemeColors, useResolvedAppearance } from '@/hooks/use-theme-colors';
 import { useAppearanceStore } from '@/store/appearance.store';
 import { DeepSkyBackdrop } from './DeepSkyBackdrop';
-import { APPEARANCE_VARIABLES, DEEP_SKY } from '@/constants/appearance';
+import { APPEARANCE_VARIABLES } from '@/constants/appearance';
+import { skyAppearance } from '@/features/appearance/appearance';
 
 export function AppearanceProvider({ children }: { children: React.ReactNode }) {
   const colors = useThemeColors();
-  const deepSky = useAppearanceStore((s) => s.preference === 'deep-sky');
+  const sky = useAppearanceStore((s) => skyAppearance(s.preference));
   const scheme = useResolvedAppearance();
   useEffect(() => { void useAppearanceStore.getState().hydrate(); }, []);
   const variables = useMemo(() => vars(Object.fromEntries(
@@ -26,8 +27,8 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
   }), [colors, scheme]);
   return (
     <ThemeProvider value={navigationTheme}>
-      <View style={[{ flex: 1, backgroundColor: deepSky ? DEEP_SKY.canvas : colors.background }, variables]}>
-        {deepSky && <DeepSkyBackdrop />}
+      <View style={[{ flex: 1, backgroundColor: colors.canvas }, variables]}>
+        {sky && <DeepSkyBackdrop sky={sky} />}
         <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         {children}
       </View>

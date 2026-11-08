@@ -13,6 +13,8 @@ import { BODY_FONT, BODY_BOLD_FONT } from './body-font';
 
 export const COLORS = {
   background: '#ffffff',
+  /** Opaque fill behind the page. Equals `background` except in sky themes, where the page is transparent. */
+  canvas: '#ffffff',
   backgroundInverse: '#12131A',
   // Pure black, to blend with the iPhone's Dynamic Island hardware.
   dynamicIsland: '#000000',

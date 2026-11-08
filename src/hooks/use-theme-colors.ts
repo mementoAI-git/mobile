@@ -4,7 +4,7 @@ import { useColorScheme } from 'react-native';
 import { useAppearanceStore } from '@/store/appearance.store';
 import { resolveAppearance } from '@/features/appearance/appearance';
 import { COLORS } from '@/constants/tokens';
-import { DARK_COLORS, DEEP_SKY_COLORS } from '@/constants/appearance';
+import { DARK_COLORS, DEEP_SKY_COLORS, LIGHT_SKY_COLORS } from '@/constants/appearance';
 
 export function useResolvedAppearance() {
   const preference = useAppearanceStore((s) => s.preference);
@@ -15,7 +15,9 @@ export function useResolvedAppearance() {
 export function useThemeColors() {
   const preference = useAppearanceStore((s) => s.preference);
   const scheme = useResolvedAppearance();
-  return preference === 'deep-sky' ? DEEP_SKY_COLORS : scheme === 'dark' ? DARK_COLORS : COLORS;
+  if (preference === 'deep-sky') return DEEP_SKY_COLORS;
+  if (preference === 'light-sky') return LIGHT_SKY_COLORS;
+  return scheme === 'dark' ? DARK_COLORS : COLORS;
 }
 
 /** Re-resolve existing StyleSheet semantic colors without mutating shared styles. */

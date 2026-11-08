@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { COLORS, CARD_PASTEL_SURFACES } from '@/constants/tokens';
-import { DARK_COLORS, DARK_CARD_SURFACES, APPEARANCE_VARIABLES, DEEP_SKY, DEEP_SKY_COLORS } from '@/constants/appearance';
+import { DARK_COLORS, DARK_CARD_SURFACES, APPEARANCE_VARIABLES, DEEP_SKY, DEEP_SKY_COLORS, LIGHT_SKY, LIGHT_SKY_COLORS } from '@/constants/appearance';
 
 function rgb(value: string): number[] {
   if (value.startsWith('#')) return [1, 3, 5].map((i) => parseInt(value.slice(i, i + 2), 16));
@@ -54,4 +54,20 @@ describe('theme readability', () => {
     expect(contrast(DEEP_SKY_COLORS.textBase, surface)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(DEEP_SKY_COLORS.previewText, surface)).toBeGreaterThanOrEqual(4.5);
   }
+});
+
+test('Light Sky ink stays readable on every sky stop and on its translucent cards', () => {
+  const sky = [LIGHT_SKY.canvas, LIGHT_SKY.midpoint, LIGHT_SKY.horizon];
+  const hex = (channels: number[]) => '#' + channels.map((c) => Math.round(c).toString(16).padStart(2, '0')).join('');
+  for (const stop of sky) {
+    const card = hex(composite(LIGHT_SKY_COLORS.card, stop));
+    for (const surface of [stop, card]) {
+      expect(contrast(LIGHT_SKY_COLORS.textStrong, surface)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(LIGHT_SKY_COLORS.textBase, surface)).toBeGreaterThanOrEqual(4.5);
+    }
+    // Story previews sit on cards, never on the bare sky.
+    expect(contrast(LIGHT_SKY_COLORS.previewText, card)).toBeGreaterThanOrEqual(4.5);
+  }
+  const activeBg = LIGHT_SKY_COLORS.activeFill;
+  expect(contrast(LIGHT_SKY_COLORS.activeText, activeBg)).toBeGreaterThanOrEqual(4.5);
 });
