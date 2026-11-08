@@ -31,7 +31,6 @@ import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Check from 'lucide-react-native/icons/check';
 import ImageIcon from 'lucide-react-native/icons/image';
 import VolumeX from 'lucide-react-native/icons/volume-x';
-import { DEEP_SKY } from '@/constants/appearance';
 import { TYPE } from '@/constants/typography';
 import { minTouchTarget, radius } from '@/constants/responsive';
 import { getChatSettingsLayout } from '@/features/chat/chat-settings-layout';
@@ -409,8 +408,8 @@ export default function ChatSettingsScreen() {
 
 const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   screen: {
-    // Deep Sky normally reveals the shared canvas; this overlay needs its own opaque surface.
-    backgroundColor: COLORS.background === 'transparent' ? DEEP_SKY.canvas : COLORS.background,
+    // Sky themes normally reveal the shared backdrop; this overlay needs its own opaque surface.
+    backgroundColor: COLORS.canvas,
     flex: 1,
   },
   backgroundGradient: {

@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { View } from 'react-native';
 import Sun from 'lucide-react-native/icons/sun';
 import CloudMoon from 'lucide-react-native/icons/cloud-moon';
+import CloudSun from 'lucide-react-native/icons/cloud-sun';
 import Moon from 'lucide-react-native/icons/moon';
 import Monitor from 'lucide-react-native/icons/monitor';
 import Check from 'lucide-react-native/icons/check';
@@ -15,6 +16,7 @@ import type { AppearancePreference } from '@/features/appearance/appearance';
 const OPTIONS = [
   { value: 'system', label: 'System', icon: Monitor },
   { value: 'light', label: 'Light', icon: Sun },
+  { value: 'light-sky', label: 'Light Sky', icon: CloudSun },
   { value: 'dark', label: 'Dark', icon: Moon },
   { value: 'deep-sky', label: 'Deep Sky', icon: CloudMoon },
 ] as const;
