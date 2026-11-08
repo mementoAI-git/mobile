@@ -77,10 +77,7 @@
   "submit": {
     "testflight": {
       "ios": {
-        "ascAppId": "6804683183",
-        "ascApiKeyPath": "./secrets/AuthKey_BSKY495VD9.p8",
-        "ascApiKeyId": "BSKY495VD9",
-        "ascApiKeyIssuerId": "a9b89b7c-54ac-4abc-9bc4-4e01b7fed2f3"
+        "ascAppId": "6804683183"
       }
     },
     "production": {
