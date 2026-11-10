@@ -36,6 +36,7 @@ import { type ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { toast } from '@/components/ui/Toast';
 import { publishedPostUrl } from '@/lib/env';
+import { useShareStoryLink } from '@/hooks/use-share-story-link';
 import { PublishPrivacySheet, type PrivacyMode } from './PublishPrivacySheet';
 import { SheetHeader } from './SheetHeader';
 import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
@@ -78,6 +79,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
   const { mutate: deleteMemory, isPending: isDeleting } = useDeleteMemory();
   const { mutate: toggleBookmark, isPending: isBookmarking } = useBookmarkMemory();
   const { mutate: updateMemory } = useUpdateMemory(memory._id);
+  const shareStoryLink = useShareStoryLink();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const originalAudience = useMemo(() => deriveMemoryAudience(memory), [memory]);
@@ -114,15 +116,18 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
 
   const handleShare = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      await Share.share({
-        message: `${memory.title || 'Check out my story'}\n\n${publishedPostUrl(memory._id)}`,
-      });
-    } catch {
-      toast('We couldn’t share this story. Please try again.', 'error');
-    }
-    onClose?.();
-  }, [memory, onClose]);
+    const plan = await shareStoryLink(memory._id, async () => {
+      try {
+        await Share.share({
+          message: `${memory.title || 'Check out my story'}\n\n${publishedPostUrl(memory._id)}`,
+        });
+      } catch {
+        toast('We couldn’t share this story. Please try again.', 'error');
+      }
+    });
+    // The confirmation sheet has taken this sheet's place; closing would dismiss it.
+    if (plan !== 'confirm-public') onClose?.();
+  }, [memory, onClose, shareStoryLink]);
 
   const handleBookmark = useCallback(() => {
     Haptics.selectionAsync();
