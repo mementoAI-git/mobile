@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, expect, spyOn, test } from 'bun:test';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { signInWithAppleNative } from './apple-auth';
+import { appleSignInShown, signInWithAppleNative } from './apple-auth';
 
 describe('signInWithAppleNative', () => {
   test('returns identityToken and user when authentication succeeds', async () => {
@@ -42,5 +42,14 @@ describe('signInWithAppleNative', () => {
     const result = await signInWithAppleNative();
     expect(result.success).toBe(false);
     expect(result.cancelled).toBe(true);
+  });
+});
+
+describe('appleSignInShown', () => {
+  test('shows Sign in with Apple only on iOS', () => {
+    expect(appleSignInShown('ios')).toBe(true);
+    // Apple has no Android sign-in; the button only ever failed there.
+    expect(appleSignInShown('android')).toBe(false);
+    expect(appleSignInShown('web')).toBe(false);
   });
 });
