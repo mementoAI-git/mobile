@@ -58,7 +58,7 @@ export function useVerifyEmail() {
 
 export function useSetPassword() {
   return useMutation({
-    mutationFn: (payload: { token: string; password: string }) =>
+    mutationFn: (payload: { token: string; password: string; email?: string }) =>
       post(endpoint.setPassword, payload, { skipAuth: true }),
   });
 }
