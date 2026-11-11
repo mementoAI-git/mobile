@@ -27,7 +27,8 @@ import {
 } from '@/components/chat/MessageBubble';
 import { VoiceSessionDivider } from '@/components/chat/VoiceSessionDivider';
 import { DigitalMindHeader } from '@/components/chat/DigitalMindHeader';
-import { VoiceChatComposer } from '@/components/chat/VoiceChatComposer';
+import { VoiceScreenBeam } from '@/components/effects/VoiceGlow';
+import { FrostedHeaderBackdrop, HeaderButtonBlur } from '@/components/ui/FrostedHeaderBackdrop';
 import { MessageActionsProvider } from '@/components/chat/MessageActionsProvider';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { ChatInput, type ChatSendPayload } from '@/components/chat/ChatInput';
@@ -80,6 +81,8 @@ const COLLAPSED_COMPOSER_HEIGHT = minTouchTarget(58);
 const COMPOSER_OVERLAY_GAP = responsiveSpace(8);
 const COMPOSER_OVERLAY_MIN_HEIGHT = vs(180);
 const DEFAULT_HEADER_HEIGHT = 70;
+/** How far the header's frosted backdrop fades out below the header row. */
+const HEADER_FADE_HEIGHT = 56;
 const CHAT_VISIBLE_CONTENT_POSITION = Object.freeze({
   autoscrollToBottomThreshold: 0.2,
   startRenderingFromBottom: true,
@@ -534,9 +537,14 @@ export default function ChatScreen() {
     );
   }, [isFetchingOlderMessages, isPromptType, promptTitle, promptMemory?.title, promptMemory?.category, promptMemory?._id, promptMemory?.bookmarked, promptLabel, promptId]);
 
+  // The message list runs under the transparent header, so bubbles scroll beneath it.
+  // A deep dive banner sits between them instead, and the list starts below it.
+  const showDeepDiveBanner = !isPromptType && chatMode === 'deep_dive' && Boolean(deepDiveDimension);
+  const listUnderHeader = showDeepDiveBanner ? 0 : headerHeight;
+  const showMilestone = enrichmentStats.deltaToday > 0 || Boolean(enrichmentStats.milestoneJustReached);
   const messagesContentStyle = React.useMemo(
-    () => [styles.messagesContent, { paddingBottom: messageBottomPadding }],
-    [messageBottomPadding],
+    () => [styles.messagesContent, { paddingBottom: messageBottomPadding, paddingTop: 8 + (showMilestone ? 0 : listUnderHeader) }],
+    [messageBottomPadding, showMilestone, listUnderHeader],
   );
 
   const handleSelectStarter = useCallback((prompt: string) => {
@@ -614,6 +622,7 @@ export default function ChatScreen() {
 
       {/* ── Header ───────────────────────────────────────────────────── */}
       <View style={styles.header} onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}>
+        <FrostedHeaderBackdrop fade={HEADER_FADE_HEIGHT} />
         <TouchableOpacity
           accessibilityLabel="Go back"
           accessibilityRole="button"
@@ -621,6 +630,7 @@ export default function ChatScreen() {
           activeOpacity={0.7}
           style={styles.headerButton}
         >
+          <HeaderButtonBlur dark={dark} />
           <ArrowLeft size={21} color={COLORS.textStrong} strokeWidth={2.2} />
         </TouchableOpacity>
 
@@ -634,6 +644,7 @@ export default function ChatScreen() {
             onPress={handleVoiceCall}
             style={styles.headerButton}
           >
+            <HeaderButtonBlur dark={dark} />
             <PhoneCall size={20} color={COLORS.textStrong} strokeWidth={2.2} />
           </TouchableOpacity>
           <TouchableOpacity
@@ -643,6 +654,7 @@ export default function ChatScreen() {
             onPress={handleActions}
             style={styles.headerButton}
           >
+            <HeaderButtonBlur dark={dark} />
             {/* Web host chat header: SlidersHorizontal for Chat settings. */}
             <SlidersHorizontal size={20} color={COLORS.textStrong} strokeWidth={1.75} />
           </TouchableOpacity>
@@ -650,11 +662,11 @@ export default function ChatScreen() {
       </View>
 
       {/* ── Contextual chat surfaces ───────────────────────────── */}
-      {showInlineVoice && <VoiceChatComposer />}
-      {!showInlineVoice && !isPromptType && (
+      {/* The live voice call is the floating card (FloatingVoiceCall), not an inline panel. */}
+      {showDeepDiveBanner && (
         <View>
           {/* Deep dive banner (while in deep_dive mode) */}
-          {chatMode === 'deep_dive' && deepDiveDimension && (
+          {deepDiveDimension && (
             <View className="px-4 pt-2">
               <DeepDiveBanner
                 dimensionLabel={dimensionLabel(deepDiveDimension)}
@@ -668,8 +680,9 @@ export default function ChatScreen() {
       )}
 
       {/* ── Messages ─────────────────────────────────────────────── */}
-      <View style={styles.messageList}>
-        {(enrichmentStats.deltaToday > 0 || enrichmentStats.milestoneJustReached) && (
+      <View style={[styles.messageList, { marginTop: -listUnderHeader }]}>
+        {showMilestone && (
+          <View style={{ paddingTop: listUnderHeader }}>
           <MilestoneCard
             enrichmentDelta={enrichmentStats.deltaToday}
             milestoneLabel={
@@ -678,9 +691,12 @@ export default function ChatScreen() {
                 : null
             }
           />
+          </View>
         )}
         {isLoading && !allMessages.length ? (
-          <ChatSkeleton />
+          <View style={{ flex: 1, paddingTop: showMilestone ? 0 : listUnderHeader }}>
+            <ChatSkeleton />
+          </View>
         ) : (
           <FlashList
             ref={flatListRef}
@@ -726,7 +742,10 @@ export default function ChatScreen() {
           {Platform.OS === 'ios' && (
             <BlurView tint={dark ? 'dark' : 'light'} intensity={90} style={StyleSheet.absoluteFill} />
           )}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: Platform.OS === 'ios' ? COLORS.glass : COLORS.popover }]} />
+          {/* In voice mode iOS keeps only the blur, so the beam glows through behind the input. */}
+          {!(showInlineVoice && Platform.OS === 'ios') && (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: Platform.OS === 'ios' ? COLORS.glass : COLORS.popover }]} />
+          )}
         </MaskedView>
         {/* ── Reply Quote Preview Panel ────────────────────────────── */}
         {replyQuote && (
@@ -784,6 +803,8 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top', 'bottom']}>
+      {/* Voice mode: the sunset beam rises from the bottom edge of the screen, beneath messages and the input. */}
+      {showInlineVoice && <VoiceScreenBeam active={voiceCall.isConnected && !voiceCall.isEnding} level={voiceCall.getPlaybackLevel} />}
       {Platform.OS === 'ios' ? (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           <View style={styles.screenSurface}>
@@ -800,15 +821,15 @@ export default function ChatScreen() {
 }
 
 const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
+  // Transparent: the SafeAreaView paints the page, so the voice beam behind can show through.
   screenSurface: {
-    backgroundColor: COLORS.background,
     flex: 1,
   },
+  // Transparent and above the message list, which scrolls beneath it.
   header: {
     alignItems: 'center',
-    borderBottomColor: COLORS.strokeWeak,
-    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
+    zIndex: 10,
     height: 70,
     paddingHorizontal: 16,
   },
@@ -818,6 +839,7 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderRadius: radius(20),
     height: minTouchTarget(40),
     justifyContent: 'center',
+    overflow: 'hidden',
     width: minTouchTarget(40),
   },
   headerTitle: {
@@ -832,7 +854,6 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     gap: 4,
   },
   messageList: {
-    backgroundColor: COLORS.background,
     flex: 1,
     position: 'relative',
   },

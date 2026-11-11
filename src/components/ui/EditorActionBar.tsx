@@ -1,4 +1,5 @@
-import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
+import { useResolvedAppearance, useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
+import { BlurView } from 'expo-blur';
 /**
  * EditorActionBar — bottom toolbar for the story editor and quick-capture screens.
  *
@@ -21,9 +22,9 @@ import {
   ScrollView,
   StyleSheet,
   Animated,
+  Platform,
 } from 'react-native';
 import { Pressable, TouchableOpacity } from '@/components/ui/Touchable';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BookOpen from 'lucide-react-native/icons/book-open';
 import Pencil from 'lucide-react-native/icons/pencil';
@@ -44,6 +45,7 @@ import type { ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, radius, minTouchTarget } from '@/constants/responsive';
 import { MediaPickerMenu } from './MediaPickerMenu';
+import { HAS_NATIVE_MEDIA_MENU, NativeMediaMenu } from './NativeMediaMenu';
 import { RecordingIconButton } from './RecordingIconButton';
 import type { EditorBridge } from '@10play/tentap-editor';
 import { useBridgeState } from '@10play/tentap-editor';
@@ -52,6 +54,10 @@ import { useBridgeState } from '@10play/tentap-editor';
 
 const TOOLTIP_SEEN_KEY = 'editor_mode_tooltip_seen_v1';
 const TOOLTIP_DURATION_MS = 3500;
+/** Every screen using this bar sits in a SafeAreaView that already clears the home indicator. */
+const BAR_BOTTOM_PADDING = 4;
+/** Story toolbar buttons; hitSlop keeps their tap area at 44pt. */
+const BAR_BUTTON = 36;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -92,7 +98,7 @@ function FmtBtn({
       accessibilityState={{ selected: Boolean(active) }}
       onPressIn={() => { Haptics.selectionAsync(); onPress(); }}
       activeOpacity={0.7}
-      hitSlop={6}
+      hitSlop={4}
       style={[fmtStyles.btn, active && fmtStyles.btnActive]}
     >
       {children}
@@ -102,9 +108,9 @@ function FmtBtn({
 
 const createFmtStyles = (COLORS: ThemeColors) => StyleSheet.create({
   btn: {
-    width: 32,
-    height: 32,
-    borderRadius: radius(8),
+    width: BAR_BUTTON,
+    height: BAR_BUTTON,
+    borderRadius: BAR_BUTTON / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -121,7 +127,7 @@ function StoryFormattingTools({ editor }: { editor: EditorBridge }) {
   const s = useBridgeState(editor);
   const activeColor = COLORS.textStrong;
   const inactiveColor = COLORS.textBase;
-  const sz = iconSize(18);
+  const sz = iconSize(20);
   return (
     <>
       <FmtBtn label="Bold" active={s.isBoldActive} onPress={() => editor.toggleBold()}>
@@ -159,10 +165,13 @@ function StoryToolbar({
   onAudio,
   audioDisabled,
   isRecording,
+  nativeMenu,
 }: {
   editor?: EditorBridge | null;
   uploadOpen: boolean;
   onToggleUpload: () => void;
+  /** iOS system menu that replaces the upload toggle and the tile popup. */
+  nativeMenu?: React.ReactNode;
   onSwitchMode?: () => void;
   disableModeSwitch?: boolean;
   onAudio?: () => void;
@@ -172,10 +181,17 @@ function StoryToolbar({
   const COLORS = useThemeColors();
   const fmtStyles = useThemeStyles(createFmtStyles);
   const styles = useThemeStyles(createStyles);
+  const dark = useResolvedAppearance() === 'dark';
   return (
     <View style={styles.storyRow}>
+      {/* Theme-adaptive glass: a blur (iOS) under the weak fill, clipped to the pill. */}
+      <View pointerEvents="none" style={styles.storyGlass}>
+        {Platform.OS === 'ios' && <BlurView tint={dark ? 'dark' : 'light'} intensity={60} style={StyleSheet.absoluteFill} />}
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.fillWeak }]} />
+      </View>
       <View style={styles.captureTools}>
-      {/* ⊕ Upload toggle */}
+      {/* ⊕ Upload toggle: the iOS system menu, or a toggle for the tile popup elsewhere */}
+      {nativeMenu ?? (
       <TouchableOpacity
         onPress={onToggleUpload}
         activeOpacity={0.75}
@@ -184,11 +200,12 @@ function StoryToolbar({
         style={[styles.uploadBtn, styles.addButton]}
       >
         <Plus
-          size={iconSize(22)}
+          size={iconSize(20)}
           color={COLORS.activeText}
           strokeWidth={2}
         />
       </TouchableOpacity>
+      )}
 
       <RecordingIconButton
         hitSlop={6}
@@ -216,7 +233,7 @@ function StoryToolbar({
         ) : (
           [Bold, Italic, UnderlineIcon, Strikethrough, List, ListOrdered, Quote].map((Icon, i) => (
             <View key={i} style={[fmtStyles.btn, { opacity: 0.3 }]}>
-              <Icon size={18} color={COLORS.textMuted} strokeWidth={2} />
+              <Icon size={iconSize(20)} color={COLORS.textMuted} strokeWidth={2} />
             </View>
           ))
         )}
@@ -289,7 +306,6 @@ export function EditorActionBar({
     onSwitchMode();
   }, [onSwitchMode, showTooltip, dismissTooltip]);
 
-  const insets = useSafeAreaInsets();
   const isStory = mode === 'story';
 
   // ── Story mode: new unified toolbar ────────────────────────────────────────
@@ -311,9 +327,9 @@ export function EditorActionBar({
   if (isStory) {
     return (
       <View style={{ flexShrink: 0, flexGrow: 0 }}>
-        {/* Shared media picker menu — handles backdrop + tiles */}
+        {/* Shared media picker menu — handles backdrop + tiles (non-iOS) */}
         <MediaPickerMenu
-          visible={uploadOpen}
+          visible={uploadOpen && !HAS_NATIVE_MEDIA_MENU}
           onClose={() => setUploadOpen(false)}
           onGallery={() => callAndClose(onPhoto)}
           onCamera={() => callAndClose(onCamera)}
@@ -327,7 +343,7 @@ export function EditorActionBar({
         <ScrollView
           scrollEnabled={false}
           keyboardShouldPersistTaps="always"
-          style={[styles.container, { paddingBottom: Math.max(12, insets.bottom) }]}
+          style={[styles.storyBar, { paddingBottom: BAR_BOTTOM_PADDING }]}
         >
           <StoryToolbar
             editor={editor}
@@ -336,6 +352,16 @@ export function EditorActionBar({
             audioDisabled={audioDisabled}
             isRecording={isRecording}
             onToggleUpload={toggleUpload}
+            nativeMenu={HAS_NATIVE_MEDIA_MENU ? (
+              <NativeMediaMenu
+                size={BAR_BUTTON}
+                onGallery={onPhoto}
+                onCamera={onCamera}
+                onVoice={onAudio}
+                onFile={onFile}
+                isRecording={isRecording}
+              />
+            ) : undefined}
             onSwitchMode={handleSwitchMode}
             disableModeSwitch={disableModeSwitch}
           />
@@ -346,7 +372,7 @@ export function EditorActionBar({
 
   // ── Quick-capture mode: original layout ─────────────────────────────────────
   return (
-    <View style={[styles.container, { paddingBottom: Math.max(12, insets.bottom) }]}>
+    <View style={[styles.container, { paddingBottom: BAR_BOTTOM_PADDING }]}>
       <Text style={styles.label}>SWITCH MODES OR ADD MEDIA FILES</Text>
 
       {showTooltip && (
@@ -410,21 +436,34 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
 
   // ── Story toolbar ───────────────────────────────────────────────────────────
+  // Floating pill, like the tab bar.
+  storyBar: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
   storyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 44,
-    gap: 12,
+    gap: 6,
+    padding: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeak,
+  },
+  storyGlass: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 999,
+    overflow: 'hidden',
   },
   captureTools: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 6,
   },
   uploadBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: radius(10),
+    width: BAR_BUTTON,
+    height: BAR_BUTTON,
+    borderRadius: BAR_BUTTON / 2,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -441,7 +480,7 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   fmtScroll: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 4,
     paddingRight: 8,
   },
   fmtDivider: {

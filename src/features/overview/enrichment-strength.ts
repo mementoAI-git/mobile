@@ -3,6 +3,6 @@ export function enrichmentStrength(score: number | undefined) {
   if (score === undefined || !Number.isFinite(score)) return '–';
   if (score >= 70) return 'Strong';
   if (score >= 35) return 'Medium';
-  // "Low" rather than web's "Weak": short enough for a half-width stat tile.
-  return 'Low';
+  // The product name for the lowest band (was "Low"; web's insights tile says "Getting started" too).
+  return 'Getting started';
 }

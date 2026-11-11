@@ -20,7 +20,8 @@ import * as Haptics from 'expo-haptics';
 import { EnrichmentScoreCard } from '@/components/account/EnrichmentScoreCard';
 import { WeeklyProgressCard } from '@/components/account/WeeklyProgressCard';
 import { MusicControllerCard } from '@/components/account/MusicControllerCard';
-import { AccountSkeleton, Avatar, Button } from '@/components/ui';
+import { QuickActions } from '@/components/account/QuickActions';
+import { AccountSkeleton, Avatar } from '@/components/ui';
 
 import { TYPE } from '@/constants/typography';
 import {
@@ -98,10 +99,8 @@ export default function AccountOverviewScreen() {
     router.push('/insights');
   }, [router]);
 
-  const handleInsights = useCallback(() => {
-    Haptics.selectionAsync();
-    openInsights();
-  }, [openInsights]);
+  const openQuickNote = useCallback(() => openSheet('quick-capture'), [openSheet]);
+  const openAddPeople = useCallback(() => openSheet('add-beneficiary'), [openSheet]);
 
   // The enrichment card opens Insights on its Enrichment fields tab.
   const openEnrichment = useCallback(() => {
@@ -194,7 +193,8 @@ export default function AccountOverviewScreen() {
 
           <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: 8, paddingBottom: 32 }}
+          // Same 28px top inset as Settings, so both pages start their content at the same line.
+          contentContainerStyle={{ paddingTop: 28, paddingBottom: 32 }}
           refreshControl={(
             <RefreshControl
               refreshing={refreshing}
@@ -262,9 +262,7 @@ export default function AccountOverviewScreen() {
               </Animated.View>
 
               <Animated.View entering={FadeInDown.delay(40).duration(500)}>
-                <Button variant="secondary" size="lg" fullWidth className="h-14" onPress={handleInsights}>
-                  View insights
-                </Button>
+                <QuickActions onQuickNote={openQuickNote} onAddPeople={openAddPeople} onInsights={openInsights} />
               </Animated.View>
 
               {hasError && (

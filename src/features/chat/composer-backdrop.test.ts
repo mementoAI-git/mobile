@@ -8,7 +8,7 @@ describe('chat composer backdrop', () => {
 
     expect(source).toContain('useThemeStyles(createStyles)');
     expect(source).toContain('(COLORS: ThemeColors)');
-    expect(source).toContain('style={styles.messageList}');
+    expect(source).toContain('style={[styles.messageList, { marginTop: -listUnderHeader }]}');
     const blur = '<BlurView tint={dark ? \'dark\' : \'light\'} intensity={90}';
     expect(source).toContain(blur);
     expect(overviewDock).toContain(blur);

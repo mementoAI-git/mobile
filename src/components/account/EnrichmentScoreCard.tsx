@@ -114,7 +114,7 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     ...TYPE.bodySmall,
     marginTop: 4,
   },
-  // The score as a word (Low, Medium, Strong), not a percentage.
+  // The score as a word (Getting started, Medium, Strong), not a percentage.
   score: {
     flexShrink: 0,
     color: COLORS.textStrong,

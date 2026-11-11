@@ -3,8 +3,12 @@ import { View, Image, Text, type ImageSourcePropType } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import * as Haptics from 'expo-haptics';
 import { TYPE } from '@/constants/typography';
+import { COLORS } from '@/constants/tokens';
 import { cn } from '@/lib/utils';
 import Animated, { useSharedValue, useAnimatedStyle, useReducedMotion, withSpring } from 'react-native-reanimated';
+
+/** The media surface at 40%: enough to hold the white label on a bright photo without a heavy slab. */
+const LABEL_FILL = `${COLORS.mediaSurface}66`;
 
 interface TopicCardProps {
   title: string;
@@ -47,8 +51,9 @@ export const TopicCard = React.memo(function TopicCard({ title, image, category,
           {image && <Image source={image} className="w-full h-full" resizeMode="cover" accessibilityElementsHidden />}
           {category ? (
             <View className="absolute top-2.5 left-2.5 right-2.5 items-start">
-              <View className="rounded-full bg-card px-2.5 py-1.5">
-                <Text className="text-text-strong" style={TYPE.metadata}>{category}</Text>
+              {/* Fixed media overlay: reads on any photo, in every theme. */}
+              <View className="rounded-full px-2.5 py-1.5" style={{ backgroundColor: LABEL_FILL }}>
+                <Text style={[TYPE.metadata, { color: COLORS.mediaText }]}>{category}</Text>
               </View>
             </View>
           ) : null}

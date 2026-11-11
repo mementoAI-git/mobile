@@ -283,6 +283,11 @@ export default function CreateScreen() {
       toast('Failed to upload attachment', 'error');
     },
   });
+  // The previewer needs the saved File id to load a voice note's transcript.
+  const previewAttachments = useMemo(
+    () => attachments.map((a) => ({ ...a, persistedFileId: a.fileId ?? undefined })),
+    [attachments],
+  );
   const handleMicrophonePermissionDenied = useCallback((permission: PermissionLike) => {
     showPermissionRecoveryAlert({
       permission,
@@ -599,7 +604,7 @@ export default function CreateScreen() {
       {/* Media previewer — spans full screen over the compose modal */}
       <MediaPreviewModal
         visible={previewVisible}
-        attachments={attachments}
+        attachments={previewAttachments}
         initialIndex={previewIndex}
         onClose={() => setPreviewVisible(false)}
         onRemove={(clientId) => {

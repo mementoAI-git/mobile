@@ -1,28 +1,35 @@
 // @ts-nocheck
 import { describe, expect, test } from 'bun:test';
 
-describe('pinned voice session banner', () => {
-  test('sits outside the message list beneath the header and replaces deep dive surfaces', async () => {
-    const source = await Bun.file(new URL('../../screens/ChatScreen.tsx', import.meta.url)).text();
-    const banner = source.indexOf('{showInlineVoice && <VoiceChatComposer />}');
-    expect(banner).toBeGreaterThan(source.indexOf('onPress={handleActions}'));
-    expect(banner).toBeLessThan(source.indexOf('<View style={styles.messageList}>'));
+const read = (path: string) => Bun.file(new URL(path, import.meta.url)).text();
+
+describe('chat screen voice session', () => {
+  test('uses the floating call card only, with the beam beneath the messages and input', async () => {
+    const source = await read('../../screens/ChatScreen.tsx');
+    // One voice panel: the floating card, never a second inline one.
+    expect(source).not.toContain('VoiceChatComposer');
     // The deep dive nudge card is removed from the app for now.
     expect(source).not.toContain('DeepDiveNudge');
     expect(source).toContain('collapsedComposerHeight: COLLAPSED_COMPOSER_HEIGHT');
-    expect(source.match(/<VoiceChatComposer\s*\/>/g)).toHaveLength(1);
+    // The beam is drawn before the screen content, so it sits beneath it.
+    const beam = source.indexOf('<VoiceScreenBeam');
+    expect(beam).toBeGreaterThan(source.indexOf("edges={['top', 'bottom']}>"));
+    expect(beam).toBeLessThan(source.indexOf('<MessageActionsProvider>'));
   });
 
-  test('provides live/muted feedback and keeps the microphone, settings and end controls', async () => {
-    const source = await Bun.file(new URL('../../components/chat/VoiceChatComposer.tsx', import.meta.url)).text();
-    expect(source).toContain("voice.isMuted ? 'You’re muted'");
-    expect(source).toContain("'Live session'");
-    expect(source).toContain('borderRadius: 20');
-    expect(source).toContain('muted ? colors.activeFill : colors.fillWeak');
-    expect(source).toContain('muted ? colors.error : connected ? colors.success');
-    expect(source).toContain('voice.setMuted(!voice.isMuted)');
-    expect(source).toContain("openSheet('end-voice-session'");
+  test('lets messages scroll under a transparent header', async () => {
+    const source = await read('../../screens/ChatScreen.tsx');
+    expect(source).toContain('marginTop: -listUnderHeader');
+    const header = source.slice(source.indexOf('  header: {'), source.indexOf('  headerButton: {'));
+    expect(header).toContain('zIndex: 10');
+    expect(header).not.toContain('backgroundColor');
+    expect(header).not.toContain('borderBottom');
+  });
+
+  test('opens voice settings when the floating card is tapped', async () => {
+    const source = await read('../../components/chat/FloatingVoiceCall.tsx');
+    expect(source).toMatch(/onPress=\{openSettings\}\s+accessibilityRole="button"\s+accessibilityLabel="Voice call settings"\s+style=\{\[StyleSheet\.absoluteFill/);
     expect(source).toContain("openSheet('voice-call-settings'");
-    expect(source).toContain('<VoiceArtwork');
+    expect(source).toContain("openSheet('end-voice-session'");
   });
 });

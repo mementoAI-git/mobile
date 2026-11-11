@@ -50,7 +50,7 @@ describe('overview capture draft', () => {
 describe('overview enrichment summary', () => {
   test('shows a strength word, matching web chat settings', () => {
     expect(enrichmentStrength(undefined)).toBe('–');
-    expect(enrichmentStrength(11)).toBe('Low');
+    expect(enrichmentStrength(11)).toBe('Getting started');
     expect(enrichmentStrength(35)).toBe('Medium');
     expect(enrichmentStrength(70)).toBe('Strong');
   });

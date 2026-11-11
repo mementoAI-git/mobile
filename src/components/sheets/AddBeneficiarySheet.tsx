@@ -3,7 +3,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SheetHeader } from './SheetHeader';
-import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import Check from 'lucide-react-native/icons/check';
@@ -177,7 +177,7 @@ export function AddBeneficiarySheet({ onClose, editData }: Props) {
           gap: 12,
           paddingHorizontal: 20,
           paddingTop: 12,
-          paddingBottom: Math.max(insets.bottom, 12) + 8,
+          paddingBottom: getSheetActionsBottomPadding(insets.bottom),
           backgroundColor: COLORS.sheet,
         }}>
           <Button variant="secondary" size="lg" rounded="full" className="h-14 flex-1" onPress={onClose}>

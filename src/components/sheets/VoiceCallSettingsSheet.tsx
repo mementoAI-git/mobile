@@ -5,6 +5,7 @@ import { Pressable } from '@/components/ui/Touchable';
 import Check from 'lucide-react-native/icons/check';
 import * as Haptics from 'expo-haptics';
 import { Button } from '@/components/ui/Button';
+import { Switch } from '@/components/ui/Switch';
 import { VoiceLanguageSelect } from '@/components/chat/VoiceLanguageSelect';
 import { VoiceArtwork } from '@/components/chat/VoiceArtwork';
 import { TYPE } from '@/constants/typography';
@@ -13,7 +14,9 @@ import { useUiStore, useVoicePreferenceStore } from '@/store';
 import { useUpdateProfile } from '@/hooks/mutations/use-profile-mutation';
 import { saveCallVoice } from '@/features/chat/voice-call-voice';
 import { SheetHeader } from './SheetHeader';
-import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
 
 interface VoiceCallSettingsSheetProps {
   selectedVoiceId: VoiceId;
@@ -23,11 +26,14 @@ interface VoiceCallSettingsSheetProps {
 
 export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: VoiceCallSettingsSheetProps) {
   const COLORS = useThemeColors();
+  const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState(selectedVoiceId);
   const savedLanguage = useVoicePreferenceStore(state => state.languageCode);
   const [language, setLanguage] = useState(savedLanguage);
   const selectLanguage = useVoicePreferenceStore(state => state.selectLanguage);
   const selectVoice = useVoicePreferenceStore((state) => state.selectVoice);
+  const recordConversations = useVoicePreferenceStore((state) => state.recordConversations);
+  const setRecordConversations = useVoicePreferenceStore((state) => state.setRecordConversations);
   const { mutateAsync: updateProfileAsync } = useUpdateProfile();
   const isMountedRef = useRef(true);
   useEffect(() => { isMountedRef.current = true; return () => { isMountedRef.current = false; }; }, []);
@@ -56,10 +62,23 @@ export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: Vo
   }, [draft, language, selectedVoiceId, selectLanguage, onSaved, selectVoice, updateProfileAsync]);
 
   return (
-    <View style={{ gap: SHEET_GROUP_GAP, paddingBottom: 8 }}>
+    // Header and actions stay put; the settings between them scroll.
+    <View style={{ flex: 1, paddingHorizontal: 20, paddingBottom: getSheetBottomPadding(insets.bottom, 12), gap: SHEET_GROUP_GAP }}>
       <SheetHeader title="Settings" onClose={onClose} closeLabel="Close voice settings" />
-      <View style={{ gap: SHEET_SECTION_GAP }}>
+      <BottomSheetScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: SHEET_SECTION_GAP, paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
       <VoiceLanguageSelect value={language} onChange={setLanguage} disabled={saving} />
+      {/* Applies from the next conversation; the current one keeps recording (or not). */}
+      <View className="min-h-16 flex-row items-center gap-4 rounded-2xl border bg-card px-4 py-3" style={{ borderColor: COLORS.strokeWeak }}>
+        <View className="flex-1 gap-0.5">
+          <Text className="text-text-strong" style={TYPE.label}>Record conversations</Text>
+          <Text className="text-text-base" style={TYPE.bodySmall}>Save each conversation to Stories with its audio.</Text>
+        </View>
+        <Switch
+          value={recordConversations}
+          onValueChange={(value) => { void setRecordConversations(value); }}
+          accessibilityLabel="Record conversations"
+        />
+      </View>
       <View>
       <Text className="mb-3 text-text-strong" style={TYPE.label}>Change voice</Text>
       <View className="gap-3">
@@ -83,7 +102,7 @@ export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: Vo
         })}
       </View>
       </View>
-      </View>
+      </BottomSheetScrollView>
       <View style={{ gap: 12 }}>
         <View className="flex-row gap-3">
           <Button variant="secondary" size="lg" rounded="full" className="h-14 flex-1" onPress={onClose}>Dismiss</Button>

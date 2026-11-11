@@ -138,7 +138,8 @@ describe('Media viewer', () => {
     const viewer = await read('../../components/ui/MediaPreviewModal.tsx');
     const { COLORS } = await import('../../constants/tokens');
     const { DARK_COLORS, DEEP_SKY_COLORS, DEEP_SKY } = await import('../../constants/appearance');
-    expect(viewer).toContain('backgroundColor: COLORS.mediaViewer');
+    // Photos and videos sit on the viewer backdrop; audio plays on the app's own page background.
+    expect(viewer).toContain('backgroundColor: currentItemIsAudio ? COLORS.canvas : COLORS.mediaViewer');
     expect(viewer).toContain('style={[styles.iconBtn, { backgroundColor: COLORS.cardRaised }]}');
     expect(viewer).toContain('{ backgroundColor: COLORS.strokeStrong, width: 8, height: 8 }');
     expect(COLORS.mediaViewer).not.toBe(COLORS.background);

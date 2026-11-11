@@ -15,7 +15,7 @@ export const DARK_COLORS: typeof COLORS = {
   settingsCard: 'rgba(255,255,255,0.06)',
   // Web .dark --bg-sheet: sheets share the page canvas; the backdrop separates them.
   sheet: '#12131a',
-  publishRayStart: '#24282A',
+  publishRayStart: '#3a4252',
   cardOverlay: 'rgba(29,30,38,0.85)',
   activeFill: '#FFFFFF',
   activeText: 'rgba(23,11,0,0.9)',
@@ -107,8 +107,8 @@ export const DEEP_SKY_COLORS: typeof COLORS = {
   // Floating surfaces stay opaque so they read over content.
   popover: DEEP_SKY.surface,
   mediaViewer: DEEP_SKY.canvas,
-  // Web .deep-sky --bg-sheet.
-  sheet: DEEP_SKY.surface,
+  // Bottom sheets use the same fill as Dark mode sheets.
+  sheet: DARK_COLORS.sheet,
   cardOverlay: 'rgba(25,30,44,0.92)',
   glass: 'rgba(17,23,40,0.9)',
 };

@@ -22,8 +22,6 @@ import {
   StyleSheet,
   Share,
   ActivityIndicator,
-  Image,
-  ImageBackground,
   Platform,
 } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -38,23 +36,21 @@ import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-
 import { VideoView } from 'expo-video';
 import { runtimeDiagnostics, sanitizeMediaUri } from '@/lib/runtime-diagnostics';
 import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-type';
+import { useAppearanceStore } from '@/store/appearance.store';
+import { skyAppearance } from '@/features/appearance/appearance';
+import { DeepSkyBackdrop } from '@/components/system/DeepSkyBackdrop';
 import {
   canRenderAttachmentUri,
   shouldMountPreviewVideo,
 } from '@/features/media/media-runtime-policy';
-import { useAudioPlayer } from 'expo-audio';
 import { useVideoPlayer } from '@/hooks/use-video-player';
 import * as Haptics from 'expo-haptics';
-import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, cancelAnimation, type SharedValue } from 'react-native-reanimated';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import Share2 from 'lucide-react-native/icons/share-2';
 import X from 'lucide-react-native/icons/x';
-import Mic from 'lucide-react-native/icons/mic';
 import FileText from 'lucide-react-native/icons/file-text';
 import Music from 'lucide-react-native/icons/music';
 import Play from 'lucide-react-native/icons/play';
-import Pause from 'lucide-react-native/icons/pause';
-import RotateCcw from 'lucide-react-native/icons/rotate-ccw';
 import Link2 from 'lucide-react-native/icons/link-2';
 import Download from 'lucide-react-native/icons/download';
 import Trash2 from 'lucide-react-native/icons/trash';
@@ -66,7 +62,6 @@ import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
 import { toast, ToastViewport } from '@/components/ui/Toast';
-import { useResolvedAudioArtworkThumbnail } from '@/features/media/audio-artwork';
 import {
   refreshSignedMediaAccess,
   shouldRefreshSignedMedia,
@@ -76,6 +71,7 @@ import {
 import { useSignedMediaAccess } from '@/features/media/use-signed-media-access';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { post } from '@/api/mutations';
+import { TranscriptAudioPlayer } from '@/components/audio/TranscriptAudioPlayer';
 
 // Horizontal padding on each side — creates the "peek" effect
 const SIDE_PAD = 24;
@@ -123,12 +119,6 @@ interface Props {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatDuration(secs: number) {
-  const m = Math.floor(secs / 60);
-  const s = Math.floor(secs % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
 
 async function resolvePreviewAttachmentAccess(
   item: PreviewAttachment,
@@ -423,225 +413,25 @@ function VideoSlide({ uri, isActive }: { uri: string; isActive: boolean }) {
   );
 }
 
-const RECORD_BANNER_BG = require('../../../assets/images/backgrounds/record-banner.png');
-
-function useAudioWaveAnims() {
-  return [
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-  ];
-}
-
-function AnimatedWaveBar({ baseHeight, anim }: { baseHeight: number; anim: SharedValue<number> }) {
-  const COLORS = useThemeColors();
-  const animStyle = useAnimatedStyle(() => ({
-    height: baseHeight * anim.value,
-  }));
-
-  return (
-    <Animated.View
-      style={[{ width: 3, borderRadius: 2, backgroundColor: COLORS.brand }, animStyle]}
-    />
-  );
-}
+/** Lets an audio slide stop the pager from swiping while its timeline is dragged. */
+const PagerScrollLockContext = React.createContext<((locked: boolean) => void) | null>(null);
 
 function AudioSlide({ item, isActive }: { item: PreviewAttachment; isActive: boolean }) {
-  const COLORS = useThemeColors();
   const styles = useThemedStyles(stylesBase);
-  const player = useAudioPlayer(item.uri);
-  const [playing, setPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(item.duration ?? 0);
-  const artworkUri = useResolvedAudioArtworkThumbnail({
-    uri: item.uri,
-    mimeType: item.mimeType,
-    name: item.name,
-    backendThumbnail: item.thumbnailUrl,
-    enabled: !item.isVoice,
-  });
-
-  // Auto-pause when slide scrolls out of view
-  useEffect(() => {
-    if (!isActive) {
-      if (player.playing) {
-        player.pause();
-      }
-      setPlaying(false);
-    }
-  }, [isActive, player]);
-
-  // Poll only the active slide to avoid background intervals for mounted media.
-  useEffect(() => {
-    if (!isActive) return undefined;
-
-    const syncPlayerState = () => {
-      setCurrentTime(player.currentTime ?? 0);
-      if (player.duration && player.duration > 0) setDuration(player.duration);
-      setPlaying(player.playing ?? false);
-    };
-
-    syncPlayerState();
-    const id = setInterval(() => {
-      syncPlayerState();
-    }, 1000);
-    return () => clearInterval(id);
-  }, [isActive, player]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      try { player.pause(); } catch {}
-    };
-  }, [player]);
-
-  const progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
-  const ended = progress >= 0.99;
-
-  const handlePlayPause = useCallback(() => {
-    Haptics.selectionAsync();
-    if (ended) {
-      player.seekTo(0);
-      player.play();
-    } else if (player.playing) {
-      player.pause();
-    } else {
-      player.play();
-    }
-  }, [ended, player]);
-
-  const progressBarRef = useRef<View>(null);
-  const handleSeek = useCallback((e: any) => {
-    progressBarRef.current?.measure((_x, _y, width) => {
-      const ratio = Math.max(0, Math.min(1, e.nativeEvent.locationX / width));
-      player.seekTo(ratio * duration);
-    });
-  }, [player, duration]);
-
-  const displayName = item.isVoice ? 'Voice note' : (item.name?.replace(/\.[^.]+$/, '').replace(/_\d{12,}$/, '').replace(/_/g, ' ') ?? 'Audio');
-
-  // Static bar heights (seeded so they're consistent per file)
-  const staticBarHeights = useMemo(() => {
-    const BAR_COUNT = 10;
-    let seed = 0;
-    const str = item.uri + (item.name ?? '');
-    for (let i = 0; i < str.length; i++) seed = (seed * 31 + str.charCodeAt(i)) | 0;
-    return Array.from({ length: BAR_COUNT }, (_, i) => {
-      const s = Math.abs((seed + i * 6317) | 0);
-      return 6 + (s % 26); // range 6–32px
-    });
-  }, [item.uri, item.name]);
-
-  // One animated height per bar. Count must match BAR_COUNT above.
-  const barAnims = useAudioWaveAnims();
-
-  // Start/stop animation based on playing state
-  useEffect(() => {
-    if (playing) {
-      barAnims.forEach((anim, i) => {
-        const min = 0.2;
-        const max = 1;
-        const duration = 420 + (i * 55) % 260;
-        anim.value = withRepeat(
-          withSequence(
-            withTiming(min + Math.random() * (max - min), { duration }),
-            withTiming(min + Math.random() * (max - min), { duration }),
-          ),
-          -1,
-          true,
-        );
-      });
-    } else {
-      barAnims.forEach((anim) => {
-        cancelAnimation(anim);
-        anim.value = withTiming(1, { duration: 200 });
-      });
-    }
-  // barAnims is stable (same length/refs) — only react to playing changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing]);
-
-  const innerContent = (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 20 }}>
-      {/* Animated waveform bars */}
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 36 }}>
-        {staticBarHeights.map((h, i) => (
-          <AnimatedWaveBar key={i} baseHeight={h} anim={barAnims[i]} />
-        ))}
-      </View>
-
-      {/* Track name */}
-      <Text style={{ ...TYPE.body, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>
-        {displayName}
-      </Text>
-
-      {/* Play/Pause button */}
-      <TouchableOpacity
-        onPress={handlePlayPause}
-        activeOpacity={0.8}
-        style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }}
-      >
-        {ended
-          ? <RotateCcw size={26} color="#fff" strokeWidth={2} />
-          : playing
-            ? <Pause size={26} color="#fff" fill="#fff" strokeWidth={0} />
-            : <Play size={26} color="#fff" fill="#fff" strokeWidth={0} style={{ marginLeft: 3 }} />
-        }
-      </TouchableOpacity>
-
-      {/* Progress bar + times */}
-      <View style={{ width: '100%', gap: 6 }}>
-        <TouchableOpacity
-          ref={progressBarRef as any}
-          onPress={handleSeek}
-          activeOpacity={1}
-          style={{ height: 4, borderRadius: 2, backgroundColor: COLORS.strokeWeak }}
-        >
-          <View pointerEvents="none" style={{ height: '100%', width: `${Math.round(progress * 100)}%`, borderRadius: 2, backgroundColor: COLORS.brand }} />
-        </TouchableOpacity>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>{formatDuration(currentTime)}</Text>
-          <Text style={{ ...TYPE.metadata, color: COLORS.textWeak }}>{formatDuration(duration)}</Text>
-        </View>
-      </View>
-    </View>
-  );
-
+  const setPagerLocked = React.useContext(PagerScrollLockContext);
   return (
     <View style={styles.slide}>
-      <View style={[styles.roundedImage, { overflow: 'hidden', justifyContent: 'center' }]}>
-        {item.isVoice ? (
-          <ImageBackground source={RECORD_BANNER_BG} style={{ flex: 1, justifyContent: 'center' }} resizeMode="cover" imageStyle={{ opacity: 0.7 }}>
-            {innerContent}
-          </ImageBackground>
-        ) : artworkUri ? (
-          <View style={{ flex: 1, backgroundColor: COLORS.cardRaised, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 24, gap: 20 }}>
-            <Image
-              source={{ uri: artworkUri }}
-              style={{ width: 220, height: 220, borderRadius: 24, alignSelf: 'center', backgroundColor: COLORS.fillWeak }}
-              resizeMode="cover"
-            />
-            {innerContent}
-          </View>
-        ) : (
-          <View style={{ flex: 1, backgroundColor: COLORS.cardRaised, justifyContent: 'center' }}>
-            {innerContent}
-          </View>
-        )}
-      </View>
+      <TranscriptAudioPlayer
+        uri={item.uri}
+        name={item.name}
+        mimeType={item.mimeType}
+        isVoice={item.isVoice}
+        thumbnailUrl={item.thumbnailUrl}
+        duration={item.duration}
+        fileId={item.persistedFileId}
+        isActive={isActive}
+        onScrubbingChange={setPagerLocked ?? undefined}
+      />
     </View>
   );
 }
@@ -847,6 +637,8 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
   const { width: windowWidth } = useWindowDimensions();
   const listRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  // Audio slides lock paging while their timeline is being scrubbed.
+  const [pagerLocked, setPagerLocked] = useState(false);
 
   useEffect(() => {
     setCurrentIndex(initialIndex);
@@ -868,6 +660,10 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
   const [deleteCandidate, setDeleteCandidate] = useState<PreviewAttachment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const currentItem = attachments[currentIndex];
+  const sky = useAppearanceStore((state) => skyAppearance(state.preference));
+  const currentItemIsAudio = !!currentItem && (
+    currentItem.isVoice || getMediaCategory({ mimeType: currentItem.mimeType, name: currentItem.name, uri: currentItem.uri }) === 'audio'
+  );
   const currentItemIsVisual = !!currentItem && (
     currentItem.mimeType.startsWith('image/') || currentItem.mimeType.startsWith('video/')
   );
@@ -1022,7 +818,9 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
   }, [deleteCandidate, isDeleting, onClose, onDeletePersisted]);
 
   return (
-    <View style={[styles.container, { backgroundColor: COLORS.mediaViewer, paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <View style={[styles.container, { backgroundColor: currentItemIsAudio ? COLORS.canvas : COLORS.mediaViewer, paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      {/* Audio plays on the app's own page background (the sky in sky themes); photos keep the viewer backdrop. */}
+      {currentItemIsAudio && sky && <DeepSkyBackdrop sky={sky} />}
       {/* ── Header ── */}
       <View style={styles.header}>
         {isGallery ? (
@@ -1113,6 +911,7 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
           onPress={() => { Haptics.selectionAsync(); onClose(); }}
           activeOpacity={1}
         />
+        <PagerScrollLockContext.Provider value={setPagerLocked}>
         <FlatList
           ref={listRef}
           data={attachments}
@@ -1132,8 +931,10 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
           extraData={currentIndex}
           initialScrollIndex={initialIndex}
           onScrollToIndexFailed={() => {}}
+          scrollEnabled={!pagerLocked}
           style={{ flex: 1 }}
         />
+        </PagerScrollLockContext.Provider>
       </View>
 
       {isGallery ? (

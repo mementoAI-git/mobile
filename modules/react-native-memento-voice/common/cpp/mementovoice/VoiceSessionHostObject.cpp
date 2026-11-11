@@ -1,5 +1,8 @@
 #include "VoiceSessionHostObject.h"
 
+#include "CallRecorder.h"
+
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -21,6 +24,94 @@ const char *stateName(PlaybackState state) {
 
 uint64_t numberArg(const jsi::Value *args, size_t index, size_t count) {
   return index < count && args[index].isNumber() ? static_cast<uint64_t>(args[index].getNumber()) : 0;
+}
+
+// Float32 samples from an ArrayBuffer, or from a typed array / DataView view.
+bool floatSamplesArg(
+    jsi::Runtime &rt,
+    const jsi::Value &value,
+    const float *&samples,
+    size_t &count) {
+  if (!value.isObject()) return false;
+  auto object = value.getObject(rt);
+  size_t byteOffset = 0;
+  size_t byteLength = 0;
+  std::optional<jsi::ArrayBuffer> buffer;
+  if (object.isArrayBuffer(rt)) {
+    buffer.emplace(object.getArrayBuffer(rt));
+    byteLength = buffer->size(rt);
+  } else {
+    auto bufferValue = object.getProperty(rt, "buffer");
+    if (!bufferValue.isObject() || !bufferValue.getObject(rt).isArrayBuffer(rt)) return false;
+    buffer.emplace(bufferValue.getObject(rt).getArrayBuffer(rt));
+    auto offset = object.getProperty(rt, "byteOffset");
+    auto length = object.getProperty(rt, "byteLength");
+    if (!offset.isNumber() || !length.isNumber()) return false;
+    byteOffset = static_cast<size_t>(offset.getNumber());
+    byteLength = static_cast<size_t>(length.getNumber());
+    if (byteOffset + byteLength > buffer->size(rt)) return false;
+  }
+  if (byteOffset % alignof(float) != 0) return false;
+  samples = reinterpret_cast<const float *>(buffer->data(rt) + byteOffset);
+  count = byteLength / sizeof(float);
+  return true;
+}
+
+jsi::Object createRecorderObject(jsi::Runtime &runtime) {
+  jsi::Object recorder(runtime);
+  recorder.setProperty(
+      runtime,
+      "startRecording",
+      jsi::Function::createFromHostFunction(
+          runtime,
+          jsi::PropNameID::forAscii(runtime, "startRecording"),
+          1,
+          [](jsi::Runtime &rt, const jsi::Value &, const jsi::Value *args, size_t count) {
+            if (count < 1 || !args[0].isString()) return jsi::Value(false);
+            return jsi::Value(startGlobalCallRecording(args[0].getString(rt).utf8(rt)));
+          }));
+  recorder.setProperty(
+      runtime,
+      "pushMic",
+      jsi::Function::createFromHostFunction(
+          runtime,
+          jsi::PropNameID::forAscii(runtime, "pushMic"),
+          1,
+          [](jsi::Runtime &rt, const jsi::Value &, const jsi::Value *args, size_t count) {
+            const float *samples = nullptr;
+            size_t frames = 0;
+            if (count >= 1 && floatSamplesArg(rt, args[0], samples, frames) && frames > 0) {
+              pushGlobalCallRecordingMic(samples, frames);
+            }
+            return jsi::Value::undefined();
+          }));
+  recorder.setProperty(
+      runtime,
+      "recordingMs",
+      jsi::Function::createFromHostFunction(
+          runtime,
+          jsi::PropNameID::forAscii(runtime, "recordingMs"),
+          0,
+          [](jsi::Runtime &, const jsi::Value &, const jsi::Value *, size_t) {
+            return jsi::Value(globalCallRecordingMs());
+          }));
+  recorder.setProperty(
+      runtime,
+      "stopRecording",
+      jsi::Function::createFromHostFunction(
+          runtime,
+          jsi::PropNameID::forAscii(runtime, "stopRecording"),
+          0,
+          [](jsi::Runtime &rt, const jsi::Value &, const jsi::Value *, size_t) -> jsi::Value {
+            auto result = stopGlobalCallRecording();
+            if (!result) return jsi::Value::null();
+            jsi::Object value(rt);
+            value.setProperty(rt, "path", jsi::String::createFromUtf8(rt, result->path));
+            value.setProperty(rt, "durationMs", result->durationMs);
+            value.setProperty(rt, "activity", jsi::String::createFromUtf8(rt, result->activity));
+            return value;
+          }));
+  return recorder;
 }
 
 } // namespace
@@ -152,6 +243,9 @@ void installVoicePlaybackBindings(jsi::Runtime &runtime) {
         return jsi::Object::createFromHostObject(rt, host);
       });
   runtime.global().setProperty(runtime, "__mementoCreateVoicePlaybackSession", std::move(factory));
+  // Process-wide call recorder: outlives playback sessions, which the JS
+  // engine rebuilds on audio route changes mid-call.
+  runtime.global().setProperty(runtime, "__mementoVoiceRecorder", createRecorderObject(runtime));
 }
 
 } // namespace mementovoice

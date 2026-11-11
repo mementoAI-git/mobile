@@ -10,7 +10,7 @@ import { Button, PasswordInput, TextInput } from '@/components/ui';
 import { TYPE } from '@/constants/typography';
 import { useChangePassword } from '@/hooks/mutations/use-auth-mutations';
 import { useProfile } from '@/hooks/queries/use-profile';
-import { getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { SheetHeader } from './SheetHeader';
 
 interface PasswordValues {
@@ -132,7 +132,7 @@ export function ChangePasswordSheet({
           <Text style={[sheetStyles.error, { color: COLORS.error }]}>We couldn&apos;t update your password. Check the old password and try again.</Text>
         )}
       </View>
-      <View style={[sheetStyles.actions, { backgroundColor: COLORS.sheet, paddingBottom: getSheetBottomPadding(insets.bottom, 12) }]}>
+      <View style={[sheetStyles.actions, { backgroundColor: COLORS.sheet, paddingBottom: getSheetActionsBottomPadding(insets.bottom) }]}>
         <Button variant="secondary" size="lg" rounded="full" className="h-14 flex-1" onPress={onClose}>
           Dismiss
         </Button>

@@ -55,6 +55,13 @@ struct PlaybackSnapshot {
   uint64_t concealedFrames;
 };
 
+// Receives every session's final rendered output (what the user heard),
+// tagged with the session's id and device rate. Called on the audio render
+// thread, so implementations must be real-time safe. The call recorder
+// installs it; sessions do not link against the recorder.
+using RenderTap = void (*)(uint64_t sourceId, uint32_t sampleRate, const float *samples, size_t count) noexcept;
+void setRenderTap(RenderTap tap) noexcept;
+
 class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSession> {
  public:
   explicit VoicePlaybackSession(PlaybackOptions options);
@@ -92,6 +99,7 @@ class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSe
     std::array<float, kBlockFrames> samples{};
   };
 
+  size_t renderOutput(float *output, size_t frameCount) noexcept;
   void workerLoop();
   void processChunk(const IngressChunk &chunk);
   void finalizeFlushedTurn() noexcept;
@@ -120,6 +128,8 @@ class VoicePlaybackSession : public std::enable_shared_from_this<VoicePlaybackSe
   uint64_t thresholdFrames(uint32_t milliseconds) const noexcept;
 
   PlaybackOptions options_;
+  // Identifies this session to the render tap; only the newest session feeds it.
+  uint64_t renderSourceId_ = 0;
   std::atomic<PlaybackState> state_{PlaybackState::Idle};
   std::atomic<uint64_t> generation_{1};
   std::atomic<uint64_t> epoch_{1};

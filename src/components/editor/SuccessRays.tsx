@@ -16,7 +16,8 @@ export function SuccessRays({ width }: { width: number }) {
   return <Svg width={width} height={width * 745 / 393} viewBox="0 0 393 745" pointerEvents="none" accessibilityElementsHidden>
     <Defs><LinearGradient id="success-ray" x1="196.499" y1="-262.438" x2="196.499" y2="744.826" gradientUnits="userSpaceOnUse">
       <Stop stopColor={colors.publishRayStart} />
-      <Stop offset="0.615829" stopColor={colors.background === 'transparent' ? colors.card : colors.background} />
+      {/* Fade to transparent so rays melt into any page (sky themes have translucent cards, and SVG stops drop rgba alpha). */}
+      <Stop offset="0.615829" stopColor={colors.publishRayStart} stopOpacity={0} />
     </LinearGradient></Defs>
     {PATHS.map((d, i) => <Path key={i} d={d} fill="url(#success-ray)" />)}
   </Svg>;

@@ -12,6 +12,12 @@ interface Spec extends TurboModule {
    * input preset).
    */
   isVoiceProcessingActive(): boolean;
+  /**
+   * Converts a call recording WAV to AAC M4A (mono, 16 kHz, ~32 kbps) beside
+   * it with the same name, deletes the WAV, and resolves the M4A path.
+   * iOS only: Android rejects with code E_UNSUPPORTED and leaves the WAV.
+   */
+  convertRecordingToM4A(wavPath: string): Promise<string>;
 }
 
 export default TurboModuleRegistry.get<Spec>('MementoVoiceAudio');

@@ -21,10 +21,14 @@ interface ContinueReflectingCardProps {
   avatars?: ImageSourcePropType[];
   onPress?: () => void;
   className?: string;
+  /** Shorter card for the Topics page; Overview keeps the full web height. */
+  compact?: boolean;
 }
 
 /** Prompt lines that fit the fixed card height above the footer. */
 export const REFLECTION_CARD_LINES = 4;
+/** Prompt lines that fit the compact (Topics) card height. */
+export const REFLECTION_CARD_COMPACT_LINES = 3;
 
 export const ContinueReflectingCard = React.memo(function ContinueReflectingCard({
   title,
@@ -35,6 +39,7 @@ export const ContinueReflectingCard = React.memo(function ContinueReflectingCard
   avatars = [],
   onPress,
   className,
+  compact = false,
 }: ContinueReflectingCardProps) {
   const COLORS = useThemeColors();
   const { width } = useWindowDimensions();
@@ -69,13 +74,14 @@ export const ContinueReflectingCard = React.memo(function ContinueReflectingCard
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={reducedMotion ? 1 : 0.9}
-        // Web mobile overview: w-[min(78vw,320px)] h-[267px] gap-10 rounded-3xl p-[23px].
+        // Web mobile overview width and padding: w-[min(78vw,320px)] rounded-3xl p-[23px].
+        // Height is 230px on Overview (sized for the 20px prompt) and 200px on Topics.
         // Fixed height so every card in the row matches; long prompts are truncated
         // (the full text is on the reflection page).
         style={{ width: reflectionCardWidth(width), padding: 23 }}
-        className={cn('h-[267px] justify-between gap-10 overflow-hidden rounded-[24px] border border-stroke-weak bg-fill-weaker', className)}
+        className={cn(compact ? 'h-[200px] gap-4' : 'h-[230px] gap-6', 'justify-between overflow-hidden rounded-[24px] border border-stroke-weak bg-fill-weaker', className)}
       >
-        <Text className="text-text-strong" style={[TYPE.reflectionTitle, { flexShrink: 1 }]} numberOfLines={REFLECTION_CARD_LINES} ellipsizeMode="tail">
+        <Text className="text-text-strong" style={[TYPE.reflectionTitle, { flexShrink: 1 }]} numberOfLines={compact ? REFLECTION_CARD_COMPACT_LINES : REFLECTION_CARD_LINES} ellipsizeMode="tail">
           {accent ? (
             <>
               {title.slice(0, accent.start)}

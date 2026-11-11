@@ -4,7 +4,7 @@ import { fetchEntity, fetchPaginated } from '@/api/domain-fetchers';
 import endpoint from '@/api/endpoint';
 import { queryKeys } from '@/constants/query-keys';
 import type { IMemory } from '@/types';
-import { shouldEnableStoriesQuery } from '@/features/memories/query-options';
+import { generatedTitlePollInterval, shouldEnableStoriesQuery } from '@/features/memories/query-options';
 import { useAuthStore } from '@/store';
 import {
   getConversationMessagesUrl,
@@ -61,6 +61,9 @@ export function useStories(
     placeholderData: keepPreviousData,
     // 30s stale time — avoids refetch on every tab switch
     staleTime: 30_000,
+    // Untitled saves are named in the background; show the new title when it lands.
+    refetchInterval: (query) =>
+      generatedTitlePollInterval(query.state.data?.pages.flatMap((page) => page.docs) ?? []),
   });
 }
 
@@ -90,6 +93,7 @@ export function useMemory(id: string) {
     enabled: !!token && !!id,
     // Individual memory detail — 30s so navigating back doesn't re-fetch
     staleTime: 30_000,
+    refetchInterval: (query) => generatedTitlePollInterval([query.state.data]),
   });
 }
 

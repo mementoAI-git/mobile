@@ -8,7 +8,7 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { SheetHeader } from './SheetHeader';
-import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { toast } from '@/components/ui/Toast';
 
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -80,7 +80,7 @@ export function CreateGroupSheet({ onClose, editData }: Props) {
       gap: 12,
       paddingHorizontal: 20,
       paddingTop: 12,
-      paddingBottom: Math.max(insets.bottom, 12) + 8,
+      paddingBottom: getSheetActionsBottomPadding(insets.bottom),
       backgroundColor: COLORS.sheet,
     }}>
       <Button variant="secondary" size="lg" rounded="full" className="h-14 flex-1" onPress={close}>

@@ -25,7 +25,7 @@ export const BeneficiaryGroupRow = memo(function BeneficiaryGroupRow({
       activeOpacity={0.76}
       accessibilityRole="button"
       accessibilityLabel={`${group.name || 'Untitled group'}, ${details.join(', ')}`}
-      style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16, padding: 20, borderRadius: 20, backgroundColor: COLORS.settingsCard }}
+      style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16, padding: 16, borderRadius: 20, backgroundColor: COLORS.settingsCard }}
     >
       <View style={{ width: 24, height: 24, borderRadius: 6, marginTop: 2, backgroundColor: color }} />
       <View style={{ flex: 1, minWidth: 0 }}>

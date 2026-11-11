@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Glob } from 'bun';
 import { COLORS } from '@/constants/tokens';
-import { DARK_COLORS, DEEP_SKY, DEEP_SKY_COLORS } from '@/constants/appearance';
+import { DARK_COLORS, DEEP_SKY_COLORS } from '@/constants/appearance';
 
 const root = join(import.meta.dir, '../../..');
 const sources = [...new Glob('{app,src}/**/*.tsx').scanSync(root)]
@@ -14,7 +14,8 @@ describe('bottom sheet surface', () => {
   test('fill matches web --bg-raised / --bg-sheet per theme', () => {
     expect(COLORS.sheet).toBe('#ffffff');
     expect(DARK_COLORS.sheet).toBe('#12131a');
-    expect(DEEP_SKY_COLORS.sheet).toBe(DEEP_SKY.surface);
+    // Deep Sky sheets share the Dark mode sheet fill.
+    expect(DEEP_SKY_COLORS.sheet).toBe(DARK_COLORS.sheet);
   });
 
   test('backdrop matches web --overlay-backdrop on light and dark', async () => {
