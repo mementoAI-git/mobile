@@ -10,12 +10,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
-import Plus from 'lucide-react-native/icons/plus';
+import SquarePen from 'lucide-react-native/icons/square-pen';
 import PhoneCall from 'lucide-react-native/icons/phone-call';
 import Mic from 'lucide-react-native/icons/mic';
 import Trash2 from 'lucide-react-native/icons/trash';
-import X from 'lucide-react-native/icons/x';
-import AudioLines from 'lucide-react-native/icons/audio-lines';
+import { AudioAttachmentCard } from '@/components/media/AudioAttachmentCard';
 
 import { Button } from '@/components/ui';
 import { TouchableOpacity } from '@/components/ui/Touchable';
@@ -30,7 +29,6 @@ import {
   buildStoryHandoff,
   captureTextKey,
   captureVoiceKey,
-  formatVoiceNoteDuration,
   parseSavedVoiceNotes,
   type CaptureHandedOffEvent,
   type CaptureVoiceNote,
@@ -42,6 +40,9 @@ const MAX_VISIBLE_LINES = 9;
 type OverviewCaptureCardProps = {
   userId?: string;
   onAddStory: () => void;
+  /** Empty-card text. The stacked greeting asks the question, so the card invites a note;
+   *  with the editorial greeting pass "What’s on your mind today?" (as on web). */
+  placeholder?: string;
 };
 
 /**
@@ -49,7 +50,7 @@ type OverviewCaptureCardProps = {
  * `overview-capture-card.tsx`. Write or record a thought, then save it as a
  * quick note, turn it into a story, or discuss it with Memento.
  */
-export function OverviewCaptureCard({ userId, onAddStory }: OverviewCaptureCardProps) {
+export function OverviewCaptureCard({ userId, onAddStory, placeholder = 'Add something to your Memento' }: OverviewCaptureCardProps) {
   const COLORS = useThemeColors();
   const styles = useThemeStyles(createStyles);
   const router = useRouter();
@@ -245,27 +246,27 @@ export function OverviewCaptureCard({ userId, onAddStory }: OverviewCaptureCardP
         accessibilityHint="Opens the add story page"
         style={styles.writingArea}
       >
-        <Text numberOfLines={MAX_VISIBLE_LINES} style={[TYPE.captureInput, styles.prompt]}>
-          {hasText ? text : 'What’s on your mind today?'}
+        {/* The greeting above asks the question; the card invites a note. */}
+        <Text
+          numberOfLines={hasText ? MAX_VISIBLE_LINES : 1}
+          // The invitation always sits on one line, shrinking a little on narrow phones.
+          adjustsFontSizeToFit={!hasText}
+          minimumFontScale={0.8}
+          style={[TYPE.captureInput, hasText ? styles.prompt : styles.placeholder]}
+        >
+          {hasText ? text : placeholder}
         </Text>
       </TouchableOpacity>
 
       {voiceNotes.length > 0 && (
         <View style={styles.voiceNotes}>
           {voiceNotes.map((note) => (
-            <Animated.View key={note.fileId} entering={FadeIn.duration(200)} style={styles.voiceChip}>
-              <AudioLines size={iconSize(16)} color={COLORS.textBase} strokeWidth={2} />
-              <Text style={[TYPE.label, styles.voiceChipText]}>
-                Voice note · {formatVoiceNoteDuration(note.duration)}
-              </Text>
-              <TouchableOpacity
-                onPress={() => handleRemoveVoiceNote(note.fileId)}
-                hitSlop={12}
-                accessibilityRole="button"
-                accessibilityLabel="Remove voice note"
-              >
-                <X size={iconSize(16)} color={COLORS.textWeak} strokeWidth={2} />
-              </TouchableOpacity>
+            <Animated.View key={note.fileId} entering={FadeIn.duration(200)}>
+              <AudioAttachmentCard
+                compact
+                item={{ _id: note.fileId, name: 'voice_note.m4a', type: 'audio/m4a', duration: note.duration }}
+                onRemove={() => handleRemoveVoiceNote(note.fileId)}
+              />
             </Animated.View>
           ))}
         </View>
@@ -301,15 +302,7 @@ export function OverviewCaptureCard({ userId, onAddStory }: OverviewCaptureCardP
               </>
             ) : (
               <>
-                <Button
-                  size="md"
-                  rounded="full"
-                  onPress={handleAddStory}
-                  disabled={busy}
-                  leftIcon={<Plus size={iconSize(18)} color={COLORS.textInverse} strokeWidth={2.25} />}
-                >
-                  Add story
-                </Button>
+                {/* Talk first (white pill), then Write (orange). */}
                 <TouchableOpacity
                   onPress={handleTalk}
                   disabled={busy}
@@ -321,6 +314,16 @@ export function OverviewCaptureCard({ userId, onAddStory }: OverviewCaptureCardP
                   <PhoneCall size={iconSize(18)} color={LIGHT_COLORS.textStrong} strokeWidth={1.75} />
                   <Text style={[TYPE.buttonSmall, styles.talkText]}>Talk</Text>
                 </TouchableOpacity>
+                <Button
+                  size="md"
+                  rounded="full"
+                  onPress={handleAddStory}
+                  disabled={busy}
+                  accessibilityLabel="Write a story"
+                  leftIcon={<SquarePen size={iconSize(18)} color={COLORS.textInverse} strokeWidth={2} />}
+                >
+                  Write
+                </Button>
               </>
             )}
           </View>
@@ -370,25 +373,12 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   prompt: {
     color: COLORS.textStrong,
   },
+  placeholder: {
+    color: COLORS.textWeak,
+  },
   voiceNotes: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: responsiveSpace(8),
     paddingBottom: responsiveSpace(16),
-  },
-  voiceChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: responsiveSpace(8),
-    minHeight: 36,
-    paddingHorizontal: responsiveSpace(12),
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeak,
-    backgroundColor: COLORS.fillWeaker,
-  },
-  voiceChipText: {
-    color: COLORS.textStrong,
   },
   actions: {
     flexDirection: 'row',

@@ -132,7 +132,8 @@ describe('primary surface typography', () => {
     const capture = readFileSync('src/components/overview/OverviewCaptureCard.tsx', 'utf8');
     expect(overview).toContain('<OverviewCaptureCard');
     expect(capture).toContain('TYPE.captureInput');
-    expect(capture).toContain('What’s on your mind today?');
+    expect(capture).toContain('Add something to your Memento');
+    expect(readFileSync('src/components/overview/OverviewGreeting.tsx', 'utf8')).toContain('What’s on your mind today?');
   });
 });
 

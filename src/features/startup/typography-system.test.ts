@@ -13,7 +13,7 @@ describe('global typography system', () => {
       dashboardTitleSmall: {fontFamily: FONTS.bodyBold, fontWeight: '700', fontSize: 16, lineHeight: 22},
       voicePickerTitle: {fontFamily: FONTS.bodyBold, fontWeight: '700', fontSize: 20, lineHeight: 26},
       screenTitle: {fontFamily: FONTS.serif, fontSize: 29, lineHeight: 35},
-      greeting: {fontFamily: FONTS.serif, fontSize: 25, lineHeight: 33},
+      greeting: {fontFamily: FONTS.sans, fontWeight: '600', fontSize: 28, lineHeight: 34},
       sectionTitle: {fontFamily: FONTS.serif, fontSize: 23, lineHeight: 29},
       sectionTitleWeak: {fontFamily: FONTS.serifItalic, fontSize: 23, lineHeight: 29},
       cardTitle: {fontFamily: FONTS.serifMedium, fontSize: 21, lineHeight: 27},
@@ -36,7 +36,7 @@ describe('global typography system', () => {
   test('exposes only the approved role names', () => {
     expect(Object.keys(TYPE).sort()).toEqual([
       'body', 'bodyLarge', 'bodyLargeSemi', 'bodySmall', 'bodySmallStrong', 'bodyStrong', 'button', 'buttonSmall', 'captureInput', 'cardTitle', 'cardTitleAccent',
-      'dashboardTitle', 'dashboardTitleSmall', 'displayStat', 'displayTitle', 'editorTitle', 'eyebrow', 'greeting', 'greetingName', 'input', 'insightStat', 'label',
+      'dashboardTitle', 'dashboardTitleSmall', 'displayStat', 'displayTitle', 'editorTitle', 'eyebrow', 'greeting', 'greetingEditorial', 'greetingEditorialName', 'greetingName', 'input', 'insightStat', 'label',
       'calendarWheel', 'metadata', 'mono', 'musicCaption', 'musicTrack', 'musicVolume',
       'planPrice', 'profileName', 'publishSuccessAction', 'publishSuccessTitle', 'reflectionTitle', 'reflectionTitleAccent', 'screenTitle', 'screenTitleAccent', 'sectionTitle', 'sectionTitleWeak', 'sheetTitle', 'stat', 'streakCount', 'uiTitle', 'voicePickerTitle',
     ].sort());
