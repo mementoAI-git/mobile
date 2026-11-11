@@ -1,16 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withSpring, withTiming, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import * as Haptics from 'expo-haptics';
 import Mic from 'lucide-react-native/icons/mic';
 import X from 'lucide-react-native/icons/x';
-import AudioLines from 'lucide-react-native/icons/audio-lines';
+import PhoneCall from 'lucide-react-native/icons/phone-call';
 import PenLine from 'lucide-react-native/icons/pen-line';
 import type { LucideIcon } from 'lucide-react-native';
 import { Pressable, TouchableOpacity } from '@/components/ui/Touchable';
-import { tabBarFadeTop } from '@/components/TabBar';
+import { tabBarSettingsTop } from '@/components/TabBar';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { BRAND_BUTTON_GRADIENT } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -19,10 +19,10 @@ import { iconSize, minTouchTarget } from '@/constants/responsive';
 const FAB_SIZE = minTouchTarget(60);
 const OPTION_SIZE = minTouchTarget(52);
 const FAB_RIGHT = 24;
-/** Clear space between the button and the top of the tab bar's fade. */
-const FADE_CLEARANCE = 12;
-/** Distance from the button's centre to each option's centre. */
-const ARC_RADIUS = 104;
+/** Space between the button and the settings button below it. */
+const SETTINGS_CLEARANCE = 16;
+/** Distance from the button's centre to each option's centre: leaves room for each label. */
+const ARC_RADIUS = 136;
 const OPEN_SPRING = { damping: 16, stiffness: 190, mass: 0.8 };
 
 type CaptureOption = { key: string; label: string; icon: LucideIcon; angle: number; onPress: () => void };
@@ -35,7 +35,8 @@ type CaptureOption = { key: string; label: string; icon: LucideIcon; angle: numb
 export function CaptureFab({ onTalk, onWrite, onRecord }: { onTalk: () => void; onWrite: () => void; onRecord: () => void }) {
   const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
-  const bottom = tabBarFadeTop(insets.bottom) + FADE_CLEARANCE;
+  const { width: screenWidth } = useWindowDimensions();
+  const bottom = tabBarSettingsTop(insets.bottom, screenWidth) + SETTINGS_CLEARANCE;
   const [open, setOpen] = useState(false);
   const progress = useSharedValue(0);
   const pendingAction = useRef<(() => void) | null>(null);
@@ -68,7 +69,7 @@ export function CaptureFab({ onTalk, onWrite, onRecord }: { onTalk: () => void; 
   }, [collapse]);
 
   const options: CaptureOption[] = [
-    { key: 'talk', label: 'Talk', icon: AudioLines, angle: 180, onPress: onTalk },
+    { key: 'talk', label: 'Talk', icon: PhoneCall, angle: 180, onPress: onTalk },
     { key: 'write', label: 'Write', icon: PenLine, angle: 135, onPress: onWrite },
     { key: 'record', label: 'Record', icon: Mic, angle: 90, onPress: onRecord },
   ];
@@ -113,10 +114,10 @@ export function CaptureFab({ onTalk, onWrite, onRecord }: { onTalk: () => void; 
               key={option.key}
               option={option}
               progress={progress}
-              surface={COLORS.popover}
-              ink={COLORS.textStrong}
+              surface={COLORS.mediaText}
+              ink={COLORS.mediaSurface}
               shadow={COLORS.shadow}
-              labelColor={COLORS.mediaText}
+              labelColor={COLORS.mediaTextWeak}
               onSelect={() => {
                 void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 collapse(option.onPress);
@@ -128,9 +129,10 @@ export function CaptureFab({ onTalk, onWrite, onRecord }: { onTalk: () => void; 
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel="Close new memory options"
-            style={fabSurface}
+            // A quiet, opaque neutral close, so the white options stand out.
+            style={[fabSurface, { backgroundColor: COLORS.mediaSurface, experimental_backgroundImage: undefined, borderWidth: 1, borderColor: COLORS.mediaFill, shadowOpacity: 0, elevation: 0 }]}
           >
-            <FabGlyph progress={progress} color={COLORS.textInverse} />
+            <FabGlyph progress={progress} color={COLORS.mediaText} />
           </TouchableOpacity>
         </View>
       </Modal>

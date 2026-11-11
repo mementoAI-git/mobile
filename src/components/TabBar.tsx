@@ -85,6 +85,17 @@ export function tabBarFadeTop(safeAreaBottom: number): number {
 }
 const ICON_SIZE  = iconSize(24);
 
+/** The detached settings circle's size: smaller on narrow phones. */
+function settingsCircleSize(screenWidth: number) {
+  return screenWidth < 360 ? 48 : minTouchTarget(56);
+}
+
+/** Bottom inset of the settings circle's top edge, so a floating button can stack above it. */
+export function tabBarSettingsTop(safeAreaBottom: number, screenWidth: number): number {
+  const bottomPad = safeAreaBottom ? safeAreaBottom + 16 : 32;
+  return bottomPad + PILL_H / 2 + settingsCircleSize(screenWidth) / 2;
+}
+
 type TabRoute = {
   key: string;
   name: string;
@@ -339,10 +350,20 @@ export function TabBar({ state, navigation }: TabBarProps) {
         accessibilityRole="button"
         accessibilityLabel="Settings"
         accessibilityState={{ selected: settingsSelected }}
-        style={[styles.searchCircle, { width: screenWidth < 360 ? 48 : minTouchTarget(56), height: screenWidth < 360 ? 48 : minTouchTarget(56), backgroundColor: settingsSelected ? COLORS.fillWeak : COLORS.card, borderColor: COLORS.strokeWeak, borderWidth: 1 }]}
+        style={[styles.searchCircle, { width: settingsCircleSize(screenWidth), height: settingsCircleSize(screenWidth), backgroundColor: 'transparent', borderColor: COLORS.strokeWeak, borderWidth: 1 }]}
         android_ripple={{ color: COLORS.brandSubtle, borderless: true, radius: 28 }}
       >
-        <Settings size={iconSize(22)} color={COLORS.textBase} strokeWidth={1.8} />
+        {/* Frosted like the dock's fade: a blur of what's behind, then the weak fill. */}
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 999, overflow: 'hidden' }]}>
+          {Platform.OS === 'ios' ? (
+            <BlurView tint={dark ? 'dark' : 'light'} intensity={60} style={StyleSheet.absoluteFill} />
+          ) : (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.popover }]} />
+          )}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.fillWeak }]} />
+          {settingsSelected ? <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.fillWeak }]} /> : null}
+        </View>
+        <Settings size={iconSize(22)} color={settingsSelected ? COLORS.textStrong : COLORS.textBase} strokeWidth={1.8} />
       </Pressable>
     </Animated.View>
   );
