@@ -100,6 +100,8 @@ import { makeMutable } from 'react-native-reanimated';
 import { VoiceThinkingTracker } from '@/features/chat/voice-thinking';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
+import { CallRecordingSession } from '@/features/chat/call-recording';
+import { discardCallRecording, drainCallRecordings, finishCallRecording, getCallRecorderNative, newCallRecordingPath } from '@/features/chat/call-recording-store';
 import { invalidateMemoryQueries } from '@/features/memories/cache';
 import { useAuthStore, useUserStore } from '@/store';
 
@@ -333,6 +335,9 @@ export function useVoiceMode({
   const isSessionActiveRef = useRef(false);
   const hasCompletedSessionRef = useRef(false);
   const sessionIdRef = useRef<string>(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  // The conversation being recorded (when recording is on and the build supports it).
+  const callRecordingRef = useRef<CallRecordingSession | null>(null);
+  const [isRecordingCall, setIsRecordingCall] = useState(false);
   const transcriptRef = useRef(new VoiceTranscriptTurns());
   const timelineRef = useRef<Omit<VoiceChatSession, 'messages'> | null>(null);
   const timelineTimesRef = useRef(new Map<number, string>());
@@ -449,6 +454,7 @@ export function useVoiceMode({
     const timeline = timelineRef.current;
     if (!timeline || !isMountedRef.current) return;
     const transcript = transcriptRef.current.getTimelineMessages();
+    callRecordingRef.current?.noteTurns(transcript);
     if (!timelineConnectedRef.current && transcript.length === 0) return;
     const messages = transcript.map((message, index) => {
       if (!timelineTimesRef.current.has(index)) timelineTimesRef.current.set(index, new Date().toISOString());
@@ -827,9 +833,25 @@ export function useVoiceMode({
     }
     const sessionTurns = transcriptRef.current.getSessionTurns();
     const flattenedSessionMessages = sessionTurns.flatMap((turn) => turn.messages);
+    const callRecording = callRecordingRef.current;
+    callRecordingRef.current = null;
+    if (isMountedRef.current) setIsRecordingCall(false);
+    const recording = callRecording?.stop(
+      flattenedSessionMessages.map((message) => ({ role: message.role, text: message.text })),
+    );
     const formattedDuration = formatVoiceCallDuration(finalDuration);
     const turnSync = turnSyncRef.current;
     turnSyncRef.current = null;
+    if (recording) {
+      const recordingUserId = useUserStore.getState().user?._id;
+      // A conversation with nothing said is not worth a story.
+      if (turnSync && recordingUserId && recording.segments.length > 0) {
+        void finishCallRecording({ userId: recordingUserId, sessionId: turnSync.getSessionId(), recording })
+          .catch((error) => logger.handledError('Voice recording could not be saved', error));
+      } else {
+        discardCallRecording(recording.path);
+      }
+    }
 
     let callRecordText = '';
     let transcriptPersisted = false;
@@ -1377,9 +1399,11 @@ export function useVoiceMode({
     const engine = new VoiceAudioEngine({
       speakerFullDuplex: SPEAKER_FULL_DUPLEX,
       iosVoiceProcessing: VOICE_AUDIO_POLICY.iosVoiceProcessing,
-      onMicFrame: DEBUG_CAPTURE_GATE
-        ? (samples, flags) => gateCaptureRef.current?.add(samples, flags)
-        : undefined,
+      onMicFrame: (samples, flags) => {
+        if (DEBUG_CAPTURE_GATE) gateCaptureRef.current?.add(samples, flags);
+        // Everything the mic hears goes to the recording, except while muted.
+        callRecordingRef.current?.pushMic(samples, isMutedRef.current);
+      },
       onFatalError: (error) => {
         logger.handledError('Native voice audio failed', error);
         failureRef.current ??= { step: 'audio', message: error.message };
@@ -1597,6 +1621,17 @@ export function useVoiceMode({
         liveToken.supportsVoiceTurns && outboxUserId ? getVoiceCallOutbox(outboxUserId) : null;
       outboxRef.current = outbox;
       const callSessionId = sessionIdRef.current;
+      // Record the conversation when it will be saved on the server (turn-synced calls).
+      const recorderNative = liveToken.supportsVoiceTurns && useVoicePreferenceStore.getState().recordConversations
+        ? getCallRecorderNative()
+        : null;
+      if (recorderNative && !callRecordingRef.current) {
+        const recording = new CallRecordingSession(recorderNative);
+        if (recording.start(newCallRecordingPath(callSessionId))) {
+          callRecordingRef.current = recording;
+          if (isMountedRef.current) setIsRecordingCall(true);
+        }
+      }
       turnSyncRef.current = liveToken.supportsVoiceTurns
         ? new VoiceTurnSync(
             (url, body) => post(url, body),
@@ -1847,6 +1882,10 @@ export function useVoiceMode({
           skipSessionId: isSessionActiveRef.current ? sessionIdRef.current : undefined,
         })
         .catch((error) => logger.handledError('Voice outbox drain failed', error));
+      if (!isSessionActiveRef.current) {
+        drainCallRecordings(signedInUserId)
+          .catch((error) => logger.handledError('Voice recording outbox drain failed', error));
+      }
     };
     drain();
     const unsubscribe = NetInfo.addEventListener((state) => {
@@ -1873,6 +1912,7 @@ export function useVoiceMode({
       isEnding,
       isReconnecting,
       isMuted,
+      isRecordingCall,
       recordingTime,
       aiSpeechText,
       userSpeechText,
@@ -1898,6 +1938,7 @@ export function useVoiceMode({
       isEnding,
       isReconnecting,
       isMuted,
+      isRecordingCall,
       recordingTime,
       aiSpeechText,
       userSpeechText,

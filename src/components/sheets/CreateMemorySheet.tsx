@@ -21,7 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SelectFromMediaModal } from './SelectFromMediaModal';
 import * as Haptics from 'expo-haptics';
 import { SheetHeader } from './SheetHeader';
-import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { useUiStore, useUserStore } from '@/store';
 import { celebrateFirstStory, isFirstStory } from '@/features/ceremony/first-story';
 import type { IMemory } from '@/types';
@@ -218,7 +218,7 @@ export function CreateMemorySheet({ onClose, editData }: Props) {
         contentContainerStyle={{
           paddingHorizontal: 20,
           paddingTop: SHEET_GROUP_GAP,
-          paddingBottom: insets.bottom ? insets.bottom + 24 : 48,
+          paddingBottom: getSheetActionsBottomPadding(insets.bottom),
           gap: SHEET_GROUP_GAP,
         }}
       >

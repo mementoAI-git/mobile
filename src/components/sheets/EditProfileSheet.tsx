@@ -26,7 +26,7 @@ import {
 } from '@/features/account/profile-form';
 import { useUpdateProfile, useUploadProfilePicture } from '@/hooks/mutations/use-profile-mutation';
 import { useProfile } from '@/hooks/queries/use-profile';
-import { getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { SheetHeader } from './SheetHeader';
 
 interface EditProfileSheetProps {
@@ -122,7 +122,7 @@ export function EditProfileSheet({
           gap: 12,
           paddingHorizontal: 20,
           paddingTop: 12,
-          paddingBottom: Math.max(getSheetBottomPadding(insets.bottom, 12), 20),
+          paddingBottom: getSheetActionsBottomPadding(insets.bottom),
           backgroundColor: COLORS.sheet,
         }}
       >

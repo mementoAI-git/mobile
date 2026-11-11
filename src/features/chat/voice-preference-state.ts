@@ -11,6 +11,9 @@ export interface VoicePreferenceState {
   selectedVoiceId: VoiceId | null;
   languageCode: VoiceLanguageCode;
   selectLanguage(code: VoiceLanguageCode): Promise<void>;
+  /** Save voice conversations as stories, with their audio. On unless turned off. */
+  recordConversations: boolean;
+  setRecordConversations(enabled: boolean): Promise<void>;
   hydratedForUser: string | null;
   isHydrating: boolean;
   hydrate(userKey: string): Promise<void>;
@@ -20,6 +23,11 @@ export interface VoicePreferenceState {
 
 export function getVoicePreferenceStorageKey(userKey: string) {
   return `memento.voice-preference.${userKey}`;
+}
+
+/** Recording is on by default: only an explicit "false" turns it off. */
+export function parseRecordConversations(raw: string | null): boolean {
+  return raw !== 'false';
 }
 
 export function parseVoicePreference(raw: string | null): VoiceId | null {
@@ -42,19 +50,22 @@ export function createVoicePreferenceState(
   return (set, get) => ({
     selectedVoiceId: null,
     languageCode: 'en-US',
+    recordConversations: true,
     hydratedForUser: null,
     isHydrating: false,
     hydrate: async (userKey) => {
       const request = ++hydrationRequest;
-      set({ isHydrating: true, selectedVoiceId: null, languageCode: 'en-US', hydratedForUser: null });
-      const [raw, language] = await Promise.all([
+      set({ isHydrating: true, selectedVoiceId: null, languageCode: 'en-US', recordConversations: true, hydratedForUser: null });
+      const [raw, language, record] = await Promise.all([
         storage.getItem(getVoicePreferenceStorageKey(userKey)).catch(() => null),
         storage.getItem(`${getVoicePreferenceStorageKey(userKey)}.language`).catch(() => null),
+        storage.getItem(`${getVoicePreferenceStorageKey(userKey)}.record`).catch(() => null),
       ]);
       if (request !== hydrationRequest) return;
       set({
         selectedVoiceId: parseVoicePreference(raw),
         languageCode: parseVoiceLanguage(language),
+        recordConversations: parseRecordConversations(record),
         hydratedForUser: userKey,
         isHydrating: false,
       });
@@ -71,9 +82,15 @@ export function createVoicePreferenceState(
       await storage.setItem(`${getVoicePreferenceStorageKey(userKey)}.language`, code);
       if (get().hydratedForUser === userKey) set({ languageCode: code });
     },
+    setRecordConversations: async (enabled) => {
+      const userKey = get().hydratedForUser;
+      if (!userKey) return;
+      set({ recordConversations: enabled });
+      await storage.setItem(`${getVoicePreferenceStorageKey(userKey)}.record`, String(enabled));
+    },
     reset: () => {
       hydrationRequest += 1;
-      set({ selectedVoiceId: null, languageCode: 'en-US', hydratedForUser: null, isHydrating: false });
+      set({ selectedVoiceId: null, languageCode: 'en-US', recordConversations: true, hydratedForUser: null, isHydrating: false });
     },
   });
 }

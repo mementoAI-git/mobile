@@ -16,9 +16,21 @@ int decodeBase64Character(unsigned char value) {
   return -1;
 }
 
+std::atomic<RenderTap> gRenderTap{nullptr};
+// The newest session owns the tap: during a route-change rebuild an old
+// session may briefly overlap the new one, and its audio must not double up.
+std::atomic<uint64_t> gNextRenderSourceId{0};
+std::atomic<uint64_t> gLatestRenderSourceId{0};
+
 } // namespace
 
+void setRenderTap(RenderTap tap) noexcept {
+  gRenderTap.store(tap, std::memory_order_release);
+}
+
 VoicePlaybackSession::VoicePlaybackSession(PlaybackOptions options) : options_(options) {
+  renderSourceId_ = gNextRenderSourceId.fetch_add(1, std::memory_order_relaxed) + 1;
+  gLatestRenderSourceId.store(renderSourceId_, std::memory_order_release);
   worker_ = std::thread([this] { workerLoop(); });
 }
 
@@ -129,6 +141,19 @@ void VoicePlaybackSession::stop(uint64_t generation) {
 }
 
 size_t VoicePlaybackSession::render(
+    float *output,
+    size_t frameCount) noexcept {
+  const size_t written = renderOutput(output, frameCount);
+  if (frameCount > 0 &&
+      renderSourceId_ == gLatestRenderSourceId.load(std::memory_order_acquire)) {
+    if (RenderTap tap = gRenderTap.load(std::memory_order_acquire)) {
+      tap(renderSourceId_, options_.targetSampleRate, output, frameCount);
+    }
+  }
+  return written;
+}
+
+size_t VoicePlaybackSession::renderOutput(
     float *output,
     size_t frameCount) noexcept {
   std::memset(output, 0, frameCount * sizeof(float));

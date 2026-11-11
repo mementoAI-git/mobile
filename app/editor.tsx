@@ -41,7 +41,6 @@ import Play from 'lucide-react-native/icons/play';
 import Camera from 'lucide-react-native/icons/camera';
 import Mic from 'lucide-react-native/icons/mic';
 import Video from 'lucide-react-native/icons/video';
-import Music from 'lucide-react-native/icons/music';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as ExpoCamera from 'expo-camera';
@@ -85,6 +84,7 @@ import { plainTextToStoryHtml, storyHtmlToPlainText } from '@/features/voice-con
 import { StoryRichEditor, FormattingToolbar, type StoryRichEditorRef } from '@/components/ui/StoryRichEditor';
 import { StoryComposerBackdrop } from '@/components/editor/StoryComposerBackdrop';
 import { LinkPreviews } from '@/components/ui/LinkPreview';
+import { AudioAttachmentCard } from '@/components/media/AudioAttachmentCard';
 import type { EditorBridge } from '@10play/tentap-editor';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
@@ -96,7 +96,7 @@ import { singleLineTitle } from '@/features/editor/title-input';
 import { publishedPostUrl } from '@/lib/env';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
 import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
-import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
+import { getSheetBottomPadding, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import {
   DOCUMENT_PICKER_MIME_TYPES,
   MAX_ATTACHMENT_FILE_MB,
@@ -210,8 +210,11 @@ function PublishModalInner({
     setAudience((current) => ({ ...current, groupIds: current.groupIds.includes(id) ? current.groupIds.filter(value => value !== id) : [...current.groupIds, id] }));
   }, []);
 
+  // A title is optional: anything written or attached can be saved, and the server
+  // names untitled stories from what was added.
+  const canPost = isMeaningfulDraftContent(title, body) || attachmentIds.length > 0;
   const handlePost = useCallback(() => {
-    if (!title.trim() && !body.trim()) return;
+    if (!canPost) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const tagList = tags.split(/[,\s]+/).map(t => t.trim()).filter(Boolean);
     const payload = buildEditorPublishPayload({ title, body, tags: tagList, attachmentIds, audience });
@@ -242,7 +245,7 @@ function PublishModalInner({
     }
   // attachmentIds must be in deps — without it the closure captures the initial
   // empty array and voice notes / images added before publishing are silently dropped.
-  }, [title, body, tags, attachmentIds, audience, isExistingStory, isEditMode, targetMemoryId, createMemory, updateMemory, toast, onComplete, onPublished, draftId, userEmail]);
+  }, [canPost, title, body, tags, attachmentIds, audience, isExistingStory, isEditMode, targetMemoryId, createMemory, updateMemory, toast, onComplete, onPublished, draftId, userEmail]);
 
     return (
       <>
@@ -250,7 +253,7 @@ function PublishModalInner({
           style={{ backgroundColor: COLORS.background }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 32, gap: 32, paddingBottom: Math.max(insets.bottom + 24, 32) }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 32, gap: 32, paddingBottom: getSheetActionsBottomPadding(insets.bottom) }}
         >
               {/* Body: visibility and tags share one 24px section rhythm. */}
               <View style={{ gap: 24 }}>
@@ -283,8 +286,8 @@ function PublishModalInner({
               </View>
               {/* Actions are separated from the body by the 32px container gap. */}
               <View>
-              <TouchableOpacity onPress={handlePost} activeOpacity={0.85} disabled={(!title.trim() && !body.trim()) || isPending}
-                style={[{ height: 56, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }, ((!title.trim() && !body.trim()) || isPending) && { opacity: 0.45 }]}>
+              <TouchableOpacity onPress={handlePost} activeOpacity={0.85} disabled={!canPost || isPending}
+                style={[{ height: 56, borderRadius: 999, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' }, (!canPost || isPending) && { opacity: 0.45 }]}>
                 {isPending ? <ActivityIndicator color={COLORS.textInverse} /> : <Text style={{ ...TYPE.button, color: COLORS.textInverse }}>Post now</Text>}
               </TouchableOpacity>
               </View>
@@ -307,6 +310,41 @@ function PublishModalInner({
 }
 
 // ─── Main Editor Screen ───────────────────────────────────────────────────────
+
+/** Voice recordings in the editor: the story page's audio card, with upload and remove controls. */
+function VoiceRecordingCards({ attachments, title, onRemove }: {
+  attachments: AttachmentItem[];
+  title: string;
+  onRemove: (clientId: string) => void;
+}) {
+  const COLORS = useThemeColors();
+  const label = title.trim() || 'Voice recording';
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled"
+      style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}>
+      {attachments.map(a => (
+        <View key={a.clientId}>
+          <AudioAttachmentCard
+            width={VOICE_CARD_WIDTH}
+            memoryTitle={label}
+            item={{ _id: a.fileId ?? a.clientId, name: a.name, type: a.mimeType, duration: a.duration }}
+          />
+          {a.isUploading && (
+            <View style={{ ...StyleSheet.absoluteFill, borderRadius: 20, backgroundColor: COLORS.mediaScrim, alignItems: 'center', justifyContent: 'center' }}>
+              <ActivityIndicator color={COLORS.textInverse} />
+            </View>
+          )}
+          <TouchableOpacity onPress={() => onRemove(a.clientId)} hitSlop={8} accessibilityLabel="Remove recording"
+            style={{ position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.mediaScrim, alignItems: 'center', justifyContent: 'center' }}>
+            <X size={12} color={COLORS.textInverse} strokeWidth={2.5} />
+          </TouchableOpacity>
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
+const VOICE_CARD_WIDTH = 148;
 
 export default function EditorScreen() {
   const COLORS = useThemeColors();
@@ -391,18 +429,6 @@ export default function EditorScreen() {
   const [storyLinkText, setStoryLinkText] = useState('');
   useEffect(() => { setStoryLinkText(extractUrls(storyBody).join('\n')); }, [storyBody]);
   const [dismissedLinks, setDismissedLinks] = useState<string[]>([]);
-  const applyDictation = useCallback(async (text: string) => {
-    if (isStory) {
-      const editor = richEditorRef.current;
-      if (!editor) throw new Error('The editor is not ready. Your recording is saved for retry.');
-      const body = await editor.insertDictation(text);
-      if (!isMountedRef.current) throw new Error('The editor closed. Your recording is saved for retry.');
-      latestBodyRef.current = body;
-      setStoryBody(body);
-      storyHasContentRef.current = hasMeaningfulStoryBodyContent(body);
-      setStoryHasContent(storyHasContentRef.current);
-    } else setQcBody(previous => [previous, text].filter(Boolean).join(' '));
-  }, [isStory]);
   const [storyHasContent, setStoryHasContent] = useState(false);
   const storyHasContentRef = useRef(false);
   const [savedStatus, setSavedStatus] = useState<'saved'|'saving'|'unsaved'>('saved');
@@ -445,6 +471,11 @@ export default function EditorScreen() {
       toast('Failed to upload attachment', 'error');
     },
   });
+  // The previewer needs the saved File id to load a voice note's transcript.
+  const previewAttachments = useMemo(
+    () => attachments.map((a) => ({ ...a, persistedFileId: a.fileId ?? undefined })),
+    [attachments],
+  );
   const handleMicrophonePermissionDenied = useCallback((permission: PermissionLike) => {
     showPermissionRecoveryAlert({
       permission,
@@ -453,11 +484,16 @@ export default function EditorScreen() {
       settingsDescription: 'Microphone access is turned off in Settings. Turn it back on to record your story.',
     });
   }, []);
+  // A recording joins the story as a voice note; it is not transcribed into the text.
+  const attachRecording = useCallback(async (uri: string, seconds: number) => {
+    const file = await uploadAndAdd(uri, 'audio/m4a', `voice_${Date.now()}.m4a`, { isVoice: true, duration: seconds });
+    if (!file) throw new Error('Could not add the recording. It is saved for retry.');
+  }, [uploadAndAdd]);
   const { start: startRecording, stop: stopRecording, cancel: cancelRecording, retry: retryRecording,
     discard: discardRecording, isRecording: isCapturing, isStarting, isTranscribing, canRetry, error: dictationError,
     levels: recordingLevels, duration: recDuration } = useStoryRecording({
     owner: user?.email || 'local',
-    onTranscript: applyDictation,
+    onRecording: attachRecording,
     onPermissionDenied: handleMicrophonePermissionDenied,
   });
   const isRecording = isCapturing || isStarting;
@@ -1015,34 +1051,13 @@ export default function EditorScreen() {
             </View>
           </View>
 
-          {/* ── Story mode: unified ScrollView — title + attachments + body scroll together ── */}
+          {/* ── Story mode: media uploads, then the title, then the body ── */}
           {isStory && (
             <View
               style={{ flex: 1 }}
             >
-              {/* Title */}
-              {/* Multiline so long titles wrap. Return still moves to the body
-                  instead of adding a line break, and pasted line breaks become spaces. */}
-              <TextInput
-                selectionColor={COLORS.brand}
-                cursorColor={COLORS.brand}
-                ref={titleRef}
-                value={title}
-                onChangeText={handleTitleChange}
-                placeholder="Title"
-                placeholderTextColor={COLORS.textDisabled}
-                style={{ ...TYPE.editorTitle, color: COLORS.textStrong, padding: 0, paddingHorizontal: 16, marginBottom: 4, marginTop: 4, textAlignVertical: 'top' }}
-                multiline
-                scrollEnabled={false}
-                submitBehavior="submit"
-                returnKeyType="next"
-                autoCapitalize="sentences"
-                autoCorrect
-                onSubmitEditing={() => richEditorRef.current?.focus()}
-              />
-
               {/* ── Attachment strip ── */}
-              {attachments.length > 0 && (
+              {mediaAttachments.length + documentAttachments.length > 0 && (
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -1078,23 +1093,6 @@ export default function EditorScreen() {
                       </TouchableOpacity>
                     );
                   })}
-                  {/* Voice chips */}
-                  {voiceAttachments.map(a => {
-                    const dur = a.duration ?? 0;
-                    return (
-                      <View key={a.clientId} style={{ height: 44, backgroundColor: COLORS.mediaSurface, borderRadius: 22, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Music size={13} color={COLORS.textInverse} strokeWidth={1.8} />
-                        <Text style={{ ...TYPE.metadata, color: COLORS.mediaTextWeak }}>{Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}</Text>
-                        {a.isUploading
-                          ? <ActivityIndicator size="small" color={COLORS.textInverse} />
-                          : (
-                            <TouchableOpacity onPress={() => handleRemoveAttachment(a.clientId)} hitSlop={8}>
-                              <X size={11} color={COLORS.mediaTextWeak} strokeWidth={2} />
-                            </TouchableOpacity>
-                          )}
-                      </View>
-                    );
-                  })}
                   {/* Document chips */}
                   {documentAttachments.map(a => (
                     <View key={a.clientId} style={{ height: 44, backgroundColor: COLORS.fillWeak, borderRadius: 22, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 180 }}>
@@ -1111,6 +1109,32 @@ export default function EditorScreen() {
                   ))}
                 </ScrollView>
               )}
+
+              {/* Voice recordings, shown as on the story page */}
+              {voiceAttachments.length > 0 && (
+                <VoiceRecordingCards attachments={voiceAttachments} title={title} onRemove={handleRemoveAttachment} />
+              )}
+
+              {/* Title */}
+              {/* Multiline so long titles wrap. Return still moves to the body
+                  instead of adding a line break, and pasted line breaks become spaces. */}
+              <TextInput
+                selectionColor={COLORS.brand}
+                cursorColor={COLORS.brand}
+                ref={titleRef}
+                value={title}
+                onChangeText={handleTitleChange}
+                placeholder="Title"
+                placeholderTextColor={COLORS.textDisabled}
+                style={{ ...TYPE.editorTitle, color: COLORS.textStrong, padding: 0, paddingHorizontal: 16, marginBottom: 4, marginTop: 4, textAlignVertical: 'top' }}
+                multiline
+                scrollEnabled={false}
+                submitBehavior="submit"
+                returnKeyType="next"
+                autoCapitalize="sentences"
+                autoCorrect
+                onSubmitEditing={() => richEditorRef.current?.focus()}
+              />
 
               {/* WYSIWYG body — takes all remaining vertical space.
                   editorInstanceKey forces a full remount (blank WebView) when
@@ -1188,21 +1212,11 @@ export default function EditorScreen() {
                       })}
                     </View>
                 )}
-                {voiceAttachments.map(a => {
-                  const dur = a.duration ?? 0;
-                  return (
-                    <View key={a.clientId} style={{ marginTop: 8, backgroundColor: COLORS.mediaSurface, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                      <Music size={14} color={COLORS.textInverse} strokeWidth={1.8} />
-                      <Text style={{ flex: 1, ...TYPE.metadata, color: COLORS.mediaTextWeak }}>
-                        Voice · {Math.floor(dur/60)}:{String(Math.floor(dur%60)).padStart(2,'0')}
-                      </Text>
-                      {a.isUploading && <ActivityIndicator size="small" color={COLORS.textInverse} />}
-                      <TouchableOpacity onPress={() => handleRemoveAttachment(a.clientId)} hitSlop={8}>
-                        <X size={12} color={COLORS.mediaTextWeak} strokeWidth={2} />
-                      </TouchableOpacity>
-                    </View>
-                  );
-                })}
+                {voiceAttachments.length > 0 && (
+                  <View style={{ marginTop: 8, marginHorizontal: -16 }}>
+                    <VoiceRecordingCards attachments={voiceAttachments} title="" onRemove={handleRemoveAttachment} />
+                  </View>
+                )}
                 {/* Document chips */}
                 {documentAttachments.map(a => (
                   <View key={a.clientId} style={{ marginTop: 6, backgroundColor: COLORS.fillWeak, borderRadius: 12, borderWidth: 1, borderColor: COLORS.strokeWeaker, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -1231,9 +1245,9 @@ export default function EditorScreen() {
                           quick-capture: mode pill + media buttons ── */}
           {(dictationError || isTranscribing) && (
             <View style={{ paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
-              {isTranscribing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><ActivityIndicator color={COLORS.textBase} /><Text accessibilityLiveRegion="polite" style={{ ...TYPE.bodySmall, color: COLORS.textBase }}>Transcribing…</Text></View> : <Text accessibilityRole="alert" style={{ ...TYPE.bodySmall, color: COLORS.error }}>{dictationError}</Text>}
+              {isTranscribing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><ActivityIndicator color={COLORS.textBase} /><Text accessibilityLiveRegion="polite" style={{ ...TYPE.bodySmall, color: COLORS.textBase }}>Adding recording…</Text></View> : <Text accessibilityRole="alert" style={{ ...TYPE.bodySmall, color: COLORS.error }}>{dictationError}</Text>}
               {canRetry && <View style={{ flexDirection: 'row', gap: 12 }}>
-                <Button variant="secondary" size="sm" style={{ flex: 1 }} onPress={() => { void retryRecording(); }}>Retry transcription</Button>
+                <Button variant="secondary" size="sm" style={{ flex: 1 }} onPress={() => { void retryRecording(); }}>Retry adding recording</Button>
                 <Button variant="ghost" size="sm" onPress={() => { void discardRecording(); }}>Discard recording</Button>
               </View>}
             </View>
@@ -1258,7 +1272,7 @@ export default function EditorScreen() {
       {/* Media previewer */}
       <MediaPreviewModal
         visible={previewVisible}
-        attachments={attachments}
+        attachments={previewAttachments}
         initialIndex={previewIndex}
         onClose={() => setPreviewVisible(false)}
         onRemove={(clientId) => {

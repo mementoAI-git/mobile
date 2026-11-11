@@ -21,8 +21,17 @@ async function preserveRecording(uri: string, key: string) {
   return retained;
 }
 
-export function useStoryRecording({ owner, onTranscript, onPermissionDenied }: {
-  owner: string; onTranscript: (text: string) => Promise<void>; onPermissionDenied: (permission: PermissionLike) => void;
+/**
+ * Records a story from the microphone. With `onRecording`, the finished audio file is handed
+ * over as is (the editor attaches it to the story); otherwise it is transcribed and the text
+ * goes to `onTranscript`. Either way a failed hand-off keeps the file for retry.
+ */
+export function useStoryRecording({ owner, onTranscript, onRecording, onPermissionDenied }: {
+  owner: string;
+  onTranscript?: (text: string) => Promise<void>;
+  /** Receives the recording file and its length in seconds. Throw to keep it for retry. */
+  onRecording?: (uri: string, seconds: number) => Promise<void>;
+  onPermissionDenied: (permission: PermissionLike) => void;
 }) {
   const interrupted = useRef<() => Promise<void>>(async () => {});
   const recorder = useAudioRecorder(STORY_RECORDING_OPTIONS, status => {
@@ -34,8 +43,10 @@ export function useStoryRecording({ owner, onTranscript, onPermissionDenied }: {
   const session = useRef(new RecordingTranscription()).current;
   const mounted = useRef(true);
   const phaseRef = useRef<Phase>('idle');
-  const callbacks = useRef({ onTranscript, onPermissionDenied, transcribe });
-  callbacks.current = { onTranscript, onPermissionDenied, transcribe };
+  const callbacks = useRef({ onTranscript, onRecording, onPermissionDenied, transcribe });
+  callbacks.current = { onTranscript, onRecording, onPermissionDenied, transcribe };
+  /** Length of the last finished recording; unknown (0) for one restored from a previous session. */
+  const recordedSeconds = useRef(0);
   const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState<string | null>(null);
   const [canRetry, setCanRetry] = useState(false);
@@ -50,7 +61,9 @@ export function useStoryRecording({ owner, onTranscript, onPermissionDenied }: {
       if (!active || !uri || phaseRef.current !== 'idle') return;
       if (new File(uri).exists) {
         session.retain(uri); setCanRetry(true);
-        setError('Your previous recording is saved and ready to transcribe.');
+        setError(callbacks.current.onRecording
+          ? 'Your previous recording is saved and ready to add.'
+          : 'Your previous recording is saved and ready to transcribe.');
       } else void AsyncStorage.removeItem(storageKey);
     }).catch(() => {});
     return () => {
@@ -76,10 +89,14 @@ export function useStoryRecording({ owner, onTranscript, onPermissionDenied }: {
     transition('transcribing'); setError(null); setCanRetry(false);
     const uri = session.uri;
     try {
-      const success = await session.run((file, signal) => callbacks.current.transcribe({ uri: file, signal }), async text => {
-        if (!mounted.current) throw new Error('The editor closed. Your recording is saved.');
-        await callbacks.current.onTranscript(text);
-      });
+      const { onRecording: deliverAudio } = callbacks.current;
+      const success = deliverAudio
+        ? await deliverAudio(uri, recordedSeconds.current).then(() => true)
+        : await session.run((file, signal) => callbacks.current.transcribe({ uri: file, signal }), async text => {
+          if (!mounted.current) throw new Error('The editor closed. Your recording is saved.');
+          await callbacks.current.onTranscript?.(text);
+        });
+      if (success && deliverAudio) session.uri = null;
       if (success) {
         // The text is already inserted. Cleanup must not hold the editor in its busy state.
         if (mounted.current) { setCanRetry(false); transition('idle'); }
@@ -88,7 +105,10 @@ export function useStoryRecording({ owner, onTranscript, onPermissionDenied }: {
         });
       }
     } catch (cause) {
-      if (mounted.current) setError(cause instanceof Error ? cause.message : 'Could not transcribe. Your recording is saved for retry.');
+      const fallback = callbacks.current.onRecording
+        ? 'Could not add the recording. It is saved for retry.'
+        : 'Could not transcribe. Your recording is saved for retry.';
+      if (mounted.current) setError(cause instanceof Error ? cause.message : fallback);
     } finally {
       if (mounted.current) { setCanRetry(Boolean(session.uri)); transition('idle'); }
     }
@@ -118,6 +138,7 @@ export function useStoryRecording({ owner, onTranscript, onPermissionDenied }: {
     if (phaseRef.current !== 'recording') return;
     transition('transcribing');
     try {
+      recordedSeconds.current = Math.round(state.durationMillis / 1000);
       if (recorder.isRecording) await recorder.stop();
       const uri = recorder.uri || state.url;
       if (!uri) throw new Error('Could not find the recording. Please try again.');
@@ -130,7 +151,7 @@ export function useStoryRecording({ owner, onTranscript, onPermissionDenied }: {
     } finally { void setAudioModeAsync({ allowsRecording: false }).catch(() => {}); }
     transition('idle');
     if (mounted.current) await retry();
-  }, [recorder, retry, session, state.url, storageKey, transition]);
+  }, [recorder, retry, session, state.durationMillis, state.url, storageKey, transition]);
 
   interrupted.current = async () => { if (phaseRef.current === 'recording') await stop(); };
 

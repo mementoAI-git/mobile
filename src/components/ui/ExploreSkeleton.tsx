@@ -26,31 +26,19 @@ export function ExploreSkeleton() {
       {/* Explore Categories Title */}
       <Skeleton className="h-6 w-40 rounded-lg mb-4" />
 
-      {/* Category Cards (~340px each, rounded-[32px]) */}
-      <View className="gap-5">
-        <View className="w-full rounded-[32px] overflow-hidden bg-card border border-stroke-weaker">
-          <Skeleton className="w-full h-52 rounded-none" />
-          <View className="p-7 gap-3">
-            <View className="flex-row items-center justify-between">
-              <Skeleton className="h-7 w-48 rounded-lg" />
-              <Skeleton className="size-10 rounded-full" />
+      {/* Category rows: text left, square cover right, hairline between rows */}
+      <View>
+        {[0, 1, 2].map((row) => (
+          <View key={row} className="flex-row items-center gap-4 py-4 border-t border-stroke-weak">
+            <View className="flex-1 gap-2">
+              <Skeleton className="h-5 w-4/5 rounded-md" />
+              <Skeleton className="h-4 w-full rounded-md" />
+              <Skeleton className="h-4 w-3/5 rounded-md" />
+              <Skeleton className="h-3 w-24 rounded-md mt-1" />
             </View>
-            <Skeleton className="h-4 w-3/4 rounded-md" />
-            <Skeleton className="h-6 w-24 rounded-full mt-1" />
+            <Skeleton className="size-32 rounded-2xl" />
           </View>
-        </View>
-
-        <View className="w-full rounded-[32px] overflow-hidden bg-card border border-stroke-weaker">
-          <Skeleton className="w-full h-52 rounded-none" />
-          <View className="p-7 gap-3">
-            <View className="flex-row items-center justify-between">
-              <Skeleton className="h-7 w-40 rounded-lg" />
-              <Skeleton className="size-10 rounded-full" />
-            </View>
-            <Skeleton className="h-4 w-2/3 rounded-md" />
-            <Skeleton className="h-6 w-28 rounded-full mt-1" />
-          </View>
-        </View>
+        ))}
       </View>
     </ScrollView>
   );

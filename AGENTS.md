@@ -159,7 +159,7 @@ import { TYPE } from '@/constants/typography';
 | `screenTitle` | `FONTS.serif` | 28 / 34 | Every screen's primary title |
 | `screenTitleAccent` | `FONTS.serifItalic` | 28 / 34 | The italic word in a screen title ("My *insights*") |
 | `captureInput` | `FONTS.serif` | 24 / 34 | Overview capture card writing area |
-| `reflectionTitle` / `reflectionTitleAccent` | `FONTS.serif` / `FONTS.serifItalic` | 24 / 31 | Continue reflecting card prompt; its orange highlighted words |
+| `reflectionTitle` / `reflectionTitleAccent` | `FONTS.serif` / `FONTS.serifItalic` | 20 / 27 | Continue reflecting card prompt; its orange highlighted words |
 | `greeting` / `greetingName` | `FONTS.serif` / `FONTS.serifItalic` | 24 / 32 | Overview greeting and the host's name |
 | `sectionTitle` / `sectionTitleWeak` | `FONTS.serif` / `FONTS.serifItalic` | 22 / 28 | Section headers; muted words within them |
 | `cardTitle` | `FONTS.serifMedium` | 20 / 26 | Card titles |
@@ -215,15 +215,16 @@ The only exception is capsule theme previews, marked with a `typography-exceptio
 
 ### 3. Layout & Spacing
 
+- The `DashboardHeader` right-most control is the user's avatar, which opens `/account`. The account page shows Quick actions (`QuickActions`: Quick note, Add people, Insights) under the profile card; there is no Quick tools sheet.
 - Account page cards (profile, music, streak, enrichment) share **20px radius and 20px padding**. The profile card is white with light-mode ink on Dark and Deep Sky.
 
 - Page content and headers use **16px** left/right gutters. Bottom sheets use **20px** total left/right gutters; avoid adding the sheet manager gutter twice. Internal card/control padding stays component-specific.
 
-- Bottom sheets use three main groups: header (drag handle, title, close control), body, and actions. Keep **8px** from the visible drag indicator to the header row, **32px** between the main groups, and **24px** between sections inside the body. Sheet titles use **20px** SF Pro Rounded semibold with **32px** line height. The Publish post sheet implements this structure with a shared native handle/header component.
+- Bottom sheets use three main groups: header (drag handle, title, close control), body, and actions. Keep **8px** from the visible drag indicator to the header row, **32px** between the main groups, and **24px** between sections inside the body. Sheet titles use **20px** SF Pro Rounded semibold with **32px** line height. The Publish post sheet implements this structure with a shared native handle/header component. A bottom CTA sits **8px** above the home indicator: `getSheetActionsBottomPadding(insets.bottom)` (`src/features/layout/sheet-safe-area.ts`).
 
 - Main-screen sections use **40px** separation (`gap-10`, `mb-10`, or `pb-10` at list-header boundaries). Keep related controls, list rows, and content inside a section at their component spacing.
 - The Overview greeting and primary action card are separate sections with **40px** between them.
-- Continue Reflecting cards match web mobile: `min(78vw, 320px)` wide, 267px min height, 23px padding, 40px inner gap, 16px between cards, scrolling edge to edge and snapping to the 16px gutter.
+- Continue Reflecting cards match web mobile: `min(78vw, 320px)` wide, 230px tall on Overview (200px compact on Topics, 3 prompt lines), 23px padding, 24px inner gap (16px compact), 16px between cards, scrolling edge to edge and snapping to the 16px gutter.
 - Continue Reflecting groups its title and shuffle status in a zero-gap text column beside the shuffle button, with **16px** from the complete header group to the cards.
 
 #### Border Radius System
@@ -324,7 +325,7 @@ Chrome:        useSheetChrome() (src/components/sheets/use-sheet-chrome.ts) on e
                top radius 20px; max height 92% of screen (8% top gap, never under the status bar);
                min height min(524px, 92%) (compact: true for short confirmations, like web alert dialogs);
                grabber 36×4, strokeStrong at 35%; backdrop light rgba(94,94,94,0.5), dark/Deep Sky rgba(0,0,0,0.72)
-Background:    colors.sheet from useThemeColors() — web --bg-sheet (#ffffff light, #12131a dark, #191e2c Deep Sky)
+Background:    colors.sheet from useThemeColors() — #ffffff light, #12131a dark; Deep Sky uses the same #12131a as Dark
 Backdrop:      backdropComponent={SheetBackdrop} (black 0.55 light, 0.72 dark/Deep Sky = web .dark --overlay-backdrop)
 Trigger:       useUiStore.getState().openSheet() — never use local Modal state
 ```
@@ -499,12 +500,13 @@ Empty state titles should be warm and inviting, not system-speak (e.g., "Your st
 
 ### Overview Tab
 - Primary action: `OverviewCaptureCard` ("What's on your mind today?"), ported from web `overview-capture-card.tsx`. Tapping the card opens the add-story editor, carrying any draft. Default actions: Add story, Talk and record. With a draft (voice notes or a saved text): Save now, Use as story (editor `initialDraft` handoff), Discuss (chat `discussText`), clear and record more.
+- The story editor's + button opens the iOS system menu (`NativeMediaMenu.ios.tsx`, `@expo/ui` SwiftUI `Menu`: Gallery, Camera, Audio, Files); other platforms keep the `MediaPickerMenu` tile popup.
 - Add story (`app/editor.tsx`, new stories only) sits on web mobile's album paper via `StoryComposerBackdrop`: light/dark artwork by resolved appearance (Deep Sky uses dark), 10% paper grain on light; the rich-text WebView is transparent.
 - Reflection cards open the full reflection conversation on the topic route (`/chat/[id]`, `type: 'prompt'`), including answered cards — never a sheet.
 - Enrichment score: `EnrichmentSummaryCard`, matching web chat settings `enrichment-summary.tsx` (strength word, View Insight pill, `fillWeaker` surface, `strokeWeak` border). The enrichment card and the journey stat cards use the calendar card's 20px radius. No Memory Spotlight on Overview.
 - Stats: 4 `OverviewJourneyCard` items with background images from `/assets/images/backgrounds/`
 - Chart: `SplineChart` with touch-drag interaction and haptic feedback
-- Greeting: `TYPE.greeting`, `getGreeting()` + the user's nickname in `TYPE.greetingName` (serif italic), success green
+- Greeting: `TYPE.greeting`, `getGreeting()` + the user's nickname in `TYPE.greetingName` (serif italic), in muted `textWeak` like the other italic heading words. The Overview `DashboardHeader` floats (`floating`) over the content on a frosted fade (`FrostedHeaderBackdrop`)
 
 ### Chat Tab (Host Chat)
 - Entry screen: resolves `primary_conversation_id` then `router.replace` — never shows a blank spinner for long

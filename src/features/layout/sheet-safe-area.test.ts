@@ -26,27 +26,36 @@ test('leaves an 8px gap between the visible drag indicator and the header', asyn
   expect(SHEET_HEADER_HANDLE_STYLE.paddingTop + 4 + SHEET_HEADER_HANDLE_STYLE.paddingBottom).toBe(20);
   const chrome = await Bun.file('src/components/sheets/use-sheet-chrome.ts').text();
   expect(chrome).toContain('handleStyle: SHEET_HEADER_HANDLE_STYLE');
-  for (const file of ['QuickToolsSheet', 'QuickCaptureSheet', 'ShareMemorySheet', 'MemoryInsightsSheet', 'VoiceCallSettingsSheet']) {
+  for (const file of ['QuickCaptureSheet', 'ShareMemorySheet', 'MemoryInsightsSheet', 'VoiceCallSettingsSheet']) {
     const source = await Bun.file(`src/components/sheets/${file}.tsx`).text();
     expect(source.includes('pt-2')).toBe(false);
   }
 });
 
-test('keeps the Quick tools close control exactly square', async () => {
+test('keeps the sheet close control exactly square', async () => {
   const { SHEET_CLOSE_BUTTON_STYLE } = await import('./sheet-safe-area');
   expect(SHEET_CLOSE_BUTTON_STYLE.width).toBe(44);
   expect(SHEET_CLOSE_BUTTON_STYLE.height).toBe(SHEET_CLOSE_BUTTON_STYLE.width);
   expect(SHEET_CLOSE_BUTTON_STYLE.minHeight).toBe(SHEET_CLOSE_BUTTON_STYLE.height);
-  const sheet = await Bun.file('src/components/sheets/QuickToolsSheet.tsx').text();
+  const sheet = await Bun.file('src/components/sheets/QuickCaptureSheet.tsx').text();
   const header = await Bun.file('src/components/sheets/SheetHeader.tsx').text();
   expect(sheet).toContain('<SheetHeader');
   expect(header).toContain('style={SHEET_CLOSE_BUTTON_STYLE}');
 });
 
 test('centers standard sheet titles with their close controls', async () => {
-  for (const file of ['QuickToolsSheet', 'QuickCaptureSheet', 'ShareMemorySheet', 'MemoryInsightsSheet', 'VoiceCallSettingsSheet', 'DailyRitualSheet', 'CapsuleDetailSheet', 'CreateCapsuleSheet', 'CreateMemorySheet', 'FeedbackSheet']) {
+  for (const file of ['QuickCaptureSheet', 'ShareMemorySheet', 'MemoryInsightsSheet', 'VoiceCallSettingsSheet', 'DailyRitualSheet', 'CapsuleDetailSheet', 'CreateCapsuleSheet', 'CreateMemorySheet', 'FeedbackSheet']) {
     const source = await Bun.file(`src/components/sheets/${file}.tsx`).text();
     expect(source.includes('flex-row items-start justify-between')).toBe(false);
     expect(source).toContain('<SheetHeader');
   }
+});
+
+test('bottom CTAs sit 8px above the home indicator', async () => {
+  const { getSheetActionsBottomPadding } = await import('./sheet-safe-area');
+  expect(getSheetActionsBottomPadding(34)).toBe(42);
+  expect(getSheetActionsBottomPadding(0)).toBe(20);
+  const editor = await Bun.file('app/editor.tsx').text();
+  expect(editor).toContain('paddingBottom: getSheetActionsBottomPadding(insets.bottom)');
+  expect(editor).not.toContain('insets.bottom + 24');
 });

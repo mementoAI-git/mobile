@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   createVoicePreferenceState,
   getVoicePreferenceStorageKey,
+  parseRecordConversations,
   parseVoicePreference,
 } from './voice-preference-state';
 import { createStore } from 'zustand/vanilla';
@@ -31,5 +32,30 @@ describe('voice preference persistence', () => {
     expect(store.getState()).toMatchObject({ selectedVoiceId: 'maya', hydratedForUser: 'user-1' });
     await store.getState().selectVoice('leo');
     expect(writes).toEqual([['memento.voice-preference.user-1', '"leo"']]);
+  });
+
+  test('records conversations by default and remembers turning it off per account', async () => {
+    expect(parseRecordConversations(null)).toBe(true);
+    expect(parseRecordConversations('true')).toBe(true);
+    expect(parseRecordConversations('false')).toBe(false);
+
+    const saved = new Map<string, string>();
+    const storage = {
+      getItem: async (key: string) => saved.get(key) ?? null,
+      setItem: async (key: string, value: string) => { saved.set(key, value); },
+    };
+    const store = createStore(createVoicePreferenceState(storage));
+    await store.getState().setRecordConversations(false);
+    expect(saved.size).toBe(0);
+
+    await store.getState().hydrate('user-1');
+    expect(store.getState().recordConversations).toBe(true);
+    await store.getState().setRecordConversations(false);
+    expect(saved.get('memento.voice-preference.user-1.record')).toBe('false');
+
+    await store.getState().hydrate('user-2');
+    expect(store.getState().recordConversations).toBe(true);
+    await store.getState().hydrate('user-1');
+    expect(store.getState().recordConversations).toBe(false);
   });
 });

@@ -14,7 +14,8 @@ export function DigitalMindAvatar({ profile, size = 44, userImage, userName, use
   const colors = useThemeColors();
   const preset = DIGITAL_MIND_COLOURS.find(colour => colour.id === profile.colour) ?? DIGITAL_MIND_COLOURS[0];
   const ink = colors[preset.token];
-  const markSize = size === 44 ? 16 : 24;
+  // Small avatars (header, shape picker) scale the badge with them; large previews use 24.
+  const markSize = size <= 44 ? Math.round(size * 0.36) : 24;
   const badgeSize = markSize + 4;
   const badgeOffset = avatarBadgeOffset(size, badgeSize);
   return <View accessible={false} style={{ width: size, height: size }}>
