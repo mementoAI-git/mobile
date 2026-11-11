@@ -19,7 +19,7 @@ import { useShareStoryLink } from '@/hooks/use-share-story-link';
 import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 import { SheetHeader } from './SheetHeader';
 
-export function ShareMemorySheet() {
+export function ShareMemorySheet({ onClose }: { onClose?: (afterDismiss?: () => void) => void } = {}) {
   const COLORS = useThemeColors();
   const sheetProps = useUiStore((s) => s.sheetProps);
   const closeSheet = useUiStore((s) => s.closeSheet);
@@ -67,12 +67,12 @@ export function ShareMemorySheet() {
 
   const handleCopy = () => {
     Haptics.selectionAsync();
-    if (typeof memoryId === 'string') void shareStoryLink(memoryId, copyLink);
+    if (typeof memoryId === 'string') void shareStoryLink(memoryId, copyLink, onClose);
   };
 
   const handleShare = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (typeof memoryId === 'string') void shareStoryLink(memoryId, shareLink);
+    if (typeof memoryId === 'string') void shareStoryLink(memoryId, shareLink, onClose);
   };
 
   const handleAddAnother = () => {

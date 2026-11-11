@@ -22,3 +22,16 @@ export const PUBLIC_STORY_AUDIENCE = buildMemoryAudiencePayload({
   beneficiaryIds: [],
   groupIds: [],
 });
+
+/** Closes the current sheet, then runs `afterDismiss` once it has gone. */
+export type DismissCurrentSheet = (afterDismiss: () => void) => void;
+
+/**
+ * Opens a sheet in place of the one on screen. Only one sheet shows at a time,
+ * and the outgoing sheet's dismissal clears whichever sheet is active, so the
+ * new one must open only after the old one has finished closing.
+ */
+export function presentAfterDismiss(open: () => void, dismissCurrent?: DismissCurrentSheet): void {
+  if (dismissCurrent) dismissCurrent(open);
+  else open();
+}

@@ -9,6 +9,8 @@ import { invalidateMemoryQueries } from '@/features/memories/cache';
 import {
   PUBLIC_STORY_AUDIENCE,
   planStoryShare,
+  presentAfterDismiss,
+  type DismissCurrentSheet,
   type StorySharePlan,
 } from '@/features/memories/share-story';
 import { logger } from '@/lib/logger';
@@ -19,14 +21,19 @@ import type { IMemory } from '@/types';
  * Shares a story's link only once the link will open for whoever gets it.
  * A private story is made public first, after the host confirms; a draft is
  * refused. `share` copies or sends the link, and runs only when it will work.
- * Resolves to the plan it followed: on 'confirm-public' the confirmation sheet
- * has replaced the caller's sheet, so the caller must not close it.
+ * Called from inside a sheet, pass that sheet's onClose as `dismissCurrentSheet`:
+ * the confirmation then opens once the sheet has closed. Resolves to the plan
+ * it followed; on 'confirm-public' the caller must not close anything itself.
  */
 export function useShareStoryLink() {
   const queryClient = useQueryClient();
 
   return useCallback(
-    async (memoryId: string, share: () => Promise<void> | void): Promise<StorySharePlan> => {
+    async (
+      memoryId: string,
+      share: () => Promise<void> | void,
+      dismissCurrentSheet?: DismissCurrentSheet,
+    ): Promise<StorySharePlan> => {
       let memory: IMemory | null = null;
       try {
         // Fresh, not cached: who can see the story may have just changed.
@@ -53,7 +60,7 @@ export function useShareStoryLink() {
         return plan;
       }
 
-      useUiStore.getState().openSheet('security-confirmation', {
+      presentAfterDismiss(() => useUiStore.getState().openSheet('security-confirmation', {
         kind: 'make-story-public',
         onConfirm: async () => {
           try {
@@ -68,7 +75,7 @@ export function useShareStoryLink() {
           useUiStore.getState().closeSheet();
           await share();
         },
-      });
+      }), dismissCurrentSheet);
       return plan;
     },
     [queryClient],

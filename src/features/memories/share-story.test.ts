@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { describe, expect, test } from 'bun:test';
-import { PUBLIC_STORY_AUDIENCE, planStoryShare } from './share-story';
+import { PUBLIC_STORY_AUDIENCE, planStoryShare, presentAfterDismiss } from './share-story';
 
 describe('sharing a story link', () => {
   test('shares a public story straight away', () => {
@@ -33,5 +33,30 @@ describe('sharing a story link', () => {
 
   test('making it public clears specific shares, as the API requires', () => {
     expect(PUBLIC_STORY_AUDIENCE).toEqual({ visibility: 'everyone', beneficiaries: [], groups: [] });
+  });
+});
+
+describe('opening the make-public confirmation', () => {
+  test('waits for the sheet it replaces to finish closing', () => {
+    // Only one sheet shows at a time; opening the confirmation while the
+    // sheet that asked is still up lets that sheet's dismissal close it again.
+    const events: string[] = [];
+    let finishDismiss = () => {};
+    presentAfterDismiss(
+      () => events.push('confirmation opened'),
+      (afterDismiss) => {
+        events.push('closing current sheet');
+        finishDismiss = afterDismiss;
+      },
+    );
+    expect(events).toEqual(['closing current sheet']);
+    finishDismiss();
+    expect(events).toEqual(['closing current sheet', 'confirmation opened']);
+  });
+
+  test('opens straight away when no sheet is in the way', () => {
+    const events: string[] = [];
+    presentAfterDismiss(() => events.push('confirmation opened'));
+    expect(events).toEqual(['confirmation opened']);
   });
 });

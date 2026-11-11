@@ -49,7 +49,8 @@ import {
 
 interface Props {
   memory: IMemory;
-  onClose?: () => void;
+  /** Closes the sheet; a callback runs once it has finished closing. */
+  onClose?: (afterDismiss?: () => void) => void;
 }
 
 const MemoTagPill = React.memo(function MemoTagPill({
@@ -124,8 +125,8 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
       } catch {
         toast('We couldn’t share this story. Please try again.', 'error');
       }
-    });
-    // The confirmation sheet has taken this sheet's place; closing would dismiss it.
+    }, onClose ? (afterDismiss) => onClose(afterDismiss) : undefined);
+    // On 'confirm-public' this sheet is already closing to make way for the confirmation.
     if (plan !== 'confirm-public') onClose?.();
   }, [memory, onClose, shareStoryLink]);
 
