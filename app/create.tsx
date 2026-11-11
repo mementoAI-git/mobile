@@ -34,6 +34,7 @@ import Camera from 'lucide-react-native/icons/camera';
 import Mic from 'lucide-react-native/icons/mic';
 import Video from 'lucide-react-native/icons/video';
 import Music from 'lucide-react-native/icons/music';
+import { AudioAttachmentCard } from '@/components/media/AudioAttachmentCard';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -164,39 +165,16 @@ function ImageGrid({ items, onRemove, onPreview }: { items: AttachmentItem[]; on
   );
 }
 
-function VoiceCard({ item, onRemove }: { item: AttachmentItem; onRemove: (id: string) => void }) {
-  const styles = useThemedStyles(stylesBase);
-  const dur = item.duration ?? 0;
-  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-  const bars = useMemo(() => {
-    let h = 0;
-    for (let i = 0; i < item.clientId.length; i++) h = (h * 31 + item.clientId.charCodeAt(i)) | 0;
-    return Array.from({ length: 24 }, (_, i) => 4 + Math.round((Math.sin((h + i * 997) * 0.013) * 0.5 + 0.5) * 16));
-  }, [item.clientId]);
+/** Voice notes and audio files, as the shared recording card. */
+function RecordingCard({ item, onRemove }: { item: AttachmentItem; onRemove: (id: string) => void }) {
   return (
-    <View style={styles.voiceCard}>
-      <TouchableOpacity onPress={() => onRemove(item.clientId)} style={styles.voiceRemoveBtn} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-        <X size={8} color="rgba(255,255,255,0.7)" strokeWidth={2.5} />
-      </TouchableOpacity>
-      <Text style={styles.voiceTitle} numberOfLines={1}>Voice note · {dur > 0 ? fmt(dur) : item.name}</Text>
-      <View style={styles.waveform}>
-        {bars.map((h, i) => <View key={i} style={[styles.bar, { height: h }]} />)}
-      </View>
-    </View>
-  );
-}
-
-function AudioFileCard({ item, onRemove }: { item: AttachmentItem; onRemove: (id: string) => void }) {
-  const COLORS = useThemeColors();
-  const styles = useThemedStyles(stylesBase);
-  return (
-    <View style={styles.fileCard}>
-      <Music size={14} color={COLORS.brand} strokeWidth={1.8} />
-      <Text style={styles.fileName} numberOfLines={1}>{item.name}</Text>
-      {item.isUploading && <ActivityIndicator size="small" color={COLORS.brand} />}
-      <TouchableOpacity onPress={() => onRemove(item.clientId)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-        <X size={12} color={COLORS.textWeak} strokeWidth={2} />
-      </TouchableOpacity>
+    <View style={{ marginTop: 12 }}>
+      <AudioAttachmentCard
+        item={{ _id: item.fileId ?? item.clientId, name: item.name, type: item.mimeType, duration: item.duration }}
+        memoryTitle={item.isVoice ? 'Voice note' : undefined}
+        uploading={item.isUploading}
+        onRemove={() => onRemove(item.clientId)}
+      />
     </View>
   );
 }
@@ -574,8 +552,7 @@ export default function CreateScreen() {
             />
           )}
           {videoAttachments.map((a) => <VideoCard key={a.clientId} item={a} onRemove={handleRemove} />)}
-          {voiceAttachments.map((a) => <VoiceCard key={a.clientId} item={a} onRemove={handleRemove} />)}
-          {audioAttachments.map((a) => <AudioFileCard key={a.clientId} item={a} onRemove={handleRemove} />)}
+          {[...voiceAttachments, ...audioAttachments].map((a) => <RecordingCard key={a.clientId} item={a} onRemove={handleRemove} />)}
           {fileAttachments.map((a) => <GenericFileCard key={a.clientId} item={a} onRemove={handleRemove} />)}
 
           {saveError && <Text style={styles.errorText}>{saveError}</Text>}
@@ -664,11 +641,6 @@ const stylesBase = StyleSheet.create({
     }),
   },
 
-  voiceCard: { marginTop: 12, backgroundColor: COLORS.textStrong, borderRadius: 16, padding: 14, paddingRight: 36 },
-  voiceRemoveBtn: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  voiceTitle: { ...TYPE.metadata, color: 'rgba(255,255,255,0.85)', marginBottom: 10 },
-  waveform: { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
-  bar: { flex: 1, borderRadius: 2, backgroundColor: `${COLORS.brand}99`, maxHeight: 24 },
 
   fileCard: {
     marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8,

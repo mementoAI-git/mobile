@@ -1,3 +1,4 @@
+import { isCallRecordingAttachment } from '@/features/memories/call-recording-story';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { View, RefreshControl, useWindowDimensions } from 'react-native';
@@ -354,7 +355,8 @@ function estimateMasonryMemoryHeight(memory: IMemory, columnWidth: number) {
   const audioMedia = memory.attachments?.find((attachment) => attachment.type?.startsWith('audio/'));
   const bodyText = memory.body?.replace(/<[^>]+>/g, '').trim() ?? '';
 
-  if (bannerMedia || (audioMedia && !bodyText)) {
+  // Recorded conversations render as recording cards even with a transcript.
+  if (bannerMedia || (audioMedia && (!bodyText || isCallRecordingAttachment(audioMedia)))) {
     const aspectRatio = MEDIA_ASPECT_RATIOS[seed % MEDIA_ASPECT_RATIOS.length];
     return columnWidth / aspectRatio + ESTIMATED_TITLE_HEIGHT;
   }

@@ -431,7 +431,7 @@ export default function StoryDetailScreen() {
             {/* Date */}
             {memory.created_at && (
               <View style={styles.dateRow}>
-                <CalendarDays size={14} color={COLORS.info} strokeWidth={1.8} />
+                <CalendarDays size={14} color={COLORS.brand} strokeWidth={1.8} />
                 <Text style={styles.dateText}>{dayjs(memory.created_at).format('ddd, MMM D')}</Text>
               </View>
             )}
@@ -496,7 +496,7 @@ export default function StoryDetailScreen() {
           </View>
         )}
 
-        {/* Audio — tappable music/voice card thumbnails → opens MediaPreviewModal */}
+        {/* Audio — full-width player rows; tapping one opens the audio player (MediaPreviewModal) */}
         {audioAttachments.length > 0 && (
           <View style={{ paddingHorizontal: 16, gap: 8, marginBottom: 8 }}>
             {audioAttachments.map((item) => (

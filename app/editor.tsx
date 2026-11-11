@@ -317,34 +317,22 @@ function VoiceRecordingCards({ attachments, title, onRemove }: {
   title: string;
   onRemove: (clientId: string) => void;
 }) {
-  const COLORS = useThemeColors();
   const label = title.trim() || 'Voice recording';
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled"
-      style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}>
+    <View style={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}>
       {attachments.map(a => (
-        <View key={a.clientId}>
-          <AudioAttachmentCard
-            width={VOICE_CARD_WIDTH}
-            memoryTitle={label}
-            item={{ _id: a.fileId ?? a.clientId, name: a.name, type: a.mimeType, duration: a.duration }}
-          />
-          {a.isUploading && (
-            <View style={{ ...StyleSheet.absoluteFill, borderRadius: 20, backgroundColor: COLORS.mediaScrim, alignItems: 'center', justifyContent: 'center' }}>
-              <ActivityIndicator color={COLORS.textInverse} />
-            </View>
-          )}
-          <TouchableOpacity onPress={() => onRemove(a.clientId)} hitSlop={8} accessibilityLabel="Remove recording"
-            style={{ position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.mediaScrim, alignItems: 'center', justifyContent: 'center' }}>
-            <X size={12} color={COLORS.textInverse} strokeWidth={2.5} />
-          </TouchableOpacity>
-        </View>
+        <AudioAttachmentCard
+          key={a.clientId}
+          memoryTitle={label}
+          item={{ _id: a.fileId ?? a.clientId, name: a.name, type: a.mimeType, duration: a.duration }}
+          uploading={a.isUploading}
+          onRemove={() => onRemove(a.clientId)}
+        />
       ))}
-    </ScrollView>
+    </View>
   );
 }
 
-const VOICE_CARD_WIDTH = 148;
 
 export default function EditorScreen() {
   const COLORS = useThemeColors();

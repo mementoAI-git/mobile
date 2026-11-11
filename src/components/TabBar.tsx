@@ -75,6 +75,14 @@ const GLASS_BG = Platform.select({
 
 
 const PILL_H     = Platform.OS === 'android' ? 66 : 64;
+/** The frosted fade rises this far above the pill's vertical centre. */
+const FADE_RISE  = 64;
+
+/** Bottom inset where the tab bar's fade begins, so floating buttons can sit clear above it. */
+export function tabBarFadeTop(safeAreaBottom: number): number {
+  const bottomPad = safeAreaBottom ? safeAreaBottom + 16 : 32;
+  return bottomPad + PILL_H / 2 + FADE_RISE;
+}
 const ICON_SIZE  = iconSize(24);
 
 type TabRoute = {
@@ -289,11 +297,11 @@ export function TabBar({ state, navigation }: TabBarProps) {
         accessible={false}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
-        style={{ position: 'absolute', left: -20, right: -20, top: -PILL_H / 2 - 64, bottom: -bottomPad, overflow: 'hidden' }}
+        style={{ position: 'absolute', left: -20, right: -20, top: -PILL_H / 2 - FADE_RISE, bottom: -bottomPad, overflow: 'hidden' }}
         maskElement={
           <LinearGradient
             colors={['transparent', COLORS.textInverse, COLORS.textInverse]}
-            locations={[0, 64 / (bottomPad + PILL_H / 2 + 64), 1]}
+            locations={[0, FADE_RISE / (bottomPad + PILL_H / 2 + FADE_RISE), 1]}
             style={{ flex: 1 }}
           />
         }

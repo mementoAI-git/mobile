@@ -5,22 +5,22 @@ import { View, RefreshControl, ScrollView, Text } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Plus from 'lucide-react-native/icons/plus';
+import BookOpen from 'lucide-react-native/icons/book-open';
+import Bookmark from 'lucide-react-native/icons/bookmark';
+import Trash2 from 'lucide-react-native/icons/trash';
 import Search from 'lucide-react-native/icons/search';
 import LayoutGrid from 'lucide-react-native/icons/layout-grid';
 import List from 'lucide-react-native/icons/list';
+import { CaptureFab } from '@/components/memory/CaptureFab';
 import { StoryListRow } from '@/components/memory/StoryListRow';
 import { MasonryMemoryGrid } from '@/components/memory/MasonryMemoryGrid';
 import { Button, DashboardHeader, TextInput, StoriesSkeleton, EmptyState, Spinner } from '@/components/ui';
 import { useGuardianLensStore } from '@/store/guardian-lens.store';
-import { BRAND_BUTTON_GRADIENT } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { minTouchTarget, radius, iconSize } from '@/constants/responsive';
+import { minTouchTarget } from '@/constants/responsive';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,
-  useAnimatedStyle,
-  interpolate,
-  Extrapolation,
   useAnimatedScrollHandler,
 } from 'react-native-reanimated';
 import { useStoriesLogic } from '@/hooks/use-stories-logic';
@@ -28,7 +28,6 @@ import { useRouter } from 'expo-router';
 import type { IMemory } from '@/types';
 import { runtimeDiagnostics } from '@/lib/runtime-diagnostics';
 
-const EMPTY_MEMORIES_IMG = require('../../../assets/images/illustrations/empty_memories.webp');
 
 const FILTERS = ['All', 'Bookmarked', 'Deleted'];
 
@@ -101,56 +100,15 @@ export default function StoriesScreen() {
     }
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
+  // Talk opens a voice conversation; Record opens a new story already recording.
+  const handleTalk = useCallback(() => router.push('/voice-call'), [router]);
+  const handleRecord = useCallback(
+    () => router.push({ pathname: '/editor', params: { mode: 'story', lockMode: 'true', autoRecord: 'true' } }),
+    [router],
+  );
+
   // Reanimated scroll tracking
   const scrollY = useSharedValue(0);
-
-  // Floating button animations: transition from a wide pill to a compact circle
-  const floatBtnStyle = useAnimatedStyle(() => {
-    // Morph width from 136px (wide pill) to 44px (compact circle)
-    const width = interpolate(
-      scrollY.value,
-      [0, 100],
-      [136, 44],
-      Extrapolation.CLAMP
-    );
-
-    return {
-      width,
-    };
-  });
-
-  // Shift the Plus icon horizontally from left-side layout to absolute center
-  const animIconStyle = useAnimatedStyle(() => {
-    const translateX = interpolate(
-      scrollY.value,
-      [0, 100],
-      [-42, 0], // slide icon from left offset (when text is present) back to absolute center (0)
-      Extrapolation.CLAMP
-    );
-    return {
-      transform: [{ translateX }],
-    };
-  });
-
-  // Fade out label and slide it right on scroll
-  const labelStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(
-      scrollY.value,
-      [0, 40],
-      [1, 0],
-      Extrapolation.CLAMP
-    );
-    const translateX = interpolate(
-      scrollY.value,
-      [0, 100],
-      [18, 42], // starts next to offset icon, slides away on scroll
-      Extrapolation.CLAMP
-    );
-    return {
-      opacity,
-      transform: [{ translateX }],
-    };
-  });
 
   // Stable renderItem for FlatList — compact row with thumbnail or identicon
   const renderListItem = useCallback(
@@ -199,17 +157,24 @@ export default function StoriesScreen() {
     </View>
   ), [filterTabs, activeFilter, setActiveFilter]);
 
+  const showAllStories = useCallback(() => setActiveFilter('All'), [setActiveFilter]);
+
+  // Simple empty state like the rest of the app: icon, title and a CTA, per tab.
+  const emptyCopy = debouncedSearch
+    ? { icon: Search, title: 'No matches found', actionLabel: 'Clear search', onAction: handleClearSearch }
+    : activeFilter === 'Bookmarked'
+      ? { icon: Bookmark, title: 'No bookmarks yet', actionLabel: 'Browse your stories', onAction: showAllStories }
+      : activeFilter === 'Deleted'
+        ? { icon: Trash2, title: 'Nothing deleted', actionLabel: 'Back to your stories', onAction: showAllStories }
+        : { icon: BookOpen, title: 'Your story begins here', actionLabel: 'Write your first story', onAction: handleCreateNew };
+
   const emptyState = (
     <EmptyState
-      image={EMPTY_MEMORIES_IMG}
-      title={debouncedSearch ? 'No matches found' : 'Your story begins here'}
-      description={
-        debouncedSearch
-          ? `Try a different term for "${debouncedSearch}"`
-          : "Start preserving your life's journey today."
-      }
-      actionLabel={debouncedSearch ? 'Clear search' : 'Create first memory'}
-      onAction={debouncedSearch ? handleClearSearch : handleCreateNew}
+      icon={emptyCopy.icon}
+      title={emptyCopy.title}
+      actionLabel={emptyCopy.actionLabel}
+      onAction={emptyCopy.onAction}
+      actionTone="inverse"
     />
   );
 
@@ -320,63 +285,7 @@ export default function StoriesScreen() {
           />
         )}
 
-        {/* Floating Action Button - morphs width and contents on scroll */}
-        <Animated.View
-          style={[
-            floatBtnStyle,
-            {
-              position: 'absolute',
-              bottom: 96,
-              right: 24,
-              height: minTouchTarget(44),
-              borderRadius: radius(22),
-              backgroundColor: COLORS.brand,
-              experimental_backgroundImage: BRAND_BUTTON_GRADIENT,
-              shadowColor: COLORS.shadow,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 8,
-              elevation: 5,
-              zIndex: 50,
-              overflow: 'hidden',
-            }
-          ]}
-        >
-          <TouchableOpacity
-            onPress={handleCreateNew}
-            activeOpacity={0.85}
-            style={{
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '100%',
-              height: '100%',
-            }}
-          >
-            <Animated.View style={[
-              animIconStyle,
-              {
-                position: 'absolute',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }
-            ]}>
-              <Plus size={iconSize(20)} color="white" strokeWidth={2.5} />
-            </Animated.View>
-            <Animated.Text
-              style={[
-                labelStyle,
-                TYPE.buttonSmall,
-                {
-                  color: 'white',
-                  position: 'absolute',
-                }
-              ]}
-              numberOfLines={1}
-            >
-              New Memory
-            </Animated.Text>
-          </TouchableOpacity>
-        </Animated.View>
+        <CaptureFab onTalk={handleTalk} onWrite={handleCreateNew} onRecord={handleRecord} />
       </View>
     </SafeAreaView>
   );
