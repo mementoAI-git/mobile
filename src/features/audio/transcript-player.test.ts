@@ -13,6 +13,7 @@ import {
   resolveTimelineDuration,
   speakerLabel,
   spokenCharCount,
+  alignSegmentsToSpeech,
   transparentColor,
   type TranscriptSegment,
 } from './transcript-player';
@@ -201,11 +202,45 @@ describe('spokenCharCount', () => {
     expect(spokenCharCount(firstTurn, 30)).toBe(firstTurn.text.length);
   });
 
-  test('streams whole words through the active segment', () => {
+  test('streams whole words through the active segment, lighting each as it starts', () => {
     expect(firstTurn.text.slice(0, spokenCharCount(firstTurn, 0))).toBe('');
     expect(firstTurn.text.slice(0, spokenCharCount(firstTurn, 2))).toBe('Hi');
     expect(firstTurn.text.slice(0, spokenCharCount(firstTurn, 4))).toBe('Hi there. ');
-    expect(firstTurn.text.slice(0, spokenCharCount(firstTurn, 5.5))).toBe('Hi there. How');
+    expect(firstTurn.text.slice(0, spokenCharCount(firstTurn, 5.5))).toBe('Hi there. How are');
+  });
+});
+
+describe('alignSegmentsToSpeech', () => {
+  // Memento speaks 0.5–4s, the user 6–9s, Memento again 10.2–14s.
+  const speech = [{ start: 0.5, end: 4 }, { start: 6, end: 9 }, { start: 10.2, end: 14 }];
+
+  test('snaps late user text back and early Memento text forward to the speech heard', () => {
+    const aligned = alignSegmentsToSpeech([
+      { start: 0, end: 7.5, text: 'Hello there', speaker: 'ai' },
+      { start: 7.5, end: 9.6, text: 'Hi Memento', speaker: 'user' }, // transcribed 1.5s late
+      { start: 9.6, end: 20, text: 'Lovely to hear', speaker: 'ai' }, // text before its audio
+    ], speech);
+    expect(aligned.map((segment) => [segment.start, segment.end])).toEqual([[0.5, 4], [6, 9], [10.2, 14]]);
+  });
+
+  test('keeps turns in order and leaves them be without speech to snap to', () => {
+    const segments = [{ start: 1, end: 2, text: 'A', speaker: 'ai' as const }, { start: 2, end: 3, text: 'B', speaker: 'user' as const }];
+    expect(alignSegmentsToSpeech(segments, [])).toEqual(segments);
+    const far = alignSegmentsToSpeech(segments, [{ start: 40, end: 45 }]);
+    expect(far.map((segment) => segment.start)).toEqual([1, 2]);
+  });
+});
+
+describe('spokenCharCount with speech', () => {
+  const [turn] = mergeTranscriptTurns([{ start: 0, end: 10, text: 'one two three four', speaker: 'ai' }]);
+
+  test('holds through pauses instead of drifting behind', () => {
+    // Spoken 0–2s and 8–10s with a long pause between: half the words by the pause.
+    const speech = [{ start: 0, end: 2 }, { start: 8, end: 10 }];
+    // At 6s, mid-pause: half the speech is done, though 60% of the turn's time is.
+    expect(turn.text.slice(0, spokenCharCount(turn, 6, speech))).toBe('one two');
+    expect(turn.text.slice(0, spokenCharCount(turn, 6))).toBe('one two three');
+    expect(turn.text.slice(0, spokenCharCount(turn, 8.5, speech))).toBe('one two three');
   });
 });
 

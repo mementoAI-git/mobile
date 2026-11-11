@@ -1421,7 +1421,7 @@ export function useVoiceMode({
       onMicFrame: (samples, flags) => {
         if (DEBUG_CAPTURE_GATE) gateCaptureRef.current?.add(samples, flags);
         // Everything the mic hears goes to the recording, except while muted.
-        callRecordingRef.current?.pushMic(samples, isMutedRef.current);
+        callRecordingRef.current?.pushMic(samples, isMutedRef.current, flags.audibleOnSpeaker);
       },
       onFatalError: (error) => {
         logger.handledError('Native voice audio failed', error);

@@ -46,6 +46,7 @@ import { useResolvedAudioArtworkThumbnail } from '@/features/media/audio-artwork
 import { getNextPlaybackSpeed, type PlaybackSpeed } from '@/features/audio/narration-player';
 import {
   SKIP_SECONDS,
+  alignSegmentsToSpeech,
   clampSkip,
   computeTimelineBlocks,
   findActiveIndex,
@@ -58,7 +59,7 @@ import {
   resolveTimelineDuration,
   speakerLabel,
   spokenCharCount,
-  type TranscriptSegment,
+  type SpeechSpan,
   type TranscriptTurn,
 } from '@/features/audio/transcript-player';
 
@@ -165,11 +166,14 @@ const TranscriptTurnRow = React.memo(function TranscriptTurnRow({
 
 function TranscriptView({
   turns,
+  speech,
   currentTime,
   showSpeakers,
   onSeek,
 }: {
   turns: TranscriptTurn[];
+  /** When someone was audible (recorded calls), so pauses hold the highlight. */
+  speech?: readonly SpeechSpan[];
   currentTime: number;
   showSpeakers: boolean;
   onSeek: (seconds: number) => void;
@@ -186,7 +190,7 @@ function TranscriptView({
   const activeIndex = findActiveIndex(turns, currentTime);
   // Before the first word, keep the first turn in focus.
   const focusIndex = Math.max(0, activeIndex);
-  const activeSpoken = activeIndex >= 0 ? spokenCharCount(turns[activeIndex], currentTime) : 0;
+  const activeSpoken = activeIndex >= 0 ? spokenCharCount(turns[activeIndex], currentTime, speech) : 0;
 
   const scrollToTurn = useCallback((index: number, animated = true) => {
     const y = rowOffsets.current[index];
@@ -422,6 +426,37 @@ function SkipButton({ direction, onPress }: { direction: 'back' | 'forward'; onP
 
 // ─── Player ───────────────────────────────────────────────────────────────────
 
+/** The clock re-renders the player every this many display frames (about 30 a second). */
+const CLOCK_FRAME_STRIDE = 2;
+
+/**
+ * The play position, advanced every frame from the player's last report so the
+ * highlight and playhead move smoothly instead of in report-sized steps. The
+ * position is computed during render; the frame loop only asks for a render,
+ * so nothing here sets state in response to a report.
+ */
+function usePlaybackClock(reported: number, playing: boolean, rate: number) {
+  const anchor = useRef({ time: reported, at: Date.now() });
+  if (anchor.current.time !== reported) anchor.current = { time: reported, at: Date.now() };
+  const [, setFrame] = useState(0);
+  useEffect(() => {
+    if (!playing) return;
+    anchor.current = { time: anchor.current.time, at: Date.now() };
+    let handle = 0;
+    let count = 0;
+    const tick = () => {
+      count += 1;
+      if (count % CLOCK_FRAME_STRIDE === 0) setFrame((frame) => (frame + 1) % 1_000_000);
+      handle = requestAnimationFrame(tick);
+    };
+    handle = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(handle);
+  }, [playing]);
+  if (!playing) return reported;
+  // Never run more than half a second past the last report, in case the player stalls.
+  return anchor.current.time + Math.min(0.5, ((Date.now() - anchor.current.at) / 1000) * rate);
+}
+
 export function TranscriptAudioPlayer({
   uri,
   name,
@@ -447,13 +482,18 @@ export function TranscriptAudioPlayer({
   const [showTranscript, setShowTranscript] = useState(voice);
   const canTranscribe = Boolean(fileId);
   const transcription = useFileTranscription(fileId, showTranscript && isActive);
-  const segments = useMemo(() => transcription.data?.segments ?? [], [transcription.data]);
+  const speech = useMemo(() => transcription.data?.speech ?? [], [transcription.data]);
+  // Recorded calls note each turn when its text arrived; snap them to the speech actually heard.
+  const segments = useMemo(
+    () => alignSegmentsToSpeech(transcription.data?.segments ?? [], speech),
+    [transcription.data, speech],
+  );
   const turns = useMemo(() => mergeTranscriptTurns(segments), [segments]);
   const multiSpeaker = useMemo(() => hasSpeakers(segments), [segments]);
   // Recorded conversations know when someone was audible; otherwise the transcript segments stand in.
   const speechSpans = useMemo(
-    () => (transcription.data?.speech.length ? transcription.data.speech : segments),
-    [transcription.data, segments],
+    () => (speech.length ? speech : segments),
+    [speech, segments],
   );
   const toggleTranscript = useCallback(() => {
     Haptics.selectionAsync();
@@ -469,7 +509,8 @@ export function TranscriptAudioPlayer({
   });
 
   const duration = resolveTimelineDuration(status.duration || knownDuration || 0, segments);
-  const currentTime = scrubTime ?? pendingSeek ?? status.currentTime ?? 0;
+  const playbackTime = usePlaybackClock(status.currentTime ?? 0, status.playing, speed);
+  const currentTime = scrubTime ?? pendingSeek ?? playbackTime;
   const ended = duration > 0 && status.currentTime >= duration - END_EPSILON_SECONDS && !status.playing;
 
   // Pause when the slide scrolls out of view.
@@ -543,6 +584,7 @@ export function TranscriptAudioPlayer({
     body = (
       <TranscriptView
         turns={turns}
+        speech={speech}
         currentTime={currentTime}
         showSpeakers={multiSpeaker}
         onSeek={seekTo}
