@@ -7,6 +7,7 @@ import Moon from 'lucide-react-native/icons/moon';
 import Monitor from 'lucide-react-native/icons/monitor';
 import Check from 'lucide-react-native/icons/check';
 import { Button } from '@/components/ui/Button';
+import { SheetActions, SHEET_FILL } from './SheetActions';
 import { SheetHeader } from './SheetHeader';
 import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 import { useThemeColors } from '@/hooks/use-theme-colors';
@@ -37,12 +38,14 @@ function AppearanceOption({ value, label, icon: Icon }: (typeof OPTIONS)[number]
 
 export function AppearanceSheet({ onClose }: { onClose: () => void }) {
   return (
-    <View style={{ gap: SHEET_GROUP_GAP, paddingBottom: 8 }}>
+    <View style={{ ...SHEET_FILL, gap: SHEET_GROUP_GAP }}>
       <SheetHeader title="Appearance" onClose={onClose} closeLabel="Close appearance" />
       <View accessibilityRole="radiogroup" style={{ gap: 4 }}>
         {OPTIONS.map((option) => <AppearanceOption key={option.value} {...option} />)}
       </View>
-      <Button variant="outline" size="menu" rounded="full" onPress={onClose}>Done</Button>
+      <SheetActions>
+        <Button variant="outline" size="menu" rounded="full" onPress={onClose}>Done</Button>
+      </SheetActions>
     </View>
   );
 }

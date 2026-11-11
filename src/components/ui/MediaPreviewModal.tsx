@@ -32,7 +32,9 @@ import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Clipboard from 'expo-clipboard';
 import { Image as ExpoImage } from 'expo-image';
-import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { VideoView } from 'expo-video';
 import { runtimeDiagnostics, sanitizeMediaUri } from '@/lib/runtime-diagnostics';
 import { getMediaCategory, inferMediaMimeType } from '@/features/media/media-type';
@@ -51,7 +53,6 @@ import X from 'lucide-react-native/icons/x';
 import FileText from 'lucide-react-native/icons/file-text';
 import Music from 'lucide-react-native/icons/music';
 import Play from 'lucide-react-native/icons/play';
-import Link2 from 'lucide-react-native/icons/link-2';
 import Download from 'lucide-react-native/icons/download';
 import Trash2 from 'lucide-react-native/icons/trash';
 import MessageSquare from 'lucide-react-native/icons/message-square';
@@ -71,6 +72,7 @@ import {
 import { useSignedMediaAccess } from '@/features/media/use-signed-media-access';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { post } from '@/api/mutations';
+import { MediaShareSheet } from '@/components/media/MediaShareSheet';
 import { TranscriptAudioPlayer } from '@/components/audio/TranscriptAudioPlayer';
 
 // Horizontal padding on each side — creates the "peek" effect
@@ -669,14 +671,16 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
   );
   const saveActionTitle = currentItemIsVisual
     ? Platform.OS === 'ios' ? 'Save to Photos' : 'Save to Gallery'
-    : Platform.OS === 'ios' ? 'Save to Files' : 'Download file';
+    : 'Download';
   const saveActionDescription = currentItemIsVisual
     ? Platform.OS === 'ios' ? 'Save this to your photo library' : 'Save this to your gallery'
-    : Platform.OS === 'ios' ? 'Open the share sheet to save a copy to Files' : 'Export a copy using apps on your device';
+    : 'Save a copy to your device';
   const saveSuccessMessage = currentItemIsVisual
     ? Platform.OS === 'ios' ? 'Saved to Photos' : 'Saved to Gallery'
     : Platform.OS === 'ios' ? 'Saved to Files' : 'File downloaded';
 
+
+  const closeShareMenu = useCallback(() => setShareMenuVisible(false), []);
 
   const handleShareButtonPress = useCallback(() => {
     Haptics.selectionAsync();
@@ -964,124 +968,16 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
         </View>
       ) : null}
 
-      {/* ── Custom share action panel ── */}
-      <Modal
+      {/* Share options on the shared bottom sheet */}
+      <MediaShareSheet
         visible={shareMenuVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShareMenuVisible(false)}
-      >
-        <SafeAreaProvider>
-        <TouchableOpacity
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
-          activeOpacity={1}
-          onPress={() => { Haptics.selectionAsync(); setShareMenuVisible(false); }}
-        />
-        <SafeAreaView edges={['bottom']} style={styles.shareMenuSafeArea}>
-        <View style={{
-          backgroundColor: COLORS.background,
-          borderTopLeftRadius: 32,
-          borderTopRightRadius: 32,
-          paddingTop: 12,
-          paddingBottom: 24,
-          paddingHorizontal: 24,
-          gap: 8,
-        }}>
-          {/* Handle */}
-          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: COLORS.strokeStrong, opacity: 0.3, alignSelf: 'center', marginBottom: 12 }} />
-
-          {/* Share memory link — only when memoryId is provided */}
-          {memoryId && (
-            <TouchableOpacity
-              onPress={handleShareLink}
-              activeOpacity={0.8}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, paddingHorizontal: 4 }}
-            >
-              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
-                <Link2 size={20} color={COLORS.textBase} strokeWidth={1.8} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>Share memory link</Text>
-                <Text style={{ ...TYPE.metadata, color: COLORS.textWeak, marginTop: 1 }}>Copy and share the public link</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-
-          {Platform.OS === 'ios' ? (
-            <>
-              {/* Share file via OS sheet */}
-              <TouchableOpacity
-                onPress={handleShareFile}
-                activeOpacity={0.8}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, paddingHorizontal: 4 }}
-              >
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
-                  <Share2 size={20} color={COLORS.textBase} strokeWidth={1.8} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>Share file</Text>
-                  <Text style={{ ...TYPE.metadata, color: COLORS.textWeak, marginTop: 1 }}>Send via message, email or another app</Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* Divider */}
-              <View style={{ height: 1, backgroundColor: COLORS.strokeWeaker, marginHorizontal: 4, marginVertical: 4 }} />
-
-              {/* Save / export */}
-              <TouchableOpacity
-                onPress={handleSaveOrExport}
-                activeOpacity={0.8}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, paddingHorizontal: 4 }}
-              >
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
-                  <Download size={20} color={COLORS.textBase} strokeWidth={1.8} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>{saveActionTitle}</Text>
-                  <Text style={{ ...TYPE.metadata, color: COLORS.textWeak, marginTop: 1 }}>{saveActionDescription}</Text>
-                </View>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              {/* Save / export */}
-              <TouchableOpacity
-                onPress={handleSaveOrExport}
-                activeOpacity={0.8}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, paddingHorizontal: 4 }}
-              >
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
-                  <Download size={20} color={COLORS.textBase} strokeWidth={1.8} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>{saveActionTitle}</Text>
-                  <Text style={{ ...TYPE.metadata, color: COLORS.textWeak, marginTop: 1 }}>{saveActionDescription}</Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* Divider */}
-              <View style={{ height: 1, backgroundColor: COLORS.strokeWeaker, marginHorizontal: 4, marginVertical: 4 }} />
-
-              {/* Share file via OS sheet */}
-              <TouchableOpacity
-                onPress={handleShareFile}
-                activeOpacity={0.8}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, paddingHorizontal: 4 }}
-              >
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}>
-                  <Share2 size={20} color={COLORS.textBase} strokeWidth={1.8} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ ...TYPE.body, color: COLORS.textStrong }}>Share file</Text>
-                  <Text style={{ ...TYPE.metadata, color: COLORS.textWeak, marginTop: 1 }}>Send via message, email or another app</Text>
-                </View>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-        </SafeAreaView>
-        </SafeAreaProvider>
-      </Modal>
+        onClose={closeShareMenu}
+        onShareLink={memoryId ? handleShareLink : undefined}
+        onShareFile={handleShareFile}
+        onSave={handleSaveOrExport}
+        saveTitle={saveActionTitle}
+        saveDescription={saveActionDescription}
+      />
     </View>
   );
 }
@@ -1097,6 +993,9 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
           correct values for the modal's own native window. Plain View (not
           SafeAreaView) fills inset zones with COLORS.background — no dark bands. */}
       <SafeAreaProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+        {/* Sheets opened from the viewer present in this modal's own window. */}
+        <BottomSheetModalProvider>
         <ModalInner
           attachments={attachments}
           initialIndex={initialIndex}
@@ -1108,6 +1007,8 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
           onViewMessage={onViewMessage}
           onDeletePersisted={onDeletePersisted}
         />
+        </BottomSheetModalProvider>
+        </GestureHandlerRootView>
         <ToastViewport />
       </SafeAreaProvider>
     </Modal>
@@ -1117,11 +1018,6 @@ export function MediaPreviewModal({ visible, attachments, initialIndex = 0, onCl
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const stylesBase = StyleSheet.create({
-  shareMenuSafeArea: {
-    backgroundColor: COLORS.background,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-  },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

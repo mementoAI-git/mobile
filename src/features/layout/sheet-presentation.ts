@@ -7,7 +7,8 @@
  *   at the top; at least `min(524px, 92dvh)` (Publish post sets the size of
  *   every sheet). Short confirmations (web alert dialogs) stay compact.
  * - Grabber: 36×4, fully rounded, stroke-neutral-strong at 35%.
- * - Backdrop: light `rgba(94,94,94,0.5)`; dark and Deep Sky `rgba(0,0,0,0.72)`.
+ * - Backdrop: light `rgba(94,94,94,0.5)`; dark and Deep Sky a lighter grey
+ *   `rgba(64,66,76,0.55)`, so the dark sheet stands out from the dimmed page.
  * - Fill: `--bg-raised` (white) on light, `--bg-sheet` on dark and Deep Sky
  *   (`COLORS.sheet`).
  */
@@ -20,7 +21,8 @@ export const SHEET_GRABBER = { width: 36, height: 4, borderRadius: 2, opacity: 0
 
 export const SHEET_BACKDROP = {
   light: { color: 'rgb(94,94,94)', opacity: 0.5 },
-  dark: { color: 'rgb(0,0,0)', opacity: 0.72 },
+  // Lighter than the dark sheet (#12131a), so the sheet stands out against the dimmed page.
+  dark: { color: 'rgb(64,66,76)', opacity: 0.55 },
 } as const;
 
 /** Space kept above a fully open sheet: web's 8% gap, never under the status bar. */

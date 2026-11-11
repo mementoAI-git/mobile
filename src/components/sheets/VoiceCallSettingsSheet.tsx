@@ -16,7 +16,7 @@ import { saveCallVoice } from '@/features/chat/voice-call-voice';
 import { SheetHeader } from './SheetHeader';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 
 interface VoiceCallSettingsSheetProps {
   selectedVoiceId: VoiceId;
@@ -63,7 +63,7 @@ export function VoiceCallSettingsSheet({ selectedVoiceId, onSaved, onClose }: Vo
 
   return (
     // Header and actions stay put; the settings between them scroll.
-    <View style={{ flex: 1, paddingHorizontal: 20, paddingBottom: getSheetBottomPadding(insets.bottom, 12), gap: SHEET_GROUP_GAP }}>
+    <View style={{ flex: 1, paddingHorizontal: 20, paddingBottom: getSheetActionsBottomPadding(insets.bottom), gap: SHEET_GROUP_GAP }}>
       <SheetHeader title="Settings" onClose={onClose} closeLabel="Close voice settings" />
       <BottomSheetScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: SHEET_SECTION_GAP, paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
       <VoiceLanguageSelect value={language} onChange={setLanguage} disabled={saving} />

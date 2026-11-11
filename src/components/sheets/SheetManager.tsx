@@ -46,7 +46,7 @@ import { AppearanceSheet } from './AppearanceSheet';
 import { DailyRitualSheet } from './DailyRitualSheet';
 import { ObservationNoteSheet } from './ObservationNoteSheet';
 import { EmojiPickerSheet } from '@/components/chat/EmojiPickerSheet';
-import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
+import { getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 
 const SHEET_CONFIGS: Record<string, {
   component: React.ComponentType<any>;
@@ -223,7 +223,10 @@ export function SheetManager({ isModal = false }: { isModal?: boolean }) {
             collapseSheet={collapseSheet}
           />
         ) : (
-          <BottomSheetView style={{ ...(config?.screenHeightRatio ? { flex: 1 } : { minHeight: chrome.minContentHeight }), paddingHorizontal: config?.horizontalPadding ?? 20, paddingBottom: getSheetBottomPadding(insets.bottom, 12) }}>
+          // Fills at least the minimum sheet height. Sheets with buttons put them in
+          // <SheetActions> on a SHEET_FILL root, so the CTA always sits 8px above the
+          // home indicator, never floating mid-sheet under short content.
+          <BottomSheetView style={{ ...(config?.screenHeightRatio ? { flex: 1 } : { minHeight: chrome.minContentHeight }), paddingHorizontal: config?.horizontalPadding ?? 20, paddingBottom: getSheetActionsBottomPadding(insets.bottom) }}>
             <SheetContent {...sheetProps} onClose={animateClose} />
           </BottomSheetView>
         )

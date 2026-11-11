@@ -212,7 +212,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
 
   if (showDeleteConfirm) {
     return (
-      <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 24, paddingHorizontal: 4 }}>
+      <View style={{ alignItems: 'center', paddingTop: 16, paddingHorizontal: 4 }}>
         {/* Warning icon */}
         <View style={{ marginBottom: 24, marginTop: 8 }}>
           <AlertTriangle size={96} color={COLORS.warning} fill={COLORS.warning} strokeWidth={0} />
@@ -277,7 +277,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
     <ScrollView
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ paddingBottom: 24 }}
+      contentContainerStyle={{ paddingBottom: 0 }}
     >
       <SheetHeader
         title={memory.title?.trim() || 'Story options'}

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Image, Text, View, type ImageSourcePropType } from 'react-native';
+import { SheetActions, SHEET_FILL } from './SheetActions';
 import * as Haptics from 'expo-haptics';
 import X from 'lucide-react-native/icons/x';
 import { Button } from '@/components/ui/Button';
@@ -31,7 +32,7 @@ export function CelebrationSheet({ image, title, description, closeLabel, onClos
   }, []);
 
   return (
-    <View style={{ gap: SHEET_GROUP_GAP, paddingBottom: 8 }}>
+    <View style={{ ...SHEET_FILL, gap: SHEET_GROUP_GAP }}>
       <View>
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
           <Button
@@ -59,7 +60,7 @@ export function CelebrationSheet({ image, title, description, closeLabel, onClos
         </View>
       </View>
       {children}
-      <View style={{ gap: 12 }}>{actions}</View>
+      <SheetActions style={{ gap: 12 }}>{actions}</SheetActions>
     </View>
   );
 }
