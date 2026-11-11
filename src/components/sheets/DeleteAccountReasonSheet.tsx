@@ -8,7 +8,7 @@ import { TouchableOpacity } from '@/components/ui/Touchable';
 import { Button, TextInput } from '@/components/ui';
 import { TYPE } from '@/constants/typography';
 import { SheetHeader } from './SheetHeader';
-import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { DELETION_REASONS, type DeletionReason } from '@/features/account-deletion/deletion';
 
 interface Props {
@@ -97,7 +97,7 @@ export function DeleteAccountReasonSheet({ reason: initialReason, details: initi
           ) : null}
         </BottomSheetScrollView>
 
-        <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 12) + 8, backgroundColor: COLORS.sheet }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: getSheetActionsBottomPadding(insets.bottom), backgroundColor: COLORS.sheet }}>
           <Button size="lg" rounded="full" className="h-14 w-full" onPress={save}>
             Continue
           </Button>

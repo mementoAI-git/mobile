@@ -2,6 +2,12 @@ export function getSheetBottomPadding(bottomInset: number, minimumSpacing: numbe
   return Math.max(0, bottomInset) + minimumSpacing;
 }
 
+/** Space below a sheet's bottom CTA: 8px above the home indicator (12px floor on devices without one). */
+export const SHEET_CTA_BOTTOM_SPACING = 8;
+export function getSheetActionsBottomPadding(bottomInset: number) {
+  return Math.max(bottomInset, 12) + SHEET_CTA_BOTTOM_SPACING;
+}
+
 export function getSheetTopInset(topInset: number) {
   return Math.max(0, topInset);
 }

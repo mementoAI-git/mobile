@@ -50,3 +50,8 @@ test('keeps title-only words safe when moving them into the note body', () => {
   const payload = buildEditorPublishPayload({title: 'Me & <friends>', body: '', attachmentIds: [], audience: {mode: 'private', beneficiaryIds: [], groupIds: []}});
   expect(payload.body).toBe('<p>Me &amp; &lt;friends&gt;</p>');
 });
+
+test('saves an attachment-only story without a title so the server can name it', () => {
+  const payload = buildEditorPublishPayload({title: '', body: '', attachmentIds: ['voice1'], audience: {mode: 'private', beneficiaryIds: [], groupIds: []}});
+  expect(payload).toMatchObject({title: 'Quick note', body: '<p></p>', capture_source: 'quick', attachments: ['voice1']});
+});

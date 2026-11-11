@@ -1,4 +1,5 @@
 import { Avatar } from "@/components/ui/Avatar";
+import { getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { PublishSuccessView } from '@/components/editor/PublishSuccessView';
 import { useThemeColors, useThemedStyles, useThemeStyles } from '@/hooks/use-theme-colors';
 /**
@@ -185,7 +186,7 @@ function PublishModal({
           ) : (
 
           <ScrollView
-            contentContainerStyle={[pStyles.container, { paddingBottom: insets.bottom + 24 }]}
+            contentContainerStyle={[pStyles.container, { paddingBottom: getSheetActionsBottomPadding(insets.bottom) }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >

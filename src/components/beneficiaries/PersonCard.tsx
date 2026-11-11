@@ -23,6 +23,8 @@ export const PersonCard = memo(function PersonCard({
 }) {
   const COLORS = useThemeColors();
   const label = name || email;
+  // The avatar matches the name and details stack beside it.
+  const avatarSize = Math.round(TYPE.profileName.lineHeight + (details.length > 0 ? 2 + TYPE.bodySmall.lineHeight : 0));
   return (
     <TouchableOpacity
       onPress={onOptions}
@@ -30,10 +32,10 @@ export const PersonCard = memo(function PersonCard({
       activeOpacity={0.76}
       accessibilityRole={onOptions ? 'button' : undefined}
       accessibilityLabel={onOptions ? `Options for ${label}` : label}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 20, borderRadius: 20, backgroundColor: COLORS.settingsCard }}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 20, backgroundColor: COLORS.settingsCard }}
     >
       {/* A clipped, outlined disc so pattern avatars always read as a full circle. */}
-      <View style={{ width: 56, height: 56, borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.strokeWeak, backgroundColor: COLORS.fillWeak }}>
+      <View style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.strokeWeak, backgroundColor: COLORS.fillWeak }}>
         <Avatar userId={user?._id} seed={user?.email || email} uri={user?.picture_url} name={label} size="lg" className="h-full w-full border-0" />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>

@@ -248,30 +248,38 @@ function FloatingVoiceCallCard() {
         importantForAccessibility={side ? 'no-hide-descendants' : 'auto'}
         style={[styles.card, { width, transform: position.getTranslateTransform() }]}
       >
+        {/* Tapping anywhere on the card, outside the call buttons, opens the voice settings. */}
         <Pressable
-          onPress={voice.isAiSpeaking ? voice.interrupt : undefined}
-          disabled={!voice.isAiSpeaking}
+          onPress={openSettings}
           accessibilityRole="button"
-          accessibilityLabel={voice.isAiSpeaking ? 'Stop Memento speaking' : `${voiceDefinition.name} voice`}
+          accessibilityLabel="Voice call settings"
+          style={[StyleSheet.absoluteFill, styles.cardTap]}
+        />
+        <Pressable
+          onPress={voice.isAiSpeaking ? voice.interrupt : openSettings}
+          accessibilityRole="button"
+          accessibilityLabel={voice.isAiSpeaking ? 'Stop Memento speaking' : 'Voice call settings'}
         >
           <VoiceArtwork voice={voiceDefinition} size={48} />
         </Pressable>
-        <View style={styles.info}>
+        {/* Not touchable itself, so taps here reach the card's settings press. */}
+        <View pointerEvents="none" style={styles.info}>
           <View style={styles.timeRow}>
             <Text style={[TYPE.stat, styles.time]} accessibilityLabel={`Call time ${time}`}>{time}</Text>
-            <Pressable
-              onPress={openSettings}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Voice call settings"
-              style={styles.settings}
-            >
+            <View style={styles.settings}>
               <Settings2 size={16} color={colors.textWeak} />
-            </Pressable>
+            </View>
           </View>
           <View style={styles.statusRow} accessibilityLiveRegion="polite">
             <View style={[styles.dot, { backgroundColor: dotColor }]} />
             <Text numberOfLines={1} style={[TYPE.bodySmall, styles.status]}>{status}</Text>
+            {voice.isRecordingCall && (
+              // The conversation is being recorded and will be saved to Stories.
+              <View style={styles.recording} accessibilityLabel="Recording">
+                <View style={[styles.dot, { backgroundColor: colors.error }]} />
+                <Text numberOfLines={1} style={[TYPE.bodySmall, { color: colors.error }]}>Rec</Text>
+              </View>
+            )}
           </View>
         </View>
         <View style={styles.controls}>
@@ -305,6 +313,7 @@ function FloatingVoiceCallCard() {
           status={status}
           muted={voice.isMuted}
           speaking={voice.isAiSpeaking}
+          recording={voice.isRecordingCall}
           onPress={untuck}
         />
       )}
@@ -335,12 +344,13 @@ function FloatingVoiceCallCard() {
  * On island iPhones the call waits in the Dynamic Island: a black capsule that
  * makes the island look like it grew to show the call. Tap it to open the card.
  */
-function IslandCapsule({ topInset, time, status, muted, speaking, onPress }: {
+function IslandCapsule({ topInset, time, status, muted, speaking, recording, onPress }: {
   topInset: number;
   time: string;
   status: string;
   muted: boolean;
   speaking: boolean;
+  recording: boolean;
   onPress: () => void;
 }) {
   const colors = useThemeColors();
@@ -349,7 +359,7 @@ function IslandCapsule({ topInset, time, status, muted, speaking, onPress }: {
     <View pointerEvents="box-none" style={{ position: 'absolute', top: frame.top, left: 0, right: 0, alignItems: 'center' }}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Show voice call, ${time}, ${status}`}
+        accessibilityLabel={`Show voice call, ${time}, ${status}${recording ? ', recording' : ''}`}
         onPress={onPress}
         style={{
           width: frame.width,
@@ -372,6 +382,7 @@ function IslandCapsule({ topInset, time, status, muted, speaking, onPress }: {
           >
             {time}
           </Text>
+          {recording && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.error }} />}
         </View>
       </Pressable>
     </View>
@@ -400,6 +411,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     shadowRadius: 30,
     elevation: 12,
   },
+  cardTap: { borderRadius: 24 },
   info: { flex: 1, minWidth: 0, gap: 2 },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   time: { color: colors.textStrong, fontVariant: ['tabular-nums'] },
@@ -407,6 +419,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   status: { color: colors.textWeak, flexShrink: 1 },
+  recording: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 4 },
   controls: { flexDirection: 'row', gap: 12 },
   round: { width: ROUND, height: ROUND, borderRadius: ROUND / 2, alignItems: 'center', justifyContent: 'center' },
   mute: { borderWidth: 1, borderColor: colors.strokeWeak, backgroundColor: colors.fillWeak },

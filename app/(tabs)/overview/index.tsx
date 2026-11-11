@@ -9,9 +9,13 @@ import {
   StyleSheet,
   ImageBackground,
   Image,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+/** Header height before its first layout, so the content starts below it. */
+const OVERVIEW_HEADER_HEIGHT = 60;
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Plus from 'lucide-react-native/icons/plus';
 import Zap from 'lucide-react-native/icons/zap';
@@ -328,24 +332,35 @@ export default function OverviewScreen() {
     return () => clearInterval(interval);
   }, []);
 
+  const [headerHeight, setHeaderHeight] = useState(OVERVIEW_HEADER_HEIGHT);
+  const handleHeaderLayout = useCallback((event: LayoutChangeEvent) => {
+    const next = Math.round(event.nativeEvent.layout.height);
+    setHeaderHeight((previous) => (previous === next ? previous : next));
+  }, []);
   const calendarStreakDays = useMemo(() => storyDaysInMonth(calendarStories, calendarMonth), [calendarStories, calendarMonth]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
+      {/* Floats over the content, which scrolls up beneath its frosted fade. */}
       <DashboardHeader
         compactTitle
+        floating
         title="Overview"
         onStreakPress={openStreakSheet}
+        onLayout={handleHeaderLayout}
       />
 
       {isLoading && !manualRefreshing ? (
-        <OverviewSkeleton />
+        <View style={{ flex: 1, paddingTop: headerHeight }}>
+          <OverviewSkeleton />
+        </View>
       ) : (
         <>
           <Animated.ScrollView
             ref={voiceScrollRef}
             showsVerticalScrollIndicator={false}
-            contentContainerClassName="px-4 pt-6 pb-32 gap-10"
+            contentContainerClassName="px-4 pb-32 gap-10"
+            contentContainerStyle={{ paddingTop: headerHeight + 24 }}
             onScroll={scrollHandler}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
@@ -367,9 +382,8 @@ export default function OverviewScreen() {
                     {displayName && (
                       <Animated.Text style={[
                         TYPE.greetingName,
-                        {
-                          color: COLORS.success,
-                        },
+                        // Muted italic, like the other section headings ("Continue reflecting").
+                        { color: COLORS.textWeak },
                       ]}
                       >
                         {' '}

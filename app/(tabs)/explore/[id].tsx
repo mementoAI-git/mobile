@@ -66,7 +66,7 @@ export default function CategoryPromptsScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
       {/* Header */}
-      <View className="flex-row items-center gap-3 px-4 py-4 border-b border-stroke-weaker bg-card shadow-sm">
+      <View className="flex-row items-center gap-3 px-4 py-4">
         <TouchableOpacity
           onPress={handleBackPress}
           accessibilityRole="button"

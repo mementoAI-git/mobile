@@ -4,6 +4,8 @@
 
 #include "VoiceSessionHostObject.h"
 
+#import "MementoRecordingConverter.h"
+
 #import <audioapi/ios/system/AudioEngine.h>
 
 @interface RCTBridge (MementoVoiceJSIRuntime)
@@ -41,6 +43,27 @@ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(isVoiceProcessingActive)
     return @NO;
   }
   return engine.audioEngine.inputNode.isVoiceProcessingEnabled ? @YES : @NO;
+}
+
+// WAV call recording -> AAC M4A (mono, 16 kHz, ~32 kbps) beside it; the WAV
+// is deleted on success. Encodes on a background queue.
+RCT_EXPORT_METHOD(convertRecordingToM4A
+                  : (NSString *)wavPath resolve
+                  : (RCTPromiseResolveBlock)resolve reject
+                  : (RCTPromiseRejectBlock)reject)
+{
+  NSString *path = [wavPath copy];
+  dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+    NSError *error = nil;
+    NSString *output = MementoConvertRecordingToM4A(path, &error);
+    if (output != nil) {
+      resolve(output);
+    } else {
+      reject(@"E_RECORDING_CONVERT",
+             error.localizedDescription ?: @"Could not convert the recording.",
+             error);
+    }
+  });
 }
 
 #ifdef RCT_NEW_ARCH_ENABLED

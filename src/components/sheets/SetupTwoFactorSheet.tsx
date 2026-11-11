@@ -12,7 +12,7 @@ import { Button, TextInput } from '@/components/ui';
 import { TYPE } from '@/constants/typography';
 import { COLORS as LIGHT_COLORS } from '@/constants/tokens';
 import { useTwoFactorSettingsLogic } from '@/hooks/use-two-factor-settings-logic';
-import { getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { SheetHeader } from './SheetHeader';
 import { sanitizeTotpCode, type TwoFactorSetupData } from '@/features/security/two-factor-setup';
 
@@ -156,7 +156,7 @@ export function SetupTwoFactorSheet({
         </View>
       </BottomSheetScrollView>
 
-      <View style={[styles.actions, { paddingBottom: Math.max(getSheetBottomPadding(insets.bottom, 12), 20) }]}>
+      <View style={[styles.actions, { paddingBottom: getSheetActionsBottomPadding(insets.bottom) }]}>
         <Button variant="secondary" size="lg" rounded="full" className="h-14 flex-1" onPress={onClose}>
           Cancel
         </Button>

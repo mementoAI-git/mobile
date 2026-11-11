@@ -39,8 +39,8 @@ describe('billing reference interactions', () => {
     expect(payment).toContain('<View style={{flex: 1}}>');
     expect(details).not.toContain('BottomSheetView');
     expect(payment).not.toContain('BottomSheetView');
-    expect(details).toContain('getSheetBottomPadding');
-    expect(payment).toContain('getSheetBottomPadding');
+    expect(details).toContain('getSheetActionsBottomPadding');
+    expect(payment).toContain('getSheetActionsBottomPadding');
   });
 
   test('routes billing actions to the real provider', () => {

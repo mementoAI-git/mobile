@@ -1,7 +1,8 @@
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import React, { useCallback, useMemo, useEffect } from 'react';
+import React, { useCallback, useMemo, useEffect, useState } from 'react';
 
-import { View, Text, Image, ImageBackground, ActivityIndicator } from 'react-native';
+import { View, Text, Image, ActivityIndicator } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -18,6 +19,7 @@ import MoreHorizontal from 'lucide-react-native/icons/ellipsis';
 import Play from 'lucide-react-native/icons/play';
 import Pause from 'lucide-react-native/icons/pause';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
+import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { useUiStore, useFeedAudioPlaybackStore } from '@/store';
 import { COLORS } from '@/constants/tokens';
@@ -27,7 +29,6 @@ import { getMediaCategory } from '@/features/media/media-type';
 import { runtimeDiagnostics, sanitizeMediaUri } from '@/lib/runtime-diagnostics';
 import { canRenderAttachmentUri } from '@/features/media/media-runtime-policy';
 
-const RECORD_BANNER = require('../../../assets/images/backgrounds/record-banner.png');
 
 /** Small spinner shown while quick capture enrichment is pending */
 function InProgressBadge({ memory, overlay }: { memory: IMemory; overlay?: boolean }) {
@@ -82,10 +83,12 @@ function AnimatedCardWaveBar({
   baseHeight,
   isPlaying,
   color,
+  width = 2.5,
 }: {
   baseHeight: number;
   isPlaying: boolean;
   color: string;
+  width?: number;
 }) {
   const scaleY = useSharedValue(1);
 
@@ -113,7 +116,7 @@ function AnimatedCardWaveBar({
   return (
     <Animated.View
       style={[
-        { width: 2.5, height: baseHeight, backgroundColor: color, borderRadius: 2 },
+        { width, height: baseHeight, backgroundColor: color, borderRadius: width / 2 },
         animStyle,
       ]}
     />
@@ -125,6 +128,79 @@ function formatAudioSeconds(secs: number) {
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+/** Designer waveform for voice recording cards: bar heights in px, centred on one line. */
+const VOICE_WAVEFORM = [12.99, 12.99, 20.41, 24.12, 20.41, 31.54, 20.41, 12.99, 24.12, 20.41, 8.04] as const;
+const VOICE_CARD_SIZE = { width: 174.5, height: 237 } as const;
+
+/** 00:32:24 — hours, minutes and seconds, as in the recording card design. */
+function formatRecordingClock(secs: number) {
+  const total = Math.max(0, Math.floor(secs));
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${pad(Math.floor(total / 3600))}:${pad(Math.floor((total % 3600) / 60))}:${pad(total % 60)}`;
+}
+
+/** Voice recording story card: weak fill, two faint rings, brand waveform and the time in a chip. */
+function VoiceRecordingCardVisual({ memory, seconds, onOpenPlayer, onActions }: {
+  memory: IMemory;
+  seconds: number;
+  onOpenPlayer: () => void;
+  onActions: () => void;
+}) {
+  const colors = useThemeColors();
+  const clock = formatRecordingClock(seconds);
+  return (
+    <View
+      style={{
+        aspectRatio: VOICE_CARD_SIZE.width / VOICE_CARD_SIZE.height,
+        backgroundColor: colors.fillWeak,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: colors.strokeWeaker,
+        overflow: 'hidden',
+      }}
+      className="w-full relative"
+    >
+      <Svg
+        pointerEvents="none"
+        width="100%"
+        height="100%"
+        viewBox={`0 0 ${VOICE_CARD_SIZE.width} ${VOICE_CARD_SIZE.height}`}
+        preserveAspectRatio="xMidYMid slice"
+        style={{ position: 'absolute' }}
+      >
+        <Circle cx={229.787} cy={250.518} r={134.787} stroke={colors.strokeWeak} fill="none" />
+        <Circle cx={30.084} cy={142.631} r={153.869} stroke={colors.strokeWeak} fill="none" />
+      </Svg>
+      <InProgressBadge memory={memory} overlay />
+      <TouchableOpacity
+        onPress={onOpenPlayer}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={`Open recording, ${clock}`}
+        className="absolute inset-0 items-center justify-center"
+        style={{ gap: 12 }}
+      >
+        <View className="flex-row items-center" style={{ height: 32, gap: 3.62 }}>
+          {VOICE_WAVEFORM.map((h, i) => (
+            <View key={i} style={{ width: 2.17, height: h, borderRadius: 1.085, backgroundColor: colors.brand }} />
+          ))}
+        </View>
+        <View style={{ height: 22, minWidth: 58, paddingHorizontal: 8, borderRadius: 11, backgroundColor: colors.strokeWeak, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ ...TYPE.metadata, color: colors.textStrong, fontVariant: ['tabular-nums'] }}>{clock}</Text>
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={onActions}
+        hitSlop={8}
+        accessibilityLabel="Story options"
+        className="absolute top-2 right-2 size-7 rounded-full bg-fill-weak items-center justify-center"
+      >
+        <MoreHorizontal size={12} color={colors.textBase} />
+      </TouchableOpacity>
+    </View>
+  );
 }
 
 function MasonryAudioCardVisual({
@@ -149,8 +225,6 @@ function MasonryAudioCardVisual({
     (s) => (s.activeMemoryId === memory._id ? s.duration : 0)
   );
 
-  const isVoiceRecording =
-    audioMedia.name?.startsWith('voice_') && audioMedia.type === 'audio/m4a';
   const albumArt = audioMedia.thumbnail;
   const rawFileName = audioMedia.name
     ? audioMedia.name.replace(/\.[^.]+$/, '').replace(/_\d{12,}$/, '').replace(/_/g, ' ')
@@ -174,6 +248,26 @@ function MasonryAudioCardVisual({
     },
     [audioMedia?.url, memory._id]
   );
+
+  const [playerOpen, setPlayerOpen] = useState(false);
+  const handleOpenPlayer = useCallback(() => {
+    void Haptics.selectionAsync();
+    // The player owns playback; stop any card that is playing in the feed.
+    useFeedAudioPlaybackStore.getState().stop();
+    setPlayerOpen(true);
+  }, []);
+  const handleClosePlayer = useCallback(() => setPlayerOpen(false), []);
+  const playerAttachments = useMemo<PreviewAttachment[]>(() => [{
+    clientId: audioMedia._id ?? audioMedia.url ?? memory._id,
+    uri: audioMedia.url ?? '',
+    name: fileName,
+    mimeType: audioMedia.type ?? 'audio/m4a',
+    duration: audioMedia.duration,
+    isVoice: audioMedia.name?.startsWith('voice_') && audioMedia.type === 'audio/m4a',
+    thumbnailUrl: audioMedia.thumbnail ?? null,
+    persistedFileId: audioMedia._id,
+    access: audioMedia.access,
+  }], [audioMedia, fileName, memory._id]);
 
   if (albumArt) {
     return (
@@ -219,93 +313,25 @@ function MasonryAudioCardVisual({
     );
   }
 
-  if (isVoiceRecording) {
-    return (
-      <View style={{ aspectRatio }} className="w-full rounded-[14px] overflow-hidden relative">
-        <ImageBackground source={RECORD_BANNER} className="absolute inset-0" resizeMode="cover" style={{ opacity: 0.9 }} />
-        <InProgressBadge memory={memory} overlay />
-        <View className="absolute inset-0 items-center justify-center px-4">
-          <View
-            className="items-center gap-2.5 rounded-[14px] px-5 py-4 w-full"
-            style={{ backgroundColor: `${COLORS.textInverse}1a`, borderWidth: 1, borderColor: `${COLORS.textInverse}33` }}
-          >
-            <TouchableOpacity
-              onPress={handleTogglePlay}
-              hitSlop={8}
-              activeOpacity={0.8}
-              className="size-11 rounded-full bg-brand items-center justify-center shadow-md"
-            >
-              {isPlaying ? (
-                <Pause size={18} color={COLORS.textInverse} fill={COLORS.textInverse} />
-              ) : (
-                <Play size={18} color={COLORS.textInverse} fill={COLORS.textInverse} style={{ marginLeft: 2 }} />
-              )}
-            </TouchableOpacity>
-            <View className="flex-row items-end gap-0.5" style={{ height: 20 }}>
-              {[6, 12, 18, 14, 8, 16, 10, 18, 12, 6].map((h, i) => (
-                <AnimatedCardWaveBar key={i} baseHeight={h} isPlaying={isPlaying} color={COLORS.textInverse} />
-              ))}
-            </View>
-            <Text style={{ ...TYPE.metadata, color: COLORS.textInverse }} className="tracking-widest">
-              {displayDuration}
-            </Text>
-          </View>
-        </View>
-        <TouchableOpacity
-          onPress={handleActions}
-          hitSlop={8}
-          className="absolute top-2 right-2 size-8 rounded-full bg-white/20 items-center justify-center"
-        >
-          <MoreHorizontal size={14} color={COLORS.textInverse} />
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
+  // Every recording without cover art uses the designed recording card. Tapping it opens
+  // the full audio player (transcript, timeline, controls) rather than playing in the grid.
   return (
-    <View
-      style={{ aspectRatio, backgroundColor: COLORS.fillWeak }}
-      className="w-full rounded-[14px] overflow-hidden relative p-5"
-    >
-      <InProgressBadge memory={memory} overlay />
-      <View className="flex-1 items-center justify-center gap-3">
-        <TouchableOpacity
-          onPress={handleTogglePlay}
-          hitSlop={8}
-          activeOpacity={0.8}
-          className="size-11 rounded-full bg-brand items-center justify-center shadow-sm"
-        >
-          {isPlaying ? (
-            <Pause size={18} color={COLORS.textInverse} fill={COLORS.textInverse} />
-          ) : (
-            <Play size={18} color={COLORS.textInverse} fill={COLORS.textInverse} style={{ marginLeft: 2 }} />
-          )}
-        </TouchableOpacity>
-        <View className="flex-row items-end gap-1" style={{ height: 28 }}>
-          {[8, 16, 24, 20, 12, 22, 14, 24, 18, 8, 16, 24].map((h, i) => (
-            <AnimatedCardWaveBar key={i} baseHeight={h} isPlaying={isPlaying} color={COLORS.brand} />
-          ))}
-        </View>
-        <Text
-          style={{ ...TYPE.metadata, color: COLORS.textStrong, textAlign: 'center' }}
-          numberOfLines={2}
-        >
-          {fileName}
-        </Text>
-        <View className="bg-card-overlay rounded-full px-3 py-1">
-          <Text style={{ ...TYPE.metadata, color: COLORS.textBase }}>
-            {displayDuration}
-          </Text>
-        </View>
-      </View>
-      <TouchableOpacity
-        onPress={handleActions}
-        hitSlop={8}
-        className="absolute top-2 right-2 size-7 rounded-full bg-fill-weak items-center justify-center"
-      >
-        <MoreHorizontal size={12} color={COLORS.textBase} />
-      </TouchableOpacity>
-    </View>
+    <>
+      <VoiceRecordingCardVisual
+        memory={memory}
+        seconds={totalSecs}
+        onOpenPlayer={handleOpenPlayer}
+        onActions={handleActions}
+      />
+      {playerOpen ? (
+        <MediaPreviewModal
+          visible
+          attachments={playerAttachments}
+          memoryId={memory._id}
+          onClose={handleClosePlayer}
+        />
+      ) : null}
+    </>
   );
 }
 

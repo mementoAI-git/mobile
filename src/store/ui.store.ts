@@ -6,7 +6,6 @@ export type SheetName =
   | 'calendar-date'
   | 'calendar-stories'
   | 'emoji-picker'
-  | 'quick-tools'
   | 'appearance'
   | 'create-memory'
   | 'create-capsule'

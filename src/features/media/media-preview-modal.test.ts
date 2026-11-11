@@ -40,10 +40,12 @@ describe('Media preview modal', () => {
   });
 
   test('supports backend-first and mobile-fallback audio artwork in preview attachments', () => {
-    expect(modal).toContain("import { useResolvedAudioArtworkThumbnail } from '@/features/media/audio-artwork';");
+    const player = readFileSync('src/components/audio/TranscriptAudioPlayer.tsx', 'utf8');
     expect(modal).toContain('thumbnailUrl?: string | null;');
-    expect(modal).toContain('backendThumbnail: item.thumbnailUrl,');
-    expect(modal).toContain('source={{ uri: artworkUri }}');
+    expect(modal).toContain('thumbnailUrl={item.thumbnailUrl}');
+    expect(player).toContain("import { useResolvedAudioArtworkThumbnail } from '@/features/media/audio-artwork';");
+    expect(player).toContain('backendThumbnail: thumbnailUrl,');
+    expect(player).toContain('source={{ uri: artworkUri }}');
   });
 
   test('uses a low-frequency polling cadence for active media to avoid unnecessary heat generation', () => {
@@ -58,8 +60,12 @@ describe('Media preview modal', () => {
     expect(chatScreen).not.toContain('withRepeat(');
   });
 
-  test('uses a calmer waveform animation cadence to reduce battery drain', () => {
-    expect(modal).toContain('const BAR_COUNT = 10;');
-    expect(modal).toContain('const duration = 420 + (i * 55) % 260;');
+  test('plays audio through the transcript player, driven by player status events', () => {
+    const player = readFileSync('src/components/audio/TranscriptAudioPlayer.tsx', 'utf8');
+    expect(modal).toContain('<TranscriptAudioPlayer');
+    expect(modal).toContain('fileId={item.persistedFileId}');
+    expect(player).toContain('useAudioPlayerStatus(player)');
+    expect(player).not.toContain('setInterval(');
+    expect(player).not.toContain('withRepeat(');
   });
 });

@@ -29,6 +29,7 @@ const ExploreCategoryItem = React.memo(function ExploreCategoryItem({
       title={category.title}
       subtitle={category.description}
       image={getCategoryMeta(category.slug)?.image}
+      questionCount={category.starterTotal}
       onPress={handlePress}
     />
   );
@@ -59,7 +60,7 @@ export default function ExploreScreen() {
   const listHeader = useMemo(
     () => (
       <Animated.View entering={FadeInDown.duration(600)} className="pt-4 pb-6">
-        <View className="mb-10"><DailyPromptSection /></View>
+        <View className="mb-10"><DailyPromptSection compact /></View>
 
         <Animated.Text className="text-text-strong mb-4" style={TYPE.sectionTitle}>
           Categories

@@ -42,7 +42,6 @@ import { AddMemberToGroupSheet } from './AddMemberToGroupSheet';
 import { CancelSubscriptionConfirmationSheet } from './CancelSubscriptionConfirmationSheet';
 import { GuardianLensSheet } from './GuardianLensSheet';
 import { ExportArchiveSheet } from './ExportArchiveSheet';
-import { QuickToolsSheet } from './QuickToolsSheet';
 import { AppearanceSheet } from './AppearanceSheet';
 import { DailyRitualSheet } from './DailyRitualSheet';
 import { ObservationNoteSheet } from './ObservationNoteSheet';
@@ -93,12 +92,12 @@ const SHEET_CONFIGS: Record<string, {
   'setup-two-factor': { component: SetupTwoFactorSheet, snapPoints: ['92%'], dynamic: false, keyboardBehavior: 'fillParent' },
   'security-confirmation': { component: SecurityConfirmationSheet, horizontalPadding: 0, dynamic: true, compact: true },
   'digital-mind': { component: DigitalMindSheet, dynamic: true },
-  'voice-call-settings': { component: VoiceCallSettingsSheet, dynamic: true },
+  // Taller than one screen with every voice listed: it scrolls inside a full-height sheet.
+  'voice-call-settings': { component: VoiceCallSettingsSheet, snapPoints: ['92%'], dynamic: false },
   'end-voice-session': { component: EndVoiceSessionSheet, dynamic: true, compact: true },
   'guardian-lens': { component: GuardianLensSheet, dynamic: true },
   'export-archive': { component: ExportArchiveSheet, dynamic: true },
   'appearance': { component: AppearanceSheet, dynamic: true },
-  'quick-tools': { component: QuickToolsSheet, dynamic: true, horizontalPadding: 20 },
   'daily-ritual': { component: DailyRitualSheet, dynamic: true },
   'observation-note': { component: ObservationNoteSheet, dynamic: true, keyboardBehavior: 'interactive', androidKeyboardInputMode: 'adjustResize' },
   'emoji-picker': { component: EmojiPickerSheet, dynamic: false, snapPoints: ['42%', '65%'] },
@@ -112,6 +111,7 @@ const SELF_MANAGED = new Set([
   'edit-profile', 'add-member-to-group',
   'change-password', 'setup-two-factor',
   'emoji-picker', 'story-drafts', 'delete-account-reason',
+  'voice-call-settings',
 ]);
 
 const MODAL_SEGMENTS = new Set([

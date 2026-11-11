@@ -211,6 +211,8 @@ export default function ChatSettingsScreen() {
   const user = useAuthStore((state) => state.user);
   const selectedVoice = useVoicePreferenceStore((state) => state.selectedVoiceId);
   const hydratedForUser = useVoicePreferenceStore((state) => state.hydratedForUser);
+  const recordConversations = useVoicePreferenceStore((state) => state.recordConversations);
+  const setRecordConversations = useVoicePreferenceStore((state) => state.setRecordConversations);
   const hydrateVoice = useVoicePreferenceStore((state) => state.hydrate);
   const selectVoice = useVoicePreferenceStore((state) => state.selectVoice);
   const userKey = user?._id ?? user?.email ?? 'anonymous';
@@ -351,6 +353,18 @@ export default function ChatSettingsScreen() {
                 onValueChange={handleNarrationChange}
                 accessibilityLabel="Voice narration"
                 accessibilityHint="Reads new chat replies aloud"
+              />
+            </View>
+            <View style={[styles.settingsCard, styles.narrationRow]}>
+              <View style={styles.narrationWords}>
+                <Text nativeID="record-conversations-label" style={[TYPE.label, styles.fieldLabel]}>Record conversations</Text>
+                <Text style={[TYPE.bodySmall, styles.optionSubtitle]}>Save voice conversations to Stories with their audio.</Text>
+              </View>
+              <Switch
+                value={recordConversations}
+                onValueChange={(value) => { void setRecordConversations(value); }}
+                accessibilityLabel="Record conversations"
+                accessibilityHint="Saves each voice conversation as a story with its recording"
               />
             </View>
             <View style={styles.twoColumnGrid}>

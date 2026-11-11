@@ -23,8 +23,9 @@ import { REFLECTION_CARD_GAP, reflectionCardWidth } from '@/features/prompts/ref
 /** Matches the Overview page gutter, so cards scroll edge to edge and snap to it. */
 const PAGE_GUTTER = 16;
 
-const DailyReflectionCard = React.memo(function DailyReflectionCard({ row, replyCount, avatars }: {
+const DailyReflectionCard = React.memo(function DailyReflectionCard({ row, replyCount, avatars, compact }: {
   row: IDashboardPromptSlot;
+  compact: boolean;
   replyCount: number;
   avatars: ImageSourcePropType[];
 }) {
@@ -46,11 +47,13 @@ const DailyReflectionCard = React.memo(function DailyReflectionCard({ row, reply
       replyCount={replyCount}
       avatars={avatars}
       onPress={handlePress}
+      compact={compact}
     />
   );
 });
 
-export function DailyPromptSection() {
+/** `compact` gives the shorter Topics-page cards; Overview uses the default height. */
+export function DailyPromptSection({ compact = false }: { compact?: boolean } = {}) {
   const colors = useThemeColors();
   const reducedMotion = useReducedMotion();
   const { width: windowWidth } = useWindowDimensions();
@@ -136,12 +139,12 @@ export function DailyPromptSection() {
       >
         {isLoading ? (
           <View className="flex-row" style={{ gap: REFLECTION_CARD_GAP }}>
-            <Skeleton className="h-[267px] rounded-[24px]" style={{ width: cardWidth }} />
-            <Skeleton className="h-[267px] rounded-[24px]" style={{ width: cardWidth }} />
+            <Skeleton className={compact ? 'h-[200px] rounded-[24px]' : 'h-[230px] rounded-[24px]'} style={{ width: cardWidth }} />
+            <Skeleton className={compact ? 'h-[200px] rounded-[24px]' : 'h-[230px] rounded-[24px]'} style={{ width: cardWidth }} />
           </View>
         ) : (
           <Animated.View key={revision} entering={reducedMotion ? undefined : FadeIn.duration(200)} className="flex-row" style={{ gap: REFLECTION_CARD_GAP }}>
-            {cards.map(({ key, ...props }) => <DailyReflectionCard key={key} {...props} />)}
+            {cards.map(({ key, ...props }) => <DailyReflectionCard key={key} {...props} compact={compact} />)}
           </Animated.View>
         )}
       </ScrollView>

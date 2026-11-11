@@ -20,7 +20,7 @@ export function OverviewSkeleton() {
         <Skeleton className="h-[178px] w-full rounded-[24px]" />
       </View>
 
-      <Skeleton className="h-[267px] w-full rounded-[24px]" />
+      <Skeleton className="h-[230px] w-full rounded-[24px]" />
 
       {/* Journey stat cards (3 full-width cards) */}
       <View className="gap-3">

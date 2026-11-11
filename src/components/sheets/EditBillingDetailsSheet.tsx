@@ -11,7 +11,7 @@ import {Button} from '@/components/ui';
 import {COLORS} from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import type {BillingProfile} from '@/features/settings/billing-adapters';
-import {getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP} from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import {SheetHeader} from './SheetHeader';
 
 export interface BillingDetailsForm {
@@ -127,7 +127,7 @@ export function EditBillingDetailsSheet({
         <Field label="Postal code" value={values.postalCode} onChangeText={value => set('postalCode', value)}/>
         <Field label="Country" value={values.country} onChangeText={value => set('country', value)} select/>
       </BottomSheetScrollView>
-      <View style={{flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(getSheetBottomPadding(insets.bottom, 12), 16), backgroundColor: COLORS.sheet}}>
+      <View style={{flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: getSheetActionsBottomPadding(insets.bottom), backgroundColor: COLORS.sheet}}>
         <Button variant="secondary" size="lg" rounded="full" className="h-14 flex-1" onPress={onClose}>Dismiss</Button>
         <Button size="lg" rounded="full" className="h-14 flex-1" loading={saving} onPress={() => void submit()}>Save changes</Button>
       </View>

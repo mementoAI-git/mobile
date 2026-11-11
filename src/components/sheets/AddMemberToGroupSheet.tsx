@@ -7,7 +7,7 @@ import Check from 'lucide-react-native/icons/check';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SheetHeader } from './SheetHeader';
-import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { useBeneficiaries } from '@/hooks/queries/use-beneficiaries';
 import { useGroups } from '@/hooks/queries/use-groups';
 import { useSetGroupMembers } from '@/hooks/mutations/use-group-mutations';
@@ -133,7 +133,7 @@ export function AddMemberToGroupSheet({ groupId, onClose }: Props) {
       <View style={{
         paddingHorizontal: 20,
         paddingTop: 12,
-        paddingBottom: Math.max(insets.bottom, 12) + 8,
+        paddingBottom: getSheetActionsBottomPadding(insets.bottom),
         backgroundColor: COLORS.sheet,
       }}>
         <Button

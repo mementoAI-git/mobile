@@ -8,7 +8,7 @@ export const TYPE_METRICS = Object.freeze({
   screenTitle: Object.freeze({fontSize: ms(28, 0.25), lineHeight: ms(34, 0.25)}),
   greeting: Object.freeze({fontSize: ms(24, 0.25), lineHeight: ms(32, 0.25)}),
   captureInput: Object.freeze({fontSize: ms(24, 0.25), lineHeight: ms(34, 0.25)}),
-  reflectionTitle: Object.freeze({fontSize: ms(24, 0.25), lineHeight: ms(31, 0.25)}),
+  reflectionTitle: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(27, 0.25)}),
   sectionTitle: Object.freeze({fontSize: ms(22, 0.25), lineHeight: ms(28, 0.25)}),
   cardTitle: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(26, 0.25)}),
   uiTitle: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(26, 0.25)}),
