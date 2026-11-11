@@ -1,5 +1,6 @@
 const { spawnSync } = require('child_process');
 
+const EXPO_DOCTOR = 'expo-doctor@1.21.6';
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5000;
 
@@ -33,7 +34,8 @@ function runExpoDoctor() {
     ? (isWindows ? 'bunx.cmd' : 'bunx')
     : (isWindows ? 'npx.cmd' : 'npx');
 
-  const args = bin.includes('bunx') ? ['expo-doctor'] : ['--yes', 'expo-doctor'];
+  // Pinned: expo-doctor 1.21.7 (Nov 11, 2026) crashes on start with "Cannot find module '@expo/env'".
+  const args = bin.includes('bunx') ? [EXPO_DOCTOR] : ['--yes', EXPO_DOCTOR];
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     console.log(`[expo-doctor] Running project diagnosis (attempt ${attempt}/${MAX_RETRIES})...`);
