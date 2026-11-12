@@ -1,4 +1,5 @@
 import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
+import { appleSignInShown } from '@/features/auth/apple-auth';
 import React from 'react';
 import {
   View,
@@ -145,7 +146,8 @@ export default function LoginScreen() {
                 <Text style={styles.authButtonText}>Sign in with Google</Text>
               </TouchableOpacity>
 
-              {/* Apple button */}
+              {/* Apple button: iOS only */}
+              {appleSignInShown() && (
               <TouchableOpacity
                 onPress={handleAppleLogin}
                 disabled={googleLoading || appleLoading || passkeyLoading || isPending}
@@ -159,6 +161,7 @@ export default function LoginScreen() {
                 )}
                 <Text style={styles.authButtonText}>Sign in with Apple</Text>
               </TouchableOpacity>
+              )}
             </Animated.View>
 
             {/* Divider */}

@@ -36,7 +36,7 @@ import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import { PRIVACY_URL, TERMS_URL } from '@/lib/env';
 import { signInWithGoogleNative } from '@/features/auth/google-auth';
-import { signInWithAppleNative } from '@/features/auth/apple-auth';
+import { appleSignInShown, signInWithAppleNative } from '@/features/auth/apple-auth';
 import { establishSession } from '@/features/auth/session-coordinator';
 import { completeAuthResponse } from '@/features/auth/auth-completion';
 import { useAuthStore } from '@/store';
@@ -248,6 +248,7 @@ export default function RegisterScreen() {
                     <Text style={styles.socialBtnText}>Sign up with Google</Text>
                   </TouchableOpacity>
 
+                  {appleSignInShown() && (
                   <TouchableOpacity
                     onPress={handleAppleSignup}
                     disabled={googleLoading || appleLoading || isPending}
@@ -257,6 +258,7 @@ export default function RegisterScreen() {
                     {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={20} />}
                     <Text style={styles.socialBtnText}>Sign up with Apple</Text>
                   </TouchableOpacity>
+                  )}
                 </Animated.View>
               )}
 
