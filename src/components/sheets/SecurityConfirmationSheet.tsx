@@ -10,6 +10,7 @@ import { COLORS, FONTS } from '@/constants/tokens';
 type ConfirmationKind =
   | 'delete-passkey'
   | 'delete-memory'
+  | 'make-story-public'
   | 'disable-two-factor'
   | 'disable-biometric-fallback'
   | 'logout-all-devices'
@@ -44,6 +45,12 @@ const COPY: Record<ConfirmationKind, {
     description: 'This action can\'t be undone.',
     confirm: 'Delete story',
     destructive: true,
+  },
+  'make-story-public': {
+    title: 'Make this story public?',
+    description: 'Anyone with the link will be able to read it. You can make it private again from Who can see.',
+    confirm: 'Make public',
+    destructive: false,
   },
   'disable-two-factor': {
     title: 'Remove two-factor authentication?',
