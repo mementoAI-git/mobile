@@ -3,6 +3,11 @@ import { queryKeys } from '@/constants/query-keys';
 
 export type MemoryInvalidationOptions = {
   memoryId?: string;
+  /**
+   * Also refetch every open story. For server changes (voice and chat tools)
+   * that say memories changed without naming which one.
+   */
+  includeAllStories?: boolean;
   includeStats?: boolean;
   includeUserStats?: boolean;
   promptId?: string;
@@ -12,6 +17,7 @@ export type MemoryInvalidationOptions = {
 
 export function getMemoryInvalidationQueryKeys({
   memoryId,
+  includeAllStories = false,
   includeStats = true,
   includeUserStats = false,
   promptId,
@@ -31,7 +37,9 @@ export function getMemoryInvalidationQueryKeys({
     keys.push(queryKeys.userStats);
   }
 
-  if (memoryId) {
+  if (includeAllStories) {
+    keys.push([queryKeys.memory('')[0]]);
+  } else if (memoryId) {
     keys.push(queryKeys.memory(memoryId));
   }
 

@@ -1594,7 +1594,7 @@ export function useVoiceMode({
               if (effect.what === 'profile') {
                 void queryClient.invalidateQueries({ queryKey: queryKeys.profile });
               } else if (effect.what === 'memories') {
-                invalidateMemoryQueries(queryClient, { includeUserStats: true });
+                invalidateMemoryQueries(queryClient, { includeUserStats: true, includeAllStories: true });
               } else if (effect.what === 'capsules') {
                 void queryClient.invalidateQueries({ queryKey: ['capsules'] });
                 void queryClient.invalidateQueries({ queryKey: queryKeys.capsuleStats });

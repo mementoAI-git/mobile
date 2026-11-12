@@ -38,7 +38,7 @@ export function ChatConfirmCard({ card }: { card: ChatConfirmation }) {
       for (const effect of effects as { type?: string; what?: string }[]) {
         if (effect?.type !== 'refresh') continue;
         if (effect.what === 'profile') void queryClient.invalidateQueries({ queryKey: queryKeys.profile });
-        else if (effect.what === 'memories') invalidateMemoryQueries(queryClient, { includeUserStats: true });
+        else if (effect.what === 'memories') invalidateMemoryQueries(queryClient, { includeUserStats: true, includeAllStories: true });
         else if (effect.what === 'beneficiaries') void queryClient.invalidateQueries({ queryKey: queryKeys.beneficiaries });
         else if (effect.what === 'observations') {
           void queryClient.invalidateQueries({ queryKey: queryKeys.persona });
