@@ -765,6 +765,27 @@ describe('VoiceAudioEngine', () => {
       expect(engine.snapshot()).toMatchObject({ bargeIns: 1, uplinkEchoSuppressed: 2 });
     });
 
+    test('lets the user carry on talking when a reply starts mid-sentence', async () => {
+      const native = new FakeNative();
+      const clock = { now: 10_000 };
+      const chunks: string[] = [];
+      const engine = new VoiceAudioEngine({ native, speakerFullDuplex: true, now: () => clock.now });
+      await engine.start((chunk) => chunks.push(chunk));
+      for (let i = 0; i < 3; i += 1) {
+        feed(native, frame(0.1)); // the user talking while Memento is quiet
+        clock.now += 40;
+      }
+      expect(engine.userContinuedIntoReply()).toBe(false);
+      engine.enqueueOutput(SPEAKING, 1);
+      chunks.length = 0;
+
+      feed(native, frame(0.1)); // still talking as the reply starts
+
+      expect(chunks.map(isSilent)).toEqual([false]);
+      // An interruption now is the user, not Memento's echo.
+      expect(engine.userContinuedIntoReply()).toBe(true);
+    });
+
     test('keeps the mic closed while a reply starts, even for loud sound, and learns the echo from it', async () => {
       const native = new FakeNative();
       const clock = { now: 10_000 };
