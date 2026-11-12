@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useSetPassword } from '@/hooks/mutations/use-auth-mutations';
+import { buildSetPasswordPayload } from '@/features/auth/set-password-payload';
 import * as Haptics from 'expo-haptics';
 
 const schema = z.object({
@@ -14,7 +15,7 @@ export type SetPasswordFormData = z.infer<typeof schema>;
 
 export function useSetPasswordLogic() {
   const router = useRouter();
-  const { token } = useLocalSearchParams<{ token: string }>();
+  const { token, email } = useLocalSearchParams<{ token: string; email?: string }>();
   const { mutate, isPending, error, isSuccess } = useSetPassword();
 
   const form = useForm<SetPasswordFormData>({
@@ -28,7 +29,7 @@ export function useSetPasswordLogic() {
   const onSubmit = (data: SetPasswordFormData) => {
     if (!token) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    mutate({ token, password: data.password }, {
+    mutate(buildSetPasswordPayload(token, data.password, email), {
       onSuccess: () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       },
