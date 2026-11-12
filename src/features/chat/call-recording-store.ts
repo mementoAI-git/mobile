@@ -10,7 +10,13 @@ import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
 import { logger } from '@/lib/logger';
 import type { CallRecorderNative, RecordingSegment, SpeechSpan } from './call-recording';
-import { buildRecordingSaveBody, CallRecordingOutbox, recordingSavePath, type RecordingOutboxEntry } from './call-recording-outbox';
+import {
+  buildRecordingSaveBody,
+  CallRecordingOutbox,
+  recordingSavePath,
+  type RecordingOutboxEntry,
+  type RecordingToSave,
+} from './call-recording-outbox';
 
 /** The native recorder, on builds that have it (iOS only for now). */
 export function getCallRecorderNative(): CallRecorderNative | null {
@@ -72,7 +78,7 @@ async function upload(entry: RecordingOutboxEntry): Promise<string> {
   return file._id;
 }
 
-async function save(entry: RecordingOutboxEntry & { fileId: string }) {
+async function save(entry: RecordingToSave) {
   await post(recordingSavePath(entry.sessionId), buildRecordingSaveBody(entry));
   void queryClient.invalidateQueries({ queryKey: queryKeys.memories() });
 }

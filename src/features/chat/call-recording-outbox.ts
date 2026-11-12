@@ -18,8 +18,34 @@ export type RecordingOutboxEntry = {
   speech?: SpeechSpan[];
   /** Set once the audio is uploaded. */
   fileId?: string;
+  /** Set once the audio is given up on; only the transcript is saved. */
+  audioOmitted?: AudioOmittedReason;
   savedAt: number;
 };
+
+/** Why a call's audio could not be kept (the API's audio_omitted values). */
+export type AudioOmittedReason = 'too_large' | 'storage_full' | 'upload_failed';
+
+/** What gets saved: an entry with its uploaded audio (fileId) or the reason there is none (audioOmitted). */
+export type RecordingToSave = RecordingOutboxEntry;
+
+/**
+ * An upload failure that will never succeed on retry: the file is over the
+ * upload limit, or the member's storage is full. Anything else (no network,
+ * a server hiccup) is worth retrying, so it returns null.
+ */
+export function audioOmittedReason(error: unknown): AudioOmittedReason | null {
+  const failure = error as { httpStatus?: number; status?: number; code?: string } | null;
+  const status = failure?.httpStatus ?? failure?.status;
+  if (status === 413 || failure?.code === 'payload_too_large') return 'too_large';
+  if (failure?.code === 'storage_quota_exceeded') return 'storage_full';
+  return null;
+}
+
+/** Whether a transcript has anything worth saving on its own. */
+function hasWords(entry: Pick<RecordingOutboxEntry, 'segments'>) {
+  return entry.segments.some((segment) => segment.text.trim().length > 0);
+}
 
 export type RecordingOutboxStorage = {
   getItem(key: string): Promise<string | null>;
@@ -29,8 +55,8 @@ export type RecordingOutboxStorage = {
 export type RecordingOutboxDeps = {
   /** Uploads the audio, resolving the stored file id. */
   upload(entry: RecordingOutboxEntry): Promise<string>;
-  /** Saves the recording as a story for the call. */
-  save(entry: RecordingOutboxEntry & { fileId: string }): Promise<void>;
+  /** Saves the call as a story: with its audio, or its transcript alone. */
+  save(entry: RecordingToSave): Promise<void>;
   /** Removes the local audio once the server has it. */
   deleteFile(uri: string): void;
 };
@@ -43,10 +69,10 @@ export function recordingSavePath(sessionId: string) {
 }
 
 export function buildRecordingSaveBody(
-  entry: Pick<RecordingOutboxEntry, 'durationSeconds' | 'segments' | 'speech'> & { fileId: string },
+  entry: Pick<RecordingOutboxEntry, 'durationSeconds' | 'segments' | 'speech' | 'fileId' | 'audioOmitted'>,
 ) {
   return {
-    file_id: entry.fileId,
+    ...(entry.fileId ? { file_id: entry.fileId } : { audio_omitted: entry.audioOmitted }),
     duration_seconds: Math.max(0, Math.round(entry.durationSeconds)),
     segments: entry.segments,
     ...(entry.speech?.length ? { speech: entry.speech } : {}),
@@ -123,14 +149,42 @@ export class CallRecordingOutbox {
     try {
       for (const entry of await this.entries()) {
         if (this.now() - entry.savedAt > RECORDING_OUTBOX_MAX_AGE_MS) {
+          // Out of retries: keep the conversation itself if anything was said.
+          if (hasWords(entry) || entry.fileId) {
+            await deps
+              .save(entry.fileId ? { ...entry, fileId: entry.fileId, audioOmitted: undefined } : { ...entry, fileId: undefined, audioOmitted: entry.audioOmitted ?? 'upload_failed' })
+              .catch(() => undefined);
+          }
           deps.deleteFile(entry.uri);
           await this.update(entry.sessionId, () => null);
           continue;
         }
         try {
-          const fileId = entry.fileId ?? (await deps.upload(entry));
-          if (!entry.fileId) await this.update(entry.sessionId, (current) => ({ ...current, fileId }));
-          await deps.save({ ...entry, fileId });
+          let toSave: RecordingToSave;
+          if (entry.fileId) {
+            toSave = { ...entry, fileId: entry.fileId, audioOmitted: undefined };
+          } else if (entry.audioOmitted) {
+            toSave = { ...entry, fileId: undefined, audioOmitted: entry.audioOmitted };
+          } else {
+            try {
+              const fileId = await deps.upload(entry);
+              await this.update(entry.sessionId, (current) => ({ ...current, fileId }));
+              toSave = { ...entry, fileId, audioOmitted: undefined };
+            } catch (error) {
+              // A final failure (too large, storage full) would fail forever:
+              // keep the transcript instead. Anything else is retried later.
+              const reason = audioOmittedReason(error);
+              if (!reason) throw error;
+              if (!hasWords(entry)) {
+                deps.deleteFile(entry.uri);
+                await this.update(entry.sessionId, () => null);
+                continue;
+              }
+              await this.update(entry.sessionId, (current) => ({ ...current, audioOmitted: reason }));
+              toSave = { ...entry, fileId: undefined, audioOmitted: reason };
+            }
+          }
+          await deps.save(toSave);
           deps.deleteFile(entry.uri);
           await this.update(entry.sessionId, () => null);
           sent += 1;
