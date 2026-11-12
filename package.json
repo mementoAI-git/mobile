@@ -128,8 +128,8 @@
   },
   "overrides": {
     "react-dom": "19.2.3",
-    "expo-constants": "~57.0.23",
-    "expo-linking": "~57.0.13"
+    "expo-constants": "~57.0.24",
+    "expo-linking": "~57.0.14"
   },
   "expo": {
     "install": {
