@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/utils';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { SheetHeader } from './SheetHeader';
 
 const EMPTY_EXPLORE = require('../../../assets/images/illustrations/empty_explore.webp');
@@ -93,7 +93,7 @@ export function MemoryInsightsSheet() {
     <View className="px-5" style={{ flex: 1 }}>
       <SheetHeader title="Memory insights" onClose={closeSheet} closeLabel="Close insights" />
 
-      <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: SHEET_SECTION_GAP, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetBottomPadding(insets.bottom, 24) }}>
+      <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: SHEET_SECTION_GAP, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetActionsBottomPadding(insets.bottom) }}>
         {/* Beneficiaries section */}
         <View>
           <Text className="uppercase tracking-widest text-text-weak mb-3" style={TYPE.metadata}>

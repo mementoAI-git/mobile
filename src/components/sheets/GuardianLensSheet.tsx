@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { TYPE } from '@/constants/typography';
 import { Button } from '@/components/ui';
+import { SheetActions, SHEET_FILL } from './SheetActions';
 import { SheetHeader } from './SheetHeader';
 import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
 import { useRouter } from 'expo-router';
@@ -58,7 +59,7 @@ export function GuardianLensSheet({
   };
 
   return (
-    <View style={{ gap: SHEET_GROUP_GAP, paddingBottom: 8 }}>
+    <View style={{ ...SHEET_FILL, gap: SHEET_GROUP_GAP }}>
       <SheetHeader
         title={`${beneficiary.name}’s view`}
         onClose={handleDismiss}
@@ -132,7 +133,7 @@ export function GuardianLensSheet({
       </View>
 
       {/* Action Buttons */}
-      <View className="gap-3">
+      <SheetActions className="gap-3">
         <Button
           variant="primary"
           size="lg"
@@ -151,7 +152,7 @@ export function GuardianLensSheet({
         >
           Done Previewing
         </Button>
-      </View>
+      </SheetActions>
     </View>
   );
 }

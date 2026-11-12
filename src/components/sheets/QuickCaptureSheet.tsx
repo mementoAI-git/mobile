@@ -177,7 +177,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
   };
 
   return (
-    <View className="pb-8">
+    <View>
       <SheetHeader
         title={dailyPrompt ? "Today's reflection" : 'Quick capture'}
         onClose={() => (onClose ? onClose() : closeSheet())}

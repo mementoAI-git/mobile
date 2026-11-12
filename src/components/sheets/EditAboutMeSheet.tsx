@@ -8,6 +8,7 @@ import { normalizeAboutMe, toAboutMeUpdatePayload } from '@/features/account/pro
 import { useUpdateProfile } from '@/hooks/mutations/use-profile-mutation';
 import { usePersona } from '@/hooks/queries/use-persona';
 import { useProfile } from '@/hooks/queries/use-profile';
+import { SheetActions, SHEET_FILL } from './SheetActions';
 import { SheetHeader } from './SheetHeader';
 import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 
@@ -47,7 +48,7 @@ export function EditAboutMeSheet({ onClose }: EditAboutMeSheetProps) {
   const unchanged = biography.trim() === savedBiography.trim();
 
   return (
-    <View style={{ gap: SHEET_GROUP_GAP }}>
+    <View style={{ ...SHEET_FILL, gap: SHEET_GROUP_GAP }}>
       <SheetHeader title="About me" onClose={onClose} closeLabel="Close About me" />
 
       <TextInput
@@ -63,7 +64,7 @@ export function EditAboutMeSheet({ onClose }: EditAboutMeSheetProps) {
         inputClassName="min-h-[140px]"
       />
 
-      <View style={{ flexDirection: 'row', gap: 12 }}>
+      <SheetActions style={{ flexDirection: 'row', gap: 12 }}>
         <Button variant="secondary" size="lg" rounded="full" className="h-14 flex-1" onPress={close}>
           Dismiss
         </Button>
@@ -77,7 +78,7 @@ export function EditAboutMeSheet({ onClose }: EditAboutMeSheetProps) {
         >
           Save
         </Button>
-      </View>
+      </SheetActions>
     </View>
   );
 }

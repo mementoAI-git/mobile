@@ -16,7 +16,7 @@ export function CancelSubscriptionConfirmationSheet({onClose}: {onClose?: () => 
     onClose?.();
     setTimeout(() => router.push('/settings/cancel-plan' as Href), 300);
   };
-  return <View style={{paddingHorizontal: 20, paddingTop: 54, paddingBottom: 20}}>
+  return <View style={{paddingHorizontal: 20, paddingTop: 54}}>
     <View style={{alignItems: 'center'}}>
       <AlertTriangleIcon size={116} />
       <Text style={{...TYPE.sectionTitle, color: COLORS.textStrong, textAlign: 'center', maxWidth: 360, marginTop: 42}}>Are you sure you want to cancel your subscription</Text>

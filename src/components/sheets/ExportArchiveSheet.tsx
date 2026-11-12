@@ -3,6 +3,7 @@ import { Image, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { SheetActions, SHEET_FILL } from './SheetActions';
 import { SheetHeader } from './SheetHeader';
 import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
 import {TYPE} from '@/constants/typography';
@@ -120,7 +121,7 @@ export function ExportArchiveSheet({onClose}: ExportArchiveSheetProps) {
     : 0;
 
   return (
-    <View style={{ gap: SHEET_GROUP_GAP, paddingBottom: 8 }}>
+    <View style={{ ...SHEET_FILL, gap: SHEET_GROUP_GAP }}>
       <SheetHeader title="Export your archive" onClose={handleDismiss} closeLabel="Close export sheet" />
 
       <View style={{ gap: SHEET_SECTION_GAP }}>
@@ -150,6 +151,7 @@ export function ExportArchiveSheet({onClose}: ExportArchiveSheetProps) {
       </View>
       </View>
 
+      <SheetActions>
       <Button
         variant="primary"
         size="lg"
@@ -160,6 +162,7 @@ export function ExportArchiveSheet({onClose}: ExportArchiveSheetProps) {
       >
         {status?.status === 'complete' ? 'Export Again' : 'Create & Share Archive'}
       </Button>
+      </SheetActions>
     </View>
   );
 }

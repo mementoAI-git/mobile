@@ -59,3 +59,33 @@ test('bottom CTAs sit 8px above the home indicator', async () => {
   expect(editor).toContain('paddingBottom: getSheetActionsBottomPadding(insets.bottom)');
   expect(editor).not.toContain('insets.bottom + 24');
 });
+
+test('every sheet places its bottom CTA with the shared helper', async () => {
+  const files = [
+    'src/components/sheets/SheetManager.tsx', 'src/components/sheets/CreateCapsuleSheet.tsx', 'src/components/sheets/CapsuleDetailSheet.tsx',
+    'src/components/sheets/MemoryInsightsSheet.tsx', 'src/components/sheets/StreakSheet.tsx', 'src/components/sheets/VoiceCallSettingsSheet.tsx',
+    'src/components/sheets/PreviewCapsuleModal.tsx', 'src/components/sheets/SelectFromMemoryModal.tsx', 'src/components/sheets/SelectFromMediaModal.tsx',
+    'src/components/sheets/PublishPrivacySheet.tsx', 'src/components/capsule/StylePicker.tsx', 'src/components/ui/ConfirmDialog.tsx',
+    'src/components/chat/ChatAttachmentPickerSheet.tsx',
+  ];
+  for (const file of files) {
+    const source = await Bun.file(file).text();
+    expect(source, file).toContain('getSheetActionsBottomPadding(insets.bottom)');
+    expect(source, file).not.toMatch(/insets\.bottom \+ (6|12|16|20|24)\b/);
+  }
+});
+
+test('sheets with bottom buttons pin them with SheetActions on a filling root', async () => {
+  const sheets = [
+    'AppearanceSheet', 'CalendarSheets', 'BeneficiaryActionsSheet', 'EditAboutMeSheet', 'GuardianLensSheet',
+    'ExportArchiveSheet', 'DailyRitualSheet', 'CapsuleSealedSheet', 'UpgradePromptSheet', 'CelebrationSheet',
+    'DigitalMindSheet', 'ObservationNoteSheet', 'FeedbackSheet', 'ShareMemorySheet',
+  ];
+  for (const sheet of sheets) {
+    const source = await Bun.file(`src/components/sheets/${sheet}.tsx`).text();
+    expect(source, sheet).toContain('<SheetActions');
+    expect(source, sheet).toContain('SHEET_FILL');
+  }
+  const actions = await Bun.file('src/components/sheets/SheetActions.tsx').text();
+  expect(actions).toContain("marginTop: 'auto'");
+});

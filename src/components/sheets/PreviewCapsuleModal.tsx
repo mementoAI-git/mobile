@@ -8,7 +8,7 @@ import { getThemeById } from '@/constants/themes';
 import type { IBeneficiary } from '@/types';
 import { useUserStore } from '@/store';
 import {TYPE} from '@/constants/typography';
-import { getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { SheetHeader } from './SheetHeader';
 import { useCapsuleThemeFonts } from '@/hooks/use-capsule-theme-fonts';
 import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
@@ -82,7 +82,7 @@ export const PreviewCapsuleModal = forwardRef<BottomSheetModal, PreviewCapsuleMo
         />
 
         {/* Content */}
-        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: SHEET_SECTION_GAP }}>
+        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetActionsBottomPadding(insets.bottom), gap: SHEET_SECTION_GAP }}>
 
           {/* Controls */}
           <View className="bg-fill-weaker rounded-2xl border border-stroke-weaker p-1">

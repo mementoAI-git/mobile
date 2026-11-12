@@ -7,6 +7,7 @@ import { Button } from '@/components/ui';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { PersonCard } from '@/components/beneficiaries/PersonCard';
 import { TYPE } from '@/constants/typography';
+import { SheetActions, SHEET_FILL } from './SheetActions';
 import { SheetHeader } from './SheetHeader';
 import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 import { isInvitePending, personCardDetails } from '@/features/beneficiaries/people-cards';
@@ -39,7 +40,7 @@ export function BeneficiaryActionsSheet({
 
   return (
     // flexGrow fills the sheet's minimum height so the buttons sit at the bottom.
-    <View style={{ flexGrow: 1, gap: SHEET_GROUP_GAP, paddingBottom: 8 }}>
+    <View style={{ ...SHEET_FILL, gap: SHEET_GROUP_GAP }}>
       <SheetHeader title="Person" onClose={() => onClose?.()} />
 
       <View style={{ gap: 12 }}>
@@ -63,7 +64,7 @@ export function BeneficiaryActionsSheet({
         ) : null}
       </View>
 
-      <View style={{ marginTop: 'auto', flexDirection: 'row', gap: 12 }}>
+      <SheetActions style={{ flexDirection: 'row', gap: 12 }}>
         <Button
           variant="secondary"
           size="lg"
@@ -84,7 +85,7 @@ export function BeneficiaryActionsSheet({
         >
           Remove
         </Button>
-      </View>
+      </SheetActions>
     </View>
   );
 }

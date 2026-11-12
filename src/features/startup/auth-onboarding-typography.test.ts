@@ -7,7 +7,6 @@ const acquisitionSurfaces = [
   'app/(auth)/set-password.tsx',
   'app/(auth)/register.tsx',
   'app/(auth)/login.tsx',
-  'app/(auth)/oauth-callback.tsx',
   'app/(auth)/two-factor.tsx',
   'app/(onboard)/preferences.tsx',
   'app/(onboard)/nickname.tsx',

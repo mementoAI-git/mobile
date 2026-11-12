@@ -25,7 +25,7 @@ import { buildAudienceRecipientItems, type AudienceRecipientItem } from '@/featu
 import { canApplyMemoryAudience } from '@/features/memories/memory-audience';
 import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
 import { SheetHeader } from '@/components/sheets/SheetHeader';
-import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 
 export type PrivacyMode = 'private' | 'all' | 'specific';
 
@@ -494,7 +494,7 @@ export const PublishPrivacySheet = forwardRef<BottomSheetModal, Props>(function 
             gap: 12,
             paddingHorizontal: 20,
             paddingTop: 12,
-            paddingBottom: Math.max(insets.bottom + 6, 20),
+            paddingBottom: getSheetActionsBottomPadding(insets.bottom),
             backgroundColor: COLORS.sheet,
             borderTopWidth: 1,
             borderTopColor: COLORS.strokeWeaker,

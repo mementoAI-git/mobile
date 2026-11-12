@@ -9,7 +9,7 @@ import {
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetTextInput, BottomSheetScrollView, BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getSheetBottomPadding, SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, SHEET_SECTION_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { SheetHeader } from './SheetHeader';
 import { useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
@@ -230,7 +230,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
         style={{ paddingHorizontal: 20 }}
       />
 
-      <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: (insets.bottom ? insets.bottom + 24 : 40) + keyboardHeight, gap: SHEET_SECTION_GAP }}>
+      <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetActionsBottomPadding(insets.bottom) + keyboardHeight, gap: SHEET_SECTION_GAP }}>
 
         {/* Recipients */}
         <View className="gap-3">
@@ -573,7 +573,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
           closeLabel="Close delivery date"
           style={{ paddingHorizontal: 20 }}
         />
-        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 12 }}>
+        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetActionsBottomPadding(insets.bottom), gap: 12 }}>
           {[
             { label: 'In 3 days', days: 3 },
             { label: 'In 1 week', days: 7 },

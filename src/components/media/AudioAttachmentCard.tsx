@@ -1,9 +1,12 @@
-import React, { useCallback } from 'react';
-import { Image, Text, View, useWindowDimensions } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, Text, View, type LayoutChangeEvent } from 'react-native';
+import Play from 'lucide-react-native/icons/play';
+import X from 'lucide-react-native/icons/x';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { TYPE } from '@/constants/typography';
 import { radius } from '@/constants/responsive';
+import { recordingWaveform } from '@/features/media/recording-waveform';
 
 export interface AudioAttachmentItem {
   _id?: string;
@@ -13,102 +16,122 @@ export interface AudioAttachmentItem {
   duration?: number;
 }
 
+const BAR_WIDTH = 2.5;
+const BAR_GAP = 2.5;
+const WAVE_HEIGHT = 30;
+const MIN_BAR = 3;
+const PLAY_SIZE = 36;
+
+function formatDuration(seconds: number) {
+  return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+}
+
+function recordingTitle(item: AudioAttachmentItem, memoryTitle?: string) {
+  if (memoryTitle && memoryTitle !== 'Untitled Memory') return memoryTitle;
+  return item.name
+    ? item.name.replace(/\.[^.]+$/, '').replace(/_\d{12,}$/, '').replace(/_/g, ' ')
+    : 'Audio';
+}
+
 /**
- * How an audio attachment looks: album art with a wave strip, a voice recording as a dark
- * square with orange waves, or other audio on a light square. Used on the story page and
- * in the story editor.
+ * How a recording (or any audio attachment) looks everywhere in the app: its
+ * title, a play button, a waveform and the length, on the weak fill. Tapping it
+ * opens the audio player. `compact` drops the title line for tight spots (the
+ * chat composer, the Overview capture card).
  */
 export const AudioAttachmentCard = React.memo(function AudioAttachmentCard({
   item,
   memoryTitle,
   onPress,
-  width,
+  onRemove,
+  uploading = false,
+  compact = false,
 }: {
   item: AudioAttachmentItem;
   memoryTitle?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- callers pass their own richer attachment type
   onPress?: (item: any) => void;
-  /** Square card width; defaults to half the content width, as on the story page. */
-  width?: number;
+  /** Shows a remove control (editors and composers). */
+  onRemove?: () => void;
+  /** Covers the card with a spinner while the file uploads. */
+  uploading?: boolean;
+  compact?: boolean;
 }) {
   const COLORS = useThemeColors();
-  const { width: windowWidth } = useWindowDimensions();
-  const cardWidth = width ?? (Math.min(windowWidth, 720) - 40) / 2;
   const handlePress = useCallback(() => onPress?.(item), [item, onPress]);
-  const isVoice = item.name?.startsWith('voice_') && item.type === 'audio/m4a';
-  const albumArt = item.thumbnail;
-  const dur = Number(item.duration ?? 0);
-  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-  const rawFileName = item.name
-    ? item.name.replace(/\.[^.]+$/, '').replace(/_\d{12,}$/, '').replace(/_/g, ' ')
-    : 'Audio';
-  const fileName = memoryTitle && memoryTitle !== 'Untitled Memory' ? memoryTitle : rawFileName;
+  const title = recordingTitle(item, memoryTitle);
+  const seconds = Number(item.duration ?? 0);
+  const duration = seconds > 0 ? formatDuration(seconds) : '';
+  const [waveWidth, setWaveWidth] = useState(0);
+  const onWaveLayout = useCallback((event: LayoutChangeEvent) => {
+    setWaveWidth(Math.round(event.nativeEvent.layout.width));
+  }, []);
+  // As many bars as fit, so the waveform fills the space at any card width.
+  const barCount = Math.max(0, Math.floor((waveWidth + BAR_GAP) / (BAR_WIDTH + BAR_GAP)));
+  const bars = useMemo(
+    () => recordingWaveform(item._id || item.name || title, barCount),
+    [item._id, item.name, title, barCount],
+  );
 
-  if (albumArt) {
-    return (
-      <TouchableOpacity
-        onPress={handlePress}
-        activeOpacity={0.88}
-        style={{ borderRadius: 16, overflow: 'hidden', height: 120 }}
-      >
-        <Image source={{ uri: albumArt }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: COLORS.mediaScrim }}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 1.5, height: 14 }}>
-            {[5, 10, 14, 11, 7, 12, 8, 14].map((h, i) => <View key={i} style={{ width: 2.5, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />)}
-          </View>
-          <Text style={{ ...TYPE.metadata, color: COLORS.mediaText, flex: 1 }} numberOfLines={1}>{fileName}</Text>
-          {dur > 0 && <Text style={{ ...TYPE.metadata, color: COLORS.mediaTextWeak }}>{fmt(dur)}</Text>}
-        </View>
-      </TouchableOpacity>
-    );
-  }
-
-  if (isVoice) {
-    let h = 0;
-    const seed = item._id || item.name || '';
-    for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
-    const bars = Array.from({ length: 16 }, (_, i) =>
-      4 + Math.round((Math.sin((Math.abs(h) + i * 997) * 0.013) * 0.5 + 0.5) * 20)
-    );
-    return (
-      <TouchableOpacity
-        onPress={handlePress}
-        activeOpacity={0.88}
-        style={{ backgroundColor: COLORS.mediaSurface, borderRadius: radius(20), aspectRatio: 1, width: cardWidth, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 32 }}>
-          {bars.map((barH, i) => (
-            <View key={i} style={{ flex: 1, height: barH, borderRadius: 2, backgroundColor: `${COLORS.brand}cc`, maxHeight: 28 }} />
-          ))}
-        </View>
-        <Text style={{ ...TYPE.metadata, color: COLORS.mediaText, textAlign: 'center' }} numberOfLines={2}>
-          {fileName}
-        </Text>
-        {dur > 0 && (
-          <View style={{ backgroundColor: COLORS.mediaFill, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
-            <Text style={{ ...TYPE.metadata, color: COLORS.mediaTextWeak }}>{fmt(dur)}</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  }
+  const removeButton = onRemove ? (
+    <TouchableOpacity
+      onPress={onRemove}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel="Remove recording"
+      style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.fillWeak, alignItems: 'center', justifyContent: 'center' }}
+    >
+      <X size={12} color={COLORS.textBase} strokeWidth={2.5} />
+    </TouchableOpacity>
+  ) : null;
 
   return (
-    <TouchableOpacity
-      onPress={handlePress}
-      activeOpacity={0.88}
-      style={{ backgroundColor: COLORS.fillWeak, borderRadius: radius(20), aspectRatio: 1, width: cardWidth, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 32 }}>
-        {[8, 16, 24, 20, 12, 22, 14, 24, 18, 8, 16, 24].map((h, i) => (
-          <View key={i} style={{ width: 3, height: h, backgroundColor: COLORS.brand, borderRadius: 2 }} />
-        ))}
-      </View>
-      <Text style={{ ...TYPE.metadata, color: COLORS.textStrong, textAlign: 'center' }} numberOfLines={2}>{fileName}</Text>
-      {dur > 0 && (
-        <View style={{ backgroundColor: COLORS.cardOverlay, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
-          <Text style={{ ...TYPE.metadata, color: COLORS.textBase }}>{fmt(dur)}</Text>
+    <View>
+      <TouchableOpacity
+        onPress={handlePress}
+        disabled={!onPress}
+        activeOpacity={0.88}
+        accessibilityRole="button"
+        accessibilityLabel={`Play ${title}${duration ? `, ${duration}` : ''}`}
+        style={{ backgroundColor: COLORS.fillWeak, borderRadius: radius(compact ? 16 : 20), padding: compact ? 10 : 16, gap: 12 }}
+      >
+        {compact ? null : (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 24 }}>
+            <Text style={{ ...TYPE.label, color: COLORS.textStrong, flex: 1 }} numberOfLines={1}>{title}</Text>
+            {removeButton}
+          </View>
+        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ width: PLAY_SIZE, height: PLAY_SIZE, borderRadius: PLAY_SIZE / 2, backgroundColor: COLORS.activeFill, alignItems: 'center', justifyContent: 'center' }}>
+            <Play size={14} color={COLORS.activeText} fill={COLORS.activeText} style={{ marginLeft: 2 }} />
+          </View>
+          <View
+            onLayout={onWaveLayout}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={{ flex: 1, height: WAVE_HEIGHT, flexDirection: 'row', alignItems: 'center', gap: BAR_GAP, overflow: 'hidden' }}
+          >
+            {bars.map((bar, i) => (
+              <View
+                key={i}
+                style={{ width: BAR_WIDTH, height: MIN_BAR + bar * (WAVE_HEIGHT - MIN_BAR), borderRadius: BAR_WIDTH / 2, backgroundColor: COLORS.brand }}
+              />
+            ))}
+          </View>
+          {duration ? (
+            <Text style={{ ...TYPE.bodySmall, color: COLORS.textWeak, fontVariant: ['tabular-nums'] }}>{duration}</Text>
+          ) : null}
+          {compact ? removeButton : null}
         </View>
-      )}
-    </TouchableOpacity>
+      </TouchableOpacity>
+      {uploading ? (
+        <View
+          pointerEvents="none"
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: radius(compact ? 16 : 20), backgroundColor: COLORS.mediaScrim, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <ActivityIndicator color={COLORS.textInverse} />
+        </View>
+      ) : null}
+    </View>
   );
 });

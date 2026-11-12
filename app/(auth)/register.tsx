@@ -35,9 +35,8 @@ import * as Haptics from 'expo-haptics';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import { PRIVACY_URL, TERMS_URL } from '@/lib/env';
-import { AUTH_SESSION_RETURN_URL, oauthCallbackUrl } from '@/lib/navigation';
 import { signInWithGoogleNative } from '@/features/auth/google-auth';
-import { signInWithAppleNative } from '@/features/auth/apple-auth';
+import { appleSignInShown, signInWithAppleNative } from '@/features/auth/apple-auth';
 import { establishSession } from '@/features/auth/session-coordinator';
 import { completeAuthResponse } from '@/features/auth/auth-completion';
 import { useAuthStore } from '@/store';
@@ -160,19 +159,9 @@ export default function RegisterScreen() {
         }
       }
 
-      if (nativeResult.error) {
-        toast(nativeResult.error, 'error');
-        return;
-      }
-
-      const res = await client.get(`${endpoint.oauth}google`, {
-        params: { redirect_uri: oauthCallbackUrl('google') },
-        skipAuth: true,
-      } as never);
-      const url: string | undefined = res.data?.data?.url;
-      if (!url) return;
-      const { openAuthSessionAsync } = await import('expo-web-browser');
-      await openAuthSessionAsync(url, AUTH_SESSION_RETURN_URL);
+      // No session came back. There is no browser sign-in to fall back to:
+      // the web flow returns to the website, never to the app.
+      toast(nativeResult.error || 'Google sign up could not be completed. Please try again.', 'error');
     } catch {
       toast('Google sign up could not be completed. Please try again.', 'error');
     } finally {
@@ -208,18 +197,9 @@ export default function RegisterScreen() {
         }
       }
 
-      if (nativeResult.error) {
-        toast(nativeResult.error, 'error');
-        return;
-      }
-
-      const res = await client.get(`${endpoint.oauth}apple`, {
-        params: { redirect_uri: oauthCallbackUrl('apple') },
-        skipAuth: true,
-      } as never);
-      const url: string | undefined = res.data?.data?.url;
-      if (!url) return;
-      const { openAuthSessionAsync } = await import('expo-web-browser');
+      // No session came back. There is no browser sign-in to fall back to:
+      // the web flow returns to the website, never to the app.
+      toast(nativeResult.error || 'Apple sign up could not be completed. Please try again.', 'error');
     } catch {
       toast('Apple sign up could not be completed. Please try again.', 'error');
     } finally {
@@ -268,6 +248,7 @@ export default function RegisterScreen() {
                     <Text style={styles.socialBtnText}>Sign up with Google</Text>
                   </TouchableOpacity>
 
+                  {appleSignInShown() && (
                   <TouchableOpacity
                     onPress={handleAppleSignup}
                     disabled={googleLoading || appleLoading || isPending}
@@ -277,6 +258,7 @@ export default function RegisterScreen() {
                     {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={20} />}
                     <Text style={styles.socialBtnText}>Sign up with Apple</Text>
                   </TouchableOpacity>
+                  )}
                 </Animated.View>
               )}
 

@@ -15,7 +15,7 @@ describe('bottom sheets match web phone sheets', () => {
     expect(SHEET_RADIUS).toBe(20);
     expect(SHEET_GRABBER).toEqual({ width: 36, height: 4, borderRadius: 2, opacity: 0.35 });
     expect(SHEET_BACKDROP.light).toEqual({ color: 'rgb(94,94,94)', opacity: 0.5 });
-    expect(SHEET_BACKDROP.dark).toEqual({ color: 'rgb(0,0,0)', opacity: 0.72 });
+    expect(SHEET_BACKDROP.dark).toEqual({ color: 'rgb(64,66,76)', opacity: 0.55 });
   });
 
   test('stop at 92% of the screen and start at min(524, 92%)', () => {

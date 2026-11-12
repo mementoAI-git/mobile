@@ -21,7 +21,7 @@ import { TYPE } from '@/constants/typography';
 import { ZapIconWarm } from '@/components/ui';
 import { toMondayFirstIndex } from '@/features/account/account-overview';
 import { CompletedCheckmarkIcon } from '../ui/icons/CompletedCheckmarkIcon';
-import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
+import { getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 
 const STREAK_FLAME = require('../../../assets/images/illustrations/streak_flame.webp');
 
@@ -103,7 +103,7 @@ export function StreakSheet() {
   const CIRCLE_SIZE = 120;
 
   return (
-    <BottomSheetView style={{ paddingTop: 8, paddingBottom: getSheetBottomPadding(insets.bottom, 16) }}>
+    <BottomSheetView style={{ paddingTop: 8, paddingBottom: getSheetActionsBottomPadding(insets.bottom) }}>
       {/* ── Top close button ── */}
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, marginBottom: 8 }}>
         <TouchableOpacity

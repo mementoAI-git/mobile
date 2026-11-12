@@ -25,6 +25,7 @@ import { useState } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
 import { useCapsuleThemeFonts } from '@/hooks/use-capsule-theme-fonts';
+import { getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 
 
 
@@ -102,7 +103,7 @@ export function CapsuleDetailSheet({ onClose, capsule: initialCapsule, previewOn
 
       <BottomSheetScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom ? insets.bottom + 24 : 40 }}
+        contentContainerStyle={{ paddingBottom: getSheetActionsBottomPadding(insets.bottom) }}
       >
         {/* Themed Preview Card (Web Style - SVG Background like CapsulePreviewCard) */}
         <View className="px-5 pt-8 pb-6">

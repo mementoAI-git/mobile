@@ -30,7 +30,7 @@ import ImageOff from 'lucide-react-native/icons/image-off';
 import Music from 'lucide-react-native/icons/music';
 import Play from 'lucide-react-native/icons/play';
 import { SheetHeader } from '@/components/sheets/SheetHeader';
-import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PermissionRecoveryState } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
@@ -383,7 +383,7 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
         bottomInset={0}
         style={styles.footerContainer}
       >
-        <View style={[styles.footerContent, { paddingBottom: insets.bottom ? insets.bottom + 12 : 16 }]}>
+        <View style={[styles.footerContent, { paddingBottom: getSheetActionsBottomPadding(insets.bottom) }]}>
           <TouchableOpacity onPress={dismiss} activeOpacity={0.86} style={styles.dismissButton}>
             <Text style={styles.dismissText}>Dismiss</Text>
           </TouchableOpacity>

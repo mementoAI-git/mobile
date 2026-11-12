@@ -6,7 +6,7 @@ import {
   isCallTimeUp,
   type VoiceCallTime,
 } from '@/features/chat/voice-call-limit';
-import { voiceEffectLevel } from '@/features/chat/voice-effect-level';
+import { PlaybackLevelMeter } from '@/features/chat/voice-effect-level';
 import { voiceLanguageInstruction } from '@/features/chat/voice-language';
 import { sendVoiceText } from '@/features/chat/voice-text-input';
 import { useVoicePreferenceStore } from '@/store/voice-preference.store';
@@ -105,9 +105,11 @@ import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-aler
 import { logger } from '@/lib/logger';
 import { makeMutable } from 'react-native-reanimated';
 import { VoiceThinkingTracker } from '@/features/chat/voice-thinking';
+import { parseHybridEndMs, VoiceHybridEnd } from '@/features/chat/voice-hybrid-end';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
 import { CallRecordingSession } from '@/features/chat/call-recording';
+import { toast } from '@/components/ui/Toast';
 import { discardCallRecording, drainCallRecordings, finishCallRecording, getCallRecorderNative, newCallRecordingPath } from '@/features/chat/call-recording-store';
 import { invalidateMemoryQueries } from '@/features/memories/cache';
 import { useAuthStore, useUserStore } from '@/store';
@@ -168,6 +170,9 @@ const DEBUG_RECORD_UPLINK = __DEV__ && process.env.EXPO_PUBLIC_VOICE_DEBUG_RECOR
 // Development only: save the raw mic and speaker state for replay through the
 // echo gate (voice-gate-replay.ts).
 const DEBUG_CAPTURE_GATE = __DEV__ && process.env.EXPO_PUBLIC_VOICE_DEBUG_CAPTURE === 'true';
+// Experimental, off by default: tell Gemini the user has finished after this
+// much quiet instead of waiting for its silence window (voice-hybrid-end.ts).
+const HYBRID_END_MS = parseHybridEndMs(process.env.EXPO_PUBLIC_VOICE_HYBRID_END_MS);
 // About 10 s in total, enough to ride out a tunnel or a network switch.
 type ReconnectReason = 'go-away' | 'connection-lost' | 'network-change';
 /** `in-progress`: another reconnect is already running. `ended`: the call ended meanwhile. */
@@ -338,8 +343,12 @@ export function useVoiceMode({
   const isMutedRef = useRef(false);
   const isGreetingActiveRef = useRef(false);
   const isAiSpeakingRef = useRef(false);
-  const playbackLevelRef = useRef(0);
-  const getPlaybackLevel = useCallback(() => engineRef.current?.isAudible(0) ? playbackLevelRef.current : 0, []);
+  // The level of Memento's voice at the moment it is heard, for the voice beam.
+  const playbackMeterRef = useRef(new PlaybackLevelMeter());
+  const getPlaybackLevel = useCallback(() => {
+    const engine = engineRef.current;
+    return engine ? playbackMeterRef.current.level(engine.queueDepthMs()) : 0;
+  }, []);
   const isMountedRef = useRef(true);
   const isDisconnectingRef = useRef(false);
   const isSessionActiveRef = useRef(false);
@@ -396,6 +405,8 @@ export function useVoiceMode({
   const transcriptDiagnosticsRef = useRef(createVoiceTranscriptDiagnostics());
   const latencyRef = useRef<VoiceLatencyTracker | null>(null);
   const thinkingRef = useRef(new VoiceThinkingTracker());
+  const hybridEndRef = useRef(new VoiceHybridEnd(HYBRID_END_MS));
+  const hybridTurnEndsRef = useRef(0);
   // Loudness of what the mic sends (0..1), for the call screen's level ring.
   const micLevelRef = useRef(makeMutable(0));
   const selfInterruptRef = useRef<VoiceSelfInterruptGuard | null>(null);
@@ -613,7 +624,9 @@ export function useVoiceMode({
           thinkingRef.current.reset();
           selfInterruptRef.current?.observeInterrupted(
             engine?.isSpeakerFullDuplexActive() ?? false,
-            engine?.audibleForMs(),
+            // The user was already talking as this reply started: an early
+            // interruption is them, so judge it by its words, not its timing.
+            engine?.userContinuedIntoReply() ? undefined : engine?.audibleForMs(),
           );
           const newEpoch = engine?.nextEpoch() ?? 1;
           engine?.interruptOutput(newEpoch);
@@ -629,6 +642,7 @@ export function useVoiceMode({
             clearTimeout(pendingTurnCompleteTimerRef.current);
             pendingTurnCompleteTimerRef.current = null;
           }
+          playbackMeterRef.current.reset();
           transcriptRef.current.handleInterruption();
           transcriptRef.current.completeTurn();
           syncCompletedTurns(true);
@@ -641,7 +655,7 @@ export function useVoiceMode({
           selfInterruptRef.current?.observeModelAudio();
           goodbyeRef.current?.tracker.onModelAudio();
           if (engine?.enqueueOutput(effect.data, effect.epoch) && isMountedRef.current) {
-            playbackLevelRef.current = voiceEffectLevel(effect.data);
+            playbackMeterRef.current.push(effect.data);
             isAiSpeakingRef.current = true;
             setIsAiSpeaking(true);
           }
@@ -789,6 +803,7 @@ export function useVoiceMode({
 
     const engine = engineRef.current;
     engineRef.current = null;
+    playbackMeterRef.current.reset();
     await engine?.stop().catch((error) => logger.handledError('Voice audio cleanup failed', error));
     const engineSnapshot = engine?.snapshot();
     if (engineSnapshot) logger.runtime('[VoiceMode] session metrics', engineSnapshot);
@@ -812,6 +827,9 @@ export function useVoiceMode({
         failure: failureRef.current ?? undefined,
         endedDuringStep: connectStepRef.current ?? undefined,
         turnDetection: turnDetectionRef.current,
+        hybridEnd: HYBRID_END_MS
+          ? { delayMs: HYBRID_END_MS, turnEnds: hybridTurnEndsRef.current }
+          : undefined,
         toolCalls: transcriptDiagnosticsRef.current.toolCalls.length,
         selfInterruptions: selfInterruptRef.current
           ? {
@@ -859,8 +877,20 @@ export function useVoiceMode({
       const recordingUserId = useUserStore.getState().user?._id;
       // A conversation with nothing said is not worth a story.
       if (turnSync && recordingUserId && recording.segments.length > 0) {
+        // Reassure the person their conversation is kept once it is safe.
         void finishCallRecording({ userId: recordingUserId, sessionId: turnSync.getSessionId(), recording })
-          .catch((error) => logger.handledError('Voice recording could not be saved', error));
+          .then((result) => {
+            toast(
+              result === 'sent'
+                ? 'Your conversation recording is saved to Stories'
+                : 'Your conversation recording is saved and will appear in Stories shortly',
+              'success',
+            );
+          })
+          .catch((error) => {
+            logger.handledError('Voice recording could not be saved', error);
+            toast('We couldn’t save this conversation’s recording', 'error');
+          });
       } else {
         discardCallRecording(recording.path);
       }
@@ -1391,6 +1421,8 @@ export function useVoiceMode({
     setVoiceTimeline(null);
     messageHandlerRef.current = new VoiceMessageHandler();
     uplinkRecorderRef.current = DEBUG_RECORD_UPLINK ? new VoiceUplinkRecorder() : null;
+    hybridEndRef.current = new VoiceHybridEnd(HYBRID_END_MS);
+    hybridTurnEndsRef.current = 0;
     gateCaptureRef.current = DEBUG_CAPTURE_GATE ? new VoiceGateCapture() : null;
     latencyRef.current = new VoiceLatencyTracker();
     // On a loud speaker, leftover echo can still get past the echo filter and
@@ -1455,7 +1487,7 @@ export function useVoiceMode({
       onMicFrame: (samples, flags) => {
         if (DEBUG_CAPTURE_GATE) gateCaptureRef.current?.add(samples, flags);
         // Everything the mic hears goes to the recording, except while muted.
-        callRecordingRef.current?.pushMic(samples, isMutedRef.current);
+        callRecordingRef.current?.pushMic(samples, isMutedRef.current, flags.audibleOnSpeaker);
       },
       onFatalError: (error) => {
         logger.handledError('Native voice audio failed', error);
@@ -1484,6 +1516,7 @@ export function useVoiceMode({
       },
     });
     engineRef.current = engine;
+    playbackMeterRef.current.reset();
 
 
     try {
@@ -1549,6 +1582,12 @@ export function useVoiceMode({
           sessionRef.current?.sendRealtimeInput({
             audio: { data, mimeType: 'audio/pcm;rate=16000' },
           });
+          const quietMs = thinkingRef.current.quietForMs();
+          if (hybridEndRef.current.check(quietMs, isAiSpeakingRef.current)) {
+            hybridTurnEndsRef.current += 1;
+            logger.runtime('[VoiceMode] hybrid end of turn', { quietMs });
+            sessionRef.current?.sendRealtimeInput({ audioStreamEnd: true });
+          }
         } catch {
           // Socket is closing during a reconnect. Drop this frame.
         }
@@ -1608,7 +1647,7 @@ export function useVoiceMode({
               if (effect.what === 'profile') {
                 void queryClient.invalidateQueries({ queryKey: queryKeys.profile });
               } else if (effect.what === 'memories') {
-                invalidateMemoryQueries(queryClient, { includeUserStats: true });
+                invalidateMemoryQueries(queryClient, { includeUserStats: true, includeAllStories: true });
               } else if (effect.what === 'capsules') {
                 void queryClient.invalidateQueries({ queryKey: ['capsules'] });
                 void queryClient.invalidateQueries({ queryKey: queryKeys.capsuleStats });

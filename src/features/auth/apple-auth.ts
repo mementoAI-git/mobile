@@ -1,4 +1,14 @@
+import { Platform } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
+
+/**
+ * Sign in with Apple is native to iOS only. Apple has no Android sign-in
+ * (it would need a browser flow the API does not have yet), so the button is
+ * hidden there instead of failing when tapped.
+ */
+export function appleSignInShown(os: string = Platform.OS): boolean {
+  return os === 'ios';
+}
 
 export type NativeAppleAuthResult =
   | {

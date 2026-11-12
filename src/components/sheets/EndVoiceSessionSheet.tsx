@@ -17,7 +17,7 @@ interface EndVoiceSessionSheetProps {
 export function EndVoiceSessionSheet({ duration, onEnd, onClose }: EndVoiceSessionSheetProps) {
   const COLORS = useThemeColors();
   return (
-    <View className="items-center pb-2 pt-6">
+    <View className="items-center pt-6">
       <View className="size-20 items-center justify-center rounded-full bg-fill-weaker">
         <PhoneOff size={38} color={COLORS.warning} />
       </View>
