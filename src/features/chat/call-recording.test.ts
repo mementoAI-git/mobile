@@ -269,3 +269,14 @@ describe('call recording outbox', () => {
     });
   });
 });
+
+describe('which builds record calls', () => {
+  test('iOS always; Android when Memento plays through native playback', async () => {
+    const { canRecordCalls } = await import('./call-recording');
+    expect(canRecordCalls('ios', false)).toBe(true);
+    expect(canRecordCalls('android', true)).toBe(true);
+    // Without native playback the recorder never hears Memento's side.
+    expect(canRecordCalls('android', false)).toBe(false);
+    expect(canRecordCalls('web', true)).toBe(false);
+  });
+});

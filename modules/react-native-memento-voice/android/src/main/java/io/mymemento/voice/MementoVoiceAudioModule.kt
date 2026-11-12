@@ -22,15 +22,24 @@ class MementoVoiceAudioModule(
   // comes from the voiceCommunication input preset.
   override fun isVoiceProcessingActive(): Boolean = false
 
-  // No AAC conversion on Android yet: reject so callers keep (and can upload)
-  // the WAV, which is left untouched.
+  // Compresses off the JS thread. On failure the WAV is left untouched, so
+  // callers keep (and can upload) it.
   override fun convertRecordingToM4A(wavPath: String, promise: Promise) {
-    promise.reject("E_UNSUPPORTED", "Recording conversion is unsupported on Android.")
+    converter.execute {
+      try {
+        promise.resolve(MementoRecordingConverter.convertToM4A(wavPath))
+      } catch (error: Throwable) {
+        promise.reject("E_CONVERT", error.message ?: "Could not compress the recording.", error)
+      }
+    }
   }
 
   private external fun nativeInstall(runtimePointer: Long)
 
   companion object {
+    /** One conversion at a time; recordings are converted once, after a call. */
+    private val converter = java.util.concurrent.Executors.newSingleThreadExecutor()
+
     const val NAME = "MementoVoiceAudio"
 
     init {

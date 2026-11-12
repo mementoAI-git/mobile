@@ -228,3 +228,12 @@ export class CallRecordingSession {
     };
   }
 }
+
+/**
+ * Whether this build can record calls. The recorder takes Memento's voice
+ * from native playback, which iOS always uses; Android only when the build
+ * turns native playback on, or the recording would hold only the host.
+ */
+export function canRecordCalls(os: string, nativePlayback: boolean): boolean {
+  return os === 'ios' || (os === 'android' && nativePlayback);
+}
