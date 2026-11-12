@@ -126,11 +126,25 @@ describe('replayEchoGate', () => {
     expect(report.falseOpenings).toBe(0);
   });
 
-  test('speech already under way when a reply starts is learned as echo and missed, as live', () => {
-    // The engine treats the first 300 ms of each reply as echo calibration.
-    // A voice heard then sets the echo level at its own loudness, so the rest
-    // of the sentence is never twice as loud as "echo". Known risk (17 Oct
-    // speaker review); this pins it so a fix shows up in the numbers.
+  test('speech under way before a reply starts carries on through it', () => {
+    // Echo cannot come before Memento's audio, so the reply-onset calibration
+    // lets a voice heard just before it through instead of learning it.
+    const { capture, samples } = recording([
+      { frames: 25, level: 0, audible: false },
+      { frames: 5, level: 0.08, audible: false },
+      { frames: 25, level: 0.08, audible: true },
+    ]);
+    const labels: SpeechLabel[] = [{ startMs: ms(25), endMs: ms(55) }];
+    const report = replayEchoGate({ capture, samples, labels });
+
+    expect(report.userSpeechWhileAudible).toEqual({ totalMs: ms(25), passedMs: ms(25) });
+  });
+
+  test('speech that starts together with a reply is still learned as echo and missed', () => {
+    // At the same instant, level cannot tell a voice from echo: the first
+    // 300 ms of the reply sets the echo level at the voice's loudness, so the
+    // rest of the sentence is never twice as loud as "echo". Known limit (17
+    // Oct speaker review); this pins it so a fix shows up in the numbers.
     const { capture, samples } = recording([
       { frames: 25, level: 0, audible: false },
       { frames: 25, level: 0.08, audible: true },

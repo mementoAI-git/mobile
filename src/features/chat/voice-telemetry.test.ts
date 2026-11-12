@@ -94,6 +94,7 @@ describe('reportVoiceCall', () => {
           voiceProcessingActive: true,
           uplinkEchoSuppressed: 42,
           bargeIns: 2,
+          echoContinuations: 1,
           uplinkCaptured: 500,
           uplinkDelivered: 380,
           uplinkDroppedShield: 20,
@@ -171,6 +172,7 @@ describe('reportVoiceCall', () => {
     expect(measurements.voice_route_changes).toMatchObject({ value: 3, unit: 'none' });
     expect(measurements.voice_echo_suppressed_frames).toMatchObject({ value: 42, unit: 'none' });
     expect(measurements.voice_barge_ins).toMatchObject({ value: 2, unit: 'none' });
+    expect(measurements.voice_echo_continuations).toMatchObject({ value: 1, unit: 'none' });
     expect(measurements.voice_mic_frames_captured).toMatchObject({ value: 500 });
     expect(measurements.voice_mic_frames_sent).toMatchObject({ value: 380 });
     expect(measurements.voice_mic_frames_dropped_greeting).toMatchObject({ value: 20 });
@@ -182,6 +184,24 @@ describe('reportVoiceCall', () => {
     expect(measurements.voice_prompt_tokens_last).toMatchObject({ value: 5400, unit: 'none' });
     expect(measurements.voice_total_tokens_max).toMatchObject({ value: 6100, unit: 'none' });
     expect(measurements.voice_reply_p50.span).toBeDefined();
+  });
+
+  test('tags calls that end turns early (hybrid end of turn), and counts those turns', () => {
+    const { sentry, spans, measurements } = fakeSentry();
+
+    reportVoiceCall(
+      {
+        latency: completedCall(),
+        endedAt: 9_000,
+        platform: 'ios',
+        toolCalls: 0,
+        hybridEnd: { delayMs: 300, turnEnds: 2 },
+      },
+      sentry,
+    );
+
+    expect(spans[0].options.attributes).toMatchObject({ 'voice.hybrid_end_ms': 300 });
+    expect(measurements.voice_hybrid_turn_ends).toMatchObject({ value: 2, unit: 'none' });
   });
 
   test('marks calls that never reached setup as failed', () => {
