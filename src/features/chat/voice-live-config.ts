@@ -1,4 +1,5 @@
 import type { VoiceLanguageCode } from './voice-language';
+import { parseVoiceCallTime, type VoiceCallTime } from './voice-call-limit';
 import type { LiveConnectConfig, Modality } from '@google/genai/web';
 
 /**
@@ -11,6 +12,8 @@ const AUDIO_MODALITY: LiveConnectConfig['responseModalities'] = ['AUDIO' as Moda
 
 export type VoiceLiveToken = {
   token: string;
+  /** Present when the server limits call length (VOICE_MAX_CALL_MINUTES). */
+  callTime?: VoiceCallTime;
   model: string;
   voiceName: string;
   systemInstruction?: string;
@@ -99,6 +102,7 @@ export function parseVoiceLiveToken(
     speakerFullDuplex:
       typeof response.speakerFullDuplex === 'boolean' ? response.speakerFullDuplex : undefined,
     turnDetection: parseTurnDetection(response.turnDetection),
+    callTime: parseVoiceCallTime(response),
   };
 }
 

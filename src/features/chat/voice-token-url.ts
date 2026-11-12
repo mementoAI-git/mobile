@@ -23,6 +23,8 @@ export type EphemeralTokenParams = {
   capabilities?: string[];
   /** IANA zone; defaults to the device's. Null leaves it out. */
   timeZone?: string | null;
+  /** When the call has a time limit: the ticket from its first token. */
+  callTicket?: string | null;
 };
 
 function deviceTimeZone(): string | undefined {
@@ -37,6 +39,7 @@ export function buildEphemeralTokenUrl(base: string, params: EphemeralTokenParam
   const search = new URLSearchParams();
   if (params.memoryId) search.set('memory_id', params.memoryId);
   if (params.resumeHandle) search.set('resume_handle', params.resumeHandle);
+  if (params.callTicket) search.set('call_ticket', params.callTicket);
   if (params.deviceModel) search.set('device_model', params.deviceModel);
   if (params.capabilities?.length) search.set('capabilities', params.capabilities.join(','));
   // The host's own date and weekday, for "next Friday" and "this morning".
