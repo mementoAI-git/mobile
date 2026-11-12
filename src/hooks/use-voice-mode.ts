@@ -1,4 +1,11 @@
 import { currentDigitalMindName, currentDigitalMindHeaders } from '@/features/chat/digital-mind-runtime';
+import {
+  CALL_ENDING_SOON_PROMPT,
+  CALL_TIME_UP_PROMPT,
+  callLimitSchedule,
+  isCallTimeUp,
+  type VoiceCallTime,
+} from '@/features/chat/voice-call-limit';
 import { voiceEffectLevel } from '@/features/chat/voice-effect-level';
 import { voiceLanguageInstruction } from '@/features/chat/voice-language';
 import { sendVoiceText } from '@/features/chat/voice-text-input';
@@ -312,6 +319,9 @@ export function useVoiceMode({
 
   const sessionRef = useRef<Session | null>(null);
   const resumeHandleRef = useRef<string | null>(null);
+  /** The call's time-limit ticket, sent back on reconnect; null when calls are not limited. */
+  const callTicketRef = useRef<string | null>(null);
+  const callLimitTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const reconnectingRef = useRef(false);
   const reconnectRef = useRef<(reason: ReconnectReason) => Promise<ReconnectResult>>(
     async () => 'unavailable',
@@ -716,6 +726,9 @@ export function useVoiceMode({
     networkUnsubscribeRef.current?.();
     networkUnsubscribeRef.current = null;
     lastNetworkRef.current = undefined;
+    callLimitTimersRef.current.forEach(clearTimeout);
+    callLimitTimersRef.current = [];
+    callTicketRef.current = null;
     toolRelayRef.current?.dispose();
     toolRelayRef.current = null;
     const uplinkRecorder = uplinkRecorderRef.current;
@@ -1060,6 +1073,7 @@ export function useVoiceMode({
             const tokenResponse = await get<unknown>(
               buildEphemeralTokenUrl(endpoint.ephemeralToken, {
                 resumeHandle: resumeHandleRef.current,
+                callTicket: callTicketRef.current,
                 memoryId: memoryIdRef.current,
                 deviceModel: Device.modelName,
                 capabilities: CLIENT_CAPABILITIES,
@@ -1080,12 +1094,19 @@ export function useVoiceMode({
             sessionRef.current = next;
             transportsRef.current?.activate(transport);
             previous?.close();
+            // The server's count is the clock: restart the timers from it.
+            scheduleCallLimitRef.current(liveToken.callTime);
             // An abandoned response's end marker may never arrive on the
             // resumed session; keeping the gate shut could swallow a reply.
             responseGateRef.current?.reset();
             logger.runtime('[VoiceMode] reconnected', { reason, attempt });
             return 'reconnected';
           } catch (error) {
+            if (isCallTimeUp(error)) {
+              // Retrying cannot help: the call's time is up.
+              failureRef.current ??= { step: 'connection-lost', message: 'Call time limit reached' };
+              return 'failed';
+            }
             logger.handledError('Voice reconnect attempt failed', error);
           }
         }
@@ -1179,6 +1200,38 @@ export function useVoiceMode({
     }, 100);
     goodbyeRef.current = { tracker: new GoodbyeTracker(Date.now()), timer, then };
   }, []);
+
+  /**
+   * Arms the call's time limit, when the server sets one: a spoken heads-up
+   * near the end, then a goodbye after which the call ends. Called again on
+   * each reconnect with the server's fresh count.
+   */
+  const scheduleCallLimit = useCallback((callTime: VoiceCallTime | undefined) => {
+    callLimitTimersRef.current.forEach(clearTimeout);
+    callLimitTimersRef.current = [];
+    if (!callTime) return;
+    callTicketRef.current = callTime.ticket;
+    const ask = (text: string) => {
+      try {
+        sessionRef.current?.sendClientContent({ turns: [{ role: 'user', parts: [{ text }] }], turnComplete: true });
+      } catch (error) {
+        logger.handledError('Voice call time notice failed', error);
+      }
+    };
+    const { warnInMs, endInMs } = callLimitSchedule(callTime.secondsLeft);
+    if (warnInMs !== null) {
+      callLimitTimersRef.current.push(setTimeout(() => ask(CALL_ENDING_SOON_PROMPT), warnInMs));
+    }
+    callLimitTimersRef.current.push(
+      setTimeout(() => {
+        if (!isSessionActiveRef.current) return;
+        ask(CALL_TIME_UP_PROMPT);
+        endCallAfterGoodbye();
+      }, endInMs),
+    );
+  }, [endCallAfterGoodbye]);
+  const scheduleCallLimitRef = useRef(scheduleCallLimit);
+  scheduleCallLimitRef.current = scheduleCallLimit;
 
   /**
    * Prepares a call before the tap: opens the Gemini session with the
@@ -1697,6 +1750,9 @@ export function useVoiceMode({
         });
         latencyRef.current?.mark('greetingSent');
       }
+
+      // The call is up: arm its time limit, if the server set one.
+      scheduleCallLimitRef.current(liveToken.callTime);
 
       // Safety guard: The greeting shield prevents the model's initial spoken greeting
       // from leaking into the microphone and causing self-interruption.
