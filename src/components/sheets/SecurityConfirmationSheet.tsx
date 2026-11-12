@@ -118,7 +118,7 @@ export function SecurityConfirmationSheet({
   };
 
   return (
-    <View style={{ paddingHorizontal: 20, paddingTop: 28, paddingBottom: 20 }}>
+    <View style={{ paddingHorizontal: 20, paddingTop: 28 }}>
       <View style={{ alignItems: 'center' }}>
         {/* <AlertTriangle size={76} color={COLORS.warning} fill={COLORS.warning} /> */}
         <AlertTriangleIcon size={116} />

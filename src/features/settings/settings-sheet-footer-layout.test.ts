@@ -99,7 +99,7 @@ describe('Settings sheet footer layout', () => {
     expect(manager).not.toMatch(/mvs\(/);
     // Top inset comes from the shared chrome (web's 8% gap, never under the status bar).
     expect(manager).toContain('{...chrome.props}');
-    expect(manager).toContain('getSheetBottomPadding(insets.bottom');
+    expect(manager).toContain('getSheetActionsBottomPadding(insets.bottom)');
   });
 
   test('uses 20px gutter in SheetManager container', () => {

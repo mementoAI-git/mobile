@@ -1,5 +1,5 @@
 import { isFutureCalendarDay } from '@/features/overview/calendar-selection';
-import { getGreeting, getGreetingPunctuation } from '@/features/overview/greeting';
+import { OverviewGreeting } from '@/components/overview/OverviewGreeting';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
@@ -24,9 +24,9 @@ import { useUiStore } from '@/store';
 import { useUserStats, useMemoriesStats, useCapsuleStats } from '@/hooks/queries/use-overview';
 import { useStories } from '@/hooks/queries/use-memories';
 import { useUserStore } from '@/store';
-import { DashboardHeader, OverviewSkeleton, GreetingIcon, JourneyStatIcon } from '@/components/ui';
+import { DashboardHeader, OverviewSkeleton, JourneyStatIcon } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
-import { TYPE, TYPE_METRICS } from '@/constants/typography';
+import { TYPE } from '@/constants/typography';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/constants/query-keys';
@@ -144,12 +144,6 @@ export default function OverviewScreen() {
   const router = useRouter();
   const openSheet = useUiStore((s) => s.openSheet);
   const user = useUserStore((s) => s.user);
-  const greeting = useMemo(() => getGreeting(), []);
-  // useBright computed once at mount — hour doesn't change meaningfully during a session
-  const useBright = useMemo(() => {
-    const h = new Date().getHours();
-    return h >= 6 && h < 17;
-  }, []);
 
   const openStreakSheet = useCallback(() => {
     Haptics.selectionAsync();
@@ -370,28 +364,8 @@ export default function OverviewScreen() {
             }
           >
             <View className="gap-10">
-              {/* ── Editorial Greeting ────────────────────────────────── */}
-              <Animated.View entering={FadeInDown.duration(600)} className="flex-row items-start gap-3">
-                <GreetingIcon type={useBright ? 'sun' : 'moon'} size={TYPE_METRICS.greeting.lineHeight} />
-                <View className="flex-1">
-                  <Animated.Text
-                    className="text-text-strong"
-                    style={TYPE.greeting}
-                  >
-                    {displayName ? greeting : greeting.replace(/,$/, getGreetingPunctuation(greeting))}
-                    {displayName && (
-                      <Animated.Text style={[
-                        TYPE.greetingName,
-                        // Muted italic, like the other section headings ("Continue reflecting").
-                        { color: COLORS.textWeak },
-                      ]}
-                      >
-                        {' '}
-                        {displayName}{getGreetingPunctuation(greeting)}</Animated.Text>
-                    )}
-                  </Animated.Text>
-                </View>
-              </Animated.View>
+              {/* Greeting — `variant="editorial"` restores web's sun/moon + serif line. */}
+              <OverviewGreeting name={displayName} />
 
               <Animated.View entering={FadeInDown.delay(100)}>
                 <OverviewCaptureCard key={user?._id ?? 'guest'} userId={user?._id} onAddStory={handleAddStory} />

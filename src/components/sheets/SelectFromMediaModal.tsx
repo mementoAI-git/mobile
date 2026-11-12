@@ -16,7 +16,7 @@ import { iconSize, radius, minTouchTarget } from '@/constants/responsive';
 import { useFiles } from '@/hooks/queries/use-files';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
-import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { SheetHeader } from './SheetHeader';
 
 interface SelectFromMediaModalProps {
@@ -144,7 +144,7 @@ export const SelectFromMediaModal = React.memo(
         keyboardBehavior="interactive"
         keyboardBlurBehavior="restore"
       >
-        <View className="flex-1 px-5 pb-8" style={{ paddingBottom: insets.bottom ? insets.bottom + 12 : 32 }}>
+        <View className="flex-1 px-5" style={{ paddingBottom: getSheetActionsBottomPadding(insets.bottom) }}>
           <SheetHeader
             title="Select media"
             onClose={handleClose}

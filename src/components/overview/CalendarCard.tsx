@@ -245,7 +245,7 @@ export function CalendarCard({
                                     </View>
 
                                     {hasEvent && (
-                                        <Check size={12} color={COLORS.success} strokeWidth={3} style={styles.eventDot} />
+                                        <Check size={12} color={COLORS.success} strokeWidth={3} style={[styles.eventDot, (isToday || isSelected) && styles.eventDotUnderCircle]} />
                                     )}
                                 </Pressable>
                             );
@@ -366,15 +366,16 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
         marginTop: 8,
     },
 
+    // Row height leaves room for the check under a filled day circle (40 + 12).
     week: {
-        height: 46,
+        height: 54,
 
         flexDirection: "row",
     },
 
     dayCell: {
         flex: 1,
-        height: 46,
+        height: 54,
 
         position: "relative",
 
@@ -422,11 +423,14 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
         color: COLORS.brand,
     },
 
+    // Tucked just under the number; below the circle on today / the selected day.
     eventDot: {
         position: "absolute",
-        top: 40,
+        top: 31,
+    },
 
-
+    eventDotUnderCircle: {
+        top: 41,
     },
 
     // ─────────────────────────────

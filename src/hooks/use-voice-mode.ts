@@ -1,5 +1,5 @@
 import { currentDigitalMindName, currentDigitalMindHeaders } from '@/features/chat/digital-mind-runtime';
-import { voiceEffectLevel } from '@/features/chat/voice-effect-level';
+import { PlaybackLevelMeter } from '@/features/chat/voice-effect-level';
 import { voiceLanguageInstruction } from '@/features/chat/voice-language';
 import { sendVoiceText } from '@/features/chat/voice-text-input';
 import { useVoicePreferenceStore } from '@/store/voice-preference.store';
@@ -102,6 +102,7 @@ import { parseHybridEndMs, VoiceHybridEnd } from '@/features/chat/voice-hybrid-e
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
 import { CallRecordingSession } from '@/features/chat/call-recording';
+import { toast } from '@/components/ui/Toast';
 import { discardCallRecording, drainCallRecordings, finishCallRecording, getCallRecorderNative, newCallRecordingPath } from '@/features/chat/call-recording-store';
 import { invalidateMemoryQueries } from '@/features/memories/cache';
 import { useAuthStore, useUserStore } from '@/store';
@@ -332,8 +333,12 @@ export function useVoiceMode({
   const isMutedRef = useRef(false);
   const isGreetingActiveRef = useRef(false);
   const isAiSpeakingRef = useRef(false);
-  const playbackLevelRef = useRef(0);
-  const getPlaybackLevel = useCallback(() => engineRef.current?.isAudible(0) ? playbackLevelRef.current : 0, []);
+  // The level of Memento's voice at the moment it is heard, for the voice beam.
+  const playbackMeterRef = useRef(new PlaybackLevelMeter());
+  const getPlaybackLevel = useCallback(() => {
+    const engine = engineRef.current;
+    return engine ? playbackMeterRef.current.level(engine.queueDepthMs()) : 0;
+  }, []);
   const isMountedRef = useRef(true);
   const isDisconnectingRef = useRef(false);
   const isSessionActiveRef = useRef(false);
@@ -627,6 +632,7 @@ export function useVoiceMode({
             clearTimeout(pendingTurnCompleteTimerRef.current);
             pendingTurnCompleteTimerRef.current = null;
           }
+          playbackMeterRef.current.reset();
           transcriptRef.current.handleInterruption();
           transcriptRef.current.completeTurn();
           syncCompletedTurns(true);
@@ -639,7 +645,7 @@ export function useVoiceMode({
           selfInterruptRef.current?.observeModelAudio();
           goodbyeRef.current?.tracker.onModelAudio();
           if (engine?.enqueueOutput(effect.data, effect.epoch) && isMountedRef.current) {
-            playbackLevelRef.current = voiceEffectLevel(effect.data);
+            playbackMeterRef.current.push(effect.data);
             isAiSpeakingRef.current = true;
             setIsAiSpeaking(true);
           }
@@ -784,6 +790,7 @@ export function useVoiceMode({
 
     const engine = engineRef.current;
     engineRef.current = null;
+    playbackMeterRef.current.reset();
     await engine?.stop().catch((error) => logger.handledError('Voice audio cleanup failed', error));
     const engineSnapshot = engine?.snapshot();
     if (engineSnapshot) logger.runtime('[VoiceMode] session metrics', engineSnapshot);
@@ -857,8 +864,20 @@ export function useVoiceMode({
       const recordingUserId = useUserStore.getState().user?._id;
       // A conversation with nothing said is not worth a story.
       if (turnSync && recordingUserId && recording.segments.length > 0) {
+        // Reassure the person their conversation is kept once it is safe.
         void finishCallRecording({ userId: recordingUserId, sessionId: turnSync.getSessionId(), recording })
-          .catch((error) => logger.handledError('Voice recording could not be saved', error));
+          .then((result) => {
+            toast(
+              result === 'sent'
+                ? 'Your conversation recording is saved to Stories'
+                : 'Your conversation recording is saved and will appear in Stories shortly',
+              'success',
+            );
+          })
+          .catch((error) => {
+            logger.handledError('Voice recording could not be saved', error);
+            toast('We couldn’t save this conversation’s recording', 'error');
+          });
       } else {
         discardCallRecording(recording.path);
       }
@@ -1415,7 +1434,7 @@ export function useVoiceMode({
       onMicFrame: (samples, flags) => {
         if (DEBUG_CAPTURE_GATE) gateCaptureRef.current?.add(samples, flags);
         // Everything the mic hears goes to the recording, except while muted.
-        callRecordingRef.current?.pushMic(samples, isMutedRef.current);
+        callRecordingRef.current?.pushMic(samples, isMutedRef.current, flags.audibleOnSpeaker);
       },
       onFatalError: (error) => {
         logger.handledError('Native voice audio failed', error);
@@ -1444,6 +1463,7 @@ export function useVoiceMode({
       },
     });
     engineRef.current = engine;
+    playbackMeterRef.current.reset();
 
 
     try {

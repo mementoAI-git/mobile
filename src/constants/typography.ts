@@ -6,8 +6,13 @@ export const TYPE_METRICS = Object.freeze({
   displayStat: Object.freeze({fontSize: ms(48, 0.25), lineHeight: ms(54, 0.25)}),
   displayTitle: Object.freeze({fontSize: ms(36, 0.25), lineHeight: ms(42, 0.25)}),
   screenTitle: Object.freeze({fontSize: ms(28, 0.25), lineHeight: ms(34, 0.25)}),
-  greeting: Object.freeze({fontSize: ms(24, 0.25), lineHeight: ms(32, 0.25)}),
-  captureInput: Object.freeze({fontSize: ms(24, 0.25), lineHeight: ms(34, 0.25)}),
+  // Fixed 28/34 (not device-scaled), per the Overview greeting design.
+  greeting: Object.freeze({fontSize: 28, lineHeight: 34}),
+  /** Garamond runs small next to SF Pro Rounded, so the name is set larger on the same line height. */
+  greetingName: Object.freeze({fontSize: 32, lineHeight: 34}),
+  // The editorial greeting (still used on web): one serif line beside the sun/moon.
+  greetingEditorial: Object.freeze({fontSize: ms(24, 0.25), lineHeight: ms(32, 0.25)}),
+  captureInput: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(28, 0.25)}),
   reflectionTitle: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(27, 0.25)}),
   sectionTitle: Object.freeze({fontSize: ms(22, 0.25), lineHeight: ms(28, 0.25)}),
   cardTitle: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(26, 0.25)}),
@@ -51,8 +56,13 @@ export const TYPE = StyleSheet.create({
   reflectionTitle: {fontFamily: FONTS.serif, ...TYPE_METRICS.reflectionTitle},
   /** Orange highlighted words in a reflection prompt: the loaded serif italic face, never synthetic italics. */
   reflectionTitleAccent: {fontFamily: FONTS.serifItalic, ...TYPE_METRICS.reflectionTitle},
-  greeting: {fontFamily: FONTS.serif, ...TYPE_METRICS.greeting},
-  greetingName: {fontFamily: FONTS.serifItalic, ...TYPE_METRICS.greeting},
+  /** Overview greeting: SF Pro Rounded semibold on iOS, two lines (greeting + prompt). */
+  greeting: {fontFamily: Platform.select({ios: FONTS.sans, default: FONTS.sansSemi}), fontWeight: '600', ...TYPE_METRICS.greeting},
+  /** The person's name inside the greeting: muted serif medium italic accent. */
+  greetingName: {fontFamily: FONTS.serifMediumItalic, ...TYPE_METRICS.greetingName},
+  /** Editorial greeting variant (web's welcome section): EB Garamond 24/32, name in serif italic. */
+  greetingEditorial: {fontFamily: FONTS.serif, ...TYPE_METRICS.greetingEditorial},
+  greetingEditorialName: {fontFamily: FONTS.serifItalic, ...TYPE_METRICS.greetingEditorial},
   sectionTitle: {fontFamily: FONTS.serif, ...TYPE_METRICS.sectionTitle},
   sectionTitleWeak: {fontFamily: FONTS.serifItalic, ...TYPE_METRICS.sectionTitle},
   cardTitle: {fontFamily: FONTS.serifMedium, ...TYPE_METRICS.cardTitle},

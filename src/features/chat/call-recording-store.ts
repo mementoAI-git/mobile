@@ -85,6 +85,8 @@ export function drainCallRecordings(userId: string) {
 /**
  * Keeps a finished call's recording and saves it as a story: compressed to
  * M4A, written to the outbox first (so nothing is lost), then sent.
+ * Resolves `sent` once the story is saved, or `queued` when it is kept on the
+ * device for the next send (offline, or another send already running).
  */
 export async function finishCallRecording({
   userId,
@@ -94,7 +96,7 @@ export async function finishCallRecording({
   userId: string;
   sessionId: string;
   recording: { path: string; durationMs: number; segments: RecordingSegment[]; speech: SpeechSpan[] };
-}) {
+}): Promise<'sent' | 'queued'> {
   let path = recording.path;
   try {
     path = await convertRecordingToM4A(recording.path);
@@ -111,6 +113,8 @@ export async function finishCallRecording({
     speech: recording.speech,
   });
   await drainCallRecordings(userId);
+  const pending = (await outbox.entries()).some((entry) => entry.sessionId === sessionId);
+  return pending ? 'queued' : 'sent';
 }
 
 /** Removes a recording that will not be kept (an empty or very short call). */

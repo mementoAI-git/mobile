@@ -82,6 +82,47 @@ describe('call recording session', () => {
     expect(session.stop(turns)).toBeNull();
   });
 
+  test('keeps each turn\'s time when the user\'s words arrive after Memento\'s reply started', () => {
+    const { native } = fakeNative();
+    const session = new CallRecordingSession(native);
+    session.start('/tmp/call.wav');
+    native.setMs(5_000);
+    session.noteTurns([{ role: 'ai', text: 'Sure' }]);
+    native.setMs(6_000);
+    // The live transcript puts the user's late words ahead of the reply.
+    const turns = [{ role: 'user' as const, text: 'Tell me' }, { role: 'ai' as const, text: 'Sure' }];
+    session.noteTurns(turns);
+    const result = session.stop(turns);
+    // Before, the reply's 5s landed on the user's turn and the reply got 6s.
+    // Now the user keeps their own time (5.2s) and the reply never starts before it.
+    expect(result?.segments.map((segment) => [segment.speaker, segment.start])).toEqual([['user', 5.2], ['ai', 5.2]]);
+  });
+
+  test('starts the user\'s turn where the mic first heard them, not when the words were transcribed', () => {
+    const { native } = fakeNative();
+    const session = new CallRecordingSession(native);
+    session.start('/tmp/call.wav');
+    const quiet = new Float32Array(640); // 40 ms at 16 kHz
+    const voice = new Float32Array(640).fill(0.1);
+    native.setMs(1_000);
+    session.noteTurns([{ role: 'ai', text: 'Hello' }]);
+    // Memento's echo while it is audible is not the user.
+    native.setMs(1_500);
+    session.pushMic(voice, false, true);
+    for (let i = 0; i < 40; i += 1) session.pushMic(quiet, false);
+    native.setMs(4_000);
+    for (let i = 0; i < 10; i += 1) session.pushMic(voice, false);
+    // A short pause inside the sentence is not a new start.
+    native.setMs(4_600);
+    for (let i = 0; i < 5; i += 1) session.pushMic(quiet, false);
+    for (let i = 0; i < 5; i += 1) session.pushMic(voice, false);
+    // The words only arrive 4 seconds later.
+    native.setMs(8_000);
+    const turns = [{ role: 'ai' as const, text: 'Hello' }, { role: 'user' as const, text: 'I went to the market' }];
+    session.noteTurns(turns);
+    expect(session.stop(turns)?.segments.map((segment) => segment.start)).toEqual([1, 4]);
+  });
+
   test('does nothing when the native recorder could not start', () => {
     const { native, pushed } = fakeNative();
     native.startRecording = () => false;

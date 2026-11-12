@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Keyboard, Text, View } from 'react-native';
+import { SheetActions, SHEET_FILL } from './SheetActions';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import Check from 'lucide-react-native/icons/check';
 import * as Haptics from 'expo-haptics';
@@ -35,7 +36,7 @@ export function DigitalMindSheet({ userId, onClose }: { userId: string; onClose:
     if (!userId) return;
     Keyboard.dismiss(); saveProfile(userId, preview); onClose();
   }, [userId, saveProfile, preview, onClose]);
-  return <View className="pb-2" style={{ gap: SHEET_GROUP_GAP }}>
+  return <View style={{ ...SHEET_FILL, gap: SHEET_GROUP_GAP }}>
     <SheetHeader title="Your digital mind" onClose={onClose} closeLabel="Close digital mind customization" />
     <View style={{ gap: SHEET_SECTION_GAP }}>
     <View className="items-center py-2">
@@ -64,8 +65,8 @@ export function DigitalMindSheet({ userId, onClose }: { userId: string; onClose:
       </View>
     </View>
     </View>
-    <Button onPress={save} disabled={!userId} fullWidth variant="ghost" accessibilityLabel="Save" style={{ height: 48, minHeight: 48, borderRadius: 100, paddingVertical: 0, backgroundColor: colors.activeFill }}>
+    <SheetActions><Button onPress={save} disabled={!userId} fullWidth variant="ghost" accessibilityLabel="Save" style={{ height: 48, minHeight: 48, borderRadius: 100, paddingVertical: 0, backgroundColor: colors.activeFill }}>
       <Text style={[TYPE.button, { color: colors.activeText }]}>Save</Text>
-    </Button>
+    </Button></SheetActions>
   </View>;
 }

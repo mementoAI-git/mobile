@@ -21,6 +21,7 @@ import Pause from 'lucide-react-native/icons/pause';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
+import { isCallRecordingAttachment } from '@/features/memories/call-recording-story';
 import { useUiStore, useFeedAudioPlaybackStore } from '@/store';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -123,6 +124,16 @@ function AnimatedCardWaveBar({
   );
 }
 
+function decodeEntities(text: string) {
+  return text
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0?39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&amp;/gi, '&');
+}
+
 function formatAudioSeconds(secs: number) {
   const total = Math.max(0, Math.floor(secs));
   const m = Math.floor(total / 60);
@@ -142,9 +153,11 @@ function formatRecordingClock(secs: number) {
 }
 
 /** Voice recording story card: weak fill, two faint rings, brand waveform and the time in a chip. */
-function VoiceRecordingCardVisual({ memory, seconds, onOpenPlayer, onActions }: {
+function VoiceRecordingCardVisual({ memory, seconds, aspectRatio, onOpenPlayer, onActions }: {
   memory: IMemory;
   seconds: number;
+  /** The grid's seeded masonry ratio, so recordings vary in height like other cards. */
+  aspectRatio: number;
   onOpenPlayer: () => void;
   onActions: () => void;
 }) {
@@ -153,14 +166,12 @@ function VoiceRecordingCardVisual({ memory, seconds, onOpenPlayer, onActions }: 
   return (
     <View
       style={{
-        aspectRatio: VOICE_CARD_SIZE.width / VOICE_CARD_SIZE.height,
+        aspectRatio,
         backgroundColor: colors.fillWeak,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: colors.strokeWeaker,
         overflow: 'hidden',
       }}
-      className="w-full relative"
+      // Same shape as the other grid cards: 14px corners, no border.
+      className="w-full rounded-[14px] relative"
     >
       <Svg
         pointerEvents="none"
@@ -320,6 +331,7 @@ function MasonryAudioCardVisual({
       <VoiceRecordingCardVisual
         memory={memory}
         seconds={totalSecs}
+        aspectRatio={aspectRatio}
         onOpenPlayer={handleOpenPlayer}
         onActions={handleActions}
       />
@@ -383,11 +395,14 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
     [memory.attachments],
   );
 
-  // Strip HTML once — reused across all render branches
+  // Strip HTML once — reused across all render branches. Entities are decoded
+  // so transcripts read "It's", not "It&#39;s".
   const bodyText = useMemo(
-    () => memory.body?.replace(/<[^>]+>/g, '').trim() ?? '',
+    () => decodeEntities(memory.body?.replace(/<[^>]+>/g, '') ?? '').trim(),
     [memory.body],
   );
+  // Recorded conversations look like recordings: the audio card, not the transcript.
+  const isCallRecording = isCallRecordingAttachment(audioMedia);
 
   const cardScale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: cardScale.value }] }));
@@ -467,8 +482,8 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
       );
     }
 
-    // ── Audio card — only show when body has no actual text content ───────────
-    if (audioMedia && !bodyText) {
+    // ── Audio card — recordings (no text) and recorded conversations ──────────
+    if (audioMedia && (!bodyText || isCallRecording)) {
       return (
         <MasonryAudioCardVisual
           memory={memory}
@@ -514,7 +529,7 @@ export const MasonryMemoryCard = React.memo(function MasonryMemoryCard({
       </View>
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [COLORS, bannerMedia, audioMedia, bodyText, aspectRatio, textCardMinHeight, textBodyLines, memory, handleActions, handleVideoPress]);
+  }, [COLORS, bannerMedia, audioMedia, bodyText, isCallRecording, aspectRatio, textCardMinHeight, textBodyLines, memory, handleActions, handleVideoPress]);
 
 
   if (variant === 'list') {

@@ -232,6 +232,7 @@ export const FONTS = {
   serifMedium: 'EBGaramond_500Medium',
   serifBold: 'EBGaramond_700Bold',
   serifItalic: 'EBGaramond_400Regular_Italic',
+  serifMediumItalic: 'EBGaramond_500Medium_Italic',
   mono: 'AzeretMono_400Regular',
   geist: 'Geist_400Regular',
   geistMedium: 'Geist_500Medium',

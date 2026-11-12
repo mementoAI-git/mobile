@@ -27,7 +27,7 @@ import {
 } from '@/components/chat/MessageBubble';
 import { VoiceSessionDivider } from '@/components/chat/VoiceSessionDivider';
 import { DigitalMindHeader } from '@/components/chat/DigitalMindHeader';
-import { VoiceScreenBeam } from '@/components/effects/VoiceGlow';
+import { VoiceScreenBeam, useHostVoiceBeam } from '@/components/effects/VoiceGlow';
 import { FrostedHeaderBackdrop, HeaderButtonBlur } from '@/components/ui/FrostedHeaderBackdrop';
 import { MessageActionsProvider } from '@/components/chat/MessageActionsProvider';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
@@ -221,8 +221,12 @@ export default function ChatScreen() {
   // Intercept Android hardware back to prevent app exit when history is empty
   useBackHandler(handleBack);
 
-  const { voice: voiceCall } = useVoiceCall();
+  const { voice: voiceCall, startCall: startVoiceCall } = useVoiceCall();
   const showInlineVoice = Boolean((voiceCall.isConnected || voiceCall.isConnecting || voiceCall.isEnding) && voiceCall.voiceTimeline?.memoryId === activeChatId);
+  // The chat draws the beam behind its messages and input, so the app-wide one stands aside.
+  const [isFocused, setIsFocused] = useState(false);
+  useFocusEffect(useCallback(() => { setIsFocused(true); return () => setIsFocused(false); }, []));
+  useHostVoiceBeam(showInlineVoice && isFocused);
   const [replyQuote, setReplyQuote] = useState<ChatReplyQuote | null>(null);
   const [replyQuoteHeight, setReplyQuoteHeight] = useState(0);
   const [headerHeight, setHeaderHeight] = useState(DEFAULT_HEADER_HEIGHT);
@@ -386,12 +390,19 @@ export default function ChatScreen() {
           ? activeChatId
           : profile?.primary_conversation_id;
       voiceCall.prefetch({ memoryId, voiceName: voice.providerVoiceName });
+      // With a saved voice there is nothing to choose, so start the call here
+      // rather than flashing the voice page open and shut. It carries on in the
+      // floating call card; a plan without voice still opens the upgrade page.
+      if (!voiceCall.isConnected && !voiceCall.isConnecting) {
+        startVoiceCall({ memoryId, voiceName: voice.providerVoiceName });
+      }
+      return;
     }
     router.push({
       pathname: '/voice-call',
       params: { memoryId: activeChatId ?? '', returnToChat: 'true' },
     });
-  }, [activeChatId, router, voiceCall]);
+  }, [activeChatId, router, voiceCall, startVoiceCall]);
 
   const allMessagesRef = useRef(allMessages);
   allMessagesRef.current = allMessages;

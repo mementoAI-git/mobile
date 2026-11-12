@@ -11,11 +11,13 @@ import { iconSize, minTouchTarget, ms, responsiveSpace } from '@/constants/respo
 
 interface EmptyStateProps {
   title: string;
-  description: string;
+  description?: string;
   image?: ImageSourcePropType;
   icon?: LucideIcon;
   actionLabel?: string;
   onAction?: () => void;
+  /** `inverse` is the theme's selected fill: white in dark, ink in light. */
+  actionTone?: 'brand' | 'inverse';
   className?: string;
 }
 
@@ -26,6 +28,7 @@ export function EmptyState({
   icon: Icon,
   actionLabel,
   onAction,
+  actionTone = 'brand',
   className,
 }: EmptyStateProps) {
   const COLORS = useThemeColors();
@@ -41,42 +44,46 @@ export function EmptyState({
         />
       ) : Icon ? (
         <View
-          className="rounded-full bg-fill-weaker items-center justify-center"
+          className="rounded-full bg-fill-weak items-center justify-center"
           style={{
-            padding: responsiveSpace(24),
-            marginBottom: responsiveSpace(24),
+            padding: responsiveSpace(20),
+            marginBottom: responsiveSpace(20),
           }}
         >
-          <Icon size={iconSize(48)} color={COLORS.textDisabled} strokeWidth={1.5} />
+          <Icon size={iconSize(32)} color={COLORS.textWeak} strokeWidth={1.8} />
         </View>
       ) : null}
 
       <Animated.Text
         className="text-text-strong text-center"
-        style={[TYPE.cardTitle, { marginBottom: responsiveSpace(8) }]}
+        style={[TYPE.cardTitle, { marginBottom: responsiveSpace(description ? 8 : 24) }]}
       >
         {title}
       </Animated.Text>
 
-      <Animated.Text
-        className="text-text-weak text-center"
-        style={[TYPE.bodySmall, { marginBottom: responsiveSpace(32) }]}
-      >
-        {description}
-      </Animated.Text>
+      {description ? (
+        <Animated.Text
+          className="text-text-weak text-center"
+          style={[TYPE.bodySmall, { marginBottom: responsiveSpace(32) }]}
+        >
+          {description}
+        </Animated.Text>
+      ) : null}
 
       {actionLabel && onAction && (
         <TouchableOpacity
           onPress={onAction}
           activeOpacity={0.8}
-          className="bg-brand rounded-full shadow-sm items-center justify-center"
+          accessibilityRole="button"
+          className={cn('rounded-full items-center justify-center', actionTone === 'brand' && 'bg-brand shadow-sm')}
           style={{
+            backgroundColor: actionTone === 'inverse' ? COLORS.activeFill : undefined,
             minHeight: minTouchTarget(44),
             paddingHorizontal: responsiveSpace(32),
             paddingVertical: responsiveSpace(14),
           }}
         >
-          <Animated.Text className="text-white" style={TYPE.button}>
+          <Animated.Text style={[TYPE.button, { color: actionTone === 'inverse' ? COLORS.activeText : COLORS.textInverse }]}>
             {actionLabel}
           </Animated.Text>
         </TouchableOpacity>

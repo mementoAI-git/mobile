@@ -10,7 +10,7 @@ import { CAPSULE_THEMES, Theme } from '@/constants/themes';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize } from '@/constants/responsive';
-import { getSheetBottomPadding, SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
+import { SHEET_GROUP_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { useCapsuleThemeFonts } from '@/hooks/use-capsule-theme-fonts';
 import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
 
@@ -124,7 +124,7 @@ export function StylePicker({
           onClose={() => themeModalRef.current?.dismiss()}
           style={{ paddingHorizontal: 20 }}
         />
-        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 12 }}>
+        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetActionsBottomPadding(insets.bottom), gap: 12 }}>
           {CAPSULE_THEMES.map((theme) => {
             const isSelected = theme.id === currentThemeId;
             return (
@@ -155,7 +155,7 @@ export function StylePicker({
           onClose={() => sizeModalRef.current?.dismiss()}
           style={{ paddingHorizontal: 20 }}
         />
-        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetBottomPadding(insets.bottom, 20), gap: 12 }}>
+        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: SHEET_GROUP_GAP, paddingBottom: getSheetActionsBottomPadding(insets.bottom), gap: 12 }}>
           {sizes.map((size) => {
             const isSelected = size === fontSize;
             return (

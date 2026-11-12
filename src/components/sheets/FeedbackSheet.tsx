@@ -1,6 +1,7 @@
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
+import { SheetActions, SHEET_FILL } from './SheetActions';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { Button, TextInput, Spinner } from '@/components/ui';
 import ImageIcon from 'lucide-react-native/icons/image';
@@ -115,7 +116,7 @@ export function FeedbackSheet() {
     <BottomSheetScrollView
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ gap: SHEET_GROUP_GAP }}
+      contentContainerStyle={{ ...SHEET_FILL, gap: SHEET_GROUP_GAP }}
     >
       <SheetHeader title="Send feedback" onClose={closeSheet} closeLabel="Close feedback" />
 
@@ -194,7 +195,7 @@ export function FeedbackSheet() {
 
       </View>
 
-      <View className="flex-row gap-3">
+      <SheetActions className="flex-row gap-3">
         <Button variant="secondary" size="lg" rounded="full" onPress={closeSheet} className="h-14 flex-1">
           Cancel
         </Button>
@@ -208,7 +209,7 @@ export function FeedbackSheet() {
         >
           Send feedback
         </Button>
-      </View>
+      </SheetActions>
     </BottomSheetScrollView>
   );
 }

@@ -75,7 +75,26 @@ const GLASS_BG = Platform.select({
 
 
 const PILL_H     = Platform.OS === 'android' ? 66 : 64;
+/** The frosted fade rises this far above the pill's vertical centre. */
+const FADE_RISE  = 64;
+
+/** Bottom inset where the tab bar's fade begins, so floating buttons can sit clear above it. */
+export function tabBarFadeTop(safeAreaBottom: number): number {
+  const bottomPad = safeAreaBottom ? safeAreaBottom + 16 : 32;
+  return bottomPad + PILL_H / 2 + FADE_RISE;
+}
 const ICON_SIZE  = iconSize(24);
+
+/** The detached settings circle's size: smaller on narrow phones. */
+function settingsCircleSize(screenWidth: number) {
+  return screenWidth < 360 ? 48 : minTouchTarget(56);
+}
+
+/** Bottom inset of the settings circle's top edge, so a floating button can stack above it. */
+export function tabBarSettingsTop(safeAreaBottom: number, screenWidth: number): number {
+  const bottomPad = safeAreaBottom ? safeAreaBottom + 16 : 32;
+  return bottomPad + PILL_H / 2 + settingsCircleSize(screenWidth) / 2;
+}
 
 type TabRoute = {
   key: string;
@@ -289,11 +308,11 @@ export function TabBar({ state, navigation }: TabBarProps) {
         accessible={false}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
-        style={{ position: 'absolute', left: -20, right: -20, top: -PILL_H / 2 - 64, bottom: -bottomPad, overflow: 'hidden' }}
+        style={{ position: 'absolute', left: -20, right: -20, top: -PILL_H / 2 - FADE_RISE, bottom: -bottomPad, overflow: 'hidden' }}
         maskElement={
           <LinearGradient
             colors={['transparent', COLORS.textInverse, COLORS.textInverse]}
-            locations={[0, 64 / (bottomPad + PILL_H / 2 + 64), 1]}
+            locations={[0, FADE_RISE / (bottomPad + PILL_H / 2 + FADE_RISE), 1]}
             style={{ flex: 1 }}
           />
         }
@@ -331,10 +350,20 @@ export function TabBar({ state, navigation }: TabBarProps) {
         accessibilityRole="button"
         accessibilityLabel="Settings"
         accessibilityState={{ selected: settingsSelected }}
-        style={[styles.searchCircle, { width: screenWidth < 360 ? 48 : minTouchTarget(56), height: screenWidth < 360 ? 48 : minTouchTarget(56), backgroundColor: settingsSelected ? COLORS.fillWeak : COLORS.card, borderColor: COLORS.strokeWeak, borderWidth: 1 }]}
+        style={[styles.searchCircle, { width: settingsCircleSize(screenWidth), height: settingsCircleSize(screenWidth), backgroundColor: 'transparent', borderColor: COLORS.strokeWeak, borderWidth: 1 }]}
         android_ripple={{ color: COLORS.brandSubtle, borderless: true, radius: 28 }}
       >
-        <Settings size={iconSize(22)} color={COLORS.textBase} strokeWidth={1.8} />
+        {/* Frosted like the dock's fade: a blur of what's behind, then the weak fill. */}
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 999, overflow: 'hidden' }]}>
+          {Platform.OS === 'ios' ? (
+            <BlurView tint={dark ? 'dark' : 'light'} intensity={60} style={StyleSheet.absoluteFill} />
+          ) : (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.popover }]} />
+          )}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.fillWeak }]} />
+          {settingsSelected ? <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.fillWeak }]} /> : null}
+        </View>
+        <Settings size={iconSize(22)} color={settingsSelected ? COLORS.textStrong : COLORS.textBase} strokeWidth={1.8} />
       </Pressable>
     </Animated.View>
   );
