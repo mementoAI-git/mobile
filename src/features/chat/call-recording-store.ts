@@ -9,7 +9,7 @@ import { post } from '@/api/mutations';
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
 import { logger } from '@/lib/logger';
-import type { CallRecorderNative, RecordingSegment, SpeechSpan } from './call-recording';
+import { canRecordCalls, type CallRecorderNative, type RecordingSegment, type SpeechSpan } from './call-recording';
 import {
   buildRecordingSaveBody,
   CallRecordingOutbox,
@@ -18,9 +18,9 @@ import {
   type RecordingToSave,
 } from './call-recording-outbox';
 
-/** The native recorder, on builds that have it (iOS only for now). */
+/** The native recorder, on builds that have it. */
 export function getCallRecorderNative(): CallRecorderNative | null {
-  if (Platform.OS !== 'ios') return null;
+  if (!canRecordCalls(Platform.OS, process.env.EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK === 'true')) return null;
   try {
     return getNativeVoiceRecorder();
   } catch {
