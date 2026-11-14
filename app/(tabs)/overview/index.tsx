@@ -1,5 +1,6 @@
 import { isFutureCalendarDay } from '@/features/overview/calendar-selection';
 import { OverviewGreeting } from '@/components/overview/OverviewGreeting';
+import { OnboardingNudgeBanner } from '@/components/onboarding/OnboardingReminderCard';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
@@ -366,6 +367,8 @@ export default function OverviewScreen() {
             <View className="gap-10">
               {/* Greeting — `variant="editorial"` restores web's sun/moon + serif line. */}
               <OverviewGreeting name={displayName} />
+
+              <OnboardingNudgeBanner />
 
               <Animated.View entering={FadeInDown.delay(100)}>
                 <OverviewCaptureCard key={user?._id ?? 'guest'} userId={user?._id} onAddStory={handleAddStory} />

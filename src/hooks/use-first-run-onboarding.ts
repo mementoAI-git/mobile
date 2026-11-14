@@ -25,6 +25,15 @@ import type { EnrichmentCategory } from '@/constants/enrichment';
 import type { OnboardingMotivation } from '@/constants/onboarding';
 import { useAuthStore, useUserStore } from '@/store';
 import { persistSessionUser } from '@/features/auth/session-credentials';
+import { get } from '@/api/mutations';
+import endpoint from '@/api/endpoint';
+import {
+  buildSkipAnswers,
+  draftFromSavedAnswers,
+  endOnboardingReturn,
+  hasNoAnswers,
+  type SavedOnboardingAnswers,
+} from '@/features/onboarding/onboarding-resume';
 
 interface OnboardingStoreState {
   draft: FirstRunOnboardingDraft;
@@ -60,7 +69,7 @@ export function useFirstRunOnboarding() {
     let isMounted = true;
     if (!isHydrated) {
       readOnboardingDraft(secureStorage)
-        .then((savedDraft) => {
+        .then(async (savedDraft) => {
           if (!isMounted) return;
           const currentUser = useAuthStore.getState().user ?? useUserStore.getState().user;
           const initialName =
@@ -68,11 +77,19 @@ export function useFirstRunOnboarding() {
             currentUser?.nickname ||
             currentUser?.first_name ||
             '';
+          const draft = { ...savedDraft, preferredName: initialName };
 
-          setDraft(() => ({
-            ...savedDraft,
-            preferredName: initialName,
-          }));
+          // Back after skipping, with nothing on this device: start from the
+          // beginning with the answers the API kept when they skipped.
+          if (currentUser?.onboarding_status === 'skipped' && hasNoAnswers(draft)) {
+            const saved = await get<{ persona?: SavedOnboardingAnswers }>(endpoint.onboardingDetails)
+              .then((response) => response.data?.persona ?? null)
+              .catch(() => null);
+            if (!isMounted) return;
+            setDraft(() => draftFromSavedAnswers(draft, saved));
+          } else {
+            setDraft(() => draft);
+          }
           setHydrated(true);
         })
         .catch(() => {
@@ -167,6 +184,10 @@ export function useFirstRunOnboarding() {
   const handleSkip = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const currentUser = useAuthStore.getState().user ?? useUserStore.getState().user;
+    const { draft: currentDraft } = useOnboardingStore.getState();
+    const answers = buildSkipAnswers(currentDraft);
+    const typedName = currentDraft.preferredName.trim();
+    const nickname = typedName && typedName !== currentUser?.nickname ? typedName : undefined;
     if (currentUser) {
       const skippedUser = { ...currentUser, onboarding_status: 'skipped' as const };
       useAuthStore.getState().updateUser(skippedUser);
@@ -174,11 +195,12 @@ export function useFirstRunOnboarding() {
       void persistSessionUser(skippedUser, secureStorage);
     }
     try {
-      await skipMutation.mutateAsync();
+      await skipMutation.mutateAsync({ answers, nickname });
     } catch {
       // Local skip still lets user into app
     }
     resetDraft();
+    endOnboardingReturn();
     router.replace('/(tabs)/overview');
   }, [resetDraft, router, skipMutation]);
 
@@ -187,6 +209,7 @@ export function useFirstRunOnboarding() {
     const payload = buildOnboardingPayload(draft);
     await completeMutation.mutateAsync(payload);
     resetDraft();
+    endOnboardingReturn();
     router.replace('/(tabs)/overview');
   }, [completeMutation, draft, resetDraft, router]);
 

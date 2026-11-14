@@ -35,6 +35,12 @@ export function getSessionRouteAction(
         };
   }
 
+  // Someone who skipped can return to finish onboarding from Settings,
+  // Insights or the overview banner.
+  if (inOnboard && snapshot.onboardingStatus === 'skipped' && snapshot.resumingOnboarding) {
+    return { type: 'none' };
+  }
+
   if (inAuth || inOnboard) {
     return {
       type: 'replace',
@@ -52,5 +58,6 @@ export function getSessionReconciliationKey(snapshot: SessionRouteSnapshot) {
     snapshot.group ?? '',
     snapshot.onboardingStatus ?? '',
     snapshot.pendingHref ? String(snapshot.pendingHref) : '',
+    snapshot.resumingOnboarding ? 'resuming' : '',
   ].join('|');
 }

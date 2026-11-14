@@ -15,6 +15,7 @@ import {
   sanitizeUser,
 } from './session-credentials';
 import { post } from '@/api/mutations';
+import { getOnboardingUserAccountId } from '@/features/onboarding/onboarding-completion';
 import endpoint from '@/api/endpoint';
 import {
   reconcileOnboardingSkipMarker,
@@ -83,6 +84,16 @@ export function syncAuthenticatedUser(user: IUser): IUser {
           skipRetryPending = false;
         });
     }
+  }
+  // A profile request started before onboarding finished can land after it
+  // with "never"; keeping it would route the user back into onboarding.
+  if (
+    currentUser?.onboarding_status === 'completed' &&
+    sanitized.onboarding_status === 'never' &&
+    getOnboardingUserAccountId(currentUser) === getOnboardingUserAccountId(sanitized)
+  ) {
+    sanitized.onboarding_status = 'completed';
+    sanitized.onboarded = true;
   }
   useUserStore.getState().setUser(sanitized);
   if (useAuthStore.getState().token) useAuthStore.getState().updateUser(sanitized);

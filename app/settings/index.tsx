@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/icons/SettingsIcons';
 import { SettingsHubRow } from '@/components/settings/SettingsHubRow';
 import { PlanSummaryBanner } from '@/components/subscription/PlanSummaryBanner';
+import { OnboardingReminderCard } from '@/components/onboarding/OnboardingReminderCard';
 import { useSubscription } from '@/hooks/queries/use-subscription';
 import { TYPE } from '@/constants/typography';
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -122,6 +123,8 @@ export default function SettingsIndex() {
             cancelAtPeriodEnd={summary?.cancel_at_period_end}
             provider={summary?.provider}
           />
+
+          <OnboardingReminderCard />
 
           <TouchableOpacity
             onPress={() => {

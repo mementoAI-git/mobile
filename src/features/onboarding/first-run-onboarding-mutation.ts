@@ -10,6 +10,7 @@ import {
   type OnboardingSessionOwnership,
 } from './onboarding-completion';
 import type { IAuth, IUser } from '@/types';
+import type { OnboardingSkipAnswers } from './onboarding-resume';
 
 type Request = (url: string, payload: unknown) => Promise<ApiResponse<unknown>>;
 
@@ -137,11 +138,19 @@ function requireOwnership(
 
 export async function executeSkipFirstRunOnboardingMutation(
   dependencies: FirstRunOnboardingMutationDependencies,
+  answers: OnboardingSkipAnswers = {},
+  nickname?: string,
 ): Promise<IUser> {
   const ownership = requireOwnership(dependencies);
   assertOnboardingOwnership(ownership, dependencies.getOwnership());
 
-  const response = await dependencies.postRequest(endpoint.onboardingSkip, {});
+  // Keep a name typed before Skip; best effort, it must not block skipping.
+  if (nickname?.trim()) {
+    await dependencies.putRequest(endpoint.profile, { nickname: nickname.trim() }).catch(() => undefined);
+    assertOnboardingOwnership(ownership, dependencies.getOwnership());
+  }
+  // The API keeps these so a return to onboarding starts filled in.
+  const response = await dependencies.postRequest(endpoint.onboardingSkip, answers);
   requireAcknowledgement(response, 'skip-acknowledgement');
 
   const user = await refreshProfile(dependencies, ownership);

@@ -14,11 +14,16 @@ import { useProfile } from '@/hooks/queries/use-profile';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useUserStore } from '@/store';
 import { INSIGHTS_RADIUS, InsightsMessage } from './InsightsPrimitives';
+import { useRouter } from 'expo-router';
+import { TouchableOpacity } from '@/components/ui/Touchable';
+import { isOnboardingComplete, ONBOARDING_HREF, openOnboarding } from '@/features/onboarding/onboarding-resume';
 
 /** The milestones reached along the way. Adapted from web `milestones-panel.tsx`. */
 export function MilestonesPanel() {
   const colors = useThemeColors();
+  const router = useRouter();
   const streakOnUser = useUserStore((s) => s.user?.streak);
+  const onboardingComplete = useUserStore((s) => isOnboardingComplete(s.user));
   const { data: profile } = useProfile();
   const { data: stats, error, isLoading, refetch } = useUserStats();
   const { data: memoriesStats } = useMemoriesStats();
@@ -29,6 +34,7 @@ export function MilestonesPanel() {
   const milestones = useMemo(
     () =>
       orderMilestones(calculateMilestones({
+        onboardingComplete,
         memoryCount: Number(memoriesStats?.stories_count ?? stats?.stories_count) || 0,
         reflectionCount: Number(stats?.reflections_count) || 0,
         streakDays: streak,
@@ -36,7 +42,7 @@ export function MilestonesPanel() {
         capsuleCount: countSentCapsules(capsuleStats),
         beneficiaryCount: countBeneficiaries(beneficiaries),
       })),
-    [beneficiaries, capsuleStats, memoriesStats?.stories_count, stats?.enrichment_score, stats?.reflections_count, stats?.stories_count, streak],
+    [onboardingComplete, beneficiaries, capsuleStats, memoriesStats?.stories_count, stats?.enrichment_score, stats?.reflections_count, stats?.stories_count, streak],
   );
 
   if (error && !stats) {
@@ -52,10 +58,16 @@ export function MilestonesPanel() {
 
   return (
     <View style={{ gap: 16 }}>
-      {milestones.map((milestone) => (
-        <View
+      {milestones.map((milestone) => {
+        const href = milestone.href;
+        const Row = href ? TouchableOpacity : View;
+        return (
+        <Row
           key={milestone.id}
           accessible
+          {...(href
+            ? { accessibilityRole: 'button' as const, onPress: () => (href === ONBOARDING_HREF ? openOnboarding(router) : router.push(href as never)), activeOpacity: 0.8 }
+            : {})}
           accessibilityLabel={`${milestone.title}. ${milestone.description} ${milestone.progressLabel}`}
           accessibilityState={{ disabled: !milestone.available }}
           style={{
@@ -99,8 +111,9 @@ export function MilestonesPanel() {
               {milestone.progressLabel}
             </Text>
           </View>
-        </View>
-      ))}
+        </Row>
+        );
+      })}
     </View>
   );
 }

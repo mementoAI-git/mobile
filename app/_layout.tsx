@@ -1,4 +1,5 @@
 import { AppTabBar } from '@/components/TabBar';
+import { useOnboardingReturn } from '@/features/onboarding/onboarding-resume';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import '../global.css';
 
@@ -463,6 +464,7 @@ function RootLayout() {
       onboardingStatus:
         user?.onboarding_status ?? null,
       pendingHref: ui.pendingDeepLink,
+      resumingOnboarding: useOnboardingReturn.getState().active,
     };
 
     const key =

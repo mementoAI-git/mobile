@@ -18,6 +18,8 @@ export interface SessionRouteSnapshot {
   group?: string;
   onboardingStatus: IUser['onboarding_status'] | null;
   pendingHref: Href | null;
+  /** A skipped account chose to go back into onboarding. */
+  resumingOnboarding?: boolean;
 }
 
 export type SessionRouteAction =
