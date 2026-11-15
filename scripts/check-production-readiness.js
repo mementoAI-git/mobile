@@ -330,8 +330,13 @@ assert(!/memento:\/\/oauth-callback/.test(registerSourceForUrls), 'Register OAut
 assert(!/memento:\/\/oauth-callback/.test(loginSourceForUrls), 'Login OAuth redirects must use oauthCallbackUrl().');
 assert(!/openAuthSessionAsync\([^,]+,\s*'memento:\/\/'/.test(registerSourceForUrls), 'Register auth sessions must use AUTH_SESSION_RETURN_URL.');
 assert(!/openAuthSessionAsync\([^,]+,\s*'memento:\/\/'/.test(loginSourceForUrls), 'Login auth sessions must use AUTH_SESSION_RETURN_URL.');
-assert(/oauthCallbackUrl\('google'\)/.test(registerSourceForUrls) && /oauthCallbackUrl\('apple'\)/.test(registerSourceForUrls), 'Register OAuth redirects must use centralized provider callback URLs.');
-assert(/oauthCallbackUrl\('google'\)/.test(loginSourceForUrls) && /oauthCallbackUrl\('apple'\)/.test(loginSourceForUrls), 'Login OAuth redirects must use centralized provider callback URLs.');
+// Sign-in is native-only now (Google and Apple SDK tokens posted to the API),
+// so these screens build no redirect URLs. Should a browser OAuth flow return,
+// its redirects must still come from the centralized callback helper.
+const usesBrowserOAuth = (source) => /openAuthSessionAsync|openBrowserAsync/.test(source);
+const usesCentralCallbacks = (source) => /oauthCallbackUrl\('google'\)/.test(source) && /oauthCallbackUrl\('apple'\)/.test(source);
+assert(!usesBrowserOAuth(registerSourceForUrls) || usesCentralCallbacks(registerSourceForUrls), 'Register OAuth redirects must use centralized provider callback URLs.');
+assert(!usesBrowserOAuth(loginSourceForUrls) || usesCentralCallbacks(loginSourceForUrls), 'Login OAuth redirects must use centralized provider callback URLs.');
 assert(/AUTH_SESSION_RETURN_URL/.test(navigationSource), 'Auth session return URL must be centralized.');
 
 const privacySource = read('app/settings/privacy.tsx');
