@@ -2,14 +2,14 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TextInput as RNTextInput,
   StyleSheet,
 } from 'react-native';
-import { Pressable } from '@/components/ui/Touchable';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInRight, FadeInDown } from 'react-native-reanimated';
-import Svg, { Circle, Path } from 'react-native-svg';
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
+import { OnboardingIcon } from '@/components/onboarding/OnboardingIcon';
+import type { OnboardingIconName } from '@/components/onboarding/onboarding-icons';
+import { ABOUT_LIMIT, OnboardingAboutField } from '@/components/onboarding/OnboardingAboutField';
 import {
   MotivationChoice,
   LifeAreaChoice,
@@ -22,43 +22,42 @@ import {
 import { useFirstRunOnboarding } from '@/hooks/use-first-run-onboarding';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
-import * as Haptics from 'expo-haptics';
+import { responsiveSpace } from '@/constants/responsive';
 
 const MOTIVATION_DISPLAY_OPTIONS: Array<{
   value: FirstRunMotivationOption['value'];
   label: string;
-  emoji: string;
+  icon: OnboardingIconName;
 }> = [
   {
     value: 'preserve_memories',
     label: 'Preserve memories i don’t want to lose',
-    emoji: '🌴',
+    icon: 'palmTree',
   },
   {
     value: 'self_reflection',
     label: 'Reflect and understand myself better',
-    emoji: '🤔',
+    icon: 'thinkingFace',
   },
   {
     value: 'life_record',
     label: 'Build a record of my life over time',
-    emoji: '📖',
+    icon: 'openBook',
   },
   {
     value: 'organize_thoughts',
     label: 'Organize my thoughts, stories  and files',
-    emoji: '📁',
+    icon: 'openFileFolder',
   },
   {
     value: 'legacy_for_loved_ones',
     label: 'Create something meaningful for loved ones',
-    emoji: '💕',
+    icon: 'twoHearts',
   },
   {
     value: 'exploring',
     label: 'Just exploring',
-    emoji: '🔮',
+    icon: 'crystalBall',
   },
 ];
 
@@ -73,31 +72,20 @@ const INSPIRATION_PILLS = [
 const LIFE_AREA_DISPLAY_OPTIONS: Array<{
   value: FirstRunLifeAreaOption['value'];
   label: string;
-  emoji: string;
+  icon: OnboardingIconName;
 }> = [
-  { value: 'identity_self', label: 'Identity and self', emoji: '🍥' },
-  { value: 'everyday_life', label: 'Everyday life', emoji: '🍧' },
-  { value: 'relationships_people', label: 'Relationships & People', emoji: '👥' },
-  { value: 'work_purpose', label: 'Work & Purpose', emoji: '💼' },
-  { value: 'memories_experiences', label: 'Memories & Experiences', emoji: '🗳️' },
-  { value: 'heritage_roots', label: 'Heritage & Roots', emoji: '🏠' },
-  { value: 'passions_interests', label: 'Passions & Interests', emoji: '🎮' },
-  { value: 'lessons_wisdom', label: 'Lessons & Wisdoms', emoji: '🗝️' },
-  { value: 'beliefs_worldview', label: 'Beliefs & Worldview', emoji: '🪴' },
-  { value: 'hopes_legacy', label: 'Hopes & Legacy', emoji: '🏺' },
+  { value: 'identity_self', label: 'Identity and self', icon: 'areaIdentity' },
+  { value: 'everyday_life', label: 'Everyday life', icon: 'areaEveryday' },
+  { value: 'relationships_people', label: 'Relationships & People', icon: 'areaRelationships' },
+  { value: 'work_purpose', label: 'Work & Purpose', icon: 'areaWork' },
+  { value: 'memories_experiences', label: 'Memories & Experiences', icon: 'areaMemories' },
+  { value: 'heritage_roots', label: 'Heritage & Roots', icon: 'areaHeritage' },
+  { value: 'passions_interests', label: 'Passions & Interests', icon: 'areaPassions' },
+  { value: 'lessons_wisdom', label: 'Lessons & Wisdoms', icon: 'areaLessons' },
+  { value: 'beliefs_worldview', label: 'Beliefs & Worldview', icon: 'areaBeliefs' },
+  { value: 'hopes_legacy', label: 'Hopes & Legacy', icon: 'areaHopes' },
 ];
 
-function GreenUserIcon({ size = 32 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <Circle cx="16" cy="9" r="6" fill={COLORS.onboardingUserLime} />
-      <Path
-        d="M6 27C6 21.4772 10.4772 17 16 17C21.5228 17 26 21.4772 26 27C26 27.5523 25.5523 28 25 28H7C6.44772 28 6 27.5523 6 27Z"
-        fill={COLORS.onboardingUserLime}
-      />
-    </Svg>
-  );
-}
 
 export default function PreferencesScreen() {
   const router = useRouter();
@@ -115,6 +103,12 @@ export default function PreferencesScreen() {
     draft.step >= 2 && draft.step <= 4 ? (draft.step as 2 | 3 | 4) : 2,
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // True while the About box is recording or transcribing; Continue waits for the transcript.
+  const [aboutBusy, setAboutBusy] = useState(false);
+  const handleAboutChange = useCallback((text: string) => {
+    setErrorMessage(null);
+    setAbout(text);
+  }, [setAbout]);
 
   useEffect(() => {
     if (draft.step >= 2 && draft.step <= 4 && draft.step !== internalStep) {
@@ -149,12 +143,13 @@ export default function PreferencesScreen() {
       setStep(3);
       setInternalStep(3);
     } else if (internalStep === 3) {
+      if (aboutBusy) return;
       const trimmed = draft.about.trim();
       if (!trimmed) {
         setErrorMessage('Tell us a little about yourself.');
         return;
       }
-      if (trimmed.length > 500) {
+      if (trimmed.length > ABOUT_LIMIT) {
         setErrorMessage('Please keep this to 500 characters or fewer.');
         return;
       }
@@ -169,15 +164,7 @@ export default function PreferencesScreen() {
     }
   };
 
-  const handleInspiration = (pill: string) => {
-    Haptics.selectionAsync();
-    const current = draft.about.trim();
-    if (!current) {
-      setAbout(pill);
-    } else if (!current.includes(pill)) {
-      setAbout(`${current}, ${pill}`.slice(0, 500));
-    }
-  };
+
 
   const handleMotivationSelect = useCallback(
     (motivation: OnboardingMotivation) => {
@@ -202,7 +189,7 @@ export default function PreferencesScreen() {
     internalStep === 2
       ? !draft.motivation
       : internalStep === 3
-        ? !draft.about.trim() || draft.about.length > 500
+        ? aboutBusy || !draft.about.trim() || draft.about.length > ABOUT_LIMIT
         : draft.lifeAreas.length < 2 || draft.lifeAreas.length > 3;
 
   return (
@@ -212,14 +199,13 @@ export default function PreferencesScreen() {
       indicatorVariant="dots"
       onSkip={handleSkip}
       isSkipping={isSkipping}
-      skipLabel="Skip →"
       errorMessage={errorMessage}
       secondaryAction={
         internalStep > 2
           ? {
               label: 'Back',
               onPress: handleBack,
-              rounded: 'xl',
+              disabled: aboutBusy,
             }
           : undefined
       }
@@ -227,7 +213,6 @@ export default function PreferencesScreen() {
         label: 'Continue',
         onPress: handleNext,
         disabled: isNextDisabled,
-        rounded: 'xl',
       }}
     >
       <Animated.View
@@ -235,30 +220,24 @@ export default function PreferencesScreen() {
         entering={FadeInRight.duration(280)}
         className="pt-2 pb-6"
       >
-        {/* Step 2: Motivation */}
+        {/* Step 2: Motivation (Figma 19761:10773) */}
         {internalStep === 2 && (
-          <View>
-            <Animated.View entering={FadeInDown.duration(400)} style={styles.visualContainer}>
-              <Text style={TYPE.displayTitle}>📜</Text>
+          <View style={styles.stack}>
+            <Animated.View entering={FadeInDown.duration(400)}>
+              <OnboardingIcon name="scroll" />
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.headingContainer}>
-              <Text style={styles.titleText}>
-                Okay{' '}
-                <Text style={styles.brandItalic}>{preferredName || 'Jane'}</Text>, let’s{'\n'}
-                get started
-              </Text>
-              <Text style={styles.motivationSubtitle}>
-                First off, what brings you to Memento AI?
-              </Text>
-            </Animated.View>
+            <Animated.Text entering={FadeInDown.delay(100).duration(400)} style={styles.titleText}>
+              Okay <Text style={styles.brandItalic}>{preferredName || 'Jane'}</Text>, let’s get started
+            </Animated.Text>
+            <Text style={styles.leadStrong}>First off, what brings you to Memento AI?</Text>
 
-            <View className="gap-3">
+            <View style={styles.optionList}>
               {MOTIVATION_DISPLAY_OPTIONS.map((opt) => (
                 <MotivationChoice
                   key={opt.value}
                   label={opt.label}
-                  icon={<Text style={TYPE.label}>{opt.emoji}</Text>}
+                  icon={<OnboardingIcon name={opt.icon} />}
                   selected={draft.motivation === opt.value}
                   onPress={() => handleMotivationSelect(opt.value)}
                   hideRadio
@@ -268,92 +247,60 @@ export default function PreferencesScreen() {
           </View>
         )}
 
-        {/* Step 3: About You */}
+        {/* Step 3: About (Figma 19761:10969) */}
         {internalStep === 3 && (
-          <View>
-            <Animated.View entering={FadeInDown.duration(400)} style={styles.visualContainer}>
-              <GreenUserIcon size={32} />
+          <View style={styles.stack}>
+            <Animated.View entering={FadeInDown.duration(400)}>
+              <OnboardingIcon name="user" />
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.headingContainer}>
-              <Text style={styles.titleText}>
-                Tell us a little bit about{'\n'}
-                yourself, <Text style={styles.brandItalic}>{preferredName || 'Jane'}</Text>
-              </Text>
-              <Text style={styles.subtitleText}>
-                Share anything you think would help Memento learn about you. Just something to give us a starting point.
-              </Text>
-            </Animated.View>
+            <Animated.Text entering={FadeInDown.delay(100).duration(400)} style={styles.titleText}>
+              Tell us a little bit about yourself, <Text style={styles.brandItalic}>{preferredName || 'Jane'}</Text>
+            </Animated.Text>
+            <Text style={styles.lead}>
+              Share anything you think would help Memento learn about you. Just something to give us a starting point.
+            </Text>
 
-            <View style={styles.fieldSection}>
-              <Text style={styles.fieldLabel}>Enter About info</Text>
-              <View style={styles.textAreaContainer}>
-                <RNTextInput
-                  value={draft.about}
-                  onChangeText={(text) => {
-                    setErrorMessage(null);
-                    setAbout(text);
-                  }}
-                  placeholder="Eg: I am a software engineer and a father of 2 living in Dubln. I care about family, creativity and personal growth. Lately i’ve been focused on building the things i’m proud of..."
-                  placeholderTextColor={COLORS.textWeak}
-                  multiline
-                  numberOfLines={6}
-                  textAlignVertical="top"
-                  style={styles.textAreaInput}
-                />
-                <View style={styles.charCountContainer}>
-                  <Text style={styles.charCountText}>
-                    {draft.about.length}/500
-                  </Text>
-                </View>
-              </View>
-            </View>
+            <View style={styles.aboutGroup}>
+              <OnboardingAboutField
+                value={draft.about}
+                onChange={handleAboutChange}
+                onBusyChange={setAboutBusy}
+              />
 
-            {/* Inspiration Chips */}
-            <View style={styles.inspirationSection}>
-              <Text style={styles.inspirationLabel}>Need inspiration?</Text>
-              <View style={styles.inspirationChipsRow}>
-                {INSPIRATION_PILLS.map((pill) => (
-                  <Pressable
-                    key={pill}
-                    onPress={() => handleInspiration(pill)}
-                    accessibilityRole="button"
-                    accessibilityLabel={pill}
-                    style={styles.inspirationChip}
-                  >
-                    <Text style={styles.inspirationChipText}>{pill}</Text>
-                  </Pressable>
-                ))}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.groupLabel}>Need inspiration?</Text>
+                {/* Ideas only, not buttons: plain muted text with dot separators. */}
+                <Text style={styles.inspirationText} accessibilityLabel={`Ideas: ${INSPIRATION_PILLS.join(', ')}`}>
+                  {INSPIRATION_PILLS.join('  ·  ')}
+                </Text>
               </View>
             </View>
           </View>
         )}
 
-        {/* Step 4: Life Areas */}
+        {/* Step 4: Life areas (Figma 19761:11122 / 11309) */}
         {internalStep === 4 && (
-          <View>
-            <Animated.View entering={FadeInDown.duration(400)} style={styles.visualContainer}>
-              <Text style={TYPE.displayTitle}>📁</Text>
+          <View style={styles.stack}>
+            <Animated.View entering={FadeInDown.duration(400)}>
+              <OnboardingIcon name="folder" />
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.headingContainer}>
-              <Text style={styles.titleText}>
-                Which parts of your life{'\n'}
-                would you like explore first?
-              </Text>
-              <Text style={styles.subtitleText}>
-                Pick 2 to 3 areas. We’ll prioritize prompts and suggestions around these to help you start.
-              </Text>
-            </Animated.View>
+            <Animated.Text entering={FadeInDown.delay(100).duration(400)} style={styles.titleText}>
+              Which parts of your life would you like explore first?
+            </Animated.Text>
+            <Text style={styles.lead}>
+              Pick 2 to 3 areas. We’ll prioritize prompts and suggestions around these to help you start.
+            </Text>
 
-            <View>
-              <Text style={styles.lifeAreasHeader}>Life areas</Text>
-              <View style={styles.lifeAreasGrid}>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.groupLabel}>Life areas</Text>
+              <View style={styles.chipsRow}>
                 {LIFE_AREA_DISPLAY_OPTIONS.map((opt) => (
                   <LifeAreaChoice
                     key={opt.value}
                     label={opt.label}
-                    icon={<Text style={TYPE.label}>{opt.emoji}</Text>}
+                    icon={<OnboardingIcon name={opt.icon} />}
                     selected={draft.lifeAreas.includes(opt.value)}
                     onPress={() => handleLifeAreaToggle(opt.value)}
                   />
@@ -368,98 +315,46 @@ export default function PreferencesScreen() {
 }
 
 const styles = StyleSheet.create({
-  visualContainer: {
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  headingContainer: {
-    marginBottom: 24,
+  // Figma onboarding body: icon, title, lead and content 24px apart.
+  stack: {
+    gap: 24,
   },
   titleText: {
-    ...TYPE.displayTitle,
+    ...TYPE.onboardingTitle,
     color: COLORS.textStrong,
-    marginBottom: 12,
   },
   brandItalic: {
+    ...TYPE.onboardingTitleAccent,
     color: COLORS.brand,
-    fontStyle: 'italic',
   },
-  motivationSubtitle: {
-    ...TYPE.bodyStrong,
+  lead: {
+    ...TYPE.bodyLarge,
     color: COLORS.textStrong,
   },
-  subtitleText: {
-    ...TYPE.body,
-    color: COLORS.textStrong,
-    lineHeight: 22,
-  },
-  fieldSection: {
-    gap: 8,
-  },
-  fieldLabel: {
-    ...TYPE.bodyStrong,
+  leadStrong: {
+    ...TYPE.bodyLargeSemi,
     color: COLORS.textStrong,
   },
-  textAreaContainer: {
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeak,
-    borderRadius: radius(16),
-    padding: responsiveSpace(16),
-    minHeight: 180,
-    justifyContent: 'space-between',
-  },
-  textAreaInput: {
-    ...TYPE.body,
-    color: COLORS.textStrong,
-    padding: 0,
-    margin: 0,
-    minHeight: 130,
-    textAlignVertical: 'top',
-  },
-  charCountContainer: {
-    alignItems: 'flex-end',
-    paddingTop: 4,
-  },
-  charCountText: {
-    ...TYPE.metadata,
-    color: COLORS.textWeak,
-  },
-  inspirationSection: {
-    marginTop: 20,
-    gap: 12,
-  },
-  inspirationLabel: {
-    ...TYPE.body,
-    color: COLORS.textWeak,
-  },
-  inspirationChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  inspirationChip: {
-    paddingHorizontal: responsiveSpace(16),
-    paddingVertical: responsiveSpace(10),
-    minHeight: minTouchTarget(40),
-    borderRadius: 9999,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeak,
-    justifyContent: 'center',
-  },
-  inspirationChipText: {
-    ...TYPE.bodySmall,
-    color: COLORS.textStrong,
-  },
-  lifeAreasHeader: {
-    ...TYPE.body,
-    color: COLORS.textWeak,
-    marginBottom: 12,
-  },
-  lifeAreasGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  optionList: {
     gap: 10,
+  },
+  aboutGroup: {
+    gap: 24,
+  },
+  fieldGroup: {
+    gap: 6,
+  },
+  groupLabel: {
+    ...TYPE.label,
+    color: COLORS.textWeak,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  inspirationText: {
+    ...TYPE.bodySmall,
+    color: COLORS.textBase,
   },
 });

@@ -48,7 +48,9 @@ describe('Onboarding shared components static contract', () => {
     expect(choice).toContain('useSharedValue');
     expect(choice).toContain('withSpring');
     expect(choice).toContain('Haptics.selectionAsync()');
-    expect(choice.match(/min-h-\[44px\]/g)).toHaveLength(2);
+    // Motivation rows are 44px+; life-area chips are the 40px Figma chip with 2px hitSlop each side.
+    expect(choice.match(/min-h-\[44px\]/g)).toHaveLength(1);
+    expect(choice).toContain('hitSlop={{ top: 2, bottom: 2 }}');
     expect(choice).toContain('accessibilityRole="radio"');
     expect(choice).toContain('accessibilityRole="checkbox"');
     expect(choice.match(/accessibilityState=\{\{ checked: selected, disabled \}\}/g)).toHaveLength(2);

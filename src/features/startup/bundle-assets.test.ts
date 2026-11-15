@@ -18,7 +18,6 @@ const consumers = [
   'app/settings/activities.tsx',
   'app/(tabs)/explore/index.tsx',
   'app/(tabs)/capsule/index.tsx',
-  'src/components/onboarding/OnboardingCelebrationOverlay.tsx',
   'src/components/beneficiaries/BeneficiaryEmptyState.tsx',
   'src/components/sheets/MemoryInsightsSheet.tsx',
   'src/components/sheets/ExportArchiveSheet.tsx',

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Modal, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { interpolate, useAnimatedStyle, useSharedValue, withSpring, withTiming, type SharedValue } from 'react-native-reanimated';
+import Animated, { interpolate, useAnimatedStyle, useSharedValue, withSpring, withTiming, type AnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import * as Haptics from 'expo-haptics';
 import Mic from 'lucide-react-native/icons/mic';
@@ -10,7 +10,7 @@ import PhoneCall from 'lucide-react-native/icons/phone-call';
 import PenLine from 'lucide-react-native/icons/pen-line';
 import type { LucideIcon } from 'lucide-react-native';
 import { Pressable, TouchableOpacity } from '@/components/ui/Touchable';
-import { tabBarSettingsTop } from '@/components/TabBar';
+import { tabBarFadeTop } from '@/components/TabBar';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { BRAND_BUTTON_GRADIENT } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -19,8 +19,8 @@ import { iconSize, minTouchTarget } from '@/constants/responsive';
 const FAB_SIZE = minTouchTarget(60);
 const OPTION_SIZE = minTouchTarget(52);
 const FAB_RIGHT = 24;
-/** Space between the button and the settings button below it. */
-const SETTINGS_CLEARANCE = 16;
+/** Space between the button and the top of the tab bar's fade, so it floats clear of the blur. */
+const FADE_CLEARANCE = 8;
 /** Distance from the button's centre to each option's centre: leaves room for each label. */
 const ARC_RADIUS = 136;
 const OPEN_SPRING = { damping: 16, stiffness: 190, mass: 0.8 };
@@ -28,15 +28,22 @@ const OPEN_SPRING = { damping: 16, stiffness: 190, mass: 0.8 };
 type CaptureOption = { key: string; label: string; icon: LucideIcon; angle: number; onPress: () => void };
 
 /**
- * The Stories capture button: always a round mic, floating clear of the tab
+ * The capture button (Stories, Overview): a round brand button, floating clear of the tab
  * bar's fade. Tapping it dims the whole screen (tab bar included) and fans
  * Talk, Write and Record out along an arc above and to the left of it.
  */
-export function CaptureFab({ onTalk, onWrite, onRecord }: { onTalk: () => void; onWrite: () => void; onRecord: () => void }) {
+export function CaptureFab({ onTalk, onWrite, onRecord, icon: Icon = Mic, revealStyle }: {
+  onTalk: () => void;
+  onWrite: () => void;
+  onRecord: () => void;
+  /** The resting glyph (Stories: mic; Overview: plus). It turns into the close cross when open. */
+  icon?: LucideIcon;
+  /** Optional animated style for showing the button, e.g. Overview reveals it on scroll. */
+  revealStyle?: AnimatedStyle<ViewStyle>;
+}) {
   const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
-  const bottom = tabBarSettingsTop(insets.bottom, screenWidth) + SETTINGS_CLEARANCE;
+  const bottom = tabBarFadeTop(insets.bottom) + FADE_CLEARANCE;
   const [open, setOpen] = useState(false);
   const progress = useSharedValue(0);
   const pendingAction = useRef<(() => void) | null>(null);
@@ -92,7 +99,7 @@ export function CaptureFab({ onTalk, onWrite, onRecord }: { onTalk: () => void; 
 
   return (
     <>
-      <View style={[anchor, { zIndex: 50 }]}>
+      <Animated.View style={[anchor, { zIndex: 50 }, revealStyle]}>
         <TouchableOpacity
           onPress={expand}
           activeOpacity={0.85}
@@ -102,9 +109,9 @@ export function CaptureFab({ onTalk, onWrite, onRecord }: { onTalk: () => void; 
           accessibilityState={{ expanded: open }}
           style={[fabSurface, { opacity: open ? 0 : 1 }]}
         >
-          <Mic size={iconSize(24)} color={COLORS.textInverse} strokeWidth={2.2} />
+          <Icon size={iconSize(24)} color={COLORS.textInverse} strokeWidth={2.2} />
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
       <Modal visible={open} transparent animationType="none" statusBarTranslucent navigationBarTranslucent onRequestClose={handleClose}>
         <Backdrop progress={progress} color={COLORS.mediaScrim} onPress={handleClose} />
@@ -132,7 +139,7 @@ export function CaptureFab({ onTalk, onWrite, onRecord }: { onTalk: () => void; 
             // A quiet, opaque neutral close, so the white options stand out.
             style={[fabSurface, { backgroundColor: COLORS.mediaSurface, experimental_backgroundImage: undefined, borderWidth: 1, borderColor: COLORS.mediaFill, shadowOpacity: 0, elevation: 0 }]}
           >
-            <FabGlyph progress={progress} color={COLORS.mediaText} />
+            <FabGlyph progress={progress} color={COLORS.mediaText} icon={Icon} />
           </TouchableOpacity>
         </View>
       </Modal>
@@ -149,8 +156,8 @@ function Backdrop({ progress, color, onPress }: { progress: SharedValue<number>;
   );
 }
 
-/** The mic turns into a close cross as the menu opens. */
-function FabGlyph({ progress, color }: { progress: SharedValue<number>; color: string }) {
+/** The resting icon turns into a close cross as the menu opens. */
+function FabGlyph({ progress, color, icon: Icon }: { progress: SharedValue<number>; color: string; icon: LucideIcon }) {
   const micStyle = useAnimatedStyle(() => ({
     opacity: interpolate(progress.value, [0, 0.5], [1, 0], 'clamp'),
     transform: [{ rotate: `${progress.value * 90}deg` }],
@@ -162,7 +169,7 @@ function FabGlyph({ progress, color }: { progress: SharedValue<number>; color: s
   return (
     <>
       <Animated.View style={[StyleSheet.absoluteFill, styles.center, micStyle]}>
-        <Mic size={iconSize(24)} color={color} strokeWidth={2.2} />
+        <Icon size={iconSize(24)} color={color} strokeWidth={2.2} />
       </Animated.View>
       <Animated.View style={[StyleSheet.absoluteFill, styles.center, closeStyle]}>
         <X size={iconSize(24)} color={color} strokeWidth={2.2} />

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { TextInput } from '@/components/ui';
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
+import { OnboardingIcon } from '@/components/onboarding/OnboardingIcon';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { useFirstRunOnboarding } from '@/hooks/use-first-run-onboarding';
@@ -46,30 +47,27 @@ export default function NicknameScreen() {
       indicatorVariant="dots"
       onSkip={handleSkip}
       isSkipping={isSkipping}
-      skipLabel="Skip →"
       errorMessage={error}
       primaryAction={{
         label: 'Continue',
         onPress: handleContinue,
         disabled: !value.trim(),
-        rounded: 'xl',
       }}
     >
-      {/* Bouquet Visual */}
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.emojiContainer}>
-        <Text style={TYPE.displayTitle}>💐</Text>
-      </Animated.View>
+      {/* Figma 19761:10636: icon, heading group (title + lead 12px apart), field; 24px apart */}
+      <View style={styles.stack}>
+        <Animated.View entering={FadeInDown.duration(400)}>
+          <OnboardingIcon name="bouquet" />
+        </Animated.View>
 
-      {/* Heading */}
-      <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.headingContainer}>
-        <Text style={styles.titleText}>
-          How should we{'\n'}address{' '}
-          <Text style={styles.brandItalic}>you?</Text>
-        </Text>
-        <Text style={styles.subtitleText}>
-          We’ll use your name to personalize your experience and how Memento AI talks to you.
-        </Text>
-      </Animated.View>
+        <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.headingContainer}>
+          <Text style={styles.titleText}>
+            How should we address <Text style={styles.brandItalic}>you?</Text>
+          </Text>
+          <Text style={styles.subtitleText}>
+            We’ll use your name to personalize your experience and how Memento AI talks to you.
+          </Text>
+        </Animated.View>
 
       {/* Form Field */}
       <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.fieldContainer}>
@@ -87,34 +85,32 @@ export default function NicknameScreen() {
           autoFocus
         />
       </Animated.View>
+      </View>
     </OnboardingShell>
   );
 }
 
 const styles = StyleSheet.create({
-  emojiContainer: {
-    paddingTop: 16,
-    paddingBottom: 16,
+  stack: {
+    gap: 24,
+    paddingTop: 48,
   },
   headingContainer: {
-    marginBottom: 24,
+    gap: 12,
   },
   titleText: {
-    ...TYPE.displayTitle,
+    ...TYPE.onboardingTitle,
     color: COLORS.textStrong,
-    marginBottom: 8,
   },
   brandItalic: {
+    ...TYPE.onboardingTitleAccent,
     color: COLORS.brand,
-    fontStyle: 'italic',
   },
   subtitleText: {
-    ...TYPE.body,
+    ...TYPE.bodySmall,
     color: COLORS.textStrong,
-    lineHeight: 22,
   },
   fieldContainer: {
     gap: 8,
   },
 });
-

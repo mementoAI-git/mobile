@@ -5,7 +5,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ImageBackground,
   StyleProp,
   ViewStyle,
 } from 'react-native';
@@ -16,20 +15,21 @@ import Animated, {
   ReduceMotion,
 } from 'react-native-reanimated';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
-import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import { Button, Logo } from '@/components/ui';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { cn } from '@/lib/utils';
+import { OnboardingIcon } from './OnboardingIcon';
 
-const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
+
+/** Onboarding action buttons are 48px pills (Figma onboarding, node 19761:10606). */
+export const ONBOARDING_BUTTON_STYLE = { minHeight: 48, height: 48 } as const;
 
 export interface OnboardingAction {
   label: string;
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
-  rounded?: 'full' | 'xl' | 'lg' | '2xl';
   className?: string;
   testID?: string;
 }
@@ -39,7 +39,6 @@ export interface OnboardingShellProps {
   totalSteps?: number;
   stepLabel?: string;
   indicatorVariant?: 'bars' | 'dots';
-  skipButtonVariant?: 'text' | 'pill';
   title?: string;
   subtitle?: string;
   onBack?: () => void;
@@ -61,7 +60,6 @@ export function OnboardingShell({
   totalSteps = 4,
   stepLabel,
   indicatorVariant = 'bars',
-  skipButtonVariant = 'text',
   title,
   subtitle,
   onBack,
@@ -81,7 +79,6 @@ export function OnboardingShell({
   const hasFooter = Boolean(primaryAction || secondaryAction || footer || errorMessage);
 
   const isDots = indicatorVariant === 'dots';
-  const isPillSkip = skipButtonVariant === 'pill' || isDots;
 
   const content = (
     <Animated.View
@@ -91,7 +88,7 @@ export function OnboardingShell({
     >
       {title ? (
         <View className="mb-6">
-          <Text className="text-text-strong mb-2" style={TYPE.displayTitle}>
+          <Text className="text-text-strong mb-2" style={TYPE.onboardingTitle}>
             {title}
           </Text>
           {subtitle ? (
@@ -110,94 +107,69 @@ export function OnboardingShell({
       className="flex-1 bg-background"
       edges={['top', 'bottom']}
     >
-      <ImageBackground
-        source={PATTERN}
-        className="absolute inset-0"
-        style={{ opacity: 0.03 }}
-        resizeMode="repeat"
-      />
-
-      {/* Header */}
+      {/* Header (Figma onboarding "Page header": 72px, centred step dots, Skip pill) */}
       {hasHeader ? (
-        <View className="px-4 pt-2 pb-3">
-          <View className="flex-row items-center justify-between min-h-[44px]">
-            <View className="w-16 items-start justify-center">
-              {onBack ? (
-                <Button
-                  variant="ghost"
-                  onPress={onBack}
-                  accessibilityLabel="Go back"
-                  leftIcon={<ChevronLeft size={20} color={COLORS.textStrong} />}
-                  className="size-11 px-0 gap-0 rounded-full bg-fill-weaker border border-stroke-weaker"
-                >
-                  {null}
-                </Button>
-              ) : showLogo ? (
-                <Logo size="md" />
-              ) : null}
-            </View>
+        <View className="flex-row items-center justify-between px-4" style={{ height: 72 }}>
+          <View style={{ width: 92 }} className="items-start justify-center">
+            {onBack ? (
+              <Button
+                variant="ghost"
+                onPress={onBack}
+                accessibilityLabel="Go back"
+                leftIcon={<ChevronLeft size={20} color={COLORS.textStrong} />}
+                className="size-11 px-0 gap-0 rounded-full bg-fill-weak"
+              >
+                {null}
+              </Button>
+            ) : showLogo ? (
+              <Logo size="md" />
+            ) : null}
+          </View>
 
-            {step !== undefined ? (
+          {step !== undefined ? (
+            isDots ? (
+              <StepDots step={step} total={totalSteps} />
+            ) : (
               <View className="items-center justify-center gap-1.5">
-                {isDots ? (
-                  <View className="flex-row items-center gap-2">
-                    {Array.from({ length: totalSteps }).map((_, index) => (
-                      <Animated.View
-                        key={index}
-                        layout={LinearTransition}
-                        className={`size-2 rounded-full ${
-                          index < step ? 'bg-brand' : 'bg-fill-weak'
-                        }`}
-                      />
-                    ))}
-                  </View>
-                ) : (
-                  <View className="flex-row items-center gap-1.5">
-                    {Array.from({ length: totalSteps }).map((_, index) => (
-                      <Animated.View
-                        key={index}
-                        layout={LinearTransition}
-                        className={`rounded-full ${
-                          index < step ? 'bg-brand' : 'bg-brand/15'
-                        }`}
-                        style={{
-                          width: index === step - 1 ? 20 : 6,
-                          height: 6,
-                        }}
-                      />
-                    ))}
-                  </View>
-                )}
-                {stepLabel && !isDots ? (
-                  <Text
-                    className="text-text-weak tracking-widest uppercase"
-                    style={TYPE.eyebrow}
-                  >
+                <View className="flex-row items-center gap-1.5">
+                  {Array.from({ length: totalSteps }).map((_, index) => (
+                    <Animated.View
+                      key={index}
+                      layout={LinearTransition}
+                      className={`rounded-full ${index < step ? 'bg-brand' : 'bg-brand/15'}`}
+                      style={{ width: index === step - 1 ? 20 : 6, height: 6 }}
+                    />
+                  ))}
+                </View>
+                {stepLabel ? (
+                  <Text className="text-text-weak tracking-widest uppercase" style={TYPE.eyebrow}>
                     {stepLabel}
                   </Text>
                 ) : null}
               </View>
-            ) : null}
+            )
+          ) : null}
 
-            <View className="w-20 items-end justify-center">
-              {onSkip ? (
-                <Button
-                  variant="ghost"
-                  onPress={onSkip}
-                  disabled={isSkipping}
-                  loading={isSkipping}
-                  accessibilityLabel={skipLabel}
-                  rightIcon={isPillSkip ? undefined : <ChevronRight size={14} color={COLORS.textWeak} />}
-                  className={
-                    isPillSkip
-                      ? 'min-h-[44px] px-3.5 py-1 rounded-full bg-fill-weaker border border-stroke-weaker'
-                      : 'min-h-[44px] px-0 gap-1'
-                  }
-                >
-                  {skipLabel}
-                </Button>
-              ) : null}
-            </View>
+          <View style={{ width: 92 }} className="items-end justify-center">
+            {onSkip ? (
+              // 40px Figma pill inside a 44px tap row.
+              <View className="min-h-[44px] justify-center">
+              <Button
+                variant="secondary"
+                rounded="full"
+                onPress={onSkip}
+                disabled={isSkipping}
+                loading={isSkipping}
+                accessibilityLabel={skipLabel}
+                hitSlop={{ top: 2, bottom: 2, left: 0, right: 0 }}
+                rightIcon={<OnboardingIcon name="arrowRight" color={COLORS.textStrong} />}
+                textClassName="text-text-strong"
+                style={{ height: 40, minHeight: 40, paddingHorizontal: 13, gap: 4 }}
+              >
+                {skipLabel}
+              </Button>
+              </View>
+            ) : null}
           </View>
         </View>
       ) : null}
@@ -222,7 +194,7 @@ export function OnboardingShell({
 
         {/* Footer */}
         {hasFooter ? (
-          <View className="px-4 pt-3 pb-4 bg-background/95 border-t border-stroke-weaker">
+          <View className="px-4 pt-3 pb-2">
             {errorMessage ? (
               <Animated.Text
                 entering={FadeInDown.duration(200).reduceMotion(ReduceMotion.System)}
@@ -241,14 +213,14 @@ export function OnboardingShell({
                   <Button
                     variant="outline"
                     size="lg"
-                    rounded={secondaryAction.rounded ?? 'full'}
+                    rounded="full"
+                    style={ONBOARDING_BUTTON_STYLE}
                     onPress={secondaryAction.onPress}
                     loading={secondaryAction.loading}
                     disabled={secondaryAction.disabled}
                     accessibilityLabel={secondaryAction.label}
                     className={cn(
                       'flex-1 bg-card border border-stroke-weak',
-                      secondaryAction.rounded === 'xl' ? '!h-[52px]' : 'h-14',
                       secondaryAction.className,
                     )}
                   >
@@ -259,14 +231,14 @@ export function OnboardingShell({
                 {primaryAction ? (
                   <Button
                     size="lg"
-                    rounded={primaryAction.rounded ?? 'full'}
+                    rounded="full"
+                    style={ONBOARDING_BUTTON_STYLE}
                     onPress={primaryAction.onPress}
                     loading={primaryAction.loading}
                     disabled={primaryAction.disabled}
                     accessibilityLabel={primaryAction.label}
                     className={cn(
                       'flex-1 bg-brand',
-                      primaryAction.rounded === 'xl' ? '!h-[52px]' : 'h-14',
                       primaryAction.className,
                     )}
                   >
@@ -279,5 +251,28 @@ export function OnboardingShell({
         ) : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+/** Figma step indicator: 12px dots joined by 8px lines (84px wide for four steps). */
+function StepDots({ step, total }: { step: number; total: number }) {
+  return (
+    <View
+      className="flex-row items-center"
+      style={{ gap: 2 }}
+      accessibilityRole="progressbar"
+      accessibilityLabel={`Step ${step} of ${total}`}
+    >
+      {Array.from({ length: total }).map((_, index) => (
+        <React.Fragment key={index}>
+          {index > 0 ? <View className="bg-stroke-weak" style={{ width: 8, height: 1 }} /> : null}
+          <Animated.View
+            layout={LinearTransition}
+            className={index < step ? 'bg-brand' : 'bg-stroke-weak'}
+            style={{ width: 12, height: 12, borderRadius: 6 }}
+          />
+        </React.Fragment>
+      ))}
+    </View>
   );
 }

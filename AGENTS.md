@@ -184,6 +184,9 @@ import { TYPE } from '@/constants/typography';
 | `bodySmallStrong` | `FONTS.sansSemi` | 14 / 20 | Bold figures inside small copy |
 | `planPrice` | `FONTS.sansSemi` | 36 / 40 | Plan prices on the plans page |
 | `mono` | `FONTS.mono` | 14 / 20 | Code / mono |
+| `chipLabel` | `FONTS.sans` | 12 / 16 | Onboarding chips (inspiration, life areas) and the About counter |
+| `monoLabel` | `FONTS.mono` | 12 / 16 | Uppercase mono label (welcome "private by design" note) |
+| `onboardingTitle` / `onboardingTitleAccent` | `FONTS.serifMedium` / `FONTS.serifMediumItalic` | 32 / 40 | Onboarding welcome title; its orange accent word |
 
 `typography.ts` also holds single-purpose roles (`dashboardTitle`, `editorTitle`, `voicePickerTitle`, the music and publish-success roles, and others). Read the file for those rather than copying their values.
 

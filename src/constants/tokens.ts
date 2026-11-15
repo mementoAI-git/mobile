@@ -40,6 +40,12 @@ export const COLORS = {
   previewText: '#555555',
   successFill: 'rgba(10,204,146,0.05)',
   successStroke: 'rgba(10,204,146,0.2)',
+  /** Onboarding welcome "private by design" note (Figma 19761:10603): fill, Stroke/Success weak, Accent/green 3. */
+  privacyNoteFill: 'rgba(166,212,105,0.12)',
+  privacyNoteStroke: 'rgba(6,122,87,0.2)',
+  privacyNoteLabel: '#20C660',
+  /** Figma "Legacy Orange": the welcome screen's section heading. */
+  onboardingAccentText: '#FF5E00',
   errorFill: 'rgba(199,58,58,0.05)',
   warningFill: 'rgba(255,192,46,0.05)',
   infoFill: 'rgba(26,128,247,0.06)',
@@ -146,14 +152,16 @@ export const COLORS = {
   onboardingUserLime: '#8CB843',
 
   // Summary card thematic pastel surfaces
-  summaryBlueBg: '#F1F6FD',
-  summaryBlueBorder: '#C9DEF7',
-  summaryBlueText: '#3B82F6',
-  summaryPurpleBg: '#FAF5FF',
-  summaryPurpleBorder: '#E9D5FF',
+  // Onboarding summary cards (Figma 19761:11583-11589): fill/information-weak, purple/light, fill/brand-weak.
+  summaryBlueBg: 'rgba(26,128,247,0.06)',
+  summaryBlueBorder: 'rgba(26,128,247,0.2)',
+  summaryBlueText: '#43A9F2',
+  summaryPurpleBg: 'rgba(126,71,204,0.05)',
+  summaryPurpleBorder: 'rgba(126,71,204,0.2)',
   summaryPurpleText: '#8B5CF6',
-  summaryPeachBg: '#FFF7F0',
-  summaryPeachBorder: '#FCD8BC',
+  summaryPurpleLabel: '#A582F6',
+  summaryPeachBg: 'rgba(233,130,70,0.06)',
+  summaryPeachBorder: 'rgba(233,130,70,0.2)',
   summaryPeachText: '#E98246',
 
   // ── Blue ramp — mirrors web's --color-blue-* (steps 5 and 8/9 intentionally absent) ──

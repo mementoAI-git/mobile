@@ -114,18 +114,6 @@ export default function SettingsIndex() {
           contentContainerStyle={styles.content}
         >
         <View style={styles.topCards}>
-          <PlanSummaryBanner
-            isProOrAbove={isProOrAbove}
-            subscriptionKnown={Boolean(summary) && !subscriptionLoading}
-            onPress={handleManagePlan}
-            tier={summary?.tier}
-            status={summary?.status}
-            cancelAtPeriodEnd={summary?.cancel_at_period_end}
-            provider={summary?.provider}
-          />
-
-          <OnboardingReminderCard />
-
           <TouchableOpacity
             onPress={() => {
               void Haptics.selectionAsync();
@@ -154,6 +142,19 @@ export default function SettingsIndex() {
               ) : null}
             </View>
           </TouchableOpacity>
+
+          <PlanSummaryBanner
+            compact
+            isProOrAbove={isProOrAbove}
+            subscriptionKnown={Boolean(summary) && !subscriptionLoading}
+            onPress={handleManagePlan}
+            tier={summary?.tier}
+            status={summary?.status}
+            cancelAtPeriodEnd={summary?.cancel_at_period_end}
+            provider={summary?.provider}
+          />
+
+          <OnboardingReminderCard />
         </View>
 
         {/* Labels and order match web settings-hub.tsx. */}

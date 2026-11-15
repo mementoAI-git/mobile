@@ -29,6 +29,11 @@ export const TYPE_METRICS = Object.freeze({
   input: Object.freeze({fontSize: ms(16, 0.2), lineHeight: ms(22, 0.2)}),
   stat: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(26, 0.25)}),
   mono: Object.freeze({fontSize: ms(14, 0.2), lineHeight: ms(20, 0.2)}),
+  // Web onboarding card title (font-garamond 32/40 medium).
+  onboardingTitle: Object.freeze({fontSize: ms(32, 0.25), lineHeight: ms(40, 0.25)}),
+  monoLabel: Object.freeze({fontSize: ms(12, 0.2), lineHeight: ms(16, 0.2)}),
+  // Figma "Subtext 12px/Regular": onboarding chips and the About counter.
+  chipLabel: Object.freeze({fontSize: ms(12, 0.2), lineHeight: ms(16, 0.2)}),
 });
 
 export const TYPE = StyleSheet.create({
@@ -91,6 +96,13 @@ export const TYPE = StyleSheet.create({
   /** Insights statistics figures: SF Pro Rounded semibold on iOS, like the labels under them. */
   insightStat: {fontFamily: Platform.select({ios: FONTS.sans, default: FONTS.sansSemi}), fontWeight: '600', ...TYPE_METRICS.stat},
   mono: {fontFamily: FONTS.mono, ...TYPE_METRICS.mono},
+  /** Onboarding welcome title; the brand-coloured word uses the accent face. */
+  onboardingTitle: {fontFamily: FONTS.serifMedium, ...TYPE_METRICS.onboardingTitle},
+  onboardingTitleAccent: {fontFamily: FONTS.serifMediumItalic, ...TYPE_METRICS.onboardingTitle},
+  /** Uppercase mono label, e.g. the welcome "private by design" note. */
+  monoLabel: {fontFamily: FONTS.mono, ...TYPE_METRICS.monoLabel},
+  /** Onboarding chip text and the About character counter (Figma Subtext 12px/Regular). */
+  chipLabel: {fontFamily: FONTS.sans, ...TYPE_METRICS.chipLabel},
 });
 
 export type TypographyRole = keyof typeof TYPE;

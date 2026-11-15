@@ -8,6 +8,7 @@ import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Heart from 'lucide-react-native/icons/heart';
 import Mail from 'lucide-react-native/icons/mail';
 import User from 'lucide-react-native/icons/user';
+import { ONBOARDING_BUTTON_STYLE } from '@/components/onboarding/OnboardingShell';
 import { Button, TextInput, Logo } from '@/components/ui';
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -54,7 +55,7 @@ export default function BeneficiaryOnboardScreen() {
             <Heart size={32} color={COLORS.brand} fill={COLORS.brand} />
           </View>
           <Animated.Text
-            className=" text-text-strong leading-[40px] text-center" style={TYPE.displayTitle}
+            className="text-text-strong text-center" style={TYPE.onboardingTitle}
           >
             Add a trusted{"\n"}person
           </Animated.Text>
@@ -124,7 +125,9 @@ export default function BeneficiaryOnboardScreen() {
             loading={isPending}
             fullWidth
             size="lg"
-            className={`h-14 rounded-full shadow-md ${isFormValid ? 'bg-brand shadow-brand/20' : 'bg-brand-weak shadow-none'}`}
+            rounded="full"
+            style={ONBOARDING_BUTTON_STYLE}
+            className={`shadow-md ${isFormValid ? 'bg-brand shadow-brand/20' : 'bg-brand-weak shadow-none'}`}
           >
             <Animated.Text className="text-white" style={TYPE.button}>
               {isFormValid ? 'Add & Finish Setup' : 'Finish Setup'}

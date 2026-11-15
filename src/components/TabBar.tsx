@@ -344,25 +344,19 @@ export function TabBar({ state, navigation }: TabBarProps) {
         })}
       </View>
 
-      {/* ── Detached settings circle ── */}
+      {/* ── Detached settings circle: same surface as the main pill (popover fill, weak stroke, shadow), but round ── */}
       <Pressable
         onPress={handleSettingsPress}
         accessibilityRole="button"
         accessibilityLabel="Settings"
         accessibilityState={{ selected: settingsSelected }}
-        style={[styles.searchCircle, { width: settingsCircleSize(screenWidth), height: settingsCircleSize(screenWidth), backgroundColor: 'transparent', borderColor: COLORS.strokeWeak, borderWidth: 1 }]}
+        style={[styles.searchCircle, { width: settingsCircleSize(screenWidth), height: settingsCircleSize(screenWidth), backgroundColor: COLORS.popover, borderColor: COLORS.strokeWeak, borderWidth: 1 }]}
         android_ripple={{ color: COLORS.brandSubtle, borderless: true, radius: 28 }}
       >
-        {/* Frosted like the dock's fade: a blur of what's behind, then the weak fill. */}
-        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 999, overflow: 'hidden' }]}>
-          {Platform.OS === 'ios' ? (
-            <BlurView tint={dark ? 'dark' : 'light'} intensity={60} style={StyleSheet.absoluteFill} />
-          ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.popover }]} />
-          )}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.fillWeak }]} />
-          {settingsSelected ? <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.fillWeak }]} /> : null}
-        </View>
+        {/* Selected: the same fill the active tab uses inside the pill. */}
+        {settingsSelected ? (
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 999, margin: 4, backgroundColor: COLORS.fillWeak }]} />
+        ) : null}
         <Settings size={iconSize(22)} color={settingsSelected ? COLORS.textStrong : COLORS.textBase} strokeWidth={1.8} />
       </Pressable>
     </Animated.View>

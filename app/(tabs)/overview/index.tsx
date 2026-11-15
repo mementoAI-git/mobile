@@ -1,6 +1,5 @@
 import { isFutureCalendarDay } from '@/features/overview/calendar-selection';
 import { OverviewGreeting } from '@/components/overview/OverviewGreeting';
-import { OnboardingNudgeBanner } from '@/components/onboarding/OnboardingReminderCard';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
@@ -19,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const OVERVIEW_HEADER_HEIGHT = 60;
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Plus from 'lucide-react-native/icons/plus';
+import { CaptureFab } from '@/components/memory/CaptureFab';
 import Zap from 'lucide-react-native/icons/zap';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import { useUiStore } from '@/store';
@@ -157,6 +157,12 @@ export default function OverviewScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({ pathname: '/editor', params: { mode: 'story' } });
   }, [router]);
+  // Same Talk and Record actions as the Stories capture button.
+  const handleTalk = useCallback(() => router.push('/voice-call'), [router]);
+  const handleRecord = useCallback(
+    () => router.push({ pathname: '/editor', params: { mode: 'story', lockMode: 'true', autoRecord: 'true' } }),
+    [router],
+  );
   const handleQuickCapture = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({ pathname: '/editor', params: { mode: 'quick-capture' } });
@@ -368,8 +374,6 @@ export default function OverviewScreen() {
               {/* Greeting — `variant="editorial"` restores web's sun/moon + serif line. */}
               <OverviewGreeting name={displayName} />
 
-              <OnboardingNudgeBanner />
-
               <Animated.View entering={FadeInDown.delay(100)}>
                 <OverviewCaptureCard key={user?._id ?? 'guest'} userId={user?._id} onAddStory={handleAddStory} />
               </Animated.View>
@@ -471,35 +475,8 @@ export default function OverviewScreen() {
 
           </Animated.ScrollView>
 
-          {/* Floating + FAB — appears when "Add story" scrolls off screen */}
-          <Animated.View
-            style={[fabStyle, {
-              position: 'absolute',
-              bottom: 96,
-              right: 24,
-              zIndex: 50,
-            }]}
-          >
-            <TouchableOpacity
-              onPress={handleAddStory}
-              activeOpacity={0.85}
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 28,
-                backgroundColor: COLORS.brand,
-                alignItems: 'center',
-                justifyContent: 'center',
-                shadowColor: COLORS.shadow,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.2,
-                shadowRadius: 12,
-                elevation: 6,
-              }}
-            >
-              <Plus size={26} color={COLORS.textInverse} strokeWidth={2.5} />
-            </TouchableOpacity>
-          </Animated.View>
+          {/* Floating + capture button, revealed on scroll; opens Talk / Write / Record like Stories. */}
+          <CaptureFab icon={Plus} revealStyle={fabStyle} onTalk={handleTalk} onWrite={handleAddStory} onRecord={handleRecord} />
         </>
       )}
 
