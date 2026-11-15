@@ -15,6 +15,7 @@ import { TYPE } from '@/constants/typography';
 import { useThemeColors, useResolvedAppearance } from '@/hooks/use-theme-colors';
 import { useCalendarStories } from '@/hooks/queries/use-calendar-stories';
 import type { IMemory } from '@/types';
+import { SheetActions, SHEET_FILL } from './SheetActions';
 import { SheetHeader } from './SheetHeader';
 import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 
@@ -35,13 +36,13 @@ export function CalendarDateSheet({ date, onSelect, onClose }: { date: Date; onS
     if (choosingMonth) { setChoosingMonth(false); return; }
     onSelect(selected); onClose?.();
   }, [choosingMonth, selected, onSelect, onClose]);
-  return <View style={{ gap: SHEET_GROUP_GAP, paddingBottom: 8 }}>
+  return <View style={{ ...SHEET_FILL, gap: SHEET_GROUP_GAP }}>
     <SheetHeader title="Choose a date" onClose={onClose} closeLabel="Close date picker" />
     {choosingMonth ? <View style={{ gap: 16 }}>
       <Text style={[TYPE.button, { color: colors.brand }]}>{selected.toLocaleString('en-US', { month: 'long', year: 'numeric' })}</Text>
       <MonthYearPicker value={selected} onChange={setSelected} />
     </View> : <DateTimePicker value={selected} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'} onChange={change} themeVariant={appearance === 'light' ? 'light' : 'dark'} accentColor={colors.brand} />}
-    {(choosingMonth || Platform.OS !== 'android') && <Button size="lg" rounded="full" className="h-14" onPress={apply}>Done</Button>}
+    {(choosingMonth || Platform.OS !== 'android') && <SheetActions><Button size="lg" rounded="full" className="h-14" onPress={apply}>Done</Button></SheetActions>}
   </View>;
 }
 

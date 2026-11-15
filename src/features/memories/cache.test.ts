@@ -25,6 +25,21 @@ describe('memory cache invalidation', () => {
     ]);
   });
 
+  test('refreshes every open story when a server change names none', () => {
+    // Voice and chat tools report "memories changed" without saying which,
+    // so an open story must refetch instead of showing the old text.
+    expect(getMemoryInvalidationQueryKeys({
+      includeUserStats: true,
+      includeAllStories: true,
+    })).toEqual([
+      ['memories'],
+      ['stories'],
+      queryKeys.memoriesStats,
+      queryKeys.userStats,
+      [queryKeys.memory('')[0]],
+    ]);
+  });
+
   test('can skip stats for edits that do not change counters', () => {
     expect(getMemoryInvalidationQueryKeys({
       memoryId: 'memory-1',

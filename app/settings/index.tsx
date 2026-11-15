@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/icons/SettingsIcons';
 import { SettingsHubRow } from '@/components/settings/SettingsHubRow';
 import { PlanSummaryBanner } from '@/components/subscription/PlanSummaryBanner';
+import { OnboardingReminderCard } from '@/components/onboarding/OnboardingReminderCard';
 import { useSubscription } from '@/hooks/queries/use-subscription';
 import { TYPE } from '@/constants/typography';
 import { COLORS, FONTS } from '@/constants/tokens';
@@ -113,16 +114,6 @@ export default function SettingsIndex() {
           contentContainerStyle={styles.content}
         >
         <View style={styles.topCards}>
-          <PlanSummaryBanner
-            isProOrAbove={isProOrAbove}
-            subscriptionKnown={Boolean(summary) && !subscriptionLoading}
-            onPress={handleManagePlan}
-            tier={summary?.tier}
-            status={summary?.status}
-            cancelAtPeriodEnd={summary?.cancel_at_period_end}
-            provider={summary?.provider}
-          />
-
           <TouchableOpacity
             onPress={() => {
               void Haptics.selectionAsync();
@@ -151,6 +142,19 @@ export default function SettingsIndex() {
               ) : null}
             </View>
           </TouchableOpacity>
+
+          <PlanSummaryBanner
+            compact
+            isProOrAbove={isProOrAbove}
+            subscriptionKnown={Boolean(summary) && !subscriptionLoading}
+            onPress={handleManagePlan}
+            tier={summary?.tier}
+            status={summary?.status}
+            cancelAtPeriodEnd={summary?.cancel_at_period_end}
+            provider={summary?.provider}
+          />
+
+          <OnboardingReminderCard />
         </View>
 
         {/* Labels and order match web settings-hub.tsx. */}

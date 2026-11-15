@@ -23,9 +23,12 @@ describe('Media preview modal', () => {
   test('adapts save or export labels by platform and media type', () => {
     expect(modal).toContain('const currentItemIsVisual = !!currentItem && (');
     expect(modal).toContain("? Platform.OS === 'ios' ? 'Save to Photos' : 'Save to Gallery'");
-    expect(modal).toContain(": Platform.OS === 'ios' ? 'Save to Files' : 'Download file';");
+    expect(modal).toContain("    : 'Download';");
     expect(modal).toContain("? Platform.OS === 'ios' ? 'Save this to your photo library' : 'Save this to your gallery'");
-    expect(modal).toContain(": Platform.OS === 'ios' ? 'Open the share sheet to save a copy to Files' : 'Export a copy using apps on your device';");
+    expect(modal).toContain("    : 'Save a copy to your device';");
+    // Share options use the shared bottom sheet, not a hand-rolled Modal panel.
+    expect(modal).toContain('<MediaShareSheet');
+    expect(modal).toContain('<BottomSheetModalProvider>');
     expect(modal).toContain("? Platform.OS === 'ios' ? 'Saved to Photos' : 'Saved to Gallery'");
     expect(modal).toContain(": Platform.OS === 'ios' ? 'Saved to Files' : 'File downloaded';");
   });

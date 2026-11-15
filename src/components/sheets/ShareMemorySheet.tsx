@@ -1,6 +1,7 @@
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Share } from 'react-native';
+import { SheetActions, SHEET_FILL } from './SheetActions';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import CheckCircle2 from 'lucide-react-native/icons/circle-check';
@@ -15,15 +16,17 @@ import { Button, toast } from '@/components/ui';
 import { useUiStore } from '@/store';
 import { logger } from '@/lib/logger';
 import { publishedPostUrl } from '@/lib/env';
+import { useShareStoryLink } from '@/hooks/use-share-story-link';
 import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 import { SheetHeader } from './SheetHeader';
 
-export function ShareMemorySheet() {
+export function ShareMemorySheet({ onClose }: { onClose?: (afterDismiss?: () => void) => void } = {}) {
   const COLORS = useThemeColors();
   const sheetProps = useUiStore((s) => s.sheetProps);
   const closeSheet = useUiStore((s) => s.closeSheet);
   const openSheet = useUiStore((s) => s.openSheet);
   const memoryId = sheetProps?.id;
+  const shareStoryLink = useShareStoryLink();
   const [copied, setCopied] = useState(false);
   const mountedRef = useRef(true);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -34,11 +37,14 @@ export function ShareMemorySheet() {
 
   const shareUrl = publishedPostUrl(typeof memoryId === 'string' ? memoryId : undefined);
 
-  const handleCopy = async () => {
-    Haptics.selectionAsync();
+  const copyLink = async () => {
     try {
       await Clipboard.setStringAsync(shareUrl);
-      if (!mountedRef.current) return;
+      // After confirming, the confirmation sheet replaced this one, so say it with a toast.
+      if (!mountedRef.current) {
+        toast('Link copied', 'success');
+        return;
+      }
       setCopied(true);
       clearTimeout(copyTimerRef.current);
       copyTimerRef.current = setTimeout(() => { if (mountedRef.current) setCopied(false); }, 2000);
@@ -48,8 +54,7 @@ export function ShareMemorySheet() {
     }
   };
 
-  const handleShare = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const shareLink = async () => {
     try {
       await Share.share({
         message: `Check out this story on Memento: ${shareUrl}`,
@@ -61,13 +66,23 @@ export function ShareMemorySheet() {
     }
   };
 
+  const handleCopy = () => {
+    Haptics.selectionAsync();
+    if (typeof memoryId === 'string') void shareStoryLink(memoryId, copyLink, onClose);
+  };
+
+  const handleShare = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (typeof memoryId === 'string') void shareStoryLink(memoryId, shareLink, onClose);
+  };
+
   const handleAddAnother = () => {
     closeSheet();
     setTimeout(() => openSheet('create-memory'), 300);
   };
 
   return (
-    <View className="flex-1 pb-8">
+    <View className="flex-1">
       <SheetHeader
         title="Story added"
         onClose={closeSheet}
@@ -75,7 +90,7 @@ export function ShareMemorySheet() {
         style={{ marginBottom: SHEET_GROUP_GAP }}
       />
 
-      <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: SHEET_GROUP_GAP }}>
+      <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ ...SHEET_FILL, gap: SHEET_GROUP_GAP }}>
         <View className="bg-fill-weaker border border-stroke-weaker rounded-2xl p-5 gap-6">
           {/* Link Copy Box */}
           <View className="gap-2">
@@ -115,7 +130,7 @@ export function ShareMemorySheet() {
         </View>
 
         {/* Footer Actions */}
-        <View className="flex-row gap-3">
+        <SheetActions className="flex-row gap-3">
           <Button variant="outline" size="lg" rounded="full" className="h-14 flex-1" onPress={closeSheet}>
             Dismiss
           </Button>
@@ -128,7 +143,7 @@ export function ShareMemorySheet() {
           >
             Add Story
           </Button>
-        </View>
+        </SheetActions>
       </BottomSheetScrollView>
     </View>
   );

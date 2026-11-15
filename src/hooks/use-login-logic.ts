@@ -12,7 +12,7 @@ import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
 import { Passkey } from 'react-native-passkey';
 import { storageKeys } from '@/constants/storage-keys';
-import { AUTH_SESSION_RETURN_URL, normalizeAppHref, oauthCallbackUrl } from '@/lib/navigation';
+import { normalizeAppHref } from '@/lib/navigation';
 import { establishSession, restoreSessionWithCredentials } from '@/features/auth/session-coordinator';
 import {
   classifyPasskeyError,
@@ -144,20 +144,9 @@ export function useLoginLogic() {
         }
       }
 
-      if (nativeResult.error) {
-        toast(nativeResult.error, 'error');
-        return;
-      }
-
-      const res = await client.get(`${endpoint.oauth}google`, {
-        params: { redirect_uri: oauthCallbackUrl('google') },
-        skipAuth: true,
-      } as never);
-      const url: string | undefined = res.data?.data?.url;
-      if (!url) return;
-
-      const { openAuthSessionAsync } = await import('expo-web-browser');
-      await openAuthSessionAsync(url, AUTH_SESSION_RETURN_URL);
+      // No session came back. There is no browser sign-in to fall back to:
+      // the web flow returns to the website, never to the app.
+      toast(nativeResult.error || 'Google sign-in could not be completed. Please try again.', 'error');
     } catch (err: any) {
       const message = err?.message || 'Google sign-in failed. Please try again.';
       toast(message, 'error');
@@ -194,20 +183,9 @@ export function useLoginLogic() {
         }
       }
 
-      if (nativeResult.error) {
-        toast(nativeResult.error, 'error');
-        return;
-      }
-
-      const res = await client.get(`${endpoint.oauth}apple`, {
-        params: { redirect_uri: oauthCallbackUrl('apple') },
-        skipAuth: true,
-      } as never);
-      const url: string | undefined = res.data?.data?.url;
-      if (!url) return;
-
-      const { openAuthSessionAsync } = await import('expo-web-browser');
-      await openAuthSessionAsync(url, AUTH_SESSION_RETURN_URL);
+      // No session came back. There is no browser sign-in to fall back to:
+      // the web flow returns to the website, never to the app.
+      toast(nativeResult.error || 'Apple sign-in could not be completed. Please try again.', 'error');
     } catch (err: any) {
       const message = err?.message || 'Apple sign-in failed. Please try again.';
       toast(message, 'error');

@@ -5,11 +5,13 @@ import dayjs from 'dayjs';
 import * as Haptics from 'expo-haptics';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import MoreVertical from 'lucide-react-native/icons/ellipsis-vertical';
+import Mic from 'lucide-react-native/icons/mic';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { TYPE } from '@/constants/typography';
 import { getQuestionIdenticonUrl } from '@/features/explore/question-presentation';
 import { getMediaCategory } from '@/features/media/media-type';
+import { formatVoiceNoteDuration } from '@/features/overview/capture-draft';
 import { canRenderAttachmentUri } from '@/features/media/media-runtime-policy';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useUiStore } from '@/store';
@@ -58,6 +60,22 @@ const StoryThumbnail = React.memo(function StoryThumbnail({ memory }: { memory: 
   );
 });
 
+/** Recordings (voice notes and recorded conversations) carry an audio attachment. */
+function audioAttachments(memory: IMemory) {
+  return (memory.attachments ?? []).filter((attachment) =>
+    getMediaCategory({ mimeType: attachment.type, name: attachment.name, uri: attachment.url }) === 'audio');
+}
+
+export function hasAudioAttachment(memory: IMemory) {
+  return audioAttachments(memory).length > 0;
+}
+
+/** Total length of a story's recordings as `m:ss`, or '' when unknown. */
+export function recordingDurationLabel(memory: IMemory) {
+  const seconds = audioAttachments(memory).reduce((total, attachment) => total + (Number(attachment.duration) || 0), 0);
+  return seconds > 0 ? formatVoiceNoteDuration(seconds) : '';
+}
+
 function getStoryRowTitle(memory: IMemory): string {
   const promptText = (memory as IMemory & { prompt_text?: string }).prompt_text?.trim();
   if (memory.prompt_type && promptText) return promptText;
@@ -71,6 +89,8 @@ export const StoryListRow = React.memo(function StoryListRow({ memory, onOpen }:
   const COLORS = useThemeColors();
   const title = getStoryRowTitle(memory);
   const date = memory.created_at ? dayjs(memory.created_at).format('MMM DD, YYYY') : '';
+  const isRecording = useMemo(() => hasAudioAttachment(memory), [memory]);
+  const duration = useMemo(() => (isRecording ? recordingDurationLabel(memory) : ''), [isRecording, memory]);
 
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -102,18 +122,34 @@ export const StoryListRow = React.memo(function StoryListRow({ memory, onOpen }:
         onPressOut={handlePressOut}
         activeOpacity={0.9}
         accessibilityRole="button"
-        accessibilityLabel={`Story: ${title}${date ? `, ${date}` : ''}`}
+        accessibilityLabel={`Story: ${title}${isRecording ? ', recording' : ''}${duration ? `, ${duration}` : ''}${date ? `, ${date}` : ''}`}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, paddingRight: 64, minHeight: 74 }}
       >
         <StoryThumbnail memory={memory} />
         <View style={{ flex: 1, gap: 4 }}>
-          <Text numberOfLines={2} style={[TYPE.bodyStrong, { color: COLORS.textStrong }]}>
+          <Text numberOfLines={1} style={[TYPE.bodyStrong, { color: COLORS.textStrong }]}>
             {title}
           </Text>
-          {date ? (
-            <Text style={[TYPE.metadata, { color: COLORS.textWeak }]} className="uppercase tracking-widest">
-              {date}
-            </Text>
+          {date || isRecording ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              {/* Recordings: a mic first, then the date · length. */}
+              {isRecording ? (
+                <Mic size={12} color={COLORS.textWeak} strokeWidth={2} accessibilityLabel="Recording" />
+              ) : null}
+              {date ? (
+                <Text style={[TYPE.metadata, { color: COLORS.textWeak }]} className="uppercase tracking-widest">
+                  {date}
+                </Text>
+              ) : null}
+              {duration ? (
+                <>
+                  {date ? <Text style={[TYPE.metadata, { color: COLORS.textWeak }]}>·</Text> : null}
+                  <Text style={[TYPE.metadata, { color: COLORS.textWeak, fontVariant: ['tabular-nums'] }]} className="tracking-widest">
+                    {duration}
+                  </Text>
+                </>
+              ) : null}
+            </View>
           ) : null}
         </View>
       </TouchableOpacity>

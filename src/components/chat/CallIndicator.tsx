@@ -1,6 +1,9 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
+import { FullWindowOverlay } from 'react-native-screens';
 import { FloatingVoiceCall } from '@/components/chat/FloatingVoiceCall';
+import { VoiceScreenBeam, useVoiceBeamHosted } from '@/components/effects/VoiceGlow';
+import { useVoiceCall } from '@/hooks/use-voice-call';
 
 /**
  * Wraps the root navigator and floats the live voice call over it, as on web.
@@ -12,7 +15,29 @@ export function CallIndicatorLayout({ children }: { children: React.ReactNode })
   return (
     <View style={{ flex: 1 }}>
       {children}
+      <AppVoiceBeam />
       <FloatingVoiceCall />
     </View>
   );
 }
+
+/**
+ * The voice beam over every screen while a call is live. A screen that draws
+ * it behind its own content (the chat) takes over while it is open.
+ */
+function AppVoiceBeam() {
+  const { voice } = useVoiceCall();
+  const hosted = useVoiceBeamHosted();
+  const active = voice.isConnected && !voice.isEnding && !hosted;
+  const [mounted, setMounted] = React.useState(active);
+  // Stay mounted for the fade out.
+  React.useEffect(() => {
+    if (active) { setMounted(true); return; }
+    const id = setTimeout(() => setMounted(false), 600);
+    return () => clearTimeout(id);
+  }, [active]);
+  if (!mounted) return null;
+  const beam = <VoiceScreenBeam active={active} level={voice.getPlaybackLevel} />;
+  return Platform.OS === 'ios' ? <FullWindowOverlay>{beam}</FullWindowOverlay> : beam;
+}
+

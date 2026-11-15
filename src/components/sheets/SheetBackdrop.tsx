@@ -4,7 +4,7 @@ import { SHEET_BACKDROP } from '@/features/layout/sheet-presentation';
 
 /**
  * Backdrop dimming behind bottom sheets, matching web `--overlay-backdrop`:
- * light rgba(94,94,94,0.5); dark and Deep Sky rgba(0,0,0,0.72).
+ * light rgba(94,94,94,0.5); dark and Deep Sky rgba(64,66,76,0.55).
  */
 export const SHEET_BACKDROP_OPACITY = {
   light: SHEET_BACKDROP.light.opacity,

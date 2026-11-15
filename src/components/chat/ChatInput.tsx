@@ -19,7 +19,6 @@ import {
 } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import ArrowUp from 'lucide-react-native/icons/arrow-up';
-import AudioLines from 'lucide-react-native/icons/audio-lines';
 import Mic from 'lucide-react-native/icons/mic';
 import Square from 'lucide-react-native/icons/square';
 import Plus from 'lucide-react-native/icons/plus';
@@ -28,6 +27,7 @@ import FileText from 'lucide-react-native/icons/file-text';
 import Play from 'lucide-react-native/icons/play';
 import Smile from 'lucide-react-native/icons/face-slightly-smiling';
 import { MediaPreviewModal, type PreviewAttachment } from '@/components/ui/MediaPreviewModal';
+import { AudioAttachmentCard } from '@/components/media/AudioAttachmentCard';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -128,6 +128,21 @@ const MemoAttachmentTile = React.memo(function MemoAttachmentTile({
     onRemove(attachment.clientId);
   }, [attachment.clientId, onRemove]);
 
+  if (isAudio) {
+    // Recordings and audio files use the shared recording card, compact for the strip.
+    return (
+      <View style={{ width: SELECTED_AUDIO_WIDTH }}>
+        <AudioAttachmentCard
+          compact
+          item={{ _id: attachment.fileId ?? attachment.clientId, name: attachment.name, type: attachment.mimeType, duration: attachment.duration }}
+          onPress={previewIdx >= 0 ? handlePreviewPress : undefined}
+          onRemove={handleRemovePress}
+          uploading={attachment.isUploading}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={chatInputStyles.selectedAsset}>
       <TouchableOpacity
@@ -144,10 +159,6 @@ const MemoAttachmentTile = React.memo(function MemoAttachmentTile({
               </View>
             )}
           </>
-        ) : isAudio ? (
-          <View style={chatInputStyles.assetAudioTile}>
-            <AudioLines size={iconSize(23)} color={COLORS.brand} strokeWidth={2.3} />
-          </View>
         ) : (
           <View style={chatInputStyles.assetFileTile}>
             <FileText size={iconSize(22)} color={COLORS.brand} strokeWidth={2} />
@@ -216,6 +227,7 @@ const COMPACT_MULTILINE_VERTICAL_PADDING = responsiveSpace(4);
 const EXPANDED_TEXT_MIN_HEIGHT = vs(22);
 const SELECTED_ASSET_OUTER_SIZE = hs(74);
 const SELECTED_ASSET_SIZE = hs(70);
+const SELECTED_AUDIO_WIDTH = hs(240);
 const CHAT_HEADER_RESERVE = vs(72);
 const MULTILINE_DETECTION_BUFFER = 4;
 const TEXT_HEIGHT_BUFFER = 0;
@@ -1267,14 +1279,6 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   assetThumb: {
     width: '100%',
     height: '100%',
-  },
-  assetAudioTile: {
-    width: '100%',
-    height: '100%',
-    borderRadius: radius(10),
-    backgroundColor: COLORS.fillWeaker,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   assetFileTile: {
     width: '100%',

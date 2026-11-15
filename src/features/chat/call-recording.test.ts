@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { buildRecordingSegments, CallRecordingSession, speechSpansFromActivity, USER_TRANSCRIPT_LAG_MS, type CallRecorderNative } from './call-recording';
-import { buildRecordingSaveBody, CallRecordingOutbox, RECORDING_OUTBOX_MAX_AGE_MS, recordingSavePath } from './call-recording-outbox';
+import { audioOmittedReason, buildRecordingSaveBody, CallRecordingOutbox, RECORDING_OUTBOX_MAX_AGE_MS, recordingSavePath } from './call-recording-outbox';
 
 function fakeNative() {
   const pushed: Float32Array[] = [];
@@ -82,6 +82,47 @@ describe('call recording session', () => {
     expect(session.stop(turns)).toBeNull();
   });
 
+  test('keeps each turn\'s time when the user\'s words arrive after Memento\'s reply started', () => {
+    const { native } = fakeNative();
+    const session = new CallRecordingSession(native);
+    session.start('/tmp/call.wav');
+    native.setMs(5_000);
+    session.noteTurns([{ role: 'ai', text: 'Sure' }]);
+    native.setMs(6_000);
+    // The live transcript puts the user's late words ahead of the reply.
+    const turns = [{ role: 'user' as const, text: 'Tell me' }, { role: 'ai' as const, text: 'Sure' }];
+    session.noteTurns(turns);
+    const result = session.stop(turns);
+    // Before, the reply's 5s landed on the user's turn and the reply got 6s.
+    // Now the user keeps their own time (5.2s) and the reply never starts before it.
+    expect(result?.segments.map((segment) => [segment.speaker, segment.start])).toEqual([['user', 5.2], ['ai', 5.2]]);
+  });
+
+  test('starts the user\'s turn where the mic first heard them, not when the words were transcribed', () => {
+    const { native } = fakeNative();
+    const session = new CallRecordingSession(native);
+    session.start('/tmp/call.wav');
+    const quiet = new Float32Array(640); // 40 ms at 16 kHz
+    const voice = new Float32Array(640).fill(0.1);
+    native.setMs(1_000);
+    session.noteTurns([{ role: 'ai', text: 'Hello' }]);
+    // Memento's echo while it is audible is not the user.
+    native.setMs(1_500);
+    session.pushMic(voice, false, true);
+    for (let i = 0; i < 40; i += 1) session.pushMic(quiet, false);
+    native.setMs(4_000);
+    for (let i = 0; i < 10; i += 1) session.pushMic(voice, false);
+    // A short pause inside the sentence is not a new start.
+    native.setMs(4_600);
+    for (let i = 0; i < 5; i += 1) session.pushMic(quiet, false);
+    for (let i = 0; i < 5; i += 1) session.pushMic(voice, false);
+    // The words only arrive 4 seconds later.
+    native.setMs(8_000);
+    const turns = [{ role: 'ai' as const, text: 'Hello' }, { role: 'user' as const, text: 'I went to the market' }];
+    session.noteTurns(turns);
+    expect(session.stop(turns)?.segments.map((segment) => segment.start)).toEqual([1, 4]);
+  });
+
   test('does nothing when the native recorder could not start', () => {
     const { native, pushed } = fakeNative();
     native.startRecording = () => false;
@@ -126,20 +167,116 @@ describe('call recording outbox', () => {
     expect(uploads).toBe(1);
   });
 
-  test('drops recordings that are too old', async () => {
+  test('keeps the transcript of a recording too old to retry, then drops it', async () => {
     let now = 0;
     const outbox = new CallRecordingOutbox(memoryStorage(), 'u1', () => now);
     await outbox.add(entry);
     now = RECORDING_OUTBOX_MAX_AGE_MS + 1;
     const deleted: string[] = [];
-    await outbox.drain({ upload: async () => 'f', save: async () => {}, deleteFile: (uri) => { deleted.push(uri); } });
+    const saved: unknown[] = [];
+    await outbox.drain({
+      upload: async () => { throw new Error('should not upload'); },
+      save: async (s) => { saved.push(s); },
+      deleteFile: (uri) => { deleted.push(uri); },
+    });
+    expect(saved).toEqual([expect.objectContaining({ audioOmitted: 'upload_failed' })]);
     expect(deleted).toEqual(['file:///call.m4a']);
     expect(await outbox.entries()).toEqual([]);
+  });
+
+  test('drops an old recording with nothing said, without saving', async () => {
+    let now = 0;
+    const outbox = new CallRecordingOutbox(memoryStorage(), 'u1', () => now);
+    await outbox.add({ ...entry, segments: [] });
+    now = RECORDING_OUTBOX_MAX_AGE_MS + 1;
+    let saves = 0;
+    await outbox.drain({ upload: async () => 'f', save: async () => { saves += 1; }, deleteFile: () => {} });
+    expect(saves).toBe(0);
+    expect(await outbox.entries()).toEqual([]);
+  });
+
+  test('saves just the transcript when the audio is too large to upload', async () => {
+    const outbox = new CallRecordingOutbox(memoryStorage(), 'u1');
+    await outbox.add(entry);
+    const calls: string[] = [];
+    const sent = await outbox.drain({
+      upload: async () => { calls.push('upload'); throw { httpStatus: 413, code: 'payload_too_large' }; },
+      save: async (s) => { calls.push(`save:${s.fileId ?? s.audioOmitted}`); },
+      deleteFile: (uri) => { calls.push(`delete:${uri}`); },
+    });
+    expect(sent).toBe(1);
+    expect(calls).toEqual(['upload', 'save:too_large', 'delete:file:///call.m4a']);
+    expect(await outbox.entries()).toEqual([]);
+  });
+
+  test('saves just the transcript when storage is full', async () => {
+    const outbox = new CallRecordingOutbox(memoryStorage(), 'u1');
+    await outbox.add(entry);
+    const saved: string[] = [];
+    await outbox.drain({
+      upload: async () => { throw { httpStatus: 403, code: 'storage_quota_exceeded' }; },
+      save: async (s) => { saved.push(String(s.audioOmitted)); },
+      deleteFile: () => {},
+    });
+    expect(saved).toEqual(['storage_full']);
+  });
+
+  test('keeps retrying the upload after a passing failure', async () => {
+    const outbox = new CallRecordingOutbox(memoryStorage(), 'u1');
+    await outbox.add(entry);
+    let saves = 0;
+    const sent = await outbox.drain({
+      upload: async () => { throw { httpStatus: 503 }; },
+      save: async () => { saves += 1; },
+      deleteFile: () => {},
+    });
+    expect(sent).toBe(0);
+    expect(saves).toBe(0);
+    expect(await outbox.entries()).toHaveLength(1);
+  });
+
+  test('once the audio is given up on, a retry saves the transcript without uploading again', async () => {
+    const outbox = new CallRecordingOutbox(memoryStorage(), 'u1');
+    await outbox.add(entry);
+    let uploads = 0;
+    await outbox.drain({
+      upload: async () => { uploads += 1; throw { httpStatus: 413 }; },
+      save: async () => { throw new Error('offline'); },
+      deleteFile: () => {},
+    });
+    expect((await outbox.entries())[0].audioOmitted).toBe('too_large');
+    const sent = await outbox.drain({ upload: async () => { uploads += 1; return 'f'; }, save: async () => {}, deleteFile: () => {} });
+    expect(sent).toBe(1);
+    expect(uploads).toBe(1);
+  });
+
+  test('tells final upload failures from passing ones', () => {
+    expect(audioOmittedReason({ httpStatus: 413 })).toBe('too_large');
+    expect(audioOmittedReason({ code: 'payload_too_large' })).toBe('too_large');
+    expect(audioOmittedReason({ httpStatus: 403, code: 'storage_quota_exceeded' })).toBe('storage_full');
+    expect(audioOmittedReason({ httpStatus: 503 })).toBeNull();
+    expect(audioOmittedReason(new Error('Network Error'))).toBeNull();
   });
 
   test('builds the save request', () => {
     expect(recordingSavePath('a b')).toBe('/ai/voice/calls/a%20b/recording');
     expect(buildRecordingSaveBody({ ...entry, fileId: 'f1' })).toEqual({ file_id: 'f1', duration_seconds: 62, segments: entry.segments });
     expect(buildRecordingSaveBody({ ...entry, speech: [{ start: 0, end: 1 }], fileId: 'f1' }).speech).toEqual([{ start: 0, end: 1 }]);
+    expect(buildRecordingSaveBody({ ...entry, audioOmitted: 'storage_full' })).toEqual({
+      audio_omitted: 'storage_full',
+      duration_seconds: 62,
+      segments: entry.segments,
+    });
+  });
+});
+
+describe('which builds record calls', () => {
+  test('iOS always; Android when Memento plays through native playback', async () => {
+    const { canRecordCalls } = await import('./call-recording');
+    expect(canRecordCalls('ios', false)).toBe(true);
+    expect(canRecordCalls('android', true)).toBe(true);
+    // Without native playback the recorder never hears Memento's side.
+    expect(canRecordCalls('android', false)).toBe(false);
+    expect(canRecordCalls('web', true)).toBe(false);
   });
 });

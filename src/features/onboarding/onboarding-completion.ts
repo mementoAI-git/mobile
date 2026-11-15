@@ -117,25 +117,29 @@ export async function completeFirstRunOnboarding(
   }
 
   assertOnboardingOwnership(ownership, dependencies.getOwnership());
-  await atStage('profile', () =>
-    dependencies.writeProfile({ nickname: draft.nickname }),
-  );
-  assertOnboardingOwnership(ownership, dependencies.getOwnership());
-  await atStage('persona', () =>
-    dependencies.writePersona({
-      self_description: draft.self_description,
-      join_reasons: [...draft.join_reasons],
-    }),
-  );
-  assertOnboardingOwnership(ownership, dependencies.getOwnership());
-  await atStage('onboarding', () =>
-    dependencies.writeOnboarding({
-      motivation: draft.motivationType ?? '',
-      current_priority: [...draft.priorityDimensions],
-      priority_dimensions: [...draft.priorityDimensions],
-      step: draft.stepReached,
-    }),
-  );
+  // The nickname (User record) saves alongside the persona answers to keep the
+  // finishing screen short. Persona and onboarding stay in order: both upsert
+  // the same persona record, which has a unique index.
+  await Promise.all([
+    atStage('profile', () => dependencies.writeProfile({ nickname: draft.nickname })),
+    (async () => {
+      await atStage('persona', () =>
+        dependencies.writePersona({
+          self_description: draft.self_description,
+          join_reasons: [...draft.join_reasons],
+        }),
+      );
+      assertOnboardingOwnership(ownership, dependencies.getOwnership());
+      await atStage('onboarding', () =>
+        dependencies.writeOnboarding({
+          motivation: draft.motivationType ?? '',
+          current_priority: [...draft.priorityDimensions],
+          priority_dimensions: [...draft.priorityDimensions],
+          step: draft.stepReached,
+        }),
+      );
+    })(),
+  ]);
 
   assertOnboardingOwnership(ownership, dependencies.getOwnership());
   const completedUser = await atStage('completion', () =>

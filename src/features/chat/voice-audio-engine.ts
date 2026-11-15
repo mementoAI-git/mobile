@@ -422,6 +422,11 @@ export class VoiceAudioEngine {
     return this.playback?.isAudible(hangoverMs) ?? false;
   }
 
+  /** Received reply audio still waiting to play, in ms. */
+  queueDepthMs(): number {
+    return this.playback?.getQueueDepthMs() ?? 0;
+  }
+
   getEpoch(): number {
     return this.epoch;
   }

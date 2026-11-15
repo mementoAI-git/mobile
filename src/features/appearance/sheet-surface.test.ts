@@ -20,7 +20,7 @@ describe('bottom sheet surface', () => {
 
   test('backdrop matches web --overlay-backdrop on light and dark', async () => {
     const { SHEET_BACKDROP } = await import('../layout/sheet-presentation');
-    expect(SHEET_BACKDROP.dark).toEqual({ color: 'rgb(0,0,0)', opacity: 0.72 });
+    expect(SHEET_BACKDROP.dark).toEqual({ color: 'rgb(64,66,76)', opacity: 0.55 });
     expect(SHEET_BACKDROP.light).toEqual({ color: 'rgb(94,94,94)', opacity: 0.5 });
     const source = readFileSync(join(root, 'src/components/sheets/SheetBackdrop.tsx'), 'utf8');
     expect(source).toContain('backgroundColor: backdrop.color');

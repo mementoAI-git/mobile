@@ -130,6 +130,7 @@ These are the loaded families. Screens don't set them directly; the `TYPE` roles
 | Bold CTAs | `FONTS.sansBold` | `Inter_700Bold` |
 | Editorial headings | `FONTS.serif` | `EBGaramond_400Regular` |
 | Editorial subheadings | `FONTS.serifMedium` | `EBGaramond_500Medium` |
+| Greeting name accent | `FONTS.serifMediumItalic` | `EBGaramond_500Medium_Italic` |
 | Code / mono | `FONTS.mono` | `AzeretMono_400Regular` |
 
 #### Usage Rules
@@ -158,9 +159,10 @@ import { TYPE } from '@/constants/typography';
 | `displayTitle` | `FONTS.serif` | 36 / 42 | Hero titles |
 | `screenTitle` | `FONTS.serif` | 28 / 34 | Every screen's primary title |
 | `screenTitleAccent` | `FONTS.serifItalic` | 28 / 34 | The italic word in a screen title ("My *insights*") |
-| `captureInput` | `FONTS.serif` | 24 / 34 | Overview capture card writing area |
+| `captureInput` | `FONTS.serif` | 20 / 28 | Overview capture card writing area (the placeholder stays on one line) |
 | `reflectionTitle` / `reflectionTitleAccent` | `FONTS.serif` / `FONTS.serifItalic` | 20 / 27 | Continue reflecting card prompt; its orange highlighted words |
-| `greeting` / `greetingName` | `FONTS.serif` / `FONTS.serifItalic` | 24 / 32 | Overview greeting and the host's name |
+| `greeting` / `greetingName` | `FONTS.sans` 600 on iOS (SF Pro Rounded), `FONTS.sansSemi` elsewhere / `FONTS.serifMediumItalic` | 28 / 34 (fixed); name 32 / 34 | Overview two-line greeting ("Good morning, *Groot*," / "What’s on your mind today?"); the name is the muted serif medium italic accent |
+| `greetingEditorial` / `greetingEditorialName` | `FONTS.serif` / `FONTS.serifItalic` | 24 / 32 | The editorial greeting variant (web's welcome section): one serif line beside the sun/moon |
 | `sectionTitle` / `sectionTitleWeak` | `FONTS.serif` / `FONTS.serifItalic` | 22 / 28 | Section headers; muted words within them |
 | `cardTitle` | `FONTS.serifMedium` | 20 / 26 | Card titles |
 | `uiTitle` | `FONTS.sansSemi` | 20 / 26 | Non-editorial UI titles |
@@ -182,6 +184,9 @@ import { TYPE } from '@/constants/typography';
 | `bodySmallStrong` | `FONTS.sansSemi` | 14 / 20 | Bold figures inside small copy |
 | `planPrice` | `FONTS.sansSemi` | 36 / 40 | Plan prices on the plans page |
 | `mono` | `FONTS.mono` | 14 / 20 | Code / mono |
+| `chipLabel` | `FONTS.sans` | 12 / 16 | Onboarding chips (inspiration, life areas) and the About counter |
+| `monoLabel` | `FONTS.mono` | 12 / 16 | Uppercase mono label (welcome "private by design" note) |
+| `onboardingTitle` / `onboardingTitleAccent` | `FONTS.serifMedium` / `FONTS.serifMediumItalic` | 32 / 40 | Onboarding welcome title; its orange accent word |
 
 `typography.ts` also holds single-purpose roles (`dashboardTitle`, `editorTitle`, `voicePickerTitle`, the music and publish-success roles, and others). Read the file for those rather than copying their values.
 
@@ -220,7 +225,7 @@ The only exception is capsule theme previews, marked with a `typography-exceptio
 
 - Page content and headers use **16px** left/right gutters. Bottom sheets use **20px** total left/right gutters; avoid adding the sheet manager gutter twice. Internal card/control padding stays component-specific.
 
-- Bottom sheets use three main groups: header (drag handle, title, close control), body, and actions. Keep **8px** from the visible drag indicator to the header row, **32px** between the main groups, and **24px** between sections inside the body. Sheet titles use **20px** SF Pro Rounded semibold with **32px** line height. The Publish post sheet implements this structure with a shared native handle/header component. A bottom CTA sits **8px** above the home indicator: `getSheetActionsBottomPadding(insets.bottom)` (`src/features/layout/sheet-safe-area.ts`).
+- Bottom sheets use three main groups: header (drag handle, title, close control), body, and actions. Keep **8px** from the visible drag indicator to the header row, **32px** between the main groups, and **24px** between sections inside the body. Sheet titles use **20px** SF Pro Rounded semibold with **32px** line height. The Publish post sheet implements this structure with a shared native handle/header component. A bottom CTA sits **8px** above the home indicator: `getSheetActionsBottomPadding(insets.bottom)` (`src/features/layout/sheet-safe-area.ts`). `SheetManager`'s shared container already applies it, so sheets rendered inside it add no bottom padding of their own; self-managed sheets and modal sheets call the helper directly. Sheets are at least `min(524px, 92%)` tall, so a sheet with buttons spreads `SHEET_FILL` on its root (or scroll content) and wraps the buttons in `<SheetActions>` (`src/components/sheets/SheetActions.tsx`); that pins them to the bottom instead of leaving them mid-sheet under short content.
 
 - Main-screen sections use **40px** separation (`gap-10`, `mb-10`, or `pb-10` at list-header boundaries). Keep related controls, list rows, and content inside a section at their component spacing.
 - The Overview greeting and primary action card are separate sections with **40px** between them.
@@ -324,9 +329,9 @@ Header:        <SheetHeader title onClose /> (no description line under the titl
 Chrome:        useSheetChrome() (src/components/sheets/use-sheet-chrome.ts) on every BottomSheetModal — matches web phone sheets:
                top radius 20px; max height 92% of screen (8% top gap, never under the status bar);
                min height min(524px, 92%) (compact: true for short confirmations, like web alert dialogs);
-               grabber 36×4, strokeStrong at 35%; backdrop light rgba(94,94,94,0.5), dark/Deep Sky rgba(0,0,0,0.72)
+               grabber 36×4, strokeStrong at 35%; backdrop light rgba(94,94,94,0.5), dark/Deep Sky rgba(64,66,76,0.55) (lighter, so the dark sheet stands out)
 Background:    colors.sheet from useThemeColors() — #ffffff light, #12131a dark; Deep Sky uses the same #12131a as Dark
-Backdrop:      backdropComponent={SheetBackdrop} (black 0.55 light, 0.72 dark/Deep Sky = web .dark --overlay-backdrop)
+Backdrop:      backdropComponent={SheetBackdrop} (SHEET_BACKDROP in sheet-presentation.ts)
 Trigger:       useUiStore.getState().openSheet() — never use local Modal state
 ```
 
@@ -416,6 +421,7 @@ Use `withRepeat(withSequence(withTiming(1), withTiming(0.4)), -1, true)` for liv
 />
 ```
 Empty state titles should be warm and inviting, not system-speak (e.g., "Your story begins here" not "No items found").
+The simple form is an icon, the title and a CTA, with no illustration or description; pass `actionTone="inverse"` for the theme-adaptive white (dark) / ink (light) button. My Stories uses it.
 
 #### List / Feed Screens
 - Infinite scroll: `onEndReachedThreshold={0.3}`, `hasNextPage && fetchNextPage()`
@@ -499,17 +505,18 @@ Empty state titles should be warm and inviting, not system-speak (e.g., "Your st
 ## 📐 Tab-by-Tab Reference
 
 ### Overview Tab
-- Primary action: `OverviewCaptureCard` ("What's on your mind today?"), ported from web `overview-capture-card.tsx`. Tapping the card opens the add-story editor, carrying any draft. Default actions: Add story, Talk and record. With a draft (voice notes or a saved text): Save now, Use as story (editor `initialDraft` handoff), Discuss (chat `discussText`), clear and record more.
+- Primary action: `OverviewCaptureCard` ("What's on your mind today?"), ported from web `overview-capture-card.tsx`. Tapping the card opens the add-story editor, carrying any draft. Default actions: Talk (white pill, first), Write (orange, square-pen icon; opens the add-story editor), and record. With a draft (voice notes or a saved text): Save now, Use as story (editor `initialDraft` handoff), Discuss (chat `discussText`), clear and record more.
 - The story editor's + button opens the iOS system menu (`NativeMediaMenu.ios.tsx`, `@expo/ui` SwiftUI `Menu`: Gallery, Camera, Audio, Files); other platforms keep the `MediaPickerMenu` tile popup.
 - Add story (`app/editor.tsx`, new stories only) sits on web mobile's album paper via `StoryComposerBackdrop`: light/dark artwork by resolved appearance (Deep Sky uses dark), 10% paper grain on light; the rich-text WebView is transparent.
 - Reflection cards open the full reflection conversation on the topic route (`/chat/[id]`, `type: 'prompt'`), including answered cards — never a sheet.
 - Enrichment score: `EnrichmentSummaryCard`, matching web chat settings `enrichment-summary.tsx` (strength word, View Insight pill, `fillWeaker` surface, `strokeWeak` border). The enrichment card and the journey stat cards use the calendar card's 20px radius. No Memory Spotlight on Overview.
 - Stats: 4 `OverviewJourneyCard` items with background images from `/assets/images/backgrounds/`
 - Chart: `SplineChart` with touch-drag interaction and haptic feedback
-- Greeting: `TYPE.greeting`, `getGreeting()` + the user's nickname in `TYPE.greetingName` (serif italic), in muted `textWeak` like the other italic heading words. The Overview `DashboardHeader` floats (`floating`) over the content on a frosted fade (`FrostedHeaderBackdrop`)
+- Greeting: two lines in `TYPE.greeting` (SF Pro Rounded semibold 28/34, no sun/moon icon): `getGreeting()` + the user's nickname in `TYPE.greetingName` (serif medium italic, muted `textWeak`) ending with ",", then "What’s on your mind today?"; question greetings ("Back at it, *Groot*?") end with "?" and get a statement instead, picked per visit from `GREETING_FOLLOW_UPS` in `src/features/overview/greeting.ts` ("Ready when you are.", "Take your time.", …). The capture card below shows the muted placeholder "Add something to your Memento". Both versions live in `OverviewGreeting` (`variant="stacked"` is the default; `variant="editorial"` is web's sun/moon + Garamond line, and pairs with `OverviewCaptureCard placeholder="What’s on your mind today?"`). Keep the editorial variant: web still uses it. The Overview `DashboardHeader` floats (`floating`) over the content on a frosted fade (`FrostedHeaderBackdrop`)
 
 ### Chat Tab (Host Chat)
 - Entry screen: resolves `primary_conversation_id` then `router.replace` — never shows a blank spinner for long
+- Voice mode: with a saved voice, the chat call button starts the call directly (no `/voice-call` page); the page only opens for the intro, the voice picker or the upgrade screen. When a call ends, a toast confirms the recording was saved to Stories (iOS records calls).
 - Chat screen: `FlatList inverted`, `TypingIndicator` when streaming, `MilestoneCard` for enrichment milestones
 - Input: `ChatInput` floating pill with glassmorphism background on iOS
 - Deep Dive: `DeepDiveBanner` + `DeepDiveNudge` surface contextually — never persistently

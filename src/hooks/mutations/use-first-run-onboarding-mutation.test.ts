@@ -176,4 +176,33 @@ describe('first-run onboarding mutation adapter', () => {
     expect(setAuthUser).not.toHaveBeenCalled();
     expect(clearDraft).not.toHaveBeenCalled();
   });
+
+  test('sends the answers given so far with the skip and keeps a typed name', async () => {
+    const skippedUser = { ...completedUser, onboarded: false, onboarding_status: 'skipped' as const };
+    const postRequest = mock(async () => acknowledged(null));
+    const putRequest = mock(async () => acknowledged(null));
+    const dependencies = createDependencies({
+      postRequest,
+      putRequest,
+      getProfile: mock(async () => acknowledged(skippedUser)),
+    });
+    const answers = { self_description: 'About me', join_reasons: ['life_record'], current_priority: ['identity_self'] };
+
+    await executeSkipFirstRunOnboardingMutation(dependencies, answers, ' Ada ');
+
+    expect(putRequest).toHaveBeenCalledWith('/users/profile', { nickname: 'Ada' });
+    expect(postRequest).toHaveBeenCalledWith('/users/onboarding/skip', answers);
+  });
+
+  test('still skips when saving the typed name fails', async () => {
+    const skippedUser = { ...completedUser, onboarded: false, onboarding_status: 'skipped' as const };
+    const dependencies = createDependencies({
+      putRequest: mock(async () => { throw new Error('offline'); }),
+      getProfile: mock(async () => acknowledged(skippedUser)),
+    });
+
+    await expect(executeSkipFirstRunOnboardingMutation(dependencies, {}, 'Ada')).resolves.toMatchObject({
+      onboarding_status: 'skipped',
+    });
+  });
 });

@@ -5,7 +5,7 @@ import { FrostedHeaderBackdrop, HeaderButtonBlur } from './FrostedHeaderBackdrop
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import Animated from 'react-native-reanimated';
-import House from 'lucide-react-native/icons/house';
+import Menu from 'lucide-react-native/icons/menu';
 import { Button } from './Button';
 import Search from 'lucide-react-native/icons/search';
 import { Avatar } from './Avatar';
@@ -98,7 +98,7 @@ export function DashboardHeader({
           <View style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 22, overflow: 'hidden' }}>
             {floating && <HeaderButtonBlur dark={dark} />}
             <Button onPress={openMenu} variant="secondary" rounded="full" iconOnly className="w-full h-full" style={{ width: 44, height: 44, minHeight: 44 }} accessibilityLabel="Open app menu">
-              <House size={iconSize(20)} color={COLORS.textStrong} strokeWidth={1.8} />
+              <Menu size={iconSize(20)} color={COLORS.textStrong} strokeWidth={1.8} />
             </Button>
           </View>
           <Animated.Text

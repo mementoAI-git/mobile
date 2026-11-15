@@ -3,7 +3,7 @@ import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
  * MemoryActionsSheet — story detail actions bottom sheet
  *
  * Two views:
- *  1. Actions list: Share now | Add/Remove bookmark | Who can see | Tags | Delete
+ *  1. Actions list: Share now | Copy link | Add/Remove bookmark | Who can see | Tags | Delete
  *  2. Delete confirmation: warning icon + heading + Go back / Yes, delete
  */
 
@@ -19,6 +19,7 @@ import {
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import X from 'lucide-react-native/icons/x';
 import Share2 from 'lucide-react-native/icons/share-2';
+import Link2 from 'lucide-react-native/icons/link-2';
 import Bookmark from 'lucide-react-native/icons/bookmark';
 import BookmarkCheck from 'lucide-react-native/icons/bookmark-check';
 import Users from 'lucide-react-native/icons/users';
@@ -27,6 +28,7 @@ import Trash2 from 'lucide-react-native/icons/trash';
 import AlertTriangle from 'lucide-react-native/icons/triangle-alert';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
 import {
   useDeleteMemory, useBookmarkMemory, useUpdateMemory,
 } from '@/hooks/mutations/use-memory-mutations';
@@ -36,6 +38,7 @@ import { type ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { toast } from '@/components/ui/Toast';
 import { publishedPostUrl } from '@/lib/env';
+import { useShareStoryLink } from '@/hooks/use-share-story-link';
 import { PublishPrivacySheet, type PrivacyMode } from './PublishPrivacySheet';
 import { SheetHeader } from './SheetHeader';
 import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
@@ -48,7 +51,8 @@ import {
 
 interface Props {
   memory: IMemory;
-  onClose?: () => void;
+  /** Closes the sheet; a callback runs once it has finished closing. */
+  onClose?: (afterDismiss?: () => void) => void;
 }
 
 const MemoTagPill = React.memo(function MemoTagPill({
@@ -78,6 +82,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
   const { mutate: deleteMemory, isPending: isDeleting } = useDeleteMemory();
   const { mutate: toggleBookmark, isPending: isBookmarking } = useBookmarkMemory();
   const { mutate: updateMemory } = useUpdateMemory(memory._id);
+  const shareStoryLink = useShareStoryLink();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const originalAudience = useMemo(() => deriveMemoryAudience(memory), [memory]);
@@ -114,15 +119,33 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
 
   const handleShare = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      await Share.share({
-        message: `${memory.title || 'Check out my story'}\n\n${publishedPostUrl(memory._id)}`,
-      });
-    } catch {
-      toast('We couldn’t share this story. Please try again.', 'error');
-    }
-    onClose?.();
-  }, [memory, onClose]);
+    const plan = await shareStoryLink(memory._id, async () => {
+      try {
+        await Share.share({
+          message: `${memory.title || 'Check out my story'}\n\n${publishedPostUrl(memory._id)}`,
+        });
+      } catch {
+        toast('We couldn’t share this story. Please try again.', 'error');
+      }
+    }, onClose ? (afterDismiss) => onClose(afterDismiss) : undefined);
+    // On 'confirm-public' this sheet is already closing to make way for the confirmation.
+    if (plan !== 'confirm-public') onClose?.();
+  }, [memory, onClose, shareStoryLink]);
+
+  const handleCopyLink = useCallback(async () => {
+    Haptics.selectionAsync();
+    // Same check as Share now: a private story's link would not open for anyone.
+    const plan = await shareStoryLink(memory._id, async () => {
+      try {
+        await Clipboard.setStringAsync(publishedPostUrl(memory._id));
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        toast('Link copied', 'success');
+      } catch {
+        toast('We couldn’t copy the link. Please try again.', 'error');
+      }
+    }, onClose ? (afterDismiss) => onClose(afterDismiss) : undefined);
+    if (plan !== 'confirm-public') onClose?.();
+  }, [memory, onClose, shareStoryLink]);
 
   const handleBookmark = useCallback(() => {
     Haptics.selectionAsync();
@@ -212,7 +235,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
 
   if (showDeleteConfirm) {
     return (
-      <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 24, paddingHorizontal: 4 }}>
+      <View style={{ alignItems: 'center', paddingTop: 16, paddingHorizontal: 4 }}>
         {/* Warning icon */}
         <View style={{ marginBottom: 24, marginTop: 8 }}>
           <AlertTriangle size={96} color={COLORS.warning} fill={COLORS.warning} strokeWidth={0} />
@@ -277,7 +300,7 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
     <ScrollView
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ paddingBottom: 24 }}
+      contentContainerStyle={{ paddingBottom: 0 }}
     >
       <SheetHeader
         title={memory.title?.trim() || 'Story options'}
@@ -290,6 +313,12 @@ export function MemoryActionsSheet({ memory, onClose }: Props) {
       <TouchableOpacity onPress={handleShare} style={s.actionRow} activeOpacity={0.8}>
         <Share2 size={20} color={COLORS.textBase} strokeWidth={1.8} />
         <Text style={s.actionLabel}>Share now</Text>
+      </TouchableOpacity>
+
+      {/* Copy link */}
+      <TouchableOpacity onPress={handleCopyLink} style={s.actionRow} activeOpacity={0.8}>
+        <Link2 size={20} color={COLORS.textBase} strokeWidth={1.8} />
+        <Text style={s.actionLabel}>Copy link</Text>
       </TouchableOpacity>
 
       {/* Bookmark */}

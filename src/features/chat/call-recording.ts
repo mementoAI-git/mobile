@@ -66,6 +66,14 @@ export interface CallRecorderNative {
  */
 export const USER_TRANSCRIPT_LAG_MS = 800;
 
+/** Mic level (RMS) that counts as the user speaking. */
+export const MIC_SPEECH_RMS = 0.012;
+/** Speech must last this long to count, so clicks and breaths don't. */
+const MIC_SPEECH_MIN_MS = 120;
+/** Quiet for this long ends a stretch of the user's speech. */
+const MIC_SILENCE_RESET_MS = 1200;
+const MIC_SAMPLE_RATE = 16_000;
+
 /**
  * Timed segments for the transcript: each turn starts where it was first seen
  * (or right after the previous turn when it never was), and ends where the
@@ -101,6 +109,12 @@ export function buildRecordingSegments(
   return segments;
 }
 
+/** "ai:0", "user:0", "ai:1", …: which of that speaker's turns each one is. */
+function turnKeys(turns: RecordingTurn[]) {
+  const counts = { user: 0, ai: 0 };
+  return turns.map((turn) => `${turn.role}:${counts[turn.role]++}`);
+}
+
 function round(seconds: number) {
   return Math.round(seconds * 100) / 100;
 }
@@ -110,8 +124,18 @@ function round(seconds: number) {
  * are recorded as silence so nothing said on mute ends up in the file.
  */
 export class CallRecordingSession {
-  private readonly startsMs = new Map<number, number>();
+  /**
+   * When each turn was first seen, keyed by speaker and occurrence ("user:2").
+   * Not by list position: the live transcript inserts the user's words ahead of
+   * a Memento reply that is already arriving, which shifts every later index.
+   */
+  private readonly startsMs = new Map<string, number>();
   private active = false;
+  /** Where each stretch of the user's speech began on the recording, oldest first. */
+  private readonly micOnsetsMs: number[] = [];
+  private micVoicedMs = 0;
+  private micVoicedFromMs = 0;
+  private micQuietMs = MIC_SILENCE_RESET_MS;
 
   constructor(private readonly native: CallRecorderNative) {}
 
@@ -124,20 +148,70 @@ export class CallRecordingSession {
     return this.active;
   }
 
-  pushMic(samples: Float32Array, muted: boolean) {
+  /**
+   * `mementoAudible`: Memento is playing through the speaker, so what the mic
+   * hears may be its echo rather than the user starting to speak.
+   */
+  pushMic(samples: Float32Array, muted: boolean, mementoAudible = false) {
     if (!this.active) return;
     const frame = muted ? new Float32Array(samples.length) : Float32Array.from(samples);
+    this.noteMicLevel(frame, mementoAudible);
     this.native.pushMic(frame.buffer as ArrayBuffer);
+  }
+
+  /** Finds where the user starts speaking, straight from the mic. */
+  private noteMicLevel(frame: Float32Array, mementoAudible: boolean) {
+    if (!frame.length) return;
+    let sum = 0;
+    for (let i = 0; i < frame.length; i += 1) sum += frame[i] * frame[i];
+    const frameMs = (frame.length / MIC_SAMPLE_RATE) * 1000;
+    const voiced = !mementoAudible && Math.sqrt(sum / frame.length) >= MIC_SPEECH_RMS;
+    if (!voiced) {
+      this.micQuietMs += frameMs;
+      if (this.micQuietMs >= MIC_SILENCE_RESET_MS) this.micVoicedMs = 0;
+      return;
+    }
+    if (this.micVoicedMs === 0) {
+      // This frame is about to be written, so it starts at the recording's current end.
+      this.micVoicedFromMs = this.native.recordingMs();
+    }
+    const startsRun = this.micQuietMs >= MIC_SILENCE_RESET_MS;
+    this.micVoicedMs += frameMs;
+    if (startsRun && this.micVoicedMs >= MIC_SPEECH_MIN_MS) {
+      this.micOnsetsMs.push(this.micVoicedFromMs);
+      this.micQuietMs = 0;
+    } else if (!startsRun) {
+      this.micQuietMs = 0;
+    }
   }
 
   /** Call whenever transcript turns change; only a turn's first sighting counts. */
   noteTurns(turns: RecordingTurn[]) {
     if (!this.active) return;
     const now = this.native.recordingMs();
-    turns.forEach((turn, index) => {
-      if (this.startsMs.has(index) || !turn.text.trim()) return;
-      this.startsMs.set(index, turn.role === 'user' ? Math.max(0, now - USER_TRANSCRIPT_LAG_MS) : now);
+    const keys = turnKeys(turns);
+    keys.forEach((key, index) => {
+      if (this.startsMs.has(key) || !turns[index].text.trim()) return;
+      if (turns[index].role === 'ai') {
+        this.startsMs.set(key, now);
+        return;
+      }
+      // The user's words are transcribed a while after they start (sometimes
+      // only after Memento has begun replying): use where the mic first heard
+      // them after the turn before, else estimate back from now.
+      const previous = index > 0 ? this.startsMs.get(keys[index - 1]) ?? -1 : -1;
+      const onset = this.micOnsetsMs.find((ms) => ms > previous && ms <= now);
+      this.startsMs.set(key, onset ?? Math.max(0, now - USER_TRANSCRIPT_LAG_MS));
     });
+  }
+
+  private startsByIndex(turns: RecordingTurn[]) {
+    const starts = new Map<number, number>();
+    turnKeys(turns).forEach((key, index) => {
+      const start = this.startsMs.get(key);
+      if (start !== undefined) starts.set(index, start);
+    });
+    return starts;
   }
 
   /** Stops and returns the file with its segments, or null when nothing was recorded. */
@@ -149,8 +223,17 @@ export class CallRecordingSession {
     return {
       path: result.path,
       durationMs: result.durationMs,
-      segments: buildRecordingSegments(turns, this.startsMs, result.durationMs),
+      segments: buildRecordingSegments(turns, this.startsByIndex(turns), result.durationMs),
       speech: speechSpansFromActivity(result.activity),
     };
   }
+}
+
+/**
+ * Whether this build can record calls. The recorder takes Memento's voice
+ * from native playback, which iOS always uses; Android only when the build
+ * turns native playback on, or the recording would hold only the host.
+ */
+export function canRecordCalls(os: string, nativePlayback: boolean): boolean {
+  return os === 'ios' || (os === 'android' && nativePlayback);
 }

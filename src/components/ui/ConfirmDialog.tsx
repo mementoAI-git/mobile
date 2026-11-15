@@ -37,7 +37,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { getSheetBottomPadding } from '@/features/layout/sheet-safe-area';
+import { getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -106,10 +106,7 @@ export function ConfirmDialog({
         style={[
           styles.card,
           {
-            paddingBottom: Math.max(
-              getSheetBottomPadding(insets.bottom, 16),
-              24,
-            ),
+            paddingBottom: getSheetActionsBottomPadding(insets.bottom),
           },
         ]}
       >

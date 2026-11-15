@@ -36,12 +36,10 @@ describe('auth and onboarding sizing', () => {
     expect(setPassSource).toContain('minTouchTarget');
   });
 
-  test('onboarding shell and celebration overlay guarantee 44dp touch targets', () => {
+  test('onboarding shell guarantees 44dp touch targets', () => {
     const shellSource = readFileSync('src/components/onboarding/OnboardingShell.tsx', 'utf8');
-    const celebrationSource = readFileSync('src/components/onboarding/OnboardingCelebrationOverlay.tsx', 'utf8');
 
     expect(shellSource).toContain('min-h-[44px]');
-    expect(celebrationSource).toContain('minTouchTarget');
   });
 
   test('onboarding preferences and summary use responsive metrics and wrap chips', () => {

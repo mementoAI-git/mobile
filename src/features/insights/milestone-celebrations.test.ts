@@ -23,10 +23,29 @@ describe('milestone celebration helpers', () => {
   });
 
   test('orders what is next first: closest unreached, then reached, then unavailable', () => {
-    const ordered = orderMilestones(calculateMilestones({ memoryCount: 8, streakDays: 1, beneficiaryCount: 1 })).map((m) => m.id);
+    const ordered = orderMilestones(calculateMilestones({ onboardingComplete: true, memoryCount: 8, streakDays: 1, beneficiaryCount: 1 })).map((m) => m.id);
     expect(ordered[0]).toBe('stories-ten');
     expect(ordered.indexOf('legacy-contact')).toBeGreaterThan(ordered.indexOf('first-reflection'));
     expect(ordered.at(-1)).toBe('time-capsule');
+  });
+});
+
+describe('Complete onboarding milestone', () => {
+  const onboarding = (complete: boolean) =>
+    calculateMilestones({ onboardingComplete: complete }).find((m) => m.id === 'onboarding')!;
+
+  test('opens onboarding until it is finished', () => {
+    expect(onboarding(false)).toMatchObject({ achieved: false, progressLabel: 'Start', href: '/(onboard)' });
+  });
+
+  test('unlocks and stops linking once onboarding is completed', () => {
+    expect(onboarding(true)).toMatchObject({ achieved: true, progressLabel: 'Unlocked' });
+    expect(onboarding(true).href).toBeUndefined();
+  });
+
+  test('leads the list while unfinished, ahead of goals already in progress', () => {
+    const ordered = orderMilestones(calculateMilestones({ memoryCount: 8 })).map((m) => m.id);
+    expect(ordered.slice(0, 2)).toEqual(['onboarding', 'stories-ten']);
   });
 });
 

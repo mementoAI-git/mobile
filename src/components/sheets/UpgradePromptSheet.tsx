@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, Image } from 'react-native';
+import { SheetActions, SHEET_FILL } from './SheetActions';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { TYPE } from '@/constants/typography';
 import { Button } from '@/components/ui';
@@ -64,7 +65,7 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
   const monthlyPrice = products.monthly.localizedPrice || '$9.99';
 
   return (
-    <View className="flex-grow pb-2" style={{ gap: SHEET_GROUP_GAP }}>
+    <View style={{ ...SHEET_FILL, gap: SHEET_GROUP_GAP }}>
       <SheetHeader
         title="Unlock Premium Memento"
         onClose={onClose}
@@ -118,7 +119,7 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
       </View>
 
       {/* Bottom Actions */}
-      <View className="gap-3">
+      <SheetActions className="gap-3">
         <Button
           onPress={handleUpgrade}
           loading={loading || purchasing}
@@ -172,7 +173,7 @@ export function UpgradePromptSheet({ onClose }: UpgradePromptSheetProps) {
           </TouchableOpacity>
         </View>
         </View>
-      </View>
+      </SheetActions>
     </View>
   );
 }

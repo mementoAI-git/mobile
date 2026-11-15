@@ -1,5 +1,12 @@
 import { currentDigitalMindName, currentDigitalMindHeaders } from '@/features/chat/digital-mind-runtime';
-import { voiceEffectLevel } from '@/features/chat/voice-effect-level';
+import {
+  CALL_ENDING_SOON_PROMPT,
+  CALL_TIME_UP_PROMPT,
+  callLimitSchedule,
+  isCallTimeUp,
+  type VoiceCallTime,
+} from '@/features/chat/voice-call-limit';
+import { PlaybackLevelMeter } from '@/features/chat/voice-effect-level';
 import { voiceLanguageInstruction } from '@/features/chat/voice-language';
 import { sendVoiceText } from '@/features/chat/voice-text-input';
 import { useVoicePreferenceStore } from '@/store/voice-preference.store';
@@ -102,6 +109,7 @@ import { parseHybridEndMs, VoiceHybridEnd } from '@/features/chat/voice-hybrid-e
 import { queryClient } from '@/lib/query-client';
 import { queryKeys } from '@/constants/query-keys';
 import { CallRecordingSession } from '@/features/chat/call-recording';
+import { toast } from '@/components/ui/Toast';
 import { discardCallRecording, drainCallRecordings, finishCallRecording, getCallRecorderNative, newCallRecordingPath } from '@/features/chat/call-recording-store';
 import { invalidateMemoryQueries } from '@/features/memories/cache';
 import { useAuthStore, useUserStore } from '@/store';
@@ -316,6 +324,9 @@ export function useVoiceMode({
 
   const sessionRef = useRef<Session | null>(null);
   const resumeHandleRef = useRef<string | null>(null);
+  /** The call's time-limit ticket, sent back on reconnect; null when calls are not limited. */
+  const callTicketRef = useRef<string | null>(null);
+  const callLimitTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const reconnectingRef = useRef(false);
   const reconnectRef = useRef<(reason: ReconnectReason) => Promise<ReconnectResult>>(
     async () => 'unavailable',
@@ -332,8 +343,12 @@ export function useVoiceMode({
   const isMutedRef = useRef(false);
   const isGreetingActiveRef = useRef(false);
   const isAiSpeakingRef = useRef(false);
-  const playbackLevelRef = useRef(0);
-  const getPlaybackLevel = useCallback(() => engineRef.current?.isAudible(0) ? playbackLevelRef.current : 0, []);
+  // The level of Memento's voice at the moment it is heard, for the voice beam.
+  const playbackMeterRef = useRef(new PlaybackLevelMeter());
+  const getPlaybackLevel = useCallback(() => {
+    const engine = engineRef.current;
+    return engine ? playbackMeterRef.current.level(engine.queueDepthMs()) : 0;
+  }, []);
   const isMountedRef = useRef(true);
   const isDisconnectingRef = useRef(false);
   const isSessionActiveRef = useRef(false);
@@ -627,6 +642,7 @@ export function useVoiceMode({
             clearTimeout(pendingTurnCompleteTimerRef.current);
             pendingTurnCompleteTimerRef.current = null;
           }
+          playbackMeterRef.current.reset();
           transcriptRef.current.handleInterruption();
           transcriptRef.current.completeTurn();
           syncCompletedTurns(true);
@@ -639,7 +655,7 @@ export function useVoiceMode({
           selfInterruptRef.current?.observeModelAudio();
           goodbyeRef.current?.tracker.onModelAudio();
           if (engine?.enqueueOutput(effect.data, effect.epoch) && isMountedRef.current) {
-            playbackLevelRef.current = voiceEffectLevel(effect.data);
+            playbackMeterRef.current.push(effect.data);
             isAiSpeakingRef.current = true;
             setIsAiSpeaking(true);
           }
@@ -724,6 +740,9 @@ export function useVoiceMode({
     networkUnsubscribeRef.current?.();
     networkUnsubscribeRef.current = null;
     lastNetworkRef.current = undefined;
+    callLimitTimersRef.current.forEach(clearTimeout);
+    callLimitTimersRef.current = [];
+    callTicketRef.current = null;
     toolRelayRef.current?.dispose();
     toolRelayRef.current = null;
     const uplinkRecorder = uplinkRecorderRef.current;
@@ -784,6 +803,7 @@ export function useVoiceMode({
 
     const engine = engineRef.current;
     engineRef.current = null;
+    playbackMeterRef.current.reset();
     await engine?.stop().catch((error) => logger.handledError('Voice audio cleanup failed', error));
     const engineSnapshot = engine?.snapshot();
     if (engineSnapshot) logger.runtime('[VoiceMode] session metrics', engineSnapshot);
@@ -857,8 +877,20 @@ export function useVoiceMode({
       const recordingUserId = useUserStore.getState().user?._id;
       // A conversation with nothing said is not worth a story.
       if (turnSync && recordingUserId && recording.segments.length > 0) {
+        // Reassure the person their conversation is kept once it is safe.
         void finishCallRecording({ userId: recordingUserId, sessionId: turnSync.getSessionId(), recording })
-          .catch((error) => logger.handledError('Voice recording could not be saved', error));
+          .then((result) => {
+            toast(
+              result === 'sent'
+                ? 'Your conversation recording is saved to Stories'
+                : 'Your conversation recording is saved and will appear in Stories shortly',
+              'success',
+            );
+          })
+          .catch((error) => {
+            logger.handledError('Voice recording could not be saved', error);
+            toast('We couldn’t save this conversation’s recording', 'error');
+          });
       } else {
         discardCallRecording(recording.path);
       }
@@ -1071,6 +1103,7 @@ export function useVoiceMode({
             const tokenResponse = await get<unknown>(
               buildEphemeralTokenUrl(endpoint.ephemeralToken, {
                 resumeHandle: resumeHandleRef.current,
+                callTicket: callTicketRef.current,
                 memoryId: memoryIdRef.current,
                 deviceModel: Device.modelName,
                 capabilities: CLIENT_CAPABILITIES,
@@ -1091,12 +1124,19 @@ export function useVoiceMode({
             sessionRef.current = next;
             transportsRef.current?.activate(transport);
             previous?.close();
+            // The server's count is the clock: restart the timers from it.
+            scheduleCallLimitRef.current(liveToken.callTime);
             // An abandoned response's end marker may never arrive on the
             // resumed session; keeping the gate shut could swallow a reply.
             responseGateRef.current?.reset();
             logger.runtime('[VoiceMode] reconnected', { reason, attempt });
             return 'reconnected';
           } catch (error) {
+            if (isCallTimeUp(error)) {
+              // Retrying cannot help: the call's time is up.
+              failureRef.current ??= { step: 'connection-lost', message: 'Call time limit reached' };
+              return 'failed';
+            }
             logger.handledError('Voice reconnect attempt failed', error);
           }
         }
@@ -1190,6 +1230,38 @@ export function useVoiceMode({
     }, 100);
     goodbyeRef.current = { tracker: new GoodbyeTracker(Date.now()), timer, then };
   }, []);
+
+  /**
+   * Arms the call's time limit, when the server sets one: a spoken heads-up
+   * near the end, then a goodbye after which the call ends. Called again on
+   * each reconnect with the server's fresh count.
+   */
+  const scheduleCallLimit = useCallback((callTime: VoiceCallTime | undefined) => {
+    callLimitTimersRef.current.forEach(clearTimeout);
+    callLimitTimersRef.current = [];
+    if (!callTime) return;
+    callTicketRef.current = callTime.ticket;
+    const ask = (text: string) => {
+      try {
+        sessionRef.current?.sendClientContent({ turns: [{ role: 'user', parts: [{ text }] }], turnComplete: true });
+      } catch (error) {
+        logger.handledError('Voice call time notice failed', error);
+      }
+    };
+    const { warnInMs, endInMs } = callLimitSchedule(callTime.secondsLeft);
+    if (warnInMs !== null) {
+      callLimitTimersRef.current.push(setTimeout(() => ask(CALL_ENDING_SOON_PROMPT), warnInMs));
+    }
+    callLimitTimersRef.current.push(
+      setTimeout(() => {
+        if (!isSessionActiveRef.current) return;
+        ask(CALL_TIME_UP_PROMPT);
+        endCallAfterGoodbye();
+      }, endInMs),
+    );
+  }, [endCallAfterGoodbye]);
+  const scheduleCallLimitRef = useRef(scheduleCallLimit);
+  scheduleCallLimitRef.current = scheduleCallLimit;
 
   /**
    * Prepares a call before the tap: opens the Gemini session with the
@@ -1415,7 +1487,7 @@ export function useVoiceMode({
       onMicFrame: (samples, flags) => {
         if (DEBUG_CAPTURE_GATE) gateCaptureRef.current?.add(samples, flags);
         // Everything the mic hears goes to the recording, except while muted.
-        callRecordingRef.current?.pushMic(samples, isMutedRef.current);
+        callRecordingRef.current?.pushMic(samples, isMutedRef.current, flags.audibleOnSpeaker);
       },
       onFatalError: (error) => {
         logger.handledError('Native voice audio failed', error);
@@ -1444,6 +1516,7 @@ export function useVoiceMode({
       },
     });
     engineRef.current = engine;
+    playbackMeterRef.current.reset();
 
 
     try {
@@ -1574,7 +1647,7 @@ export function useVoiceMode({
               if (effect.what === 'profile') {
                 void queryClient.invalidateQueries({ queryKey: queryKeys.profile });
               } else if (effect.what === 'memories') {
-                invalidateMemoryQueries(queryClient, { includeUserStats: true });
+                invalidateMemoryQueries(queryClient, { includeUserStats: true, includeAllStories: true });
               } else if (effect.what === 'capsules') {
                 void queryClient.invalidateQueries({ queryKey: ['capsules'] });
                 void queryClient.invalidateQueries({ queryKey: queryKeys.capsuleStats });
@@ -1716,6 +1789,9 @@ export function useVoiceMode({
         });
         latencyRef.current?.mark('greetingSent');
       }
+
+      // The call is up: arm its time limit, if the server set one.
+      scheduleCallLimitRef.current(liveToken.callTime);
 
       // Safety guard: The greeting shield prevents the model's initial spoken greeting
       // from leaking into the microphone and causing self-interruption.

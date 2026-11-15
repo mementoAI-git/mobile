@@ -25,6 +25,8 @@ interface PlanSummaryBannerProps {
   provider?: SubscriptionSummary['provider'];
   /** "Renews Dec 7, 2026", "Trial ends …" or "Access until …", beside Manage plan (web). */
   periodLabel?: string | null;
+  /** One-row card for the Settings hub: title, status line and the action pill. Billing keeps the full card. */
+  compact?: boolean;
 }
 
 function statusBadgeLabel(
@@ -50,12 +52,49 @@ export const PlanSummaryBanner = React.memo(function PlanSummaryBanner({
   cancelAtPeriodEnd,
   provider,
   periodLabel,
+  compact = false,
 }: PlanSummaryBannerProps) {
   const COLORS = useThemeColors();
   const styles = useThemeStyles(createStyles);
   const resolvedTier = tier ?? (isProOrAbove ? 'pro' : 'free');
   const presentation = getBillingTierPresentation(resolvedTier);
   const badge = statusBadgeLabel(presentation.statusLabel, status, cancelAtPeriodEnd);
+
+  if (compact) {
+    const isPaid = presentation.variant === 'paid';
+    return (
+      <Animated.View entering={FadeInDown.delay(80).duration(500)}>
+        <LinearGradient
+          colors={PLAN_FREE_GRADIENT.colors}
+          locations={PLAN_FREE_GRADIENT.locations}
+          start={PLAN_FREE_GRADIENT.start}
+          end={PLAN_FREE_GRADIENT.end}
+          style={styles.compactCard}
+        >
+          <View style={styles.compactCopy}>
+            <Text numberOfLines={1} style={styles.compactTitle}>{presentation.title}</Text>
+            {isPaid && badge ? (
+              <View style={styles.compactStatus}>
+                <View style={styles.compactDot} />
+                <Text numberOfLines={1} style={styles.compactStatusText}>{badge}</Text>
+              </View>
+            ) : null}
+          </View>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={presentation.actionLabel}
+            onPress={onPress}
+            disabled={loading}
+            activeOpacity={0.8}
+            hitSlop={{ top: 6, bottom: 6 }}
+            style={styles.compactAction}
+          >
+            <Text style={styles.compactActionText}>{presentation.actionLabel}</Text>
+          </TouchableOpacity>
+        </LinearGradient>
+      </Animated.View>
+    );
+  }
 
   if (presentation.variant === 'paid') {
     return (
@@ -218,5 +257,49 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   badgeText: {
     ...TYPE.eyebrow,
     flexShrink: 1,
+  },
+  compactCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: hs(12),
+    borderRadius: radius(16),
+    paddingHorizontal: hs(16),
+    paddingVertical: vs(12),
+    overflow: 'hidden',
+  },
+  compactCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: vs(2),
+  },
+  compactTitle: {
+    ...TYPE.button,
+    color: COLORS.textInverse,
+  },
+  compactStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: responsiveSpace(6),
+  },
+  compactDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.textInverse,
+  },
+  compactStatusText: {
+    ...TYPE.metadata,
+    color: COLORS.textInverse,
+  },
+  compactAction: {
+    flexShrink: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+    borderRadius: 999,
+    paddingHorizontal: hs(14),
+    paddingVertical: vs(8),
+  },
+  compactActionText: {
+    ...TYPE.buttonSmall,
+    color: COLORS.textInverse,
   },
 });

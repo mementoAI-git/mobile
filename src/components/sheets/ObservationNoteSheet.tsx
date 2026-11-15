@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
+import { SheetActions, SHEET_FILL } from './SheetActions';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -85,7 +86,7 @@ export function ObservationNoteSheet({
   const busy = editNote.isPending || forgetNote.isPending;
 
   return (
-    <View style={{ gap: SHEET_GROUP_GAP }}>
+    <View style={{ ...SHEET_FILL, gap: SHEET_GROUP_GAP }}>
       <SheetHeader title={TITLES[mode]} onClose={onClose} />
 
       {mode === 'actions' ? (
@@ -130,7 +131,7 @@ export function ObservationNoteSheet({
       ) : null}
 
       {mode === 'edit' ? (
-        <Animated.View key="edit" entering={FadeInDown.duration(300)} style={{ gap: SHEET_GROUP_GAP }}>
+        <Animated.View key="edit" entering={FadeInDown.duration(300)} style={{ ...SHEET_FILL, gap: SHEET_GROUP_GAP }}>
           <View style={{ gap: SHEET_SECTION_GAP }}>
           <Text style={[TYPE.bodySmall, { color: colors.textBase }]}>
             Put this note in your own words. Memento will use this version from now on.
@@ -156,6 +157,7 @@ export function ObservationNoteSheet({
             editable={!busy}
           />
           </View>
+          <SheetActions>
           <Button
             size="lg"
             rounded="full"
@@ -166,11 +168,12 @@ export function ObservationNoteSheet({
           >
             Save changes
           </Button>
+          </SheetActions>
         </Animated.View>
       ) : null}
 
       {mode === 'forget' ? (
-        <Animated.View key="forget" entering={FadeInDown.duration(300)} style={{ gap: SHEET_GROUP_GAP }}>
+        <Animated.View key="forget" entering={FadeInDown.duration(300)} style={{ ...SHEET_FILL, gap: SHEET_GROUP_GAP }}>
           <View style={{ gap: SHEET_SECTION_GAP }}>
           <Text style={[TYPE.bodySmall, { color: colors.textBase }]}>
             Memento will stop using this note and won’t add it back. Your memories stay as they are.
@@ -188,7 +191,7 @@ export function ObservationNoteSheet({
             <Text style={[TYPE.body, { color: colors.textStrong }]}>{item.detail}</Text>
           </View>
           </View>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+          <SheetActions style={{ flexDirection: 'row', gap: 12 }}>
             <Button
               variant="secondary"
               size="lg"
@@ -209,7 +212,7 @@ export function ObservationNoteSheet({
             >
               Forget note
             </Button>
-          </View>
+          </SheetActions>
         </Animated.View>
       ) : null}
     </View>

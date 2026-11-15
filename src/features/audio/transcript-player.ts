@@ -17,7 +17,7 @@ export interface FileTranscription {
   fullText: string;
   segments: TranscriptSegment[];
   /** When someone was audible (recorded voice conversations); the rest is silence. */
-  speech: { start: number; end: number }[];
+  speech: SpeechSpan[];
 }
 
 export interface TranscriptTurn {
@@ -123,12 +123,122 @@ export function mergeTranscriptTurns(segments: readonly TranscriptSegment[]): Tr
   return turns;
 }
 
+export type SpeechSpan = { start: number; end: number };
+
+/** How far a turn's start may move to reach the speech it belongs to, in seconds. */
+const ALIGN_WINDOW_S = 6;
+/** Cost of leaving a turn where it was noted rather than snapping it to speech. */
+const ALIGN_SKIP_COST = 4;
+/** Moving a start the "wrong" way for its speaker costs this much more. */
+const ALIGN_AGAINST_COST = 3;
+
+/**
+ * A recorded call notes each turn when its text first arrived, which is not when
+ * it was heard: the user's words are transcribed after they start speaking, and
+ * Memento's text arrives before its queued audio plays. Each turn is snapped to
+ * the start of a stretch of speech in the recording (in order, the cheapest way
+ * overall), and ends when its speech does, not at the next turn, so silence
+ * between turns is never part of one.
+ */
+export function alignSegmentsToSpeech(
+  segments: readonly TranscriptSegment[],
+  speech: readonly SpeechSpan[],
+): TranscriptSegment[] {
+  const spans = speech.filter((span) => span.end > span.start).slice().sort((a, b) => a.start - b.start);
+  if (!segments.length || !spans.length) return segments.slice();
+
+  // How much snapping segment `t` to the onset of span `k` costs.
+  const snapCost = (t: number, k: number) => {
+    const shift = spans[k].start - segments[t].start;
+    if (Math.abs(shift) > ALIGN_WINDOW_S) return Infinity;
+    // The user is heard before their text arrives; Memento after.
+    const expected = segments[t].speaker === 'user' ? shift <= 0 : shift >= 0;
+    return Math.abs(shift) * (expected ? 1 : ALIGN_AGAINST_COST);
+  };
+
+  // cost[g]: cheapest so far with the last snapped onset before span g (g = 0: none yet).
+  const S = spans.length;
+  let cost = new Array<number>(S + 1).fill(Infinity);
+  cost[0] = 0;
+  const choices: Int32Array[] = []; // per segment: the onset picked (-1 skip) for each end state
+  const parents: Int32Array[] = [];
+  for (let t = 0; t < segments.length; t += 1) {
+    const next = new Array<number>(S + 1).fill(Infinity);
+    const choice = new Int32Array(S + 1).fill(-1);
+    const parent = new Int32Array(S + 1).fill(-1);
+    // Leave this one unsnapped: the state carries over.
+    for (let g = 0; g <= S; g += 1) {
+      if (cost[g] + ALIGN_SKIP_COST < next[g]) {
+        next[g] = cost[g] + ALIGN_SKIP_COST;
+        choice[g] = -1;
+        parent[g] = g;
+      }
+    }
+    // Snap to onset k, after the last snapped one: needs the best state g <= k.
+    let best = Infinity;
+    let bestG = -1;
+    for (let k = 0; k < S; k += 1) {
+      if (cost[k] < best) { best = cost[k]; bestG = k; }
+      const total = best + snapCost(t, k);
+      if (total < next[k + 1]) {
+        next[k + 1] = total;
+        choice[k + 1] = k;
+        parent[k + 1] = bestG;
+      }
+    }
+    choices.push(choice);
+    parents.push(parent);
+    cost = next;
+  }
+
+  let state = 0;
+  for (let g = 1; g <= S; g += 1) if (cost[g] < cost[state]) state = g;
+  const snapped = new Array<number>(segments.length);
+  for (let t = segments.length - 1; t >= 0; t -= 1) {
+    snapped[t] = choices[t][state];
+    state = parents[t][state];
+  }
+
+  const starts: number[] = [];
+  segments.forEach((segment, t) => {
+    const start = snapped[t] >= 0 ? spans[snapped[t]].start : segment.start;
+    starts.push(Math.max(start, t > 0 ? starts[t - 1] : 0));
+  });
+  const lastSpeech = spans[S - 1].end;
+  return segments.map((segment, t) => {
+    const start = starts[t];
+    const limit = t + 1 < starts.length ? starts[t + 1] : Math.max(lastSpeech, segment.end);
+    // Where the last speech before the next turn stops.
+    let end = start;
+    for (const span of spans) {
+      if (span.start >= limit) break;
+      if (span.end > start) end = Math.min(span.end, limit);
+    }
+    if (end <= start) end = Math.min(Math.max(segment.end, start), limit);
+    return { ...segment, start, end };
+  });
+}
+
+/** Seconds of speech between `from` and `to`. */
+function voicedBetween(spans: readonly SpeechSpan[], from: number, to: number) {
+  let total = 0;
+  for (const span of spans) {
+    if (span.start >= to) break;
+    const overlap = Math.min(span.end, to) - Math.max(span.start, from);
+    if (overlap > 0) total += overlap;
+  }
+  return total;
+}
+
 /**
  * How many characters of `turn.text` have been spoken at `time`. Finished
  * segments count in full; the segment being spoken reveals whole words in
- * proportion to its elapsed time, so the highlight streams word by word.
+ * proportion to its elapsed time (a word lights as it starts), so the
+ * highlight streams word by word. With
+ * `speech` (sorted spans of a recorded call), only time someone was audible
+ * counts, so pauses hold the highlight instead of letting it fall behind.
  */
-export function spokenCharCount(turn: TranscriptTurn, time: number): number {
+export function spokenCharCount(turn: TranscriptTurn, time: number, speech?: readonly SpeechSpan[]): number {
   if (!Number.isFinite(time) || time < turn.start) return 0;
   let count = 0;
   for (let i = 0; i < turn.parts.length; i += 1) {
@@ -139,11 +249,15 @@ export function spokenCharCount(turn: TranscriptTurn, time: number): number {
       continue;
     }
     if (time < part.start) break;
+    const voicedTotal = speech?.length ? voicedBetween(speech, part.start, part.end) : 0;
     const span = part.end - part.start;
-    const fraction = span > 0 ? (time - part.start) / span : 1;
+    const fraction = voicedTotal > 0.2
+      ? voicedBetween(speech!, part.start, time) / voicedTotal
+      : span > 0 ? (time - part.start) / span : 1;
     const words = part.text.split(/(\s+)/);
     const wordCount = words.filter((w) => w && !/^\s+$/.test(w)).length;
-    let reveal = Math.floor(wordCount * fraction);
+    // Light the word being spoken, not the last one finished, so the highlight never trails.
+    let reveal = fraction > 0 ? Math.ceil(wordCount * fraction) : 0;
     for (const piece of words) {
       if (reveal <= 0) break;
       count += piece.length;

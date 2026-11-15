@@ -11,6 +11,9 @@ import {
 import { clearOnboardingDraft } from '@/features/onboarding/onboarding-draft-storage';
 import { secureStorage } from '@/lib/secure-storage';
 import { useAuthStore, useUserStore } from '@/store';
+import { queryClient } from '@/lib/query-client';
+import { queryKeys } from '@/constants/query-keys';
+import type { OnboardingSkipAnswers } from '@/features/onboarding/onboarding-resume';
 
 function createDependencies(): FirstRunOnboardingMutationDependencies {
   return {
@@ -18,7 +21,11 @@ function createDependencies(): FirstRunOnboardingMutationDependencies {
     putRequest: (url, payload) => put(url, payload),
     postRequest: (url, payload) => post(url, payload),
     getProfile: () => get(endpoint.profile),
-    setAuthUser: (user) => useAuthStore.getState().updateUser(user),
+    setAuthUser: (user) => {
+      useAuthStore.getState().updateUser(user);
+      // Screens read the cached profile too; keep it from showing the old status.
+      queryClient.setQueryData(queryKeys.profile, user);
+    },
     setCompatibilityUser: (user) => useUserStore.getState().setUser(user),
     clearDraft: () => clearOnboardingDraft(secureStorage),
   };
@@ -33,6 +40,7 @@ export function useCompleteFirstRunOnboarding() {
 
 export function useSkipFirstRunOnboarding() {
   return useMutation({
-    mutationFn: () => executeSkipFirstRunOnboardingMutation(createDependencies()),
+    mutationFn: ({ answers, nickname }: { answers: OnboardingSkipAnswers; nickname?: string }) =>
+      executeSkipFirstRunOnboardingMutation(createDependencies(), answers, nickname),
   });
 }

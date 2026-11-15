@@ -24,6 +24,7 @@ import {
   type DailyRitualSettings,
 } from '@/features/rituals/ritual-scheduler';
 import { useUserStore } from '@/store';
+import { SheetActions, SHEET_FILL } from './SheetActions';
 import { SheetHeader } from './SheetHeader';
 import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 
@@ -209,7 +210,7 @@ export function DailyRitualSheet({ onClose, onSaved }: DailyRitualSheetProps) {
   };
 
   return (
-    <View className="flex-grow pb-2" style={{ gap: SHEET_GROUP_GAP }}>
+    <View className="flex-grow" style={{ gap: SHEET_GROUP_GAP }}>
       <View pointerEvents="none" className="absolute inset-0">
         <ImageBackground
           source={PATTERN}
@@ -305,6 +306,7 @@ export function DailyRitualSheet({ onClose, onSaved }: DailyRitualSheetProps) {
       </View>
 
       {/* Primary Companion CTA */}
+      <SheetActions>
       <Button
         variant="primary"
         size="lg"
@@ -315,6 +317,7 @@ export function DailyRitualSheet({ onClose, onSaved }: DailyRitualSheetProps) {
       >
         Save Daily Ritual
       </Button>
+      </SheetActions>
     </View>
   );
 }

@@ -6,8 +6,13 @@ export const TYPE_METRICS = Object.freeze({
   displayStat: Object.freeze({fontSize: ms(48, 0.25), lineHeight: ms(54, 0.25)}),
   displayTitle: Object.freeze({fontSize: ms(36, 0.25), lineHeight: ms(42, 0.25)}),
   screenTitle: Object.freeze({fontSize: ms(28, 0.25), lineHeight: ms(34, 0.25)}),
-  greeting: Object.freeze({fontSize: ms(24, 0.25), lineHeight: ms(32, 0.25)}),
-  captureInput: Object.freeze({fontSize: ms(24, 0.25), lineHeight: ms(34, 0.25)}),
+  // Fixed 28/34 (not device-scaled), per the Overview greeting design.
+  greeting: Object.freeze({fontSize: 28, lineHeight: 34}),
+  /** Garamond runs small next to SF Pro Rounded, so the name is set larger on the same line height. */
+  greetingName: Object.freeze({fontSize: 32, lineHeight: 34}),
+  // The editorial greeting (still used on web): one serif line beside the sun/moon.
+  greetingEditorial: Object.freeze({fontSize: ms(24, 0.25), lineHeight: ms(32, 0.25)}),
+  captureInput: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(28, 0.25)}),
   reflectionTitle: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(27, 0.25)}),
   sectionTitle: Object.freeze({fontSize: ms(22, 0.25), lineHeight: ms(28, 0.25)}),
   cardTitle: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(26, 0.25)}),
@@ -24,6 +29,11 @@ export const TYPE_METRICS = Object.freeze({
   input: Object.freeze({fontSize: ms(16, 0.2), lineHeight: ms(22, 0.2)}),
   stat: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(26, 0.25)}),
   mono: Object.freeze({fontSize: ms(14, 0.2), lineHeight: ms(20, 0.2)}),
+  // Web onboarding card title (font-garamond 32/40 medium).
+  onboardingTitle: Object.freeze({fontSize: ms(32, 0.25), lineHeight: ms(40, 0.25)}),
+  monoLabel: Object.freeze({fontSize: ms(12, 0.2), lineHeight: ms(16, 0.2)}),
+  // Figma "Subtext 12px/Regular": onboarding chips and the About counter.
+  chipLabel: Object.freeze({fontSize: ms(12, 0.2), lineHeight: ms(16, 0.2)}),
 });
 
 export const TYPE = StyleSheet.create({
@@ -51,8 +61,13 @@ export const TYPE = StyleSheet.create({
   reflectionTitle: {fontFamily: FONTS.serif, ...TYPE_METRICS.reflectionTitle},
   /** Orange highlighted words in a reflection prompt: the loaded serif italic face, never synthetic italics. */
   reflectionTitleAccent: {fontFamily: FONTS.serifItalic, ...TYPE_METRICS.reflectionTitle},
-  greeting: {fontFamily: FONTS.serif, ...TYPE_METRICS.greeting},
-  greetingName: {fontFamily: FONTS.serifItalic, ...TYPE_METRICS.greeting},
+  /** Overview greeting: SF Pro Rounded semibold on iOS, two lines (greeting + prompt). */
+  greeting: {fontFamily: Platform.select({ios: FONTS.sans, default: FONTS.sansSemi}), fontWeight: '600', ...TYPE_METRICS.greeting},
+  /** The person's name inside the greeting: muted serif medium italic accent. */
+  greetingName: {fontFamily: FONTS.serifMediumItalic, ...TYPE_METRICS.greetingName},
+  /** Editorial greeting variant (web's welcome section): EB Garamond 24/32, name in serif italic. */
+  greetingEditorial: {fontFamily: FONTS.serif, ...TYPE_METRICS.greetingEditorial},
+  greetingEditorialName: {fontFamily: FONTS.serifItalic, ...TYPE_METRICS.greetingEditorial},
   sectionTitle: {fontFamily: FONTS.serif, ...TYPE_METRICS.sectionTitle},
   sectionTitleWeak: {fontFamily: FONTS.serifItalic, ...TYPE_METRICS.sectionTitle},
   cardTitle: {fontFamily: FONTS.serifMedium, ...TYPE_METRICS.cardTitle},
@@ -81,6 +96,13 @@ export const TYPE = StyleSheet.create({
   /** Insights statistics figures: SF Pro Rounded semibold on iOS, like the labels under them. */
   insightStat: {fontFamily: Platform.select({ios: FONTS.sans, default: FONTS.sansSemi}), fontWeight: '600', ...TYPE_METRICS.stat},
   mono: {fontFamily: FONTS.mono, ...TYPE_METRICS.mono},
+  /** Onboarding welcome title; the brand-coloured word uses the accent face. */
+  onboardingTitle: {fontFamily: FONTS.serifMedium, ...TYPE_METRICS.onboardingTitle},
+  onboardingTitleAccent: {fontFamily: FONTS.serifMediumItalic, ...TYPE_METRICS.onboardingTitle},
+  /** Uppercase mono label, e.g. the welcome "private by design" note. */
+  monoLabel: {fontFamily: FONTS.mono, ...TYPE_METRICS.monoLabel},
+  /** Onboarding chip text and the About character counter (Figma Subtext 12px/Regular). */
+  chipLabel: {fontFamily: FONTS.sans, ...TYPE_METRICS.chipLabel},
 });
 
 export type TypographyRole = keyof typeof TYPE;

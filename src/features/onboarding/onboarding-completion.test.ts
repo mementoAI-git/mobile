@@ -211,7 +211,9 @@ describe('first-run onboarding completion transaction', () => {
 
   test('stops before the next network write when the initiating session logs out', async () => {
     let currentOwnership: OnboardingSessionOwnership | null = ownership;
+    // Profile and persona are sent together; the writes after them must not run.
     const writePersona = mock(async () => undefined);
+    const writeOnboarding = mock(async () => undefined);
     const completeOnboarding = mock(async () => completedUser);
     const setAuthUser = mock(() => undefined);
     const clearDraft = mock(async () => undefined);
@@ -221,6 +223,7 @@ describe('first-run onboarding completion transaction', () => {
         currentOwnership = null;
       },
       writePersona,
+      writeOnboarding,
       completeOnboarding,
       setAuthUser,
       clearDraft,
@@ -230,7 +233,7 @@ describe('first-run onboarding completion transaction', () => {
       stage: 'ownership',
     });
 
-    expect(writePersona).not.toHaveBeenCalled();
+    expect(writeOnboarding).not.toHaveBeenCalled();
     expect(completeOnboarding).not.toHaveBeenCalled();
     expect(setAuthUser).not.toHaveBeenCalled();
     expect(clearDraft).not.toHaveBeenCalled();

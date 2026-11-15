@@ -1,4 +1,5 @@
 import { AppTabBar } from '@/components/TabBar';
+import { useOnboardingReturn } from '@/features/onboarding/onboarding-resume';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import '../global.css';
 
@@ -43,6 +44,7 @@ import { EBGaramond_400Regular } from '@expo-google-fonts/eb-garamond/400Regular
 import { EBGaramond_500Medium } from '@expo-google-fonts/eb-garamond/500Medium';
 import { EBGaramond_700Bold } from '@expo-google-fonts/eb-garamond/700Bold';
 import { EBGaramond_400Regular_Italic } from '@expo-google-fonts/eb-garamond/400Regular_Italic';
+import { EBGaramond_500Medium_Italic } from '@expo-google-fonts/eb-garamond/500Medium_Italic';
 import { AzeretMono_400Regular } from '@expo-google-fonts/azeret-mono/400Regular';
 
 import { AppearanceProvider } from '@/components/system/AppearanceProvider';
@@ -369,6 +371,7 @@ function RootLayout() {
     EBGaramond_500Medium,
     EBGaramond_700Bold,
     EBGaramond_400Regular_Italic,
+    EBGaramond_500Medium_Italic,
     AzeretMono_400Regular,
 
     // NOTE: Geist weights removed from the blocking set — zero usage on
@@ -461,6 +464,7 @@ function RootLayout() {
       onboardingStatus:
         user?.onboarding_status ?? null,
       pendingHref: ui.pendingDeepLink,
+      resumingOnboarding: useOnboardingReturn.getState().active,
     };
 
     const key =

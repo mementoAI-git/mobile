@@ -39,3 +39,20 @@ export function shouldUseBrightWelcomeIcon(at: Date = new Date()): boolean {
   const hour = at.getHours();
   return hour >= 6 && hour < 17;
 }
+
+/**
+ * Second line after a question greeting ("Back at it, Groot?"). Statements,
+ * never questions, so the greeting doesn't ask twice. One is picked per visit.
+ */
+export const GREETING_FOLLOW_UPS = [
+  'Ready when you are.',
+  'I’m all ears.',
+  'Take your time.',
+  'Pick up wherever you like.',
+  'Tell me anything.',
+  'Your stories are safe here.',
+] as const;
+
+export function getGreetingFollowUp(random: () => number = Math.random): string {
+  return GREETING_FOLLOW_UPS[Math.floor(random() * GREETING_FOLLOW_UPS.length)];
+}

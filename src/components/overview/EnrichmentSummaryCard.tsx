@@ -96,6 +96,6 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     minHeight: 32,
   },
   description: {
-    color: COLORS.textWeak,
+    color: COLORS.textStrong,
   },
 });

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, Image } from 'react-native';
+import { SheetActions, SHEET_FILL } from './SheetActions';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
@@ -48,7 +49,7 @@ export function CapsuleSealedSheet({
   };
 
   return (
-    <View className="flex-grow pb-8 pt-2">
+    <View className="flex-grow pt-2" style={SHEET_FILL}>
       {/* Top Bar with 44x44 Close Button */}
       <View className="flex-row items-center justify-end mb-2">
         <TouchableOpacity
@@ -127,6 +128,7 @@ export function CapsuleSealedSheet({
       </View>
 
       {/* Primary Action Button */}
+      <SheetActions>
       <Button
         variant="primary"
         size="lg"
@@ -138,6 +140,7 @@ export function CapsuleSealedSheet({
       >
         Done
       </Button>
+      </SheetActions>
     </View>
   );
 }

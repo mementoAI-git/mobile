@@ -69,22 +69,23 @@ export function MotivationChoice({
       accessibilityState={{ checked: selected, disabled }}
       accessibilityLabel={label}
       style={animatedStyle}
-      className={`min-h-[44px] flex-row items-center gap-3 px-4 py-3.5 rounded-xl border ${
+      // Figma "What brings you to Memento" option: 8px radius, 16/14 padding, 24px icon, 14/20 text.
+      className={`min-h-[44px] flex-row items-center gap-3 px-4 py-3.5 rounded-lg border ${
         selected
-          ? 'bg-brand/[0.06] border-brand'
+          ? 'bg-brand/[0.06] border-brand/80'
           : 'bg-card border-stroke-weak'
       }`}
     >
       {icon ? (
-        <View className="w-7 items-center justify-center shrink-0">
+        <View className="size-6 items-center justify-center shrink-0">
           {icon}
         </View>
       ) : null}
 
       <View className="flex-1">
         <Text
-          className={selected ? 'text-brand' : 'text-text-strong'}
-          style={TYPE.buttonSmall}
+          className="text-text-strong"
+          style={TYPE.bodySmall}
         >
           {label}
         </Text>
@@ -163,16 +164,16 @@ export function LifeAreaChoice({
       accessibilityState={{ checked: selected, disabled }}
       accessibilityLabel={label}
       style={animatedStyle}
-      className={`min-h-[44px] flex-row items-center gap-2 px-4 py-2.5 rounded-full border ${
-        selected
-          ? 'bg-card border-brand'
-          : 'bg-card border-stroke-weak'
+      hitSlop={{ top: 2, bottom: 2 }}
+      // Figma life-area chip: 16/11 padding, 16px icon, 12/16 text; selected uses the brand-strong stroke.
+      className={`flex-row items-center gap-2 px-4 rounded-full border bg-card ${
+        selected ? 'border-brand/80' : 'border-stroke-weak'
       }`}
     >
       {icon}
       <Text
         className="text-text-strong"
-        style={TYPE.buttonSmall}
+        style={[TYPE.chipLabel, { paddingVertical: 11 }]}
       >
         {label}
       </Text>
