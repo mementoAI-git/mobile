@@ -8,6 +8,7 @@ import { OnboardingSettingUp } from '@/components/onboarding/OnboardingSettingUp
 import { TYPE } from '@/constants/typography';
 import { responsiveSpace } from '@/constants/responsive';
 import { COLORS } from '@/constants/tokens';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import { useFirstRunOnboarding } from '@/hooks/use-first-run-onboarding';
 
 const MOTIVATION_SUMMARY_TEXT: Record<string, string> = {
@@ -42,6 +43,7 @@ const DEFAULT_ABOUT =
   'You’re curious, thoughtful person who values growth, meaningful relationships and new experiences.';
 
 export default function SummaryScreen() {
+  const styles = useThemeStyles(createStyles);
   const {
     draft,
     summary,
@@ -49,6 +51,7 @@ export default function SummaryScreen() {
     isCompleting,
     completionError,
   } = useFirstRunOnboarding();
+  const colors = useThemeColors();
 
   const preferredName = draft.preferredName.trim();
   const whyYouAreHere =
@@ -105,17 +108,17 @@ export default function SummaryScreen() {
 
         <View style={styles.cards}>
           <Animated.View entering={FadeInDown.delay(200).duration(400)} style={[styles.card, styles.cardBlue]}>
-            <Text style={[styles.panelLabel, { color: COLORS.summaryBlueText }]}>Why you’re here</Text>
+            <Text style={[styles.panelLabel, { color: colors.summaryBlueText }]}>Why you’re here</Text>
             <Text style={styles.monoBody}>{whyYouAreHere}</Text>
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(300).duration(400)} style={[styles.card, styles.cardPurple]}>
-            <Text style={[styles.panelLabel, { color: COLORS.summaryPurpleLabel }]}>About you</Text>
+            <Text style={[styles.panelLabel, { color: colors.summaryPurpleLabel }]}>About you</Text>
             <Text style={styles.monoBody}>{aboutYou}</Text>
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(400).duration(400)} style={[styles.card, styles.cardPeach]}>
-            <Text style={[styles.panelLabel, { color: COLORS.summaryPeachText }]}>Starting areas</Text>
+            <Text style={[styles.panelLabel, { color: colors.summaryPeachText }]}>Starting areas</Text>
             <View style={styles.chipsRow}>
               {selectedAreas.map((areaKey) => (
                 <View key={areaKey} style={styles.lifeAreaChip}>
@@ -127,7 +130,7 @@ export default function SummaryScreen() {
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(500).duration(400)} style={styles.infoRow}>
-            <OnboardingIcon name="infoCircle" color={COLORS.textStrong} />
+            <OnboardingIcon name="infoCircle" color={colors.textStrong} />
             <Text style={styles.infoText}>You can always edit or build on this later</Text>
           </Animated.View>
         </View>
@@ -136,7 +139,7 @@ export default function SummaryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: typeof COLORS) => StyleSheet.create({
   // Figma summary body: icon, title, lead and cards 24px apart; cards 12px apart.
   container: {
     paddingTop: 8,
@@ -145,15 +148,15 @@ const styles = StyleSheet.create({
   },
   titleText: {
     ...TYPE.onboardingTitle,
-    color: COLORS.textStrong,
+    color: c.textStrong,
   },
   brandItalic: {
     ...TYPE.onboardingTitleAccent,
-    color: COLORS.brand,
+    color: c.brand,
   },
   subtitleText: {
     ...TYPE.bodyLarge,
-    color: COLORS.textStrong,
+    color: c.textStrong,
   },
   cards: {
     gap: 12,
@@ -166,23 +169,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardBlue: {
-    backgroundColor: COLORS.summaryBlueBg,
-    borderColor: COLORS.summaryBlueBorder,
+    backgroundColor: c.summaryBlueBg,
+    borderColor: c.summaryBlueBorder,
   },
   cardPurple: {
-    backgroundColor: COLORS.summaryPurpleBg,
-    borderColor: COLORS.summaryPurpleBorder,
+    backgroundColor: c.summaryPurpleBg,
+    borderColor: c.summaryPurpleBorder,
   },
   cardPeach: {
-    backgroundColor: COLORS.summaryPeachBg,
-    borderColor: COLORS.summaryPeachBorder,
+    backgroundColor: c.summaryPeachBg,
+    borderColor: c.summaryPeachBorder,
   },
   panelLabel: {
     ...TYPE.bodySmallStrong,
   },
   monoBody: {
     ...TYPE.mono,
-    color: COLORS.textStrong,
+    color: c.textStrong,
   },
   chipsRow: {
     flexDirection: 'row',
@@ -196,13 +199,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: responsiveSpace(16),
     paddingVertical: 11,
     borderRadius: 9999,
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     borderWidth: 1,
-    borderColor: COLORS.strokeWeak,
+    borderColor: c.strokeWeak,
   },
   lifeAreaChipText: {
     ...TYPE.chipLabel,
-    color: COLORS.textStrong,
+    color: c.textStrong,
   },
   infoRow: {
     flexDirection: 'row',
@@ -213,6 +216,6 @@ const styles = StyleSheet.create({
   },
   infoText: {
     ...TYPE.bodySmall,
-    color: COLORS.textBase,
+    color: c.textBase,
   },
 });

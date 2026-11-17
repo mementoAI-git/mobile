@@ -5,12 +5,14 @@ import { TextInput } from '@/components/ui';
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
 import { OnboardingIcon } from '@/components/onboarding/OnboardingIcon';
 import { COLORS } from '@/constants/tokens';
+import { useThemeStyles } from '@/hooks/use-theme-colors';
 import { TYPE } from '@/constants/typography';
 import { useFirstRunOnboarding } from '@/hooks/use-first-run-onboarding';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 export default function NicknameScreen() {
   const router = useRouter();
+  const styles = useThemeStyles(createStyles);
   const {
     draft,
     setPreferredName,
@@ -90,7 +92,7 @@ export default function NicknameScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: typeof COLORS) => StyleSheet.create({
   stack: {
     gap: 24,
     paddingTop: 48,
@@ -100,15 +102,15 @@ const styles = StyleSheet.create({
   },
   titleText: {
     ...TYPE.onboardingTitle,
-    color: COLORS.textStrong,
+    color: c.textStrong,
   },
   brandItalic: {
     ...TYPE.onboardingTitleAccent,
-    color: COLORS.brand,
+    color: c.brand,
   },
   subtitleText: {
     ...TYPE.bodySmall,
-    color: COLORS.textStrong,
+    color: c.textStrong,
   },
   fieldContainer: {
     gap: 8,

@@ -21,6 +21,7 @@ import {
 } from '@/features/onboarding/first-run-onboarding';
 import { useFirstRunOnboarding } from '@/hooks/use-first-run-onboarding';
 import { COLORS } from '@/constants/tokens';
+import { useThemeStyles } from '@/hooks/use-theme-colors';
 import { TYPE } from '@/constants/typography';
 import { responsiveSpace } from '@/constants/responsive';
 
@@ -31,7 +32,7 @@ const MOTIVATION_DISPLAY_OPTIONS: Array<{
 }> = [
   {
     value: 'preserve_memories',
-    label: 'Preserve memories i don’t want to lose',
+    label: 'Preserve memories I don’t want to lose',
     icon: 'palmTree',
   },
   {
@@ -89,6 +90,7 @@ const LIFE_AREA_DISPLAY_OPTIONS: Array<{
 
 export default function PreferencesScreen() {
   const router = useRouter();
+  const styles = useThemeStyles(createStyles);
   const {
     draft,
     setMotivation,
@@ -314,26 +316,26 @@ export default function PreferencesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: typeof COLORS) => StyleSheet.create({
   // Figma onboarding body: icon, title, lead and content 24px apart.
   stack: {
     gap: 24,
   },
   titleText: {
     ...TYPE.onboardingTitle,
-    color: COLORS.textStrong,
+    color: c.textStrong,
   },
   brandItalic: {
     ...TYPE.onboardingTitleAccent,
-    color: COLORS.brand,
+    color: c.brand,
   },
   lead: {
     ...TYPE.bodyLarge,
-    color: COLORS.textStrong,
+    color: c.textStrong,
   },
   leadStrong: {
     ...TYPE.bodyLargeSemi,
-    color: COLORS.textStrong,
+    color: c.textStrong,
   },
   optionList: {
     gap: 10,
@@ -346,7 +348,7 @@ const styles = StyleSheet.create({
   },
   groupLabel: {
     ...TYPE.label,
-    color: COLORS.textWeak,
+    color: c.textWeak,
   },
   chipsRow: {
     flexDirection: 'row',
@@ -355,6 +357,6 @@ const styles = StyleSheet.create({
   },
   inspirationText: {
     ...TYPE.bodySmall,
-    color: COLORS.textBase,
+    color: c.textBase,
   },
 });
