@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  ImageBackground,
   Image,
   Keyboard,
   LayoutAnimation,
@@ -41,7 +40,6 @@ import { establishSession } from '@/features/auth/session-coordinator';
 import { completeAuthResponse } from '@/features/auth/auth-completion';
 import { useAuthStore } from '@/store';
 
-const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 const APP_ICON = require('../../assets/icon.png');
 
 // ─── Easing presets ───────────────────────────────────────────────────────────
@@ -59,9 +57,10 @@ export function GoogleSvgIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-export function AppleSvgIcon({ size = 20 }: { size?: number }) {
+export function AppleSvgIcon({ size = 20, color }: { size?: number; color?: string }) {
+  const colors = useThemeColors();
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="#000000">
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color ?? colors.textStrong}>
       <Path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.21.67-2.93 1.49-.62.69-1.16 1.84-1.01 2.96 1.12.09 2.27-.58 2.95-1.39z" />
     </Svg>
   );
@@ -208,7 +207,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ImageBackground source={PATTERN} style={styles.screenBg} imageStyle={{ opacity: 0.03 }}>
+    <View style={styles.screenBg}>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -242,7 +241,7 @@ export default function RegisterScreen() {
                     onPress={handleGoogleSignup}
                     disabled={googleLoading || appleLoading || isPending}
                     activeOpacity={0.8}
-                    style={styles.socialBtn}
+                    style={[styles.socialBtn, { backgroundColor: COLORS.cardRaised }]}
                   >
                     {googleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <GoogleSvgIcon size={20} />}
                     <Text style={styles.socialBtnText}>Sign up with Google</Text>
@@ -253,7 +252,7 @@ export default function RegisterScreen() {
                     onPress={handleAppleSignup}
                     disabled={googleLoading || appleLoading || isPending}
                     activeOpacity={0.8}
-                    style={styles.socialBtn}
+                    style={[styles.socialBtn, { backgroundColor: COLORS.cardRaised }]}
                   >
                     {appleLoading ? <ActivityIndicator size="small" color={COLORS.brand} /> : <AppleSvgIcon size={20} />}
                     <Text style={styles.socialBtnText}>Sign up with Apple</Text>
@@ -399,7 +398,7 @@ export default function RegisterScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </ImageBackground>
+    </View>
   );
 }
 
@@ -439,7 +438,6 @@ const stylesBase = StyleSheet.create({
     borderRadius: 9999,
     borderWidth: 1,
     borderColor: COLORS.strokeWeak,
-    backgroundColor: '#ffffff',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

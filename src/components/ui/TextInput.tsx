@@ -118,7 +118,7 @@ export function TextInput({
           {
             flexDirection: 'row',
             alignItems: props.multiline ? 'flex-start' : 'center',
-            backgroundColor: isRounded ? COLORS.card : variant === 'filled' ? COLORS.fillWeak : COLORS.fillWeaker,
+            backgroundColor: isRounded ? COLORS.cardRaised : variant === 'filled' ? COLORS.fillWeak : COLORS.fillWeaker,
             borderWidth,
             borderColor,
             borderRadius: resolvedRadius,
