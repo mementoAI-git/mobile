@@ -11,8 +11,8 @@ import {
 const payload: OnboardingCompatibilityPayload = {
   nickname: 'Jane',
   self_description: 'I care about family and growth.',
-  join_reasons: ['self_reflection'],
-  motivationType: 'self_reflection',
+  join_reasons: ['self_understanding'],
+  motivationType: 'self_understanding',
   priorityDimensions: ['identity_self', 'passions_interests'],
   stepReached: 4,
   isComplete: true,
@@ -36,7 +36,7 @@ const completedUser: IUser = {
   context: {
     self_description: 'I care about family and growth.',
     current_priority: '',
-    join_reasons: ['self_reflection'],
+    join_reasons: ['self_understanding'],
   },
   verified: true,
   private_key: '',
@@ -83,13 +83,13 @@ describe('first-run onboarding completion transaction', () => {
         calls.push('persona');
         expect(value).toEqual({
           self_description: 'I care about family and growth.',
-          join_reasons: ['self_reflection'],
+          join_reasons: ['self_understanding'],
         });
       }),
       writeOnboarding: mock(async (value) => {
         calls.push('onboarding');
         expect(value).toEqual({
-          motivation: 'self_reflection',
+          motivation: 'self_understanding',
           current_priority: ['identity_self', 'passions_interests'],
           priority_dimensions: ['identity_self', 'passions_interests'],
           step: 4,
@@ -99,9 +99,9 @@ describe('first-run onboarding completion transaction', () => {
         calls.push('completion');
         expect(value).toEqual({
           self_description: 'I care about family and growth.',
-          join_reasons: ['self_reflection'],
+          join_reasons: ['self_understanding'],
           current_priority: ['identity_self', 'passions_interests'],
-          motivationType: 'self_reflection',
+          motivationType: 'self_understanding',
           stepReached: 4,
         });
         return completedUser;

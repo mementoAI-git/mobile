@@ -12,19 +12,36 @@ import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import { useFirstRunOnboarding } from '@/hooks/use-first-run-onboarding';
 
 const MOTIVATION_SUMMARY_TEXT: Record<string, string> = {
-  self_reflection:
+  self_understanding:
     'To reflect more, remember the important moments, and grow into a better version of myself.',
-  preserve_memories:
+  memory_preservation:
     'To preserve memories I don’t want to lose and keep them safe for years to come.',
   life_record:
     'To build a rich, enduring record of my life, my milestones, and my everyday journey.',
-  organize_thoughts:
+  personal_space:
     'To organize my thoughts, stories, and files in one meaningful, searchable space.',
-  legacy_for_loved_ones:
+  emotional_depth:
     'To create something meaningful, lasting, and deeply personal for loved ones.',
-  exploring:
+  explorer:
     'To explore Memento AI and discover fresh, mindful ways to reflect and remember.',
 };
+
+// Short phrases joined when several reasons are chosen, matching web summary.tsx.
+const MOTIVATION_SUMMARY_PHRASE: Record<string, string> = {
+  memory_preservation: 'preserve memories I don’t want to lose',
+  self_understanding: 'reflect and understand myself better',
+  life_record: 'build a record of my life over time',
+  personal_space: 'organize my thoughts, stories and files',
+  emotional_depth: 'create something meaningful for loved ones',
+  explorer: 'explore Memento and discover what feels right for me',
+};
+
+function motivationSummary(motivations: readonly string[]): string | null {
+  if (motivations.length === 0) return null;
+  if (motivations.length === 1) return MOTIVATION_SUMMARY_TEXT[motivations[0]] ?? null;
+  const phrases = motivations.map((value) => MOTIVATION_SUMMARY_PHRASE[value]).filter(Boolean);
+  return phrases.length ? `To ${phrases.join(', and ')}.` : null;
+}
 
 const LIFE_AREA_LABELS: Record<string, string> = {
   identity_self: 'Identity and self',
@@ -55,9 +72,9 @@ export default function SummaryScreen() {
 
   const preferredName = draft.preferredName.trim();
   const whyYouAreHere =
-    (draft.motivation && MOTIVATION_SUMMARY_TEXT[draft.motivation]) ||
+    motivationSummary(draft.motivations) ||
     summary.whyYouAreHere ||
-    MOTIVATION_SUMMARY_TEXT.self_reflection;
+    MOTIVATION_SUMMARY_TEXT.self_understanding;
 
   const aboutYou = draft.about.trim() || DEFAULT_ABOUT;
   const selectedAreas =

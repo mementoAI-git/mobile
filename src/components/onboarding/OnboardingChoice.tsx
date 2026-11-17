@@ -7,6 +7,8 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import CircleCheck from 'lucide-react-native/icons/circle-check';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 
@@ -20,6 +22,8 @@ export interface MotivationChoiceProps {
   onPress: () => boolean | void;
   disabled?: boolean;
   hideRadio?: boolean;
+  /** Checkbox behaviour: announced as a checkbox, with a check when chosen. */
+  multiple?: boolean;
   testID?: string;
 }
 
@@ -31,8 +35,10 @@ export function MotivationChoice({
   onPress,
   disabled = false,
   hideRadio = false,
+  multiple = false,
   testID,
 }: MotivationChoiceProps) {
+  const colors = useThemeColors();
   const scale = useSharedValue(1);
 
   const handlePressIn = useCallback(() => {
@@ -65,7 +71,7 @@ export function MotivationChoice({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
-      accessibilityRole="radio"
+      accessibilityRole={multiple ? 'checkbox' : 'radio'}
       accessibilityState={{ checked: selected, disabled }}
       accessibilityLabel={label}
       style={animatedStyle}
@@ -96,7 +102,11 @@ export function MotivationChoice({
         ) : null}
       </View>
 
-      {!hideRadio && (
+      {multiple && selected ? (
+        <CircleCheck size={20} color={colors.brand} strokeWidth={2.2} />
+      ) : null}
+
+      {!hideRadio && !multiple && (
         <View
           className={`size-5 rounded-full border-2 items-center justify-center shrink-0 ${
             selected ? 'bg-brand border-brand' : 'bg-transparent border-stroke-weak'

@@ -11,6 +11,7 @@ import {
   validateOnboardingStep,
   buildOnboardingPayload,
   buildOnboardingSummary,
+  toggleMotivationSelection,
 } from '@/features/onboarding/first-run-onboarding';
 import {
   readOnboardingDraft,
@@ -125,10 +126,10 @@ export function useFirstRunOnboarding() {
     [persistDraft, setDraft],
   );
 
-  const setMotivation = useCallback(
+  const toggleMotivation = useCallback(
     (motivation: OnboardingMotivation) => {
       setDraft((prev) => {
-        const next = { ...prev, motivation };
+        const next = { ...prev, motivations: toggleMotivationSelection(prev.motivations, motivation) };
         persistDraft(next);
         return next;
       });
@@ -220,7 +221,7 @@ export function useFirstRunOnboarding() {
     summary,
     isHydrated,
     setPreferredName,
-    setMotivation,
+    toggleMotivation,
     setAbout,
     toggleLifeArea,
     setStep,

@@ -12,8 +12,8 @@ import {
 const payload: OnboardingCompatibilityPayload = {
   nickname: 'Jane',
   self_description: 'I care about family and growth.',
-  join_reasons: ['self_reflection'],
-  motivationType: 'self_reflection',
+  join_reasons: ['self_understanding'],
+  motivationType: 'self_understanding',
   priorityDimensions: ['identity_self', 'passions_interests'],
   stepReached: 4,
   isComplete: true,
@@ -37,7 +37,7 @@ const completedUser: IUser = {
   context: {
     self_description: 'I care about family and growth.',
     current_priority: '',
-    join_reasons: ['self_reflection'],
+    join_reasons: ['self_understanding'],
   },
   verified: true,
   private_key: '',
