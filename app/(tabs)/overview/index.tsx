@@ -1,5 +1,5 @@
 import { isFutureCalendarDay } from '@/features/overview/calendar-selection';
-import { OverviewGreeting } from '@/components/overview/OverviewGreeting';
+import { GREETING_CAPTURE_PLACEHOLDER, OverviewGreeting, type OverviewGreetingVariant } from '@/components/overview/OverviewGreeting';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
@@ -46,12 +46,6 @@ import { OverviewCaptureCard } from '@/components/overview/OverviewCaptureCard';
 import { EnrichmentSummaryCard } from '@/components/overview/EnrichmentSummaryCard';
 import { CalendarCard } from '@/components/overview/CalendarCard';
 import { useVoiceScroll } from '@/features/voice-control/hooks';
-
-const WELCOME_BG = require('../../../assets/images/backgrounds/welcome_bg.png');
-
-
-
-
 
 /** All memories / Beneficiaries / Streak count cards are hidden on Overview for now. */
 const SHOW_JOURNEY_STATS = false;
@@ -135,6 +129,8 @@ const OverviewJourneyCard = React.memo(function OverviewJourneyCard({
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Switch to 'B' for the two-line greeting. */
+const GREETING_STYLE: OverviewGreetingVariant = 'A';
 
 export default function OverviewScreen() {
   const COLORS = useThemeColors();
@@ -371,11 +367,11 @@ export default function OverviewScreen() {
             }
           >
             <View className="gap-10">
-              {/* Greeting — `variant="editorial"` restores web's sun/moon + serif line. */}
-              <OverviewGreeting name={displayName} />
+              {/* Greeting style A (sun/moon + serif line); style B is the two-line greeting. */}
+              <OverviewGreeting name={displayName} variant={GREETING_STYLE} />
 
               <Animated.View entering={FadeInDown.delay(100)}>
-                <OverviewCaptureCard key={user?._id ?? 'guest'} userId={user?._id} onAddStory={handleAddStory} />
+                <OverviewCaptureCard key={user?._id ?? 'guest'} userId={user?._id} onAddStory={handleAddStory} placeholder={GREETING_CAPTURE_PLACEHOLDER[GREETING_STYLE]} />
               </Animated.View>
 
               {/* ── Quick-Capture Status ─────────────────────────────── */}

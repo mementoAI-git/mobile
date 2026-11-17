@@ -6,26 +6,33 @@ import { TYPE, TYPE_METRICS } from '@/constants/typography';
 import { getGreeting, getGreetingFollowUp, getGreetingPunctuation, shouldUseBrightWelcomeIcon } from '@/features/overview/greeting';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 
-export type OverviewGreetingVariant = 'stacked' | 'editorial';
-
 /**
- * The Overview welcome line, in two variants:
- * - `stacked` (mobile default): SF Pro Rounded semibold 28/34 over two lines,
+ * Greeting styles:
+ * - `A` (default, web's welcome section): the sun/moon beside one EB Garamond
+ *   line, "Good morning *Groot*.", with the capture card asking the question
+ *   (see `GREETING_CAPTURE_PLACEHOLDER`).
+ * - `B`: SF Pro Rounded semibold 28/34 over two lines,
  *   "Good morning, *Groot*," / "What's on your mind today?".
- * - `editorial` (web's welcome section): the sun/moon beside one EB Garamond
- *   line, "Good morning *Groot*." with the capture card asking the question.
  * The name is the muted serif italic accent in both.
  */
-export function OverviewGreeting({ name, variant = 'stacked' }: { name?: string | null; variant?: OverviewGreetingVariant }) {
+export type OverviewGreetingVariant = 'A' | 'B';
+
+/** The capture card placeholder that pairs with each greeting style. */
+export const GREETING_CAPTURE_PLACEHOLDER: Record<OverviewGreetingVariant, string> = {
+  A: 'What’s on your mind today?',
+  B: 'Add something to your Memento',
+};
+
+export function OverviewGreeting({ name, variant = 'A' }: { name?: string | null; variant?: OverviewGreetingVariant }) {
   const COLORS = useThemeColors();
   // Picked once per mount; the hour doesn't change meaningfully in a session.
   const greeting = useMemo(() => getGreeting(), []);
   const bright = useMemo(() => shouldUseBrightWelcomeIcon(), []);
   const followUp = useMemo(() => getGreetingFollowUp(), []);
   const question = getGreetingPunctuation(greeting) === '?';
-  const nameStyle = [variant === 'stacked' ? TYPE.greetingName : TYPE.greetingEditorialName, { color: COLORS.textWeak }];
+  const nameStyle = [variant === 'B' ? TYPE.greetingName : TYPE.greetingEditorialName, { color: COLORS.textWeak }];
 
-  if (variant === 'editorial') {
+  if (variant === 'A') {
     const end = getGreetingPunctuation(greeting);
     return (
       <Animated.View entering={FadeInDown.duration(600)} className="flex-row items-start gap-3">

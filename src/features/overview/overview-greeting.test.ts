@@ -3,9 +3,10 @@ import { readFileSync } from 'node:fs';
 import { TYPE } from '@/constants/typography';
 import { FONTS } from '@/constants/tokens';
 
-test('keeps both greeting variants: stacked (mobile) and editorial (web)', () => {
+test('keeps greeting style A (editorial, default) and style B (two-line)', () => {
   const greeting = readFileSync('src/components/overview/OverviewGreeting.tsx', 'utf8');
-  expect(greeting).toContain("export type OverviewGreetingVariant = 'stacked' | 'editorial'");
+  expect(greeting).toContain("export type OverviewGreetingVariant = 'A' | 'B'");
+  expect(greeting).toContain("variant = 'A'");
   expect(greeting).toContain('<GreetingIcon');
   expect(greeting).toContain('TYPE.greetingEditorial');
   expect(greeting).toContain("const prompt = question ? followUp : 'What’s on your mind today?';");
@@ -13,7 +14,9 @@ test('keeps both greeting variants: stacked (mobile) and editorial (web)', () =>
   expect(TYPE.greetingEditorialName).toMatchObject({ fontFamily: FONTS.serifItalic });
   expect(TYPE.greeting).toMatchObject({ fontSize: 28, lineHeight: 34 });
   const overview = readFileSync('app/(tabs)/overview/index.tsx', 'utf8');
-  expect(overview).toContain('<OverviewGreeting name={displayName} />');
+  expect(overview).toContain("const GREETING_STYLE: OverviewGreetingVariant = 'A';");
+  expect(overview).toContain('<OverviewGreeting name={displayName} variant={GREETING_STYLE} />');
+  expect(overview).toContain('placeholder={GREETING_CAPTURE_PLACEHOLDER[GREETING_STYLE]}');
 });
 
 test('question greetings get a varied statement, never another question', async () => {

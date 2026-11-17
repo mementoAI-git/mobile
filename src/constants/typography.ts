@@ -11,7 +11,7 @@ export const TYPE_METRICS = Object.freeze({
   /** Garamond runs small next to SF Pro Rounded, so the name is set larger on the same line height. */
   greetingName: Object.freeze({fontSize: 32, lineHeight: 34}),
   // The editorial greeting (still used on web): one serif line beside the sun/moon.
-  greetingEditorial: Object.freeze({fontSize: ms(24, 0.25), lineHeight: ms(32, 0.25)}),
+  greetingEditorial: Object.freeze({fontSize: ms(34, 0.25), lineHeight: ms(40, 0.25)}),
   captureInput: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(28, 0.25)}),
   reflectionTitle: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(27, 0.25)}),
   sectionTitle: Object.freeze({fontSize: ms(22, 0.25), lineHeight: ms(28, 0.25)}),
