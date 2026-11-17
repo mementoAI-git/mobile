@@ -23,7 +23,6 @@ import {
   Text,
   Image,
   ScrollView,
-  ImageBackground,
 } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -41,8 +40,6 @@ import { minTouchTarget, radius, iconSize } from '@/constants/responsive';
 import { Spinner, Button } from '@/components/ui';
 import { UiZapFast, UiDatabase01 } from '@/components/ui/icons/SettingsIcons';
 import { NativeModalSafeAreaBoundary } from '@/components/system/NativeModalSafeAreaBoundary';
-
-const PATTERN = require('../assets/images/backgrounds/welcome_bg.png');
 
 // ─── File type helpers ────────────────────────────────────────────────────────
 
@@ -199,7 +196,7 @@ function ShareContent() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top', 'bottom']}>
-      <ImageBackground source={PATTERN} style={{ flex: 1 }} imageStyle={{ opacity: 0.03 }}>
+      <View style={{ flex: 1 }}>
 
         {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 }}>
@@ -297,7 +294,7 @@ function ShareContent() {
             </TouchableOpacity>
           </Animated.View>
         </ScrollView>
-      </ImageBackground>
+      </View>
     </SafeAreaView>
   );
 }

@@ -3,7 +3,6 @@ import React from 'react';
 import {
   View,
   Text,
-  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -20,8 +19,6 @@ import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 
-const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
-
 export default function ForgotPasswordScreen() {
   const COLORS = useThemeColors();
   const styles = useThemedStyles(stylesBase);
@@ -35,12 +32,7 @@ export default function ForgotPasswordScreen() {
   } = useForgotPasswordLogic();
 
   return (
-    <ImageBackground
-      source={PATTERN}
-      style={{ flex: 1, backgroundColor: COLORS.background }}
-      imageStyle={{ opacity: 0.03 }}
-      resizeMode="repeat"
-    >
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -124,7 +116,7 @@ export default function ForgotPasswordScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </ImageBackground>
+    </View>
   );
 }
 

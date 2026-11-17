@@ -136,7 +136,6 @@ const SPLASH_ASSETS = [
   require('../assets/images/splash-cinematic/avatar-2.webp'),
   require('../assets/images/splash-cinematic/avatar-3.webp'),
   require('../assets/images/splash-cinematic/memento_mark.webp'),
-  require('../assets/images/backgrounds/welcome_bg.png'),
 ];
 
 // -----------------------------------------------------------------------------

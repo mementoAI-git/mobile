@@ -4,7 +4,6 @@ import {
   View,
   Text,
   Platform,
-  ImageBackground,
 } from 'react-native';
 import { Pressable, TouchableOpacity } from '@/components/ui/Touchable';
 import Animated, {
@@ -28,7 +27,6 @@ import { SheetActions, SHEET_FILL } from './SheetActions';
 import { SheetHeader } from './SheetHeader';
 import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
 
-const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type PresetOption = 'morning' | 'evening' | 'custom' | 'off';
@@ -211,14 +209,6 @@ export function DailyRitualSheet({ onClose, onSaved }: DailyRitualSheetProps) {
 
   return (
     <View className="flex-grow" style={{ gap: SHEET_GROUP_GAP }}>
-      <View pointerEvents="none" className="absolute inset-0">
-        <ImageBackground
-          source={PATTERN}
-          className="flex-1"
-          style={{ opacity: 0.03 }}
-          resizeMode="repeat"
-        />
-      </View>
 
       <SheetHeader
         title="Daily Reflection Ritual"

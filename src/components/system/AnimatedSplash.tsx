@@ -1,7 +1,6 @@
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
-  ImageBackground,
   type ImageSourcePropType,
   StyleSheet,
   Text,
@@ -42,7 +41,6 @@ const AVATAR_ONE = require('../../../assets/images/splash-cinematic/avatar-1.web
 const AVATAR_TWO = require('../../../assets/images/splash-cinematic/avatar-2.webp');
 const AVATAR_THREE = require('../../../assets/images/splash-cinematic/avatar-3.webp');
 const LOGO_MARK = require('../../../assets/images/splash-cinematic/memento_mark.webp');
-const GRAIN = require('../../../assets/images/backgrounds/welcome_bg.png');
 
 const CARD_IMAGES: Record<CinematicSplashCard['id'], ImageSourcePropType> = {
   journal: JOURNAL,
@@ -347,7 +345,6 @@ const BrandPromise = memo(function BrandPromise({ clock, stageHeight }: ClockPro
   );
 });
 
-
 export function AnimatedSplash({
   onDone,
   onReady,
@@ -485,14 +482,6 @@ export function AnimatedSplash({
       <PromptCard clock={clock} stageWidth={width} stageHeight={height} />
       <LogoMark clock={clock} stageHeight={height} />
       <BrandPromise clock={clock} stageHeight={height} />
-      <View pointerEvents="none" style={styles.grain}>
-        <ImageBackground
-          source={GRAIN}
-          resizeMode="repeat"
-          style={StyleSheet.absoluteFill}
-          imageStyle={styles.grainImage}
-        />
-      </View>
     </Animated.View>
   );
 }
@@ -605,6 +594,4 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
   },
   avatarOverlap: { marginLeft: -10 },
-  grain: { ...StyleSheet.absoluteFill, zIndex: 30, opacity: 0.09 },
-  grainImage: { opacity: 0.35 },
 });

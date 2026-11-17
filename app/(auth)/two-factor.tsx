@@ -3,7 +3,6 @@ import React from 'react';
 import {
   View,
   Text,
-  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -17,8 +16,6 @@ import { OtpCodeInput } from '@/components/auth/OtpCodeInput';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, responsiveSpace } from '@/constants/responsive';
-
-const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 export default function TwoFactorScreen() {
   const COLORS = useThemeColors();
@@ -35,12 +32,7 @@ export default function TwoFactorScreen() {
   } = useTwoFactorLogic();
 
   return (
-    <ImageBackground
-      source={PATTERN}
-      style={{ flex: 1, backgroundColor: COLORS.background }}
-      imageStyle={{ opacity: 0.03 }}
-      resizeMode="repeat"
-    >
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View className="px-4 py-4">
           <Logo size="sm" />
@@ -120,6 +112,6 @@ export default function TwoFactorScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </ImageBackground>
+    </View>
   );
 }
