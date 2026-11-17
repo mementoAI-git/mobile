@@ -21,7 +21,7 @@ describe('Settings typography', () => {
       'utf8',
     );
 
-    expect(hubRow).toContain('style={[TYPE.body, { flex: 1, color: COLORS.textStrong }]}');
+    expect(hubRow).toContain('style={[TYPE.label, { flex: 1, color: color ?? colors.textStrong }]}');
     expect(profile).toContain('TYPE.body');
     expect(tabs).not.toContain('h-8');
     expect(tabs).not.toContain('rounded-lg');

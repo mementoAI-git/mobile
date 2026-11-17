@@ -17,16 +17,14 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Avatar, ResponsiveScreen } from '@/components/ui';
 import { useUiStore } from '@/store';
-import {
-  UiCreditCard01,
-  UiEye,
-  UiLogOut01,
-  UiMessageChatSquare,
-  UiShieldTick,
-  UiUserCircle,
-  UiUsers01,
-} from '@/components/ui/icons/SettingsIcons';
-import { SettingsHubRow } from '@/components/settings/SettingsHubRow';
+import CreditCard from 'lucide-react-native/icons/credit-card';
+import LockKeyhole from 'lucide-react-native/icons/lock-keyhole';
+import LogOut from 'lucide-react-native/icons/log-out';
+import MessageSquare from 'lucide-react-native/icons/message-square';
+import ShieldCheck from 'lucide-react-native/icons/shield-check';
+import UserRound from 'lucide-react-native/icons/user-round';
+import UsersRound from 'lucide-react-native/icons/users-round';
+import { SettingsGroupedList, SettingsHubRow } from '@/components/settings/SettingsHubRow';
 import { PlanSummaryBanner } from '@/components/subscription/PlanSummaryBanner';
 import { OnboardingReminderCard } from '@/components/onboarding/OnboardingReminderCard';
 import { useSubscription } from '@/hooks/queries/use-subscription';
@@ -157,53 +155,59 @@ export default function SettingsIndex() {
           <OnboardingReminderCard />
         </View>
 
-        {/* Labels and order match web settings-hub.tsx. */}
-        <View>
-          <SettingsHubRow
-            label="Personal info"
-            icon={<UiUserCircle size={24} color={COLORS.textBase} />}
-            onPress={() => push('/settings/profile')}
-          />
-          <SettingsHubRow
-            label="Security"
-            icon={<UiShieldTick size={24} color={COLORS.textBase} />}
-            onPress={() => push('/settings/account')}
-          />
-          <SettingsHubRow
-            label="People & Groups"
-            icon={<UiUsers01 size={24} color={COLORS.textBase} />}
-            onPress={() => push('/settings/beneficiaries')}
-          />
-          <SettingsHubRow
-            label="Privacy & Account"
-            icon={<UiEye size={24} color={COLORS.textBase} />}
-            onPress={() => push('/settings/privacy')}
-          />
-          <SettingsHubRow
-            label="Billing"
-            icon={<UiCreditCard01 size={24} color={COLORS.textBase} />}
-            onPress={() => push('/settings/billing')}
-          />
-          <SettingsHubRow
-            label="Send Feedback"
-            icon={<UiMessageChatSquare size={24} color={COLORS.textBase} />}
-            onPress={() => push('/settings/feedback')}
-            showChevron={false}
-          />
-        </View>
+        {/* Labels, order, icons and grouped cards match web settings-hub.tsx. */}
+        <View style={styles.groups}>
+          <SettingsGroupedList>
+            <SettingsHubRow
+              isFirst
+              label="Personal info"
+              icon={<UserRound size={20} color={COLORS.textStrong} strokeWidth={1.75} />}
+              onPress={() => push('/settings/profile')}
+            />
+            <SettingsHubRow
+              label="Security"
+              icon={<LockKeyhole size={20} color={COLORS.textStrong} strokeWidth={1.75} />}
+              onPress={() => push('/settings/account')}
+            />
+            <SettingsHubRow
+              label="People & Groups"
+              icon={<UsersRound size={20} color={COLORS.textStrong} strokeWidth={1.75} />}
+              onPress={() => push('/settings/beneficiaries')}
+            />
+            <SettingsHubRow
+              label="Privacy & Account"
+              icon={<ShieldCheck size={20} color={COLORS.textStrong} strokeWidth={1.75} />}
+              onPress={() => push('/settings/privacy')}
+            />
+            <SettingsHubRow
+              label="Billing"
+              icon={<CreditCard size={20} color={COLORS.textStrong} strokeWidth={1.75} />}
+              onPress={() => push('/settings/billing')}
+            />
+            <SettingsHubRow
+              isLast
+              label="Send Feedback"
+              icon={<MessageSquare size={20} color={COLORS.textStrong} strokeWidth={1.75} />}
+              onPress={() => push('/settings/feedback')}
+              showChevron={false}
+            />
+          </SettingsGroupedList>
 
-        <TouchableOpacity
-          onPress={() => openSheet('security-confirmation', {
-            kind: 'logout-current-device',
-            onConfirm: handleLogout,
-          })}
-          disabled={isPending}
-          activeOpacity={0.75}
-          style={styles.logout}
-        >
-          <UiLogOut01 size={24} color={COLORS.error} />
-          <Text style={[TYPE.label, { color: COLORS.error }]}>Logout</Text>
-        </TouchableOpacity>
+          <SettingsGroupedList>
+            <SettingsHubRow
+              isFirst
+              isLast
+              label={isPending ? 'Logging out…' : 'Logout'}
+              icon={<LogOut size={20} color={COLORS.textStrong} strokeWidth={1.75} />}
+              onPress={() => openSheet('security-confirmation', {
+                kind: 'logout-current-device',
+                onConfirm: handleLogout,
+              })}
+              disabled={isPending}
+              showChevron={false}
+            />
+          </SettingsGroupedList>
+        </View>
 
         <Text style={[TYPE.metadata, styles.communityLabel]}>JOIN OUR COMMUNITY</Text>
         <View style={styles.communityRow}>
@@ -266,14 +270,8 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
   profileCopy: { flex: 1, minWidth: 0, gap: 4 },
   profileMetaText: { color: COLORS.textBase },
-  logout: {
-    minHeight: 56,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 8,
-  },
+  // Web: the section list and the logout card sit 16px apart.
+  groups: { gap: 16 },
   communityLabel: {
     marginTop: 48,
     color: COLORS.textWeak,

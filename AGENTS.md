@@ -182,6 +182,7 @@ import { TYPE } from '@/constants/typography';
 | `insightStat` | `FONTS.sans` 600 on iOS, `FONTS.sansSemi` elsewhere | 20 / 26 | Insights statistics tiles (all four the same size, no shrink-to-fit) |
 | `streakCount` | `FONTS.sansSemi` | 28 / 36 | Streak card day count (web streak card B) |
 | `bodySmallStrong` | `FONTS.sansSemi` | 14 / 20 | Bold figures inside small copy |
+| `rowTitle` | `FONTS.sans` 600 on iOS, `FONTS.sansSemi` elsewhere | 15 / 20 | Compact settings card titles (Settings onboarding reminder) |
 | `planPrice` | `FONTS.sansSemi` | 36 / 40 | Plan prices on the plans page |
 | `mono` | `FONTS.mono` | 14 / 20 | Code / mono |
 | `chipLabel` | `FONTS.sans` | 12 / 16 | Onboarding chips (inspiration, life areas) and the About counter |
@@ -221,7 +222,7 @@ The only exception is capsule theme previews, marked with a `typography-exceptio
 ### 3. Layout & Spacing
 
 - The `DashboardHeader` right-most control is the user's avatar, which opens `/account`. The account page shows Quick actions (`QuickActions`: Quick note, Add people, Insights) under the profile card; there is no Quick tools sheet.
-- Account page cards (profile, music, streak, enrichment) share **20px radius and 20px padding**. The profile card is white with light-mode ink on Dark and Deep Sky.
+- Account page cards (profile, music, streak, enrichment) share **20px radius and 20px padding**. Settings hub rows match web `settings-grouped-list`: 60px `SettingsHubRow` cards on `fillWeak`, 4px apart with 4px inner and 20px outer corners (`SettingsGroupedList`); Logout is its own one-row group 16px below. The onboarding reminder is web's compact row (12px radius, title + one line, small "Start" pill). The profile card is white with light-mode ink on Dark and Deep Sky.
 
 - Page content and headers use **16px** left/right gutters. Bottom sheets use **20px** total left/right gutters; avoid adding the sheet manager gutter twice. Internal card/control padding stays component-specific.
 

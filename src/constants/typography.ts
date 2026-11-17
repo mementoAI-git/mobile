@@ -81,6 +81,8 @@ export const TYPE = StyleSheet.create({
   /** Bold figures inside small copy ("3 reflections"). */
   bodySmallStrong: {fontFamily: FONTS.sansSemi, ...TYPE_METRICS.bodySmall},
   bodyLarge: {fontFamily: FONTS.sans, ...TYPE_METRICS.bodyLarge},
+  /** 15/20 semibold in the body face: compact settings card titles (Settings onboarding reminder). */
+  rowTitle: {fontFamily: Platform.select({ios: FONTS.sans, default: FONTS.sansSemi}), fontWeight: '600', fontSize: ms(15, 0.2), lineHeight: ms(20, 0.2)},
   /** 16px semibold in the body face (SF Pro Rounded on iOS): the Account enrichment strength word. */
   bodyLargeSemi: {fontFamily: Platform.select({ios: FONTS.sans, default: FONTS.sansSemi}), fontWeight: '600', ...TYPE_METRICS.bodyLarge},
   body: {fontFamily: FONTS.sans, ...TYPE_METRICS.body},
