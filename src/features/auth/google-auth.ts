@@ -3,11 +3,11 @@ import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-si
 
 export const DEFAULT_GOOGLE_WEB_CLIENT_ID =
   process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ||
-  '680261459129-g1l36cheppg1e29slepth6dpvngjqjj1.apps.googleusercontent.com';
+  '246773083886-bu35mshe7kbnhe329rka30k50t120vde.apps.googleusercontent.com';
 
 export const DEFAULT_GOOGLE_IOS_CLIENT_ID =
   process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ||
-  '680261459129-nupaa1nhgpkolmiicmcho7ffipl939lf.apps.googleusercontent.com';
+  '246773083886-nkljj6mafpodch7a8mv1g5khn91sv8a4.apps.googleusercontent.com';
 
 export function configureGoogleSignIn(
   webClientId = DEFAULT_GOOGLE_WEB_CLIENT_ID,
