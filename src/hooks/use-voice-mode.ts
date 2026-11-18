@@ -111,6 +111,7 @@ import { CallRecordingSession } from '@/features/chat/call-recording';
 import { toast } from '@/components/ui/Toast';
 import { discardCallRecording, drainCallRecordings, finishCallRecording, getCallRecorderNative, newCallRecordingPath } from '@/features/chat/call-recording-store';
 import { invalidateMemoryQueries } from '@/features/memories/cache';
+import { VOICE_USAGE_CHECK_IN_MS, sendVoiceUsageCheckIn } from '@/features/chat/voice-usage';
 import { useAuthStore, useUserStore } from '@/store';
 
 type SetupReady = {
@@ -741,6 +742,12 @@ export function useVoiceMode({
     lastNetworkRef.current = undefined;
     callLimitTimersRef.current.forEach(clearTimeout);
     callLimitTimersRef.current = [];
+    // A last check-in records the call's full length, then the voice minutes cards refresh.
+    const endedTicket = callTicketRef.current;
+    if (endedTicket) {
+      void sendVoiceUsageCheckIn(endedTicket).then(() =>
+        queryClient.invalidateQueries({ queryKey: queryKeys.voiceUsage }));
+    }
     callTicketRef.current = null;
     toolRelayRef.current?.dispose();
     toolRelayRef.current = null;
@@ -1125,6 +1132,7 @@ export function useVoiceMode({
             previous?.close();
             // The server's count is the clock: restart the timers from it.
             scheduleCallLimitRef.current(liveToken.callTime);
+            if (liveToken.callTicket) callTicketRef.current = liveToken.callTicket;
             // An abandoned response's end marker may never arrive on the
             // resumed session; keeping the gate shut could swallow a reply.
             responseGateRef.current?.reset();
@@ -1267,6 +1275,17 @@ export function useVoiceMode({
   }, [endCallAfterGoodbye]);
   const scheduleCallLimitRef = useRef(scheduleCallLimit);
   scheduleCallLimitRef.current = scheduleCallLimit;
+
+  // While connected, check in once a minute so voice minutes add up even if the call
+  // ends without a goodbye (app closed, crash, lost connection).
+  useEffect(() => {
+    if (!isConnected) return undefined;
+    const id = setInterval(() => {
+      const ticket = callTicketRef.current;
+      if (ticket) void sendVoiceUsageCheckIn(ticket);
+    }, VOICE_USAGE_CHECK_IN_MS);
+    return () => clearInterval(id);
+  }, [isConnected]);
 
   /**
    * Prepares a call before the tap: opens the Gemini session with the
@@ -1797,6 +1816,8 @@ export function useVoiceMode({
 
       // The call is up: arm its time limit, if the server set one.
       scheduleCallLimitRef.current(liveToken.callTime);
+      // Every call has a ticket (limited or not): reconnects and usage check-ins name the call by it.
+      if (liveToken.callTicket) callTicketRef.current = liveToken.callTicket;
 
       // Safety guard: The greeting shield prevents the model's initial spoken greeting
       // from leaking into the microphone and causing self-interruption.

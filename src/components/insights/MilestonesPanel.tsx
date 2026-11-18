@@ -14,6 +14,7 @@ import { useProfile } from '@/hooks/queries/use-profile';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useUserStore } from '@/store';
 import { INSIGHTS_RADIUS, InsightsMessage } from './InsightsPrimitives';
+import { VoiceMinutesCards } from './VoiceMinutesCards';
 import { useRouter } from 'expo-router';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { isOnboardingComplete, ONBOARDING_HREF, openOnboarding } from '@/features/onboarding/onboarding-resume';
@@ -58,6 +59,8 @@ export function MilestonesPanel() {
 
   return (
     <View style={{ gap: 16 }}>
+      {/* Voice mode minutes: this month (resets on the 1st) and all time. */}
+      <VoiceMinutesCards />
       {milestones.map((milestone) => {
         const href = milestone.href;
         const Row = href ? TouchableOpacity : View;
