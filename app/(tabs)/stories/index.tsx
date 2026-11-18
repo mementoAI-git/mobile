@@ -60,8 +60,8 @@ export default function StoriesScreen() {
     stats,
     isLoading,
     isFetching,
-    isRefetching,
-    refetch,
+    isPullRefreshing,
+    pullToRefresh,
     isFetchingNextPage,
     fetchNextPage,
     hasNextPage,
@@ -258,9 +258,9 @@ export default function StoriesScreen() {
             ListEmptyComponent={emptyState}
             onMemoryPress={handleGridMemoryPress}
             onEndReached={handleGridEndReached}
-            refreshing={isRefetching}
+            refreshing={isPullRefreshing}
             loadingMore={isFetchingNextPage}
-            onRefresh={refetch}
+            onRefresh={pullToRefresh}
             scrollY={scrollY}
           />
         ) : (
@@ -275,7 +275,7 @@ export default function StoriesScreen() {
             renderItem={renderListItem}
             contentContainerClassName="pb-40"
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.brand} />}
+            refreshControl={<RefreshControl refreshing={isPullRefreshing} onRefresh={pullToRefresh} tintColor={COLORS.brand} />}
             onScroll={scrollHandler}
             scrollEventThrottle={16}
             onEndReached={handleGridEndReached}
