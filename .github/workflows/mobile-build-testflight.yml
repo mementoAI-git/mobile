@@ -1,8 +1,10 @@
 name: Mobile — Build & Submit TestFlight
 
-# Runs on every push to main after the quality workflow has already gated the
-# branch (via branch protection). Builds the iOS `testflight` EAS profile and
-# auto-submits the result to App Store Connect / TestFlight.
+# Manual only (Actions → Run workflow). Builds the iOS `testflight` EAS profile,
+# which talks to the staging API, and submits it to App Store Connect /
+# TestFlight. It used to run on every push to main, which put staging builds
+# next to production builds under the App Store version, where one could be
+# picked for review by mistake. Store builds come from the production workflow.
 #
 # Required GitHub secrets:
 #   EXPO_TOKEN          — Expo account token (eas build + eas submit auth)
@@ -14,9 +16,7 @@ name: Mobile — Build & Submit TestFlight
 #   eas credentials --platform ios
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   build-testflight:
