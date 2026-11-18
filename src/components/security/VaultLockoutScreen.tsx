@@ -1,6 +1,6 @@
 import { useThemedStyles } from '@/hooks/use-theme-colors';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -8,8 +8,6 @@ import { hs, radius } from '@/constants/responsive';
 import { Button, Avatar } from '@/components/ui';
 import { useVaultLockStore } from '@/features/security/vault-lock.store';
 import { useUserStore } from '@/store';
-
-const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 
 export function VaultLockoutScreen() {
   const styles = useThemedStyles(stylesBase);
@@ -43,7 +41,6 @@ export function VaultLockoutScreen() {
       exiting={FadeOut.duration(200)}
       style={[StyleSheet.absoluteFill, styles.container]}
     >
-      <ImageBackground source={PATTERN} style={[StyleSheet.absoluteFill, { opacity: 0.03 }]} resizeMode="repeat" />
 
       <View style={styles.card}>
         <Avatar userId={user?._id} seed={user?.email} uri={user?.picture_url} name={displayName} size="xl" />

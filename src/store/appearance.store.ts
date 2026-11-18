@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { parseAppearance, type AppearancePreference } from '@/features/appearance/appearance';
+import { DEFAULT_APPEARANCE, parseAppearance, type AppearancePreference } from '@/features/appearance/appearance';
 
 const STORAGE_KEY = 'memento.appearance';
 let revision = 0;
@@ -14,7 +14,7 @@ interface AppearanceState {
 }
 
 export const useAppearanceStore = create<AppearanceState>((set, get) => ({
-  preference: 'system',
+  preference: DEFAULT_APPEARANCE,
   hydrated: false,
   hydrate: async () => {
     if (get().hydrated) return;

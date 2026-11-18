@@ -2,8 +2,9 @@ import type { EnrichmentCategory } from '@/constants/enrichment';
 import {
   FIRST_RUN_LIFE_AREAS,
   FIRST_RUN_MOTIVATIONS,
+  LEGACY_MOTIVATION_IDS,
 } from '@/constants/onboarding';
-import type { OnboardingMotivation } from '@/constants/onboarding';
+import type { OnboardingMotivation, OnboardingMotivationType } from '@/constants/onboarding';
 
 export { FIRST_RUN_LIFE_AREAS, FIRST_RUN_MOTIVATIONS };
 export type {
@@ -16,7 +17,8 @@ export type OnboardingStep = 1 | 2 | 3 | 4;
 
 export interface FirstRunOnboardingDraft {
   preferredName: string;
-  motivation: OnboardingMotivation | null;
+  /** Every reason chosen for “What brings you to Memento AI?”, in list order. */
+  motivations: OnboardingMotivation[];
   about: string;
   lifeAreas: EnrichmentCategory[];
   step: OnboardingStep;
@@ -42,7 +44,7 @@ export interface OnboardingCompatibilityPayload {
   nickname: string;
   self_description: string;
   join_reasons: OnboardingMotivation[];
-  motivationType: OnboardingMotivation | null;
+  motivationType: OnboardingMotivationType | null;
   priorityDimensions: EnrichmentCategory[];
   stepReached: 4;
   isComplete: true;
@@ -50,7 +52,7 @@ export interface OnboardingCompatibilityPayload {
 
 export const EMPTY_ONBOARDING_DRAFT: FirstRunOnboardingDraft = {
   preferredName: '',
-  motivation: null,
+  motivations: [],
   about: '',
   lifeAreas: [],
   step: 1,
@@ -71,6 +73,33 @@ export function setLifeAreaSelection(
   return { values: [...current, next], accepted: true };
 }
 
+/**
+ * Saved reasons as known IDs in the order the options are shown. Accepts the
+ * IDs mobile used before matching web and drops anything unknown.
+ */
+export function normalizeMotivations(values: readonly unknown[]): OnboardingMotivation[] {
+  const chosen = new Set(
+    values.map((value) => (typeof value === 'string' ? LEGACY_MOTIVATION_IDS[value] ?? value : null)),
+  );
+  return FIRST_RUN_MOTIVATIONS.map((option) => option.value).filter((value) => chosen.has(value));
+}
+
+/** The primary motivation type for the API: the first chosen reason's type. */
+export function primaryMotivationType(
+  motivations: readonly OnboardingMotivation[],
+): OnboardingMotivationType | null {
+  const first = FIRST_RUN_MOTIVATIONS.find((option) => option.value === motivations[0]);
+  return first?.motivation ?? null;
+}
+
+/** Add or remove a reason, keeping the list in the order the options are shown. */
+export function toggleMotivationSelection(
+  current: readonly OnboardingMotivation[],
+  next: OnboardingMotivation,
+): OnboardingMotivation[] {
+  return normalizeMotivations(current.includes(next) ? current.filter((value) => value !== next) : [...current, next]);
+}
+
 export function validateOnboardingStep(
   draft: FirstRunOnboardingDraft,
   step: OnboardingStep,
@@ -81,7 +110,7 @@ export function validateOnboardingStep(
         ? { valid: true, message: null }
         : { valid: false, message: 'Please share the name you’d like us to use.' };
     case 2:
-      return draft.motivation
+      return draft.motivations.length > 0
         ? { valid: true, message: null }
         : { valid: false, message: 'Please choose what brings you here.' };
     case 3: {
@@ -101,15 +130,15 @@ export function validateOnboardingStep(
 export function buildOnboardingSummary(
   draft: FirstRunOnboardingDraft,
 ): OnboardingSummary {
-  const motivation = FIRST_RUN_MOTIVATIONS.find(
-    (option) => option.value === draft.motivation,
-  );
+  const motivationLabels = FIRST_RUN_MOTIVATIONS.filter((option) =>
+    draft.motivations.includes(option.value),
+  ).map((option) => option.label);
   const labelsByArea = new Map(
     FIRST_RUN_LIFE_AREAS.map((area) => [area.value, area.label]),
   );
 
   return {
-    whyYouAreHere: motivation?.label ?? '',
+    whyYouAreHere: motivationLabels.join(', '),
     aboutYou: draft.about.trim(),
     startingAreas: draft.lifeAreas.map((area) => labelsByArea.get(area) ?? area),
   };
@@ -121,8 +150,9 @@ export function buildOnboardingPayload(
   return {
     nickname: draft.preferredName.trim(),
     self_description: draft.about.trim(),
-    join_reasons: draft.motivation ? [draft.motivation] : [],
-    motivationType: draft.motivation,
+    join_reasons: [...draft.motivations],
+    // The API keeps one primary motivation for the AI; like web, it is the first chosen in list order.
+    motivationType: primaryMotivationType(draft.motivations),
     priorityDimensions: [...draft.lifeAreas],
     stepReached: 4,
     isComplete: true,

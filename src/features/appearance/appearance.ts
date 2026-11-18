@@ -2,8 +2,13 @@ export type AppearancePreference = 'system' | 'light' | 'dark' | 'deep-sky' | 'l
 export type ResolvedAppearance = 'light' | 'dark';
 export type SkyAppearance = 'deep-sky' | 'light-sky';
 
+/** Mobile opens in Dark until the person picks another appearance. */
+export const DEFAULT_APPEARANCE: AppearancePreference = 'dark';
+
 export function parseAppearance(value: string | null): AppearancePreference {
-  return value === 'light' || value === 'dark' || value === 'deep-sky' || value === 'light-sky' ? value : 'system';
+  return value === 'system' || value === 'light' || value === 'dark' || value === 'deep-sky' || value === 'light-sky'
+    ? value
+    : DEFAULT_APPEARANCE;
 }
 
 /** Deep Sky renders dark controls and Light Sky light ones, matching web resolveTheme. */

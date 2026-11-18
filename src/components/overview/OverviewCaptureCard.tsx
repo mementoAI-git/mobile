@@ -24,6 +24,7 @@ import { TYPE } from '@/constants/typography';
 import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
+import { useUiStore } from '@/store';
 import {
   CAPTURE_HANDED_OFF_EVENT,
   buildStoryHandoff,
@@ -152,8 +153,8 @@ export function OverviewCaptureCard({ userId, onAddStory, placeholder = 'Add som
     }
   }, [quickCapture, updateText, voiceNotes]);
 
-  /** Opens the add-story page with this card's draft; `record` starts recording there. */
-  const openStoryWithDraft = useCallback((record: boolean) => {
+  /** Opens the add-story page with this card's draft. */
+  const openStoryWithDraft = useCallback(() => {
     const hasCardDraft = Boolean(textRef.current.trim() || voiceNotes.length);
     let initialDraft: string | undefined;
     if (hasCardDraft) {
@@ -166,21 +167,21 @@ export function OverviewCaptureCard({ userId, onAddStory, placeholder = 'Add som
       params: {
         mode: 'story',
         ...(initialDraft ? { initialDraft } : {}),
-        ...(record ? { autoRecord: 'true' } : {}),
       },
     });
   }, [router, voiceNotes]);
 
   const handleUseAsStory = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    openStoryWithDraft(false);
+    openStoryWithDraft();
   }, [openStoryWithDraft]);
 
-  // The mic opens Add story and records there, the same as its own mic button.
+  // The mic opens the recorder sheet; Done saves the recording as its own story,
+  // which the AI names from the transcript. The card's draft stays as it is.
   const handleRecord = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    openStoryWithDraft(true);
-  }, [openStoryWithDraft]);
+    useUiStore.getState().openSheet('recorder');
+  }, []);
 
   const handleDiscuss = useCallback(() => {
     const message = textRef.current.trim();

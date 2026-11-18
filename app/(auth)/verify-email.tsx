@@ -3,7 +3,6 @@ import React from 'react';
 import {
   View,
   Text,
-  ImageBackground,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -21,7 +20,6 @@ import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 
-const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 const APP_ICON = require('../../assets/icon.png');
 
 export default function VerifyEmailScreen() {
@@ -43,7 +41,7 @@ export default function VerifyEmailScreen() {
   } = useVerifyEmailLogic();
 
   return (
-    <ImageBackground source={PATTERN} style={styles.screenBg} imageStyle={{ opacity: 0.03 }}>
+    <View style={styles.screenBg}>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -167,7 +165,7 @@ export default function VerifyEmailScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </ImageBackground>
+    </View>
   );
 }
 

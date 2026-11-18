@@ -51,7 +51,11 @@ describe('Onboarding shared components static contract', () => {
     // Motivation rows are 44px+; life-area chips are the 40px Figma chip with 2px hitSlop each side.
     expect(choice.match(/min-h-\[44px\]/g)).toHaveLength(1);
     expect(choice).toContain('hitSlop={{ top: 2, bottom: 2 }}');
-    expect(choice).toContain('accessibilityRole="radio"');
+    // Motivation rows are radios by default and checkboxes in multi-select mode.
+    expect(choice).toContain("accessibilityRole={multiple ? 'checkbox' : 'radio'}");
+    const preferences = readFileSync('app/(onboard)/preferences.tsx', 'utf8');
+    expect(preferences).toContain('selected={draft.motivations.includes(opt.value)}');
+    expect(preferences).toContain('multiple');
     expect(choice).toContain('accessibilityRole="checkbox"');
     expect(choice.match(/accessibilityState=\{\{ checked: selected, disabled \}\}/g)).toHaveLength(2);
     expect(choice).not.toContain('style={TYPE.label}');

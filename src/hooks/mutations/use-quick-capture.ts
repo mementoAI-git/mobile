@@ -19,6 +19,8 @@ export interface QuickCapturePayload {
   prompt_text?: string;
   /** YYYY-MM-DD reflection day */
   reflection_day_key?: string;
+  /** Let the AI name the story from its content instead of keeping "Quick note". */
+  auto_title?: boolean;
 }
 
 /**

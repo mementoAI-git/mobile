@@ -39,7 +39,7 @@ const QuickActionCard = React.memo(function QuickActionCard({
   onPress: () => void;
 }) {
   return (
-    <Button variant="outline" iconOnly accessibilityLabel={label} className="flex-1 bg-card" style={actionCardStyle} onPress={onPress}>
+    <Button variant="outline" iconOnly accessibilityLabel={label} className="flex-1 bg-fill-weak" style={actionCardStyle} onPress={onPress}>
       <QuickActionTexture />
       <Image source={icon} style={{ width: 24, height: 24 }} accessible={false} />
       <Text className="text-text-strong" style={TYPE.label} numberOfLines={1}>{label}</Text>

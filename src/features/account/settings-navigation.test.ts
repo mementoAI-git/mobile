@@ -26,7 +26,7 @@ describe('settings and personal info navigation', () => {
       .map((label) => settings.indexOf(`label="${label}"`));
     expect(labels.every((index) => index > -1)).toBe(true);
     expect([...labels].sort((a, b) => a - b)).toEqual(labels);
-    expect(settings).toContain('>Logout<');
+    expect(settings).toContain("'Logout'");
     expect(settings).not.toContain('Daily reflection ritual');
     expect(settings).not.toContain('Ceremonial Experience Lab');
     expect(account).not.toContain('Daily reflection ritual');

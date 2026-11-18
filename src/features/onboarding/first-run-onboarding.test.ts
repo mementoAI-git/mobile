@@ -6,18 +6,21 @@ import {
   buildOnboardingPayload,
   buildOnboardingSummary,
   setLifeAreaSelection,
+  toggleMotivationSelection,
+  normalizeMotivations,
+  primaryMotivationType,
   validateOnboardingStep,
 } from './first-run-onboarding';
 
 describe('first-run onboarding options', () => {
   test('exposes the six canonical motivation keys', () => {
     expect(FIRST_RUN_MOTIVATIONS.map((motivation) => motivation.value)).toEqual([
-      'preserve_memories',
-      'self_reflection',
+      'memory_preservation',
+      'self_understanding',
       'life_record',
-      'organize_thoughts',
-      'legacy_for_loved_ones',
-      'exploring',
+      'personal_space',
+      'emotional_depth',
+      'explorer',
     ]);
   });
 
@@ -90,8 +93,15 @@ describe('onboarding step validation', () => {
     expect(validateOnboardingStep(EMPTY_ONBOARDING_DRAFT, 1).valid).toBe(false);
   });
 
-  test('requires a motivation', () => {
+  test('requires at least one motivation', () => {
     expect(validateOnboardingStep(EMPTY_ONBOARDING_DRAFT, 2).valid).toBe(false);
+    expect(validateOnboardingStep({ ...EMPTY_ONBOARDING_DRAFT, motivations: ['explorer'] }, 2).valid).toBe(true);
+  });
+
+  test('toggles motivations on and off, keeping the option order', () => {
+    expect(toggleMotivationSelection([], 'explorer')).toEqual(['explorer']);
+    expect(toggleMotivationSelection(['explorer'], 'memory_preservation')).toEqual(['memory_preservation', 'explorer']);
+    expect(toggleMotivationSelection(['memory_preservation', 'explorer'], 'explorer')).toEqual(['memory_preservation']);
   });
 
   test('requires non-empty about text and caps it at 500 characters', () => {
@@ -128,7 +138,7 @@ describe('onboarding summary', () => {
     expect(
       buildOnboardingSummary({
         preferredName: ' Jane ',
-        motivation: 'self_reflection',
+        motivations: ['self_understanding'],
         about: ' I care about family and growth. ',
         lifeAreas: ['identity_self', 'passions_interests'],
         step: 4,
@@ -141,12 +151,44 @@ describe('onboarding summary', () => {
   });
 });
 
+describe('reason IDs', () => {
+  test('match web reasonOptions and read the IDs mobile used before', () => {
+    expect(normalizeMotivations(['exploring', 'self_reflection', 'life_record', 'nope', 7, 'self_understanding'])).toEqual([
+      'self_understanding',
+      'life_record',
+      'explorer',
+    ]);
+  });
+
+  test('a life record counts as memory preservation for the primary motivation, as on web', () => {
+    expect(primaryMotivationType(['life_record', 'explorer'])).toBe('memory_preservation');
+    expect(primaryMotivationType([])).toBeNull();
+  });
+});
+
+describe('onboarding compatibility payload with several reasons', () => {
+  test('sends every reason and the first as the primary motivation', () => {
+    const payload = buildOnboardingPayload({
+      ...EMPTY_ONBOARDING_DRAFT,
+      motivations: ['self_understanding', 'emotional_depth'],
+    });
+    expect(payload.join_reasons).toEqual(['self_understanding', 'emotional_depth']);
+    expect(payload.motivationType).toBe('self_understanding');
+  });
+
+  test('sends no reasons and no primary motivation when none were chosen', () => {
+    const payload = buildOnboardingPayload(EMPTY_ONBOARDING_DRAFT);
+    expect(payload.join_reasons).toEqual([]);
+    expect(payload.motivationType).toBeNull();
+  });
+});
+
 describe('onboarding compatibility payload', () => {
   test('maps the canonical draft to the completion contract', () => {
     expect(
       buildOnboardingPayload({
         preferredName: ' Jane ',
-        motivation: 'self_reflection',
+        motivations: ['self_understanding'],
         about: ' I care about family and growth. ',
         lifeAreas: ['identity_self', 'passions_interests'],
         step: 4,
@@ -154,8 +196,8 @@ describe('onboarding compatibility payload', () => {
     ).toEqual({
       nickname: 'Jane',
       self_description: 'I care about family and growth.',
-      join_reasons: ['self_reflection'],
-      motivationType: 'self_reflection',
+      join_reasons: ['self_understanding'],
+      motivationType: 'self_understanding',
       priorityDimensions: ['identity_self', 'passions_interests'],
       stepReached: 4,
       isComplete: true,

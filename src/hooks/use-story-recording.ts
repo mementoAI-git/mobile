@@ -50,7 +50,13 @@ export function useStoryRecording({ owner, onTranscript, onRecording, onPermissi
   const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState<string | null>(null);
   const [canRetry, setCanRetry] = useState(false);
+  /** False until the check for a recording kept from a previous session has finished. */
+  const [ready, setReady] = useState(false);
   const [levels, setLevels] = useState<number[]>(Array(32).fill(0));
+  // A paused recorder reports isRecording false but still holds the take, so stop and cleanup check this too.
+  const pausedRef = useRef(false);
+  const [paused, setPausedState] = useState(false);
+  const setPaused = useCallback((next: boolean) => { pausedRef.current = next; if (mounted.current) setPausedState(next); }, []);
   const storageKey = `story-recording:${owner}`;
   const transition = useCallback((next: Phase) => { phaseRef.current = next; if (mounted.current) setPhase(next); }, []);
 
@@ -58,18 +64,20 @@ export function useStoryRecording({ owner, onTranscript, onRecording, onPermissi
     mounted.current = true;
     let active = true;
     AsyncStorage.getItem(storageKey).then(uri => {
-      if (!active || !uri || phaseRef.current !== 'idle') return;
+      if (!active) return;
+      setReady(true);
+      if (!uri || phaseRef.current !== 'idle') return;
       if (new File(uri).exists) {
         session.retain(uri); setCanRetry(true);
         setError(callbacks.current.onRecording
           ? 'Your previous recording is saved and ready to add.'
           : 'Your previous recording is saved and ready to transcribe.');
       } else void AsyncStorage.removeItem(storageKey);
-    }).catch(() => {});
+    }).catch(() => { if (active) setReady(true); });
     return () => {
       active = false; mounted.current = false; session.cancelRequest();
       try {
-        if (recorder.isRecording) {
+        if (recorder.isRecording || pausedRef.current) {
           const uri = recorder.uri;
           void recorder.stop().catch(() => {}).then(async () => { if (uri) await preserveRecording(uri, storageKey); }).catch(() => {});
         }
@@ -126,20 +134,34 @@ export function useStoryRecording({ owner, onTranscript, onRecording, onPermissi
       if (!mounted.current || (phaseRef.current as Phase) !== 'starting') return false;
       recorder.record();
       if (!recorder.isRecording) throw new Error('The microphone did not start. Please try again.');
-      setLevels(Array(32).fill(0)); transition('recording');
+      setLevels(Array(32).fill(0)); setPaused(false); transition('recording');
       return true;
     } catch (cause) {
       if (mounted.current) setError(cause instanceof Error ? cause.message : 'Could not start recording.');
       transition('idle'); return false;
     }
-  }, [recorder, session, transition]);
+  }, [recorder, session, setPaused, transition]);
+
+  /** Holds the take without finishing it; `resume` carries on recording into the same file. */
+  const pause = useCallback(() => {
+    if (phaseRef.current !== 'recording' || pausedRef.current) return;
+    try { recorder.pause(); setPaused(true); } catch { /* Native recorder already released. */ }
+  }, [recorder, setPaused]);
+
+  const resume = useCallback(() => {
+    if (phaseRef.current !== 'recording' || !pausedRef.current) return;
+    try { recorder.record(); setPaused(false); } catch (cause) {
+      if (mounted.current) setError(cause instanceof Error ? cause.message : 'Could not resume recording.');
+    }
+  }, [recorder, setPaused]);
 
   const stop = useCallback(async () => {
     if (phaseRef.current !== 'recording') return;
     transition('transcribing');
     try {
       recordedSeconds.current = Math.round(state.durationMillis / 1000);
-      if (recorder.isRecording) await recorder.stop();
+      if (recorder.isRecording || pausedRef.current) await recorder.stop();
+      setPaused(false);
       const uri = recorder.uri || state.url;
       if (!uri) throw new Error('Could not find the recording. Please try again.');
       // Keep the original before copying, so a storage failure does not lose the audio.
@@ -151,7 +173,7 @@ export function useStoryRecording({ owner, onTranscript, onRecording, onPermissi
     } finally { void setAudioModeAsync({ allowsRecording: false }).catch(() => {}); }
     transition('idle');
     if (mounted.current) await retry();
-  }, [recorder, retry, session, state.durationMillis, state.url, storageKey, transition]);
+  }, [recorder, retry, session, setPaused, state.durationMillis, state.url, storageKey, transition]);
 
   interrupted.current = async () => { if (phaseRef.current === 'recording') await stop(); };
 
@@ -159,12 +181,13 @@ export function useStoryRecording({ owner, onTranscript, onRecording, onPermissi
     if (phaseRef.current === 'transcribing') { session.cancelRequest(); setCanRetry(Boolean(session.uri)); transition('idle'); return; }
     transition('idle');
     try {
-      if (recorder.isRecording) await recorder.stop();
+      if (recorder.isRecording || pausedRef.current) await recorder.stop();
+      setPaused(false);
       if (recorder.uri) { const file = new File(recorder.uri); if (file.exists) file.delete(); }
     } catch { /* Already stopped. */ }
     await setAudioModeAsync({ allowsRecording: false }).catch(() => {});
     if (mounted.current) setError(null);
-  }, [recorder, session, transition]);
+  }, [recorder, session, setPaused, transition]);
 
   const discard = useCallback(async () => {
     if (phaseRef.current !== 'idle') return;
@@ -176,5 +199,6 @@ export function useStoryRecording({ owner, onTranscript, onRecording, onPermissi
   }, [session, storageKey]);
 
   return { phase, isRecording: phase === 'recording', isStarting: phase === 'starting', isTranscribing: phase === 'transcribing',
-    duration: Math.floor(state.durationMillis / 1000), levels, error, canRetry, start, stop, cancel, retry, discard };
+    ready, isPaused: paused, duration: Math.floor(state.durationMillis / 1000), levels, error, canRetry,
+    start, stop, pause, resume, cancel, retry, discard };
 }

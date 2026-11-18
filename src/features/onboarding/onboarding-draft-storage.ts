@@ -2,11 +2,10 @@ import { storageKeys } from '@/constants/storage-keys';
 import {
   EMPTY_ONBOARDING_DRAFT,
   FIRST_RUN_LIFE_AREAS,
-  FIRST_RUN_MOTIVATIONS,
+  normalizeMotivations,
   type FirstRunOnboardingDraft,
 } from './first-run-onboarding';
 import type { EnrichmentCategory } from '@/constants/enrichment';
-import type { OnboardingMotivation } from '@/constants/onboarding';
 
 export interface OnboardingDraftStorage {
   getItem(key: string): Promise<string | null>;
@@ -15,9 +14,6 @@ export interface OnboardingDraftStorage {
 }
 
 const DRAFT_VERSION = 1;
-const validMotivations = new Set<OnboardingMotivation>(
-  FIRST_RUN_MOTIVATIONS.map((option) => option.value),
-);
 const validLifeAreas = new Set<EnrichmentCategory>(
   FIRST_RUN_LIFE_AREAS.map((option) => option.value),
 );
@@ -27,10 +23,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function sanitizeDraft(value: Record<string, unknown>): FirstRunOnboardingDraft {
-  const motivation =
-    typeof value.motivation === 'string' && validMotivations.has(value.motivation as OnboardingMotivation)
-      ? (value.motivation as OnboardingMotivation)
-      : null;
+  // Drafts saved before multi-select hold a single `motivation` string.
+  const motivations = normalizeMotivations(Array.isArray(value.motivations) ? value.motivations : [value.motivation]);
   const lifeAreas: EnrichmentCategory[] = [];
   if (Array.isArray(value.lifeAreas)) {
     for (const area of value.lifeAreas) {
@@ -52,7 +46,7 @@ function sanitizeDraft(value: Record<string, unknown>): FirstRunOnboardingDraft 
   return {
     preferredName:
       typeof value.preferredName === 'string' ? value.preferredName : EMPTY_ONBOARDING_DRAFT.preferredName,
-    motivation,
+    motivations,
     about:
       typeof value.about === 'string'
         ? value.about.slice(0, 500)
