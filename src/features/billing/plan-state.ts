@@ -224,6 +224,5 @@ export const FREE_FEATURES = [
 export const PRO_FEATURES = [
   'Everything in Free',
   'Voice mode conversations',
-  'Supermemory integration',
   'Bigger storage (10 GB)',
 ] as const;
