@@ -53,3 +53,39 @@ describe('appleSignInShown', () => {
     expect(appleSignInShown('web')).toBe(false);
   });
 });
+
+describe('appleOAuthBody', () => {
+  const { appleOAuthBody } = require('./apple-auth');
+
+  // The server exchanges Apple's one-time code for the token it must revoke
+  // when the account is deleted.
+  test("sends the identity token, Apple's authorization code and the name", async () => {
+    spyOn(AppleAuthentication, 'isAvailableAsync').mockResolvedValue(true);
+    spyOn(AppleAuthentication, 'signInAsync').mockResolvedValue({
+      identityToken: 'mock-apple-identity-token',
+      authorizationCode: 'one-time-code',
+      fullName: { givenName: 'Jane', familyName: 'Appleseed' },
+    });
+
+    const result = await signInWithAppleNative();
+
+    expect(appleOAuthBody(result)).toEqual({
+      id_token: 'mock-apple-identity-token',
+      code: 'one-time-code',
+      user: { name: { firstName: 'Jane', lastName: 'Appleseed' } },
+    });
+  });
+
+  test('leaves out what Apple did not return', async () => {
+    spyOn(AppleAuthentication, 'isAvailableAsync').mockResolvedValue(true);
+    spyOn(AppleAuthentication, 'signInAsync').mockResolvedValue({
+      identityToken: 'mock-apple-identity-token',
+      authorizationCode: null,
+      fullName: null,
+    });
+
+    const result = await signInWithAppleNative();
+
+    expect(appleOAuthBody(result)).toEqual({ id_token: 'mock-apple-identity-token' });
+  });
+});
