@@ -2,6 +2,7 @@ import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { SelectionChip } from '@/components/onboarding/SelectionChip';
 import { RELATIONSHIP_OPTIONS } from '@/constants/onboarding';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
@@ -32,6 +33,7 @@ export default function BeneficiaryOnboardScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.onboardingCream }} edges={['top', 'bottom']}>
+      <StatusBar style="dark" />
       <View className="flex-row items-center justify-between px-4 pt-2">
         <Logo size="md" />
         <TouchableOpacity
