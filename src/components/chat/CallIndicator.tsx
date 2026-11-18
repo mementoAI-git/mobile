@@ -2,6 +2,7 @@ import React from 'react';
 import { Platform, View } from 'react-native';
 import { FullWindowOverlay } from 'react-native-screens';
 import { FloatingVoiceCall } from '@/components/chat/FloatingVoiceCall';
+import { FloatingRecorder } from '@/components/overview/FloatingRecorder';
 import { VoiceScreenBeam, useVoiceBeamHosted } from '@/components/effects/VoiceGlow';
 import { useVoiceCall } from '@/hooks/use-voice-call';
 
@@ -17,6 +18,8 @@ export function CallIndicatorLayout({ children }: { children: React.ReactNode })
       {children}
       <AppVoiceBeam />
       <FloatingVoiceCall />
+      {/* A minimized Overview recording floats the same way. */}
+      <FloatingRecorder />
     </View>
   );
 }

@@ -140,7 +140,8 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Allow Memento to access your microphone for voice recordings."
+          "microphonePermission": "Allow Memento to access your microphone for voice recordings.",
+          "enableBackgroundRecording": true
         }
       ],
       "@react-native-community/datetimepicker",

@@ -6,8 +6,28 @@ import { useTranscribeRecording } from '@/hooks/mutations/use-transcribe-recordi
 import { STORY_RECORDING_OPTIONS } from '@/features/editor/story-recording-options';
 import { RecordingTranscription } from '@/features/editor/recording-transcription';
 import { isPermissionGranted, type PermissionLike } from '@/lib/permission-recovery';
+import { logger } from '@/lib/logger';
 
 type Phase = 'idle' | 'starting' | 'recording' | 'transcribing';
+
+export const START_FAILED_MESSAGE = 'The microphone didn’t start. Close other apps using audio, then try again.';
+
+/**
+ * Switches the audio session to recording and prepares the file. iOS can refuse to activate
+ * the session for a moment (right after a sheet opens, a call ends or other audio stops), so a
+ * failed attempt is retried once after a short pause.
+ */
+async function prepareMicrophone(recorder: { prepareToRecordAsync: () => Promise<void> }, background: boolean) {
+  const mode = { allowsRecording: true, playsInSilentMode: true, allowsBackgroundRecording: background };
+  try {
+    await setAudioModeAsync(mode);
+    await recorder.prepareToRecordAsync();
+  } catch {
+    await new Promise<void>((resolve) => setTimeout(resolve, 400));
+    await setAudioModeAsync(mode);
+    await recorder.prepareToRecordAsync();
+  }
+}
 async function preserveRecording(uri: string, key: string) {
   if (uri.startsWith(Paths.document.uri)) {
     await AsyncStorage.setItem(key, uri);
@@ -26,8 +46,10 @@ async function preserveRecording(uri: string, key: string) {
  * over as is (the editor attaches it to the story); otherwise it is transcribed and the text
  * goes to `onTranscript`. Either way a failed hand-off keeps the file for retry.
  */
-export function useStoryRecording({ owner, onTranscript, onRecording, onPermissionDenied }: {
+export function useStoryRecording({ owner, onTranscript, onRecording, onPermissionDenied, background = false }: {
   owner: string;
+  /** Keep recording when the app goes to the background or the phone locks. */
+  background?: boolean;
   onTranscript?: (text: string) => Promise<void>;
   /** Receives the recording file and its length in seconds. Throw to keep it for retry. */
   onRecording?: (uri: string, seconds: number) => Promise<void>;
@@ -129,18 +151,18 @@ export function useStoryRecording({ owner, onTranscript, onRecording, onPermissi
       const permission = await AudioModule.requestRecordingPermissionsAsync();
       if (!mounted.current || (phaseRef.current as Phase) !== 'starting') return false;
       if (!isPermissionGranted(permission)) { callbacks.current.onPermissionDenied(permission); transition('idle'); return false; }
-      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
-      await recorder.prepareToRecordAsync();
+      await prepareMicrophone(recorder, background);
       if (!mounted.current || (phaseRef.current as Phase) !== 'starting') return false;
       recorder.record();
       if (!recorder.isRecording) throw new Error('The microphone did not start. Please try again.');
       setLevels(Array(32).fill(0)); setPaused(false); transition('recording');
       return true;
     } catch (cause) {
-      if (mounted.current) setError(cause instanceof Error ? cause.message : 'Could not start recording.');
+      logger.handledError('Failed to start story recording', cause);
+      if (mounted.current) setError(START_FAILED_MESSAGE);
       transition('idle'); return false;
     }
-  }, [recorder, session, setPaused, transition]);
+  }, [background, recorder, session, setPaused, transition]);
 
   /** Holds the take without finishing it; `resume` carries on recording into the same file. */
   const pause = useCallback(() => {

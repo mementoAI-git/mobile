@@ -1,3 +1,4 @@
+import { useRecordingSession } from '@/features/overview/recording-session';
 import { isFutureCalendarDay } from '@/features/overview/calendar-selection';
 import { GREETING_CAPTURE_PLACEHOLDER, OverviewGreeting, type OverviewGreetingVariant } from '@/components/overview/OverviewGreeting';
 import { useThemeColors } from '@/hooks/use-theme-colors';
@@ -155,10 +156,11 @@ export default function OverviewScreen() {
   }, [router]);
   // Talk matches the Stories capture button; Record opens the recorder sheet, like the capture card's mic.
   const handleTalk = useCallback(() => router.push('/voice-call'), [router]);
+  const { open: openRecorder } = useRecordingSession();
   const handleRecord = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    openSheet('recorder');
-  }, [openSheet]);
+    openRecorder();
+  }, [openRecorder]);
   const handleQuickCapture = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({ pathname: '/editor', params: { mode: 'quick-capture' } });
