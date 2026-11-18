@@ -10,6 +10,7 @@ import * as RNIap from 'expo-iap';
 import { post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { logger } from '@/lib/logger';
+import { extractFreeTrial } from './intro-offer';
 import {
   FALLBACK_PRODUCTS,
   getAllPlatformSkus,
@@ -161,6 +162,7 @@ class InAppPurchaseService {
         return fallbacks;
       }
 
+      const eligibility = await this.introOfferEligibility(subscriptions);
       const products: IAPProduct[] = subscriptions.flatMap((sub: any) => {
         const productId = sub.id || sub.productId;
         if (!skus.includes(productId)) return [];
@@ -177,6 +179,10 @@ class InAppPurchaseService {
           localizedPrice: sub.displayPrice || sub.localizedPrice || fallback.localizedPrice,
           interval,
           storeAvailable: true,
+          freeTrial: Platform.OS === 'ios' ? extractFreeTrial(sub) : null,
+          introOfferEligible: Platform.OS === 'ios' && typeof sub.subscriptionGroupIdIOS === 'string'
+            ? eligibility.get(sub.subscriptionGroupIdIOS) === true
+            : false,
         }];
       });
 
@@ -188,6 +194,26 @@ class InAppPurchaseService {
       this.isUsingFallbacks = true;
       return fallbacks;
     }
+  }
+
+  /** StoreKit intro-offer eligibility per subscription group; unknown counts as not eligible. */
+  private async introOfferEligibility(subscriptions: any[]): Promise<Map<string, boolean>> {
+    const result = new Map<string, boolean>();
+    if (Platform.OS !== 'ios') return result;
+    const groups = new Set<string>(
+      subscriptions
+        .map((sub) => sub?.subscriptionGroupIdIOS)
+        .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0),
+    );
+    await Promise.all([...groups].map(async (groupId) => {
+      try {
+        result.set(groupId, await RNIap.isEligibleForIntroOfferIOS(groupId));
+      } catch (err) {
+        logger.handledError('[IAPService] intro offer eligibility check failed:', err);
+        result.set(groupId, false);
+      }
+    }));
+    return result;
   }
 
   public async purchaseSubscription(

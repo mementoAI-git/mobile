@@ -1,5 +1,29 @@
 import { describe, expect, test } from 'bun:test';
-import { buildDeleteAccountPayload, deletionReasonLabel, isDeletionConfirmed, maskEmail } from './deletion';
+import {
+  buildDeleteAccountPayload,
+  deletionReasonLabel,
+  getStoreSubscriptionNotice,
+  isDeletionConfirmed,
+  maskEmail,
+} from './deletion';
+
+describe('store subscription notice', () => {
+  test('Apple and Google Play subscribers are told to cancel in the store', () => {
+    expect(getStoreSubscriptionNotice('apple', 'ios')?.store).toBe('apple');
+    expect(getStoreSubscriptionNotice('apple', 'ios')?.body).toContain('Apple subscription keeps billing until you cancel it');
+    expect(getStoreSubscriptionNotice('google', 'android')?.store).toBe('google');
+    expect(getStoreSubscriptionNotice('google', 'android')?.body).toContain('Google Play subscription');
+  });
+
+  test('an unknown provider on iOS means App Store billing', () => {
+    expect(getStoreSubscriptionNotice(undefined, 'ios')?.store).toBe('apple');
+    expect(getStoreSubscriptionNotice(undefined, 'android')).toBeNull();
+  });
+
+  test('web billing gets no store notice', () => {
+    expect(getStoreSubscriptionNotice('polar', 'ios')).toBeNull();
+  });
+});
 
 describe('account deletion', () => {
   test('requires the exact confirmation word', () => {

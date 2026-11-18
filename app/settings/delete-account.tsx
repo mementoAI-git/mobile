@@ -13,11 +13,13 @@ import { SheetHeader } from '@/components/sheets/SheetHeader';
 import { TYPE } from '@/constants/typography';
 import { useDeleteAccount } from '@/hooks/mutations/use-auth-mutations';
 import { useSubscription } from '@/hooks/queries/use-subscription';
+import { iapService } from '@/features/billing/iap-service';
 import { useUiStore, useUserStore } from '@/store';
 import {
   buildDeleteAccountPayload,
   DELETE_CONFIRMATION_WORD,
   deletionReasonLabel,
+  getStoreSubscriptionNotice,
   isDeletionConfirmed,
   maskEmail,
   type DeletionReason,
@@ -32,7 +34,8 @@ export default function DeleteAccountScreen() {
   const insets = useSafeAreaInsets();
   const openSheet = useUiStore((s) => s.openSheet);
   const email = useUserStore((s) => s.user?.email);
-  const { isProOrAbove } = useSubscription();
+  const { isProOrAbove, summary } = useSubscription();
+  const storeNotice = isProOrAbove ? getStoreSubscriptionNotice(summary?.provider, Platform.OS) : null;
   const deleteAccount = useDeleteAccount();
 
   const [step, setStep] = useState<Step>('overview');
@@ -48,6 +51,13 @@ export default function DeleteAccountScreen() {
     if (router.canGoBack()) router.back();
     else router.replace('/settings/privacy');
   }, [busy, router]);
+
+  /** Deleting the account doesn't stop store billing; open the store's subscription settings. */
+  const manageSubscription = useCallback(() => {
+    if (!storeNotice) return;
+    Haptics.selectionAsync();
+    void iapService.openSubscriptionManagement(undefined, storeNotice.store);
+  }, [storeNotice]);
 
   const chooseReason = useCallback(() => {
     Haptics.selectionAsync();
@@ -115,6 +125,20 @@ export default function DeleteAccountScreen() {
                     <Text style={{ ...TYPE.body, color: COLORS.textBase }}>
                       Your Memento Pro plan is still active. You’ll immediately lose access to your Pro plan benefits if you deactivate your account.
                     </Text>
+                    {storeNotice ? (
+                      <>
+                        <Text style={{ ...TYPE.body, color: COLORS.textBase }}>{storeNotice.body}</Text>
+                        <Button
+                          variant="outline"
+                          size="md"
+                          rounded="full"
+                          className="mt-2 self-start"
+                          onPress={manageSubscription}
+                        >
+                          Manage subscription
+                        </Button>
+                      </>
+                    ) : null}
                   </View>
                 ) : null}
 

@@ -43,6 +43,7 @@ export type SheetName =
   | 'export-archive'
   | 'daily-ritual'
   | 'observation-note'
+  | 'ai-data-consent'
   | null;
 
 interface UiState {

@@ -2,8 +2,6 @@ import type { ThemeColors } from '@/constants/tokens';
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback } from 'react';
 import {
-  Image,
-  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,7 +10,6 @@ import {
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
-import MessageCircle from 'lucide-react-native/icons/message-circle';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Avatar, ResponsiveScreen } from '@/components/ui';
@@ -34,17 +31,6 @@ import { useProfileSettingsLogic } from '@/hooks/use-profile-settings-logic';
 import { useVoiceScroll } from '@/features/voice-control/hooks';
 import Animated from 'react-native-reanimated';
 
-const X_ICON = require('../../assets/images/icons/x.png');
-const DISCORD_ICON = require('../../assets/images/icons/discord-colored.png');
-const FACEBOOK_ICON = require('../../assets/images/icons/facebook-colored.png');
-const LINKEDIN_ICON = require('../../assets/images/icons/linkedin-colored.png');
-
-const COMMUNITY_LINKS = [
-  { label: 'X (Twitter)', icon: X_ICON, url: 'https://x.com' },
-  { label: 'Discord', icon: DISCORD_ICON, url: 'https://discord.com' },
-  { label: 'Facebook', icon: FACEBOOK_ICON, url: 'https://facebook.com' },
-  { label: 'LinkedIn', icon: LINKEDIN_ICON, url: 'https://linkedin.com' },
-] as const;
 
 export default function SettingsIndex() {
   const COLORS = useThemeColors();
@@ -85,10 +71,6 @@ export default function SettingsIndex() {
     router.push('/pricing');
   }, [router]);
 
-  const openCommunity = useCallback((url: string) => {
-    Haptics.selectionAsync();
-    Linking.openURL(url).catch(() => { });
-  }, []);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -209,29 +191,6 @@ export default function SettingsIndex() {
           </SettingsGroupedList>
         </View>
 
-        <Text style={[TYPE.metadata, styles.communityLabel]}>JOIN OUR COMMUNITY</Text>
-        <View style={styles.communityRow}>
-          {COMMUNITY_LINKS.map((item) => (
-            <TouchableOpacity
-              key={item.label}
-              onPress={() => openCommunity(item.url)}
-              activeOpacity={0.78}
-              style={styles.communityCard}
-            >
-              {item.icon ? (
-                <Image
-                  source={item.icon}
-                  // The X mark is monochrome black artwork; tint it so it reads in every theme.
-                  style={[styles.communityIcon, item.label === 'X (Twitter)' && { tintColor: COLORS.textStrong }]}
-                  resizeMode="contain"
-                />
-              ) : (
-                <MessageCircle size={28} color={COLORS.info} fill={COLORS.info} />
-              )}
-              <Text numberOfLines={1} style={styles.communityText}>{item.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
         <Text style={styles.version}>Memento AI v1.0</Text>
 
       </Animated.ScrollView>
@@ -272,35 +231,10 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   profileMetaText: { color: COLORS.textBase },
   // Web: the section list and the logout card sit 16px apart.
   groups: { gap: 16 },
-  communityLabel: {
-    marginTop: 48,
-    color: COLORS.textWeak,
-  },
-  communityRow: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: 14,
-  },
-  communityCard: {
-    flex: 1,
-    minHeight: 64,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.fillWeak,
-  },
-  communityIcon: { width: 28, height: 28 },
-  communityText: {
-    color: COLORS.textStrong,
-    ...TYPE.eyebrow,
-    marginTop: 6,
-  },
   version: {
     color: COLORS.textWeak,
     ...TYPE.metadata,
     textAlign: 'center',
-    marginTop: 14,
+    marginTop: 48,
   },
 });

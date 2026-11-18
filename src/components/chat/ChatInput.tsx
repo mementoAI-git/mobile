@@ -193,7 +193,8 @@ export interface ChatSendPayload {
 }
 
 interface ChatInputProps {
-  onSend: (payload: ChatSendPayload) => void | boolean;
+  /** false keeps the composer as it is; a promise clears it only once it resolves to anything but false. */
+  onSend: (payload: ChatSendPayload) => void | boolean | Promise<boolean>;
   onStop?: () => void;
   disabled?: boolean;
   placeholder?: string;
@@ -496,6 +497,23 @@ export function ChatInput({
 
   // ─── Send ─────────────────────────────────────────────────────────────────
 
+  const resetComposer = useCallback(() => {
+    setText('');
+    textInputRef.current?.clear();
+    setMultiline(false);
+    setCompactTextHeight(COMPACT_TEXT_MIN_HEIGHT);
+    setExpandedTextHeight(EXPANDED_TEXT_MIN_HEIGHT);
+    setCompactMeasuredHeight(COMPACT_TEXT_MIN_HEIGHT);
+    setCompactMeasuredPadding(0);
+    setExpandedMeasuredHeight(EXPANDED_TEXT_MIN_HEIGHT);
+    setIsTextComposerExpanded(false);
+    setIsFocused(false);
+    textInputRef.current?.blur();
+    Keyboard.dismiss();
+    setAttachments([]);
+    textBeforeDictationRef.current = '';
+  }, [setAttachments]);
+
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
     const uploadedAttachments = getUploadedAttachments(attachments);
@@ -517,22 +535,15 @@ export function ChatInput({
     }, 300);
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (onSend({ text: trimmed, attachmentIds: readyIds, attachmentPreviews: readyAttachmentPreviews }) === false) return;
-    setText('');
-    textInputRef.current?.clear();
-    setMultiline(false);
-    setCompactTextHeight(COMPACT_TEXT_MIN_HEIGHT);
-    setExpandedTextHeight(EXPANDED_TEXT_MIN_HEIGHT);
-    setCompactMeasuredHeight(COMPACT_TEXT_MIN_HEIGHT);
-    setCompactMeasuredPadding(0);
-    setExpandedMeasuredHeight(EXPANDED_TEXT_MIN_HEIGHT);
-    setIsTextComposerExpanded(false);
-    setIsFocused(false);
-    textInputRef.current?.blur();
-    Keyboard.dismiss();
-    setAttachments([]);
-    textBeforeDictationRef.current = '';
-  }, [text, attachments, disabled, onSend, setAttachments]);
+    const result = onSend({ text: trimmed, attachmentIds: readyIds, attachmentPreviews: readyAttachmentPreviews });
+    if (result === false) return;
+    if (result instanceof Promise) {
+      // e.g. the first message waits for AI consent: keep the draft until it is sent.
+      void result.then((sent) => { if (sent !== false) resetComposer(); }, () => {});
+      return;
+    }
+    resetComposer();
+  }, [text, attachments, disabled, onSend, resetComposer]);
 
   const handleMicPress = useCallback(async () => {
     if (disabled) return;

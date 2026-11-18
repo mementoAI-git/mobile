@@ -15,6 +15,10 @@ export interface IAPProduct {
   interval: IAPPlanInterval;
   /** True only when the native store returned this exact product identifier. */
   storeAvailable: boolean;
+  /** iOS free-trial introductory offer on this product, if App Store Connect has one. */
+  freeTrial?: { unit: 'day' | 'week' | 'month' | 'year'; count: number } | null;
+  /** StoreKit says this Apple ID can still redeem the product's intro offer. */
+  introOfferEligible?: boolean;
 }
 
 export interface IAPVerificationPayload {

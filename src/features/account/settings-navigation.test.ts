@@ -15,7 +15,9 @@ describe('settings and personal info navigation', () => {
     expect(settings).toContain("'/settings/billing'");
     expect(settings).toContain("push('/settings/feedback')");
     expect(settings).toContain('handleLogout');
-    expect(settings).toContain('JOIN OUR COMMUNITY');
+    // No placeholder social links: there are no real community profiles yet (App Review 2.1).
+    expect(settings).not.toContain('JOIN OUR COMMUNITY');
+    expect(settings).not.toContain('https://x.com');
   });
 
   test('hub labels match web; Milestones is the milestone list only', async () => {
