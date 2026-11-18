@@ -78,10 +78,11 @@ const PILL_H     = Platform.OS === 'android' ? 66 : 64;
 /** The frosted fade rises this far above the pill's vertical centre. */
 const FADE_RISE  = 64;
 
-/** Bottom inset where the tab bar's fade begins, so floating buttons can sit clear above it. */
-export function tabBarFadeTop(safeAreaBottom: number): number {
+/** Bottom inset of the tab bar pill's top edge, so floating buttons can sit just above it. */
+export function tabBarPillTop(safeAreaBottom: number): number {
   const bottomPad = safeAreaBottom ? safeAreaBottom + 16 : 32;
-  return bottomPad + PILL_H / 2 + FADE_RISE;
+  // The bar's root is a zero-height row bottomPad up from the bottom; the pill is centred on it.
+  return bottomPad + PILL_H / 2;
 }
 const ICON_SIZE  = iconSize(24);
 

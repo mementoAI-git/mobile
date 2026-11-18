@@ -1,16 +1,18 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withSpring, withTiming, type AnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import * as Haptics from 'expo-haptics';
 import Mic from 'lucide-react-native/icons/mic';
+import Plus from 'lucide-react-native/icons/plus';
 import X from 'lucide-react-native/icons/x';
 import PhoneCall from 'lucide-react-native/icons/phone-call';
 import PenLine from 'lucide-react-native/icons/pen-line';
 import type { LucideIcon } from 'lucide-react-native';
 import { Pressable, TouchableOpacity } from '@/components/ui/Touchable';
-import { tabBarFadeTop } from '@/components/TabBar';
+import { tabBarPillTop } from '@/components/TabBar';
+import { useFloatingAction } from '@/components/memory/FloatingActionLayer';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { BRAND_BUTTON_GRADIENT } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -19,8 +21,8 @@ import { iconSize, minTouchTarget } from '@/constants/responsive';
 const FAB_SIZE = minTouchTarget(60);
 const OPTION_SIZE = minTouchTarget(52);
 const FAB_RIGHT = 24;
-/** Space between the button and the top of the tab bar's fade, so it floats clear of the blur. */
-const FADE_CLEARANCE = 8;
+/** Space between the button and the top of the tab bar pill. */
+const TAB_BAR_CLEARANCE = 16;
 /** Distance from the button's centre to each option's centre: leaves room for each label. */
 const ARC_RADIUS = 136;
 const OPEN_SPRING = { damping: 16, stiffness: 190, mass: 0.8 };
@@ -28,22 +30,36 @@ const OPEN_SPRING = { damping: 16, stiffness: 190, mass: 0.8 };
 type CaptureOption = { key: string; label: string; icon: LucideIcon; angle: number; onPress: () => void };
 
 /**
- * The capture button (Stories, Overview): a round brand button, floating clear of the tab
- * bar's fade. Tapping it dims the whole screen (tab bar included) and fans
+ * The capture button (Stories, Overview): a round brand button, 16px above the tab bar. Tapping it dims the whole screen (tab bar included) and fans
  * Talk, Write and Record out along an arc above and to the left of it.
  */
-export function CaptureFab({ onTalk, onWrite, onRecord, icon: Icon = Mic, revealStyle }: {
+type CaptureFabProps = {
   onTalk: () => void;
   onWrite: () => void;
   onRecord: () => void;
-  /** The resting glyph (Stories: mic; Overview: plus). It turns into the close cross when open. */
+  /** The resting glyph (a plus by default). It turns into the close cross when open. */
   icon?: LucideIcon;
   /** Optional animated style for showing the button, e.g. Overview reveals it on scroll. */
   revealStyle?: AnimatedStyle<ViewStyle>;
-}) {
+};
+
+/**
+ * Renders nothing in place: the button is drawn by `FloatingActionHost` above the tab bar,
+ * so the tab bar's frosted fade never covers it.
+ */
+export function CaptureFab({ onTalk, onWrite, onRecord, icon, revealStyle }: CaptureFabProps) {
+  const node = useMemo(
+    () => <CaptureFabView onTalk={onTalk} onWrite={onWrite} onRecord={onRecord} icon={icon} revealStyle={revealStyle} />,
+    [onTalk, onWrite, onRecord, icon, revealStyle],
+  );
+  useFloatingAction(node);
+  return null;
+}
+
+function CaptureFabView({ onTalk, onWrite, onRecord, icon: Icon = Plus, revealStyle }: CaptureFabProps) {
   const COLORS = useThemeColors();
   const insets = useSafeAreaInsets();
-  const bottom = tabBarFadeTop(insets.bottom) + FADE_CLEARANCE;
+  const bottom = tabBarPillTop(insets.bottom) + TAB_BAR_CLEARANCE;
   const [open, setOpen] = useState(false);
   const progress = useSharedValue(0);
   const pendingAction = useRef<(() => void) | null>(null);
