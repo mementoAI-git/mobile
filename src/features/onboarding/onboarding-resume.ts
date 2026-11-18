@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import type { EnrichmentCategory } from '@/constants/enrichment';
-import type { OnboardingMotivation } from '@/constants/onboarding';
 import type { IUser } from '@/types';
 import {
   FIRST_RUN_LIFE_AREAS,
-  FIRST_RUN_MOTIVATIONS,
+  normalizeMotivations,
+  primaryMotivationType,
   type FirstRunOnboardingDraft,
 } from './first-run-onboarding';
 
@@ -27,8 +27,8 @@ export function buildSkipAnswers(draft: FirstRunOnboardingDraft): OnboardingSkip
   const about = draft.about.trim();
   return {
     ...(about ? { self_description: about } : {}),
-    ...(draft.motivation
-      ? { join_reasons: [draft.motivation], motivationType: draft.motivation }
+    ...(draft.motivations.length
+      ? { join_reasons: [...draft.motivations], motivationType: primaryMotivationType(draft.motivations) ?? undefined }
       : {}),
     ...(draft.lifeAreas.length ? { current_priority: [...draft.lifeAreas] } : {}),
   };
@@ -36,7 +36,7 @@ export function buildSkipAnswers(draft: FirstRunOnboardingDraft): OnboardingSkip
 
 /** Nothing answered yet on this device (the name is filled from the profile). */
 export function hasNoAnswers(draft: FirstRunOnboardingDraft): boolean {
-  return !draft.motivation && !draft.about.trim() && draft.lifeAreas.length === 0;
+  return draft.motivations.length === 0 && !draft.about.trim() && draft.lifeAreas.length === 0;
 }
 
 export interface SavedOnboardingAnswers {
@@ -46,7 +46,6 @@ export interface SavedOnboardingAnswers {
   current_priority?: unknown;
 }
 
-const motivations = new Set<string>(FIRST_RUN_MOTIVATIONS.map((option) => option.value));
 const lifeAreas = new Set<string>(FIRST_RUN_LIFE_AREAS.map((option) => option.value));
 
 /** Fill a draft from the answers the API kept, starting from the first question. */
@@ -56,9 +55,9 @@ export function draftFromSavedAnswers(
 ): FirstRunOnboardingDraft {
   if (!saved) return draft;
   const reasons = Array.isArray(saved.join_reasons) ? saved.join_reasons : [];
-  const motivation = [...reasons, saved.motivation].find(
-    (value): value is OnboardingMotivation => typeof value === 'string' && motivations.has(value),
-  );
+  // Older accounts may hold mobile's previous IDs; `motivation` is the fallback when no reasons were kept.
+  const savedReasons = normalizeMotivations(reasons);
+  const restored = savedReasons.length ? savedReasons : normalizeMotivations([saved.motivation]);
   const areas = Array.isArray(saved.current_priority)
     ? [...new Set(saved.current_priority.filter(
         (value): value is EnrichmentCategory => typeof value === 'string' && lifeAreas.has(value),
@@ -68,7 +67,7 @@ export function draftFromSavedAnswers(
   return {
     ...draft,
     step: 1,
-    motivation: motivation ?? draft.motivation,
+    motivations: restored.length ? restored : draft.motivations,
     about: about || draft.about,
     lifeAreas: areas.length ? areas : draft.lifeAreas,
   };

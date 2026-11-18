@@ -58,10 +58,10 @@ export default function OnboardWelcomeScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerClassName="px-4 pt-2 pb-8 gap-6">
-        <Animated.View entering={FadeInDown.duration(600)} className="gap-3">
+      <ScrollView contentContainerClassName="px-4 pt-4 pb-8 gap-8">
+        <Animated.View entering={FadeInDown.duration(600)}>
           <BrandMarkIcon size={40} />
-          <Text style={[TYPE.onboardingTitle, { color: colors.textStrong }]}>
+          <Text style={[TYPE.onboardingTitle, { color: colors.textStrong, marginTop: 20, marginBottom: 12 }]}>
             Hey there,{' '}
             <Text style={[TYPE.onboardingTitleAccent, { color: colors.brand }]}>welcome</Text>
             {' '}to Memento AI
@@ -72,10 +72,10 @@ export default function OnboardWelcomeScreen() {
           </Text>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.duration(600).delay(100)} className="gap-3">
+        <Animated.View entering={FadeInDown.duration(600).delay(100)} className="gap-5">
           <Text style={[TYPE.bodySmall, { color: colors.onboardingAccentText }]}>What can you do on Memento?</Text>
           {FEATURES.map((feature) => (
-            <View key={feature.title} className="flex-row items-start gap-3">
+            <View key={feature.title} className="flex-row items-start gap-4">
               <Image
                 source={feature.image}
                 accessibilityIgnoresInvertColors
@@ -91,7 +91,7 @@ export default function OnboardWelcomeScreen() {
 
         <Animated.View
           entering={FadeInDown.duration(600).delay(200)}
-          className="gap-2 rounded-2xl border px-4 py-3"
+          className="gap-2 rounded-2xl border p-4"
           style={{ backgroundColor: colors.privacyNoteFill, borderColor: colors.privacyNoteStroke }}
         >
           <Text style={[TYPE.monoLabel, { color: colors.privacyNoteLabel }]}>MEMENTO IS PRIVATE BY DESIGN</Text>
@@ -101,7 +101,7 @@ export default function OnboardWelcomeScreen() {
           </Text>
         </Animated.View>
 
-        <View className="mt-4 flex-row justify-end gap-2.5">
+        <View className="flex-row justify-end gap-2.5">
           <Button
             variant="outline"
             size="lg"

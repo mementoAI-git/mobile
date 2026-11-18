@@ -35,7 +35,7 @@ function createStorage(initial: Record<string, string> = {}): MemoryStorage {
 
 const completeDraft: FirstRunOnboardingDraft = {
   preferredName: 'Jane',
-  motivation: 'self_reflection',
+  motivations: ['self_understanding', 'explorer'],
   about: 'I care about family and growth.',
   lifeAreas: ['identity_self', 'passions_interests'],
   step: 4,
@@ -83,7 +83,7 @@ describe('onboarding draft storage', () => {
     expect(await readOnboardingDraft(storage)).toEqual({
       ...EMPTY_ONBOARDING_DRAFT,
       preferredName: 'Jane',
-      motivation: 'self_reflection',
+      motivations: ['self_understanding'],
       about: 'About Jane',
       lifeAreas: ['identity_self', 'passions_interests'],
     });
@@ -135,10 +135,22 @@ describe('onboarding draft storage', () => {
 
     expect(await readOnboardingDraft(storage)).toEqual({
       ...EMPTY_ONBOARDING_DRAFT,
-      motivation: 'self_reflection',
+      motivations: ['self_understanding'],
       lifeAreas: ['identity_self', 'passions_interests'],
       step: 2,
     });
+  });
+
+  test('maps old mobile IDs, drops unknown motivations and restores list order', async () => {
+    const storage = createStorage({
+      [storageKeys.onboardingState]: JSON.stringify({
+        version: 1,
+        ...completeDraft,
+        motivations: ['exploring', 'nope', 'self_reflection', 'exploring', 3],
+      }),
+    });
+
+    expect((await readOnboardingDraft(storage)).motivations).toEqual(['self_understanding', 'explorer']);
   });
 
   test('deduplicates and caps saved life areas at three canonical values', async () => {

@@ -38,7 +38,7 @@ describe('global typography system', () => {
       'body', 'bodyLarge', 'bodyLargeSemi', 'bodySmall', 'bodySmallStrong', 'bodyStrong', 'button', 'buttonSmall', 'captureInput', 'cardTitle', 'cardTitleAccent', 'chipLabel',
       'dashboardTitle', 'dashboardTitleSmall', 'displayStat', 'displayTitle', 'editorTitle', 'eyebrow', 'greeting', 'greetingEditorial', 'greetingEditorialName', 'greetingName', 'input', 'insightStat', 'label',
       'calendarWheel', 'metadata', 'mono', 'monoLabel', 'musicCaption', 'musicTrack', 'musicVolume', 'onboardingTitle', 'onboardingTitleAccent',
-      'planPrice', 'profileName', 'publishSuccessAction', 'publishSuccessTitle', 'reflectionTitle', 'reflectionTitleAccent', 'screenTitle', 'screenTitleAccent', 'sectionTitle', 'sectionTitleWeak', 'sheetTitle', 'stat', 'streakCount', 'uiTitle', 'voicePickerTitle',
+      'planPrice', 'profileName', 'publishSuccessAction', 'publishSuccessTitle', 'reflectionTitle', 'reflectionTitleAccent', 'rowTitle', 'screenTitle', 'screenTitleAccent', 'sectionTitle', 'sectionTitleWeak', 'sheetTitle', 'stat', 'streakCount', 'uiTitle', 'voicePickerTitle',
     ].sort());
   });
 

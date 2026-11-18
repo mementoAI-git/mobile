@@ -11,7 +11,7 @@ export const TYPE_METRICS = Object.freeze({
   /** Garamond runs small next to SF Pro Rounded, so the name is set larger on the same line height. */
   greetingName: Object.freeze({fontSize: 32, lineHeight: 34}),
   // The editorial greeting (still used on web): one serif line beside the sun/moon.
-  greetingEditorial: Object.freeze({fontSize: ms(24, 0.25), lineHeight: ms(32, 0.25)}),
+  greetingEditorial: Object.freeze({fontSize: ms(28, 0.25), lineHeight: ms(34, 0.25)}),
   captureInput: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(28, 0.25)}),
   reflectionTitle: Object.freeze({fontSize: ms(20, 0.25), lineHeight: ms(27, 0.25)}),
   sectionTitle: Object.freeze({fontSize: ms(22, 0.25), lineHeight: ms(28, 0.25)}),
@@ -81,6 +81,8 @@ export const TYPE = StyleSheet.create({
   /** Bold figures inside small copy ("3 reflections"). */
   bodySmallStrong: {fontFamily: FONTS.sansSemi, ...TYPE_METRICS.bodySmall},
   bodyLarge: {fontFamily: FONTS.sans, ...TYPE_METRICS.bodyLarge},
+  /** 15/20 semibold in the body face: compact settings card titles (Settings onboarding reminder). */
+  rowTitle: {fontFamily: Platform.select({ios: FONTS.sans, default: FONTS.sansSemi}), fontWeight: '600', fontSize: ms(15, 0.2), lineHeight: ms(20, 0.2)},
   /** 16px semibold in the body face (SF Pro Rounded on iOS): the Account enrichment strength word. */
   bodyLargeSemi: {fontFamily: Platform.select({ios: FONTS.sans, default: FONTS.sansSemi}), fontWeight: '600', ...TYPE_METRICS.bodyLarge},
   body: {fontFamily: FONTS.sans, ...TYPE_METRICS.body},

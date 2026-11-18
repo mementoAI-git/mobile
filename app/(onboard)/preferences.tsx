@@ -21,6 +21,7 @@ import {
 } from '@/features/onboarding/first-run-onboarding';
 import { useFirstRunOnboarding } from '@/hooks/use-first-run-onboarding';
 import { COLORS } from '@/constants/tokens';
+import { useThemeStyles } from '@/hooks/use-theme-colors';
 import { TYPE } from '@/constants/typography';
 import { responsiveSpace } from '@/constants/responsive';
 
@@ -30,12 +31,12 @@ const MOTIVATION_DISPLAY_OPTIONS: Array<{
   icon: OnboardingIconName;
 }> = [
   {
-    value: 'preserve_memories',
-    label: 'Preserve memories i don’t want to lose',
+    value: 'memory_preservation',
+    label: 'Preserve memories I don’t want to lose',
     icon: 'palmTree',
   },
   {
-    value: 'self_reflection',
+    value: 'self_understanding',
     label: 'Reflect and understand myself better',
     icon: 'thinkingFace',
   },
@@ -45,17 +46,17 @@ const MOTIVATION_DISPLAY_OPTIONS: Array<{
     icon: 'openBook',
   },
   {
-    value: 'organize_thoughts',
+    value: 'personal_space',
     label: 'Organize my thoughts, stories  and files',
     icon: 'openFileFolder',
   },
   {
-    value: 'legacy_for_loved_ones',
+    value: 'emotional_depth',
     label: 'Create something meaningful for loved ones',
     icon: 'twoHearts',
   },
   {
-    value: 'exploring',
+    value: 'explorer',
     label: 'Just exploring',
     icon: 'crystalBall',
   },
@@ -89,9 +90,10 @@ const LIFE_AREA_DISPLAY_OPTIONS: Array<{
 
 export default function PreferencesScreen() {
   const router = useRouter();
+  const styles = useThemeStyles(createStyles);
   const {
     draft,
-    setMotivation,
+    toggleMotivation,
     setAbout,
     toggleLifeArea,
     setStep,
@@ -136,7 +138,7 @@ export default function PreferencesScreen() {
   const handleNext = () => {
     setErrorMessage(null);
     if (internalStep === 2) {
-      if (!draft.motivation) {
+      if (draft.motivations.length === 0) {
         setErrorMessage('Please choose what brings you here.');
         return;
       }
@@ -166,12 +168,12 @@ export default function PreferencesScreen() {
 
 
 
-  const handleMotivationSelect = useCallback(
+  const handleMotivationToggle = useCallback(
     (motivation: OnboardingMotivation) => {
       setErrorMessage(null);
-      setMotivation(motivation);
+      toggleMotivation(motivation);
     },
-    [setMotivation],
+    [toggleMotivation],
   );
 
   const handleLifeAreaToggle = useCallback(
@@ -187,7 +189,7 @@ export default function PreferencesScreen() {
 
   const isNextDisabled =
     internalStep === 2
-      ? !draft.motivation
+      ? draft.motivations.length === 0
       : internalStep === 3
         ? aboutBusy || !draft.about.trim() || draft.about.length > ABOUT_LIMIT
         : draft.lifeAreas.length < 2 || draft.lifeAreas.length > 3;
@@ -231,6 +233,7 @@ export default function PreferencesScreen() {
               Okay <Text style={styles.brandItalic}>{preferredName || 'Jane'}</Text>, let’s get started
             </Animated.Text>
             <Text style={styles.leadStrong}>First off, what brings you to Memento AI?</Text>
+            <Text style={styles.hint}>Choose all that apply.</Text>
 
             <View style={styles.optionList}>
               {MOTIVATION_DISPLAY_OPTIONS.map((opt) => (
@@ -238,9 +241,9 @@ export default function PreferencesScreen() {
                   key={opt.value}
                   label={opt.label}
                   icon={<OnboardingIcon name={opt.icon} />}
-                  selected={draft.motivation === opt.value}
-                  onPress={() => handleMotivationSelect(opt.value)}
-                  hideRadio
+                  selected={draft.motivations.includes(opt.value)}
+                  onPress={() => handleMotivationToggle(opt.value)}
+                  multiple
                 />
               ))}
             </View>
@@ -314,26 +317,32 @@ export default function PreferencesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: typeof COLORS) => StyleSheet.create({
   // Figma onboarding body: icon, title, lead and content 24px apart.
   stack: {
     gap: 24,
   },
   titleText: {
     ...TYPE.onboardingTitle,
-    color: COLORS.textStrong,
+    color: c.textStrong,
   },
   brandItalic: {
     ...TYPE.onboardingTitleAccent,
-    color: COLORS.brand,
+    color: c.brand,
   },
   lead: {
     ...TYPE.bodyLarge,
-    color: COLORS.textStrong,
+    color: c.textStrong,
   },
   leadStrong: {
     ...TYPE.bodyLargeSemi,
-    color: COLORS.textStrong,
+    color: c.textStrong,
+  },
+  // Sits right under the question, pulled up into the 24px stack gap.
+  hint: {
+    ...TYPE.bodySmall,
+    color: c.textWeak,
+    marginTop: -20,
   },
   optionList: {
     gap: 10,
@@ -346,7 +355,7 @@ const styles = StyleSheet.create({
   },
   groupLabel: {
     ...TYPE.label,
-    color: COLORS.textWeak,
+    color: c.textWeak,
   },
   chipsRow: {
     flexDirection: 'row',
@@ -355,6 +364,6 @@ const styles = StyleSheet.create({
   },
   inspirationText: {
     ...TYPE.bodySmall,
-    color: COLORS.textBase,
+    color: c.textBase,
   },
 });

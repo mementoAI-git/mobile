@@ -1,13 +1,12 @@
 import { useThemedStyles } from '@/hooks/use-theme-colors';
 import React, { useEffect, useState } from 'react';
-import { AppState, View, StyleSheet, Text, ImageBackground, Image } from 'react-native';
+import { AppState, View, StyleSheet, Text, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { hs } from '@/constants/responsive';
 import { useVaultLockStore } from '@/features/security/vault-lock.store';
 
-const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 const LOGO = require('../../../assets/images/memento_flat.webp');
 
 export function AppSwitcherPrivacyBlur() {
@@ -42,7 +41,6 @@ export function AppSwitcherPrivacyBlur() {
   return (
     <View style={[StyleSheet.absoluteFill, styles.container]} pointerEvents="none">
       <BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} />
-      <ImageBackground source={PATTERN} style={[StyleSheet.absoluteFill, { opacity: 0.04 }]} resizeMode="repeat" />
       <View style={styles.content}>
         <Image source={LOGO} style={{ width: hs(64), height: hs(64), marginBottom: 12 }} resizeMode="contain" />
         <Text style={[TYPE.cardTitle, styles.title]}>Memento Vault</Text>

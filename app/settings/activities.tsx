@@ -1,6 +1,6 @@
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, ScrollView, ImageBackground, Text, ActivityIndicator } from 'react-native';
+import { View, ScrollView, Text, ActivityIndicator } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -21,8 +21,6 @@ const PAGE_SIZE = 20;
 
 // ─── Editorial hero card ───────────────────────────────────────────────────
 
-const WELCOME_BG = require('../../assets/images/backgrounds/welcome_bg.png');
-
 function EditorialHeroCard({ totalDocs }: { totalDocs: number }) {
   const COLORS = useThemeColors();
   if (totalDocs === 0) return null;
@@ -36,14 +34,14 @@ function EditorialHeroCard({ totalDocs }: { totalDocs: number }) {
       entering={FadeInDown.duration(500)}
       style={{ marginBottom: 20, borderRadius: 32, overflow: 'hidden', backgroundColor: COLORS.settingsCard }}
     >
-      <ImageBackground source={WELCOME_BG} style={{ padding: 24, gap: 12 }} imageStyle={{ opacity: 0.04 }} resizeMode="repeat">
+      <View style={{ padding: 24, gap: 12 }}>
         <Text style={{ ...TYPE.sectionTitle, color: COLORS.textStrong, lineHeight: 28 }}>
           Your legacy{'\n'}is growing.
         </Text>
         <Text style={{ ...TYPE.label, color: COLORS.textWeak, lineHeight: 21 }}>
           {bodyText}
         </Text>
-      </ImageBackground>
+      </View>
     </Animated.View>
   );
 }

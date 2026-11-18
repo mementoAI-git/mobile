@@ -19,6 +19,7 @@ export type SheetName =
   | 'capsule-actions'
   | 'capsule-detail'
   | 'quick-capture'
+  | 'recorder'
   | 'memory-insights'
   | 'feedback'
   | 'upgrade-prompt'

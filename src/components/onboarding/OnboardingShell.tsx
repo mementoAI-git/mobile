@@ -16,7 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import { Button, Logo } from '@/components/ui';
-import { COLORS } from '@/constants/tokens';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { TYPE } from '@/constants/typography';
 import { cn } from '@/lib/utils';
 import { OnboardingIcon } from './OnboardingIcon';
@@ -75,6 +75,7 @@ export function OnboardingShell({
   contentContainerStyle,
   children,
 }: OnboardingShellProps) {
+  const colors = useThemeColors();
   const hasHeader = showLogo || onBack || onSkip || step !== undefined;
   const hasFooter = Boolean(primaryAction || secondaryAction || footer || errorMessage);
 
@@ -116,7 +117,7 @@ export function OnboardingShell({
                 variant="ghost"
                 onPress={onBack}
                 accessibilityLabel="Go back"
-                leftIcon={<ChevronLeft size={20} color={COLORS.textStrong} />}
+                leftIcon={<ChevronLeft size={20} color={colors.textStrong} />}
                 className="size-11 px-0 gap-0 rounded-full bg-fill-weak"
               >
                 {null}
@@ -162,7 +163,7 @@ export function OnboardingShell({
                 loading={isSkipping}
                 accessibilityLabel={skipLabel}
                 hitSlop={{ top: 2, bottom: 2, left: 0, right: 0 }}
-                rightIcon={<OnboardingIcon name="arrowRight" color={COLORS.textStrong} />}
+                rightIcon={<OnboardingIcon name="arrowRight" color={colors.textStrong} />}
                 textClassName="text-text-strong"
                 style={{ height: 40, minHeight: 40, paddingHorizontal: 13, gap: 4 }}
               >

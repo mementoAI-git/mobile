@@ -2,8 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { parseAppearance, resolveAppearance } from './appearance';
 
 describe('appearance preference', () => {
-  test('falls back to system for missing or invalid saved values', () => {
-    for (const value of [null, '', 'sepia', '{}']) expect(parseAppearance(value)).toBe('system');
+  test('falls back to dark for missing or invalid saved values', () => {
+    for (const value of [null, '', 'sepia', '{}']) expect(parseAppearance(value)).toBe('dark');
+    expect(parseAppearance('system')).toBe('system');
     expect(parseAppearance('dark')).toBe('dark');
     expect(parseAppearance('light')).toBe('light');
   });

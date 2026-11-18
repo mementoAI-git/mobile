@@ -1,5 +1,5 @@
 import React from 'react';
-import { ImageBackground, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
 import { Button } from '@/components/ui';
@@ -8,8 +8,6 @@ import { TYPE } from '@/constants/typography';
 import { hs } from '@/constants/responsive';
 import { SENTRY_DSN } from '@/lib/env';
 import { logger } from '@/lib/logger';
-
-const PATTERN = require('../../../assets/images/backgrounds/welcome_bg.png');
 
 interface AppErrorBoundaryProps {
   children: React.ReactNode;
@@ -48,7 +46,6 @@ export class AppErrorBoundary extends React.Component<AppErrorBoundaryProps, App
 
     return (
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <ImageBackground source={PATTERN} style={StyleSheet.absoluteFill} imageStyle={styles.pattern} resizeMode="repeat" />
         <View style={styles.content}>
           <View style={styles.mark}>
             <Text style={styles.markText}>M</Text>
@@ -70,9 +67,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  pattern: {
-    opacity: 0.03,
   },
   content: {
     flex: 1,

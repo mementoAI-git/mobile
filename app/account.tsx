@@ -3,7 +3,6 @@ import { useAppearanceStore } from '@/store/appearance.store';
 import { COLORS as LIGHT_COLORS } from '@/constants/tokens';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  ImageBackground,
   RefreshControl,
   ScrollView,
   Text,
@@ -31,8 +30,6 @@ import {
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useUserStats } from '@/hooks/queries/use-overview';
 import { useUiStore } from '@/store';
-
-const PATTERN = require('../assets/images/backgrounds/welcome_bg.png');
 
 export default function AccountOverviewScreen() {
   const COLORS = useThemeColors();
@@ -128,12 +125,7 @@ export default function AccountOverviewScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top']}>
-        <ImageBackground
-          source={PATTERN}
-          style={{ flex: 1 }}
-          imageStyle={{ opacity: 0.03 }}
-          resizeMode="repeat"
-        >
+        <View style={{ flex: 1 }}>
           <View
             style={{
               minHeight: 62,
@@ -305,7 +297,7 @@ export default function AccountOverviewScreen() {
             </View>
           )}
         </ScrollView>
-      </ImageBackground>
+      </View>
 
     </SafeAreaView>
   );

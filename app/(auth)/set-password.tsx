@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ImageBackground,
   Image,
   StyleSheet,
 } from 'react-native';
@@ -22,8 +21,6 @@ import { useLocalSearchParams } from 'expo-router';
 import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
-
-const PATTERN = require('../../assets/images/backgrounds/welcome_bg.png');
 
 function CelebrationBadge({ size = 100 }: { size?: number }) {
   return (
@@ -98,12 +95,7 @@ export default function SetPasswordScreen() {
   }, [isSuccess]);
 
   return (
-    <ImageBackground
-      source={PATTERN}
-      style={{ flex: 1, backgroundColor: COLORS.background }}
-      imageStyle={{ opacity: 0.03 }}
-      resizeMode="repeat"
-    >
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -268,7 +260,7 @@ export default function SetPasswordScreen() {
           </Animated.View>
         ) : null}
       </SafeAreaView>
-    </ImageBackground>
+    </View>
   );
 }
 

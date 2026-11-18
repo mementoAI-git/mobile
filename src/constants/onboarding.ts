@@ -1,15 +1,39 @@
 import type { EnrichmentCategory } from './enrichment';
 
+/**
+ * Reasons for joining, stored in persona `join_reasons`. The IDs match web
+ * `reasonOptions` (src/pages/onboarding/flow-options.ts) so answers given on
+ * one app restore on the other.
+ */
 export type OnboardingMotivation =
-  | 'preserve_memories'
-  | 'self_reflection'
+  | 'memory_preservation'
+  | 'self_understanding'
   | 'life_record'
-  | 'organize_thoughts'
-  | 'legacy_for_loved_ones'
-  | 'exploring';
+  | 'personal_space'
+  | 'emotional_depth'
+  | 'explorer';
+
+/** The primary motivation type the API keeps for the AI (web `MotivationType`). */
+export type OnboardingMotivationType =
+  | 'memory_preservation'
+  | 'self_understanding'
+  | 'personal_space'
+  | 'emotional_depth'
+  | 'explorer';
+
+/** IDs mobile saved before it matched web; read them as their web equivalents. */
+export const LEGACY_MOTIVATION_IDS: Readonly<Record<string, OnboardingMotivation>> = {
+  preserve_memories: 'memory_preservation',
+  self_reflection: 'self_understanding',
+  organize_thoughts: 'personal_space',
+  legacy_for_loved_ones: 'emotional_depth',
+  exploring: 'explorer',
+};
 
 export interface FirstRunMotivationOption {
   value: OnboardingMotivation;
+  /** Sent as `motivationType`; "Build a record of my life" counts as memory preservation, as on web. */
+  motivation: OnboardingMotivationType;
   label: string;
   emoji: string;
 }
@@ -21,12 +45,12 @@ export interface FirstRunLifeAreaOption {
 }
 
 export const FIRST_RUN_MOTIVATIONS: readonly FirstRunMotivationOption[] = [
-  { value: 'preserve_memories', label: 'Preserve memories', emoji: '📚' },
-  { value: 'self_reflection', label: 'Reflect on my life', emoji: '🪞' },
-  { value: 'life_record', label: 'Record my life', emoji: '✍️' },
-  { value: 'organize_thoughts', label: 'Organize my thoughts', emoji: '🗂️' },
-  { value: 'legacy_for_loved_ones', label: 'Leave a legacy for loved ones', emoji: '💌' },
-  { value: 'exploring', label: 'I’m just exploring', emoji: '🔍' },
+  { value: 'memory_preservation', motivation: 'memory_preservation', label: 'Preserve memories', emoji: '📚' },
+  { value: 'self_understanding', motivation: 'self_understanding', label: 'Reflect on my life', emoji: '🪞' },
+  { value: 'life_record', motivation: 'memory_preservation', label: 'Record my life', emoji: '✍️' },
+  { value: 'personal_space', motivation: 'personal_space', label: 'Organize my thoughts', emoji: '🗂️' },
+  { value: 'emotional_depth', motivation: 'emotional_depth', label: 'Leave a legacy for loved ones', emoji: '💌' },
+  { value: 'explorer', motivation: 'explorer', label: 'I’m just exploring', emoji: '🔍' },
 ] as const;
 
 export const FIRST_RUN_LIFE_AREAS: readonly FirstRunLifeAreaOption[] = [
