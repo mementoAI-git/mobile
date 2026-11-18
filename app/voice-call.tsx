@@ -179,10 +179,10 @@ export default function VoiceCallRoute() {
           <VoicePicker selectedId={draftVoiceId} onSelect={chooseVoice} />
           <Button
             voiceLabel={false}
-            fullWidth
             rounded="full"
             className="mb-2"
-            style={{ height: 48, minHeight: 48 }}
+            // 80% of the page width, centred.
+            style={{ height: 48, minHeight: 48, width: '80%', alignSelf: 'center' }}
             loading={savingVoice}
             accessibilityLabel={`Select ${selectedVoice.name} and start the call`}
             onPress={() => void confirmVoice()}
