@@ -49,12 +49,24 @@ export function useStoriesLogic() {
     fetchNextPage,
     hasNextPage,
     refetch,
-    isRefetching,
   } = useStories({
     limit: STORIES_PAGE_SIZE,
     filter: activeFilter === 'All' ? undefined : activeFilter.toLowerCase(),
     search: debouncedSearch || undefined,
   });
+
+  // The pull-to-refresh spinner follows only a real pull. React Query's isRefetching is
+  // also true while a new tab loads behind keepPreviousData, and a refreshing
+  // RefreshControl pushes the list down on iOS, so switching tabs made the page jump.
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+  const pullToRefresh = useCallback(async () => {
+    setIsPullRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsPullRefreshing(false);
+    }
+  }, [refetch]);
 
   const stories = useMemo(() => data?.pages.flatMap((p) => p.docs) ?? [], [data?.pages]);
   const stats = statsData;
@@ -91,8 +103,8 @@ export function useStoriesLogic() {
       stats,
       isLoading,
       isFetching,
-      isRefetching,
-      refetch,
+      isPullRefreshing,
+      pullToRefresh,
       isFetchingNextPage,
       fetchNextPage,
       hasNextPage,
@@ -113,8 +125,8 @@ export function useStoriesLogic() {
       stats,
       isLoading,
       isFetching,
-      isRefetching,
-      refetch,
+      isPullRefreshing,
+      pullToRefresh,
       isFetchingNextPage,
       fetchNextPage,
       hasNextPage,

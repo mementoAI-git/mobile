@@ -1,5 +1,6 @@
 import { RecordingSessionProvider } from '@/features/overview/recording-session';
 import { AppTabBar } from '@/components/TabBar';
+import { FloatingActionHost } from '@/components/memory/FloatingActionLayer';
 import { useOnboardingReturn } from '@/features/onboarding/onboarding-resume';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import '../global.css';
@@ -717,6 +718,7 @@ function RootLayout() {
                           <Stack.Screen name="+not-found" />
                         </Stack>
                         <AppTabBar />
+                        <FloatingActionHost />
                       </CallIndicatorLayout>
                       </AppMenuLayout>
 

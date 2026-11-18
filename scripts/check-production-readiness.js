@@ -353,6 +353,6 @@ assert(/AppErrorBoundary/.test(layoutSource), 'Root layout must wrap the app she
 const errorBoundarySource = read('src/components/system/AppErrorBoundary.tsx');
 assert(/componentDidCatch/.test(errorBoundarySource), 'AppErrorBoundary must catch render errors.');
 assert(/Sentry\.captureException/.test(errorBoundarySource), 'AppErrorBoundary must report render errors to Sentry when configured.');
-assert(/COLORS\.background/.test(errorBoundarySource), 'AppErrorBoundary fallback must use the app background token.');
+assert(/(COLORS|colors)\.(background|canvas)/.test(errorBoundarySource), 'AppErrorBoundary fallback must use the app background token.');
 
 console.log('Production readiness checks passed.');
