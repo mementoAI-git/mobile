@@ -126,7 +126,7 @@ export function GuardianLensSheet({
       {/* Security Assurance */}
       <View className="bg-brand/5 border-l-2 border-brand rounded-r-2xl p-4">
         <Text className="text-text-weak" style={TYPE.bodySmall}>
-          Zero-knowledge privacy protects all unshared personal memories until you explicitly grant access.
+          Your memories are private to your account by default, encrypted in transit and at rest, and you choose what to share.
         </Text>
       </View>
 
