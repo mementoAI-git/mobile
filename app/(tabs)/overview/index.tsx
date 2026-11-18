@@ -153,12 +153,12 @@ export default function OverviewScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({ pathname: '/editor', params: { mode: 'story' } });
   }, [router]);
-  // Same Talk and Record actions as the Stories capture button.
+  // Talk matches the Stories capture button; Record opens the recorder sheet, like the capture card's mic.
   const handleTalk = useCallback(() => router.push('/voice-call'), [router]);
-  const handleRecord = useCallback(
-    () => router.push({ pathname: '/editor', params: { mode: 'story', lockMode: 'true', autoRecord: 'true' } }),
-    [router],
-  );
+  const handleRecord = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    openSheet('recorder');
+  }, [openSheet]);
   const handleQuickCapture = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({ pathname: '/editor', params: { mode: 'quick-capture' } });

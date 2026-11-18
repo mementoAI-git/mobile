@@ -18,6 +18,7 @@ import { CapsuleActionsSheet } from './CapsuleActionsSheet';
 import { CreateGroupSheet } from './CreateGroupSheet';
 import { ShareMemorySheet } from './ShareMemorySheet';
 import { QuickCaptureSheet } from './QuickCaptureSheet';
+import { RecorderSheet } from './RecorderSheet';
 import { MemoryInsightsSheet } from './MemoryInsightsSheet';
 import { SearchMemorySheet } from './SearchMemorySheet';
 import { FeedbackSheet } from './FeedbackSheet';
@@ -73,6 +74,8 @@ const SHEET_CONFIGS: Record<string, {
   'add-member-to-group': { component: AddMemberToGroupSheet, snapPoints: ['88%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
   'create-group': { component: CreateGroupSheet, snapPoints: ['78%'], dynamic: false, keyboardBehavior: 'fillParent', androidKeyboardInputMode: 'adjustResize' },
   'quick-capture': { component: QuickCaptureSheet, dynamic: true, keyboardBlurBehavior: 'none' },
+  // Overview record button: a short recorder that saves straight to Stories.
+  'recorder': { component: RecorderSheet, dynamic: true, compact: true },
   'memory-insights': { component: MemoryInsightsSheet, snapPoints: ['88%'] },
   'search-memory': { component: SearchMemorySheet, horizontalPadding: 0, screenHeightRatio: 0.8, dynamic: false, keyboardBehavior: 'extend', keyboardBlurBehavior: 'none' },
   'feedback': { component: FeedbackSheet, snapPoints: ['90%'], dynamic: true, keyboardBehavior: 'fillParent' },
