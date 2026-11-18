@@ -1,13 +1,12 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
 import { Button } from '@/components/ui';
-import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { hs } from '@/constants/responsive';
 import { SENTRY_DSN } from '@/lib/env';
 import { logger } from '@/lib/logger';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 
 interface AppErrorBoundaryProps {
   children: React.ReactNode;
@@ -43,30 +42,35 @@ export class AppErrorBoundary extends React.Component<AppErrorBoundaryProps, App
 
   render() {
     if (!this.state.error) return this.props.children;
-
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <View style={styles.content}>
-          <View style={styles.mark}>
-            <Text style={styles.markText}>M</Text>
-          </View>
-          <Text style={styles.title}>Something went off track</Text>
-          <Text style={styles.body}>
-            Try reopening this screen. If it keeps happening, we will have the crash report and enough detail to investigate.
-          </Text>
-          <Button onPress={this.handleReset} size="lg" className="mt-4 px-8">
-            Try again
-          </Button>
-        </View>
-      </SafeAreaView>
-    );
+    return <AppErrorFallback onReset={this.handleReset} />;
   }
+}
+
+const APP_ICON = require('../../../assets/icon.png');
+
+function AppErrorFallback({ onReset }: { onReset: () => void }) {
+  const colors = useThemeColors();
+  return (
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.canvas }]} edges={['top', 'bottom']}>
+      <View style={styles.content}>
+        <Image source={APP_ICON} style={styles.logo} resizeMode="contain" accessibilityLabel="Memento" />
+        <Text style={[TYPE.screenTitle, styles.centered, { color: colors.textStrong }]}>
+          Something went off track
+        </Text>
+        <Text style={[TYPE.body, styles.centered, styles.body, { color: colors.textBase }]}>
+          Try again. If it keeps happening, we have the crash report and will look into it.
+        </Text>
+        <Button onPress={onReset} size="lg" rounded="full" className="mt-8 px-10">
+          Try again
+        </Button>
+      </View>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   content: {
     flex: 1,
@@ -74,34 +78,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 32,
   },
-  mark: {
-    width: hs(64),
-    height: hs(64),
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.brandSubtle,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeaker,
-    marginBottom: 20,
+  logo: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    marginBottom: 24,
   },
-  markText: {
-    color: COLORS.brand,
-    ...TYPE.displayTitle,
-    lineHeight: 40,
-  },
-  title: {
-    color: COLORS.textStrong,
-    ...TYPE.screenTitle,
-    lineHeight: 36,
+  centered: {
     textAlign: 'center',
-    marginBottom: 10,
   },
   body: {
-    color: COLORS.textBase,
-    ...TYPE.body,
-    lineHeight: 22,
-    textAlign: 'center',
+    marginTop: 8,
     maxWidth: 320,
   },
 });
