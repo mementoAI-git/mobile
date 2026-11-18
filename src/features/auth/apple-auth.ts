@@ -14,6 +14,8 @@ export type NativeAppleAuthResult =
   | {
       success: true;
       identityToken: string;
+      /** One-time code the server exchanges for the token it revokes on account deletion. */
+      authorizationCode?: string;
       user?: { name?: { firstName?: string; lastName?: string } };
       cancelled?: false;
       error?: never;
@@ -45,6 +47,7 @@ export async function signInWithAppleNative(): Promise<NativeAppleAuthResult> {
     return {
       success: true,
       identityToken: credential.identityToken,
+      ...(credential.authorizationCode ? { authorizationCode: credential.authorizationCode } : {}),
       user,
     };
   } catch (error: any) {
@@ -53,4 +56,13 @@ export async function signInWithAppleNative(): Promise<NativeAppleAuthResult> {
     }
     return { success: false, error: error?.message || 'Apple sign-in failed' };
   }
+}
+
+/** Body for POST /auth/oauth/apple from a successful native sign-in. */
+export function appleOAuthBody(result: Extract<NativeAppleAuthResult, { success: true }>) {
+  return {
+    id_token: result.identityToken,
+    ...(result.authorizationCode ? { code: result.authorizationCode } : {}),
+    ...(result.user ? { user: result.user } : {}),
+  };
 }

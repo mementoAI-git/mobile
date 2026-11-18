@@ -36,7 +36,7 @@ import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import { PRIVACY_URL, TERMS_URL } from '@/lib/env';
 import { signInWithGoogleNative } from '@/features/auth/google-auth';
-import { appleSignInShown, signInWithAppleNative } from '@/features/auth/apple-auth';
+import { appleOAuthBody, appleSignInShown, signInWithAppleNative } from '@/features/auth/apple-auth';
 import { establishSession } from '@/features/auth/session-coordinator';
 import { completeAuthResponse } from '@/features/auth/auth-completion';
 import { useAuthStore } from '@/store';
@@ -180,10 +180,7 @@ export default function RegisterScreen() {
       if (nativeResult.success && nativeResult.identityToken) {
         const res = await client.post(
           `${endpoint.oauth}apple`,
-          {
-            id_token: nativeResult.identityToken,
-            ...(nativeResult.user ? { user: nativeResult.user } : {}),
-          },
+          appleOAuthBody(nativeResult),
           { skipAuth: true } as never,
         );
         const completion = await completeAuthResponse(res.data, establishSession);
