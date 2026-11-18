@@ -1,6 +1,6 @@
 import type { ThemeColors } from '@/constants/tokens';
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -8,10 +8,15 @@ import {
   View,
 } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { tabBarPillTop } from '@/components/TabBar';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
+import { useToast } from '@/components/ui/Toast';
+import { appVersionDetails, appVersionLabel } from '@/features/app-info/app-version';
+import { currentAppVersion } from '@/features/app-info/current-app-version';
 import { Avatar, ResponsiveScreen } from '@/components/ui';
 import { useUiStore } from '@/store';
 import CreditCard from 'lucide-react-native/icons/credit-card';
@@ -47,6 +52,8 @@ export default function SettingsIndex() {
     isLoading: subscriptionLoading,
   } = useSubscription();
   const router = useRouter();
+  const { toast } = useToast();
+  const insets = useSafeAreaInsets();
   // Same name and joined-date rules as web settings-profile-header.tsx.
   const rawDisplayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
   const displayName = rawDisplayName || profile?.nickname?.trim() || 'Your name';
@@ -65,6 +72,20 @@ export default function SettingsIndex() {
   const push = useCallback((href: string) => {
     router.push(href as never);
   }, [router]);
+
+  // Version, build and running update, so testers and support can tell
+  // exactly which code is on the device.
+  const versionInfo = useMemo(() => currentAppVersion(), []);
+  const versionLabel = appVersionLabel(versionInfo);
+  const handleCopyVersion = useCallback(async () => {
+    Haptics.selectionAsync();
+    try {
+      await Clipboard.setStringAsync(appVersionDetails(versionInfo));
+      toast('Version details copied', 'success');
+    } catch {
+      toast('We couldn’t copy the version details. Please try again.', 'error');
+    }
+  }, [toast, versionInfo]);
 
   const handleManagePlan = useCallback(() => {
     Haptics.selectionAsync();
@@ -91,7 +112,7 @@ export default function SettingsIndex() {
         <Animated.ScrollView
           ref={voiceScrollRef}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingBottom: tabBarPillTop(insets.bottom) + TAB_BAR_FADE_CLEARANCE }]}
         >
         <View style={styles.topCards}>
           <TouchableOpacity
@@ -191,7 +212,14 @@ export default function SettingsIndex() {
           </SettingsGroupedList>
         </View>
 
-        <Text style={styles.version}>Memento AI v1.0</Text>
+        <TouchableOpacity
+          onPress={handleCopyVersion}
+          accessibilityRole="button"
+          accessibilityLabel={`${versionLabel}. Copy version details`}
+          style={styles.versionButton}
+        >
+          <Text style={styles.version}>{versionLabel}</Text>
+        </TouchableOpacity>
 
       </Animated.ScrollView>
       </ResponsiveScreen>
@@ -199,6 +227,10 @@ export default function SettingsIndex() {
     </SafeAreaView>
   );
 }
+
+// The floating tab bar sits over this screen; its frosted fade rises 32px
+// above the pill, so the last rows scroll clear of both.
+const TAB_BAR_FADE_CLEARANCE = 48;
 
 const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
@@ -216,7 +248,7 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: COLORS.fillWeak,
   },
-  content: { paddingTop: 28, paddingBottom: 24 },
+  content: { paddingTop: 28 },
   // Web: profile header and plan card stack with gap-4, then gap-10 to the section list.
   topCards: { gap: 16, marginBottom: 40 },
   profileCard: {
@@ -231,10 +263,11 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   profileMetaText: { color: COLORS.textBase },
   // Web: the section list and the logout card sit 16px apart.
   groups: { gap: 16 },
+  // 44px tap target around the one-line version label.
+  versionButton: { marginTop: 36, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   version: {
     color: COLORS.textWeak,
     ...TYPE.metadata,
     textAlign: 'center',
-    marginTop: 48,
   },
 });
