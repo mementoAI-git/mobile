@@ -162,7 +162,7 @@ import { TYPE } from '@/constants/typography';
 | `captureInput` | `FONTS.serif` | 20 / 28 | Overview capture card writing area (the placeholder stays on one line) |
 | `reflectionTitle` / `reflectionTitleAccent` | `FONTS.serif` / `FONTS.serifItalic` | 20 / 27 | Continue reflecting card prompt; its orange highlighted words |
 | `greeting` / `greetingName` | `FONTS.sans` 600 on iOS (SF Pro Rounded), `FONTS.sansSemi` elsewhere / `FONTS.serifMediumItalic` | 28 / 34 (fixed); name 32 / 34 | Overview greeting style B, two lines ("Good morning, *Groot*," / "What’s on your mind today?"); the name is the muted serif medium italic accent |
-| `greetingEditorial` / `greetingEditorialName` | `FONTS.serif` / `FONTS.serifItalic` | 34 / 40 | Overview greeting style A (default, web's welcome section): one serif line beside the sun/moon |
+| `greetingEditorial` / `greetingEditorialName` | `FONTS.serif` / `FONTS.serifItalic` | 28 / 34 | Overview greeting style A (default, web's welcome section): one serif line beside the sun/moon |
 | `sectionTitle` / `sectionTitleWeak` | `FONTS.serif` / `FONTS.serifItalic` | 22 / 28 | Section headers; muted words within them |
 | `cardTitle` | `FONTS.serifMedium` | 20 / 26 | Card titles |
 | `uiTitle` | `FONTS.sansSemi` | 20 / 26 | Non-editorial UI titles |
