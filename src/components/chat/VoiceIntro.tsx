@@ -89,7 +89,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   phone: { height: '100%', maxHeight: 240, width: '100%' },
   body: { paddingHorizontal: 16, paddingTop: 20, gap: 24 },
   title: { color: colors.textStrong, textAlign: 'center' },
-  benefits: { alignSelf: 'center', maxWidth: 300, gap: 16 },
+  // A set width: in a shrink-wrapped column the flex:1 text gets none and disappears.
+  benefits: { alignSelf: 'center', width: '100%', maxWidth: 300, gap: 16 },
   benefit: { flexDirection: 'row', gap: 10 },
   benefitIcon: { marginTop: 2 },
   benefitText: { flex: 1 },

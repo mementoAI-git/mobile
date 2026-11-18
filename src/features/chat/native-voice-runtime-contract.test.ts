@@ -22,7 +22,7 @@ describe('native voice runtime contract', () => {
       'react-native-audio-api',
       {
         iosMicrophonePermission:
-          'Allow Memento to access your microphone for voice conversations.',
+          'Memento uses the microphone for voice calls with your AI companion and for recording stories.',
         iosBackgroundMode: true,
         androidPermissions: [
           'android.permission.RECORD_AUDIO',

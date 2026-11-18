@@ -21,6 +21,12 @@ describe('voice entitlement handling', () => {
       feature: 'voice_mode',
       message: 'Upgrade to continue.',
     })).toEqual({ kind: 'upgrade-required' });
+    // The free plan's monthly voice minutes are used up; the API puts the gate in details.
+    expect(feature?.getVoiceConnectionFailure({
+      status: 402,
+      message: 'You’ve used this month’s 90 free voice minutes. Voice mode requires Pro or Legacy to keep talking.',
+      details: { error: 'subscription_required', feature: 'voice_mode' },
+    })).toEqual({ kind: 'upgrade-required' });
     expect(feature?.getVoiceConnectionFailure({
       status: 402,
       error: 'subscription_required',

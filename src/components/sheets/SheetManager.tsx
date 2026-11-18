@@ -46,6 +46,7 @@ import { ExportArchiveSheet } from './ExportArchiveSheet';
 import { AppearanceSheet } from './AppearanceSheet';
 import { DailyRitualSheet } from './DailyRitualSheet';
 import { ObservationNoteSheet } from './ObservationNoteSheet';
+import { AiDataConsentSheet } from './AiDataConsentSheet';
 import { EmojiPickerSheet } from '@/components/chat/EmojiPickerSheet';
 import { getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 
@@ -104,6 +105,8 @@ const SHEET_CONFIGS: Record<string, {
   'daily-ritual': { component: DailyRitualSheet, dynamic: true },
   'observation-note': { component: ObservationNoteSheet, dynamic: true, keyboardBehavior: 'interactive', androidKeyboardInputMode: 'adjustResize' },
   'emoji-picker': { component: EmojiPickerSheet, dynamic: false, snapPoints: ['42%', '65%'] },
+  // One-time AI data disclosure before the first chat message or voice call.
+  'ai-data-consent': { component: AiDataConsentSheet, dynamic: true },
 };
 
 // Sheets that manage their own BottomSheetView / layout
@@ -144,6 +147,8 @@ export function SheetManager({ isModal = false }: { isModal?: boolean }) {
 
   const currentSegment = segments[0] as string | undefined;
   const isCurrentSegmentModal = currentSegment ? MODAL_SEGMENTS.has(currentSegment) : false;
+  // This instance renders sheets for the current route (root vs native modal).
+  const rendersHere = isModal === isCurrentSegmentModal;
 
   // Prevent global sheets from mounting before Expo Router has created the
   // navigation container. This avoids the classic ``Couldn't find a navigation context``
@@ -154,15 +159,17 @@ export function SheetManager({ isModal = false }: { isModal?: boolean }) {
       return;
     }
 
-    if (activeSheet) {
+    // A sheet opened while another instance's route was in front (a call
+    // starting as the voice page closes) presents once this one renders.
+    if (activeSheet && rendersHere) {
       const t = setTimeout(() => {
         modalRef.current?.present();
       }, 50);
       return () => clearTimeout(t);
-    } else {
+    } else if (!activeSheet) {
       modalRef.current?.dismiss();
     }
-  }, [activeSheet, closeSheet, navigationReady]);
+  }, [activeSheet, closeSheet, navigationReady, rendersHere]);
 
   const handleDismiss = useCallback(() => {
     // Called by the sheet when the user swipes it down or taps the backdrop
@@ -200,8 +207,7 @@ export function SheetManager({ isModal = false }: { isModal?: boolean }) {
   if (!navigationReady) return null;
 
   // Render logic to prevent duplicate sheets in root vs local native modals
-  if (!isModal && isCurrentSegmentModal) return null;
-  if (isModal && !isCurrentSegmentModal) return null;
+  if (!rendersHere) return null;
 
   return (
     <BottomSheetModal

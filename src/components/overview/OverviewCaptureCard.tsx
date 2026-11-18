@@ -14,6 +14,7 @@ import SquarePen from 'lucide-react-native/icons/square-pen';
 import PhoneCall from 'lucide-react-native/icons/phone-call';
 import Mic from 'lucide-react-native/icons/mic';
 import Trash2 from 'lucide-react-native/icons/trash';
+import { useRecordingSession } from '@/features/overview/recording-session';
 import { AudioAttachmentCard } from '@/components/media/AudioAttachmentCard';
 
 import { Button } from '@/components/ui';
@@ -24,7 +25,6 @@ import { TYPE } from '@/constants/typography';
 import { iconSize, minTouchTarget, radius, responsiveSpace } from '@/constants/responsive';
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
-import { useUiStore } from '@/store';
 import {
   CAPTURE_HANDED_OFF_EVENT,
   buildStoryHandoff,
@@ -178,10 +178,11 @@ export function OverviewCaptureCard({ userId, onAddStory, placeholder = 'Add som
 
   // The mic opens the recorder sheet; Done saves the recording as its own story,
   // which the AI names from the transcript. The card's draft stays as it is.
+  const { open: openRecorder } = useRecordingSession();
   const handleRecord = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    useUiStore.getState().openSheet('recorder');
-  }, []);
+    openRecorder();
+  }, [openRecorder]);
 
   const handleDiscuss = useCallback(() => {
     const message = textRef.current.trim();

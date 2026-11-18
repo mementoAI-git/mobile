@@ -50,7 +50,7 @@ function WeekCell({ day }: { day: AccountWeekDay }) {
           day.isCompleted ? styles.ringActive : day.isToday ? styles.ringToday : styles.ringIdle,
         ]}
       >
-        <View style={styles.ringInner}>
+        <View style={[styles.ringInner, day.isCompleted && styles.ringInnerActive]}>
           {day.isCompleted ? <CheckMark color={colors.brand} /> : null}
         </View>
       </View>
@@ -167,13 +167,18 @@ const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.strokeWeak,
   },
+  // 24 inside the 30px ring leaves a 3px ring.
   ringInner: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.sheet,
+  },
+  // Active days only: white in every theme, so the brand tick reads clearly on it.
+  ringInnerActive: {
+    backgroundColor: COLORS.textInverse,
   },
   totals: {
     marginTop: 12,

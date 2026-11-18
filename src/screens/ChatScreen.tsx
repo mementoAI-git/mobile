@@ -1,4 +1,5 @@
 import { useThemeColors, useThemeStyles, useResolvedAppearance } from '@/hooks/use-theme-colors';
+import { ensureAiConsent, hasAiConsentNow } from '@/features/chat/ai-consent-gate';
 import { BlurView } from 'expo-blur';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -476,13 +477,25 @@ export default function ChatScreen() {
       }
       return;
     }
-    send(
-      payload.text,
-      replyQuote,
-      payload.attachmentIds.length ? payload.attachmentIds : undefined,
-      payload.attachmentPreviews.length ? payload.attachmentPreviews : undefined,
-    );
-    setReplyQuote(null);
+    const deliver = () => {
+      send(
+        payload.text,
+        replyQuote,
+        payload.attachmentIds.length ? payload.attachmentIds : undefined,
+        payload.attachmentPreviews.length ? payload.attachmentPreviews : undefined,
+      );
+      setReplyQuote(null);
+    };
+    if (hasAiConsentNow()) {
+      deliver();
+      return;
+    }
+    // First message: ask for AI consent first, keeping the draft in the composer
+    // until the member agrees. Not now leaves it unsent.
+    return ensureAiConsent().then((agreed) => {
+      if (agreed) deliver();
+      return agreed;
+    });
   }, [send, replyQuote, showInlineVoice, voiceCall]);
 
   // Day separators precomputed in one forward pass. renderMessage used to

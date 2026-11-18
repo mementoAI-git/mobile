@@ -49,11 +49,11 @@ describe('voice call actions', () => {
     const { controls, calls } = fakeControls();
 
     await createCallActionHandlers(controls).open_screen({
-      destination: 'time_capsules',
+      destination: 'insights',
       keep_talking: true,
     });
 
-    expect(calls).toEqual(['navigate:/(tabs)/capsule']);
+    expect(calls).toEqual(['navigate:/insights']);
   });
 
   test('open_screen without keep_talking navigates after the goodbye', async () => {
@@ -77,6 +77,8 @@ describe('voice call actions', () => {
       /isn't available/,
     );
     expect(resolveVoiceDestination('toString')).toBeUndefined();
+    // Time capsules are paused: never open their Coming soon page.
+    expect(resolveVoiceDestination('time_capsules')).toBeUndefined();
     expect(resolveVoiceDestination(42)).toBeUndefined();
     expect(calls).toEqual([]);
   });
@@ -85,6 +87,6 @@ describe('voice call actions', () => {
     for (const { href } of Object.values(VOICE_DESTINATIONS)) {
       expect(href.startsWith('/')).toBe(true);
     }
-    expect(Object.keys(VOICE_DESTINATIONS)).toHaveLength(19);
+    expect(Object.keys(VOICE_DESTINATIONS)).toHaveLength(18);
   });
 });

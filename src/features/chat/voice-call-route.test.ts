@@ -19,9 +19,9 @@ describe('voice call route contract', () => {
     expect(route).toContain('<VoiceIntro onChooseVoice={openPicker} onDismiss={dismiss} />');
     expect(route).toContain('startCall({ memoryId: effectiveMemoryId, voiceName: choice.providerVoiceName });');
     expect(route).toContain('useVoiceCall()');
-    // Select voice: a 48px pill.
+    // Select voice: a 48px pill, 80% wide and centred.
     expect(route).toContain('rounded="full"');
-    expect(route).toContain('style={{ height: 48, minHeight: 48 }}');
+    expect(route).toContain("style={{ height: 48, minHeight: 48, width: '80%', alignSelf: 'center' }}");
   });
 
 });

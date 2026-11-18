@@ -364,7 +364,7 @@ export function generateMemoirHtml({
 
     <footer class="colophon">
       <p>Compiled and archived from Memento Personal Legacy Vault on ${exportDate}.</p>
-      <p style="margin-top: 4px;">Zero-knowledge encrypted · Privately owned by ${escapeHtml(authorName)} &copy; ${currentYear}</p>
+      <p style="margin-top: 4px;">Privately owned by ${escapeHtml(authorName)} &copy; ${currentYear}</p>
     </footer>
   </div>
 </body>

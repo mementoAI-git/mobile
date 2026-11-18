@@ -19,8 +19,9 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSSupportsLiveActivities": true,
-        "NSSpeechRecognitionUsageDescription": "Allow Memento to use speech recognition.",
-        "NSMicrophoneUsageDescription": "Allow Memento to use the microphone for voice input."
+        "NSSpeechRecognitionUsageDescription": "Memento turns what you say into text for your stories and chats.",
+        "NSMicrophoneUsageDescription": "Memento uses the microphone for voice calls with your AI companion and for recording stories.",
+        "NSFaceIDUsageDescription": "Memento uses Face ID to unlock your private vault and sign you in."
       }
     },
     "android": {
@@ -112,7 +113,12 @@
       "./plugins/with-storekit-config",
       "./plugins/with-audio-api-ffmpeg-disabled",
       "expo-router",
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Memento uses Face ID to unlock your private vault and sign you in."
+        }
+      ],
       "expo-font",
       "expo-apple-authentication",
       "expo-sharing",
@@ -125,7 +131,8 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Memento to access your camera to capture photos and videos for your memories."
+          "cameraPermission": "Allow Memento to access your camera to capture photos and videos for your memories.",
+          "microphonePermission": "Memento uses the microphone for voice calls with your AI companion and for recording stories."
         }
       ],
       [
@@ -133,14 +140,15 @@
         {
           "photosPermission": "Allow Memento to access your photos to attach them to your memories.",
           "cameraPermission": "Allow Memento to use your camera to capture memories.",
-          "microphonePermission": "Allow Memento to record audio for videos and voice memos."
+          "microphonePermission": "Memento uses the microphone for voice calls with your AI companion and for recording stories."
         }
       ],
       "expo-web-browser",
       [
         "expo-audio",
         {
-          "microphonePermission": "Allow Memento to access your microphone for voice recordings."
+          "microphonePermission": "Memento uses the microphone for voice calls with your AI companion and for recording stories.",
+          "enableBackgroundRecording": true
         }
       ],
       "@react-native-community/datetimepicker",
@@ -157,15 +165,15 @@
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "Allow Memento to use the microphone for voice input.",
-          "speechRecognitionPermission": "Allow Memento to use speech recognition."
+          "microphonePermission": "Memento uses the microphone for voice calls with your AI companion and for recording stories.",
+          "speechRecognitionPermission": "Memento turns what you say into text for your stories and chats."
         }
       ],
       "expo-dev-client",
       [
         "react-native-audio-api",
         {
-          "iosMicrophonePermission": "Allow Memento to access your microphone for voice conversations.",
+          "iosMicrophonePermission": "Memento uses the microphone for voice calls with your AI companion and for recording stories.",
           "iosBackgroundMode": true,
           "androidPermissions": [
             "android.permission.RECORD_AUDIO",

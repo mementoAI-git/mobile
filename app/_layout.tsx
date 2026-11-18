@@ -1,3 +1,4 @@
+import { RecordingSessionProvider } from '@/features/overview/recording-session';
 import { AppTabBar } from '@/components/TabBar';
 import { useOnboardingReturn } from '@/features/onboarding/onboarding-resume';
 import { useThemeColors } from '@/hooks/use-theme-colors';
@@ -561,6 +562,8 @@ function RootLayout() {
             <QueryClientProvider client={queryClient}>
               <SessionBootstrap />
 
+              {/* Above the sheet portal, so the recorder sheet and its floating card share the take. */}
+              <RecordingSessionProvider>
               <BottomSheetModalProvider>
                 <ShareIntentProvider>
                   <ToastProvider>
@@ -725,6 +728,7 @@ function RootLayout() {
                   </ToastProvider>
                 </ShareIntentProvider>
               </BottomSheetModalProvider>
+              </RecordingSessionProvider>
             </QueryClientProvider>
           </AppErrorBoundary>
         </KeyboardProvider>

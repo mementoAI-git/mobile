@@ -12,8 +12,10 @@ const AUDIO_MODALITY: LiveConnectConfig['responseModalities'] = ['AUDIO' as Moda
 
 export type VoiceLiveToken = {
   token: string;
-  /** Present when the server limits call length (VOICE_MAX_CALL_MINUTES). */
+  /** Present when the call is limited (VOICE_MAX_CALL_MINUTES, or the free plan's monthly minutes). */
   callTime?: VoiceCallTime;
+  /** The call's signed ticket, sent on every call (limited or not) for reconnects and usage check-ins. */
+  callTicket?: string;
   model: string;
   voiceName: string;
   systemInstruction?: string;
@@ -103,6 +105,7 @@ export function parseVoiceLiveToken(
       typeof response.speakerFullDuplex === 'boolean' ? response.speakerFullDuplex : undefined,
     turnDetection: parseTurnDetection(response.turnDetection),
     callTime: parseVoiceCallTime(response),
+    callTicket: typeof response.call_ticket === 'string' && response.call_ticket ? response.call_ticket : undefined,
   };
 }
 

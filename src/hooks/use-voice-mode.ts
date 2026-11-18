@@ -1,7 +1,7 @@
 import { currentDigitalMindName, currentDigitalMindHeaders } from '@/features/chat/digital-mind-runtime';
+import { ensureAiConsent, hasAiConsentNow } from '@/features/chat/ai-consent-gate';
 import {
-  CALL_ENDING_SOON_PROMPT,
-  CALL_TIME_UP_PROMPT,
+  callLimitPrompts,
   callLimitSchedule,
   isCallTimeUp,
   type VoiceCallTime,
@@ -112,6 +112,7 @@ import { CallRecordingSession } from '@/features/chat/call-recording';
 import { toast } from '@/components/ui/Toast';
 import { discardCallRecording, drainCallRecordings, finishCallRecording, getCallRecorderNative, newCallRecordingPath } from '@/features/chat/call-recording-store';
 import { invalidateMemoryQueries } from '@/features/memories/cache';
+import { VOICE_USAGE_CHECK_IN_MS, sendVoiceUsageCheckIn } from '@/features/chat/voice-usage';
 import { useAuthStore, useUserStore } from '@/store';
 
 type SetupReady = {
@@ -444,6 +445,8 @@ export function useVoiceMode({
     left: VOICE_WARM_START_REFRESHES,
   });
   const warmStartedRef = useRef(false);
+  // Set while connect() waits on the AI consent sheet, so a second tap doesn't start a second call.
+  const consentPromptRef = useRef(false);
   // Bumped by each connect(), so an older connect that is still awaiting can
   // tell it was superseded.
   const connectAttemptRef = useRef(0);
@@ -742,6 +745,12 @@ export function useVoiceMode({
     lastNetworkRef.current = undefined;
     callLimitTimersRef.current.forEach(clearTimeout);
     callLimitTimersRef.current = [];
+    // A last check-in records the call's full length, then the voice minutes cards refresh.
+    const endedTicket = callTicketRef.current;
+    if (endedTicket) {
+      void sendVoiceUsageCheckIn(endedTicket).then(() =>
+        queryClient.invalidateQueries({ queryKey: queryKeys.voiceUsage }));
+    }
     callTicketRef.current = null;
     toolRelayRef.current?.dispose();
     toolRelayRef.current = null;
@@ -1126,6 +1135,7 @@ export function useVoiceMode({
             previous?.close();
             // The server's count is the clock: restart the timers from it.
             scheduleCallLimitRef.current(liveToken.callTime);
+            if (liveToken.callTicket) callTicketRef.current = liveToken.callTicket;
             // An abandoned response's end marker may never arrive on the
             // resumed session; keeping the gate shut could swallow a reply.
             responseGateRef.current?.reset();
@@ -1135,6 +1145,11 @@ export function useVoiceMode({
             if (isCallTimeUp(error)) {
               // Retrying cannot help: the call's time is up.
               failureRef.current ??= { step: 'connection-lost', message: 'Call time limit reached' };
+              return 'failed';
+            }
+            if (getVoiceConnectionFailure(error).kind === 'upgrade-required') {
+              // The free plan's voice minutes for the month ran out mid-call.
+              failureRef.current ??= { step: 'connection-lost', message: 'Free voice minutes used up' };
               return 'failed';
             }
             logger.handledError('Voice reconnect attempt failed', error);
@@ -1248,20 +1263,32 @@ export function useVoiceMode({
         logger.handledError('Voice call time notice failed', error);
       }
     };
+    const prompts = callLimitPrompts(callTime.reason);
     const { warnInMs, endInMs } = callLimitSchedule(callTime.secondsLeft);
     if (warnInMs !== null) {
-      callLimitTimersRef.current.push(setTimeout(() => ask(CALL_ENDING_SOON_PROMPT), warnInMs));
+      callLimitTimersRef.current.push(setTimeout(() => ask(prompts.endingSoon), warnInMs));
     }
     callLimitTimersRef.current.push(
       setTimeout(() => {
         if (!isSessionActiveRef.current) return;
-        ask(CALL_TIME_UP_PROMPT);
+        ask(prompts.timeUp);
         endCallAfterGoodbye();
       }, endInMs),
     );
   }, [endCallAfterGoodbye]);
   const scheduleCallLimitRef = useRef(scheduleCallLimit);
   scheduleCallLimitRef.current = scheduleCallLimit;
+
+  // While connected, check in once a minute so voice minutes add up even if the call
+  // ends without a goodbye (app closed, crash, lost connection).
+  useEffect(() => {
+    if (!isConnected) return undefined;
+    const id = setInterval(() => {
+      const ticket = callTicketRef.current;
+      if (ticket) void sendVoiceUsageCheckIn(ticket);
+    }, VOICE_USAGE_CHECK_IN_MS);
+    return () => clearInterval(id);
+  }, [isConnected]);
 
   /**
    * Prepares a call before the tap: opens the Gemini session with the
@@ -1347,6 +1374,8 @@ export function useVoiceMode({
   const prefetch = useCallback(
     (target: { memoryId?: string | null; voiceName?: string } = {}) => {
       if (engineRef.current) return;
+      // The token and warm-up already send context to Gemini: only after AI consent.
+      if (!hasAiConsentNow()) return;
       const id = validMemoryId(target.memoryId ?? memoryId);
       const name = target.voiceName ?? voiceName;
       const key = voiceTokenKey(id, name);
@@ -1370,8 +1399,26 @@ export function useVoiceMode({
     refresh.left = VOICE_WARM_START_REFRESHES;
   }, []);
 
+  // The first call asks for AI consent, then starts with the latest connect().
+  const connectRef = useRef<(() => Promise<void>) | null>(null);
+  const connectAfterConsent = useCallback(async () => {
+    if (consentPromptRef.current) return;
+    consentPromptRef.current = true;
+    try {
+      if (!(await ensureAiConsent())) return;
+    } finally {
+      consentPromptRef.current = false;
+    }
+    await connectRef.current?.();
+  }, []);
+
   const connect = useCallback(async () => {
     if (isConnecting || isConnected || isDisconnectingRef.current) return;
+    // Nothing reaches the AI service until the member has agreed (once per account).
+    if (!hasAiConsentNow()) {
+      void connectAfterConsent();
+      return;
+    }
     // A call prepared on the call screen for this conversation and voice
     // (or still being prepared). Claimed now, before anything awaits, so
     // leaving the screen cannot close it from under this call.
@@ -1792,6 +1839,8 @@ export function useVoiceMode({
 
       // The call is up: arm its time limit, if the server set one.
       scheduleCallLimitRef.current(liveToken.callTime);
+      // Every call has a ticket (limited or not): reconnects and usage check-ins name the call by it.
+      if (liveToken.callTicket) callTicketRef.current = liveToken.callTicket;
 
       // Safety guard: The greeting shield prevents the model's initial spoken greeting
       // from leaking into the microphone and causing self-interruption.
@@ -1890,7 +1939,9 @@ export function useVoiceMode({
     resolveTargetMemoryId,
     setMuted,
     voiceName,
+    connectAfterConsent,
   ]);
+  connectRef.current = connect;
 
   const toggleMute = useCallback(() => {
     void Haptics.selectionAsync();

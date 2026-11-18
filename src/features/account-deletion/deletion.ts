@@ -47,3 +47,30 @@ export function buildDeleteAccountPayload(input: {
   if (input.reason === 'other' && details) payload.details = details.slice(0, 1000);
   return payload;
 }
+
+export interface StoreSubscriptionNotice {
+  body: string;
+  /** Which store's subscription settings "Manage subscription" opens. */
+  store: 'apple' | 'google';
+}
+
+/**
+ * Deleting the account doesn't cancel a store subscription, which keeps
+ * billing until it is cancelled in the store. Web (Polar) billing ends with
+ * the account, so it gets no notice. An unknown provider on iOS is treated as
+ * App Store billing, since that is the only way to buy Pro there.
+ */
+export function getStoreSubscriptionNotice(
+  provider: 'polar' | 'apple' | 'google' | undefined,
+  platform: string,
+): StoreSubscriptionNotice | null {
+  const store = provider === 'apple' || provider === 'google'
+    ? provider
+    : !provider && platform === 'ios' ? 'apple' : null;
+  if (!store) return null;
+  const name = store === 'apple' ? 'Apple' : 'Google Play';
+  return {
+    store,
+    body: `Your ${name} subscription keeps billing until you cancel it. Deleting your account doesn’t cancel it, so cancel it first in your ${name} subscriptions.`,
+  };
+}

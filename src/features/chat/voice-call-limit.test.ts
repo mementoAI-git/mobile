@@ -1,10 +1,20 @@
 import { describe, expect, test } from 'bun:test';
 import { buildEphemeralTokenUrl } from './voice-token-url';
-import { callLimitSchedule, isCallTimeUp, parseVoiceCallTime } from './voice-call-limit';
+import {
+  CALL_TIME_UP_PROMPT,
+  FREE_MINUTES_UP_PROMPT,
+  callLimitPrompts,
+  callLimitSchedule,
+  isCallTimeUp,
+  parseVoiceCallTime,
+} from './voice-call-limit';
 
 describe('voice call time limit', () => {
   test('reads the ticket and time left from the token response', () => {
-    expect(parseVoiceCallTime({ call_ticket: 't1', call_seconds_left: 1800 })).toEqual({ ticket: 't1', secondsLeft: 1800 });
+    expect(parseVoiceCallTime({ call_ticket: 't1', call_seconds_left: 1800 })).toEqual({ ticket: 't1', secondsLeft: 1800, reason: 'call' });
+    expect(
+      parseVoiceCallTime({ call_ticket: 't1', call_seconds_left: 600, call_limit_reason: 'free_monthly' }),
+    ).toEqual({ ticket: 't1', secondsLeft: 600, reason: 'free_monthly' });
     // No limit on the server: nothing to schedule.
     expect(parseVoiceCallTime({ token: 'x' })).toBeUndefined();
     expect(parseVoiceCallTime({ call_ticket: 't1', call_seconds_left: 0 })).toBeUndefined();
@@ -24,5 +34,10 @@ describe('voice call time limit', () => {
     expect(isCallTimeUp({ httpStatus: 403, details: { reason: 'voice_call_limit' } })).toBe(true);
     expect(isCallTimeUp({ httpStatus: 403, details: { reason: 'subscription_required' } })).toBe(false);
     expect(isCallTimeUp({ httpStatus: 503 })).toBe(false);
+  });
+
+  test('says goodbye for the free monthly minutes, not the call limit, when those run out', () => {
+    expect(callLimitPrompts('free_monthly').timeUp).toBe(FREE_MINUTES_UP_PROMPT);
+    expect(callLimitPrompts('call').timeUp).toBe(CALL_TIME_UP_PROMPT);
   });
 });

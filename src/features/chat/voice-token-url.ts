@@ -27,7 +27,7 @@ export type EphemeralTokenParams = {
   callTicket?: string | null;
 };
 
-function deviceTimeZone(): string | undefined {
+export function deviceTimeZone(): string | undefined {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
   } catch {

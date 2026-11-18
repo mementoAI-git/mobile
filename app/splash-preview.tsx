@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import RotateCcw from 'lucide-react-native/icons/rotate-ccw';
 import Repeat from 'lucide-react-native/icons/repeat';
@@ -16,7 +16,13 @@ import { COLORS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { iconSize, minTouchTarget, radius } from '@/constants/responsive';
 
-export default function SplashPreviewScreen() {
+/** Developer tool for tuning the splash animation; production builds never show it. */
+export default function SplashPreviewRoute() {
+  if (!__DEV__) return <Redirect href="/" />;
+  return <SplashPreviewScreen />;
+}
+
+function SplashPreviewScreen() {
   const router = useRouter();
   const [replayKey, setReplayKey] = useState(0);
   const [loop, setLoop] = useState(true);

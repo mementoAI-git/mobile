@@ -6,7 +6,7 @@
  * Restore Purchases and the store disclosure stay at the bottom, as the stores require.
  */
 import React, { useCallback, useMemo } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -14,7 +14,6 @@ import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { useQueryClient } from '@tanstack/react-query';
 import AudioLines from 'lucide-react-native/icons/audio-lines';
-import Brain from 'lucide-react-native/icons/brain';
 import Check from 'lucide-react-native/icons/check';
 import HardDrive from 'lucide-react-native/icons/hard-drive';
 import Lightbulb from 'lucide-react-native/icons/lightbulb';
@@ -25,7 +24,7 @@ import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SettingsSubpageHeader } from '@/components/settings/SettingsSubpageHeader';
 import type { ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { getIapDisclosureCopy, IAP_LEGAL_URLS, iapService } from '@/features/billing';
+import { getIapDisclosureCopy, getTrialCopy, IAP_LEGAL_URLS, iapService, SUBSCRIBE_LABEL } from '@/features/billing';
 import {
   FREE_FEATURES,
   PRO_FEATURES,
@@ -46,7 +45,6 @@ const FEATURE_ICONS: Record<string, typeof Check> = {
   'Memory insights': Lightbulb,
   'Standard uploads and storage (200 MB)': HardDrive,
   'Voice mode conversations': AudioLines,
-  'Supermemory integration': Brain,
   'Bigger storage (10 GB)': HardDrive,
 };
 
@@ -88,14 +86,30 @@ export default function ManagePlanScreen() {
   const { summary, isLoading, error, refetch } = useSubscription();
   const [resuming, setResuming] = React.useState(false);
 
+  const selectedProduct = products?.[selectedInterval];
+  /** Store checkout: promise a trial only when StoreKit offers one this Apple ID can redeem. */
+  const trialCopy = useMemo(() => (selectedProduct ? getTrialCopy({
+    platform: Platform.OS,
+    freeTrial: selectedProduct.freeTrial,
+    eligible: selectedProduct.introOfferEligible,
+    storeAvailable: selectedProduct.storeAvailable,
+    localizedPrice: selectedProduct.localizedPrice,
+    interval: selectedProduct.interval,
+  }) : null), [selectedProduct]);
+  const storeBilled = Platform.OS === 'ios' || Platform.OS === 'android';
+
   const plan = useMemo(() => getPlanState({
     summary,
     loading: isLoading,
     error,
     selectedInterval,
     canCheckout: purchaseAvailable,
-  }), [summary, isLoading, error, selectedInterval, purchaseAvailable]);
+    upgradeLabel: storeBilled ? trialCopy?.label ?? SUBSCRIBE_LABEL : undefined,
+  }), [summary, isLoading, error, selectedInterval, purchaseAvailable, storeBilled, trialCopy]);
   const interval = plan.interval;
+  const trialDisclosure = plan.pro.action === 'checkout' && plan.pro.label === trialCopy?.label
+    ? trialCopy.disclosure
+    : null;
   const busy = checkoutLoading || resuming;
   const price = products?.[interval]?.storeAvailable
     ? products[interval].localizedPrice
@@ -260,6 +274,7 @@ export default function ManagePlanScreen() {
           >
             {plan.pro.label}
           </Button>
+          {trialDisclosure ? <Text style={styles.trialDisclosure}>{trialDisclosure}</Text> : null}
           <View style={styles.priceRow}>
             <Text style={styles.price}>{price}</Text>
             <Text style={styles.pricePeriod}>/ {interval === 'monthly' ? 'month' : 'year'}</Text>
@@ -393,6 +408,7 @@ const createStyles = (colors: ThemeColors) => ({
   intervalText: { ...TYPE.buttonSmall, color: colors.textBase },
   intervalTextActive: { color: colors.activeText },
   note: { ...TYPE.bodySmall, color: colors.textBase },
+  trialDisclosure: { ...TYPE.bodySmall, color: colors.textBase, textAlign: 'center' as const, marginTop: -12 },
   // Web insights-card: 12px radius, 20px padding.
   cancelRow: {
     gap: 12,

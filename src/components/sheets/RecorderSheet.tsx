@@ -1,111 +1,74 @@
-import React, { useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Check from 'lucide-react-native/icons/check';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import X from 'lucide-react-native/icons/x';
 import Pause from 'lucide-react-native/icons/pause';
 import Play from 'lucide-react-native/icons/play';
 import { Button } from '@/components/ui/Button';
-import { toast } from '@/components/ui/Toast';
 import { TYPE } from '@/constants/typography';
 import type { ThemeColors } from '@/constants/tokens';
 import { formatVoiceCallDuration } from '@/features/chat/voice-call-flow';
 import { SHEET_GROUP_GAP } from '@/features/layout/sheet-safe-area';
-import { useFileUpload } from '@/hooks/mutations/use-file-upload';
-import { useQuickCapture } from '@/hooks/mutations/use-quick-capture';
-import { useStoryRecording } from '@/hooks/use-story-recording';
+import { useRecordingSession } from '@/features/overview/recording-session';
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
-import { showPermissionRecoveryAlert } from '@/lib/show-permission-recovery-alert';
-import type { PermissionLike } from '@/lib/permission-recovery';
-import { useUserStore } from '@/store';
 
 const ROUND_BUTTON = { width: 56, height: 56, minHeight: 56 };
+const MINIMIZE_BUTTON = { width: 44, height: 44, minHeight: 44 };
 const BAR_WIDTH = 4;
 const WAVE_HEIGHT = 56;
+const ACTION_GAP = 12;
+/** Done is 70% of the room left beside the two round buttons; the row stays centred with 12px gaps. */
+const DONE_WIDTH_RATIO = 0.7;
 
 /**
- * The Overview record button's recorder. Recording starts when the sheet opens;
- * Done uploads the audio and saves it as a private quick capture that the AI
- * names from the transcript (`auto_title`). A failed save keeps the recording
- * on the device, so the sheet offers it again, including after a swipe-down.
+ * The Overview recorder, expanded. The take itself belongs to RecordingSessionProvider,
+ * so swiping this sheet down (or the chevron) only minimizes it: it keeps recording and
+ * floats as a card over every screen (FloatingRecorder) until Done or X.
  */
 export function RecorderSheet({ onClose }: { onClose: () => void }) {
   const colors = useThemeColors();
   const styles = useThemeStyles(createStyles);
-  const owner = useUserStore((s) => s.user?._id) ?? 'local';
-  const { mutateAsync: upload } = useFileUpload();
-  const { mutateAsync: quickCapture } = useQuickCapture();
-  const mountedRef = useRef(true);
+  const session = useRecordingSession();
+  const { isPaused, duration, levels, error, busy, recordingLive, saving, pending, startFailed, closeRequest, done, discard, togglePause } = session;
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
-  useEffect(() => () => { mountedRef.current = false; }, []);
 
-  const saveRecording = useCallback(async (uri: string) => {
-    let fileId: string | undefined;
-    try {
-      fileId = (await upload({ uri, type: 'audio/m4a', name: `voice_${Date.now()}.m4a` }))?._id;
-    } catch { /* Reported below. */ }
-    if (!fileId) throw new Error('Couldn’t upload your recording. It’s kept on this phone, so you can try again.');
-    try {
-      await quickCapture({ body: '', attachments: [fileId], visibility: 'private', auto_title: true });
-    } catch {
-      throw new Error('Couldn’t save your recording. It’s kept on this phone, so you can try again.');
-    }
-    toast('Recording saved. We’ll name it once it’s transcribed.', 'success');
-    if (mountedRef.current) closeRef.current();
-  }, [quickCapture, upload]);
-
-  const handlePermissionDenied = useCallback((permission: PermissionLike) => {
-    showPermissionRecoveryAlert({
-      permission,
-      title: 'Microphone is off',
-      description: 'Allow microphone access to record.',
-      settingsDescription: 'Microphone access is turned off in Settings. Turn it back on to record.',
-    });
-    closeRef.current();
-  }, []);
-
-  const recording = useStoryRecording({
-    owner: `overview-recorder:${owner}`,
-    onRecording: saveRecording,
-    onPermissionDenied: handlePermissionDenied,
-  });
-  const { ready, canRetry, phase, isPaused, duration, levels, error, start, stop, pause, resume, cancel, retry, discard } = recording;
-
-  // Start once the hook has checked for a recording kept from an earlier session.
-  const startedRef = useRef(false);
+  // The take ended on its own (saved, or the microphone was refused): close.
+  const firstCloseRequest = useRef(closeRequest);
   useEffect(() => {
-    if (!ready || startedRef.current || canRetry) return;
-    startedRef.current = true;
-    void start();
-  }, [canRetry, ready, start]);
-
-  const saving = phase === 'transcribing';
-  const recordingLive = phase === 'recording';
-  // A kept recording waiting to be saved (after a failure or a swipe-down mid-take).
-  const pending = phase === 'idle' && canRetry;
-
-  const handleDone = useCallback(() => {
-    if (pending) void retry();
-    else void stop();
-  }, [pending, retry, stop]);
+    if (closeRequest !== firstCloseRequest.current) closeRef.current();
+  }, [closeRequest]);
 
   const handleCancel = useCallback(async () => {
-    if (pending) await discard();
-    else await cancel();
+    await discard();
     closeRef.current();
-  }, [cancel, discard, pending]);
+  }, [discard]);
 
-  const togglePause = useCallback(() => {
-    if (isPaused) resume();
-    else pause();
-  }, [isPaused, pause, resume]);
+  const [doneWidth, setDoneWidth] = useState(0);
+  const handleActionsLayout = useCallback((event: LayoutChangeEvent) => {
+    const room = event.nativeEvent.layout.width - ROUND_BUTTON.width * 2 - ACTION_GAP * 2;
+    setDoneWidth(Math.round(room * DONE_WIDTH_RATIO));
+  }, []);
 
-  const status = pending ? 'Not saved yet' : isPaused ? 'Paused' : formatVoiceCallDuration(duration);
+  const status = pending ? 'Not saved yet' : startFailed ? 'Not recording' : isPaused ? 'Paused' : formatVoiceCallDuration(duration);
   const live = recordingLive && !isPaused;
 
   return (
     <View style={styles.root}>
       <View style={styles.header}>
+        {busy ? (
+          <Button
+            variant="ghost"
+            rounded="full"
+            iconOnly
+            onPress={() => closeRef.current()}
+            accessibilityLabel="Minimize recorder, keep recording"
+            style={[MINIMIZE_BUTTON, styles.minimize]}
+          >
+            <ChevronDown size={22} color={colors.textBase} />
+          </Button>
+        ) : null}
         <Text style={styles.title} accessibilityRole="header">New recording</Text>
         <View style={styles.statusRow} accessibilityLiveRegion="polite">
           <View style={[styles.dot, { backgroundColor: live ? colors.success : colors.textMuted }]} />
@@ -126,7 +89,7 @@ export function RecorderSheet({ onClose }: { onClose: () => void }) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <View style={styles.actions}>
+      <View style={styles.actions} onLayout={handleActionsLayout}>
         <Button
           variant="outline"
           rounded="full"
@@ -141,14 +104,14 @@ export function RecorderSheet({ onClose }: { onClose: () => void }) {
         <Button
           size="lg"
           rounded="full"
-          className="flex-1"
-          onPress={handleDone}
+          style={doneWidth ? { width: doneWidth } : styles.doneFallback}
+          onPress={done}
           loading={saving}
-          disabled={!pending && !recordingLive}
-          leftIcon={<Check size={22} color={colors.textInverse} strokeWidth={2.4} />}
-          accessibilityLabel={pending ? 'Save recording' : 'Done, save recording'}
+          disabled={!pending && !recordingLive && !startFailed}
+          leftIcon={startFailed ? undefined : <Check size={22} color={colors.textInverse} strokeWidth={2.4} />}
+          accessibilityLabel={pending ? 'Save recording' : startFailed ? 'Try recording again' : 'Done, save recording'}
         >
-          {pending ? 'Save' : 'Done'}
+          {pending ? 'Save' : startFailed ? 'Try again' : 'Done'}
         </Button>
         <Button
           variant="outline"
@@ -161,7 +124,7 @@ export function RecorderSheet({ onClose }: { onClose: () => void }) {
         >
           {isPaused
             ? <Play size={20} color={colors.textStrong} fill={colors.textStrong} />
-            : <Pause size={20} color={colors.textStrong} fill={colors.textStrong} />}
+            : <Pause size={20} color={colors.textStrong} fill={colors.textStrong} strokeWidth={0} />}
         </Button>
       </View>
     </View>
@@ -176,6 +139,11 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   header: {
     alignItems: 'center',
     gap: 8,
+  },
+  minimize: {
+    position: 'absolute',
+    left: 0,
+    top: -6,
   },
   title: {
     ...TYPE.sheetTitle,
@@ -216,6 +184,10 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'center',
+    gap: ACTION_GAP,
+  },
+  doneFallback: {
+    flex: 1,
   },
 });

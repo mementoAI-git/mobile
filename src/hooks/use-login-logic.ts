@@ -21,7 +21,7 @@ import {
 import { normalizeAuthCompletion } from '@/api/contract-adapter';
 import { completeAuthResponse } from '@/features/auth/auth-completion';
 import { signInWithGoogleNative } from '@/features/auth/google-auth';
-import { signInWithAppleNative } from '@/features/auth/apple-auth';
+import { appleOAuthBody, signInWithAppleNative } from '@/features/auth/apple-auth';
 
 const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
@@ -166,10 +166,7 @@ export function useLoginLogic() {
       if (nativeResult.success && nativeResult.identityToken) {
         const res = await client.post(
           `${endpoint.oauth}apple`,
-          {
-            id_token: nativeResult.identityToken,
-            ...(nativeResult.user ? { user: nativeResult.user } : {}),
-          },
+          appleOAuthBody(nativeResult),
           { skipAuth: true } as never,
         );
         const completion = await completeAuthResponse(res.data, establishSession);

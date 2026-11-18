@@ -5,5 +5,6 @@ import WidgetKit
 struct CallActivityBundle: WidgetBundle {
   var body: some Widget {
     CallLiveActivity()
+    RecordingLiveActivity()
   }
 }
