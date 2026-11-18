@@ -11,8 +11,9 @@ export const CALL_ACTIONS_CAPABILITY = 'call_actions';
 /**
  * Screens the model may open. Keep the keys in sync with
  * VOICE_SCREEN_DESTINATIONS in api/src/module/api/ai/live-session-config.ts,
- * apart from people, which only web has; the model hears "That screen isn't
- * available" for it here.
+ * apart from people, which only web has, and time_capsules, paused (its
+ * screen is a Coming soon page); the model hears "That screen isn't
+ * available" for those here.
  */
 export const VOICE_DESTINATIONS = {
   home: { href: '/(tabs)/overview', label: 'home' },
@@ -21,7 +22,6 @@ export const VOICE_DESTINATIONS = {
   bookmarks: { href: '/(tabs)/stories?filter=bookmarked', label: 'your bookmarked stories' },
   new_story: { href: '/editor?mode=story&lockMode=true', label: 'a new story' },
   quick_note: { href: '/editor?mode=quick-capture', label: 'a quick note' },
-  time_capsules: { href: '/(tabs)/capsule', label: 'your time capsules' },
   explore_prompts: { href: '/(tabs)/explore', label: 'topics' },
   insights: { href: '/insights', label: 'insights' },
   account: { href: '/account', label: 'your account' },

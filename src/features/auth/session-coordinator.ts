@@ -14,6 +14,7 @@ import {
   persistSessionUser,
   sanitizeUser,
 } from './session-credentials';
+import { signOutIdentityProviders } from './identity-provider-sign-out';
 import { post } from '@/api/mutations';
 import { getOnboardingUserAccountId } from '@/features/onboarding/onboarding-completion';
 import endpoint from '@/api/endpoint';
@@ -143,6 +144,7 @@ export function terminateSession(reason: TerminationReason): Promise<void> {
         secureStorage.deleteItem(storageKeys.pendingOnboardingSkip),
         useOfflineQueueStore.getState().clearQueue(),
         clearPersistedQueryCache(),
+        signOutIdentityProviders(),
       ];
       if (reason === 'deleted') {
         deletions.push(

@@ -1,4 +1,5 @@
 import { currentDigitalMindName, currentDigitalMindHeaders } from '@/features/chat/digital-mind-runtime';
+import { ensureAiConsent, hasAiConsentNow } from '@/features/chat/ai-consent-gate';
 import {
   callLimitPrompts,
   callLimitSchedule,
@@ -444,6 +445,8 @@ export function useVoiceMode({
     left: VOICE_WARM_START_REFRESHES,
   });
   const warmStartedRef = useRef(false);
+  // Set while connect() waits on the AI consent sheet, so a second tap doesn't start a second call.
+  const consentPromptRef = useRef(false);
   // Bumped by each connect(), so an older connect that is still awaiting can
   // tell it was superseded.
   const connectAttemptRef = useRef(0);
@@ -1371,6 +1374,8 @@ export function useVoiceMode({
   const prefetch = useCallback(
     (target: { memoryId?: string | null; voiceName?: string } = {}) => {
       if (engineRef.current) return;
+      // The token and warm-up already send context to Gemini: only after AI consent.
+      if (!hasAiConsentNow()) return;
       const id = validMemoryId(target.memoryId ?? memoryId);
       const name = target.voiceName ?? voiceName;
       const key = voiceTokenKey(id, name);
@@ -1394,8 +1399,26 @@ export function useVoiceMode({
     refresh.left = VOICE_WARM_START_REFRESHES;
   }, []);
 
+  // The first call asks for AI consent, then starts with the latest connect().
+  const connectRef = useRef<(() => Promise<void>) | null>(null);
+  const connectAfterConsent = useCallback(async () => {
+    if (consentPromptRef.current) return;
+    consentPromptRef.current = true;
+    try {
+      if (!(await ensureAiConsent())) return;
+    } finally {
+      consentPromptRef.current = false;
+    }
+    await connectRef.current?.();
+  }, []);
+
   const connect = useCallback(async () => {
     if (isConnecting || isConnected || isDisconnectingRef.current) return;
+    // Nothing reaches the AI service until the member has agreed (once per account).
+    if (!hasAiConsentNow()) {
+      void connectAfterConsent();
+      return;
+    }
     // A call prepared on the call screen for this conversation and voice
     // (or still being prepared). Claimed now, before anything awaits, so
     // leaving the screen cannot close it from under this call.
@@ -1916,7 +1939,9 @@ export function useVoiceMode({
     resolveTargetMemoryId,
     setMuted,
     voiceName,
+    connectAfterConsent,
   ]);
+  connectRef.current = connect;
 
   const toggleMute = useCallback(() => {
     void Haptics.selectionAsync();

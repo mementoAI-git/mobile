@@ -4,7 +4,7 @@
  */
 
 import { Platform } from 'react-native';
-import { TERMS_URL, PRIVACY_URL, WEB_BASE_URL } from '@/lib/env';
+import { TERMS_URL, PRIVACY_URL, SUPPORT_EMAIL_URL } from '@/lib/env';
 import type { IAPPlanInterval, IAPProduct } from './iap-types';
 
 export const IAP_SKUS = {
@@ -62,7 +62,7 @@ export const FALLBACK_PRODUCTS: Record<IAPPlanInterval, IAPProduct> = {
 export const IAP_LEGAL_URLS = {
   terms: TERMS_URL,
   privacy: PRIVACY_URL,
-  support: `${WEB_BASE_URL}/support`,
+  support: SUPPORT_EMAIL_URL,
 };
 
 export const IAP_STORE_MANAGEMENT_URLS = {

@@ -74,9 +74,13 @@ function metricValue(stats: MilestoneStatsInput, metric: MilestoneMetric): numbe
   return Math.max(0, Number(values[metric]) || 0);
 }
 
-/** Every milestone, in catalogue order, measured against the account's figures. */
+/**
+ * Every available milestone, in catalogue order, measured against the
+ * account's figures. Milestones for paused features (time capsules) are left
+ * out rather than shown as "Coming soon", which App Review flags.
+ */
 export function calculateMilestones(stats: MilestoneStatsInput): Milestone[] {
-  return MILESTONE_CATALOGUE.map((definition) => {
+  return MILESTONE_CATALOGUE.filter((definition) => definition.available ?? true).map((definition) => {
     const available = definition.available ?? true;
     const current = metricValue(stats, definition.metric);
     const achieved = available && current >= definition.target;
@@ -87,9 +91,7 @@ export function calculateMilestones(stats: MilestoneStatsInput): Milestone[] {
       description: definition.description,
       achieved,
       available,
-      progressLabel: !available
-        ? 'Coming soon'
-        : achieved
+      progressLabel: achieved
           ? 'Unlocked'
           : definition.href
             ? 'Start'

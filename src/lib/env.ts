@@ -29,8 +29,12 @@ function webBaseUrlFromApiBaseUrl(apiBaseUrl: string): string {
 }
 
 export const WEB_BASE_URL = webBaseUrlFromApiBaseUrl(API_BASE_URL);
-export const TERMS_URL = `${WEB_BASE_URL}/terms`;
-export const PRIVACY_URL = `${WEB_BASE_URL}/privacy`;
+// The legal pages live on the marketing site; the web app has no /terms or
+// /privacy route (it answers them with its 404 page).
+export const LEGAL_SITE_URL = 'https://www.mymemento.io';
+export const TERMS_URL = `${LEGAL_SITE_URL}/legal-pages/terms-of-service/`;
+export const PRIVACY_URL = `${LEGAL_SITE_URL}/legal-pages/privacy/`;
+export const SUPPORT_EMAIL_URL = 'mailto:support@mymemento.io';
 export const SIGNUP_URL = `${WEB_BASE_URL}/signup`;
 
 export function publishedPostUrl(memoryId?: string | null): string {

@@ -51,9 +51,11 @@ describe('IAP Constants and SKUs', () => {
   });
 
   test('contains mandatory App Store legal URLs', () => {
-    expect(IAP_LEGAL_URLS.terms).toContain('/terms');
-    expect(IAP_LEGAL_URLS.privacy).toContain('/privacy');
-    expect(IAP_LEGAL_URLS.support).toContain('/support');
+    // The web app answers /terms and /privacy with its 404 page; the real
+    // pages are on the marketing site.
+    expect(IAP_LEGAL_URLS.terms).toBe('https://www.mymemento.io/legal-pages/terms-of-service/');
+    expect(IAP_LEGAL_URLS.privacy).toBe('https://www.mymemento.io/legal-pages/privacy/');
+    expect(IAP_LEGAL_URLS.support).toBe('mailto:support@mymemento.io');
     expect(IAP_LEGAL_URLS.terms.startsWith('https://')).toBe(true);
     expect(IAP_LEGAL_URLS.privacy.startsWith('https://')).toBe(true);
   });

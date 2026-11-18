@@ -22,11 +22,10 @@ describe('milestone celebration helpers', () => {
     expect(milestones.every((m) => !m.achieved)).toBe(true);
   });
 
-  test('orders what is next first: closest unreached, then reached, then unavailable', () => {
+  test('orders what is next first: closest unreached, then reached', () => {
     const ordered = orderMilestones(calculateMilestones({ onboardingComplete: true, memoryCount: 8, streakDays: 1, beneficiaryCount: 1 })).map((m) => m.id);
     expect(ordered[0]).toBe('stories-ten');
     expect(ordered.indexOf('legacy-contact')).toBeGreaterThan(ordered.indexOf('first-reflection'));
-    expect(ordered.at(-1)).toBe('time-capsule');
   });
 });
 
@@ -50,11 +49,10 @@ describe('Complete onboarding milestone', () => {
 });
 
 describe('milestone presentation', () => {
-  test('Future Messenger is disabled while time capsules are paused', () => {
-    const capsule = calculateMilestones({ capsuleCount: 3 }).find((m) => m.id === 'time-capsule');
-    expect(capsule?.available).toBe(false);
-    expect(capsule?.achieved).toBe(false);
-    expect(capsule?.progressLabel).toBe('Coming soon');
+  test('Future Messenger is hidden while time capsules are paused, with no Coming soon label', () => {
+    const milestones = calculateMilestones({ capsuleCount: 3 });
+    expect(milestones.find((m) => m.id === 'time-capsule')).toBeUndefined();
+    expect(milestones.some((m) => m.progressLabel === 'Coming soon')).toBe(false);
   });
 
   test('ticks are brand orange and the score shows the enrichment card level', async () => {

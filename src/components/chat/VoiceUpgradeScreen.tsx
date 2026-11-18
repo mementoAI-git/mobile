@@ -1,6 +1,6 @@
 import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import X from 'lucide-react-native/icons/x';
@@ -14,7 +14,7 @@ import { iconSize, radius, minTouchTarget, responsiveSpace, ms } from '@/constan
 import { launchBillingCheckout } from '@/features/settings/billing-flow';
 import { useIAP } from '@/features/billing/use-iap';
 import { useSubscription } from '@/hooks/queries/use-subscription';
-import { IAP_DISCLOSURE_COPY, IAP_LEGAL_URLS } from '@/features/billing';
+import { getTrialCopy, IAP_DISCLOSURE_COPY, IAP_LEGAL_URLS, SUBSCRIBE_LABEL } from '@/features/billing';
 import {
   getVoiceUpgradeCheckout,
   type VoiceUpgradePlan,
@@ -68,6 +68,19 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
       badge: 'Save 15%',
     },
   ];
+
+  const selectedProduct = products[selectedPlan];
+  /** A trial is promised only when StoreKit offers one this Apple ID can still redeem. */
+  const trialCopy = useMemo(() => getTrialCopy({
+    platform: Platform.OS,
+    freeTrial: selectedProduct.freeTrial,
+    eligible: selectedProduct.introOfferEligible,
+    storeAvailable: selectedProduct.storeAvailable,
+    localizedPrice: selectedProduct.localizedPrice,
+    interval: selectedProduct.interval,
+  }), [selectedProduct]);
+  const upgradeLabel = trialCopy?.label
+    ?? (Platform.OS === 'ios' || Platform.OS === 'android' ? SUBSCRIBE_LABEL : 'Upgrade to Pro');
 
   const handleSelectPlan = useCallback((plan: VoiceUpgradePlan) => {
     void Haptics.selectionAsync();
@@ -179,8 +192,13 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
             onPress={() => { void handleUpgrade(); }}
             className="h-14"
           >
-            Upgrade to Pro
+            {upgradeLabel}
           </Button>
+          {trialCopy ? (
+            <Text style={[TYPE.bodySmall, { color: COLORS.textBase, textAlign: 'center' }]}>
+              {trialCopy.disclosure}
+            </Text>
+          ) : null}
 
           <Button
             fullWidth

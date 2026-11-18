@@ -22,7 +22,7 @@ const FEATURES: { title: string; description: string; image: ImageSourcePropType
   {
     title: 'Converse with your digital twin',
     description:
-      'Talk to your AI twin, shaped by your stories and values. It learns from you, grows with you, and speaks in your voice.',
+      'Talk with your AI twin, shaped by your stories and values. It remembers what you share, grows with you, and talks things through with you.',
     image: require('../../assets/images/onboarding/welcome-feature-twin.png'),
   },
   {
@@ -96,8 +96,8 @@ export default function OnboardWelcomeScreen() {
         >
           <Text style={[TYPE.monoLabel, { color: colors.privacyNoteLabel }]}>MEMENTO IS PRIVATE BY DESIGN</Text>
           <Text style={[TYPE.mono, { color: colors.textStrong }]}>
-            Your entries on Memento AI are encrypted and only visible to you. You decide what to
-            share, when to share, and with whom.
+            Your entries are private to your account by default and encrypted in transit and at
+            rest. You decide what to share, when to share, and with whom.
           </Text>
         </Animated.View>
 
