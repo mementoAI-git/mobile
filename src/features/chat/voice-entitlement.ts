@@ -16,9 +16,10 @@ export function getVoiceConnectionFailure(error: unknown): VoiceConnectionFailur
     error?: string;
     feature?: string;
     data?: { error?: string; feature?: string };
+    details?: { error?: string; feature?: string };
   } | null;
-  const gateError = apiError?.error ?? apiError?.data?.error;
-  const gateFeature = apiError?.feature ?? apiError?.data?.feature;
+  const gateError = apiError?.error ?? apiError?.data?.error ?? apiError?.details?.error;
+  const gateFeature = apiError?.feature ?? apiError?.data?.feature ?? apiError?.details?.feature;
   if (
     apiError?.status === 402
     && (

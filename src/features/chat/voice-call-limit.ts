@@ -1,6 +1,7 @@
 /**
- * The optional time limit on a voice call. The API sets it (VOICE_MAX_CALL_MINUTES)
- * and sends it with each token: a signed ticket for when the call started, and
+ * The time limit on a voice call. The API sets it, from the optional per-call
+ * limit (VOICE_MAX_CALL_MINUTES) or, on the free plan, the voice minutes left
+ * this month, and sends it with each token: a signed ticket for when the call started, and
  * how many seconds are left. The app gives a spoken heads-up shortly before
  * the end, then asks Memento to say goodbye; the call ends after the goodbye.
  */
@@ -9,6 +10,8 @@ export type VoiceCallTime = {
   ticket: string;
   /** Seconds left when the token was issued. */
   secondsLeft: number;
+  /** What ends the call: its own time limit, or the free plan's monthly voice minutes running out. */
+  reason: 'call' | 'free_monthly';
 };
 
 /** How long before the end Memento mentions that time is nearly up. */
@@ -22,13 +25,28 @@ export const CALL_ENDING_SOON_PROMPT =
 export const CALL_TIME_UP_PROMPT =
   'The time for this call is up. Say a short, warm goodbye in one sentence now, and say they can start a new call any time.';
 
+/** Asked of Memento when about two minutes of the month's free voice minutes remain. */
+export const FREE_MINUTES_ENDING_SOON_PROMPT =
+  'About two minutes of their free voice minutes for this month are left. When there is a natural pause, let them know gently, in one short sentence. Then carry on.';
+
+/** Asked of Memento when the month's free voice minutes are used up. */
+export const FREE_MINUTES_UP_PROMPT =
+  'Their free voice minutes for this month are used up. Say a short, warm goodbye in one sentence now, and mention they can upgrade to Pro to keep talking.';
+
+/** The prompts for whichever limit ends the call. */
+export function callLimitPrompts(reason: VoiceCallTime['reason']): { endingSoon: string; timeUp: string } {
+  return reason === 'free_monthly'
+    ? { endingSoon: FREE_MINUTES_ENDING_SOON_PROMPT, timeUp: FREE_MINUTES_UP_PROMPT }
+    : { endingSoon: CALL_ENDING_SOON_PROMPT, timeUp: CALL_TIME_UP_PROMPT };
+}
+
 export function parseVoiceCallTime(response: Record<string, unknown>): VoiceCallTime | undefined {
   const ticket = response.call_ticket;
   const secondsLeft = response.call_seconds_left;
   if (typeof ticket !== 'string' || !ticket || typeof secondsLeft !== 'number' || !(secondsLeft > 0)) {
     return undefined;
   }
-  return { ticket, secondsLeft };
+  return { ticket, secondsLeft, reason: response.call_limit_reason === 'free_monthly' ? 'free_monthly' : 'call' };
 }
 
 /** When, from now, to give the heads-up (if there is time for one) and to end. */

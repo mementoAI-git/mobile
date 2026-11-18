@@ -1,7 +1,6 @@
 import { currentDigitalMindName, currentDigitalMindHeaders } from '@/features/chat/digital-mind-runtime';
 import {
-  CALL_ENDING_SOON_PROMPT,
-  CALL_TIME_UP_PROMPT,
+  callLimitPrompts,
   callLimitSchedule,
   isCallTimeUp,
   type VoiceCallTime,
@@ -1137,6 +1136,11 @@ export function useVoiceMode({
               failureRef.current ??= { step: 'connection-lost', message: 'Call time limit reached' };
               return 'failed';
             }
+            if (getVoiceConnectionFailure(error).kind === 'upgrade-required') {
+              // The free plan's voice minutes for the month ran out mid-call.
+              failureRef.current ??= { step: 'connection-lost', message: 'Free voice minutes used up' };
+              return 'failed';
+            }
             logger.handledError('Voice reconnect attempt failed', error);
           }
         }
@@ -1248,14 +1252,15 @@ export function useVoiceMode({
         logger.handledError('Voice call time notice failed', error);
       }
     };
+    const prompts = callLimitPrompts(callTime.reason);
     const { warnInMs, endInMs } = callLimitSchedule(callTime.secondsLeft);
     if (warnInMs !== null) {
-      callLimitTimersRef.current.push(setTimeout(() => ask(CALL_ENDING_SOON_PROMPT), warnInMs));
+      callLimitTimersRef.current.push(setTimeout(() => ask(prompts.endingSoon), warnInMs));
     }
     callLimitTimersRef.current.push(
       setTimeout(() => {
         if (!isSessionActiveRef.current) return;
-        ask(CALL_TIME_UP_PROMPT);
+        ask(prompts.timeUp);
         endCallAfterGoodbye();
       }, endInMs),
     );

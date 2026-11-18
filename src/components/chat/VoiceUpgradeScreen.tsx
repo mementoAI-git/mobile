@@ -126,9 +126,9 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
         </TouchableOpacity>
 
         <View style={styles.headingBlock}>
-          <Text style={styles.title}>Voice mode is a Pro feature</Text>
+          <Text style={styles.title}>You’ve used this month’s free voice minutes</Text>
           <Text style={styles.subtitle}>
-            Upgrade to talk with Memento hands-free. Pro includes unlimited voice conversations.
+            Free includes 90 minutes of voice mode each month. Upgrade to Pro for unlimited voice conversations.
           </Text>
         </View>
 
