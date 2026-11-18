@@ -77,6 +77,7 @@ import {
   SENTRY_TRACES_SAMPLE_RATE,
 } from '@/lib/env';
 import { tracePropagationTargetsFor } from '@/lib/sentry-tracing';
+import { syncAnalyticsUser, trackScreen } from '@/lib/analytics';
 import { normalizeAppHref } from '@/lib/navigation';
 import { queryClient } from '@/lib/query-client';
 import { logger } from '@/lib/logger';
@@ -310,6 +311,17 @@ function RootLayout() {
 
   const router = useRouter();
   const segments = useSegments();
+
+  // Analytics follows the session: identify on sign-in, reset on sign-out.
+  useEffect(() => {
+    if (phase === 'authenticated') syncAnalyticsUser(user, true);
+    else if (phase === 'anonymous') syncAnalyticsUser(null, false);
+  }, [phase, user]);
+
+  const screenKey = segments.join('/');
+  useEffect(() => {
+    trackScreen(screenKey ? screenKey.split('/') : []);
+  }, [screenKey]);
 
   const rootNavigationState = useRootNavigationState();
   const navigationReady = Boolean(

@@ -11,7 +11,10 @@
         "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "development",
         "EXPO_PUBLIC_API_BASE_URL": "https://dev.mymemento.io/api",
         "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "1",
-        "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "true"
+        "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "true",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_mqmWoDWycGmL6r62SxciYRYqPphPcHtF6WqZu3nXtrs3",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
+        "EXPO_PUBLIC_POSTHOG_ENVIRONMENT": "development"
       },
       "android": {
         "buildType": "apk"
@@ -27,14 +30,20 @@
         "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE": "0.2",
         "SENTRY_ALLOW_FAILURE": "true",
         "EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK": "true",
-        "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "true"
+        "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "true",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_mqmWoDWycGmL6r62SxciYRYqPphPcHtF6WqZu3nXtrs3",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
+        "EXPO_PUBLIC_POSTHOG_ENVIRONMENT": "staging"
       }
     },
     "apk": {
       "extends": "preview",
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "apk"
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "apk",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_mqmWoDWycGmL6r62SxciYRYqPphPcHtF6WqZu3nXtrs3",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
+        "EXPO_PUBLIC_POSTHOG_ENVIRONMENT": "staging"
       },
       "android": {
         "buildType": "apk"
@@ -55,7 +64,10 @@
         "EXPO_APPLE_TEAM_ID": "LKYKU36B7W",
         "EXPO_APPLE_TEAM_TYPE": "INDIVIDUAL",
         "EXPO_PUBLIC_SENTRY_DSN": "https://8551764415ef9db1c446d9fa44571728@o4511222887022592.ingest.us.sentry.io/4511469048692736",
-        "EXPO_PUBLIC_VOICE_IOS_VOICE_PROCESSING": "true"
+        "EXPO_PUBLIC_VOICE_IOS_VOICE_PROCESSING": "true",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_mqmWoDWycGmL6r62SxciYRYqPphPcHtF6WqZu3nXtrs3",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
+        "EXPO_PUBLIC_POSTHOG_ENVIRONMENT": "staging"
       }
     },
     "production": {
@@ -70,7 +82,10 @@
         "SENTRY_ALLOW_FAILURE": "true",
         "EXPO_PUBLIC_NATIVE_VOICE_PLAYBACK": "true",
         "EXPO_PUBLIC_VOICE_FULL_DUPLEX": "false",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://8551764415ef9db1c446d9fa44571728@o4511222887022592.ingest.us.sentry.io/4511469048692736"
+        "EXPO_PUBLIC_SENTRY_DSN": "https://8551764415ef9db1c446d9fa44571728@o4511222887022592.ingest.us.sentry.io/4511469048692736",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_mqmWoDWycGmL6r62SxciYRYqPphPcHtF6WqZu3nXtrs3",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
+        "EXPO_PUBLIC_POSTHOG_ENVIRONMENT": "production"
       }
     }
   },
