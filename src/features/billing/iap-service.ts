@@ -7,10 +7,12 @@ import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import * as RNIap from 'expo-iap';
+import * as Sentry from '@sentry/react-native';
 import { post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { logger } from '@/lib/logger';
 import { extractFreeTrial } from './intro-offer';
+import { reportTrialStatus } from './trial-diagnostics';
 import {
   FALLBACK_PRODUCTS,
   getAllPlatformSkus,
@@ -162,7 +164,7 @@ class InAppPurchaseService {
         return fallbacks;
       }
 
-      const eligibility = await this.introOfferEligibility(subscriptions);
+      const { eligibility, error: eligibilityError } = await this.introOfferEligibility(subscriptions);
       const products: IAPProduct[] = subscriptions.flatMap((sub: any) => {
         const productId = sub.id || sub.productId;
         if (!skus.includes(productId)) return [];
@@ -188,6 +190,7 @@ class InAppPurchaseService {
 
       this.cachedProducts = products.length > 0 ? products : null;
       this.isUsingFallbacks = products.length !== skus.length;
+      if (Platform.OS === 'ios') reportTrialStatus(Sentry, products, eligibilityError);
       return products;
     } catch (err) {
       logger.handledError('[IAPService] fetchProducts error, using fallbacks:', err);
@@ -197,9 +200,12 @@ class InAppPurchaseService {
   }
 
   /** StoreKit intro-offer eligibility per subscription group; unknown counts as not eligible. */
-  private async introOfferEligibility(subscriptions: any[]): Promise<Map<string, boolean>> {
+  private async introOfferEligibility(
+    subscriptions: any[],
+  ): Promise<{ eligibility: Map<string, boolean>; error?: string }> {
     const result = new Map<string, boolean>();
-    if (Platform.OS !== 'ios') return result;
+    let error: string | undefined;
+    if (Platform.OS !== 'ios') return { eligibility: result };
     const groups = new Set<string>(
       subscriptions
         .map((sub) => sub?.subscriptionGroupIdIOS)
@@ -210,10 +216,11 @@ class InAppPurchaseService {
         result.set(groupId, await RNIap.isEligibleForIntroOfferIOS(groupId));
       } catch (err) {
         logger.handledError('[IAPService] intro offer eligibility check failed:', err);
+        error = err instanceof Error ? err.message : String(err);
         result.set(groupId, false);
       }
     }));
-    return result;
+    return { eligibility: result, error };
   }
 
   public async purchaseSubscription(
