@@ -1,21 +1,27 @@
 import React from 'react';
 import { Button, Host, Image, Menu } from '@expo/ui/swift-ui';
-import { background, frame, shapes } from '@expo/ui/swift-ui/modifiers';
+import { background, disabled as disabledModifier, frame, shapes } from '@expo/ui/swift-ui/modifiers';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import type { NativeMediaMenuProps } from './NativeMediaMenu.types';
 
-/** The editor's add-attachment button as the iOS system menu (SwiftUI `Menu`). */
-export function NativeMediaMenu({ size, onGallery, onCamera, onVoice, onFile, isRecording = false }: NativeMediaMenuProps) {
+/** The add-attachment button as the iOS system menu (SwiftUI `Menu`), used by the editor and chat. */
+export function NativeMediaMenu({
+  size, onGallery, onCamera, onVoice, onFile, isRecording = false, tone = 'filled', iconSize = 18, disabled = false,
+}: NativeMediaMenuProps) {
   const COLORS = useThemeColors();
+  const plain = tone === 'plain';
   return (
-    <Host matchContents style={{ width: size, height: size }}>
+    <Host matchContents style={{ width: size, height: size, opacity: disabled ? 0.45 : 1 }}>
       <Menu
+        modifiers={[disabledModifier(disabled)]}
         label={(
           <Image
             systemName="plus"
-            size={18}
-            color={COLORS.activeText}
-            modifiers={[frame({ width: size, height: size }), background(COLORS.activeFill, shapes.circle())]}
+            size={iconSize}
+            color={plain ? COLORS.textBase : COLORS.activeText}
+            modifiers={plain
+              ? [frame({ width: size, height: size })]
+              : [frame({ width: size, height: size }), background(COLORS.activeFill, shapes.circle())]}
           />
         )}
       >

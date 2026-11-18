@@ -37,6 +37,7 @@ import {
   type ChatPickerAsset,
 } from '@/components/chat/ChatAttachmentPickerSheet';
 import { EmojiPickerSheet } from '@/components/chat/EmojiPickerSheet';
+import { HAS_NATIVE_MEDIA_MENU, NativeMediaMenu } from '@/components/ui/NativeMediaMenu';
 import { insertEmojiAtPosition } from '@/features/chat/emoji-data';
 import { RecordingIconButton } from '@/components/ui/RecordingIconButton';
 import { RecordingStatus } from '@/components/ui/RecordingStatus';
@@ -434,6 +435,25 @@ export function ChatInput({
       }
     } catch { /* user cancelled */ }
   }, [uploadAndAdd]);
+
+  // The system photo picker (iOS): the whole library, albums and search, several at once.
+  const handlePickFromLibrary = useCallback(async () => {
+    Haptics.selectionAsync();
+    Keyboard.dismiss();
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images', 'videos'],
+        allowsMultipleSelection: true,
+        quality: 0.85,
+      });
+      if (result.canceled || result.assets.length === 0) return;
+      const uploads = result.assets.map((asset) => getMediaUploadInput(asset));
+      const valid = uploads.filter((upload) => !isFileTooLarge(upload.fileSize));
+      if (valid.length < uploads.length) toast(`Videos must be ${MAX_ATTACHMENT_FILE_MB} MB or smaller.`, 'error');
+      await Promise.all(valid.map((upload) =>
+        uploadAndAdd(upload.uri, upload.mimeType, upload.name, { fileSize: upload.fileSize })));
+    } catch { /* Picker closed. */ }
+  }, [toast, uploadAndAdd]);
 
   const handleAddPickerAssets = useCallback(async (pickedAssets: ChatPickerAsset[]) => {
     await Promise.all(pickedAssets.map(asset =>
@@ -974,19 +994,34 @@ export function ChatInput({
 
           {/* Plus / attach button (compact mode: inline on left) */}
           {!useExpandedComposer && (
-            <TouchableOpacity
-              onPress={handleOpenAttachmentPicker}
-              disabled={disabled || anyUploading}
-              hitSlop={6}
-              style={styles.plusButton}
-            >
-              <View style={[
-                styles.plusIconSurface,
-                (hasText || hasAttachments) ? styles.plusIconSurfaceActive : styles.plusIconSurfaceEmpty,
-              ]}>
-                <Plus size={iconSize(18)} color={COLORS.textBase} strokeWidth={1.8} />
+            HAS_NATIVE_MEDIA_MENU ? (
+              <View style={styles.plusButton}>
+                <NativeMediaMenu
+                  size={SECONDARY_ACTION_SIZE}
+                  tone="plain"
+                  iconSize={iconSize(17)}
+                  disabled={disabled || anyUploading}
+                  onGallery={handlePickFromLibrary}
+                  onCamera={handleLaunchCamera}
+                  onVoice={handlePickAudio}
+                  onFile={handlePickDocument}
+                />
               </View>
-            </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={handleOpenAttachmentPicker}
+                disabled={disabled || anyUploading}
+                hitSlop={6}
+                style={styles.plusButton}
+              >
+                <View style={[
+                  styles.plusIconSurface,
+                  (hasText || hasAttachments) ? styles.plusIconSurfaceActive : styles.plusIconSurfaceEmpty,
+                ]}>
+                  <Plus size={iconSize(18)} color={COLORS.textBase} strokeWidth={1.8} />
+                </View>
+              </TouchableOpacity>
+            )
           )}
 
           {/* ── THE SINGLE STABLE TEXT INPUT ── */}
@@ -1027,19 +1062,34 @@ export function ChatInput({
               exiting={FadeOut.duration(120)}
               style={styles.expandedBottomToolbar}
             >
-              <TouchableOpacity
-                onPress={handleOpenAttachmentPicker}
-                disabled={disabled || anyUploading}
-                hitSlop={6}
-                style={styles.plusButton}
-              >
-                <View style={[
-                  styles.plusIconSurface,
-                  (hasText || hasAttachments) ? styles.plusIconSurfaceActive : styles.plusIconSurfaceEmpty,
-                ]}>
-                  <Plus size={iconSize(18)} color={COLORS.textBase} strokeWidth={1.8} />
+              {HAS_NATIVE_MEDIA_MENU ? (
+                <View style={styles.plusButton}>
+                  <NativeMediaMenu
+                    size={SECONDARY_ACTION_SIZE}
+                    tone="plain"
+                    iconSize={iconSize(17)}
+                    disabled={disabled || anyUploading}
+                    onGallery={handlePickFromLibrary}
+                    onCamera={handleLaunchCamera}
+                    onVoice={handlePickAudio}
+                    onFile={handlePickDocument}
+                  />
                 </View>
-              </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={handleOpenAttachmentPicker}
+                  disabled={disabled || anyUploading}
+                  hitSlop={6}
+                  style={styles.plusButton}
+                >
+                  <View style={[
+                    styles.plusIconSurface,
+                    (hasText || hasAttachments) ? styles.plusIconSurfaceActive : styles.plusIconSurfaceEmpty,
+                  ]}>
+                    <Plus size={iconSize(18)} color={COLORS.textBase} strokeWidth={1.8} />
+                  </View>
+                </TouchableOpacity>
+              )}
 
               <View style={{ flex: 1 }} />
 
@@ -1210,13 +1260,16 @@ export function ChatInput({
         </View>
       </Animated.View>
 
-      <ChatAttachmentPickerSheet
-        ref={attachmentPickerRef}
-        onCamera={handleLaunchCamera}
-        onDocs={handlePickDocument}
-        onAudio={handlePickAudio}
-        onConfirm={handleAddPickerAssets}
-      />
+      {/* iOS attaches through the system menu and photo picker; other platforms keep the sheet. */}
+      {!HAS_NATIVE_MEDIA_MENU && (
+        <ChatAttachmentPickerSheet
+          ref={attachmentPickerRef}
+          onCamera={handleLaunchCamera}
+          onDocs={handlePickDocument}
+          onAudio={handlePickAudio}
+          onConfirm={handleAddPickerAssets}
+        />
+      )}
 
       <EmojiPickerSheet
         ref={emojiPickerRef}
