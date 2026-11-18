@@ -125,6 +125,6 @@ describe('AI consent wiring', () => {
     expect(sheet).toContain('Gemini');
     expect(sheet).toContain('Agree and continue');
     expect(sheet).toContain('Not now');
-    expect(sheet).toContain('https://app.mymemento.io/privacy');
+    expect(sheet).toContain('PRIVACY_URL');
   });
 });

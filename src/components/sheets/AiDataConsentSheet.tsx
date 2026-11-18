@@ -4,12 +4,13 @@ import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { Button } from '@/components/ui/Button';
 import { TYPE } from '@/constants/typography';
+import { PRIVACY_URL } from '@/lib/env';
 import { SHEET_GROUP_GAP, SHEET_SECTION_GAP } from '@/features/layout/sheet-safe-area';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { SheetActions, SHEET_FILL } from './SheetActions';
 import { SheetHeader } from './SheetHeader';
 
-const PRIVACY_POLICY_URL = 'https://app.mymemento.io/privacy';
+const PRIVACY_POLICY_URL = PRIVACY_URL;
 
 interface AiDataConsentSheetProps {
   onAgree?: () => void;

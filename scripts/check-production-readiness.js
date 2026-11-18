@@ -307,8 +307,11 @@ const envSource = read('src/lib/env.ts');
 assert(/WEB_BASE_URL/.test(envSource), 'Legal URLs must be derived from a web base URL.');
 assert(/https:\/\/dev\.mymemento\.io/.test(envSource), 'Dev legal URLs must use dev.mymemento.io.');
 assert(/https:\/\/app\.mymemento\.io/.test(envSource), 'Production legal URLs must use app.mymemento.io.');
-assert(/TERMS_URL = `\$\{WEB_BASE_URL\}\/terms`/.test(envSource), 'Terms URL must be based on WEB_BASE_URL.');
-assert(/PRIVACY_URL = `\$\{WEB_BASE_URL\}\/privacy`/.test(envSource), 'Privacy URL must be based on WEB_BASE_URL.');
+// The web app has no /terms or /privacy route (it renders its 404 page), so the
+// legal links point at the marketing site's published pages.
+assert(/LEGAL_SITE_URL = 'https:\/\/www\.mymemento\.io'/.test(envSource), 'Legal pages must be on www.mymemento.io.');
+assert(/TERMS_URL = `\$\{LEGAL_SITE_URL\}\/legal-pages\/terms-of-service\/`/.test(envSource), 'Terms URL must be the published terms page.');
+assert(/PRIVACY_URL = `\$\{LEGAL_SITE_URL\}\/legal-pages\/privacy\/`/.test(envSource), 'Privacy URL must be the published privacy page.');
 assert(/SIGNUP_URL = `\$\{WEB_BASE_URL\}\/signup`/.test(envSource), 'Signup URL must be based on WEB_BASE_URL.');
 assert(/publishedPostUrl/.test(envSource), 'Published post URLs must be centralized in env utilities.');
 
