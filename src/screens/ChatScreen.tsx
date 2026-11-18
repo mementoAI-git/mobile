@@ -11,7 +11,6 @@ import {
   Platform,
   StyleSheet,
   ActivityIndicator,
-  Image,
 } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
 import { FlashList } from '@shopify/flash-list';
@@ -31,6 +30,7 @@ import { VoiceScreenBeam, useHostVoiceBeam } from '@/components/effects/VoiceGlo
 import { FrostedHeaderBackdrop, HeaderButtonBlur } from '@/components/ui/FrostedHeaderBackdrop';
 import { MessageActionsProvider } from '@/components/chat/MessageActionsProvider';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
+import { ThinkingOrb } from '@/components/effects/thinking-orb/ThinkingOrb';
 import { ChatInput, type ChatSendPayload } from '@/components/chat/ChatInput';
 import { MilestoneCard } from '@/components/chat/MilestoneCard';
 import { DeepDiveBanner } from '@/components/chat/DeepDiveBanner';
@@ -92,7 +92,24 @@ const PROMPT_VISIBLE_CONTENT_POSITION = Object.freeze({
   startRenderingFromBottom: false,
 });
 
-const CHAT_ORB = require('../../assets/images/onboarding/chat-ai-orb.png');
+/** Memento's presence on the empty chat: the same orb as the typing indicator, breathing slowly. */
+function ChatEmptyOrb() {
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(useCallback(() => {
+    setFocused(true);
+    return () => setFocused(false);
+  }, []));
+  const appearance = useResolvedAppearance();
+  return (
+    <ThinkingOrb
+      state="breathing"
+      size={64}
+      paused={!focused}
+      theme={appearance === 'light' ? 'light' : 'dark'}
+      accessibilityLabel="Memento"
+    />
+  );
+}
 
 const STARTER_PROMPTS = [
   "Ask me about a memory I never want to forget.",
@@ -568,16 +585,9 @@ export default function ChatScreen() {
 
     return (
       <View className="items-center justify-center px-6 py-12 gap-6">
-        {/* AI Host Orb Illustration */}
-        <Animated.View
-          entering={FadeInUp.duration(600)}
-          className="size-20 rounded-full bg-brand/10 items-center justify-center"
-        >
-          <Image
-            source={CHAT_ORB}
-            style={{ width: 56, height: 56 }}
-            resizeMode="contain"
-          />
+        {/* Memento's thinking orb, breathing while the chat is empty */}
+        <Animated.View entering={FadeInUp.duration(600)}>
+          <ChatEmptyOrb />
         </Animated.View>
 
         {/* Heading & Subtitle */}
