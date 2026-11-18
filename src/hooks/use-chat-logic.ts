@@ -8,6 +8,7 @@ import { useConversationMessages, useMemories, useMemory } from '@/hooks/queries
 import { useMemoryByPrompt } from '@/hooks/queries/use-prompts';
 import { useStartConversation, useCreateMemory } from '@/hooks/mutations/use-memory-mutations';
 import { useStreamChat } from '@/hooks/use-stream-chat';
+import { ensureAiConsent } from '@/features/chat/ai-consent-gate';
 import { useEnrichmentStats } from '@/hooks/use-enrichment-stats';
 import { useProfile } from '@/hooks/queries/use-profile';
 import { useUiStore, useAuthStore, useUserStore } from '@/store';
@@ -175,6 +176,9 @@ export function useChatLogic() {
       isSendingRef.current = true;
 
       try {
+        // Nothing reaches the AI service until the member has agreed (once per account).
+        if (!(await ensureAiConsent())) return;
+
         let targetChatId = activeChatId;
 
         // If no host conversation exists yet for host chat, initialize it on the backend
