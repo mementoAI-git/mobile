@@ -8,7 +8,7 @@
  */
 import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
 import React, { useCallback } from 'react';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Platform, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -24,6 +24,7 @@ import { ProPlanCard } from '@/components/subscription/ProPlanCard';
 import type { ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
 import { billingProviderName } from '@/features/billing/plan-state';
+import { canRedeemPromoCode } from '@/features/billing/promo-visibility';
 import { getStoragePresentation } from '@/features/settings/billing-storage';
 import { useBillingSettingsLogic } from '@/hooks/use-billing-settings-logic';
 
@@ -108,8 +109,8 @@ export default function BillingSettingsScreen() {
           <BillingInvoicesPanel invoices={invoices} loading={invoicesLoading} />
         )}
 
-        {/* Promo code sits on Overview only; Invoices is just the invoice list. */}
-        {activeTab === 'overview' ? (
+        {/* Promo code sits on Overview only; Invoices is just the invoice list. Never on iOS (App Store 3.1.1). */}
+        {activeTab === 'overview' && canRedeemPromoCode(Platform.OS) ? (
           <View style={[styles.card, styles.promo]}>
             <Text style={[TYPE.bodyStrong, { color: COLORS.textStrong }]}>Promo code</Text>
             <Text style={[TYPE.bodySmall, { color: COLORS.textBase, marginTop: 4 }]}>

@@ -46,9 +46,9 @@ describe('promo code', () => {
 });
 
 describe('invoices tab', () => {
-  test('shows only the invoice list; the promo code stays on Overview', () => {
+  test('shows only the invoice list; the promo code stays on Overview, never on iOS', () => {
     const promo = screen.indexOf('Promo code</Text>');
-    const guard = screen.lastIndexOf("{activeTab === 'overview' ? (", promo);
+    const guard = screen.lastIndexOf("{activeTab === 'overview' && canRedeemPromoCode(Platform.OS) ? (", promo);
     expect(guard).toBeGreaterThan(screen.indexOf('<BillingInvoicesPanel'));
   });
 });
