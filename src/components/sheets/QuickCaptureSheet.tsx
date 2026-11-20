@@ -13,6 +13,7 @@ import { useUiStore } from '@/store';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import { useAudioRecorder } from '@/hooks/use-audio-recorder';
 import * as ImagePicker from 'expo-image-picker';
+import { requestLibraryPickerAccess } from '@/features/media/library-picker-access';
 
 import { COLORS, FONTS } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
@@ -112,7 +113,7 @@ export function QuickCaptureSheet({ onClose }: { onClose?: () => void }) {
     setIsPickingImage(true);
     let shouldFocusInput = true;
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission = await requestLibraryPickerAccess();
       if (!isPermissionGranted(permission)) {
         shouldFocusInput = false;
         if (isMountedRef.current) {

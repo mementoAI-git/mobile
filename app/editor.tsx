@@ -43,6 +43,7 @@ import Mic from 'lucide-react-native/icons/mic';
 import Video from 'lucide-react-native/icons/video';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import { requestLibraryPickerAccess } from '@/features/media/library-picker-access';
 import * as ExpoCamera from 'expo-camera';
 import * as DocumentPicker from 'expo-document-picker';
 import Animated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
@@ -608,7 +609,7 @@ export default function EditorScreen() {
 
   const handleImagePicker = useCallback(async () => {
     Haptics.selectionAsync();
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await requestLibraryPickerAccess();
     if (!isPermissionGranted(permission)) {
       showPermissionRecoveryAlert({
         permission,

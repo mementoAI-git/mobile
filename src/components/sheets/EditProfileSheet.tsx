@@ -11,6 +11,7 @@ import { TouchableOpacity } from '@/components/ui/Touchable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { requestLibraryPickerAccess } from '@/features/media/library-picker-access';
 import CalendarDays from 'lucide-react-native/icons/calendar-days';
 import Camera from 'lucide-react-native/icons/camera';
 import { Controller, useForm } from 'react-hook-form';
@@ -63,7 +64,7 @@ export function EditProfileSheet({
 
   const handlePickAvatar = useCallback(async () => {
     Haptics.selectionAsync();
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await requestLibraryPickerAccess();
     if (permission.status !== 'granted') {
       showPermissionRecoveryAlert({
         permission,

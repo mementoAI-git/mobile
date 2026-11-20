@@ -14,7 +14,8 @@ describe('Media preview modal', () => {
 
   test('keeps gallery-save permission recovery flow intact', () => {
     expect(modal).toContain('showPermissionRecoveryAlert');
-    expect(modal).toContain('MediaLibrary.requestPermissionsAsync()');
+    expect(modal).toContain('MediaLibrary.requestPermissionsAsync(true)');
+    expect(modal).not.toContain('MediaLibrary.requestPermissionsAsync()');
     expect(modal).toContain('MediaLibrary.saveToLibraryAsync');
     expect(modal).toContain("import type * as MediaLibraryType from 'expo-media-library/legacy'");
     expect(modal).toContain("return require('expo-media-library/legacy') as typeof MediaLibraryType;");
