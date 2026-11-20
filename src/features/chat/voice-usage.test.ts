@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { formatVoiceMinutes, parseVoiceUsage, voiceMinutes } from './voice-usage';
+import { formatVoiceMinutes, parseVoiceUsage, voiceMinutes, VoiceQuietClock } from './voice-usage';
 
 describe('voice usage', () => {
   test('reads this month, all time and the free allowance', () => {
@@ -34,10 +34,21 @@ describe('voice usage', () => {
   test('calls check in every minute and once more at the end, naming the call by its ticket', () => {
     const hook = readFileSync('src/hooks/use-voice-mode.ts', 'utf8');
     expect(hook).toContain('}, VOICE_USAGE_CHECK_IN_MS);');
-    expect(hook).toContain('void sendVoiceUsageCheckIn(endedTicket)');
+    expect(hook).toContain('void sendVoiceUsageCheckIn(endedTicket, endedQuietSeconds)');
+    // The clock starts when the call connects, with a check-in straight away.
+    expect(hook).toContain('if (callTicketRef.current) void sendVoiceUsageCheckIn(callTicketRef.current, 0);');
     // Every call keeps its ticket, limited or not.
     expect(hook.match(/if \(liveToken\.callTicket\) callTicketRef\.current = liveToken\.callTicket;/g)?.length).toBe(2);
     expect(readFileSync('src/features/chat/voice-live-config.ts', 'utf8')).toContain("callTicket: typeof response.call_ticket === 'string'");
+  });
+
+  test('frees only the part of a silence after its first minute', () => {
+    const clock = new VoiceQuietClock(0);
+    clock.activity(50_000);
+    expect(clock.quietSeconds(100_000)).toBe(0);
+    clock.activity(50_000 + 5 * 60_000); // four quiet minutes after the first
+    expect(clock.quietSeconds(50_000 + 5 * 60_000)).toBe(240);
+    expect(clock.quietSeconds(50_000 + 7 * 60_000)).toBe(300);
   });
 
   test('the Milestones tab opens with the voice minutes cards', () => {

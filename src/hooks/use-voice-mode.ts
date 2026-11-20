@@ -112,7 +112,7 @@ import { CallRecordingSession } from '@/features/chat/call-recording';
 import { toast } from '@/components/ui/Toast';
 import { discardCallRecording, drainCallRecordings, finishCallRecording, getCallRecorderNative, newCallRecordingPath } from '@/features/chat/call-recording-store';
 import { invalidateMemoryQueries } from '@/features/memories/cache';
-import { VOICE_USAGE_CHECK_IN_MS, sendVoiceUsageCheckIn } from '@/features/chat/voice-usage';
+import { VOICE_USAGE_CHECK_IN_MS, VoiceQuietClock, sendVoiceUsageCheckIn } from '@/features/chat/voice-usage';
 import { useAuthStore, useUserStore } from '@/store';
 
 type SetupReady = {
@@ -327,6 +327,8 @@ export function useVoiceMode({
   const resumeHandleRef = useRef<string | null>(null);
   /** The call's time-limit ticket, sent back on reconnect; null when calls are not limited. */
   const callTicketRef = useRef<string | null>(null);
+  /** Long silences in the call, which voice minutes don't count. */
+  const quietClockRef = useRef<VoiceQuietClock | null>(null);
   const callLimitTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const reconnectingRef = useRef(false);
   const reconnectRef = useRef<(reason: ReconnectReason) => Promise<ReconnectResult>>(
@@ -556,6 +558,15 @@ export function useVoiceMode({
   const handleLiveMessage = useCallback(
     (message: LiveServerMessage) => {
       const summary = summarizeVoiceServerMessage(message);
+      // Anyone speaking ends a silence, for voice minutes.
+      if (
+        summary.outputAudioFrames > 0 ||
+        summary.inputTranscriptLength > 0 ||
+        summary.interimInputTranscriptLength > 0 ||
+        summary.outputTranscriptLength > 0
+      ) {
+        quietClockRef.current?.activity();
+      }
       const diagnostics = transcriptDiagnosticsRef.current;
       diagnostics.rawMessages += 1;
       diagnostics.setupComplete += summary.setupComplete ? 1 : 0;
@@ -747,8 +758,10 @@ export function useVoiceMode({
     callLimitTimersRef.current = [];
     // A last check-in records the call's full length, then the voice minutes cards refresh.
     const endedTicket = callTicketRef.current;
+    const endedQuietSeconds = quietClockRef.current?.quietSeconds() ?? 0;
+    quietClockRef.current = null;
     if (endedTicket) {
-      void sendVoiceUsageCheckIn(endedTicket).then(() =>
+      void sendVoiceUsageCheckIn(endedTicket, endedQuietSeconds).then(() =>
         queryClient.invalidateQueries({ queryKey: queryKeys.voiceUsage }));
     }
     callTicketRef.current = null;
@@ -1285,7 +1298,7 @@ export function useVoiceMode({
     if (!isConnected) return undefined;
     const id = setInterval(() => {
       const ticket = callTicketRef.current;
-      if (ticket) void sendVoiceUsageCheckIn(ticket);
+      if (ticket) void sendVoiceUsageCheckIn(ticket, quietClockRef.current?.quietSeconds() ?? 0);
     }, VOICE_USAGE_CHECK_IN_MS);
     return () => clearInterval(id);
   }, [isConnected]);
@@ -1841,6 +1854,9 @@ export function useVoiceMode({
       scheduleCallLimitRef.current(liveToken.callTime);
       // Every call has a ticket (limited or not): reconnects and usage check-ins name the call by it.
       if (liveToken.callTicket) callTicketRef.current = liveToken.callTicket;
+      // Voice minutes count from now, not from when the token was fetched ahead of the tap.
+      quietClockRef.current = new VoiceQuietClock();
+      if (callTicketRef.current) void sendVoiceUsageCheckIn(callTicketRef.current, 0);
 
       // Safety guard: The greeting shield prevents the model's initial spoken greeting
       // from leaking into the microphone and causing self-interruption.
