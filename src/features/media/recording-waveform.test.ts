@@ -1,5 +1,7 @@
 import { expect, test } from 'bun:test';
-import { recordingWaveform } from './recording-waveform';
+import { recordingWaveform, recordingWaveformColor } from './recording-waveform';
+import { COLORS } from '@/constants/tokens';
+import { DARK_COLORS, DEEP_SKY_COLORS, LIGHT_SKY_COLORS } from '@/constants/appearance';
 
 test('the waveform is the requested length, in range, and the same for the same recording', () => {
   const bars = recordingWaveform('file-1', 40);
@@ -17,4 +19,11 @@ test('the waveform reads as speech: uneven, with quiet pauses, not a mirrored cu
   expect(max - min).toBeGreaterThan(0.4);
   expect(bars.some((bar) => bar < 0.2)).toBe(true);
   expect([...bars].reverse()).not.toEqual(bars);
+});
+
+test('recording cards draw a white waveform on dark themes, and a dark one on the light ones', () => {
+  expect(recordingWaveformColor(DARK_COLORS)).toBe('#FFFFFF');
+  expect(recordingWaveformColor(DEEP_SKY_COLORS)).toBe('#FFFFFF');
+  expect(recordingWaveformColor(LIGHT_SKY_COLORS)).toBe(LIGHT_SKY_COLORS.textStrong);
+  expect(recordingWaveformColor(COLORS)).toBe(COLORS.textStrong);
 });

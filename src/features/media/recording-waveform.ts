@@ -1,3 +1,15 @@
+import { COLORS } from '@/constants/tokens';
+import { LIGHT_SKY_COLORS } from '@/constants/appearance';
+
+/**
+ * The waveform's colour on recording story cards: white on Dark and Deep Sky,
+ * and dark on the light palettes (Light Sky and Light), whose pale cards white
+ * would fade into (web: stories/components/recording-card.tsx).
+ */
+export function recordingWaveformColor(colors: typeof COLORS): string {
+  return colors === LIGHT_SKY_COLORS || colors === COLORS ? colors.textStrong : COLORS.textInverse;
+}
+
 /**
  * The illustrated waveform on recording cards. Real speech comes in words:
  * short bursts that swell and fall, of uneven loudness, with pauses between.

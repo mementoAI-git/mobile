@@ -24,6 +24,7 @@ import { SignedAttachmentImage } from '@/components/ui/SignedAttachmentImage';
 import { isCallRecordingAttachment } from '@/features/memories/call-recording-story';
 import { useUiStore, useFeedAudioPlaybackStore } from '@/store';
 import { COLORS } from '@/constants/tokens';
+import { recordingWaveformColor } from '@/features/media/recording-waveform';
 import { TYPE } from '@/constants/typography';
 import type { IMemory } from '@/types';
 import { getMediaCategory } from '@/features/media/media-type';
@@ -152,7 +153,7 @@ function formatRecordingClock(secs: number) {
   return `${pad(Math.floor(total / 3600))}:${pad(Math.floor((total % 3600) / 60))}:${pad(total % 60)}`;
 }
 
-/** Voice recording story card: weak fill, two faint rings, brand waveform and the time in a chip. */
+/** Voice recording story card: weak fill, two faint rings, a white waveform and the time in a chip. */
 function VoiceRecordingCardVisual({ memory, seconds, aspectRatio, onOpenPlayer, onActions }: {
   memory: IMemory;
   seconds: number;
@@ -162,6 +163,7 @@ function VoiceRecordingCardVisual({ memory, seconds, aspectRatio, onOpenPlayer, 
   onActions: () => void;
 }) {
   const colors = useThemeColors();
+  const waveformColor = recordingWaveformColor(colors);
   const clock = formatRecordingClock(seconds);
   return (
     <View
@@ -195,7 +197,7 @@ function VoiceRecordingCardVisual({ memory, seconds, aspectRatio, onOpenPlayer, 
       >
         <View className="flex-row items-center" style={{ height: 32, gap: 3.62 }}>
           {VOICE_WAVEFORM.map((h, i) => (
-            <View key={i} style={{ width: 2.17, height: h, borderRadius: 1.085, backgroundColor: colors.brand }} />
+            <View key={i} style={{ width: 2.17, height: h, borderRadius: 1.085, backgroundColor: waveformColor }} />
           ))}
         </View>
         <View style={{ height: 22, minWidth: 58, paddingHorizontal: 8, borderRadius: 11, backgroundColor: colors.strokeWeak, alignItems: 'center', justifyContent: 'center' }}>
