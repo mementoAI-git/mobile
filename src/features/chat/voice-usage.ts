@@ -6,15 +6,51 @@ export const VOICE_USAGE_CHECK_IN_MS = 60_000;
 
 export const VOICE_USAGE_PATH = '/ai/voice/usage';
 
+/** Silence up to this long counts as part of the conversation; only what follows is free. */
+export const VOICE_QUIET_GRACE_MS = 60_000;
+
 /**
- * Tells the API the call is still going. The API works out the call's length
- * from its signed ticket and its own clock, so voice minutes add up across
- * calls even when one ends without a goodbye. Failures are ignored: the next
- * check-in, a reconnect or the end report records the time instead.
+ * Measures a call's long silences (web: src/features/voice/usage.ts): the
+ * stretches with no speech from either side, less the first minute of each,
+ * so a call left open isn't charged for the quiet. Only ever grows.
  */
-export function sendVoiceUsageCheckIn(callTicket: string): Promise<void> {
+export class VoiceQuietClock {
+  private lastActivity: number;
+  private banked = 0;
+
+  constructor(startedAt: number = Date.now()) {
+    this.lastActivity = startedAt;
+  }
+
+  /** Someone spoke (the member or Memento). */
+  activity(at: number = Date.now()): void {
+    if (at <= this.lastActivity) return;
+    this.banked += Math.max(0, at - this.lastActivity - VOICE_QUIET_GRACE_MS);
+    this.lastActivity = at;
+  }
+
+  /** Seconds of long silence so far, including a silence still going on. */
+  quietSeconds(at: number = Date.now()): number {
+    const current = Math.max(0, at - this.lastActivity - VOICE_QUIET_GRACE_MS);
+    return Math.floor((this.banked + current) / 1000);
+  }
+}
+
+/**
+ * Tells the API the call is connected. The API counts the call from its first
+ * connected check-in (not from when the token was fetched ahead of the tap),
+ * on its own clock, less the long silences reported here, so voice minutes add
+ * up across calls even when one ends without a goodbye. Failures are ignored:
+ * the next check-in, a reconnect or the end report records the time instead.
+ */
+export function sendVoiceUsageCheckIn(callTicket: string, quietSeconds = 0): Promise<void> {
   const timezone = deviceTimeZone();
-  return post(VOICE_USAGE_PATH, { call_ticket: callTicket, ...(timezone ? { timezone } : {}) })
+  return post(VOICE_USAGE_PATH, {
+    call_ticket: callTicket,
+    connected: true,
+    quiet_seconds: Math.max(0, Math.floor(quietSeconds)),
+    ...(timezone ? { timezone } : {}),
+  })
     .then(() => undefined)
     .catch(() => undefined);
 }
