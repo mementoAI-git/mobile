@@ -16,6 +16,7 @@ import RotateCcw from 'lucide-react-native/icons/rotate-ccw';
 import X from 'lucide-react-native/icons/x';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import { requestLibraryPickerAccess } from '@/features/media/library-picker-access';
 import { useRouter } from 'expo-router';
 import { Button, ResponsiveScreen, Select, Spinner, TextInput } from '@/components/ui';
 import type { SelectOption } from '@/components/ui/Select';
@@ -109,7 +110,7 @@ export default function FeedbackSettingsScreen() {
 
   const handlePickImages = useCallback(async () => {
     Haptics.selectionAsync();
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await requestLibraryPickerAccess();
     if (!isPermissionGranted(permission)) {
       showPermissionRecoveryAlert({
         permission,

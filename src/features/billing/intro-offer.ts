@@ -1,9 +1,11 @@
 /**
  * Free-trial copy for the store paywalls. The App Store applies an
- * introductory offer on its own when the member is eligible, so the trial is
- * only promised when StoreKit reports a free-trial intro offer on the product
- * and says this Apple ID can still redeem it. Google Play purchases don't pass
- * an offer token yet, so Android never promises a trial.
+ * introductory offer on its own when the member is eligible, so on iOS the
+ * trial is only promised when StoreKit reports a free-trial intro offer on the
+ * product and says this Apple ID can still redeem it. On Android the purchase
+ * passes the free-trial offer's token (see android-offers.ts), and Google Play
+ * only returns offers the account is eligible for, so the trial is promised
+ * when the product carries a free-trial offer.
  */
 import type { IAPPlanInterval } from './iap-types';
 
@@ -63,7 +65,10 @@ export function formatTrialLength(trial: FreeTrial) {
 export interface TrialCopyInput {
   platform: string;
   freeTrial: FreeTrial | null | undefined;
-  /** StoreKit's intro-offer eligibility for this Apple ID. */
+  /**
+   * iOS: StoreKit's intro-offer eligibility for this Apple ID. Android: Google
+   * Play returned a free-trial offer for this account.
+   */
   eligible: boolean | undefined;
   /** The store returned this product (not a fallback). */
   storeAvailable: boolean;
@@ -79,13 +84,14 @@ export interface TrialCopy {
 
 /** The trial button label and disclosure, or null when no trial applies. */
 export function getTrialCopy(input: TrialCopyInput): TrialCopy | null {
-  if (input.platform !== 'ios') return null;
+  if (input.platform !== 'ios' && input.platform !== 'android') return null;
   if (!input.storeAvailable || !input.freeTrial || input.eligible !== true) return null;
   const length = formatTrialLength(input.freeTrial);
   const period = input.interval === 'annual' ? 'year' : 'month';
+  const cancelIn = input.platform === 'ios' ? 'Settings' : 'Google Play';
   return {
     label: `Start ${length.adjective} free trial`,
-    disclosure: `Free for ${length.phrase}, then ${input.localizedPrice}/${period}. Cancel anytime in Settings.`,
+    disclosure: `Free for ${length.phrase}, then ${input.localizedPrice}/${period}. Cancel anytime in ${cancelIn}.`,
   };
 }
 

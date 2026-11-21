@@ -12,6 +12,7 @@ import { post } from '@/api/mutations';
 import endpoint from '@/api/endpoint';
 import { logger } from '@/lib/logger';
 import { extractFreeTrial } from './intro-offer';
+import { selectAndroidOffer } from './android-offers';
 import { reportTrialStatus } from './trial-diagnostics';
 import {
   FALLBACK_PRODUCTS,
@@ -171,6 +172,8 @@ class InAppPurchaseService {
         const interval = getIntervalFromSku(productId);
         const fallback = FALLBACK_PRODUCTS[interval];
         const rawPrice = typeof sub.price === 'string' ? parseFloat(sub.price) : Number(sub.price ?? fallback.price);
+        const isIOS = Platform.OS === 'ios';
+        const androidOffer = isIOS ? null : selectAndroidOffer(sub);
 
         return [{
           productId,
@@ -181,10 +184,13 @@ class InAppPurchaseService {
           localizedPrice: sub.displayPrice || sub.localizedPrice || fallback.localizedPrice,
           interval,
           storeAvailable: true,
-          freeTrial: Platform.OS === 'ios' ? extractFreeTrial(sub) : null,
-          introOfferEligible: Platform.OS === 'ios' && typeof sub.subscriptionGroupIdIOS === 'string'
-            ? eligibility.get(sub.subscriptionGroupIdIOS) === true
-            : false,
+          freeTrial: isIOS ? extractFreeTrial(sub) : androidOffer?.freeTrial ?? null,
+          introOfferEligible: isIOS
+            ? typeof sub.subscriptionGroupIdIOS === 'string' && eligibility.get(sub.subscriptionGroupIdIOS) === true
+            : Boolean(androidOffer?.freeTrial),
+          ...(androidOffer
+            ? { offerToken: androidOffer.offerToken, basePlanOfferToken: androidOffer.basePlanOfferToken }
+            : {}),
         }];
       });
 
@@ -289,6 +295,12 @@ class InAppPurchaseService {
             },
           });
         } else {
+          // Play Billing 5+ buys a subscription through an offer: the free trial when
+          // Google offered one to this account, otherwise the base plan.
+          const offerToken = selectedProduct.offerToken || selectedProduct.basePlanOfferToken || null;
+          if (!offerToken) {
+            logger.handledError('[IAPService] no Google Play offer token for subscription:', sku);
+          }
           await RNIap.requestPurchase({
             type: 'subs',
             request: {
@@ -296,6 +308,7 @@ class InAppPurchaseService {
                 skus: [sku],
                 obfuscatedAccountId: storeAccountToken,
                 obfuscatedProfileId: storeAccountToken,
+                ...(offerToken ? { subscriptionOffers: [{ sku, offerToken }] } : {}),
               },
             },
           });

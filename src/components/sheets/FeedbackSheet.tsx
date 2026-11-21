@@ -9,6 +9,7 @@ import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-shee
 import { useUiStore, useUserStore } from '@/store';
 import { useFileUpload } from '@/hooks/mutations/use-file-upload';
 import * as ImagePicker from 'expo-image-picker';
+import { requestLibraryPickerAccess } from '@/features/media/library-picker-access';
 import client from '@/api/client';
 import endpoint from '@/api/endpoint';
 import { useToast } from '@/components/ui/Toast';
@@ -43,7 +44,7 @@ export function FeedbackSheet() {
   const { mutateAsync: uploadFile, isPending: isUploading } = useFileUpload();
 
   const handlePickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await requestLibraryPickerAccess();
     if (!isPermissionGranted(permission)) {
       showPermissionRecoveryAlert({
         permission,

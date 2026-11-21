@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import { requestLibraryPickerAccess } from '@/features/media/library-picker-access';
 
 export interface PickedAsset {
   uri: string;
@@ -13,7 +14,7 @@ export function useImagePicker() {
     mediaTypes?: 'images' | 'videos' | 'all';
     allowsMultipleSelection?: boolean;
   }): Promise<PickedAsset[]> => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const { status } = await requestLibraryPickerAccess();
     if (status !== 'granted') return [];
 
     const result = await ImagePicker.launchImageLibraryAsync({

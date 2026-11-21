@@ -67,10 +67,35 @@ describe('trial copy', () => {
     ['eligibility unknown', { eligible: undefined }],
     ['no intro offer', { freeTrial: null }],
     ['a fallback product', { storeAvailable: false }],
-    ['Android', { platform: 'android' }],
+    ['Android without a free-trial offer', { platform: 'android', freeTrial: null, eligible: false }],
+    ['web', { platform: 'web' }],
   ] as const)('says Subscribe to Pro with no disclosure when %s', (_, overrides) => {
     const input = { ...base, ...overrides } as TrialCopyInput;
     expect(getTrialCopy(input)).toBeNull();
     expect(getStoreUpgradeLabel(input)).toBe('Subscribe to Pro');
+  });
+});
+
+describe('Android trial copy', () => {
+  const android: TrialCopyInput = { ...base, platform: 'android', freeTrial: { unit: 'day', count: 14 }, eligible: true };
+
+  test('offers the 14-day trial when Google Play returned the free-trial offer', () => {
+    expect(getTrialCopy(android)).toEqual({
+      label: 'Start 14-day free trial',
+      disclosure: 'Free for 14 days, then $9.99/month. Cancel anytime in Google Play.',
+    });
+    expect(getStoreUpgradeLabel(android)).toBe('Start 14-day free trial');
+  });
+
+  test('a two-week billing period reads as 14 days', () => {
+    expect(getTrialCopy({ ...android, freeTrial: { unit: 'week', count: 2 } })?.label).toBe('Start 14-day free trial');
+  });
+
+  test('no trial for a fallback product', () => {
+    expect(getTrialCopy({ ...android, storeAvailable: false })).toBeNull();
+  });
+
+  test('iOS copy still points to Settings', () => {
+    expect(getTrialCopy(base)?.disclosure).toBe('Free for 14 days, then $9.99/month. Cancel anytime in Settings.');
   });
 });

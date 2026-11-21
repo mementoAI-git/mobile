@@ -38,6 +38,7 @@ import { AudioAttachmentCard } from '@/components/media/AudioAttachmentCard';
 import { EditorActionBar } from '@/components/ui/EditorActionBar';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import { requestLibraryPickerAccess } from '@/features/media/library-picker-access';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, SlideInUp } from 'react-native-reanimated';
@@ -381,7 +382,7 @@ export default function CreateScreen() {
   // Image toolbar button — images + videos from gallery (matches web's Image icon)
   const handleImagePicker = useCallback(async () => {
     Haptics.selectionAsync();
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await requestLibraryPickerAccess();
     if (!isPermissionGranted(permission)) {
       showPermissionRecoveryAlert({
         permission,
@@ -403,7 +404,7 @@ export default function CreateScreen() {
   // Video toolbar button — video from gallery (matches web's Video icon)
   const handleVideoPicker = useCallback(async () => {
     Haptics.selectionAsync();
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await requestLibraryPickerAccess();
     if (!isPermissionGranted(permission)) {
       showPermissionRecoveryAlert({
         permission,

@@ -1,63 +1,33 @@
-import { useThemeColors, useThemedStyles } from '@/hooks/use-theme-colors';
-import React, { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  AppState,
-  Linking,
-  StyleSheet,
-  Text,
-  View,
-  Platform,
-} from 'react-native';
+import { useThemeColors, useThemeStyles } from '@/hooks/use-theme-colors';
+import React, { forwardRef, useCallback, useRef } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { TouchableOpacity } from '@/components/ui/Touchable';
-import { Image } from 'expo-image';
-import {
-  BottomSheetFlatList,
-  BottomSheetFooter,
-  BottomSheetModal,
-  BottomSheetView,
-  type BottomSheetFooterProps,
-} from '@gorhom/bottom-sheet';
-import * as MediaLibrary from 'expo-media-library/legacy';
-import * as FileSystem from 'expo-file-system/legacy';
+import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
+import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import Camera from 'lucide-react-native/icons/camera';
-import Check from 'lucide-react-native/icons/check';
 import FileText from 'lucide-react-native/icons/file-text';
 import Film from 'lucide-react-native/icons/film';
 import ImageIcon from 'lucide-react-native/icons/image';
-import ImageOff from 'lucide-react-native/icons/image-off';
 import Music from 'lucide-react-native/icons/music';
-import Play from 'lucide-react-native/icons/play';
 import { SheetHeader } from '@/components/sheets/SheetHeader';
+import { SheetActions, SHEET_FILL } from '@/components/sheets/SheetActions';
 import { SHEET_GROUP_GAP, getSheetActionsBottomPadding } from '@/features/layout/sheet-safe-area';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PermissionRecoveryState } from '@/components/ui';
-import { COLORS } from '@/constants/tokens';
+import { Button } from '@/components/ui/Button';
+import { type ThemeColors } from '@/constants/tokens';
 import { TYPE } from '@/constants/typography';
-import { iconSize, radius, minTouchTarget } from '@/constants/responsive';
+import { iconSize } from '@/constants/responsive';
 import { toast } from '@/components/ui/Toast';
+import { MAX_ATTACHMENT_FILE_MB } from '@/features/media/attachments';
 import {
-  getPermissionRecoveryAction,
-  isPermissionGranted,
-  type PermissionLike,
-} from '@/lib/permission-recovery';
-import { getPickerAssetUploadUri } from '@/features/media/picker-assets';
-import { MAX_ATTACHMENT_FILE_MB, isFileTooLarge } from '@/features/media/attachments';
+  pickChatLibraryAssets,
+  type ChatLibraryPick,
+  type ChatPickerAsset,
+} from '@/features/media/picker-assets';
 import { useSheetChrome } from '@/components/sheets/use-sheet-chrome';
 
-type PickerMode = 'gallery' | 'videos' | 'audio';
-
-export type ChatPickerAsset = {
-  id: string;
-  uri: string;
-  uploadUri: string;
-  name: string;
-  mimeType: string;
-  mediaType: 'photo' | 'video' | 'audio';
-  duration?: number;
-  fileSize?: number;
-};
+export type { ChatPickerAsset };
 
 interface ChatAttachmentPickerSheetProps {
   onCamera: () => void;
@@ -66,231 +36,57 @@ interface ChatAttachmentPickerSheetProps {
   onConfirm: (assets: ChatPickerAsset[]) => void;
 }
 
-const GRID_COLUMNS = 4;
-const GRID_GAP = 3;
 const SHEET_HORIZONTAL = 20;
-const PAGE_SIZE = 80;
 
-// ─── Asset cache — bounded and short-lived to avoid retaining large media lists ────
-const assetCache = new Map<PickerMode, { assets: MediaLibrary.Asset[]; cursor: string | null; hasNextPage: boolean; ts: number }>();
-const CACHE_TTL_MS = 20_000; // 20 seconds
-
-export function clearAssetCache() {
-  assetCache.clear();
-}
-
-function getCachedAssets(mode: PickerMode) {
-  const entry = assetCache.get(mode);
-  if (!entry) return null;
-  if (Date.now() - entry.ts > CACHE_TTL_MS) {
-    assetCache.delete(mode);
-    return null;
-  }
-  return entry;
-}
-
-function setCachedAssets(mode: PickerMode, assets: MediaLibrary.Asset[], cursor: string | null, hasNextPage: boolean) {
-  assetCache.set(mode, { assets, cursor, hasNextPage, ts: Date.now() });
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function getAssetMimeType(asset: MediaLibrary.Asset): string {
-  const ext = asset.filename?.split('.').pop()?.toLowerCase() ?? '';
-  if (asset.mediaType === MediaLibrary.MediaType.video) {
-    if (ext === 'mov') return 'video/quicktime';
-    if (ext === 'webm') return 'video/webm';
-    return 'video/mp4';
-  }
-  if (asset.mediaType === MediaLibrary.MediaType.audio) {
-    if (ext === 'wav') return 'audio/wav';
-    if (ext === 'm4a') return 'audio/m4a';
-    if (ext === 'aac') return 'audio/aac';
-    return 'audio/mpeg';
-  }
-  if (ext === 'png') return 'image/png';
-  if (ext === 'gif') return 'image/gif';
-  if (ext === 'webp') return 'image/webp';
-  if (ext === 'heic') return 'image/heic';
-  return 'image/jpeg';
-}
-
-function getSelectionLabel(assets: MediaLibrary.Asset[]): string {
-  if (assets.length === 0) return 'photos';
-  const allPhotos = assets.every(a => a.mediaType === MediaLibrary.MediaType.photo);
-  const allVideos = assets.every(a => a.mediaType === MediaLibrary.MediaType.video);
-  const allAudio = assets.every(a => a.mediaType === MediaLibrary.MediaType.audio);
-  if (allPhotos) return assets.length === 1 ? 'photo' : 'photos';
-  if (allVideos) return assets.length === 1 ? 'video' : 'videos';
-  if (allAudio) return assets.length === 1 ? 'audio' : 'audio';
-  return assets.length === 1 ? 'item' : 'items';
-}
-
-function getGranularPermissions(mode: PickerMode): MediaLibrary.GranularPermission[] {
-  return mode === 'videos' ? ['video'] : mode === 'audio' ? ['audio'] : ['photo'];
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
-
+/**
+ * Attach media in chat (Android and web; iOS uses the system menu in ChatInput).
+ *
+ * Photos and videos come from the system photo picker (the Android Photo
+ * Picker on Android 13+, or its Play services backport), which returns only
+ * what the person picks. Memento never reads the whole library, so it needs no
+ * READ_MEDIA_IMAGES / READ_MEDIA_VIDEO permission.
+ */
 export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttachmentPickerSheetProps>(
   function ChatAttachmentPickerSheet({ onCamera, onDocs, onAudio, onConfirm }, ref) {
-  const COLORS = useThemeColors();
-  const sheetChrome = useSheetChrome();
-  const styles = useThemedStyles(stylesBase);
+    const COLORS = useThemeColors();
+    const sheetChrome = useSheetChrome();
+    const styles = useThemeStyles(createStyles);
     const insets = useSafeAreaInsets();
-    const [mode, setMode] = useState<PickerMode>('gallery');
-    const [assets, setAssets] = useState<MediaLibrary.Asset[]>([]);
-    const [selected, setSelected] = useState<Record<string, MediaLibrary.Asset>>({});
-    const [loading, setLoading] = useState(false);
-    const [resolving, setResolving] = useState(false);
-    const [permissionIssue, setPermissionIssue] = useState<PermissionLike | null>(null);
-    const [isOpen, setIsOpen] = useState(false);
-    const [nextCursor, setNextCursor] = useState<string | null>(null);
-    const [hasNextPage, setHasNextPage] = useState(false);
-    const loadRequestIdRef = useRef(0);
-
-    const selectedAssets = useMemo(() => Object.values(selected), [selected]);
-    const selectedCount = selectedAssets.length;
-    const selectionLabel = getSelectionLabel(selectedAssets);
+    const pickingRef = useRef(false);
 
     const dismiss = useCallback(() => {
       if (typeof ref !== 'function') ref?.current?.dismiss();
     }, [ref]);
 
-    const handleDismiss = useCallback(() => {
-      clearAssetCache();
-      setSelected({});
-      setIsOpen(false);
-    }, []);
-
-    const loadAssets = useCallback(async (nextMode: PickerMode, after?: string | null) => {
-      // Use cache for first page loads (after === null/undefined) if available
-      if (!after) {
-        const cached = getCachedAssets(nextMode);
-        if (cached) {
-          setAssets(cached.assets);
-          setNextCursor(cached.cursor);
-          setHasNextPage(cached.hasNextPage);
-          setPermissionIssue(null);
-          return;
-        }
-      }
-
-      const requestId = ++loadRequestIdRef.current;
-      setLoading(true);
-      setPermissionIssue(null);
+    const openLibrary = useCallback(async (kind: ChatLibraryPick) => {
+      if (pickingRef.current) return;
+      pickingRef.current = true;
+      dismiss();
       try {
-        const granularPermissions = getGranularPermissions(nextMode);
-        const permission = await MediaLibrary.requestPermissionsAsync(false, granularPermissions);
-        if (requestId !== loadRequestIdRef.current) return;
-        if (!isPermissionGranted(permission)) {
-          setPermissionIssue(permission);
-          if (!after) setAssets([]);
-          return;
-        }
-
-        const mediaType =
-          nextMode === 'videos'
-            ? MediaLibrary.MediaType.video
-            : nextMode === 'audio'
-              ? MediaLibrary.MediaType.audio
-              : MediaLibrary.MediaType.photo;
-
-        const page = await MediaLibrary.getAssetsAsync({
-          first: PAGE_SIZE,
-          after: after ?? undefined,
-          mediaType,
-          sortBy: [[MediaLibrary.SortBy.creationTime, false]],
-        });
-
-        if (requestId !== loadRequestIdRef.current) return;
-
-        const filteredNewAssets = page.assets.filter((a) => {
-          if (nextMode === 'videos') return a.mediaType === MediaLibrary.MediaType.video;
-          if (nextMode === 'audio') return a.mediaType === MediaLibrary.MediaType.audio;
-          return a.mediaType === MediaLibrary.MediaType.photo;
-        });
-
-        const nextAssets = after ? [...assets, ...filteredNewAssets] : filteredNewAssets;
-        setAssets(nextAssets);
-        setNextCursor(page.endCursor);
-        setHasNextPage(page.hasNextPage);
-
-        // Cache first-page results
-        if (!after) {
-          setCachedAssets(nextMode, nextAssets, page.endCursor, page.hasNextPage);
-        }
+        const { assets, oversizedCount } = await pickChatLibraryAssets(kind, ImagePicker.launchImageLibraryAsync);
+        if (oversizedCount > 0) toast(`Videos must be ${MAX_ATTACHMENT_FILE_MB} MB or smaller.`, 'error');
+        if (assets.length > 0) onConfirm(assets);
+      } catch {
+        toast('Your gallery did not open. Please try again.', 'error');
       } finally {
-        if (requestId === loadRequestIdRef.current) {
-          setLoading(false);
-        }
+        pickingRef.current = false;
       }
-    }, [assets]);
+    }, [dismiss, onConfirm]);
 
-    const handleSheetChange = useCallback((index: number) => {
-      const opening = index >= 0;
-      setIsOpen(opening);
-      if (opening && assets.length === 0 && !loading) {
-        loadAssets(mode, null);
-      }
-    }, [assets.length, loadAssets, loading, mode]);
-
-    // Re-check permission if user returns from Settings
-    useEffect(() => {
-      if (!isOpen || !permissionIssue) return undefined;
-
-      const subscription = AppState.addEventListener('change', async (state) => {
-        if (state !== 'active') return;
-        const permission = await MediaLibrary.getPermissionsAsync(false, getGranularPermissions(mode));
-        if (isPermissionGranted(permission)) {
-          setPermissionIssue(null);
-          loadAssets(mode, null);
-        } else {
-          setPermissionIssue(permission);
-        }
-      });
-
-      return () => subscription.remove();
-    }, [isOpen, loadAssets, mode, permissionIssue]);
-
-    const permissionRecoveryAction = getPermissionRecoveryAction(permissionIssue);
-    const permissionCopy = useMemo(() => {
-      const noun = mode === 'videos' ? 'videos' : mode === 'audio' ? 'audio' : 'photos';
-      return {
-        title: `${noun[0].toUpperCase()}${noun.slice(1)} are tucked away`,
-        description:
-          permissionRecoveryAction === 'settings'
-            ? `Memento cannot see your ${noun} because access is turned off in Settings. Turn it back on to attach them here.`
-            : `Allow Memento to show your recent ${noun} so you can attach them without leaving the chat.`,
-      };
-    }, [mode, permissionRecoveryAction]);
-
-    const handlePermissionAction = useCallback(() => {
-      if (permissionRecoveryAction === 'settings') {
-        Linking.openSettings();
-        return;
-      }
-      loadAssets(mode, null);
-    }, [loadAssets, mode, permissionRecoveryAction]);
-
-    const selectMode = useCallback((nextMode: PickerMode) => {
-      if (nextMode === mode) return;
+    const handleGallery = useCallback(() => {
       Haptics.selectionAsync();
-      setMode(nextMode);
-      // Check cache first — if available, no loading state needed
-      const cached = getCachedAssets(nextMode);
-      if (cached) {
-        setAssets(cached.assets);
-        setNextCursor(cached.cursor);
-        setHasNextPage(cached.hasNextPage);
-        setPermissionIssue(null);
-      } else {
-        setAssets([]);
-        setNextCursor(null);
-        setHasNextPage(false);
-        loadAssets(nextMode, null);
-      }
-    }, [loadAssets, mode]);
+      openLibrary('media');
+    }, [openLibrary]);
+
+    // The shared Button fires its own haptic.
+    const handleGalleryButton = useCallback(() => {
+      openLibrary('media');
+    }, [openLibrary]);
+
+    const handleVideos = useCallback(() => {
+      Haptics.selectionAsync();
+      openLibrary('videos');
+    }, [openLibrary]);
 
     const handleCamera = useCallback(() => {
       Haptics.selectionAsync();
@@ -306,118 +102,22 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
 
     const handleAudio = useCallback(() => {
       Haptics.selectionAsync();
-      if (Platform.OS === 'ios' && onAudio) {
-        dismiss();
-        onAudio();
-      } else {
-        selectMode('audio');
-      }
-    }, [dismiss, onAudio, selectMode]);
-
-    const toggleAsset = useCallback((asset: MediaLibrary.Asset) => {
-      Haptics.selectionAsync();
-      setSelected(prev => {
-        const next = { ...prev };
-        if (next[asset.id]) delete next[asset.id];
-        else next[asset.id] = asset;
-        return next;
-      });
-    }, []);
-
-    const handleAddSelected = useCallback(async () => {
-      if (selectedAssets.length === 0 || resolving) return;
-      setResolving(true);
-      try {
-        const resolved = await Promise.all(selectedAssets.map(async (asset): Promise<ChatPickerAsset> => {
-          const uploadUri = await getPickerAssetUploadUri(asset, MediaLibrary.getAssetInfoAsync);
-          let fileSize: number | undefined;
-          try {
-            const fileInfo = await FileSystem.getInfoAsync(uploadUri);
-            if (fileInfo.exists && typeof fileInfo.size === 'number') fileSize = fileInfo.size;
-          } catch {
-          }
-          return {
-            id: asset.id,
-            uri: asset.uri,
-            uploadUri,
-            name: asset.filename || `${asset.mediaType}_${Date.now()}`,
-            mimeType: getAssetMimeType(asset),
-            mediaType: asset.mediaType as 'photo' | 'video' | 'audio',
-            duration: asset.duration,
-            fileSize,
-          };
-        }));
-        const oversized = resolved.filter((asset) => isFileTooLarge(asset.fileSize));
-        if (oversized.length > 0) {
-          toast(`Videos must be ${MAX_ATTACHMENT_FILE_MB} MB or smaller.`, 'error');
-          return;
-        }
-        onConfirm(resolved);
-        setSelected({});
-        dismiss();
-      } finally {
-        setResolving(false);
-      }
-    }, [dismiss, onConfirm, resolving, selectedAssets]);
-
-    const loadMore = useCallback(() => {
-      if (!loading && hasNextPage && nextCursor) {
-        loadAssets(mode, nextCursor);
-      }
-    }, [hasNextPage, loadAssets, loading, mode, nextCursor]);
-
-    const keyExtractor = useCallback((item: MediaLibrary.Asset) => item.id, []);
-
-
-    const renderAsset = useCallback(({ item }: { item: MediaLibrary.Asset }) => (
-      <AssetTile
-        asset={item}
-        isSelected={Boolean(selected[item.id])}
-        onToggle={toggleAsset}
-      />
-    ), [selected, toggleAsset]);
-
-    const renderFooter = useCallback((props: BottomSheetFooterProps) => (
-      <BottomSheetFooter
-        {...props}
-        bottomInset={0}
-        style={styles.footerContainer}
-      >
-        <View style={[styles.footerContent, { paddingBottom: getSheetActionsBottomPadding(insets.bottom) }]}>
-          <TouchableOpacity onPress={dismiss} activeOpacity={0.86} style={styles.dismissButton}>
-            <Text style={styles.dismissText}>Dismiss</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleAddSelected}
-            disabled={selectedCount === 0 || resolving}
-            activeOpacity={0.86}
-            style={[styles.addButton, selectedCount === 0 && styles.addButtonDisabled]}
-          >
-            {resolving ? (
-              <ActivityIndicator color={COLORS.textInverse} />
-            ) : (
-              <Text style={styles.addText}>
-                {selectedCount > 0 ? `Add ${selectedCount} ${selectionLabel}` : 'Select to add'}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </BottomSheetFooter>
-    ), [dismiss, handleAddSelected, insets.bottom, resolving, selectedCount, selectionLabel]);
+      dismiss();
+      onAudio?.();
+    }, [dismiss, onAudio]);
 
     return (
       <BottomSheetModal
         ref={ref}
         {...sheetChrome.props}
-        snapPoints={sheetChrome.snapPoints(['60%', '92%'])}
-        enableDynamicSizing={false}
-        footerComponent={renderFooter}
         enablePanDownToClose
-        onChange={handleSheetChange}
-        onDismiss={handleDismiss}
       >
-        <BottomSheetView style={styles.container}>
-          {/* ── Header ── */}
+        <BottomSheetView
+          style={[
+            styles.container,
+            { minHeight: sheetChrome.minContentHeight, paddingBottom: getSheetActionsBottomPadding(insets.bottom) },
+          ]}
+        >
           <SheetHeader
             title="Attach media"
             onClose={dismiss}
@@ -425,7 +125,6 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
             style={styles.header}
           />
 
-          {/* ── Action row ── */}
           <View style={styles.actionRow}>
             <PickerAction
               label="Camera"
@@ -434,22 +133,21 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
             />
             <PickerAction
               label="Gallery"
-              active={mode === 'gallery'}
-              icon={<ImageIcon size={20} color={mode === 'gallery' ? COLORS.brand : COLORS.textBase} strokeWidth={1.8} />}
-              onPress={() => selectMode('gallery')}
+              icon={<ImageIcon size={20} color={COLORS.textBase} strokeWidth={1.8} />}
+              onPress={handleGallery}
             />
             <PickerAction
               label="Videos"
-              active={mode === 'videos'}
-              icon={<Film size={20} color={mode === 'videos' ? COLORS.brand : COLORS.textBase} strokeWidth={1.8} />}
-              onPress={() => selectMode('videos')}
+              icon={<Film size={20} color={COLORS.textBase} strokeWidth={1.8} />}
+              onPress={handleVideos}
             />
-            <PickerAction
-              label="Audio"
-              active={mode === 'audio'}
-              icon={<Music size={20} color={mode === 'audio' ? COLORS.brand : COLORS.textBase} strokeWidth={1.8} />}
-              onPress={handleAudio}
-            />
+            {onAudio ? (
+              <PickerAction
+                label="Audio"
+                icon={<Music size={20} color={COLORS.textBase} strokeWidth={1.8} />}
+                onPress={handleAudio}
+              />
+            ) : null}
             <PickerAction
               label="Docs"
               icon={<FileText size={20} color={COLORS.textBase} strokeWidth={1.8} />}
@@ -457,125 +155,41 @@ export const ChatAttachmentPickerSheet = forwardRef<BottomSheetModal, ChatAttach
             />
           </View>
 
-          {mode === 'videos' && (
-            <Text style={styles.videoLimit}>Videos up to {MAX_ATTACHMENT_FILE_MB} MB</Text>
-          )}
+          <TouchableOpacity
+            onPress={handleGallery}
+            activeOpacity={0.86}
+            style={styles.galleryPanel}
+            accessibilityRole="button"
+            accessibilityLabel="Choose photos and videos"
+          >
+            <View style={styles.galleryIcon}>
+              <ImageIcon size={iconSize(24)} color={COLORS.brand} strokeWidth={1.8} />
+            </View>
+            <Text style={styles.galleryTitle}>Choose photos and videos</Text>
+            <Text style={styles.galleryText}>
+              Pick from your gallery. Memento only sees what you choose. Videos up to {MAX_ATTACHMENT_FILE_MB} MB.
+            </Text>
+          </TouchableOpacity>
 
-          <View style={styles.divider} />
-
-          {/* ── Content ── */}
-          <View style={styles.contentArea}>
-            {permissionIssue ? (
-              <View style={styles.emptyState}>
-                <PermissionRecoveryState
-                  icon={ImageOff}
-                  title={permissionCopy.title}
-                  description={permissionCopy.description}
-                  actionLabel={permissionRecoveryAction === 'settings' ? 'Open Settings' : 'Allow access'}
-                  onAction={handlePermissionAction}
-                  secondaryLabel="Dismiss"
-                  onSecondary={dismiss}
-                  tone="light"
-                />
+          <SheetActions style={styles.actions}>
+            <View style={styles.actionsRow}>
+              <View style={styles.dismissSlot}>
+                <Button variant="outline" size="lg" rounded="full" fullWidth onPress={dismiss}>
+                  Dismiss
+                </Button>
               </View>
-            ) : (
-              <BottomSheetFlatList
-                data={assets}
-                keyExtractor={keyExtractor}
-                renderItem={renderAsset}
-                extraData={selected}
-                numColumns={4}
-                style={styles.assetList}
-                columnWrapperStyle={styles.gridRow}
-                contentContainerStyle={styles.gridContent}
-                onEndReached={loadMore}
-                onEndReachedThreshold={0.6}
-                enableFooterMarginAdjustment
-                initialNumToRender={24}
-                maxToRenderPerBatch={12}
-                windowSize={5}
-                removeClippedSubviews
-                ListEmptyComponent={
-                  loading ? null : mode === 'audio' && Platform.OS === 'ios' ? (
-                    <View style={styles.emptyState}>
-                      <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: `${COLORS.brand}12`, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                        <Music size={26} color={COLORS.brand} strokeWidth={1.8} />
-                      </View>
-                      <Text style={[styles.emptyText, { marginBottom: 14 }]}>Audio is stored in device Files</Text>
-                      {onAudio && (
-                        <TouchableOpacity
-                          onPress={handleAudio}
-                          activeOpacity={0.8}
-                          style={{ paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999, backgroundColor: COLORS.brand }}
-                        >
-                          <Text style={{ ...TYPE.buttonSmall, color: COLORS.textInverse }}>Browse Audio Files</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  ) : (
-                    <View style={styles.emptyState}>
-                      <Text style={styles.emptyText}>No {mode === 'gallery' ? 'photos' : mode} found</Text>
-                    </View>
-                  )
-                }
-                ListFooterComponent={loading ? <ActivityIndicator color={COLORS.brand} style={styles.loader} /> : null}
-              />
-            )}
-          </View>
+              <View style={styles.openSlot}>
+                <Button size="lg" rounded="full" fullWidth onPress={handleGalleryButton}>
+                  Open gallery
+                </Button>
+              </View>
+            </View>
+          </SheetActions>
         </BottomSheetView>
       </BottomSheetModal>
     );
   },
 );
-
-// ─── Asset tile ───────────────────────────────────────────────────────────────
-
-const AssetTile = React.memo(function AssetTile({
-  asset,
-  isSelected,
-  onToggle,
-}: {
-  asset: MediaLibrary.Asset;
-  isSelected: boolean;
-  onToggle: (asset: MediaLibrary.Asset) => void;
-}) {
-  const COLORS = useThemeColors();
-  const styles = useThemedStyles(stylesBase);
-  const isVideo = asset.mediaType === MediaLibrary.MediaType.video;
-  const isAudio = asset.mediaType === MediaLibrary.MediaType.audio;
-
-  const handlePress = useCallback(() => {
-    onToggle(asset);
-  }, [asset, onToggle]);
-
-  return (
-    <TouchableOpacity
-      onPress={handlePress}
-      activeOpacity={0.88}
-      style={styles.assetTile}
-    >
-      {isAudio ? (
-        <View style={styles.audioTile}>
-          <Music size={22} color={COLORS.textWeak} strokeWidth={1.8} />
-          <Text style={styles.audioLabel} numberOfLines={1}>{asset.filename?.replace(/\.[^.]+$/, '') || 'Audio'}</Text>
-        </View>
-      ) : (
-        <Image source={{ uri: asset.uri }} style={styles.assetImage} contentFit="cover" />
-      )}
-      {isVideo && (
-        <View style={styles.playOverlay}>
-          <Play size={14} color={COLORS.textInverse} fill={COLORS.textInverse} strokeWidth={0} />
-        </View>
-      )}
-      {/* Selection indicator */}
-      <View style={isSelected ? styles.selectedCheck : styles.unselectedDot}>
-        {isSelected && <Check size={11} color={COLORS.textInverse} strokeWidth={3} />}
-      </View>
-      {/* Selection overlay tint */}
-      {isSelected && <View style={styles.selectedOverlay} />}
-    </TouchableOpacity>
-  );
-});
 
 // ─── Picker action tile ───────────────────────────────────────────────────────
 
@@ -583,52 +197,37 @@ function PickerAction({
   label,
   icon,
   onPress,
-  active,
 }: {
   label: string;
   icon: React.ReactNode;
   onPress: () => void;
-  active?: boolean;
 }) {
-  const styles = useThemedStyles(stylesBase);
+  const styles = useThemeStyles(createStyles);
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.82}
-      style={[styles.actionTile, active && styles.actionTileActive]}
+      style={styles.actionTile}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
       {icon}
-      <Text style={[styles.actionLabel, active && styles.actionLabelActive]}>{label}</Text>
+      <Text style={styles.actionLabel}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const stylesBase = StyleSheet.create({
-  sheetBackground: {
-    backgroundColor: COLORS.background,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    backgroundColor: COLORS.strokeStrong,
-    opacity: 0.3,
-  },
+const createStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
+    ...SHEET_FILL,
+    backgroundColor: COLORS.sheet,
   },
-
-  // Header
   header: {
     paddingHorizontal: SHEET_HORIZONTAL,
     marginBottom: SHEET_GROUP_GAP,
   },
-
-  // Action row
   actionRow: {
     flexDirection: 'row',
     paddingHorizontal: SHEET_HORIZONTAL,
@@ -647,174 +246,54 @@ const stylesBase = StyleSheet.create({
     gap: 5,
     minHeight: 64,
   },
-  actionTileActive: {
-    backgroundColor: `${COLORS.brand}08`,
-    borderColor: `${COLORS.brand}30`,
-  },
   actionLabel: {
     ...TYPE.eyebrow,
     color: COLORS.textWeak,
     textAlign: 'center',
   },
-  actionLabelActive: {
-    color: COLORS.brand,
-    ...TYPE.label,
-  },
-  videoLimit: {
-    marginTop: 8,
+  galleryPanel: {
+    marginTop: 24,
     marginHorizontal: SHEET_HORIZONTAL,
-    ...TYPE.bodySmall,
-    color: COLORS.textWeak,
+    paddingVertical: 28,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.fillWeaker,
+    borderWidth: 1,
+    borderColor: COLORS.strokeWeaker,
   },
-
-  // Divider
-  divider: {
-    marginHorizontal: SHEET_HORIZONTAL,
-    marginTop: 16,
-    marginBottom: 12,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: COLORS.strokeWeaker,
-  },
-
-  // Grid
-  contentArea: {
-    flex: 1,
-    minHeight: 0,
-  },
-  assetList: {
-    flex: 1,
-  },
-  gridContent: {
-    paddingHorizontal: SHEET_HORIZONTAL,
-    paddingBottom: 16,
-  },
-  gridRow: {
-    gap: GRID_GAP,
-    marginBottom: GRID_GAP,
-  },
-  assetTile: {
-    flex: 1,
-    aspectRatio: 1,
-    borderRadius: radius(8),
-    overflow: 'hidden',
-    backgroundColor: COLORS.fillWeak,
-  },
-  assetImage: {
-    width: '100%',
-    height: '100%',
-  },
-  audioTile: {
-    flex: 1,
+  galleryIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.fillWeak,
-    paddingHorizontal: 4,
-    gap: 4,
+    marginBottom: 4,
+    backgroundColor: COLORS.brandSubtle,
   },
-  audioLabel: {
-    ...TYPE.eyebrow,
-    color: COLORS.textMuted,
+  galleryTitle: {
+    ...TYPE.label,
+    color: COLORS.textStrong,
     textAlign: 'center',
   },
-  playOverlay: {
-    ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  selectedCheck: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: COLORS.brand,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: COLORS.brand,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.4,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  unselectedDot: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.75)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.9)',
-  },
-  selectedOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: `${COLORS.brand}18`,
-  },
-
-  // Empty / loading
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: 32,
-  },
-  emptyText: {
-    ...TYPE.label,
+  galleryText: {
+    ...TYPE.bodySmall,
     color: COLORS.textWeak,
+    textAlign: 'center',
   },
-  loader: {
-    paddingVertical: 24,
+  actions: {
+    paddingTop: SHEET_GROUP_GAP,
+    paddingHorizontal: SHEET_HORIZONTAL,
   },
-
-  // Footer
-  footerContainer: {
-    backgroundColor: COLORS.background,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: COLORS.strokeWeaker,
-  },
-  footerContent: {
+  actionsRow: {
     flexDirection: 'row',
     gap: 12,
-    paddingTop: 12,
-    paddingHorizontal: SHEET_HORIZONTAL,
-    backgroundColor: COLORS.background,
   },
-  dismissButton: {
+  dismissSlot: {
     flex: 1,
-    height: 56,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.fillWeak,
-    borderWidth: 1,
-    borderColor: COLORS.strokeWeak,
   },
-  dismissText: {
-    ...TYPE.button,
-    color: COLORS.textBase,
-  },
-  addButton: {
+  openSlot: {
     flex: 2,
-    height: 56,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.brand,
-    shadowColor: COLORS.brand,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  addButtonDisabled: {
-    opacity: 0.45,
-  },
-  addText: {
-    ...TYPE.button,
-    color: COLORS.textInverse,
   },
 });
