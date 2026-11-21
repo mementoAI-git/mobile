@@ -38,7 +38,7 @@ const PATTERNS: [RegExp, string][] = [
   [/^\/stories\/[^/]+$/, 'A story'],
   [/^\/chat\/[^/]+$/, 'A conversation'],
   [/^\/explore\/[^/]+$/, 'A prompt category'],
-  [/^\/settings\/beneficiary\/[^/]+$/, 'A beneficiary'],
+  [/^\/settings\/beneficiary\/[^/]+$/, 'A connection'],
   [/^\/settings\/group\/[^/]+$/, 'A group'],
 ];
 

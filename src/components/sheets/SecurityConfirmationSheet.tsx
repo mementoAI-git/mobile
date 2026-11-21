@@ -77,7 +77,7 @@ const COPY: Record<ConfirmationKind, {
     destructive: false,
   },
   'remove-beneficiary': {
-    title: 'Remove this beneficiary?',
+    title: 'Remove this connection?',
     description: 'They will no longer have access to the memories and capsules you share.',
     confirm: 'Remove',
     destructive: true,

@@ -87,6 +87,10 @@ describe('voice call actions', () => {
     for (const { href } of Object.values(VOICE_DESTINATIONS)) {
       expect(href.startsWith('/')).toBe(true);
     }
-    expect(Object.keys(VOICE_DESTINATIONS)).toHaveLength(18);
+    expect(Object.keys(VOICE_DESTINATIONS)).toHaveLength(19);
+  });
+
+  test("'connections' opens the same screen as the API's older 'beneficiaries'", () => {
+    expect(VOICE_DESTINATIONS.connections.href).toBe(VOICE_DESTINATIONS.beneficiaries.href);
   });
 });
