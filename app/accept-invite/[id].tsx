@@ -46,7 +46,7 @@ export default function AcceptInviteScreen() {
         <EmptyState
           icon={CheckCircle2}
           title="Invite accepted!"
-          description="You're now connected as a beneficiary."
+          description="You're now connected on Memento."
           actionLabel={token ? 'Go to App' : 'Sign in'}
           onAction={() => (token ? router.replace('/(tabs)/overview') : router.replace('/(auth)/login'))}
         />
@@ -71,7 +71,7 @@ export default function AcceptInviteScreen() {
               className="text-text-weak text-center"
               style={TYPE.body}
             >
-              {inviteData.from} wants to add you as a beneficiary.
+              {inviteData.from} wants to add you as a connection.
             </Animated.Text>
           )}
         </View>

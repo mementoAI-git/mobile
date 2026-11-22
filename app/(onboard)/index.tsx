@@ -20,9 +20,9 @@ const FEATURES: { title: string; description: string; image: ImageSourcePropType
     image: require('../../assets/images/onboarding/welcome-feature-reflect.png'),
   },
   {
-    title: 'Converse with your digital twin',
+    title: 'Converse with your Memento',
     description:
-      'Talk with your AI twin, shaped by your stories and values. It remembers what you share, grows with you, and talks things through with you.',
+      'Talk with your Memento, shaped by your stories and values. It remembers what you share, grows with you, and talks things through with you.',
     image: require('../../assets/images/onboarding/welcome-feature-twin.png'),
   },
   {

@@ -87,8 +87,8 @@ export default function BeneficiaryDetailScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     openSheet('security-confirmation', {
       kind: 'remove-beneficiary',
-      title: 'Remove user from beneficiary list?',
-      description: 'Removing a beneficiary will delete their access to your Memento profile and info.',
+      title: 'Remove this connection?',
+      description: 'Removing a connection will delete their access to your Memento profile and info.',
       confirmLabel: 'Yes, remove',
       onConfirm: async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -151,9 +151,9 @@ export default function BeneficiaryDetailScreen() {
         </View>
         <EmptyState
           icon={UserRound}
-          title="Beneficiary not found"
+          title="Connection not found"
           description="This person may have been removed or the invitation was cancelled."
-          actionLabel="Back to beneficiaries"
+          actionLabel="Back to connections"
           onAction={handleBack}
         />
       </SafeAreaView>
@@ -239,7 +239,7 @@ export default function BeneficiaryDetailScreen() {
                 </Text>
               </View>
               <Text style={{ ...TYPE.label, color: COLORS.textBase, lineHeight: 20, marginBottom: 16 }}>
-                This beneficiary hasn't accepted your invitation yet. They won't receive memories until they join.
+                This connection hasn't accepted your invitation yet. They won't receive memories until they join.
               </Text>
               <TouchableOpacity
                 onPress={handleResend}
@@ -260,7 +260,7 @@ export default function BeneficiaryDetailScreen() {
           
           <View style={{ gap: 16 }}>
             <View style={styles.fieldBox}>
-              <Text style={styles.fieldLabel}>Beneficiary name</Text>
+              <Text style={styles.fieldLabel}>Name</Text>
               <View style={styles.fieldValueContainer}>
                 <Text style={styles.fieldValueText}>{name}</Text>
               </View>

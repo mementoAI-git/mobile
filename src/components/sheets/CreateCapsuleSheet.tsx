@@ -276,7 +276,7 @@ export function CreateCapsuleSheet({ onClose, editData }: Props) {
                 ))}
               </View>
             ) : beneficiaries.length === 0 ? (
-              <Text className="text-text-weak" style={TYPE.label}>No beneficiaries added yet.</Text>
+              <Text className="text-text-weak" style={TYPE.label}>No connections added yet.</Text>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
                 {beneficiaries.map((b: any) => {

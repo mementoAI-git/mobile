@@ -64,7 +64,7 @@ export default function BeneficiaryOnboardScreen() {
           <Animated.Text
             className="text-text-base mt-4 leading-relaxed text-center"
             style={TYPE.body}>
-            A beneficiary can receive your memories and time capsules if you're away.
+            A connection can receive your memories and time capsules if you're away.
           </Animated.Text>
         </Animated.View>
 

@@ -30,7 +30,9 @@ export const VOICE_DESTINATIONS = {
   plan_and_billing: { href: '/settings/billing', label: 'plan and billing' },
   upgrade: { href: '/pricing', label: 'plans' },
   privacy: { href: '/settings/privacy', label: 'privacy settings' },
-  beneficiaries: { href: '/settings/beneficiaries', label: 'beneficiaries' },
+  // 'beneficiaries' is the name the API still sends; 'connections' is its replacement.
+  beneficiaries: { href: '/settings/beneficiaries', label: 'your connections' },
+  connections: { href: '/settings/beneficiaries', label: 'your connections' },
   feedback: { href: '/settings/feedback', label: 'feedback' },
   activity: { href: '/settings/activities', label: 'your activity' },
   two_factor: { href: '/settings/two-factor', label: 'two-factor settings' },

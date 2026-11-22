@@ -51,7 +51,7 @@ export const CINEMATIC_SPLASH_CARDS = Object.freeze([
     startRotation: -6,
     rotation: -1,
     floatY: -8,
-    chip: 'Invite beneficiaries',
+    chip: 'Invite connections',
     tone: 'mint',
   },
   {

@@ -103,7 +103,7 @@ export function generateMemoirHtml({
                 : 'Scheduled';
               const recipients = (c.recipients || [])
                 .map((r) => [r.first_name, r.last_name].filter(Boolean).join(' ') || r.email)
-                .join(', ') || 'Designated Beneficiaries';
+                .join(', ') || 'Designated Connections';
               return `
                 <div class="capsule-card">
                   <span class="capsule-tag">SEALED CAPSULE ${i + 1}</span>
