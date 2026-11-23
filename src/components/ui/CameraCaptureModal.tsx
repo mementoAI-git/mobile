@@ -37,6 +37,7 @@ import { TouchableOpacity } from '@/components/ui/Touchable';
 import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-context';
 import { CameraView, Camera as ExpoCamera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import { requestLibraryPickerAccess } from '@/features/media/library-picker-access';
 import * as Haptics from 'expo-haptics';
 import { PermissionRecoveryState } from '@/components/ui/PermissionRecoveryState';
 import X from 'lucide-react-native/icons/x';
@@ -321,7 +322,7 @@ export function CameraCaptureModal({
   const handleGallery = useCallback(async () => {
     if (isRecording) return;
     Haptics.selectionAsync();
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await requestLibraryPickerAccess();
     if (!isPermissionGranted(permission)) {
       showPermissionRecoveryAlert({
         permission,

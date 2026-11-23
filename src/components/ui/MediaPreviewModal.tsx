@@ -723,7 +723,8 @@ function ModalInner({ attachments, initialIndex, onClose, onRemove, memoryId, he
         return;
       }
 
-      const permission = await MediaLibrary.requestPermissionsAsync();
+      // Write-only: saving needs no read access to the library (Google Play photo/video policy).
+      const permission = await MediaLibrary.requestPermissionsAsync(true);
       if (!isPermissionGranted(permission)) {
         showPermissionRecoveryAlert({
           permission,
