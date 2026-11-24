@@ -14,7 +14,13 @@ import { iconSize, radius, minTouchTarget, responsiveSpace, ms } from '@/constan
 import { launchBillingCheckout } from '@/features/settings/billing-flow';
 import { useIAP } from '@/features/billing/use-iap';
 import { useSubscription } from '@/hooks/queries/use-subscription';
-import { getTrialCopy, IAP_DISCLOSURE_COPY, IAP_LEGAL_URLS, SUBSCRIBE_LABEL } from '@/features/billing';
+import {
+  annualSavingsPercent,
+  getTrialCopy,
+  IAP_DISCLOSURE_COPY,
+  IAP_LEGAL_URLS,
+  SUBSCRIBE_LABEL,
+} from '@/features/billing';
 import {
   getVoiceUpgradeCheckout,
   type VoiceUpgradePlan,
@@ -47,6 +53,7 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
     onClose();
   }, [isProOrAbove, onClose]);
 
+  const annualSaving = annualSavingsPercent(products.monthly, products.annual);
   const plans: Array<{
     id: VoiceUpgradePlan;
     name: string;
@@ -63,9 +70,9 @@ export function VoiceUpgradeScreen({ onClose }: VoiceUpgradeScreenProps) {
     {
       id: 'annual',
       name: 'Annual',
-      price: products.annual.localizedPrice || '$79.00',
+      price: products.annual.localizedPrice || '$94.99',
       cadence: '/year',
-      badge: 'Save 15%',
+      badge: annualSaving ? `Save ${annualSaving}%` : undefined,
     },
   ];
 

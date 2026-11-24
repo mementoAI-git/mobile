@@ -44,8 +44,8 @@ describe('IAP Constants and SKUs', () => {
     expect(FALLBACK_PRODUCTS.monthly.interval).toBe('monthly');
     expect(FALLBACK_PRODUCTS.monthly.storeAvailable).toBe(false);
 
-    expect(FALLBACK_PRODUCTS.annual.price).toBe(79.0);
-    expect(FALLBACK_PRODUCTS.annual.localizedPrice).toBe('$79.00');
+    expect(FALLBACK_PRODUCTS.annual.price).toBe(94.99);
+    expect(FALLBACK_PRODUCTS.annual.localizedPrice).toBe('$94.99');
     expect(FALLBACK_PRODUCTS.annual.interval).toBe('annual');
     expect(FALLBACK_PRODUCTS.annual.storeAvailable).toBe(false);
   });

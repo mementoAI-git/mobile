@@ -26,6 +26,13 @@ describe('Android media permissions', () => {
     expect(android.blockedPermissions ?? []).toContain(permission);
   });
 
+  // Expo's Android template adds "display over other apps"; Memento never
+  // draws over other apps, and Play flags the permission.
+  test('SYSTEM_ALERT_WINDOW is blocked', () => {
+    expect(android.permissions).not.toContain('android.permission.SYSTEM_ALERT_WINDOW');
+    expect(android.blockedPermissions ?? []).toContain('android.permission.SYSTEM_ALERT_WINDOW');
+  });
+
   test('WRITE_EXTERNAL_STORAGE is not requested by the app itself', () => {
     // expo-media-library and expo-image-picker declare it with maxSdkVersion 32:
     // saving to the gallery on Android 12 and lower and camera capture on
