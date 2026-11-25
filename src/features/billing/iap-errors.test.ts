@@ -28,3 +28,33 @@ describe('IAP error classification', () => {
     expect(source).toContain("toast('Your existing subscription has been restored.', 'success')");
   });
 });
+
+// A test purchase on Play succeeded, verification failed on the server, and the
+// app showed "[object Object]".
+describe('purchaseVerificationError', () => {
+  const { purchaseVerificationError, PURCHASE_NOT_CONFIRMED_MESSAGE } = require('./iap-errors');
+
+  test('a plain API error object becomes a readable message, never [object Object]', () => {
+    const err = purchaseVerificationError({
+      message: 'Google Play purchase verification service is not configured on the server',
+      status: 503,
+      httpStatus: 503,
+    });
+    expect(err).toBeInstanceOf(Error);
+    expect(err.message).toBe(PURCHASE_NOT_CONFIRMED_MESSAGE);
+    expect(err.message).not.toContain('[object Object]');
+    expect(err.cause).toBe('Google Play purchase verification service is not configured on the server');
+    expect(err.status).toBe(503);
+  });
+
+  test('keeps the detail of a thrown Error for logs', () => {
+    const err = purchaseVerificationError(new Error('Purchase verification failed on the server.'));
+    expect(err.message).toBe(PURCHASE_NOT_CONFIRMED_MESSAGE);
+    expect(err.cause).toBe('Purchase verification failed on the server.');
+  });
+
+  test('handles values with no message', () => {
+    expect(purchaseVerificationError(undefined).message).toBe(PURCHASE_NOT_CONFIRMED_MESSAGE);
+    expect(purchaseVerificationError('boom').cause).toBe('boom');
+  });
+});
