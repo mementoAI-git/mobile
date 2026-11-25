@@ -9,6 +9,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as RNIap from 'expo-iap';
 import * as Sentry from '@sentry/react-native';
 import { post } from '@/api/mutations';
+import { purchaseVerificationError } from './iap-errors';
 import endpoint from '@/api/endpoint';
 import { logger } from '@/lib/logger';
 import { extractFreeTrial } from './intro-offer';
@@ -110,7 +111,7 @@ class InAppPurchaseService {
         if (this.pendingPurchaseRejecter) {
           const reject = this.pendingPurchaseRejecter;
           this.clearPendingPurchase();
-          reject(err instanceof Error ? err : new Error(String(err)));
+          reject(purchaseVerificationError(err));
         }
       }
     });
